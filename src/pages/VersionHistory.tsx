@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.048",
+    date: "2026-03-15",
+    changes: [
+      { type: 'improvement', description: "Profile isolation extended to crypto tokens, holidays, clothing brand, fan management, festival schedule conflicts, and equipment mutations" },
+      { type: 'fix', description: "Crypto buy/sell operations now deduct/credit cash on the active character profile instead of the auth account" },
+      { type: 'improvement', description: "Holiday booking, cancellation, and health boosts now target the active profile. Schedule activities include profile_id" },
+      { type: 'fix', description: "FanManagement page and UnderworldNew page now pass profileId instead of user.id to data hooks" },
+    ],
+  },
+  {
     version: "1.1.047",
     date: "2026-03-15",
     changes: [

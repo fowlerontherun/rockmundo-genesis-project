@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { ClothingScores } from "@/utils/clothingQuality";
 
@@ -44,21 +45,22 @@ export interface ClothingItem {
 
 export const useClothingBrand = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: brand, isLoading: brandLoading } = useQuery({
-    queryKey: ["clothing-brand", user?.id],
+    queryKey: ["clothing-brand", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data as ClothingBrand | null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: items = [], isLoading: itemsLoading } = useQuery({

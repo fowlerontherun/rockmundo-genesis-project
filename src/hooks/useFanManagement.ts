@@ -33,72 +33,72 @@ export interface FanInteraction {
   created_at: string;
 }
 
-export const useFanManagement = (userId?: string) => {
+export const useFanManagement = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch campaigns
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
-    queryKey: ["fan-campaigns", userId],
+    queryKey: ["fan-campaigns", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_campaigns")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as FanCampaign[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch segments
   const { data: segments = [], isLoading: segmentsLoading } = useQuery({
-    queryKey: ["fan-segments", userId],
+    queryKey: ["fan-segments", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_segments")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("fan_count", { ascending: false });
 
       if (error) throw error;
       return data as FanSegment[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch interactions
   const { data: interactions = [], isLoading: interactionsLoading } = useQuery({
-    queryKey: ["fan-interactions", userId],
+    queryKey: ["fan-interactions", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("fan_interactions")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
       return data as FanInteraction[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Create campaign
   const createCampaign = useMutation({
     mutationFn: async (campaign: Partial<FanCampaign>) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
       const { data, error } = await (supabase as any)
         .from("fan_campaigns")
-        .insert({ ...campaign, user_id: userId })
+        .insert({ ...campaign, user_id: profileId })
         .select()
         .single();
 
@@ -106,7 +106,7 @@ export const useFanManagement = (userId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fan-campaigns", userId] });
+      queryClient.invalidateQueries({ queryKey: ["fan-campaigns", profileId] });
       toast.success("Campaign created successfully");
     },
     onError: (error: any) => {
@@ -117,11 +117,11 @@ export const useFanManagement = (userId?: string) => {
   // Create segment
   const createSegment = useMutation({
     mutationFn: async (segment: Partial<FanSegment>) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
       const { data, error } = await (supabase as any)
         .from("fan_segments")
-        .insert({ ...segment, user_id: userId })
+        .insert({ ...segment, user_id: profileId })
         .select()
         .single();
 
@@ -129,7 +129,7 @@ export const useFanManagement = (userId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fan-segments", userId] });
+      queryClient.invalidateQueries({ queryKey: ["fan-segments", profileId] });
       toast.success("Segment created successfully");
     },
     onError: (error: any) => {

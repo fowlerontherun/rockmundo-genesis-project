@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 
 interface EquipGearVariables {
@@ -20,6 +21,7 @@ interface EquipGearResult {
 
 export const useEquipPlayerEquipment = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { addActivity } = useGameData();
   const queryClient = useQueryClient();
 
@@ -59,7 +61,7 @@ export const useEquipPlayerEquipment = () => {
       return { id: data.id, isEquipped: data.is_equipped } satisfies EquipGearResult;
     },
     onSuccess: async (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
 
       if (variables.equip && variables.activityMessage) {
         try {

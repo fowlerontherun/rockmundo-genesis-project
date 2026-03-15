@@ -37,6 +37,7 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { useUnderworld, type CryptoToken } from "@/hooks/useUnderworld";
 import { useCryptoTokens } from "@/hooks/useCryptoTokens";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import underworldVeil from "@/assets/underworld-veil.svg";
 import { UnderworldStoreTab } from "@/components/underworld/UnderworldStoreTab";
 import { toast } from "sonner";
@@ -152,8 +153,8 @@ const PriceCell = ({ price, previousPrice }: { price: number; previousPrice?: nu
 };
 
 // Portfolio panel
-const PortfolioPanel = ({ userId }: { userId: string }) => {
-  const { holdings, isLoading } = useCryptoTokens(userId);
+const PortfolioPanel = ({ profileId }: { profileId: string }) => {
+  const { holdings, isLoading } = useCryptoTokens(profileId);
 
   if (isLoading) return <Skeleton className="h-24 w-full" />;
   if (!holdings || holdings.length === 0) return null;
@@ -234,7 +235,8 @@ const RugAlertBanner = ({ ruggedSymbols }: { ruggedSymbols: string[] }) => {
 
 export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoToken[]; tokensLoading: boolean }) => {
   const { user } = useAuth();
-  const { holdings, buyToken, sellToken, isBuying, isSelling } = useCryptoTokens(user?.id);
+  const { profileId } = useActiveProfile();
+  const { holdings, buyToken, sellToken, isBuying, isSelling } = useCryptoTokens(profileId ?? undefined);
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [buyQuantity, setBuyQuantity] = useState("");
   const [sellQuantity, setSellQuantity] = useState("");
@@ -390,7 +392,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
         <RugAlertBanner ruggedSymbols={ruggedHeldSymbols} />
 
         {/* Portfolio */}
-        {user && <PortfolioPanel userId={user.id} />}
+        {profileId && <PortfolioPanel profileId={profileId} />}
 
         {/* Shadow Store */}
         <section id="store" className="space-y-6">

@@ -19,7 +19,7 @@ export interface TokenHolding {
   token: CryptoToken;
 }
 
-export const useCryptoTokens = (userId?: string) => {
+export const useCryptoTokens = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all tokens
@@ -41,9 +41,9 @@ export const useCryptoTokens = (userId?: string) => {
 
   // Fetch user holdings
   const { data: holdings = [], isLoading: holdingsLoading } = useQuery({
-    queryKey: ["token-holdings", userId],
+    queryKey: ["token-holdings", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_token_holdings")
@@ -51,19 +51,19 @@ export const useCryptoTokens = (userId?: string) => {
           *,
           token:crypto_tokens(*)
         `)
-        .eq("user_id", userId);
+        .eq("user_id", profileId);
 
       if (error) throw error;
       return data as any as TokenHolding[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch transaction history
   const { data: transactions = [] } = useQuery({
-    queryKey: ["token-transactions", userId],
+    queryKey: ["token-transactions", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("token_transactions")
@@ -71,14 +71,14 @@ export const useCryptoTokens = (userId?: string) => {
           *,
           token:crypto_tokens(symbol, name)
         `)
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Buy token mutation
@@ -92,15 +92,15 @@ export const useCryptoTokens = (userId?: string) => {
       quantity: number;
       price: number;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
       const totalCost = quantity * price;
 
-      // Check user balance
+      // Check user balance via profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", userId)
+        .eq("id", profileId)
         .single();
 
       if (!profile || profile.cash < totalCost) {
@@ -111,13 +111,13 @@ export const useCryptoTokens = (userId?: string) => {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: profile.cash - totalCost })
-        .eq("user_id", userId);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 
       // Record transaction
       const { error: txError } = await supabase.from("token_transactions").insert({
-        user_id: userId,
+        user_id: profileId,
         token_id: tokenId,
         transaction_type: "buy",
         quantity,
@@ -127,11 +127,11 @@ export const useCryptoTokens = (userId?: string) => {
 
       if (txError) throw txError;
 
-      // Fetch fresh holding from DB to avoid stale closure
+      // Fetch fresh holding from DB
       const { data: existingHoldings } = await supabase
         .from("player_token_holdings")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .eq("token_id", tokenId)
         .limit(1);
 
@@ -155,7 +155,7 @@ export const useCryptoTokens = (userId?: string) => {
         const { error: holdingError } = await supabase
           .from("player_token_holdings")
           .insert({
-            user_id: userId,
+            user_id: profileId,
             token_id: tokenId,
             quantity,
             average_buy_price: price,
@@ -165,8 +165,8 @@ export const useCryptoTokens = (userId?: string) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["token-holdings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["token-transactions", userId] });
+      queryClient.invalidateQueries({ queryKey: ["token-holdings", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["token-transactions", profileId] });
       toast.success("Token purchased successfully");
     },
     onError: (error: any) => {
@@ -185,13 +185,13 @@ export const useCryptoTokens = (userId?: string) => {
       quantity: number;
       price: number;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
-      // Fetch fresh holding from DB to avoid stale closure
+      // Fetch fresh holding from DB
       const { data: freshHoldings } = await supabase
         .from("player_token_holdings")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", profileId)
         .eq("token_id", tokenId)
         .limit(1);
 
@@ -202,11 +202,11 @@ export const useCryptoTokens = (userId?: string) => {
 
       const totalRevenue = quantity * price;
 
-      // Add cash
+      // Add cash to profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", userId)
+        .eq("id", profileId)
         .single();
 
       if (!profile) throw new Error("Profile not found");
@@ -214,13 +214,13 @@ export const useCryptoTokens = (userId?: string) => {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: profile.cash + totalRevenue })
-        .eq("user_id", userId);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 
       // Record transaction
       const { error: txError } = await supabase.from("token_transactions").insert({
-        user_id: userId,
+        user_id: profileId,
         token_id: tokenId,
         transaction_type: "sell",
         quantity,
@@ -250,8 +250,8 @@ export const useCryptoTokens = (userId?: string) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["token-holdings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["token-transactions", userId] });
+      queryClient.invalidateQueries({ queryKey: ["token-holdings", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["token-transactions", profileId] });
       toast.success("Token sold successfully");
     },
     onError: (error: any) => {
