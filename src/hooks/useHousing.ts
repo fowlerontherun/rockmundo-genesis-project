@@ -98,10 +98,11 @@ export function useRentalTypes() {
 
 export function usePlayerProperties() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ["player-properties", user?.id],
+    queryKey: ["player-properties", profileId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !profileId) return [];
       const { data, error } = await supabase
         .from("player_properties")
         .select("*, housing_types(*)")
@@ -110,7 +111,7 @@ export function usePlayerProperties() {
       if (error) throw error;
       return (data ?? []) as PlayerProperty[];
     },
-    enabled: !!user,
+    enabled: !!user && !!profileId,
   });
 }
 
