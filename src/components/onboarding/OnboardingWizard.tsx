@@ -115,18 +115,20 @@ export const OnboardingWizard = () => {
       case 1:
         return data.displayName.trim().length >= 2;
       case 2:
-        return true; // Appearance is optional
+        return data.gender.length > 0;
       case 3:
-        return data.originId !== null;
+        return true; // Appearance is optional
       case 4:
-        return data.traitIds.length >= 2 && data.traitIds.length <= 3;
+        return data.originId !== null;
       case 5:
-        return data.musicalStyle.trim().length > 0;
+        return data.traitIds.length >= 2 && data.traitIds.length <= 3;
       case 6:
-        return data.careerGoal.length > 0;
+        return data.musicalStyle.trim().length > 0;
       case 7:
-        return data.startingCityId !== null;
+        return data.careerGoal.length > 0;
       case 8:
+        return data.startingCityId !== null;
+      case 9:
         return true;
       default:
         return false;
