@@ -246,6 +246,38 @@ export function useCharacterSlots() {
     },
   });
 
+  const deleteCharacter = useMutation({
+    mutationFn: async (profileId: string) => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      // Verify the profile belongs to this user and is not active
+      const { data: profile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("id, is_active, user_id")
+        .eq("id", profileId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!profile) throw new Error("Character not found");
+      if (profile.is_active) throw new Error("Cannot delete your active character. Switch to another character first.");
+
+      // Soft-delete by setting died_at
+      const { error: deleteError } = await supabase
+        .from("profiles")
+        .update({ died_at: new Date().toISOString(), is_active: false })
+        .eq("id", profileId)
+        .eq("user_id", user.id);
+
+      if (deleteError) throw deleteError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["character-slots"] });
+      queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
+    },
+  });
+
   return {
     slots: slotsQuery.data,
     slotsLoading: slotsQuery.isLoading,
@@ -253,5 +285,6 @@ export function useCharacterSlots() {
     charactersLoading: charactersQuery.isLoading,
     switchCharacter,
     createCharacter,
+    deleteCharacter,
   };
 }

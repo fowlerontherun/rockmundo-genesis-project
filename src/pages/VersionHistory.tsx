@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.041",
+    date: "2026-03-15",
+    changes: [
+      { type: 'fix', description: "New character creation now properly takes you through the full onboarding wizard (fixed stale game data cache)" },
+      { type: 'feature', description: "Added Delete Character button on the Characters page (soft-delete, with confirmation dialog)" },
+    ],
+  },
+  {
     version: "1.1.040",
     date: "2026-03-15",
     changes: [

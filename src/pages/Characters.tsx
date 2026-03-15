@@ -1,4 +1,4 @@
-import { Loader2, Plus, RefreshCw, Users } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,12 +10,23 @@ import { PageLayout } from "@/components/ui/PageLayout";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Characters() {
-  const { slots, slotsLoading, characters, switchCharacter } = useCharacterSlots();
+  const { slots, slotsLoading, characters, switchCharacter, deleteCharacter } = useCharacterSlots();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [switchingToId, setSwitchingToId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const activeCharacter = characters.find((character) => character.is_active);
   const maxSlots = slots?.maxSlots ?? 2;
@@ -33,6 +44,18 @@ export default function Characters() {
       toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
     } finally {
       setSwitchingToId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteCharacter.mutateAsync(deleteTarget.id);
+      toast({ title: "Character deleted", description: `${deleteTarget.name} has been removed.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to delete character", variant: "destructive" });
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -77,18 +100,19 @@ export default function Characters() {
             {characters.map((character) => {
               const isActive = character.is_active;
               const isSwitching = switchingToId === character.id;
+              const charName = character.display_name || character.username || "Unnamed";
 
               return (
                 <div key={character.id} className="flex items-center gap-3 rounded-md border p-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={character.avatar_url ?? undefined} />
                     <AvatarFallback>
-                      {(character.display_name || character.username || "?")[0]?.toUpperCase()}
+                      {charName[0]?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{character.display_name || character.username || "Unnamed"}</p>
+                    <p className="truncate font-medium">{charName}</p>
                     <p className="text-xs text-muted-foreground">
                       Level {character.level} • {(character.fame || 0).toLocaleString()} fame
                     </p>
@@ -101,14 +125,25 @@ export default function Characters() {
                   {isActive ? (
                     <Badge className="bg-primary/20 text-primary border-primary/30">Active</Badge>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSwitch(character.id)}
-                      disabled={isSwitching || switchCharacter.isPending}
-                    >
-                      {isSwitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Switch</>}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSwitch(character.id)}
+                        disabled={isSwitching || switchCharacter.isPending}
+                      >
+                        {isSwitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Switch</>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget({ id: character.id, name: charName })}
+                        disabled={deleteCharacter.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
@@ -138,6 +173,27 @@ export default function Characters() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Character</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone. All progress, items, and history for this character will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteCharacter.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Delete Character
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 }
