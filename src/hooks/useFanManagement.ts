@@ -94,11 +94,11 @@ export const useFanManagement = (profileId?: string) => {
   // Create campaign
   const createCampaign = useMutation({
     mutationFn: async (campaign: Partial<FanCampaign>) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("User not authenticated");
 
       const { data, error } = await (supabase as any)
         .from("fan_campaigns")
-        .insert({ ...campaign, user_id: userId })
+        .insert({ ...campaign, user_id: profileId })
         .select()
         .single();
 
