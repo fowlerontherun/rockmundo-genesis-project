@@ -179,6 +179,21 @@ export const OnboardingWizard = () => {
     try {
       await saveProgress();
       
+      // Save display_name, username, and gender to the profile
+      if (profileId) {
+        const profileUpdates: Record<string, any> = {
+          display_name: data.displayName.trim(),
+          gender: data.gender,
+        };
+        if (data.artistName.trim()) {
+          profileUpdates.username = data.artistName.trim();
+        }
+        await supabase
+          .from("profiles")
+          .update(profileUpdates)
+          .eq("id", profileId);
+      }
+      
       // Create reputation with initial modifiers from origin and traits
       const selectedOrigin = origins.find((o) => o.id === data.originId) ?? null;
       const selectedTraits = traits.filter((t) => data.traitIds.includes(t.id));
