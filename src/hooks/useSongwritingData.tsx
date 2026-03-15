@@ -208,12 +208,17 @@ export const useSongwritingData = (profileId?: string | null) => {
   // Create project
   const createProject = useMutation({
     mutationFn: async (projectData: CreateProjectInput) => {
-      if (!userId) throw new Error("User ID required");
+      if (!profileId) throw new Error("Profile ID required");
+      
+      // Get the auth user for user_id field
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
       
       const { data, error } = await supabase
         .from('songwriting_projects')
         .insert({
-          user_id: userId,
+          user_id: user.id,
+          profile_id: profileId,
           title: projectData.title.trim(),
           theme_id: projectData.theme_id || null,
           chord_progression_id: projectData.chord_progression_id || null,
