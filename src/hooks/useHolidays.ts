@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 import staycationImg from "@/assets/holidays/staycation.jpg";
@@ -26,8 +27,8 @@ export interface HolidayDestination {
   image: string;
   location: string;
   highlights: string[];
-  stressReduction: number; // 1-5 rating
-  creativityBoost: number; // percentage XP bonus to songwriting during holiday
+  stressReduction: number;
+  creativityBoost: number;
   tier: "budget" | "standard" | "premium" | "luxury" | "ultra";
 }
 
@@ -217,58 +218,59 @@ export interface PlayerHoliday {
 
 export function useHolidays() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch active holiday
   const { data: activeHoliday, isLoading } = useQuery({
-    queryKey: ["active-holiday", user?.id],
+    queryKey: ["active-holiday", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("player_holidays")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       return data as PlayerHoliday | null;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Check cooldown (14 days since last completed holiday)
   const { data: canBookHoliday } = useQuery({
-    queryKey: ["holiday-cooldown", user?.id],
+    queryKey: ["holiday-cooldown", profileId],
     queryFn: async () => {
-      if (!user?.id) return true;
+      if (!profileId) return true;
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
       const { data } = await supabase
         .from("player_holidays")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .in("status", ["completed", "active"])
         .gte("created_at", fourteenDaysAgo.toISOString())
         .limit(1);
 
       return !data || data.length === 0;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Book a holiday
   const bookHolidayMutation = useMutation({
     mutationFn: async ({ destination, durationDays }: { destination: HolidayDestination; durationDays: number }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId || !user?.id) throw new Error("Not authenticated");
 
       const totalCost = destination.costPerDay * durationDays;
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if ((profile?.cash ?? 0) < totalCost) {
@@ -295,9 +297,10 @@ export function useHolidays() {
 
       if (holidayError) throw holidayError;
 
-      // Create blocking scheduled activity (blocks everything except songwriting)
+      // Create blocking scheduled activity
       await (supabase as any).from("player_scheduled_activities").insert({
         user_id: user.id,
+        profile_id: profileId,
         activity_type: "holiday",
         scheduled_start: startDate.toISOString(),
         scheduled_end: endDate.toISOString(),
@@ -308,17 +311,17 @@ export function useHolidays() {
       });
 
       // Deduct cost
-      await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - totalCost }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - totalCost }).eq("id", profileId);
 
       // Immediate health boost for first day
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("health")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       const newHealth = Math.min(100, (currentProfile?.health ?? 0) + destination.healthPerDay);
-      await supabase.from("profiles").update({ health: newHealth }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ health: newHealth }).eq("id", profileId);
 
       return { destination: destination.name, durationDays, totalCost };
     },
@@ -334,7 +337,7 @@ export function useHolidays() {
   // Cancel holiday early
   const cancelHolidayMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !activeHoliday) throw new Error("No active holiday");
+      if (!profileId || !activeHoliday) throw new Error("No active holiday");
 
       await supabase
         .from("player_holidays")
@@ -345,7 +348,7 @@ export function useHolidays() {
       await (supabase as any)
         .from("player_scheduled_activities")
         .update({ status: "completed" })
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("activity_type", "holiday")
         .eq("status", "in_progress");
 

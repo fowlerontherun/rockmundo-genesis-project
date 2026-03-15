@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface ScheduleConflict {
   hasConflict: boolean;
@@ -20,19 +21,19 @@ export const useFestivalScheduleConflict = (
   enabled = true
 ) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["festival-schedule-conflict", festivalStartDate, festivalEndDate, user?.id],
+    queryKey: ["festival-schedule-conflict", festivalStartDate, festivalEndDate, profileId],
     queryFn: async (): Promise<ScheduleConflict> => {
-      if (!user?.id || !festivalStartDate || !festivalEndDate) {
+      if (!profileId || !festivalStartDate || !festivalEndDate) {
         return { hasConflict: false, conflictingActivities: [] };
       }
 
-      // Query player_scheduled_activities for overlapping time slots
       const { data: conflicts, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("id, activity_type, scheduled_start, scheduled_end, status, title, description")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .neq("status", "completed")
         .neq("status", "cancelled")
         .lte("scheduled_start", festivalEndDate)
@@ -57,7 +58,7 @@ export const useFestivalScheduleConflict = (
         conflictingActivities,
       };
     },
-    enabled: enabled && !!user?.id && !!festivalStartDate && !!festivalEndDate,
+    enabled: enabled && !!profileId && !!festivalStartDate && !!festivalEndDate,
   });
 
   return {
@@ -87,9 +88,10 @@ function getActivityDescription(activityType: string): string {
 
 export const useCheckFestivalConflict = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const checkConflict = async (startDate: string, endDate: string): Promise<ScheduleConflict> => {
-    if (!user?.id) {
+    if (!profileId) {
       return { hasConflict: false, conflictingActivities: [] };
     }
 
@@ -97,7 +99,7 @@ export const useCheckFestivalConflict = () => {
       const { data: conflicts, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("id, activity_type, scheduled_start, scheduled_end, status, title, description")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .neq("status", "completed")
         .neq("status", "cancelled")
         .lte("scheduled_start", endDate)
