@@ -12,7 +12,7 @@ export default function DonationSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [processed, setProcessed] = useState(false);
   const [processing, setProcessing] = useState(true);
