@@ -75,6 +75,14 @@ export const EnhancedSetlistSongManager = ({
     },
   });
 
+  const getNextPosition = (section?: 'main' | 'encore') =>
+    Math.max(
+      0,
+      ...((setlistSongs ?? [])
+        .filter((song) => (section ? song.section === section : true))
+        .map((song) => song.position || 0))
+    ) + 1;
+
   const addPerformanceItemMutation = useMutation({
     mutationFn: async (item: PerformanceItem) => {
       // Check if we already have 5 performance items
@@ -83,7 +91,7 @@ export const EnhancedSetlistSongManager = ({
         throw new Error('Maximum 5 performance items per setlist');
       }
       
-      const nextPosition = getNextPosition();
+      const nextPosition = getNextPosition('main');
       
       console.log('[EnhancedSetlistSongManager] Adding performance item:', {
         itemId: item.id,
@@ -177,7 +185,7 @@ export const EnhancedSetlistSongManager = ({
         currentMainCount: mainCount
       });
 
-      const nextPosition = getNextPosition();
+      const nextPosition = getNextPosition('main');
 
       const { data, error } = await supabase
         .from("setlist_songs")
@@ -266,13 +274,10 @@ export const EnhancedSetlistSongManager = ({
   );
   const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
-  const getNextPosition = () =>
-    Math.max(0, ...(setlistSongs?.map(song => song.position || 0) || [])) + 1;
-
   const handleAddSong = () => {
     if (!selectedSongId) return;
 
-    const nextPosition = getNextPosition();
+    const nextPosition = getNextPosition('main');
     
     addSongMutation.mutate({
       setlistId,
