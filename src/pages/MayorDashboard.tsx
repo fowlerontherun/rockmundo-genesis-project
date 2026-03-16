@@ -32,7 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCityMayor, useIsCurrentMayor, useUpdateCityLaws } from "@/hooks/useMayorDashboard";
 import { useCityLaws, useCityLawHistory } from "@/hooks/useCityLaws";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";

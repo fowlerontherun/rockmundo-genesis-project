@@ -352,7 +352,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!user ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your property keys.</p>
               ) : propertiesLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your property keys...</p>
