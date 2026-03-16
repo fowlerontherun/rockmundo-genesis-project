@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
 import { TransportComparison } from "@/components/travel/TransportComparison";
@@ -41,6 +42,7 @@ const TRANSPORT_ICONS = {
 
 const Travel = () => {
   const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentCity, setCurrentCity] = useState<any>(null);
@@ -56,14 +58,14 @@ const Travel = () => {
 
   useEffect(() => {
     const loadTravelData = async () => {
-      if (!user) return;
+      if (!profileId) return;
 
       try {
         // Load profile and current city
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*, cities:current_city_id(*)")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         if (profileData) {
@@ -80,7 +82,7 @@ const Travel = () => {
     };
 
     loadTravelData();
-  }, [user]);
+  }, [profileId]);
 
   const handleSelectDestination = (destination: SelectedDestination) => {
     setSelectedDestination(destination);

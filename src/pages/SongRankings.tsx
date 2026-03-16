@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSongRankings, useSongGenres, type RankingType, type RankedSong } from "@/hooks/useSongRankings";
 import { CoverSongDialog } from "@/components/songs/CoverSongDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Trophy, BarChart3, Headphones, Star, Music, Search, Copy } from "lucide
 import { SongPlayer } from "@/components/audio/SongPlayer";
 
 const SongRankings = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [rankingType, setRankingType] = useState<RankingType>("quality");
   const [genreFilter, setGenreFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -26,18 +26,18 @@ const SongRankings = () => {
 
   // Get user's band
   const { data: userBand } = useQuery({
-    queryKey: ["user-band-for-covers", user?.id],
+    queryKey: ["user-band-for-covers", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(id, name)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .limit(1)
         .maybeSingle();
       return (data?.bands as any as { id: string; name: string }) || null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const filteredSongs = (songs || []).filter(s =>

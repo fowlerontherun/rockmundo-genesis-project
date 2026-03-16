@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useUserBand } from "@/hooks/useUserBand";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +88,7 @@ function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
 
 export function AiAvatarCreator() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: band } = useUserBand();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,17 +106,17 @@ export function AiAvatarCreator() {
 
   // Fetch profile for generation count and current avatar
   const { data: profile } = useQuery({
-    queryKey: ["profile-avatar", user?.id],
+    queryKey: ["profile-avatar", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("profiles")
         .select("avatar_url, avatar_generation_count, cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Restore saved avatar when profile loads (persistence fix)
@@ -169,13 +171,13 @@ export function AiAvatarCreator() {
   }, [processFile]);
 
   const handleSaveAvatar = async () => {
-    if (!generatedAvatar || !user?.id) return;
+    if (!generatedAvatar || !profileId) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ avatar_url: generatedAvatar })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (error) throw error;
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 export default function BandSearch() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,12 +71,12 @@ export default function BandSearch() {
     queryKey: ["user-band-ratings", user?.id],
     queryFn: async () => {
       if (!user) return {};
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("band_ratings")
         .select("band_id, rating")
         .eq("user_id", user.id);
       if (error) throw error;
-      return data.reduce((acc, r) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
+      return (data as any[]).reduce((acc: Record<string, string>, r: any) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
     },
     enabled: !!user,
   });
@@ -105,16 +107,14 @@ export default function BandSearch() {
       const currentRating = userRatings?.[bandId];
       
       if (currentRating === rating) {
-        // Remove rating
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("band_ratings")
           .delete()
           .eq("band_id", bandId)
           .eq("user_id", user.id);
         if (error) throw error;
       } else {
-        // Upsert rating
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("band_ratings")
           .upsert(
             { band_id: bandId, user_id: user.id, rating },

@@ -100,8 +100,8 @@ export const useUnderworldStore = () => {
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user!.id)
-        .eq("is_active", true)
+      .eq("profile_id", profileId)
+      .eq("is_active", true)
         .gt("expires_at", new Date().toISOString());
 
       if (error) throw error;
@@ -112,23 +112,23 @@ export const useUnderworldStore = () => {
 
   // Fetch purchase history
   const { data: purchaseHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: ["purchase-history", user?.id],
+    queryKey: ["purchase-history", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("underworld_purchases")
         .select(`
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(20);
 
       if (error) throw error;
       return (data || []) as UnderworldPurchase[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Purchase product mutation
@@ -161,10 +161,10 @@ export const useUnderworldStore = () => {
         }
 
         // Fetch player's token holding
-        const { data: holding, error: holdingError } = await supabase
+        const { data: holding, error: holdingError } = await (supabase as any)
           .from("player_token_holdings")
           .select("id, quantity")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("token_id", product.price_token_id)
           .maybeSingle();
 

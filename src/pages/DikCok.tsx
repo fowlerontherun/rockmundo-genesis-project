@@ -13,7 +13,7 @@ import { DikCokVideoCard } from "@/components/dikcok/DikCokVideoCard";
 import { DikCokCreateDialog } from "@/components/dikcok/DikCokCreateDialog";
 import { DikCokBandAnalytics } from "@/components/dikcok/DikCokBandAnalytics";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -22,24 +22,24 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 export default function DikCok() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
 
   // Fetch user's bands
   const { data: userBands, isLoading: bandsLoading } = useQuery({
-    queryKey: ["user-bands-dikcok", user?.id],
+    queryKey: ["user-bands-dikcok", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(id, name, genre, logo_url)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("member_status", "active");
       if (error) throw error;
       return data?.filter(m => m.bands) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Set default selected band
