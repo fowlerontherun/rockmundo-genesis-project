@@ -44,7 +44,7 @@ export const usePlaytimeTracker = (profileId: string | null) => {
             total_hours_played: Math.round(newTotalHours),
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', userId);
+          .eq('id', profileId);
 
         if (updateError) {
           console.warn('Failed to update playtime:', updateError.message);
