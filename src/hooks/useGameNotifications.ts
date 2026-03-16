@@ -91,11 +91,11 @@ export const useGameNotifications = (userId: string | null) => {
     };
 
     async function getUserBandIds(userId: string): Promise<string[]> {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
-      return data?.map(d => d.band_id) || [];
+        .eq("profile_id", userId);
+      return data?.map((d: any) => d.band_id) || [];
     }
 
     // Check on mount

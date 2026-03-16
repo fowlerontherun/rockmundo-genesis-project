@@ -40,7 +40,7 @@ export const MyContractsList = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const getStatusBadge = (status: string) => {

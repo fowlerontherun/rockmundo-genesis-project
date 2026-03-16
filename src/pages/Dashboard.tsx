@@ -100,14 +100,14 @@ const Dashboard = () => {
   const {
     data: achievements
   } = useQuery({
-    queryKey: ["player-achievements", user?.id],
+    queryKey: ["player-achievements", profile?.id],
     queryFn: async (): Promise<any[]> => {
-      if (!user?.id) return [];
+      if (!profile?.id) return [];
       const client: any = supabase;
-      const result = await client.from("player_achievements").select("*, achievements(*)").eq("user_id", user.id);
+      const result = await client.from("player_achievements").select("*, achievements(*)").eq("profile_id", profile.id);
       return result.data || [];
     },
-    enabled: !!user?.id
+    enabled: !!profile?.id
   });
 
   // Filter skills with XP > 0
