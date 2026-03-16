@@ -52,6 +52,7 @@ interface LeaderProfileSummary {
 
 export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [bandInfo, setBandInfo] = useState<BandInfo | null>(null);
