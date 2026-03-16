@@ -141,7 +141,7 @@ const TrainingPage = () => {
   }, [courses, enrollments]);
 
   const handleEnroll = async (course: TrainingCourseRecord) => {
-    if (!user?.id) {
+    if (!profileId) {
       toast({
         title: "Log in required",
         description: "Sign in to reserve a seat in this training cohort.",
