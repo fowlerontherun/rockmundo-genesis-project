@@ -18,7 +18,7 @@ export function SocialStats() {
       const { data: account } = await supabase
         .from("twaater_accounts")
         .select("id, follower_count, following_count, engagement_score")
-        .eq("owner_id", user.id)
+        .eq("owner_id", profileId)
         .eq("owner_type", "persona")
         .single();
 
