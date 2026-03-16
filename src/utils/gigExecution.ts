@@ -69,10 +69,10 @@ export async function executeGigPerformance(data: GigExecutionData) {
     supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance, primary_genre, leader_id').eq('id', bandId).single(),
     supabase.from('band_members').select('user_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
     supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0),
-    // Fetch leader's stage behavior setting
+    // Fetch leader character's stage behavior setting
     supabase.from('bands').select('leader_id').eq('id', bandId).single().then(async (r) => {
       if (!r.data?.leader_id) return { data: null };
-      return supabase.from('player_behavior_settings').select('stage_behavior').eq('user_id', r.data.leader_id).maybeSingle();
+      return supabase.from('player_behavior_settings').select('stage_behavior').eq('profile_id', r.data.leader_id).maybeSingle();
     }),
     // Fetch recent gigs for tour fatigue calculation
     supabase.from('gigs').select('scheduled_date').eq('band_id', bandId).eq('status', 'completed').order('scheduled_date', { ascending: false }).limit(10),
