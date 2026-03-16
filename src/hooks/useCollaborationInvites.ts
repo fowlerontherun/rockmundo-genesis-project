@@ -156,6 +156,8 @@ export const useCollaborationInvites = (projectId?: string) => {
           .from("profiles")
           .select("cash")
           .eq("user_id", user.id)
+          .eq("is_active", true)
+          .is("died_at", null)
           .single();
 
         if (!profile || (profile.cash || 0) < params.flatFeeAmount) {
