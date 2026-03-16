@@ -38,7 +38,7 @@ import { SelfPromotionPanel } from "@/components/pr/SelfPromotionPanel";
 type TabValue = "offers" | "appearances" | "self-promo" | "film" | "consultant";
 
 export default function PublicRelations() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabValue>("offers");
 
@@ -46,17 +46,17 @@ export default function PublicRelations() {
   const { data: userBand, isLoading: bandLoading } = useQuery({
     queryKey: ["user-band-pr", profileId],
     queryFn: async () => {
-      if (!profileId) return null;
+      if (!userId) return null;
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, fame, total_fans, band_balance")
-        .eq("leader_id", profileId)
+        .eq("leader_id", userId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!profileId,
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -105,7 +105,7 @@ export default function PublicRelations() {
     staleTime: 2 * 60 * 1000,
   });
 
-  if (!profileId) {
+  if (!userId) {
     return (
       <div className="container mx-auto p-6">
         <Alert>
@@ -247,7 +247,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="self-promo" className="mt-4">
-            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={profileId!} />
+            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={userId} />
           </TabsContent>
 
           <TabsContent value="appearances" className="mt-4">
@@ -255,7 +255,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="film" className="mt-4">
-            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={profileId!} />
+            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={userId} />
           </TabsContent>
 
           <TabsContent value="consultant" className="mt-4">
