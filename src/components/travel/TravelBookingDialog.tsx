@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTravelBooking } from "@/hooks/useTravelBooking";
 import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/travelSystem";
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
