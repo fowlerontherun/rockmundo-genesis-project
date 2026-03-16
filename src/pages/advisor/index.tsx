@@ -6,7 +6,7 @@ import {
   type AdvisorSuggestion,
 } from "@/lib/services/advisor";
 import { streamAdvisorChat } from "@/lib/api/advisor-chat";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
