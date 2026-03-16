@@ -19,7 +19,7 @@ import { useCityElection, useElectionCandidates, useUserVote, useCastVote } from
 import { useCityMayor } from "@/hooks/useMayorDashboard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import { CandidateCard } from "@/components/city/CandidateCard";
 import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistrationDialog";
