@@ -11,7 +11,7 @@ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useClaimWatchReward } from "@/hooks/useFestivalWatchRewards";
 import { FestivalVoiceChat } from "./FestivalVoiceChat";
 import { FestivalStageCommentary } from "./FestivalStageCommentary";
-import { useAuth } from "@/hooks/use-auth-context";
+
 import { toast } from "sonner";
 
 interface LiveFestivalViewProps {
