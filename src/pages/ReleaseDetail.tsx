@@ -12,7 +12,6 @@ import { PromoTourCard } from "@/components/releases/PromoTourCard";
 import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 import { HypeMeter } from "@/components/releases/HypeMeter";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useAuth } from "@/hooks/use-auth-context";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
