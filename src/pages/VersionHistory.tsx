@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.057",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Player statistics hook uses profile_id for band membership and songwriting queries" },
+      { type: 'improvement', description: "Recent activity feed filters by profile_id instead of user_id" },
+      { type: 'improvement', description: "Chart positions component queries songs by profile_id" },
+      { type: 'improvement', description: "Performance history uses profile_id for band membership lookup" },
+      { type: 'improvement', description: "Promo tour card deducts cash and queries activities by profile_id" },
+      { type: 'improvement', description: "Recording type selector fetches fame/level from active profile" },
+      { type: 'improvement', description: "Music video release tab uses profile_id for band membership queries" },
+      { type: 'improvement', description: "Modeling offers panel queries contracts by profile_id" },
+    ],
+  },
+  {
     version: "1.1.056",
     date: "2026-03-16",
     changes: [
