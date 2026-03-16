@@ -14,11 +14,22 @@ export function usePromoTourCompletion(userId: string | undefined) {
     queryKey: ["promo-tour-completable", userId],
     queryFn: async () => {
       if (!userId) return [];
+
+      // Get active profile
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+      if (!activeProfile) return [];
+
       const now = new Date().toISOString();
       const { data, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", activeProfile.id)
         .eq("activity_type", "release_promo")
         .eq("status", "scheduled")
         .lte("scheduled_end", now);
@@ -52,9 +63,11 @@ export function usePromoTourCompletion(userId: string | undefined) {
         // Apply health and energy drain
         const { data: profile } = await supabase
           .from("profiles")
-          .select("health, energy")
+          .select("id, health, energy")
           .eq("user_id", userId)
-          .single();
+          .eq("is_active", true)
+          .is("died_at", null)
+          .maybeSingle();
 
         if (profile) {
           const newHealth = Math.max(0, (profile.health ?? 100) - healthDrain);
@@ -66,7 +79,7 @@ export function usePromoTourCompletion(userId: string | undefined) {
               energy: newEnergy,
               last_health_update: new Date().toISOString(),
             })
-            .eq("user_id", userId);
+            .eq("id", profile.id);
         }
 
         // Add hype to release
@@ -89,8 +102,7 @@ export function usePromoTourCompletion(userId: string | undefined) {
         const { data: bandMember } = await supabase
           .from("band_members")
           .select("band_id")
-          .eq("user_id", userId)
-          .eq("role", "leader")
+          .eq("profile_id", profile?.id)
           .maybeSingle();
 
         if (bandMember?.band_id) {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface NightclubQuest {
@@ -48,6 +49,7 @@ export interface QuestProgress {
 
 export function useNightclubQuests(clubId: string | undefined) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch quests for this club
@@ -76,13 +78,7 @@ export function useNightclubQuests(clubId: string | undefined) {
   const { data: progress, isLoading: progressLoading } = useQuery({
     queryKey: ["nightclub-quest-progress", clubId, user?.id],
     queryFn: async () => {
-      if (!user?.id || !clubId) return [];
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      if (!profile) return [];
+      if (!profileId || !clubId) return [];
 
       const questIds = quests?.map((q) => q.id) ?? [];
       if (!questIds.length) return [];
@@ -90,22 +86,22 @@ export function useNightclubQuests(clubId: string | undefined) {
       const { data, error } = await supabase
         .from("player_nightclub_quest_progress")
         .select("*")
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .in("quest_id", questIds);
       if (error) throw error;
       return (data ?? []) as unknown as QuestProgress[];
     },
-    enabled: !!user?.id && !!clubId && !!quests?.length,
+    enabled: !!profileId && !!clubId && !!quests?.length,
   });
 
   // Start a quest
   const startQuest = useMutation({
     mutationFn: async (questId: string) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, energy")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
 
@@ -120,14 +116,14 @@ export function useNightclubQuests(clubId: string | undefined) {
       await supabase
         .from("profiles")
         .update({ energy: Math.max(0, (profile.energy ?? 100) - quest.energy_cost) })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       const firstNodeId = quest.dialogue?.[0]?.id ?? null;
 
       const { data, error } = await supabase
         .from("player_nightclub_quest_progress")
         .insert({
-          profile_id: profile.id,
+          profile_id: profileId,
           quest_id: questId,
           status: "active",
           started_at: new Date().toISOString(),
@@ -193,11 +189,11 @@ export function useNightclubQuests(clubId: string | undefined) {
       progressId: string;
       rewards: Record<string, any>;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
 
@@ -211,7 +207,7 @@ export function useNightclubQuests(clubId: string | undefined) {
             cash: (profile.cash ?? 0) + cashReward,
             fame: (profile.fame ?? 0) + fameReward,
           })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
       }
 
       await supabase

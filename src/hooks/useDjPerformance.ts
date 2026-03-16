@@ -50,7 +50,7 @@ export function useDjPerformance() {
       const { data: attrs } = await supabase
         .from("player_attributes")
         .select("stage_presence, charisma")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       const energy = profile.energy ?? 100;
@@ -101,7 +101,7 @@ export function useDjPerformance() {
         const { data: existing } = await supabase
           .from("player_addictions")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", addictionType)
           .in("status", ["active", "recovering", "relapsed"])
           .maybeSingle();
@@ -117,6 +117,7 @@ export function useDjPerformance() {
           addictionSeverityGain = 20;
           await supabase.from("player_addictions").insert({
             user_id: user.id,
+            profile_id: profileId,
             addiction_type: addictionType,
             severity: 20,
             status: "active",

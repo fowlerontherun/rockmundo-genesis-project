@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.056",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Promo tour completion uses active profile filter for scheduled activities, health/energy drain, and band membership" },
+      { type: 'improvement', description: "Global gig execution uses profile_id-based band membership lookup via active profile" },
+      { type: 'improvement', description: "Auto recording completion band lookup migrated to profile_id" },
+      { type: 'improvement', description: "Nightclub quests use useActiveProfile for progress, energy deduction, and reward claims" },
+      { type: 'fix', description: "DJ performance addiction tracking uses profile_id for queries and inserts" },
+      { type: 'improvement', description: "Underworld inventory queries and item usage migrated from user_id to profile_id" },
+    ],
+  },
+  {
     version: "1.1.055",
     date: "2026-03-16",
     changes: [
