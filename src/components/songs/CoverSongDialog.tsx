@@ -137,7 +137,7 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
         version: "cover",
         status: "recorded",
         added_to_repertoire_at: new Date().toISOString(),
-        added_to_repertoire_by: user.id,
+        added_to_repertoire_by: profileId,
       });
 
       if (songError) throw songError;
