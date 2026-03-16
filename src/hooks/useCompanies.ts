@@ -382,7 +382,7 @@ export const useCloseSubsidiary = () => {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("id", profileId)
+          .eq("id", inputProfileId)
           .single();
 
         if (!profileError && profile) {
