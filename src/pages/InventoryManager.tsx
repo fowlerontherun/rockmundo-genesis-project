@@ -29,6 +29,7 @@ const rarityStyles: Record<string, string> = {
 
 const InventoryManager = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
