@@ -119,7 +119,7 @@ export const useCryptoTokens = (profileId?: string) => {
 
       // Record transaction
       const { error: txError } = await supabase.from("token_transactions").insert({
-        user_id: profileId,
+        user_id: userId,
         token_id: tokenId,
         transaction_type: "buy",
         quantity,
