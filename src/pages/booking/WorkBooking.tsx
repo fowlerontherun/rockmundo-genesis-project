@@ -8,7 +8,7 @@ import { Briefcase, MapPin, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const ACTIVITY_TYPES = [
   { value: "work", label: "Work Shift", icon: Briefcase },
