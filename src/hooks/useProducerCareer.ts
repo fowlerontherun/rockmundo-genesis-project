@@ -180,7 +180,7 @@ export const useProducerSessionHistory = () => {
 
 export const useSubmitProducerReview = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {
