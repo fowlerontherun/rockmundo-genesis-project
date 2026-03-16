@@ -20,7 +20,7 @@ import {
   acceptModelingOffer,
   declineModelingOffer,
 } from "@/utils/modelingOfferGenerator";
-
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 interface ModelingOffersPanelProps {
   userId: string;
   playerLooks: number;
