@@ -110,7 +110,7 @@ const NightClubDetail = () => {
   };
 
   const handleBuyDrink = async (drink: NightClubDrink) => {
-    if (!user?.id || !drink.price) return;
+    if (!profileId || !drink.price) return;
     setBuyingDrinkId(drink.id);
     try {
       const { data: profile } = await supabase
