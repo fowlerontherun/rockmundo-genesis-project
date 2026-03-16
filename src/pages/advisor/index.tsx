@@ -56,7 +56,7 @@ const formatCurrency = (value: number): string => {
 };
 
 const AdvisorPage = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
