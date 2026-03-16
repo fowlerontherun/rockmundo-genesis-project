@@ -76,7 +76,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
         .from("festival_tickets")
         .insert({
           festival_id: festivalId,
-          user_id: user.id,
+          user_id: profileId,
           ticket_type: ticketType,
           purchase_price: price,
           day_number: dayNumber || null,
