@@ -43,7 +43,7 @@ export interface ClothingItem {
 }
 
 export const useClothingBrand = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: brand, isLoading: brandLoading } = useQuery({
