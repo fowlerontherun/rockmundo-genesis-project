@@ -89,7 +89,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       // Block schedule for festival duration
       try {
         await createScheduledActivity({
-          userId: user.id,
+          userId: profileId,
           activityType: "festival_attendance",
           scheduledStart: new Date(festivalStart),
           scheduledEnd: new Date(festivalEnd),

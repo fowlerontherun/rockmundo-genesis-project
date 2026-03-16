@@ -74,7 +74,7 @@ export function useTravelStatus() {
 
   const cancelTravelMutation = useMutation({
     mutationFn: async (travelId: string) => {
-      if (!user || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const { data: travel, error: travelError } = await supabase
         .from("player_travel_history")

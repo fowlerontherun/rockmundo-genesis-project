@@ -24,7 +24,6 @@ export interface VipStatus {
 }
 
 export const useVipStatus = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery({
@@ -45,7 +44,7 @@ export const useVipStatus = () => {
       const { data, error } = await supabase
         .from("vip_subscriptions")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId)
         .eq("status", "active")
         .gte("expires_at", new Date().toISOString())
         .order("expires_at", { ascending: false })
