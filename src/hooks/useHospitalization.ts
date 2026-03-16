@@ -27,7 +27,6 @@ export interface Hospitalization {
 }
 
 export function useHospitalization() {
-  const { user } = useAuth();
   const { profileId, profile: activeProfile } = useActiveProfile();
   const queryClient = useQueryClient();
 
