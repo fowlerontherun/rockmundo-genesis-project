@@ -112,25 +112,25 @@ export default function BandManager() {
       return;
     }
 
-    // Get user_ids that are not null
-    const userIds = bandMembersData
-      .map(m => m.user_id)
+    // Get profile_ids that are not null (use profile_id to get the correct character)
+    const profileIds = bandMembersData
+      .map(m => m.profile_id)
       .filter((id): id is string => id !== null);
 
     // Fetch profiles for human members only
     let profilesData: any[] = [];
-    if (userIds.length > 0) {
+    if (profileIds.length > 0) {
       const { data } = await supabase
         .from('profiles')
-        .select('user_id, display_name, username')
-        .in('user_id', userIds);
+        .select('id, user_id, display_name, username')
+        .in('id', profileIds);
       profilesData = data || [];
     }
 
-    // Attach profile data to members
+    // Attach profile data to members using profile_id
     const membersWithProfiles = bandMembersData.map(member => {
-      if (member.user_id) {
-        const profile = profilesData.find(p => p.user_id === member.user_id);
+      if (member.profile_id) {
+        const profile = profilesData.find(p => p.id === member.profile_id);
         return { ...member, profiles: profile || null };
       }
       return { ...member, profiles: null };
