@@ -66,7 +66,7 @@ interface WatchVideoInput {
 
 export const useWatchVideo = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   
   return useMutation({
