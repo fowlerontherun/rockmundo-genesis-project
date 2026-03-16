@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Baby, Crown, Heart, Plus, Clock, Users, Activity, Star } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useOptionalGameData
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { useMarriageStatus, usePartnerProfile, useRespondToProposal, useInitiateDivorce } from "@/hooks/useMarriage";
 import {
