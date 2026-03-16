@@ -1,27 +1,25 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function ActivityStatusIndicator() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [currentActivity, setCurrentActivity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     const fetchCurrentActivity = async () => {
       const now = new Date().toISOString();
       
-      // Find activities happening NOW based on time, not status
-      // Activities may still be 'scheduled' even when they should be active
       const { data } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('profile_id', profileId)
         .in('status', ['scheduled', 'in_progress'])
         .lte('scheduled_start', now)
         .gte('scheduled_end', now)
@@ -35,11 +33,10 @@ export function ActivityStatusIndicator() {
 
     fetchCurrentActivity();
 
-    // Poll every 30 seconds
     const interval = setInterval(fetchCurrentActivity, 30000);
 
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [profileId]);
 
   if (loading || !user) return null;
 
