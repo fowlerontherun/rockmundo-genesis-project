@@ -71,16 +71,11 @@ export function CreateLabelDialog({
 
   // Fetch user's profile ID
   const { data: profile } = useQuery({
-    queryKey: ["profile-for-label", user?.id],
-    enabled: open && !!user?.id,
+    queryKey: ["profile-for-label", profileId],
+    enabled: open && !!profileId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-      if (error) throw error;
-      return data;
+      if (!profileId) return null;
+      return { id: profileId };
     },
   });
 

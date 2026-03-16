@@ -43,9 +43,9 @@ export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
 
       // Filter to user's own releases or their band's releases
       if (bandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+        query = query.or(`band_id.in.(${bandIds.join(",")})`);
       } else {
-        query = query.eq("user_id", userId);
+        return [];
       }
 
       const { data } = await query;

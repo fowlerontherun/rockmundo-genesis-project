@@ -30,20 +30,18 @@ export const useJamSessionBooking = () => {
 
   // Fetch active profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile-jam", user?.id],
+    queryKey: ["profile-jam", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash, current_city_id, user_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
+        .eq("id", profileId)
+        .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Check if user has conflicting activities during a time range

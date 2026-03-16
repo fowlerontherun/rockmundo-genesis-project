@@ -86,17 +86,18 @@ export const useEducationSummary = () => {
 
   // Get profile
   const { data: profile } = useQuery({
-    queryKey: ["education-summary-profile", user?.id],
+    queryKey: ["education-summary-profile", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, current_city_id, cities:current_city_id(id, name)")
-        .eq("user_id", user!.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Active book reading sessions

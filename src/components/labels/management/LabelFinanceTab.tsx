@@ -40,13 +40,14 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: profileData } = useQuery({
-    queryKey: ["user-balance", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["user-balance", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user!.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;

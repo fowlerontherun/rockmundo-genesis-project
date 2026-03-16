@@ -34,7 +34,7 @@ export const RpmAvatarCreator = ({
   onOpenChange, 
   onAvatarCreated 
 }: RpmAvatarCreatorProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [saving, setSaving] = useState(false);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
@@ -47,13 +47,13 @@ export const RpmAvatarCreator = ({
     setCreatedUrl(optimizedUrl);
     
     // Save to database
-    if (user) {
+    if (profileId) {
       setSaving(true);
       try {
         const { error } = await supabase
           .from('profiles')
           .update({ rpm_avatar_url: optimizedUrl })
-          .eq('user_id', user.id);
+          .eq('id', profileId);
         
         if (error) throw error;
         

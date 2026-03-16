@@ -39,7 +39,7 @@ export const useEquipPlayerEquipment = () => {
           .from("player_equipment_inventory")
           .update({ is_equipped: false })
           .in("id", unequipIds)
-          .eq("user_id", user.id);
+          .eq("profile_id", profileId!);
 
         if (unequipError) {
           throw unequipError;
@@ -50,7 +50,7 @@ export const useEquipPlayerEquipment = () => {
         .from("player_equipment_inventory")
         .update({ is_equipped: variables.equip })
         .eq("id", targetId)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId!)
         .select("id, is_equipped")
         .single();
 
