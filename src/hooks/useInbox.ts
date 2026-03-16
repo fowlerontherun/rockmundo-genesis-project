@@ -110,12 +110,12 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!profileId) return;
+      if (!userId) return;
 
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_read: true })
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_read', false);
 
       if (error) throw error;
