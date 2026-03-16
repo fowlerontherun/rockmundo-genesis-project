@@ -61,9 +61,7 @@ function detectThresholdEvents(
 // ─── Fetch All Relationships ─────────────────────────────
 
 export const useCharacterRelationships = (entityBType?: RelationshipEntityType) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId, entityBType],
