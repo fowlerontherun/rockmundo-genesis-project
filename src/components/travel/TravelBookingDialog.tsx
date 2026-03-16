@@ -49,6 +49,7 @@ export function TravelBookingDialog({
   preselectedDestinationId,
 }: TravelBookingDialogProps) {
   const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const travelMutation = useTravelBooking();
   const { data: calendar } = useGameCalendar();
   const { data: originWeather } = useWeather(currentCityId);
