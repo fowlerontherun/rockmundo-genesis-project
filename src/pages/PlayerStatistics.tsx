@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useGameData } from '@/hooks/useGameData';
 import { usePlayerLevel } from '@/hooks/usePlayerLevel';
 import { TrendingUp, Award, Music, Users, Star, DollarSign } from 'lucide-react';
@@ -11,7 +11,7 @@ import { PlayerAchievements } from '@/components/player-stats/PlayerAchievements
 import { PerformanceHistory } from '@/components/player-stats/PerformanceHistory';
 
 export default function PlayerStatistics() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile, skills, attributes, xpWallet } = useGameData();
   
   const levelData = usePlayerLevel({
@@ -21,7 +21,7 @@ export default function PlayerStatistics() {
     attributeStars: 0,
   });
 
-  if (!user || !profile) {
+  if (!profileId || !profile) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -175,11 +175,11 @@ export default function PlayerStatistics() {
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-6">
-          <PlayerAchievements userId={user?.id} />
+          <PlayerAchievements userId={profileId ?? undefined} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          <PerformanceHistory userId={user?.id} />
+          <PerformanceHistory userId={profileId ?? undefined} />
         </TabsContent>
       </Tabs>
     </div>

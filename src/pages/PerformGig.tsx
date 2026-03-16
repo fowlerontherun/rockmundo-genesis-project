@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth-context';
+// useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,7 +29,7 @@ type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
 export default function PerformGig() {
   const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  // profileId already available from useActiveProfile below
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
 
@@ -58,7 +58,7 @@ export default function PerformGig() {
   const equippedGearCount = bandGearData?.gearItems.length ?? 0;
 
   const loadGig = useCallback(async () => {
-    if (!gigId || !user) return;
+    if (!gigId || !profileId) return;
 
     try {
       // Load gig details
@@ -191,7 +191,7 @@ export default function PerformGig() {
       });
       navigate('/gig-booking');
     }
-  }, [gigId, user, navigate, toast]);
+  }, [gigId, profileId, navigate, toast]);
 
   useEffect(() => {
     loadGig();

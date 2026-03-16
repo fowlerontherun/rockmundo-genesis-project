@@ -10,7 +10,7 @@ import { Guitar, Music, Users, Mic, DollarSign } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ export default function PerformanceBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
@@ -39,25 +39,25 @@ export default function PerformanceBooking() {
 
   // Fetch user's bands
   const { data: bands = [] } = useQuery({
-    queryKey: ["user-bands", user?.id],
+    queryKey: ["user-bands", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands(id, name, band_balance)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("member_status", "active");
       if (error) throw error;
       return data?.map(bm => bm.bands).filter(Boolean) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch songs for selected band
   const { data: bandSongs = [] } = useQuery({
-    queryKey: ["band-songs", selectedBand, user?.id],
+    queryKey: ["band-songs", selectedBand, profileId],
     queryFn: async () => {
-      if (!selectedBand || !user?.id) return [];
+      if (!selectedBand || !profileId) return [];
       const { data, error } = await supabase
         .from("songs")
         .select(`
@@ -66,7 +66,7 @@ export default function PerformanceBooking() {
           genre,
           band_song_familiarity!song_id(familiarity_minutes, band_id)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .order("title");
       if (error) throw error;
       return data?.map(song => ({
@@ -74,7 +74,7 @@ export default function PerformanceBooking() {
         band_song_familiarity: song.band_song_familiarity?.filter((f: any) => f.band_id === selectedBand)
       })) || [];
     },
-    enabled: !!selectedBand && !!user?.id,
+    enabled: !!selectedBand && !!profileId,
   });
 
   // Fetch setlists for selected band
@@ -124,7 +124,7 @@ export default function PerformanceBooking() {
   const totalCost = selectedRoomData ? selectedRoomData.hourly_rate * parseInt(duration) : 0;
 
   const handleBookRehearsal = async () => {
-    if (!date || !timeSlot || !user || !selectedBand || !selectedRoom) {
+    if (!date || !timeSlot || !profileId || !selectedBand || !selectedRoom) {
       toast({
         title: "Missing Information",
         description: "Please select all required fields.",
@@ -197,17 +197,11 @@ export default function PerformanceBooking() {
 
       if (balanceError) throw balanceError;
 
-      // Create scheduled activity - fetch profile_id first
-      const { data: userProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (userProfile) {
+      // Create scheduled activity using profileId directly
+      if (profileId) {
         await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: user.id,
-          profile_id: userProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "rehearsal",
           scheduled_start: scheduledStart.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
@@ -242,7 +236,7 @@ export default function PerformanceBooking() {
       return;
     }
 
-    if (!date || !activityType || !timeSlot || !user) {
+    if (!date || !activityType || !timeSlot || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, activity type, and time slot.",
@@ -268,16 +262,10 @@ export default function PerformanceBooking() {
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;
 
-    // Fetch profile_id first
-    const { data: userProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    
+    // Use profileId directly
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: user.id,
-      profile_id: userProfile?.id,
+      user_id: profileId,
+      profile_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),

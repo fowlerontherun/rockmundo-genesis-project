@@ -1,15 +1,15 @@
 import { useGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
 
 function ModelingInner() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { progress } = useSkillSystem();
 
-  if (!user || !profile) {
+  if (!profileId || !profile) {
     return (
       <div className="container mx-auto py-8">
         <p className="text-muted-foreground">Please log in to access modeling.</p>
@@ -28,7 +28,7 @@ function ModelingInner() {
   return (
     <div className="container mx-auto p-4 max-w-5xl">
       <ModelingOffersPanel
-        userId={user.id}
+        userId={profileId}
         playerLooks={playerLooks}
         playerFame={playerFame}
         skillLevels={skillLevels}

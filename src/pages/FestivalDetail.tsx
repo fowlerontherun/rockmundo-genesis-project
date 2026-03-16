@@ -19,12 +19,12 @@
  import { useFestivalTickets } from "@/hooks/useFestivalTickets";
  import { useFestivalStages } from "@/hooks/useFestivalStages";
  import { useFestivalQuality } from "@/hooks/useFestivalFinances";
- import { useAuth } from "@/hooks/use-auth-context";
+ import { useActiveProfile } from "@/hooks/useActiveProfile";
  
  export default function FestivalDetail() {
    const { festivalId } = useParams();
    const navigate = useNavigate();
-   const { user } = useAuth();
+   const { profileId } = useActiveProfile();
    const { data: primaryBandRecord } = usePrimaryBand();
    const band = primaryBandRecord?.bands;
    const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);

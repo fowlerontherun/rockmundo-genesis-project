@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,7 +75,7 @@ type SortType = 'hot' | 'new' | 'top';
 
 const GettitPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();

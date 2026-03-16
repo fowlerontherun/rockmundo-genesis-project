@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { getSeasonEmoji, getCurrentSeason, getMonthName } from "@/utils/gameCalendar";
 import type { Season } from "@/utils/gameCalendar";
@@ -28,7 +28,7 @@ const SEASON_ICONS: Record<Season, React.ReactNode> = {
 };
 
 const SeasonalEventsCalendar = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: calendar } = useGameCalendar();
   const currentSeason = calendar?.season ?? "spring";
   const [activeTab, setActiveTab] = useState<string>(currentSeason);
@@ -48,16 +48,16 @@ const SeasonalEventsCalendar = () => {
 
   // Fetch player's encountered events
   const { data: playerEvents } = useQuery({
-    queryKey: ["player-seasonal-events", user?.id],
+    queryKey: ["player-seasonal-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data } = await supabase
         .from("player_events")
         .select("event_id")
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       return data?.map((e) => e.event_id) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const encounteredSet = useMemo(() => new Set(playerEvents || []), [playerEvents]);

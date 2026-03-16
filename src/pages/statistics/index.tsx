@@ -2,14 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerStatistics } from "@/hooks/usePlayerStatistics";
 import { Trophy, Music, TrendingUp, Star, Award, Target } from "lucide-react";
 
 const PlayerStatistics = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const {
     allAchievements,
@@ -20,7 +18,7 @@ const PlayerStatistics = () => {
     isLoading: isLoadingAchievements,
   } = useAchievements(profileId ?? undefined);
 
-  const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(user?.id);
+  const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(profileId ?? undefined);
 
   if (isLoadingAchievements || isLoadingStats) {
     return (

@@ -28,7 +28,7 @@ import {
   Trophy,
   TrendingUp
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
 
@@ -49,7 +49,7 @@ type Song = {
 };
 
 export default function AISongGeneration() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);

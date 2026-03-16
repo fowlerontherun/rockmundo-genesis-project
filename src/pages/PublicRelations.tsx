@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,26 +38,25 @@ import { SelfPromotionPanel } from "@/components/pr/SelfPromotionPanel";
 type TabValue = "offers" | "appearances" | "self-promo" | "film" | "consultant";
 
 export default function PublicRelations() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabValue>("offers");
 
   // Fetch user's band
   const { data: userBand, isLoading: bandLoading } = useQuery({
-    queryKey: ["user-band-pr", user?.id],
+    queryKey: ["user-band-pr", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, fame, total_fans, band_balance")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -107,7 +105,7 @@ export default function PublicRelations() {
     staleTime: 2 * 60 * 1000,
   });
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="container mx-auto p-6">
         <Alert>
@@ -249,7 +247,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="self-promo" className="mt-4">
-            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={user.id} />
+            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={profileId!} />
           </TabsContent>
 
           <TabsContent value="appearances" className="mt-4">
@@ -257,7 +255,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="film" className="mt-4">
-            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={user.id} />
+            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={profileId!} />
           </TabsContent>
 
           <TabsContent value="consultant" className="mt-4">

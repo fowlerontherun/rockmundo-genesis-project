@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function BandSearch() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -250,7 +248,7 @@ export default function BandSearch() {
                         variant={userRating === "up" ? "default" : "outline"}
                         size="sm"
                         onClick={() => rateMutation.mutate({ bandId: band.id, rating: "up" })}
-                        disabled={rateMutation.isPending || !user}
+                        disabled={rateMutation.isPending || !profileId}
                         className={cn(
                           "gap-1",
                           userRating === "up" && "bg-green-600 hover:bg-green-700"
@@ -263,7 +261,7 @@ export default function BandSearch() {
                         variant={userRating === "down" ? "default" : "outline"}
                         size="sm"
                         onClick={() => rateMutation.mutate({ bandId: band.id, rating: "down" })}
-                        disabled={rateMutation.isPending || !user}
+                        disabled={rateMutation.isPending || !profileId}
                         className={cn(
                           "gap-1",
                           userRating === "down" && "bg-red-600 hover:bg-red-700"

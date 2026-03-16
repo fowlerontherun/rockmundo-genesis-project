@@ -5,29 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Trophy, Sparkles, Home } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DonationSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [processed, setProcessed] = useState(false);
   const [processing, setProcessing] = useState(true);
 
   useEffect(() => {
     const processRewards = async () => {
-      if (!user || processed) return;
+      if (!profileId || processed) return;
 
       try {
         // Award XP via experience_ledger
         const { error: xpError } = await supabase
           .from("experience_ledger")
           .insert({
-            user_id: user.id,
-            profile_id: user.id,
+            user_id: profileId,
+            profile_id: profileId,
             activity_type: "project_donation",
             xp_amount: 1000,
             metadata: { session_id: sessionId, description: "Thank you for your generous donation to Rockmundo!" },
@@ -39,14 +39,14 @@ export default function DonationSuccess() {
         const { data: profile } = await supabase
           .from("profiles")
           .select("experience")
-          .eq("user_id", user.id)
+          .eq("user_id", profileId)
           .single();
 
         if (profile) {
           await supabase
             .from("profiles")
             .update({ experience: (profile.experience || 0) + 1000 })
-            .eq("user_id", user.id);
+            .eq("user_id", profileId);
         }
 
         // Check if donation achievement exists, if not create it
@@ -81,13 +81,13 @@ export default function DonationSuccess() {
           const { data: existingPlayerAchievement } = await supabase
             .from("player_achievements")
             .select("id")
-            .eq("user_id", user.id)
+            .eq("user_id", profileId)
             .eq("achievement_id", achievementId)
             .single();
 
           if (!existingPlayerAchievement) {
             await supabase.from("player_achievements").insert({
-              user_id: user.id,
+              user_id: profileId,
               achievement_id: achievementId,
               progress: { donation: true },
               unlocked_at: new Date().toISOString(),
@@ -97,7 +97,7 @@ export default function DonationSuccess() {
 
         // Log activity
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
           activity_type: "donation",
           message: "Made a generous donation to support Rockmundo! 💖",
           earnings: 0,
@@ -123,7 +123,7 @@ export default function DonationSuccess() {
     };
 
     processRewards();
-  }, [user, processed, sessionId, toast]);
+  }, [profileId, processed, sessionId, toast]);
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-2xl">
