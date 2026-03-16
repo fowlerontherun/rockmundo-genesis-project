@@ -367,7 +367,7 @@ export default function BandManager() {
                   isLeader={member.role === 'leader'}
                   canManage={isLeader && selectedBand.status === 'active'}
                   onRemove={
-                    isLeader && member.user_id !== selectedBand.leader_id && selectedBand.status === 'active'
+                    isLeader && member.role !== 'leader' && selectedBand.status === 'active'
                       ? () => handleRemoveMember(member.id)
                       : undefined
                   }
