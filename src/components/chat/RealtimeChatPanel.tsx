@@ -163,10 +163,10 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }, [channelKey, fetchMessages, message, profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void fetchMessages();
     }
-  }, [user, channelKey, fetchMessages]);
+  }, [profileId, channelKey, fetchMessages]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector(
