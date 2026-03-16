@@ -39,7 +39,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const { data: limits } = useSongGenerationLimits();
 
   const handleReset = async () => {
-    if (!user?.id) return;
+    if (!profileId) return;
     setRetrying(true);
     try {
       // Reset the stuck status to 'failed' so it can be retried
