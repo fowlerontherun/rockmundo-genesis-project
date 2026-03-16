@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Settings, LogOut, Users, Ban, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { leaveBand, transferLeadership, disbandBand, getEligibleLeaders } from '@/utils/bandMembers';
 import { putBandOnHiatus, reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
