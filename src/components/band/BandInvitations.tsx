@@ -21,14 +21,14 @@ interface BandInvitation {
 }
 
 export const BandInvitations = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: invitations, isLoading } = useQuery({
-    queryKey: ["band-invitations", user?.id],
+    queryKey: ["band-invitations", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from("band_invitations")
@@ -41,14 +41,14 @@ export const BandInvitations = () => {
           created_at,
           bands(name, genre)
         `)
-        .eq("invited_user_id", user.id)
+        .eq("invited_user_id", profileId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as BandInvitation[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const acceptInviteMutation = useMutation({
