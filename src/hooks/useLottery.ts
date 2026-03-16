@@ -76,7 +76,7 @@ export function useMyTickets() {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
-        .eq("user_id", profileId!)
+        .eq("profile_id", profileId!)
         .order("created_at", { ascending: false })
         .limit(20);
 
