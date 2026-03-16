@@ -147,11 +147,10 @@ export const useUnderworldInventory = () => {
       // Check addiction trigger if product has addiction_type
       if (product?.addiction_type) {
         const addictionType = product.addiction_type as AddictionType;
-        // Check if player already has this addiction
         const { data: existingAddiction } = await supabase
           .from("player_addictions")
           .select("id, severity")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", addictionType)
           .in("status", ["active", "recovering", "relapsed"])
           .maybeSingle();
