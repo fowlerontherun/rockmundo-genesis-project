@@ -162,7 +162,7 @@ const MyGear: React.FC = () => {
       }
 
       // Deduct and repair
-      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('user_id', user.id);
+      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('id', profileId);
       await supabase.from('player_equipment').update({ condition: 100 }).eq('id', itemId);
 
       toast({ title: "Equipment Repaired!", description: `Restored to pristine condition for $${cost.toLocaleString()}` });
