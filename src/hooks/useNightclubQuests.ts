@@ -91,7 +91,7 @@ export function useNightclubQuests(clubId: string | undefined) {
       if (error) throw error;
       return (data ?? []) as unknown as QuestProgress[];
     },
-    enabled: !!user?.id && !!clubId && !!quests?.length,
+    enabled: !!profileId && !!clubId && !!quests?.length,
   });
 
   // Start a quest
