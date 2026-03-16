@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -9,22 +10,15 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 export function useMentorSessions() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, cash, experience, current_city_id")
-        .eq("user_id", user.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
+  const profile = activeProfile ? {
+    id: activeProfile.id,
+    cash: activeProfile.cash ?? 0,
+    experience: activeProfile.experience ?? 0,
+    current_city_id: activeProfile.current_city_id,
+  } : null;
 
   const { data: mentors } = useQuery({
     queryKey: ["education_mentors"],

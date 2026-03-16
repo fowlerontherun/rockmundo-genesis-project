@@ -191,6 +191,8 @@ export const useCollaborationInvites = (projectId?: string) => {
           .from("profiles")
           .select("username")
           .eq("user_id", user.id)
+          .eq("is_active", true)
+          .is("died_at", null)
           .single(),
         supabase
           .from("songwriting_projects")

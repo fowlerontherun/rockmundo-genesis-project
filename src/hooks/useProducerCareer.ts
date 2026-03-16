@@ -109,7 +109,7 @@ export const useUpdateProducerProfile = () => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user!.id)
+        .eq('id', profileId)
         .single();
 
       const updateData: any = { ...input };

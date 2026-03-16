@@ -92,8 +92,8 @@ export const useUpcomingGigWarning = () => {
         needsWarning: isInWrongCity && hoursUntilGig <= 6,
       };
     },
-    enabled: !!user?.id && !!profile,
-    staleTime: 60 * 1000, // Check every minute
+    enabled: !!profileId && !!profile,
+    staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
   });
 };

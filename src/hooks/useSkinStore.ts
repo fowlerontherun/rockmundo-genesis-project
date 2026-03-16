@@ -155,11 +155,13 @@ export const usePurchaseSkin = () => {
     }) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Get profile_id
+      // Get active profile_id
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
         .single();
 
       if (!profile) throw new Error("Profile not found");
