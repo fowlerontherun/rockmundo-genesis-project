@@ -64,13 +64,6 @@ export const BandInvitations = () => {
 
       if (inviteError) throw inviteError;
 
-      // Update invitation status
-      const { error: inviteError } = await supabase
-        .from("band_invitations")
-        .update({ status: "accepted", responded_at: new Date().toISOString() })
-        .eq("id", invitationId);
-
-      if (inviteError) throw inviteError;
 
       // Add member to band with profile_id
       const { error: memberError } = await supabase
