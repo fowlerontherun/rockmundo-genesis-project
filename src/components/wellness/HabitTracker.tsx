@@ -13,25 +13,25 @@ import { toast } from "sonner";
 import { format, subDays, isSameDay } from "date-fns";
 
 export function HabitTracker() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [newHabit, setNewHabit] = useState("");
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: habits, isLoading } = useQuery({
-    queryKey: ["player-habits", user?.id],
+    queryKey: ["player-habits", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_habits")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: completions } = useQuery({
