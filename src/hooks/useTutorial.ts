@@ -55,14 +55,14 @@ export const useTutorial = () => {
   // Mark step as complete
   const completeMutation = useMutation({
     mutationFn: async (stepKey: string) => {
-      if (!profileId) throw new Error("No active profile");
+      if (!userId) throw new Error("No active profile");
       const { error } = await supabase
         .from("player_tutorial_progress")
-        .insert({ user_id: profileId, step_key: stepKey });
+        .insert({ user_id: userId, step_key: stepKey });
       if (error && !error.message.includes("duplicate")) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", userId] });
     },
   });
 

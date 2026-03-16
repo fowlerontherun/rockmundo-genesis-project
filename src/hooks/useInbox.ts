@@ -169,17 +169,17 @@ export function useInbox(category?: InboxCategory | 'all') {
 }
 
 export function useUnreadInboxCount() {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ['inbox-unread-count', profileId],
+    queryKey: ['inbox-unread-count', userId],
     queryFn: async () => {
-      if (!profileId) return 0;
+      if (!userId) return 0;
 
       const { count, error } = await supabase
         .from('player_inbox')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_read', false)
         .eq('is_archived', false);
 
@@ -190,7 +190,7 @@ export function useUnreadInboxCount() {
 
       return count || 0;
     },
-    enabled: !!profileId,
+    enabled: !!userId,
     refetchInterval: 30000,
   });
 }

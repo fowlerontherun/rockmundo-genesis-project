@@ -132,7 +132,7 @@ export const useRadioStations = () => {
         .insert({
           station_id: stationId,
           song_id: songId,
-          user_id: profileId,
+          user_id: userId,
           band_id: bandId || null,
           status: "pending",
         })
