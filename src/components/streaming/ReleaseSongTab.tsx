@@ -76,7 +76,7 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
           song_id: selectedSong,
           platform_id: platformId,
           platform_name: platform?.platform_name,
-          profile_id: userId,
+          user_id: userId,
           release_type: releaseType,
           release_date: new Date().toISOString(),
           is_active: true,
