@@ -122,7 +122,7 @@ export function BandSettingsTab({
   };
 
   const handleReactivate = async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
       setLoading(true);
