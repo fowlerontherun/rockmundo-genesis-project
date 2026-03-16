@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -15,24 +14,23 @@ export interface FestivalAttendance {
 }
 
 export const useFestivalAttendance = (festivalId: string | undefined) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: attendance, isLoading } = useQuery<FestivalAttendance | null>({
     queryKey: ["festival-attendance", festivalId, profileId],
     queryFn: async () => {
-      if (!festivalId || !user?.id) return null;
+      if (!festivalId || !profileId) return null;
       const { data, error } = await (supabase as any)
         .from("festival_attendance")
         .select("*")
         .eq("festival_id", festivalId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!festivalId && !!user?.id,
+    enabled: !!festivalId && !!profileId,
   });
 
   const { data: stageAttendees = [] } = useQuery<{ current_stage_id: string; count: number }[]>({
@@ -62,12 +60,12 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
 
   const joinFestival = useMutation({
     mutationFn: async ({ festivalId, stageId }: { festivalId: string; stageId: string }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data, error } = await (supabase as any)
         .from("festival_attendance")
         .upsert({
           festival_id: festivalId,
-          user_id: user.id,
+          user_id: profileId,
           current_stage_id: stageId,
           is_active: true,
           last_moved_at: new Date().toISOString(),
@@ -86,7 +84,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
 
   const moveToStage = useMutation({
     mutationFn: async (stageId: string) => {
-      if (!user?.id || !festivalId) throw new Error("Missing context");
+      if (!profileId || !festivalId) throw new Error("Missing context");
       const { data, error } = await (supabase as any)
         .from("festival_attendance")
         .update({
@@ -94,7 +92,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
           last_moved_at: new Date().toISOString(),
         })
         .eq("festival_id", festivalId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .select()
         .single();
       if (error) throw error;
@@ -109,12 +107,12 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
 
   const leaveFestival = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !festivalId) throw new Error("Missing context");
+      if (!profileId || !festivalId) throw new Error("Missing context");
       const { error } = await (supabase as any)
         .from("festival_attendance")
         .update({ is_active: false })
         .eq("festival_id", festivalId)
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       if (error) throw error;
     },
     onSuccess: () => {

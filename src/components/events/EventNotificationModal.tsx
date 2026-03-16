@@ -12,82 +12,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Zap, Heart, DollarSign, Users, Star, Sparkles, AlertTriangle, Clock } from "lucide-react";
 import { usePendingEvent, useChooseEventOption, type PlayerEvent } from "@/hooks/usePlayerEvents";
 
-// Effect value can be a plain number or a range object {min, max}
-type EffectValue = number | { min: number; max: number };
-
-interface EffectDisplayProps {
-  effects: Record<string, EffectValue>;
-  label: string;
-}
-
-// Helper to format effect values - handles both plain numbers and {min, max} ranges
-function formatEffectValue(value: EffectValue): { display: string; isPositive: boolean; isNonZero: boolean } {
-  if (typeof value === 'number') {
-    return { 
-      display: `${value > 0 ? '+' : ''}${value}`,
-      isPositive: value > 0,
-      isNonZero: value !== 0
-    };
-  }
-  
-  // It's a range object {min, max}
-  if (typeof value === 'object' && value !== null && 'min' in value && 'max' in value) {
-    const avgValue = (value.min + value.max) / 2;
-    return {
-      display: `${avgValue > 0 ? '+' : ''}${value.min}-${value.max}`,
-      isPositive: avgValue > 0,
-      isNonZero: value.min !== 0 || value.max !== 0
-    };
-  }
-  
-  // Fallback for unexpected types
-  return { display: '?', isPositive: true, isNonZero: false };
-}
-
-function EffectDisplay({ effects, label }: EffectDisplayProps) {
-  const effectIcons: Record<string, { icon: typeof Zap; label: string }> = {
-    fans: { icon: Users, label: "Fans" },
-    cash: { icon: DollarSign, label: "Cash" },
-    health: { icon: Heart, label: "Health" },
-    energy: { icon: Zap, label: "Energy" },
-    fame: { icon: Star, label: "Fame" },
-    xp: { icon: Sparkles, label: "XP" },
-  };
-
-  const effectEntries = Object.entries(effects).filter(([_, value]) => {
-    const formatted = formatEffectValue(value);
-    return formatted.isNonZero;
-  });
-
-  if (effectEntries.length === 0) return null;
-
-  return (
-    <div className="mt-2 flex flex-wrap gap-1">
-      {effectEntries.map(([key, value]) => {
-        const config = effectIcons[key];
-        if (!config) return null;
-        const Icon = config.icon;
-        const { display, isPositive } = formatEffectValue(value);
-
-        return (
-          <Badge
-            key={key}
-            variant="outline"
-            className={`text-xs ${
-              isPositive
-                ? "border-green-500/50 text-green-500"
-                : "border-red-500/50 text-red-500"
-            }`}
-          >
-            <Icon className="h-3 w-3 mr-1" />
-            {display} {config.label}
-          </Badge>
-        );
-      })}
-    </div>
-  );
-}
-
 const categoryColors: Record<string, string> = {
   career: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   health: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -110,12 +34,13 @@ export function EventNotificationModal() {
   const handleChoose = async (choice: "a" | "b") => {
     setSelectedOption(choice);
     await chooseOption.mutateAsync({
-      playerEventId: pendingEvent.id,
-      choice,
+      eventId: pendingEvent.id,
+      option: choice,
     });
   };
 
-  const categoryClass = categoryColors[event.category] || categoryColors.random;
+  const eventType = event.event_type || "random";
+  const categoryClass = categoryColors[eventType] || categoryColors.random;
 
   return (
     <Dialog open={true}>
@@ -124,10 +49,10 @@ export function EventNotificationModal() {
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
             <Badge variant="outline" className={categoryClass}>
-              {event.category.charAt(0).toUpperCase() + event.category.slice(1)} Event
+              {eventType.charAt(0).toUpperCase() + eventType.slice(1)} Event
             </Badge>
           </div>
-          <DialogTitle className="text-xl">{event.title}</DialogTitle>
+          <DialogTitle className="text-xl">{event.name}</DialogTitle>
           <DialogDescription className="text-base leading-relaxed">
             {event.description}
           </DialogDescription>
@@ -142,7 +67,6 @@ export function EventNotificationModal() {
           >
             <CardContent className="p-4">
               <div className="font-medium">{event.option_a_text}</div>
-              <EffectDisplay effects={event.option_a_effects} label="Option A" />
             </CardContent>
           </Card>
 
@@ -154,7 +78,6 @@ export function EventNotificationModal() {
           >
             <CardContent className="p-4">
               <div className="font-medium">{event.option_b_text}</div>
-              <EffectDisplay effects={event.option_b_effects} label="Option B" />
             </CardContent>
           </Card>
         </div>
