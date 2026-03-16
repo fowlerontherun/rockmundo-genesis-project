@@ -20,6 +20,7 @@ interface Band {
   chemistry_level: number | null;
   description: string | null;
   total_fans: number | null;
+  is_recruiting: boolean | null;
   member_count: number;
   song_count: number;
 }
