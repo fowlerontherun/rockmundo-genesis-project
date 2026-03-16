@@ -17,7 +17,7 @@ export const GigLocationWarning = () => {
   const { data: warning, isLoading } = useUpcomingGigWarning();
   const { data: vipStatus } = useVipStatus();
   const { profile } = useGameData();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
