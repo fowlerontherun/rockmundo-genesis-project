@@ -25,7 +25,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .select("*")
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
       return data;
