@@ -3,20 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Radio, Users, TrendingUp, Zap, Music, Award } from "lucide-react";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface MyAirplayStatsProps {
   userId: string;
 }
 
 export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
+  const { profileId } = useActiveProfile();
+
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["my-airplay-stats", userId],
+    queryKey: ["my-airplay-stats", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       // Get user's songs
       const { data: userSongs } = await supabase
         .from("songs")
         .select("id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (!userSongs?.length) {
         return {
