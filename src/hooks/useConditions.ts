@@ -29,7 +29,6 @@ export interface PlayerCondition {
 }
 
 export function useConditions() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -37,17 +36,16 @@ export function useConditions() {
     queryKey: ["player-conditions", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      // player_conditions table may not exist — use user_id fallback
       const { data, error } = await (supabase as any)
         .from("player_conditions")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId)
         .in("status", ["active", "treating"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as PlayerCondition[];
     },
-    enabled: !!profileId && !!user?.id,
+    enabled: !!profileId,
   });
 
   const activeConditions = conditions.filter((c) => c.status === "active" || c.status === "treating");
