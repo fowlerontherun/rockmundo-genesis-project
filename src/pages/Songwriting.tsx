@@ -400,6 +400,7 @@ const getProgressPercent = (value?: number | null) => {
 const Songwriting = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
   const {
