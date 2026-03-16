@@ -24,7 +24,7 @@ export interface VipStatus {
 }
 
 export const useVipStatus = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
 
   return useQuery({
     queryKey: ["vip-status", profileId],
