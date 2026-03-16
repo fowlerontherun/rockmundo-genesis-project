@@ -142,7 +142,7 @@ export const useJamSessionBooking = () => {
 
       // Check for activity conflicts
       const { hasConflict, conflictTitle } = await checkActivityConflict(
-        user.id,
+        profile.id,
         scheduledStart,
         scheduledEnd
       );
