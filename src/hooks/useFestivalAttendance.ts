@@ -92,7 +92,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
           last_moved_at: new Date().toISOString(),
         })
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .select()
         .single();
       if (error) throw error;
