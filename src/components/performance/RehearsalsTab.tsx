@@ -36,7 +36,7 @@ export function RehearsalsTab() {
   const [bandSongs, setBandSongs] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     setLoading(true);
     try {
