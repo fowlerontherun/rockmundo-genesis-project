@@ -67,16 +67,16 @@ export function useMyTicketsForDraw(drawId: string | undefined) {
 }
 
 export function useMyTickets() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["lottery-tickets", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["lottery-tickets", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .order("created_at", { ascending: false })
         .limit(20);
 
