@@ -57,7 +57,7 @@ export function useMyTicketsForDraw(drawId: string | undefined) {
         .from("lottery_tickets")
         .select("*")
         .eq("draw_id", drawId!)
-        .eq("user_id", profileId!)
+        .eq("profile_id", profileId!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
