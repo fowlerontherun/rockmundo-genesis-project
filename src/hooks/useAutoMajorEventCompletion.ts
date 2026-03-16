@@ -16,7 +16,7 @@ export function useAutoMajorEventCompletion(userId: string | null) {
   const processingRef = useRef(false);
 
   useEffect(() => {
-    if (!userId || !calendar || processingRef.current) return;
+    if (!userId || !profile?.id || !calendar || processingRef.current) return;
 
     const checkAndAutoComplete = async () => {
       processingRef.current = true;
