@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useGameData } from '@/hooks/useGameData';
 import { usePlayerLevel } from '@/hooks/usePlayerLevel';
 import { TrendingUp, Award, Music, Users, Star, DollarSign } from 'lucide-react';
