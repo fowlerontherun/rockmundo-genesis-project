@@ -65,7 +65,7 @@ export const useFanManagement = (profileId?: string) => {
       const { data, error } = await supabase
         .from("fan_segments")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("fan_count", { ascending: false });
 
       if (error) throw error;
