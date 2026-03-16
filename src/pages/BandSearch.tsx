@@ -102,25 +102,23 @@ export default function BandSearch() {
   // Rate band mutation
   const rateMutation = useMutation({
     mutationFn: async ({ bandId, rating }: { bandId: string; rating: "up" | "down" }) => {
-      if (!profileId) throw new Error("Must be logged in to rate");
+      if (!user) throw new Error("Must be logged in to rate");
       
       const currentRating = userRatings?.[bandId];
       
       if (currentRating === rating) {
-        // Remove rating
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("band_ratings")
           .delete()
           .eq("band_id", bandId)
-          .eq("profile_id", profileId);
+          .eq("user_id", user.id);
         if (error) throw error;
       } else {
-        // Upsert rating
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("band_ratings")
           .upsert(
-            { band_id: bandId, profile_id: profileId, rating },
-            { onConflict: "band_id,profile_id" }
+            { band_id: bandId, user_id: user.id, rating },
+            { onConflict: "band_id,user_id" }
           );
         if (error) throw error;
       }
