@@ -157,7 +157,7 @@ export const useCryptoTokens = (profileId?: string) => {
         const { error: holdingError } = await supabase
           .from("player_token_holdings")
           .insert({
-            user_id: profileId,
+            user_id: userId,
             token_id: tokenId,
             quantity,
             average_buy_price: price,
