@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   Dialog,
   DialogContent,
@@ -20,19 +20,19 @@ interface LinkReleaseDialogProps {
 }
 
 export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseDialogProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [search, setSearch] = useState("");
 
   const { data: releases = [], isLoading } = useQuery({
-    queryKey: ["user-releases-for-twaater", user?.id],
+    queryKey: ["user-releases-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get user's bands
       const { data: memberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
 
@@ -40,13 +40,13 @@ export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseD
       const { data: releases, error } = await supabase
         .from("releases")
         .select("id, title, release_type, artwork_url, release_status, band:bands(id, name)")
-        .or(bandIds.length > 0 ? `band_id.in.(${bandIds.join(",")}),user_id.eq.${user.id}` : `user_id.eq.${user.id}`)
+        .or(bandIds.length > 0 ? `band_id.in.(${bandIds.join(",")})` : `band_id.is.null`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return releases || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredReleases = releases.filter((r: any) =>

@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import type { Database } from "@/lib/supabase-types";
 import { computePlayerLevel } from "@/hooks/usePlayerLevel";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"] & {
   cities?: { name: string; country: string } | null;
@@ -58,6 +59,7 @@ function getHealthBadgeVariant(impact: number): "default" | "secondary" | "destr
 export default function Employment() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("current");
@@ -65,20 +67,20 @@ export default function Employment() {
   const [activeTab, setActiveTab] = useState("jobs");
 
   const { data: profile } = useQuery({
-    queryKey: ["profile"],
+    queryKey: ["profile", profileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("*, cities:current_city_id(id, name, country)")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   // Fetch XP wallet for level calculation

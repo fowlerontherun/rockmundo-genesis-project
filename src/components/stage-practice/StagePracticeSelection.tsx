@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,44 +21,38 @@ interface StagePracticeSelectionProps {
 }
 
 export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [selectedSong, setSelectedSong] = useState<PracticeSong | null>(null);
   const [selectedInstrument, setSelectedInstrument] = useState<string>('');
 
   // Fetch player's instrument skills
   const { data: skills = [], isLoading: loadingSkills } = useQuery({
-    queryKey: ['practice-instrument-skills', user?.id],
+    queryKey: ['practice-instrument-skills', profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from('skill_progress')
         .select('skill_slug, current_level, current_xp, required_xp')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .gt('current_level', 0);
       if (error) throw error;
 
       const instrumentSlugs = Object.keys(INSTRUMENT_LABELS);
       return (data || []).filter(s => instrumentSlugs.includes(s.skill_slug));
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch player's recorded songs
   const { data: recordedSongs = [], isLoading: loadingSongs } = useQuery({
-    queryKey: ['practice-recorded-songs', user?.id],
+    queryKey: ['practice-recorded-songs', profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from('songs')
         .select('id, title, genre, duration_seconds, audio_url')
-        .eq('user_id', user.id)
+        .eq('profile_id', profileId)
         .in('status', ['recorded', 'released', 'completed', 'mastered'])
         .order('created_at', { ascending: false })
         .limit(50);
@@ -73,7 +67,7 @@ export function StagePracticeSelection({ onStart }: StagePracticeSelectionProps)
         audioUrl: s.audio_url || null,
       })) as PracticeSong[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch admin-uploaded audio for default practice tracks

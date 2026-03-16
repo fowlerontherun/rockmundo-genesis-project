@@ -7,30 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
 import InteractiveWorldMap from "@/components/map/InteractiveWorldMap";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const WorldMap = () => {
   const { t } = useTranslation();
+  const { profile: activeProfile } = useActiveProfile();
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["world-environment", "snapshot"],
     queryFn: fetchWorldEnvironmentSnapshot,
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: currentLocation } = useQuery({
-    queryKey: ["current-location"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("current_city_id")
-        .eq("user_id", user.id)
-        .single();
-      
-      return profile?.current_city_id || null;
-    },
-  });
+  const currentLocation = activeProfile?.current_city_id || null;
 
   const cities = data?.cities ?? [];
   const currentCityId = currentLocation;

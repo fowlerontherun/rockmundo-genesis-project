@@ -14,6 +14,7 @@ import { TerritorySelectionStep, TerritorySelection } from "./TerritorySelection
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { Loader2, AlertTriangle, Building2, BadgeCheck } from "lucide-react";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { addDays, isBefore } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
@@ -45,19 +46,22 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
 
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   // Auto-detect user's active band
   const { data: userBand } = useQuery({
-    queryKey: ["user-active-band", userId],
+    queryKey: ["user-active-band", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(*)")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .limit(1)
         .single();
       return data?.bands || null;
-    }
+    },
+    enabled: !!profileId,
   });
 
   // Get band's home country & region from home city
@@ -85,15 +89,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         filters.push(`band_id.eq.${userBand.id}`);
       }
       
-      // Get profile ID for solo artist check
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-      
-      if (profile?.id) {
-        filters.push(`artist_profile_id.eq.${profile.id}`);
+      if (profileId) {
+        filters.push(`artist_profile_id.eq.${profileId}`);
       }
 
       if (filters.length === 0) return null;

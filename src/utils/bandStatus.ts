@@ -6,12 +6,12 @@ export interface ActiveBandCheck {
   existingBand?: any;
 }
 
-export async function getUserActiveBand(userId: string): Promise<any | null> {
+export async function getUserActiveBand(profileId: string): Promise<any | null> {
   try {
     const { data, error } = await supabase
       .from('band_members')
       .select('band_id, bands!band_members_band_id_fkey!inner(*)')
-      .eq('user_id', userId)
+      .eq('profile_id', profileId)
       .eq('bands.status', 'active')
       .limit(1)
       .maybeSingle();
@@ -33,7 +33,7 @@ export async function getUserActiveBand(userId: string): Promise<any | null> {
   }
 }
 
-export async function getUserBands(userId: string) {
+export async function getUserBands(profileId: string) {
   try {
     const { data, error } = await supabase
       .from('band_members')
@@ -46,7 +46,7 @@ export async function getUserBands(userId: string) {
         is_touring_member,
         bands!band_members_band_id_fkey(*)
       `)
-      .eq('user_id', userId)
+      .eq('profile_id', profileId)
       .order('joined_at', { ascending: false });
     
     if (error) {
@@ -61,9 +61,9 @@ export async function getUserBands(userId: string) {
   }
 }
 
-export async function canJoinAnotherBand(userId: string): Promise<ActiveBandCheck> {
+export async function canJoinAnotherBand(profileId: string): Promise<ActiveBandCheck> {
   try {
-    const activeBand = await getUserActiveBand(userId);
+    const activeBand = await getUserActiveBand(profileId);
     
     if (!activeBand) {
       return { allowed: true };

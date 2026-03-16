@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { format, isPast, isFuture } from "date-fns";
 
@@ -48,12 +49,14 @@ const TRANSPORT_ICONS = {
 export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedTravelId, setSelectedTravelId] = useState<string | null>(null);
 
   const { data: upcomingTravel, isLoading } = useQuery({
-    queryKey: ["upcoming-travel", userId],
+    queryKey: ["upcoming-travel", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       // Fetch manual travel bookings that are scheduled or in progress
       const { data: manualTravel, error: manualError } = await supabase
         .from("player_travel_history")
@@ -68,7 +71,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
           arrival_time,
           status
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .in("status", ["scheduled", "in_progress"])
         .order("departure_time", { ascending: true });
 
@@ -78,7 +81,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
       const { data: bandMemberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       const bandIds = bandMemberships?.map(m => m.band_id) || [];
 
@@ -182,7 +185,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
 
       return allTravel;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -207,17 +210,19 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
       if (updateError) throw updateError;
 
       // Refund the cost by updating profile directly
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("user_id", userId)
-        .single();
-
-      if (profile) {
-        await supabase
+      if (profileId) {
+        const { data: profile } = await supabase
           .from("profiles")
-          .update({ cash: (profile.cash || 0) + travel.cost_paid })
-          .eq("user_id", userId);
+          .select("cash")
+          .eq("id", profileId)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({ cash: (profile.cash || 0) + travel.cost_paid })
+            .eq("id", profileId);
+        }
       }
 
       return travel;

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { BandCreationForm } from '@/components/band/BandCreationForm';
 import { BandOverview } from '@/components/band/BandOverview';
 import { BandMemberCard } from '@/components/band/BandMemberCard';
@@ -34,6 +35,7 @@ import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [userBands, setUserBands] = useState<any[]>([]);
@@ -58,10 +60,10 @@ export default function BandManager() {
   }, [selectedBandId]);
 
   const loadUserBands = async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
-      const bands = await getUserBands(user.id);
+      const bands = await getUserBands(profileId);
       
       // Filter out disbanded bands
       const activeBands = bands.filter((b: any) => b.bands.status !== 'disbanded');

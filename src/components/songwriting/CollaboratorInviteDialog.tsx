@@ -58,13 +58,16 @@ export const CollaboratorInviteDialog = ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    // Get active profile
+    const { data: activeProfile } = await supabase
       .from("profiles")
-      .select("cash")
+      .select("id, cash")
       .eq("user_id", user.id)
+      .eq("is_active", true)
+      .is("died_at", null)
       .single();
 
-    setUserCash(data?.cash || 0);
+    setUserCash(activeProfile?.cash || 0);
   };
 
   const fetchPotentialCollaborators = async () => {
@@ -78,6 +81,8 @@ export const CollaboratorInviteDialog = ({
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
         .single();
       
       if (!userProfile) return;
