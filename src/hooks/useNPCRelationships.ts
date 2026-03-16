@@ -18,7 +18,7 @@ export const useNPCRelationships = () => {
   return useQuery({
     queryKey: ["npc-relationships", profileId],
     queryFn: () => fetchNPCRelationships(profileId!),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 };
