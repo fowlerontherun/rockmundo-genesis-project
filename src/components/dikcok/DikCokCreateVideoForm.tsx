@@ -11,7 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Music, Sparkles, Loader2, Clock, Star, Image } from "lucide-react";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface DikCokCreateVideoFormProps {
   bandId: string;
@@ -23,7 +23,7 @@ interface DikCokCreateVideoFormProps {
 
 export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs = [], onSuccess }: DikCokCreateVideoFormProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { videoTypes, isLoading: typesLoading } = useDikCokVideoTypes();
 
@@ -40,7 +40,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs =
 
   const createVideoMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       if (!formData.videoTypeId) throw new Error("Please select a video type");
       
       // Simulate video creation with outcome calculation
@@ -53,7 +53,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs =
 
       const { data: videoData, error } = await supabase.from("dikcok_videos").insert({
         band_id: bandId,
-        creator_user_id: user.id,
+        creator_user_id: profileId,
         video_type_id: formData.videoTypeId,
         title: formData.title.trim(),
         description: formData.description.trim() || null,

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Sparkles } from "lucide-react";
@@ -8,26 +8,26 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export const RandomEventsNews = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: pendingEvents } = useQuery({
-    queryKey: ["pending-random-events", user?.id],
+    queryKey: ["pending-random-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_events")
         .select(`
           id, status, created_at,
           random_events(id, title, description, rarity, category)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("status", "pending_choice")
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!pendingEvents || pendingEvents.length === 0) {

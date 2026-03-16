@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,7 +40,7 @@ interface Comment {
 }
 
 export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
@@ -66,7 +66,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   // Add reaction mutation
   const addReactionMutation = useMutation({
     mutationFn: async (reactionType: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       toast({ title: "Reactions coming soon!" });
       return { action: "pending" };
     },
@@ -78,7 +78,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       toast({ title: "Comments coming soon!" });
     },
     onSuccess: () => {
@@ -91,7 +91,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   };
 
   const hasReacted = (type: string) => {
-    return reactions?.some(r => r.user_id === user?.id && r.reaction_type === type);
+    return reactions?.some(r => r.user_id === profileId && r.reaction_type === type);
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -111,7 +111,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
             variant={hasReacted(type) ? "default" : "outline"}
             size="sm"
             onClick={() => addReactionMutation.mutate(type)}
-            disabled={!user || addReactionMutation.isPending}
+            disabled={!profileId || addReactionMutation.isPending}
             className="gap-1"
           >
             <Icon className={`h-4 w-4 ${hasReacted(type) ? "" : color}`} />
@@ -128,7 +128,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
         </div>
 
         {/* Comment Input */}
-        {user && (
+        {profileId && (
           <form onSubmit={handleSubmitComment} className="flex gap-2">
             <Input
               placeholder="Add a comment..."

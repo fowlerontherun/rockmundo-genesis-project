@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Loader2, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import {
   Tooltip,
@@ -32,14 +32,13 @@ export const SongVoting = ({
   showCounts = true,
   compact = false,
 }: SongVotingProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const queryClient = useQueryClient();
 
   const { data: voteCounts, isLoading } = useQuery<VoteCounts>({
-    queryKey: ["song-votes", songId, user?.id],
+    queryKey: ["song-votes", songId, profileId],
     queryFn: async () => {
-      // Get vote counts
       const { data: votes, error: votesError } = await supabase
         .from("song_votes")
         .select("vote_type")
@@ -50,14 +49,13 @@ export const SongVoting = ({
       const upvotes = votes?.filter((v) => v.vote_type === "up").length || 0;
       const downvotes = votes?.filter((v) => v.vote_type === "down").length || 0;
 
-      // Get user's vote if logged in
       let userVote: "up" | "down" | null = null;
-      if (user?.id) {
+      if (profileId) {
         const { data: userVoteData } = await supabase
           .from("song_votes")
           .select("vote_type")
           .eq("song_id", songId)
-          .eq("user_id", user.id)
+          .eq("user_id", profileId)
           .maybeSingle();
 
         userVote = (userVoteData?.vote_type as "up" | "down") || null;
@@ -70,14 +68,13 @@ export const SongVoting = ({
 
   const voteMutation = useMutation({
     mutationFn: async (voteType: "up" | "down") => {
-      if (!user?.id) throw new Error("Must be logged in to vote");
+      if (!profileId) throw new Error("Must be logged in to vote");
 
-      // Check if user already voted
       const { data: existing } = await supabase
         .from("song_votes")
         .select("id, vote_type")
         .eq("song_id", songId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {
@@ -102,7 +99,7 @@ export const SongVoting = ({
         // New vote
         const { error } = await supabase.from("song_votes").insert({
           song_id: songId,
-          user_id: user.id,
+          user_id: profileId,
           vote_type: voteType,
         });
         if (error) throw error;
@@ -127,7 +124,7 @@ export const SongVoting = ({
   });
 
   const handleVote = (voteType: "up" | "down") => {
-    if (!user) {
+    if (!profileId) {
       toast.error("Please log in to vote");
       return;
     }

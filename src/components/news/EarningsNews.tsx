@@ -1,28 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Wallet, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 
 export const EarningsNews = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Get user's bands
   const { data: userBands } = useQuery({
-    queryKey: ["user-bands-earnings", user?.id],
+    queryKey: ["user-bands-earnings", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands(id, name)")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const bandIds = userBands?.map((b) => b.band_id) || [];
