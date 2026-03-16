@@ -31,7 +31,9 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single();
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
 
       if (!profile) return null;
 
