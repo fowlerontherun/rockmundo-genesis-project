@@ -86,13 +86,39 @@ export const BooksTab = () => {
     setAutoRead(false);
   };
 
+  // Get unique skill categories for filter
+  const skillCategories = useMemo(() => {
+    if (!typedBooks) return [];
+    const cats = new Set<string>();
+    for (const book of typedBooks) {
+      cats.add(book.skill_display_name || book.skill_slug || "Other");
+    }
+    return Array.from(cats).sort();
+  }, [typedBooks]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState<string>("all");
+
   const groupedBooks = useMemo(() => {
     if (!typedBooks) return null;
     
-    // Group by display name to consolidate skills with different slugs but same name
+    let filtered = typedBooks;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        (b.skill_display_name || b.skill_slug || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (selectedSkill !== "all") {
+      filtered = filtered.filter(b => (b.skill_display_name || b.skill_slug || "Other") === selectedSkill);
+    }
+
     const groups = new Map<string, EnrichedSkillBook[]>();
-    
-    for (const book of typedBooks) {
+    for (const book of filtered) {
       const groupKey = book.skill_display_name || book.skill_slug || "Other";
       const existing = groups.get(groupKey) || [];
       existing.push(book);
@@ -100,7 +126,9 @@ export const BooksTab = () => {
     }
     
     return Object.fromEntries(groups.entries());
-  }, [typedBooks]);
+  }, [typedBooks, searchQuery, selectedSkill]);
+
+  const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
   return (
     <div className="space-y-8">
