@@ -20,7 +20,7 @@ interface BandCreationFormProps {
 }
 
 export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [creationMode, setCreationMode] = useState<'band' | 'solo'>('band');
