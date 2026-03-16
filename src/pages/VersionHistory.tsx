@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.093",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Fixed book purchasing RLS error — BooksTab was passing profileId as user_id instead of auth userId, causing row-level security violation" },
+    ],
+  },
+  {
     version: "1.1.092",
     date: "2026-03-16",
     changes: [

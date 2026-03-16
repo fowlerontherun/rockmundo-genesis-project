@@ -17,7 +17,7 @@ type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 
 export const BooksTab = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
@@ -45,7 +45,7 @@ export const BooksTab = () => {
     !activeSession && selectedBook && isPurchased(selectedBook.id) && !isCompleted(selectedBook.id);
 
   const handlePurchase = async (book: SkillBook) => {
-    if (!profileId) return;
+    if (!profileId || !userId) return;
     
     // Check if already completed
     if (isCompleted(book.id)) {
@@ -60,7 +60,7 @@ export const BooksTab = () => {
     
     purchaseBook({
       bookId: book.id,
-      userId: profileId,
+      userId: userId,
       profileId: profileId,
       price: book.price,
     });
@@ -68,7 +68,7 @@ export const BooksTab = () => {
   };
 
   const handleStartReading = async () => {
-    if (!profileId || !selectedBook) return;
+    if (!profileId || !userId || !selectedBook) return;
     
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
@@ -76,7 +76,7 @@ export const BooksTab = () => {
     startReading({
       purchaseId: purchase.id,
       bookId: selectedBook.id,
-      userId: profileId,
+      userId: userId,
       profileId: profileId,
       readingDays: selectedBook.base_reading_days,
       autoRead,
