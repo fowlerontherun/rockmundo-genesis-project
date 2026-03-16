@@ -1,8 +1,7 @@
 // NPC Relationships Hook - Manages player's relationships with NPCs
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useOptionalGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   fetchNPCRelationships,
   fetchNPCRelationship,
