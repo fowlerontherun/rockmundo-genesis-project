@@ -60,7 +60,7 @@ export function PersonalUpdates() {
       const { data: activities } = await supabase
         .from("player_scheduled_activities")
         .select("activity_type, scheduled_start")
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .eq("status", "scheduled")
         .gte("scheduled_start", new Date().toISOString())
         .order("scheduled_start", { ascending: true })

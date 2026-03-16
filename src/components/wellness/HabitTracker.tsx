@@ -25,7 +25,7 @@ export function HabitTracker() {
       const { data, error } = await supabase
         .from("player_habits")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
       if (error) throw error;

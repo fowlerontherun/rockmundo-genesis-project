@@ -111,7 +111,7 @@ export function useBuyTicket() {
         .from("lottery_tickets")
         .select("*", { count: "exact", head: true })
         .eq("draw_id", drawId)
-        .eq("user_id", profileId);
+        .eq("profile_id", profileId);
 
       if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
 

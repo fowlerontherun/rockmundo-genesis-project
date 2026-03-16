@@ -153,7 +153,7 @@ export async function checkOverworkEffects(profileId: string): Promise<{
   const { data: activities, error } = await supabase
     .from("experience_ledger")
     .select("*")
-    .eq("user_id", profileId)
+    .eq("profile_id", profileId)
     .gte("created_at", oneDayAgo.toISOString())
     .in("activity_type", ["gig", "recording", "songwriting", "rehearsal", "busking"]);
 

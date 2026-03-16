@@ -79,7 +79,7 @@ export function useInbox(category?: InboxCategory | 'all') {
           event: '*',
           schema: 'public',
           table: 'player_inbox',
-          filter: `user_id=eq.${profileId}`,
+          filter: `user_id=eq.${userId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['inbox'] });
