@@ -51,7 +51,6 @@ export interface UnderworldPurchase {
 }
 
 export const useUnderworldStore = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
