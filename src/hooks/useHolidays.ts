@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -217,7 +216,6 @@ export interface PlayerHoliday {
 }
 
 export function useHolidays() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -229,7 +227,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -263,7 +261,7 @@ export function useHolidays() {
   // Book a holiday
   const bookHolidayMutation = useMutation({
     mutationFn: async ({ destination, durationDays }: { destination: HolidayDestination; durationDays: number }) => {
-      if (!profileId || !user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const totalCost = destination.costPerDay * durationDays;
 

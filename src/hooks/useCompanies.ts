@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import type { Company, CreateCompanyInput, CompanyFinancialSummary } from "@/types/company";
 import { COMPANY_CREATION_COSTS } from "@/types/company";
 
 export const useCompanies = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["companies", user?.id],
+    queryKey: ["companies", profileId],
     queryFn: async (): Promise<Company[]> => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("companies")
@@ -20,7 +20,7 @@ export const useCompanies = () => {
           headquarters_city:cities!headquarters_city_id(id, name, country),
           parent_company:companies!parent_company_id(id, name)
         `)
-        .eq("owner_id", user.id)
+        .eq("owner_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -30,7 +30,7 @@ export const useCompanies = () => {
 
       return (data || []) as Company[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
 
@@ -88,13 +88,13 @@ export const useCompanySubsidiaries = (parentCompanyId: string | undefined) => {
 };
 
 export const useCreateCompany = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateCompanyInput & { profileId?: string }): Promise<Company> => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get creation costs
       const costs = COMPANY_CREATION_COSTS[input.company_type];
@@ -126,7 +126,7 @@ export const useCreateCompany = () => {
       const { data, error } = await supabase
         .from("companies")
         .insert({
-          owner_id: user.id,
+          owner_id: profileId,
           name: input.name,
           company_type: input.company_type,
           description: input.description || null,
@@ -169,7 +169,7 @@ export const useCreateCompany = () => {
       // Initialize share ownership for founder
       await supabase.from("company_shareholders" as any).insert({
         company_id: data.id,
-        user_id: user.id,
+        user_id: profileId,
         shares: 100,
       });
 
@@ -233,12 +233,12 @@ export const useUpdateCompany = () => {
 };
 
 export const useCompanyFinancialSummary = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["company-financial-summary", user?.id],
+    queryKey: ["company-financial-summary", profileId],
     queryFn: async (): Promise<CompanyFinancialSummary> => {
-      if (!user?.id) {
+      if (!profileId) {
         return {
           total_balance: 0,
           monthly_income: 0,
@@ -255,7 +255,7 @@ export const useCompanyFinancialSummary = () => {
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
         .select("id, balance, weekly_operating_costs, company_type")
-        .eq("owner_id", user.id);
+        .eq("owner_id", profileId);
 
       if (companiesError) throw companiesError;
 
@@ -334,26 +334,26 @@ export const useCompanyFinancialSummary = () => {
         effective_tax_rate: effectiveTaxRate,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
 
 export const useCloseSubsidiary = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ 
       companyId, 
-      profileId,
+      profileId: inputProfileId,
       transferBalance = true 
     }: { 
       companyId: string; 
       profileId?: string;
       transferBalance?: boolean;
     }): Promise<void> => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get company details
       const { data: company, error: companyError } = await supabase
@@ -363,7 +363,7 @@ export const useCloseSubsidiary = () => {
         .single();
 
       if (companyError || !company) throw new Error("Company not found");
-      if (company.owner_id !== user.id) throw new Error("You don't own this company");
+      if (company.owner_id !== profileId) throw new Error("You don't own this company");
       if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
 
       // Check for active contracts/obligations
@@ -378,18 +378,18 @@ export const useCloseSubsidiary = () => {
       }
 
       // Transfer remaining balance to player if requested
-      if (transferBalance && Number(company.balance) > 0 && profileId) {
+      if (transferBalance && Number(company.balance) > 0 && inputProfileId) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("cash")
-          .eq("id", profileId)
+          .eq("id", inputProfileId)
           .single();
 
         if (!profileError && profile) {
           await supabase
             .from("profiles")
             .update({ cash: Number(profile.cash) + Number(company.balance) })
-            .eq("id", profileId);
+            .eq("id", inputProfileId);
 
           // Record the withdrawal transaction
           await supabase.from("company_transactions").insert({

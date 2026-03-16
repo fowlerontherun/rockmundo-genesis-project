@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.079",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useHolidays migrated to profileId" },
+      { type: 'improvement', description: "useClothingMarketplace migrated to profileId" },
+      { type: 'improvement', description: "useRomanceSystem migrated to profileId via useActiveProfile" },
+      { type: 'improvement', description: "useJamSessionBooking migrated to profileId" },
+      { type: 'improvement', description: "useJamVoiceChat migrated to profileId, removed redundant profile query" },
+      { type: 'improvement', description: "useCompanies migrated to profileId" },
+      { type: 'improvement', description: "useMajorEvents migrated to profileId" },
+    ],
+  },
+  {
     version: "1.1.078",
     date: "2026-03-16",
     changes: [

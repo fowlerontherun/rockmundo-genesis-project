@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Peer, { MediaConnection } from "peerjs";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { AudioLevelMonitor, createAudioElement, requestMicrophoneAccess, stopMediaStream } from "@/utils/audioUtils";
 
@@ -37,7 +37,7 @@ interface PresenceState {
 }
 
 export const useJamVoiceChat = (sessionId: string | null): UseJamVoiceChatReturn => {
-  const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -53,22 +53,13 @@ export const useJamVoiceChat = (sessionId: string | null): UseJamVoiceChatReturn
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const levelIntervalRef = useRef<number | null>(null);
 
-  // Get current user's profile
-  const { data: myProfile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, display_name, username, avatar_url")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
+  // Use the active profile directly
+  const myProfile = activeProfile ? {
+    id: activeProfile.id,
+    display_name: activeProfile.display_name,
+    username: activeProfile.username,
+    avatar_url: activeProfile.avatar_url,
+  } : null;
 
   // Cleanup function
   const cleanup = useCallback(() => {

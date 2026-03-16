@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { ClothingItem, ClothingBrand } from "./useClothingBrand";
@@ -14,7 +13,6 @@ export const useClothingMarketplace = (filters?: {
   genre?: string;
   search?: string;
 }) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -45,12 +43,12 @@ export const useClothingMarketplace = (filters?: {
         brand: item.player_clothing_brands as unknown as ClothingBrand,
       })) as MarketplaceItem[];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const purchaseItem = useMutation({
     mutationFn: async (item: MarketplaceItem) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get buyer's cash
       const { data: profile } = await supabase
@@ -106,7 +104,7 @@ export const useClothingMarketplace = (filters?: {
       const { error: purchaseError } = await supabase
         .from("player_clothing_purchases" as never)
         .insert({
-          buyer_user_id: user.id,
+          buyer_user_id: profileId,
           item_id: item.id,
           seller_user_id: item.creator_user_id,
           price_paid: item.sale_price,

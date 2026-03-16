@@ -2,8 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useOptionalGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
 import type {
   RomanticRelationship,
@@ -23,9 +22,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 // ─── Fetch All Romances ──────────────────────────────────
 
 export const useRomanticRelationships = (activeOnly = true) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId, activeOnly],
@@ -42,7 +39,7 @@ export const useRomanticRelationships = (activeOnly = true) => {
       if (error) throw error;
       return (data ?? []) as unknown as RomanticRelationship[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };
@@ -70,8 +67,7 @@ export const useRomanticRelationship = (romanceId: string | undefined) => {
 
 export const useStartRomance = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {
@@ -274,8 +270,7 @@ export const useRomanceInteraction = () => {
 
 export const useEndRomance = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {

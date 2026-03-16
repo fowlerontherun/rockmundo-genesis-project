@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
@@ -237,7 +237,7 @@ export function useBandYearEventCount(bandId?: string) {
 }
 
 export function useAcceptMajorEvent() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -261,11 +261,11 @@ export function useAcceptMajorEvent() {
       eventEnd: string;
       eventName: string;
     }) => {
-      if (!user) throw new Error('Must be logged in');
+      if (!profileId) throw new Error('Must be logged in');
 
       // Create scheduled activity to block the time slot
       await createScheduledActivity({
-        userId: user.id,
+        userId: profileId,
         bandId,
         activityType: 'major_event' as any,
         scheduledStart: new Date(eventStart),
@@ -279,7 +279,7 @@ export function useAcceptMajorEvent() {
         .from('major_event_performances')
         .insert({
           instance_id: instanceId,
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId,
           song_1_id: song1Id,
           song_2_id: song2Id,

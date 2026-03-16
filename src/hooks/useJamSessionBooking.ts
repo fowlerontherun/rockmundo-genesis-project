@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { REHEARSAL_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
 
@@ -24,7 +23,6 @@ export interface BookJamSessionParams {
 }
 
 export const useJamSessionBooking = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -128,7 +126,7 @@ export const useJamSessionBooking = () => {
 
   const bookJamSession = async (params: BookJamSessionParams): Promise<string> => {
     if (!profile) throw new Error("Profile not found");
-    if (!user) throw new Error("User not found");
+    if (!profile) throw new Error("Profile not found");
 
     setIsBooking(true);
 
@@ -217,7 +215,7 @@ export const useJamSessionBooking = () => {
 
       // Create scheduled activity for the creator
       await createScheduledActivity(
-        user.id,
+        profile.user_id,
         profile.id,
         session.id,
         params.name,
@@ -253,7 +251,7 @@ export const useJamSessionBooking = () => {
 
   const joinJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
-    if (!user) throw new Error("User not found");
+    if (!profile) throw new Error("Profile not found");
 
     // Get session details with city info
     const { data: session } = await supabase
@@ -324,7 +322,7 @@ export const useJamSessionBooking = () => {
     // Create scheduled activity for the joiner
     if (session.scheduled_start && session.scheduled_end) {
       await createScheduledActivity(
-        user.id,
+        profile.user_id,
         profile.id,
         sessionId,
         session.name,
@@ -358,7 +356,7 @@ export const useJamSessionBooking = () => {
 
   const leaveJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
-    if (!user) throw new Error("User not found");
+    if (!profile) throw new Error("Profile not found");
 
     // Get session details
     const { data: session } = await supabase
