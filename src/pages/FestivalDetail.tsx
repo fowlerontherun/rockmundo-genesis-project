@@ -19,7 +19,7 @@
  import { useFestivalTickets } from "@/hooks/useFestivalTickets";
  import { useFestivalStages } from "@/hooks/useFestivalStages";
  import { useFestivalQuality } from "@/hooks/useFestivalFinances";
- import { useAuth } from "@/hooks/use-auth-context";
+ import { useActiveProfile } from "@/hooks/useActiveProfile";
  
  export default function FestivalDetail() {
    const { festivalId } = useParams();
