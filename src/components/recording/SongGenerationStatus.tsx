@@ -83,7 +83,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   };
 
   const handleAdminRegenerate = async (updatedLyrics?: string) => {
-    if (!user?.id || !limits?.is_admin) return;
+    if (!profileId || !limits?.is_admin) return;
     setRetrying(true);
     setShowLyricsDialog(false);
     try {
