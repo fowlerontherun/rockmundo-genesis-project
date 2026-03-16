@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { getSeasonEmoji, getCurrentSeason, getMonthName } from "@/utils/gameCalendar";
 import type { Season } from "@/utils/gameCalendar";
