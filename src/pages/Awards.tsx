@@ -28,7 +28,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Awards() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
 
   // Fetch the user's primary band
