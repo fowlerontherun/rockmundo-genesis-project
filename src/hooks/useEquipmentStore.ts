@@ -31,6 +31,7 @@ export interface PlayerEquipment {
 }
 
 export const useEquipmentStore = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch equipment catalog
