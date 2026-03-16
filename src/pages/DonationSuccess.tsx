@@ -26,8 +26,8 @@ export default function DonationSuccess() {
         const { error: xpError } = await supabase
           .from("experience_ledger")
           .insert({
-            user_id: user.id,
-            profile_id: user.id,
+            user_id: profileId,
+            profile_id: profileId,
             activity_type: "project_donation",
             xp_amount: 1000,
             metadata: { session_id: sessionId, description: "Thank you for your generous donation to Rockmundo!" },
