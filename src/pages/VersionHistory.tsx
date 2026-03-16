@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.094",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Band Health section redesigned — Band Health overview is now full-width, Fan Sentiment and Media Cycle are side-by-side in a 2-column layout, and Health Event Log moved below Sentiment charts for better readability" },
+    ],
+  },
+  {
     version: "1.1.093",
     date: "2026-03-16",
     changes: [
