@@ -60,9 +60,9 @@ export const useRadioStations = () => {
 
   // Fetch my submissions
   const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
-    queryKey: ["my-radio-submissions", profileId],
+    queryKey: ["my-radio-submissions", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select(`
@@ -70,13 +70,13 @@ export const useRadioStations = () => {
           station:radio_stations!inner(id, name, station_type, quality_level),
           song:songs!inner(id, title, genre)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Fetch submissions for specific station
