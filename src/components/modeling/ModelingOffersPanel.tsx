@@ -57,6 +57,7 @@ const TIME_SLOTS = [
 
 export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLevels = {} }: ModelingOffersPanelProps) => {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [bookingOffer, setBookingOffer] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
