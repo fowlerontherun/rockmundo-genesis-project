@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.095",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Band member display now uses profile_id instead of user_id to fetch character names — fixes multi-character bug where the wrong character was shown as a band member" },
+    ],
+  },
+  {
     version: "1.1.094",
     date: "2026-03-16",
     changes: [
