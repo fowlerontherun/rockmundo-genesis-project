@@ -10,7 +10,7 @@ export default function VipSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [countdown, setCountdown] = useState(5);
 
   const sessionId = searchParams.get("session_id");
