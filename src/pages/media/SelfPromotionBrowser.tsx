@@ -100,7 +100,7 @@ const SelfPromotionBrowser = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
       return data;
