@@ -17,9 +17,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 // ─── Fetch Emotional State ───────────────────────────────
 
 export const useEmotionalState = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId],
