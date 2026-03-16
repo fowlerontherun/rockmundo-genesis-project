@@ -48,7 +48,7 @@ export function StagePracticeResults({
       const { data, error } = await supabase
         .from('stage_practice_sessions')
         .select('xp_earned')
-        .eq('user_id', profileId)
+        .eq('profile_id', profileId)
         .gte('played_at', today.toISOString());
       if (error) throw error;
       const sessions = data?.length || 0;

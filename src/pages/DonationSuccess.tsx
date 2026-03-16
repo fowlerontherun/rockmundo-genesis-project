@@ -12,7 +12,7 @@ export default function DonationSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const [processed, setProcessed] = useState(false);
   const [processing, setProcessing] = useState(true);
@@ -26,7 +26,7 @@ export default function DonationSuccess() {
         const { error: xpError } = await supabase
           .from("experience_ledger")
           .insert({
-            user_id: profileId,
+            user_id: userId,
             profile_id: profileId,
             activity_type: "project_donation",
             xp_amount: 1000,
@@ -39,14 +39,14 @@ export default function DonationSuccess() {
         const { data: profile } = await supabase
           .from("profiles")
           .select("experience")
-          .eq("user_id", profileId)
+          .eq("id", profileId)
           .single();
 
         if (profile) {
           await supabase
             .from("profiles")
             .update({ experience: (profile.experience || 0) + 1000 })
-            .eq("user_id", profileId);
+            .eq("id", profileId);
         }
 
         // Check if donation achievement exists, if not create it
@@ -81,13 +81,13 @@ export default function DonationSuccess() {
           const { data: existingPlayerAchievement } = await supabase
             .from("player_achievements")
             .select("id")
-            .eq("user_id", profileId)
+            .eq("profile_id", profileId)
             .eq("achievement_id", achievementId)
             .single();
 
           if (!existingPlayerAchievement) {
             await supabase.from("player_achievements").insert({
-              user_id: profileId,
+              user_id: userId,
               achievement_id: achievementId,
               progress: { donation: true },
               unlocked_at: new Date().toISOString(),
@@ -97,7 +97,7 @@ export default function DonationSuccess() {
 
         // Log activity
         await supabase.from("activity_feed").insert({
-          user_id: profileId,
+          user_id: userId,
           activity_type: "donation",
           message: "Made a generous donation to support Rockmundo! 💖",
           earnings: 0,

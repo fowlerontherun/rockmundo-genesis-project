@@ -66,7 +66,7 @@ export default function PerformanceBooking() {
           genre,
           band_song_familiarity!song_id(familiarity_minutes, band_id)
         `)
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .order("title");
       if (error) throw error;
       return data?.map(song => ({

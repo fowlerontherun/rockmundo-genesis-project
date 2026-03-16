@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function BandSearch() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,7 +72,7 @@ export default function BandSearch() {
       const { data, error } = await (supabase as any)
         .from("band_ratings")
         .select("band_id, rating")
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return (data as any[]).reduce((acc: Record<string, string>, r: any) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
     },
@@ -109,13 +109,13 @@ export default function BandSearch() {
           .from("band_ratings")
           .delete()
           .eq("band_id", bandId)
-          .eq("user_id", profileId);
+          .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await (supabase as any)
           .from("band_ratings")
           .upsert(
-            { band_id: bandId, user_id: profileId, rating },
+            { band_id: bandId, user_id: userId, rating },
             { onConflict: "band_id,user_id" }
           );
         if (error) throw error;

@@ -181,7 +181,7 @@ export function useClaimPrize() {
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
         .eq("id", ticketId)
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .single();
 
       if (fetchError) throw fetchError;

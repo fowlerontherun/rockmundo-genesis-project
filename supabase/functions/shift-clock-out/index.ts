@@ -32,7 +32,7 @@ async function calculateDynamicFameImpact(
   const { data: bandMember } = await supabaseClient
     .from('band_members')
     .select('band_id, role, bands(name, popularity, weekly_fans, fame)')
-    .eq('user_id', profileId)
+    .eq('profile_id', profileId)
     .eq('member_status', 'active')
     .limit(1)
     .single();

@@ -32,7 +32,7 @@ export const SongVoting = ({
   showCounts = true,
   compact = false,
 }: SongVotingProps) => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const queryClient = useQueryClient();
 
@@ -55,7 +55,7 @@ export const SongVoting = ({
           .from("song_votes")
           .select("vote_type")
           .eq("song_id", songId)
-          .eq("user_id", profileId)
+          .eq("user_id", userId)
           .maybeSingle();
 
         userVote = (userVoteData?.vote_type as "up" | "down") || null;
@@ -74,7 +74,7 @@ export const SongVoting = ({
         .from("song_votes")
         .select("id, vote_type")
         .eq("song_id", songId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {
@@ -99,7 +99,7 @@ export const SongVoting = ({
         // New vote
         const { error } = await supabase.from("song_votes").insert({
           song_id: songId,
-          user_id: profileId,
+          user_id: userId,
           vote_type: voteType,
         });
         if (error) throw error;

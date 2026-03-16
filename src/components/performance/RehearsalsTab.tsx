@@ -44,7 +44,7 @@ export function RehearsalsTab() {
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
         .select('bands!band_members_band_id_fkey(*)')
-        .eq('user_id', profileId)
+        .eq('profile_id', profileId)
         .order('joined_at', { ascending: false });
 
       if (memberError) throw memberError;

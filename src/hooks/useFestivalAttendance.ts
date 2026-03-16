@@ -14,7 +14,7 @@ export interface FestivalAttendance {
 }
 
 export const useFestivalAttendance = (festivalId: string | undefined) => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: attendance, isLoading } = useQuery<FestivalAttendance | null>({
@@ -25,7 +25,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .select("*")
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -65,7 +65,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .upsert({
           festival_id: festivalId,
-          user_id: profileId,
+          user_id: userId,
           current_stage_id: stageId,
           is_active: true,
           last_moved_at: new Date().toISOString(),
@@ -92,7 +92,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
           last_moved_at: new Date().toISOString(),
         })
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .select()
         .single();
       if (error) throw error;
@@ -112,7 +112,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .update({ is_active: false })
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {
