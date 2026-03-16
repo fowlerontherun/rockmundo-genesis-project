@@ -9,21 +9,23 @@ import { format } from "date-fns";
 
 export const BandGainsNews = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Get user's bands
+  // Get character's bands
   const { data: userBands } = useQuery({
-    queryKey: ["user-bands", user?.id],
+    queryKey: ["user-bands", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands(id, name)")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const bandIds = userBands?.map((b) => b.band_id) || [];

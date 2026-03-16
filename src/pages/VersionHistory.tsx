@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.058",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Dashboard career stats and financial summary use profile_id for band membership and earnings queries" },
+      { type: 'improvement', description: "Player gains news (XP/skill) queries by profile_id instead of user_id" },
+      { type: 'improvement', description: "Band gains news uses profile_id for band membership lookup" },
+      { type: 'improvement', description: "Festival browser profile cash and band slot queries use profile_id" },
+      { type: 'improvement', description: "Festival exclusive shop purchases and activity logs scoped to profile_id" },
+      { type: 'improvement', description: "Festival merch stand creation includes profile_id" },
+    ],
+  },
+  {
     version: "1.1.057",
     date: "2026-03-16",
     changes: [

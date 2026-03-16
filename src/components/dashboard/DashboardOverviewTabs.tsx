@@ -161,19 +161,19 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch financial summary
   const { data: financialSummary } = useQuery({
-    queryKey: ["dashboard-financial-summary", user?.id],
+    queryKey: ["dashboard-financial-summary", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const client: any = supabase;
       const { data: earnings } = await client
         .from("band_earnings")
         .select("amount, source")
-        .eq("earned_by_user_id", user.id)
+        .eq("profile_id", profileId)
         .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
       const weeklyEarnings = earnings?.reduce((acc: number, e: any) => acc + (e.amount || 0), 0) || 0;
       return { weeklyEarnings };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 60000
   });
 

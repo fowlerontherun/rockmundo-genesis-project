@@ -55,6 +55,7 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
         .from("player_merchandise")
         .insert({
           user_id: user.id,
+          profile_id: profileId,
           band_id: bandId,
           design_name: `${festivalTitle} - ${designName}`,
           item_type: itemType,
