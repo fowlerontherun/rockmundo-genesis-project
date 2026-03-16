@@ -13,7 +13,6 @@ export const useClothingMarketplace = (filters?: {
   genre?: string;
   search?: string;
 }) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
