@@ -43,7 +43,7 @@ export const CurrentLearningSection = () => {
           *,
           skill_books (title, skill_slug)
         `)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("status", "reading")
         .maybeSingle();
 
