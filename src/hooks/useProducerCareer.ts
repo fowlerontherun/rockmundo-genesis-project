@@ -152,15 +152,15 @@ export const useAvailablePlayerProducers = (cityId?: string, genre?: string) => 
 };
 
 export const useProducerSessionHistory = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-session-history', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['producer-session-history', profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const { data: profile } = await (supabase as any)
         .from('player_producer_profiles')
         .select('id')
-        .eq('user_id', user!.id)
+        .eq('user_id', profileId!)
         .maybeSingle();
 
       if (!profile) return [];
