@@ -205,7 +205,7 @@ export default function TattooParlour() {
   // Custom tattoo mutation
   const customMutation = useMutation({
     mutationFn: async (data: { description: string; bodySlot: BodySlot; quotedPrice: number; estimatedQuality: number }) => {
-      if (!customArtist || !currentParlour || !user) throw new Error('Missing data');
+      if (!customArtist || !currentParlour || !profileId) throw new Error('Missing data');
       if ((profile?.cash || 0) < data.quotedPrice) throw new Error('Insufficient funds');
 
       // Deduct cash
