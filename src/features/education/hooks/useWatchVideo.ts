@@ -77,7 +77,7 @@ export const useWatchVideo = () => {
         throw new Error("cooldown");
       }
       
-      if (!user) {
+      if (!profileId) {
         throw new Error("Not authenticated");
       }
       
@@ -85,7 +85,7 @@ export const useWatchVideo = () => {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, experience, user_id")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       
       if (profileError || !profile) {
