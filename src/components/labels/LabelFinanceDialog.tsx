@@ -41,7 +41,7 @@ interface Transaction {
 }
 
 export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: LabelFinanceDialogProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [depositAmount, setDepositAmount] = useState("");
