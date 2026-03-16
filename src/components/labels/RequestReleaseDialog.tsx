@@ -16,7 +16,7 @@ interface RequestReleaseDialogProps {
   terminationFeePct: number;
   contractValue: number;
   bandId: string | null;
-  userId: string;
+  profileId: string;
 }
 
 export function RequestReleaseDialog({
@@ -27,7 +27,7 @@ export function RequestReleaseDialog({
   terminationFeePct,
   contractValue,
   bandId,
-  userId,
+  profileId,
 }: RequestReleaseDialogProps) {
   const queryClient = useQueryClient();
 
