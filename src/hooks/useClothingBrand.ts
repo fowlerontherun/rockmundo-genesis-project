@@ -104,7 +104,7 @@ export const useClothingBrand = () => {
       stock_quantity: number;
       scores: ClothingScores;
     }) => {
-      if (!user || !brand) throw new Error("Brand required");
+      if (!profileId || !brand) throw new Error("Brand required");
       const { scores, ...rest } = input;
       const { data, error } = await supabase
         .from("player_clothing_items" as never)
