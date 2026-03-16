@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.088",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Batch 28 (final): Migrated MyGear, useWatchVideo to profileId" },
+      { type: 'improvement', description: "Remaining 11 hooks/pages confirmed as legitimately needing auth user.id" },
+    ],
+  },
+  {
     version: "1.1.087",
     date: "2026-03-16",
     changes: [
