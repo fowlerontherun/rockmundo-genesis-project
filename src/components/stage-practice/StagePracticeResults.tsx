@@ -75,20 +75,12 @@ export function StagePracticeResults({
   // Save session and award XP
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !xpResult || saved) return;
-
-      // Get profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (!profile) throw new Error('Profile not found');
+      if (!profileId || !xpResult || saved) return;
 
       // Save session
       await supabase.from('stage_practice_sessions').insert({
-        user_id: user.id,
-        profile_id: profile.id,
+        user_id: profileId,
+        profile_id: profileId,
         instrument_slug: instrumentSlug,
         song_id: songId.startsWith('default-') ? null : songId,
         song_title: songTitle,
