@@ -111,7 +111,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
             variant={hasReacted(type) ? "default" : "outline"}
             size="sm"
             onClick={() => addReactionMutation.mutate(type)}
-            disabled={!user || addReactionMutation.isPending}
+            disabled={!profileId || addReactionMutation.isPending}
             className="gap-1"
           >
             <Icon className={`h-4 w-4 ${hasReacted(type) ? "" : color}`} />
