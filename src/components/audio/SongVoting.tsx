@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Loader2, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import {
   Tooltip,
