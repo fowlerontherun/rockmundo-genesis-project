@@ -144,7 +144,7 @@ export function usePlayerSurvey() {
               attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
               attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
             })
-            .eq("user_id", profileId);
+            .eq("user_id", userId);
         }
       } catch (e) {
         console.warn("Attribute points award failed:", e);
