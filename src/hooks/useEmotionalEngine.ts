@@ -133,9 +133,7 @@ export const useApplyEmotion = () => {
 // ─── Fetch Emotional Event History ───────────────────────
 
 export const useEmotionalHistory = (limit = 20) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, "history", profileId, limit],
