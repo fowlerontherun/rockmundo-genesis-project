@@ -68,17 +68,17 @@ export default function BandSearch() {
 
   // Fetch user's ratings
   const { data: userRatings } = useQuery({
-    queryKey: ["user-band-ratings", profileId],
+    queryKey: ["user-band-ratings", user?.id],
     queryFn: async () => {
-      if (!profileId) return {};
-      const { data, error } = await supabase
+      if (!user) return {};
+      const { data, error } = await (supabase as any)
         .from("band_ratings")
         .select("band_id, rating")
-        .eq("profile_id", profileId);
+        .eq("user_id", user.id);
       if (error) throw error;
-      return data.reduce((acc, r) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
+      return (data as any[]).reduce((acc: Record<string, string>, r: any) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
     },
-    enabled: !!profileId,
+    enabled: !!user,
   });
 
   // Fetch rating counts for all bands
