@@ -27,7 +27,7 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
       const { data, error } = await supabase
         .from("songs")
         .select("*")
-        .eq("profile_id", userId)
+        .eq("user_id", userId)
         .in("status", ["draft", "recorded"])
         .order("created_at", { ascending: false });
 
