@@ -6,12 +6,12 @@ import type { Company, CreateCompanyInput, CompanyFinancialSummary } from "@/typ
 import { COMPANY_CREATION_COSTS } from "@/types/company";
 
 export const useCompanies = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["companies", user?.id],
+    queryKey: ["companies", profileId],
     queryFn: async (): Promise<Company[]> => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("companies")
@@ -20,7 +20,7 @@ export const useCompanies = () => {
           headquarters_city:cities!headquarters_city_id(id, name, country),
           parent_company:companies!parent_company_id(id, name)
         `)
-        .eq("owner_id", user.id)
+        .eq("owner_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) {
