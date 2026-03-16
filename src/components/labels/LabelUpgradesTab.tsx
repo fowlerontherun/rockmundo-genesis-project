@@ -75,7 +75,7 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
 ];
 
 export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
