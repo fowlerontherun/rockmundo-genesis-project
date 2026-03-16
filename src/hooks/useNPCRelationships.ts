@@ -51,8 +51,7 @@ export const useCreateNPCRelationship = () => {
 
 export const useUpdateNPCRelationship = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: ({
