@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export function usePrisonStatus() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -46,12 +44,12 @@ export function usePrisonStatus() {
       const { data, error } = await supabase
         .from("player_prison_events")
         .select("*, prison_events(*)")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId)
         .eq("status", "pending");
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profileId && !!imprisonment && !!user?.id,
+    enabled: !!profileId && !!imprisonment,
   });
 
   const { data: communityService } = useQuery({
@@ -61,13 +59,13 @@ export function usePrisonStatus() {
       const { data, error } = await supabase
         .from("community_service_assignments")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!profileId && !!user?.id,
+    enabled: !!profileId,
   });
 
   const payBailMutation = useMutation({
@@ -77,7 +75,7 @@ export function usePrisonStatus() {
       const response = await supabase.functions.invoke("pay-bail", {
         body: {
           imprisonment_id: imprisonment.id,
-          payer_user_id: payerUserId || user?.id,
+          payer_user_id: payerUserId || profileId,
         },
         headers: { Authorization: `Bearer ${session.data.session?.access_token}` },
       });

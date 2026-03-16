@@ -1,39 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
-export interface RandomEvent {
+interface RandomEvent {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  category: string;
   option_a_text: string;
-  option_a_effects: Record<string, number>;
-  option_a_outcome_text: string;
   option_b_text: string;
-  option_b_effects: Record<string, number>;
-  option_b_outcome_text: string;
+  success_chance_a: number;
+  success_chance_b: number;
+  success_result_a: string;
+  success_result_b: string;
+  failure_result_a: string;
+  failure_result_b: string;
+  image_url: string | null;
+  event_type: string | null;
 }
 
-export interface PlayerEvent {
+interface PlayerEvent {
   id: string;
-  user_id: string;
-  event_id: string;
+  profile_id: string;
+  random_event_id: string;
+  status: "pending_choice" | "completed";
+  chosen_option: "a" | "b" | null;
+  success: boolean | null;
+  result_text: string | null;
   triggered_at: string;
-  choice_made: "a" | "b" | null;
-  choice_made_at: string | null;
-  outcome_applied: boolean;
-  outcome_applied_at: string | null;
-  outcome_effects: Record<string, number> | null;
-  outcome_message: string | null;
-  status: "pending_choice" | "awaiting_outcome" | "completed" | "expired";
-  random_events?: RandomEvent;
+  random_events: RandomEvent;
 }
 
 export function usePlayerEvents() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery({
@@ -56,7 +54,6 @@ export function usePlayerEvents() {
 }
 
 export function usePendingEvent() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery({
@@ -83,34 +80,28 @@ export function usePendingEvent() {
 }
 
 export function useChooseEventOption() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ playerEventId, choice }: { playerEventId: string; choice: "a" | "b" }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Not authenticated");
+    mutationFn: async ({ eventId, option }: { eventId: string; option: "a" | "b" }) => {
+      const { data, error } = await (supabase as any).from("player_events").update({
+        status: "completed",
+        chosen_option: option,
+      }).eq("id", eventId);
 
-      const response = await supabase.functions.invoke("choose-event-option", {
-        body: { playerEventId, choice },
-      });
-
-      if (response.error) throw response.error;
-      return response.data;
+      if (error) throw error;
+      return data;
     },
-    onSuccess: (data) => {
-      toast({
-        title: "Choice Made!",
-        description: data.message || "Your outcome will be applied tomorrow.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["pending-event", profileId] });
-      queryClient.invalidateQueries({ queryKey: ["player-events", profileId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["player-events"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-event"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to make choice",
+        title: "Failed to choose event option",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -125,15 +116,14 @@ export function useRecentEventOutcomes() {
     queryFn: async () => {
       if (!profileId) return [];
 
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-
       const { data, error } = await (supabase as any)
         .from("player_events")
         .select(`*, random_events (*)`)
         .eq("profile_id", profileId)
         .eq("status", "completed")
-        .gte("outcome_applied_at", threeDaysAgo)
-        .order("outcome_applied_at", { ascending: false });
+        .not("result_text", "is", null)
+        .order("triggered_at", { ascending: false })
+        .limit(5);
 
       if (error) throw error;
       return data as PlayerEvent[];

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface CurrentEnrollment {
   id: string;
@@ -18,20 +18,12 @@ interface CurrentEnrollment {
 }
 
 export function useCurrentEnrollment() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["current_enrollment", user?.id],
+    queryKey: ["current_enrollment", profileId],
     queryFn: async () => {
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("player_university_enrollments")
@@ -49,7 +41,7 @@ export function useCurrentEnrollment() {
             name
           )
         `)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .in("status", ["enrolled", "in_progress"])
         .single();
 
@@ -60,7 +52,7 @@ export function useCurrentEnrollment() {
 
       return data as CurrentEnrollment | null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
     refetchInterval: 60000, // Refetch every minute to check time
   });
 }

@@ -1,84 +1,69 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 
 export interface MarketPrice {
+  id: string;
   country: string;
   price_multiplier: number;
-  trend: 'rising' | 'falling' | 'stable';
-  trend_strength: number;
-  last_updated_at: string;
+  updated_at: string;
 }
 
 export interface HousingType {
   id: string;
-  country: string;
   name: string;
-  description: string;
-  tier: number;
   base_price: number;
+  description: string | null;
   image_url: string | null;
-  style_tags: string[];
-  bedrooms: number;
-  is_active: boolean;
-  created_at: string;
+  prestige_level: number;
+  max_occupants: number;
 }
 
 export interface PlayerProperty {
   id: string;
-  user_id: string;
+  profile_id: string;
   housing_type_id: string;
   country: string;
-  purchased_at: string;
   purchase_price: number;
-  is_primary: boolean;
   daily_upkeep: number;
   is_rented_out: boolean;
   rental_income_daily: number;
-  created_at: string;
+  purchased_at: string;
   housing_types?: HousingType;
 }
 
 export interface RentalType {
   id: string;
   name: string;
-  description: string;
   base_weekly_cost: number;
-  tier: number;
-  created_at: string;
+  description: string | null;
+  prestige_level: number;
 }
 
 export interface PlayerRental {
   id: string;
-  user_id: string;
+  profile_id: string;
   rental_type_id: string;
   country: string;
   weekly_cost: number;
+  status: string;
   started_at: string;
   ended_at: string | null;
-  last_charged_at: string;
-  status: string;
-  created_at: string;
   rental_types?: RentalType;
 }
 
-export function useHousingTypes(country: string | null) {
+export function useHousingTypes() {
   return useQuery({
-    queryKey: ["housing-types", country],
+    queryKey: ["housing-types"],
     queryFn: async () => {
-      if (!country) return [];
       const { data, error } = await supabase
         .from("housing_types")
         .select("*")
-        .eq("country", country)
-        .eq("is_active", true)
-        .order("tier", { ascending: true });
+        .order("base_price", { ascending: true });
       if (error) throw error;
       return (data ?? []) as HousingType[];
     },
-    enabled: !!country,
   });
 }
 
@@ -89,7 +74,7 @@ export function useRentalTypes() {
       const { data, error } = await supabase
         .from("rental_types")
         .select("*")
-        .order("tier", { ascending: true });
+        .order("base_weekly_cost", { ascending: true });
       if (error) throw error;
       return (data ?? []) as RentalType[];
     },
@@ -97,12 +82,11 @@ export function useRentalTypes() {
 }
 
 export function usePlayerProperties() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   return useQuery({
     queryKey: ["player-properties", profileId],
     queryFn: async () => {
-      if (!user || !profileId) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_properties")
         .select("*, housing_types(*)")
@@ -111,17 +95,16 @@ export function usePlayerProperties() {
       if (error) throw error;
       return (data ?? []) as PlayerProperty[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
   });
 }
 
 export function usePlayerRental() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   return useQuery({
     queryKey: ["player-rental", profileId],
     queryFn: async () => {
-      if (!user || !profileId) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("player_rentals")
         .select("*, rental_types(*)")
@@ -131,19 +114,18 @@ export function usePlayerRental() {
       if (error) throw error;
       return data as PlayerRental | null;
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
   });
 }
 
 export function useBuyProperty() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ housingType, country, marketMultiplier = 1 }: { housingType: HousingType; country: string; marketMultiplier?: number }) => {
-      if (!user || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
 
@@ -170,7 +152,7 @@ export function useBuyProperty() {
       const { error: insertError } = await supabase
         .from("player_properties")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           housing_type_id: housingType.id,
           country,
           purchase_price: marketPrice,
@@ -190,7 +172,6 @@ export function useBuyProperty() {
 }
 
 export function useStartRental() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -205,7 +186,7 @@ export function useStartRental() {
       country: string;
       weeklyCost: number;
     }) => {
-      if (!user || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Check no active rental
       const { data: existing } = await supabase
@@ -234,7 +215,7 @@ export function useStartRental() {
 
       // Create rental
       const { error } = await supabase.from("player_rentals").insert({
-        user_id: user.id,
+        user_id: profileId,
         rental_type_id: rentalType.id,
         country,
         weekly_cost: weeklyCost,
@@ -253,14 +234,13 @@ export function useStartRental() {
 }
 
 export function useEndRental() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (rentalId: string) => {
-      if (!user || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("player_rentals")
         .update({ status: "ended", ended_at: new Date().toISOString() })
@@ -278,23 +258,20 @@ export function useEndRental() {
   });
 }
 
-// Helper to calculate rental cost scaled by country cost_of_living
-export function calculateWeeklyRent(baseWeeklyCost: number, costOfLiving: number): number {
-  return Math.round(baseWeeklyCost * (0.4 + (costOfLiving / 100) * 1.2));
+export function calculateWeeklyRent(baseWeeklyCost: number, marketMultiplier: number = 1): number {
+  return Math.round(baseWeeklyCost * marketMultiplier);
 }
 
-// Helper formulas
-export function calculateDailyUpkeep(basePrice: number): number {
-  return Math.round(basePrice * 0.001);
+export function calculateDailyUpkeep(purchasePrice: number): number {
+  return Math.round(purchasePrice * 0.001);
 }
 
 export function calculateSellPrice(purchasePrice: number, marketMultiplier: number = 1): number {
-  // Sell at 70% of current market value (purchase_price * market multiplier * 0.7)
-  return Math.round(purchasePrice * marketMultiplier * 0.7);
+  return Math.round(purchasePrice * 0.85 * marketMultiplier);
 }
 
-export function getMarketPrice(basePrice: number, multiplier: number): number {
-  return Math.round(basePrice * multiplier);
+export function getMarketPrice(basePrice: number, marketMultiplier: number = 1): number {
+  return Math.round(basePrice * marketMultiplier);
 }
 
 export function useMarketPrices() {
@@ -323,14 +300,13 @@ export function calculateRentalIncome(purchasePrice: number): number {
 }
 
 export function useSellProperty() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ property, marketMultiplier = 1 }: { property: PlayerProperty; marketMultiplier?: number }) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const sellPrice = calculateSellPrice(property.purchase_price, marketMultiplier);
 
       // Credit cash back
@@ -370,14 +346,13 @@ export function useSellProperty() {
 }
 
 export function useToggleRentOut() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (property: PlayerProperty) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const newRentedOut = !property.is_rented_out;
       const rentalIncome = newRentedOut ? calculateRentalIncome(property.purchase_price) : 0;
 
