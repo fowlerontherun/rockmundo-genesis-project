@@ -87,7 +87,7 @@ export function useMyTickets() {
 }
 
 export function useBuyTicket() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const queryClient = useQueryClient();
 
@@ -101,7 +101,7 @@ export function useBuyTicket() {
       selectedNumbers: number[];
       bonusNumber: number;
     }) => {
-      if (!user?.id || !profile?.id) throw new Error("Not authenticated");
+      if (!profileId || !profile?.id) throw new Error("Not authenticated");
       if ((profile as any).cash < TICKET_COST) throw new Error("Not enough cash");
       if (selectedNumbers.length !== 7) throw new Error("Select 7 numbers");
       if (bonusNumber < 1 || bonusNumber > 10) throw new Error("Invalid bonus number");
@@ -111,7 +111,7 @@ export function useBuyTicket() {
         .from("lottery_tickets")
         .select("*", { count: "exact", head: true })
         .eq("draw_id", drawId)
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
 
       if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
 
@@ -127,7 +127,7 @@ export function useBuyTicket() {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profile.id,
           draw_id: drawId,
           selected_numbers: selectedNumbers,
