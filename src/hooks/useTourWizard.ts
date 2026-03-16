@@ -520,7 +520,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         .from('tours')
         .insert({
           name: state.name,
-          user_id: user.id,
+          user_id: profileId,
           band_id: state.bandId,
           start_date: state.startDate,
           end_date: endDate,

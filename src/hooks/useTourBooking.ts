@@ -76,15 +76,13 @@ export function useTourBooking() {
     mutationFn: async (tourData: TourBookingData) => {
       const costs = await calculateTourCosts(tourData);
 
-      // Get current user for tour ownership
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Create the tour with correct column names
       const { data: tour, error: tourError } = await supabase
         .from('tours')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           band_id: tourData.artistId,
           name: tourData.name,
           start_date: tourData.startDate,

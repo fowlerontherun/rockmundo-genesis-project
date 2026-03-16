@@ -111,8 +111,7 @@ const { profileId } = useActiveProfile();
       songId: string;
       bandId?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Check if already submitted
       const { data: existing } = await supabase
@@ -120,7 +119,7 @@ const { profileId } = useActiveProfile();
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {
@@ -132,7 +131,7 @@ const { profileId } = useActiveProfile();
         .insert({
           station_id: stationId,
           song_id: songId,
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId || null,
           status: "pending",
         })
