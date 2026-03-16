@@ -159,7 +159,7 @@ export function BandSettingsTab({
   };
 
   const handleTransferLeadership = async () => {
-    if (!user || !newLeaderId) return;
+    if (!profileId || !newLeaderId) return;
 
     try {
       setLoading(true);
