@@ -54,7 +54,7 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
       if (error) throw error;
       return gigs || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredGigs = gigs.filter((g: any) =>

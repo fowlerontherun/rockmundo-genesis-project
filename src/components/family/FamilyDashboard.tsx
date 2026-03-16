@@ -20,7 +20,7 @@ import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { formatDistanceToNow } from "date-fns";
 
 export function FamilyDashboard() {
-  const { user } = useAuth();
+  // profileId derived from gameData below
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
   const profileName = gameData?.profile?.display_name ?? gameData?.profile?.username ?? "You";

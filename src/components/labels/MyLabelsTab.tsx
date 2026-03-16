@@ -66,8 +66,8 @@ export function MyLabelsTab() {
       
       // Filter to show labels where user is direct owner OR owns the parent company
       const filteredLabels = (data || []).filter((label: any) => {
-        const isDirectOwner = label.owner_id === profile.id;
-        const ownsParentCompany = label.companies?.owner_id === user!.id;
+        const isDirectOwner = label.owner_id === profileId;
+        const ownsParentCompany = label.companies?.owner_id === profileId;
         return isDirectOwner || ownsParentCompany;
       });
       

@@ -130,9 +130,9 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
       if (releaseError) throw releaseError;
 
       // Log the activity - use current user's ID for RLS compliance
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
           activity_type: "physical_format_reordered",
           message: `Reordered ${quantity} additional ${formatType.toUpperCase()} units for "${release.title}"`,
           metadata: {
