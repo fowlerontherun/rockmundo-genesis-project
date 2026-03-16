@@ -20,6 +20,7 @@ export interface TokenHolding {
 }
 
 export const useCryptoTokens = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all tokens
