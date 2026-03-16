@@ -32,7 +32,7 @@ export const SongVoting = ({
   showCounts = true,
   compact = false,
 }: SongVotingProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const queryClient = useQueryClient();
 
