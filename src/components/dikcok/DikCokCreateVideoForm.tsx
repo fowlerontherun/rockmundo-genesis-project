@@ -23,7 +23,7 @@ interface DikCokCreateVideoFormProps {
 
 export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs = [], onSuccess }: DikCokCreateVideoFormProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { videoTypes, isLoading: typesLoading } = useDikCokVideoTypes();
 
