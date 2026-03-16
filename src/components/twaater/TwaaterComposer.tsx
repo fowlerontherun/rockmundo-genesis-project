@@ -64,7 +64,7 @@ const formatBandHashtag = (bandName: string): string => {
 };
 
 export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [body, setBody] = useState("");
   const [linkedType, setLinkedType] = useState<"single" | "album" | "gig" | "tour" | "busking" | null>(null);
   const [linkedId, setLinkedId] = useState<string | null>(null);
