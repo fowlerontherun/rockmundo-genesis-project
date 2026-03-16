@@ -4,14 +4,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Music2 } from "lucide-react";
 
 interface ReleaseSelectorProps {
-  userId?: string;
+  profileId?: string;
   bandId?: string;
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
 }
 
-export function ReleaseSelector({ userId, bandId, value, onValueChange, placeholder = "Select a release" }: ReleaseSelectorProps) {
+export function ReleaseSelector({ profileId, bandId, value, onValueChange, placeholder = "Select a release" }: ReleaseSelectorProps) {
   const { data: releases, isLoading } = useQuery({
     queryKey: ["user-releases", userId, bandId],
     queryFn: async () => {
