@@ -19,7 +19,6 @@ interface EquipGearResult {
 }
 
 export const useEquipPlayerEquipment = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { addActivity } = useGameData();
   const queryClient = useQueryClient();
