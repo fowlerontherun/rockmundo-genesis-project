@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.102",
+    date: "2026-03-16",
+    changes: [
+      { type: 'feature', description: "Added search and skill filter to the university detail page — filter courses by name or skill when viewing a specific university" },
+    ],
+  },
+  {
     version: "1.1.101",
     date: "2026-03-16",
     changes: [
