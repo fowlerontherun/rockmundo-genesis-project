@@ -68,7 +68,7 @@ export const BooksTab = () => {
   };
 
   const handleStartReading = async () => {
-    if (!profileId || !selectedBook) return;
+    if (!profileId || !userId || !selectedBook) return;
     
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
@@ -76,7 +76,7 @@ export const BooksTab = () => {
     startReading({
       purchaseId: purchase.id,
       bookId: selectedBook.id,
-      userId: profileId,
+      userId: userId,
       profileId: profileId,
       readingDays: selectedBook.base_reading_days,
       autoRead,
