@@ -139,10 +139,7 @@ export function useMentorSessions() {
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
 
-      // Check discovery
-      if (!isMentorDiscovered(mentorId)) {
-        throw new Error("You haven't discovered this master yet");
-      }
+      // Discovery check removed — all mentors unlocked
 
       // Check if player is in the mentor's city
       if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
