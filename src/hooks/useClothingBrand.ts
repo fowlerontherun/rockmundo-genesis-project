@@ -43,7 +43,6 @@ export interface ClothingItem {
 }
 
 export const useClothingBrand = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
