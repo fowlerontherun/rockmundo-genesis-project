@@ -327,6 +327,14 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
+          {/* Pending Applications (Leader only) */}
+          {isLeader && selectedBand.status === 'active' && (
+            <BandApplicationsList 
+              bandId={selectedBand.id} 
+              onMemberAdded={() => loadBandMembers(selectedBand.id)} 
+            />
+          )}
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
