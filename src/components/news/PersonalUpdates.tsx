@@ -20,7 +20,7 @@ export function PersonalUpdates() {
       const { data: invites } = await supabase
         .from("band_invitations")
         .select("created_at, status, bands(name)")
-        .eq("invited_user_id", user.id)
+        .eq("invited_user_id", profileId)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(3);
