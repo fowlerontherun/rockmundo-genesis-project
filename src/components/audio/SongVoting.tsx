@@ -37,9 +37,8 @@ export const SongVoting = ({
   const queryClient = useQueryClient();
 
   const { data: voteCounts, isLoading } = useQuery<VoteCounts>({
-    queryKey: ["song-votes", songId, user?.id],
+    queryKey: ["song-votes", songId, profileId],
     queryFn: async () => {
-      // Get vote counts
       const { data: votes, error: votesError } = await supabase
         .from("song_votes")
         .select("vote_type")
@@ -50,14 +49,13 @@ export const SongVoting = ({
       const upvotes = votes?.filter((v) => v.vote_type === "up").length || 0;
       const downvotes = votes?.filter((v) => v.vote_type === "down").length || 0;
 
-      // Get user's vote if logged in
       let userVote: "up" | "down" | null = null;
-      if (user?.id) {
+      if (profileId) {
         const { data: userVoteData } = await supabase
           .from("song_votes")
           .select("vote_type")
           .eq("song_id", songId)
-          .eq("user_id", user.id)
+          .eq("user_id", profileId)
           .maybeSingle();
 
         userVote = (userVoteData?.vote_type as "up" | "down") || null;
