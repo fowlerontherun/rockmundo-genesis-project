@@ -27,7 +27,7 @@ export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
       const { data: bandMembers } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", userId);
       
       const bandIds = bandMembers?.map(b => b.band_id) || [];
 
