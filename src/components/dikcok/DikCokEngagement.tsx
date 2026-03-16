@@ -78,7 +78,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       toast({ title: "Comments coming soon!" });
     },
     onSuccess: () => {
