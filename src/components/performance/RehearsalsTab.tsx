@@ -23,7 +23,7 @@ type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'] & {
 type Band = Database['public']['Tables']['bands']['Row'];
 
 export function RehearsalsTab() {
-  const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
   const { toast } = useToast();
   const { bookRehearsal, isBooking } = useRehearsalBooking();
   const [loading, setLoading] = useState(true);
