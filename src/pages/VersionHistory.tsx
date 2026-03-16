@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.092",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Final audit of profile_id vs user_id usage across all files — confirmed all remaining 65 instances are correct (variable named userId but holds profileId)" },
+      { type: 'fix', description: "Identified unused dead hooks: useGameNotifications and useGigNotifications (not imported anywhere)" },
+    ],
+  },
+  {
     version: "1.1.091",
     date: "2026-03-16",
     changes: [
