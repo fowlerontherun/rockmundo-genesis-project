@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ContractNegotiationDialog } from "./ContractNegotiationDialog";
 import { useState } from "react";
 import { FileText, Building2, DollarSign, Percent, Clock, AlertCircle, CheckCircle } from "lucide-react";
