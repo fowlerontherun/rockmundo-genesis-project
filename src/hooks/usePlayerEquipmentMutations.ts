@@ -46,13 +46,13 @@ export const useEquipPlayerEquipment = () => {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("player_equipment_inventory")
         .update({ is_equipped: variables.equip })
         .eq("id", targetId)
         .eq("profile_id", profileId!)
         .select("id, is_equipped")
-        .single();
+        .single() as any);
 
       if (error) {
         throw error;
