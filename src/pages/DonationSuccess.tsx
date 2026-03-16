@@ -46,7 +46,7 @@ export default function DonationSuccess() {
           await supabase
             .from("profiles")
             .update({ experience: (profile.experience || 0) + 1000 })
-            .eq("user_id", profileId);
+            .eq("id", profileId);
         }
 
         // Check if donation achievement exists, if not create it
