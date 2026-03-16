@@ -126,7 +126,7 @@ export const useCreateCompany = () => {
       const { data, error } = await supabase
         .from("companies")
         .insert({
-          owner_id: user.id,
+          owner_id: profileId,
           name: input.name,
           company_type: input.company_type,
           description: input.description || null,
