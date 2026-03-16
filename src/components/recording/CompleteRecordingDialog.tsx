@@ -34,7 +34,7 @@ export const CompleteRecordingDialog = ({
   const [currentSongId, setCurrentSongId] = useState<string | null>(propSongId || null);
   const queryClient = useQueryClient();
   const { data: vipStatus } = useVipStatus();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: limits } = useSongGenerationLimits();
   const { isCompleted, hasAudio, cannotRegenerate } = useSongGenerationStatus(currentSongId);
 
