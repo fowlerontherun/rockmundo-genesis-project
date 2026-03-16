@@ -4,6 +4,7 @@ import Navigation from "@/components/ui/navigation";
 import HorizontalNavigation from "@/components/ui/HorizontalNavigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useNavStyle } from "@/hooks/useNavStyle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
