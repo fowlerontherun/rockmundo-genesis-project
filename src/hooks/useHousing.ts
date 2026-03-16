@@ -211,7 +211,7 @@ export function useStartRental() {
       const { data: existing } = await supabase
         .from("player_rentals")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (existing) throw new Error("You already have an active rental. End it first.");
