@@ -36,14 +36,14 @@ export const useUnderworldInventory = () => {
   const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ["underworld-inventory", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("underworld_purchases")
         .select(`
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("is_used", false)
         .order("created_at", { ascending: false });
 
