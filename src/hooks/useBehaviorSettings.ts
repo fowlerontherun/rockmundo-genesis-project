@@ -136,29 +136,28 @@ export const getRiskLevel = (score: number): { label: string; color: string; des
 };
 
 export function useBehaviorSettings() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading, error } = useQuery({
-    queryKey: ["behavior-settings", user?.id],
+    queryKey: ["behavior-settings", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_behavior_settings")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
         throw error;
       }
 
-      // If no settings exist, create default ones
       if (!data) {
-        const { data: newData, error: insertError } = await supabase
+        const { data: newData, error: insertError } = await (supabase as any)
           .from("player_behavior_settings")
-          .insert({ user_id: user.id, ...DEFAULT_SETTINGS })
+          .insert({ profile_id: profileId, ...DEFAULT_SETTINGS })
           .select()
           .single();
 
@@ -168,7 +167,7 @@ export function useBehaviorSettings() {
 
       return data as BehaviorSettings;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch unlocked advanced behaviors
