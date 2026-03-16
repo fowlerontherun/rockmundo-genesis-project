@@ -137,7 +137,7 @@ const CareerDashboardPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [profileId]);
 
   const topSkill = useMemo(() => getTopSkillLabel(overview), [overview]);
   const lastGigRelative = useMemo(
