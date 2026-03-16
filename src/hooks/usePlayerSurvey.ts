@@ -59,14 +59,14 @@ export function usePlayerSurvey() {
 
   // Check if player already completed current round
   const { data: hasCompleted, isSuccess: completionChecked } = useQuery({
-    queryKey: ["survey-completion", profileId, surveyConfig?.round],
-    enabled: !!profileId && !!surveyConfig?.enabled && !!surveyConfig?.round,
+    queryKey: ["survey-completion", userId, surveyConfig?.round],
+    enabled: !!userId && !!surveyConfig?.enabled && !!surveyConfig?.round,
     refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("player_survey_completions")
         .select("id")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .eq("survey_round", surveyConfig!.round)
         .maybeSingle();
       return !!data;
