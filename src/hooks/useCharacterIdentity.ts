@@ -1,7 +1,7 @@
 // Character Identity Hook - Manages player's RP identity (origin, traits, backstory)
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useOptionalGameData
 import { useOptionalGameData } from "@/hooks/useGameData";
 import {
   fetchCharacterOrigins,
