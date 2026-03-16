@@ -39,18 +39,18 @@ export default function PerformanceBooking() {
 
   // Fetch user's bands
   const { data: bands = [] } = useQuery({
-    queryKey: ["user-bands", user?.id],
+    queryKey: ["user-bands", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands(id, name, band_balance)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("member_status", "active");
       if (error) throw error;
       return data?.map(bm => bm.bands).filter(Boolean) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch songs for selected band
