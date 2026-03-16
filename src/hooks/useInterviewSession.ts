@@ -199,12 +199,12 @@ export const useInterviewSession = () => {
   };
 
   const finishInterview = useCallback(async () => {
-    if (!pending || !totalEffects || !user?.id || !bandId) return;
+    if (!pending || !totalEffects || !profileId || !bandId) return;
     setLoading(true);
 
     // Save results
     await (supabase as any).from("interview_results").insert({
-      user_id: user.id,
+      user_id: profileId,
       band_id: bandId,
       offer_id: pending.offerId,
       media_type: pending.mediaType,
