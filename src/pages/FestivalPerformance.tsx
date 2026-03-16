@@ -38,7 +38,7 @@ export default function FestivalPerformance() {
   const { participationId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const primaryBandQuery = usePrimaryBand();
   const primaryBand = primaryBandQuery.data?.bands;
 

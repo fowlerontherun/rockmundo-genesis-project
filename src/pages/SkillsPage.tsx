@@ -27,7 +27,7 @@ const SkillsPage = () => {
   
   // Get practice restrictions for current date
   const today = new Date();
-  const { data: restrictions } = useSkillPracticeRestrictions(user?.id, today);
+  const { data: restrictions } = useSkillPracticeRestrictions(profileId ?? undefined, today);
 
   // Fetch full attributes row
   useEffect(() => {

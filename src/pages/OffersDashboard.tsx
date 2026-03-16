@@ -73,11 +73,10 @@ const statusBadge = (status: string) => {
 };
 
 const OffersDashboard = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
 
-  const userId = user?.id;
+  const userId = profileId;
 
   // Fetch user's band id
   const { data: bandData } = useQuery({

@@ -104,9 +104,9 @@ export default function LabelManagement() {
   }
   
   // Get user profile ID for direct ownership check
-  const isDirectOwner = label.owner_id && user && label.owner_id === user.id; // Rough check, real check would need profile ID
+  const isDirectOwner = label.owner_id && profileId && label.owner_id === profileId;
   // Check company ownership
-  const isCompanyOwner = label.companies?.owner_id === user?.id;
+  const isCompanyOwner = label.companies?.owner_id === profileId;
   const isPlayerOwned = isDirectOwner || isCompanyOwner;
   
   return (

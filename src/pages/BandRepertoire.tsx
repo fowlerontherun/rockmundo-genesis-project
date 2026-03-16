@@ -32,7 +32,7 @@ interface RepertoireSong {
 }
 
 const BandRepertoire = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");

@@ -54,20 +54,18 @@ const Rehearsals = () => {
 
   // Fetch all user's bands using the same approach as RecordingStudio
   const { data: userBands = [], isLoading: isLoadingBands, error: bandsError } = useQuery({
-    queryKey: ["user-bands", user?.id],
+    queryKey: ["user-bands", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
-      console.log('[Rehearsals] Auth user ID:', user.id);
-      console.log('[Rehearsals] Profile user_id:', profile?.user_id);
-      console.log('[Rehearsals] Profile id:', profile?.id);
-      console.log('[Rehearsals] Fetching bands for user:', user.id);
+      console.log('[Rehearsals] Profile ID:', profileId);
+      console.log('[Rehearsals] Fetching bands for profile:', profileId);
       
       // Use explicit FK relationship to avoid ambiguity
       const { data, error } = await supabase
         .from("band_members")
         .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, chemistry_level, status)')
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq('is_touring_member', false);
       
       if (error) {
@@ -85,7 +83,7 @@ const Rehearsals = () => {
       console.log('[Rehearsals] Found bands:', bands.length, bands);
       return bands;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
   
   if (bandsError) {

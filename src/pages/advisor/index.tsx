@@ -137,13 +137,13 @@ const AdvisorPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void loadInsights();
     }
-  }, [user, loadInsights]);
+  }, [profileId, loadInsights]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

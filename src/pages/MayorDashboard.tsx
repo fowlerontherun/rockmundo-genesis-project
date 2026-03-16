@@ -42,7 +42,7 @@ import { MUSIC_GENRES } from "@/data/genres";
 
 export default function MayorDashboard() {
   const { cityId } = useParams<{ cityId: string }>();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: city } = useQuery({
     queryKey: ["city", cityId],

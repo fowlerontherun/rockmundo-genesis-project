@@ -155,7 +155,7 @@ const GigBooking = () => {
   }, [venues, selectedCountry, selectedVenueSize]);
 
   const resolveBand = useCallback(async (): Promise<BandRow | null> => {
-    if (!user?.id) {
+    if (!profileId) {
       return null;
     }
 
@@ -163,7 +163,7 @@ const GigBooking = () => {
     const { data: leaderBand, error: leaderError } = await supabase
       .from('bands')
       .select('*')
-      .eq('leader_id', user.id)
+      .eq('leader_id', profileId)
       .eq('status', 'active')
       .maybeSingle();
 
@@ -179,7 +179,7 @@ const GigBooking = () => {
     const { data: memberRecord, error: memberError } = await supabase
       .from('band_members')
       .select('band_id, bands:bands!band_members_band_id_fkey(*)')
-      .eq('user_id', user.id)
+      .eq('profile_id', profileId)
       .eq('bands.status', 'active')
       .maybeSingle();
 
@@ -192,7 +192,7 @@ const GigBooking = () => {
     }
 
     return null;
-  }, [user?.id]);
+  }, [profileId]);
 
   const loadUpcomingGigs = useCallback(async (bandId: string) => {
     const { data, error } = await supabase

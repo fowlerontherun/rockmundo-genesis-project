@@ -70,7 +70,7 @@ const SetlistManager = () => {
     setDeletingSetlistId(null);
   };
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="text-center py-12">Please log in to manage setlists.</div>
     );
