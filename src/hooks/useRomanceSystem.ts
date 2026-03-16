@@ -67,8 +67,7 @@ export const useRomanticRelationship = (romanceId: string | undefined) => {
 
 export const useStartRomance = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {
