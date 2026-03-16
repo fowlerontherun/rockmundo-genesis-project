@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — tokens are public data, no user filtering needed
 import { useToast } from "@/hooks/use-toast";
 
 export interface CryptoToken {
