@@ -33,21 +33,14 @@ interface MyLabel {
 }
 
 export function MyLabelsTab() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const navigate = useNavigate();
 
   const { data: myLabels = [], isLoading } = useQuery<MyLabel[]>({
-    queryKey: ["my-labels", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["my-labels", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
-      // First get user's profile ID
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       // Get labels where:
       // 1. owner_id = profile.id (directly owned)
