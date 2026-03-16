@@ -3,7 +3,7 @@ import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench } from "lucide-r
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 import { calculateRepairCost } from "@/utils/equipmentDegradation";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
