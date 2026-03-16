@@ -23,7 +23,7 @@ const Journal = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
-  const { data: entries, isLoading, refetch } = useJournalEntries(user?.id || null, {
+  const { data: entries, isLoading, refetch } = useJournalEntries(profileId || null, {
     type: filterType === "all" ? undefined : filterType,
     category: category === "all" ? undefined : category,
     search: searchQuery || undefined,
