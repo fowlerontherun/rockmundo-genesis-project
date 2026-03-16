@@ -40,7 +40,7 @@ export default function ReleaseDetail() {
         bandFame: (bandMember as any)?.bands?.fame || 0,
       };
     },
-    enabled: !!profileId && !!user,
+    enabled: !!profileId,
   });
 
   usePromoTourCompletion(userData?.userId);

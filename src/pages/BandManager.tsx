@@ -340,7 +340,7 @@ export default function BandManager() {
                     <InviteFriendToBand
                       bandId={selectedBand.id}
                       bandName={selectedBand.name}
-                      currentUserId={user!.id}
+                      currentUserId={profileId!}
                     />
                     <AddTouringMember 
                       bandId={selectedBand.id} 

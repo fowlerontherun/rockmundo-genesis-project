@@ -153,7 +153,7 @@ const TrainingPage = () => {
     setEnrollingCourseId(course.id);
     try {
       const enrollment = await upsertTrainingEnrollment({
-        profileId: user.id,
+        profileId: profileId!,
         course,
         progress: 0,
         status: "enrolled",

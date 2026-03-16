@@ -26,7 +26,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function BandRiders() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord, isLoading: bandLoading } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   const { riders, ridersLoading, deleteRider, setDefaultRider, createRider } = useBandRiders(band?.id || null);

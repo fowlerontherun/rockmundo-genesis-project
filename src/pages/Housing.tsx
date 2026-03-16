@@ -86,7 +86,7 @@ function useCitiesInCountry(country: string | null) {
 
 const Housing = () => {
   const { currentCity } = useGameData();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { isAdmin } = useUserRole();
 
   // Filter state — defaults to player's current location

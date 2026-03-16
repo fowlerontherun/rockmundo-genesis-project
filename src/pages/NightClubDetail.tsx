@@ -129,7 +129,7 @@ const NightClubDetail = () => {
           cash: Math.max(0, (profile.cash ?? 0) - drink.price),
           energy: Math.min(100, (profile.energy ?? 0) + 5),
         })
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       toast.success(`🍸 ${drink.name} — ${drink.effect || "+5 energy"}`);
     } catch (err: any) {
       toast.error(err.message);

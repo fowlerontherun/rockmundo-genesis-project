@@ -17,10 +17,10 @@ export default function VipSuccess() {
 
   useEffect(() => {
     // Invalidate VIP status to refresh
-    if (user?.id) {
-      queryClient.invalidateQueries({ queryKey: ["vip-status", user.id] });
+    if (profileId) {
+      queryClient.invalidateQueries({ queryKey: ["vip-status", profileId] });
     }
-  }, [user?.id, queryClient]);
+  }, [profileId, queryClient]);
 
   useEffect(() => {
     // Auto-redirect countdown

@@ -41,7 +41,7 @@ export default function WorkBooking() {
     const durationHours = parseInt(duration);
 
     const { error } = await (supabase as any).from("scheduled_activities").insert({
-      user_id: user.id,
+      user_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),

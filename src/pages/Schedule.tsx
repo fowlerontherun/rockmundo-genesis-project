@@ -112,7 +112,7 @@ const Schedule = () => {
           </TabsList>
           {weekDays.map(day => (
             <TabsContent key={day.toISOString()} value={format(day, 'yyyy-MM-dd')}>
-              <DaySchedule date={day} userId={user?.id} />
+              <DaySchedule date={day} userId={profileId ?? undefined} />
             </TabsContent>
           ))}
         </Tabs>

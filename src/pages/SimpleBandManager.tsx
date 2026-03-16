@@ -10,7 +10,7 @@ import { Users, Music2, TrendingUp, DollarSign, Settings, UserPlus } from "lucid
 import { Link } from "react-router-dom";
 
 const SimpleBandManager = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: bandData, isLoading } = usePrimaryBand();
   const band = bandData?.bands;
   
