@@ -29,7 +29,7 @@ export const useNPCRelationship = (npcType: string, npcId: string) => {
   return useQuery({
     queryKey: ["npc-relationship", profileId, npcType, npcId],
     queryFn: () => fetchNPCRelationship(profileId!, npcType, npcId),
-    enabled: !!user && !!profileId && !!npcType && !!npcId,
+    enabled: !!profileId && !!npcType && !!npcId,
     staleTime: 1000 * 60 * 5,
   });
 };
