@@ -26,7 +26,7 @@ export default function WorkBooking() {
   const [duration, setDuration] = useState<string>("8");
 
   const handleBookActivity = async () => {
-    if (!date || !activityType || !timeSlot || !user) {
+    if (!date || !activityType || !timeSlot || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, activity type, and time slot.",
