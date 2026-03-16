@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import type { InterviewQuestion, InterviewAnswer, InterviewPhase } from "@/data/interviewQuestions";
 
