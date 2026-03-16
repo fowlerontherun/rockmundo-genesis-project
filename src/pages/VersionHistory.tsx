@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.053",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Collaboration invites now fetch active profile (is_active/died_at filter) for pending invitations and cash checks" },
+      { type: 'improvement', description: "Upcoming gig warning uses profileId-based band membership lookup instead of user_id" },
+      { type: 'fix', description: "Company finance useUserCashBalance now queries active profile instead of any profile" },
+      { type: 'improvement', description: "Open mic nights profile lookup uses active profile filter" },
+      { type: 'improvement', description: "Producer career hooks use profileId for city lookups and profile operations" },
+      { type: 'improvement', description: "Mentor sessions hook uses useActiveProfile() instead of separate profile query" },
+      { type: 'fix', description: "Skin store owned skins and purchase hooks use active profile filter" },
+    ],
+  },
+  {
     version: "1.1.052",
     date: "2026-03-16",
     changes: [

@@ -151,6 +151,8 @@ export const useUserCashBalance = () => {
         .from("profiles")
         .select("id, cash")
         .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
         .single();
       
       if (error) throw error;

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface PlayerProducerProfile {
@@ -43,6 +44,7 @@ export const useProducerProfile = () => {
 export const useCreateProducerProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {
@@ -54,11 +56,11 @@ export const useCreateProducerProfile = () => {
       mixing_skill: number;
       arrangement_skill: number;
     }) => {
-      // Get player's current city
+      // Get player's current city from active profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user!.id)
+        .eq('id', profileId)
         .single();
 
       const { data, error } = await (supabase as any)
@@ -90,6 +92,7 @@ export const useCreateProducerProfile = () => {
 export const useUpdateProducerProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: Partial<{
@@ -106,7 +109,7 @@ export const useUpdateProducerProfile = () => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user!.id)
+        .eq('id', profileId)
         .single();
 
       const updateData: any = { ...input };
