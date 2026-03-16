@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { useUnderworld, type CryptoToken } from "@/hooks/useUnderworld";
 import { useCryptoTokens } from "@/hooks/useCryptoTokens";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import underworldVeil from "@/assets/underworld-veil.svg";
 import { UnderworldStoreTab } from "@/components/underworld/UnderworldStoreTab";

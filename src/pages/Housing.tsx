@@ -30,7 +30,7 @@ import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUserRole } from "@/hooks/useUserRole";
