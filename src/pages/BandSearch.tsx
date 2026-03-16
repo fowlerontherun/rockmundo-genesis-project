@@ -109,7 +109,7 @@ export default function BandSearch() {
           .from("band_ratings")
           .delete()
           .eq("band_id", bandId)
-          .eq("user_id", profileId);
+          .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await (supabase as any)
