@@ -191,7 +191,7 @@ export function AiAvatarCreator() {
   };
 
   const handleGenerate = async () => {
-    if (!uploadedPhoto || !user?.id) return;
+    if (!uploadedPhoto || !profileId) return;
 
     if (!canAfford) {
       toast.error(`You need $${cost} to regenerate your avatar`);
