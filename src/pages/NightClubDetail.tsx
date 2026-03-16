@@ -44,7 +44,7 @@ const getScoreColor = (score: number) => {
 const NightClubDetail = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [club, setClub] = useState<CityNightClub | null>(null);
   const [cityName, setCityName] = useState<string>("");
   const [loading, setLoading] = useState(true);
