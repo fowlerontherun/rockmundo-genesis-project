@@ -167,7 +167,7 @@ export const useUnderworldInventory = () => {
           // Roll for new addiction (30% chance from direct substance use)
           if (Math.random() < 0.30) {
             await supabase.from("player_addictions").insert({
-              user_id: user.id,
+              user_id: profileId,
               profile_id: profileId,
               addiction_type: addictionType,
               severity: 20,
