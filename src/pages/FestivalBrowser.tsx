@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useFestivals, Festival, FestivalParticipant } from "@/hooks/useFestivals";
 import { useFestivalHistory } from "@/hooks/useFestivalHistory";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useSetlists } from "@/hooks/useSetlists";
 import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
