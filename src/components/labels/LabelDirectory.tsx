@@ -142,20 +142,8 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
   // Get user's primary band for demo submission
   const primaryBand = artistEntities.find(e => e.type === 'band');
 
-  // Get user's profile ID
-  const { data: userProfile } = useQuery({
-    queryKey: ["user-profile-id", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Profile ID from useActiveProfile
+  const userProfile = profileId ? { id: profileId } : null;
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
