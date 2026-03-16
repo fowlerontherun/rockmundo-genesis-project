@@ -83,10 +83,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void fetchMessages();
     }
-  }, [user, fetchMessages]);
+  }, [profileId, fetchMessages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
