@@ -49,7 +49,7 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [targetCompanyId, setTargetCompanyId] = useState("");
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: companyData, isLoading: loadingCompany } = useCompanyBalance(companyId);
   const { data: profileData } = useUserCashBalance();
