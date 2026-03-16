@@ -143,7 +143,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         .from("radio_submissions")
         .select("station_id")
         .eq("song_id", selectedSong.id)
-        .eq("user_id", user.id);
+        .eq("profile_id", user.id);
       if (error) throw error;
       return data.map(s => s.station_id);
     },

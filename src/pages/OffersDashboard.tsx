@@ -119,13 +119,13 @@ const OffersDashboard = () => {
   });
 
   const { data: mediaOffers, isLoading: loadingMedia } = useQuery({
-    queryKey: ["offers-media", userId],
+    queryKey: ["offers-media", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       const { data } = await supabase
         .from("pr_media_offers")
         .select("id, status, compensation, fame_boost, created_at, show_name, outlet_name")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
       return (data || []).map((r: any) => ({
         id: r.id,
         source: "Media",
@@ -136,7 +136,7 @@ const OffersDashboard = () => {
         fameImpact: r.fame_boost || 0,
       }));
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: gigOffers, isLoading: loadingGigs } = useQuery({

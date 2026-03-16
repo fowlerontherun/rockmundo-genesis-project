@@ -110,20 +110,13 @@ const CareerDashboardPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+        const activeProfileId = profileId;
 
-        if (authError) {
-          throw authError;
+        if (!activeProfileId) {
+          throw new Error("No active character found.");
         }
 
-        if (!user) {
-          throw new Error("You need to be logged in to view your career dashboard.");
-        }
-
-        const data = await fetchCareerOverview(user.id);
+        const data = await fetchCareerOverview(activeProfileId);
         if (active) {
           setOverview(data);
         }

@@ -178,13 +178,6 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
       .select("skill_slug, current_level")
       .eq("profile_id", profileId);
 
-  let skillRows: { skill_slug: string; current_level: number }[] = [];
-  if (playerProfile?.id) {
-    const { data: progressData, error: skillsError } = await supabase
-      .from("skill_progress")
-      .select("skill_slug, current_level")
-      .eq("profile_id", playerProfile.id);
-
     if (skillsError) {
       throw skillsError;
     }

@@ -77,5 +77,5 @@ export const usePlaytimeTracker = (profileId: string | null) => {
       // Final update on unmount
       updatePlaytime();
     };
-  }, [userId]);
+  }, [profileId]);
 };

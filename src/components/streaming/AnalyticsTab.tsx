@@ -10,7 +10,7 @@ interface AnalyticsTabProps {
 
 export const AnalyticsTab = ({ profileId }: AnalyticsTabProps) => {
   const { data: releases } = useQuery({
-    queryKey: ["song-releases-analytics", userId],
+    queryKey: ["song-releases-analytics", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("song_releases")
@@ -22,7 +22,7 @@ export const AnalyticsTab = ({ profileId }: AnalyticsTabProps) => {
             quality_score
           )
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("is_active", true)
         .order("total_streams", { ascending: false });
 

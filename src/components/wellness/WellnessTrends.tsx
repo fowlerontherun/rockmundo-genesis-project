@@ -55,7 +55,7 @@ export function WellnessTrends() {
 
       return dailyData;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const totalXp = trends?.reduce((sum, d) => sum + d.total, 0) || 0;

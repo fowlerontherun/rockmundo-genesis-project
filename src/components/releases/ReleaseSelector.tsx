@@ -13,7 +13,7 @@ interface ReleaseSelectorProps {
 
 export function ReleaseSelector({ profileId, bandId, value, onValueChange, placeholder = "Select a release" }: ReleaseSelectorProps) {
   const { data: releases, isLoading } = useQuery({
-    queryKey: ["user-releases", userId, bandId],
+    queryKey: ["user-releases", profileId, bandId],
     queryFn: async () => {
       let query = supabase
         .from("releases")
@@ -23,15 +23,15 @@ export function ReleaseSelector({ profileId, bandId, value, onValueChange, place
 
       if (bandId) {
         query = query.eq("band_id", bandId);
-      } else if (userId) {
-        query = query.eq("user_id", userId);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!userId || !!bandId,
+    enabled: !!profileId || !!bandId,
   });
 
   if (isLoading) {

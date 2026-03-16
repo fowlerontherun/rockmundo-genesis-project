@@ -84,7 +84,7 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
         status: t.status,
       })) as TravelHistoryEntry[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const getTransportIcon = (type: string) => {

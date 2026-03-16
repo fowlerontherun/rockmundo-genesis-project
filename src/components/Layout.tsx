@@ -42,7 +42,7 @@ const Layout = () => {
   useGlobalGigExecution(user?.id || null);
 
   // Track total hours played
-  usePlaytimeTracker(user?.id || null);
+  usePlaytimeTracker(profileId || null);
 
   // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);

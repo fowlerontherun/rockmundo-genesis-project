@@ -63,10 +63,10 @@ export function RequestReleaseDialog({
           earned_by_user_id: userId,
         });
       } else {
-        const { data: profile } = await supabase.from("profiles").select("cash").eq("user_id", userId).single();
+        const { data: profile } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
         if (!profile || (profile.cash || 0) < terminationFee) throw new Error("Insufficient funds for termination fee");
         
-        await supabase.from("profiles").update({ cash: (profile.cash || 0) - terminationFee }).eq("user_id", userId);
+        await supabase.from("profiles").update({ cash: (profile.cash || 0) - terminationFee }).eq("id", profileId);
       }
 
       // Get contract's label_id to credit the label

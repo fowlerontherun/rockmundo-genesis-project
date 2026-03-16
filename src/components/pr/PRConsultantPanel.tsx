@@ -121,7 +121,7 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", userId] });
+      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", profileId] });
       toast.success("Auto-accept disabled");
     },
     onError: (error: Error) => {

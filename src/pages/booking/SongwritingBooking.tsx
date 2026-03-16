@@ -78,7 +78,8 @@ export default function SongwritingBooking() {
     const project = projects.find(p => p.id === selectedProjectId);
 
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: user.id,
+      user_id: user!.id,
+      profile_id: profileId,
       activity_type: "songwriting",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),

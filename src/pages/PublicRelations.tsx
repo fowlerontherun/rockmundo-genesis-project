@@ -259,7 +259,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="consultant" className="mt-4">
-            <PRConsultantPanel userId={user.id} bandId={userBand.id} />
+            <PRConsultantPanel profileId={profileId || ""} bandId={userBand.id} />
           </TabsContent>
         </Tabs>
       </div>
