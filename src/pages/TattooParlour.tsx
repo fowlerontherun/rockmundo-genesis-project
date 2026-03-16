@@ -278,10 +278,10 @@ export default function TattooParlour() {
       const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + artistBonus);
       const isInfected = rollForInfection(currentParlour.infection_risk);
 
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('user_id', user.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('id', profileId!);
 
-      const { error } = await supabase.from('player_tattoos').insert({
-        user_id: user.id,
+      const { error } = await (supabase as any).from('player_tattoos').insert({
+        profile_id: profileId,
         tattoo_design_id: null,
         parlour_id: currentParlour.id,
         artist_id: selectedArtist?.id || null,
