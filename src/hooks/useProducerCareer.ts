@@ -120,7 +120,7 @@ export const useUpdateProducerProfile = () => {
       const { error } = await (supabase as any)
         .from('player_producer_profiles')
         .update(updateData)
-        .eq('user_id', profileId!);
+        .eq('user_id', userId!);
       if (error) throw error;
     },
     onSuccess: () => {

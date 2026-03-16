@@ -59,7 +59,7 @@ export function usePrisonStatus() {
       const { data, error } = await supabase
         .from("community_service_assignments")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;

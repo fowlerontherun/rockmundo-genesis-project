@@ -154,7 +154,7 @@ export function usePlayerSurvey() {
       const { error: compError } = await supabase
         .from("player_survey_completions")
         .insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           survey_round: round,
           xp_awarded: 250,
