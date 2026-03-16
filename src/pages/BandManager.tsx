@@ -46,10 +46,10 @@ export default function BandManager() {
   useAutoGigExecution(selectedBandId);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       loadUserBands();
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
     if (selectedBandId) {
