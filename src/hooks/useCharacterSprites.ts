@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface CharacterSprite {
@@ -66,7 +66,7 @@ export const SKIN_TONES = [
 ];
 
 export const useCharacterSprites = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all available sprites grouped by category (aligned-only)
@@ -76,7 +76,7 @@ export const useCharacterSprites = () => {
       const { data, error } = await supabase
         .from('character_sprite_assets')
         .select('*')
-        .ilike('subcategory', 'aligned%')  // Only aligned template assets
+        .ilike('subcategory', 'aligned%')
         .order('category')
         .order('name');
       
@@ -85,25 +85,10 @@ export const useCharacterSprites = () => {
     },
   });
 
-  // Fetch player's current sprite config
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
   const { data: config, isLoading: configLoading } = useQuery({
-    queryKey: ['character-config', profile?.id],
+    queryKey: ['character-config', profileId],
     queryFn: async () => {
-      if (!profile?.id) return null;
+      if (!profileId) return null;
       
       const { data, error } = await supabase
         .from('player_avatar_config')
@@ -123,14 +108,14 @@ export const useCharacterSprites = () => {
           selected_skin_tone,
           rendered_avatar_url
         `)
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .maybeSingle();
       
       if (error) throw error;
       
       return data as CharacterConfig | null;
     },
-    enabled: !!profile?.id,
+    enabled: !!profileId,
   });
 
   // Get sprites by category
@@ -160,13 +145,13 @@ export const useCharacterSprites = () => {
   // Save character config
   const saveConfigMutation = useMutation({
     mutationFn: async (newConfig: Partial<CharacterConfig>) => {
-      if (!profile?.id) throw new Error('Not authenticated');
+      if (!profileId) throw new Error('No active profile');
 
       // Check if config exists
       const { data: existing } = await supabase
         .from('player_avatar_config')
         .select('id')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .maybeSingle();
 
       if (existing) {
@@ -174,17 +159,16 @@ export const useCharacterSprites = () => {
           .from('player_avatar_config')
           .update({
             ...newConfig,
-            // Invalidate render cache when config changes
             rendered_avatar_url: null,
             render_hash: null,
           })
-          .eq('profile_id', profile.id);
+          .eq('profile_id', profileId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('player_avatar_config')
           .insert({
-            profile_id: profile.id,
+            profile_id: profileId,
             ...newConfig,
           });
         if (error) throw error;

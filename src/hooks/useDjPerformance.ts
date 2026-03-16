@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBehaviorSettings } from "@/hooks/useBehaviorSettings";
 import { toast } from "sonner";
 import {
@@ -26,19 +27,21 @@ const DJ_ENERGY_COST = 25;
 
 export function useDjPerformance() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { settings } = useBehaviorSettings();
   const queryClient = useQueryClient();
 
   const performDjSet = useMutation({
     mutationFn: async (club: CityNightClub): Promise<DjPerformanceOutcome> => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
       if (!settings) throw new Error("Behavior settings not loaded");
 
       // 1. Get player profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, energy, cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (!profile) throw new Error("Profile not found");
@@ -65,7 +68,7 @@ export function useDjPerformance() {
       const { data: skillProgress } = await supabase
         .from("skill_progress")
         .select("*")
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .like("skill_slug", "dj_%");
 
       // 3. Calculate performance
@@ -132,7 +135,7 @@ export function useDjPerformance() {
           cash: (profile.cash ?? 0) + djOutcome.cashEarned,
           fame: fame + djOutcome.fameGained,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       // 6. Award XP to DJ skills (spread across core skills)
       const djCoreSlugs = [
@@ -156,7 +159,7 @@ export function useDjPerformance() {
             .eq("id", existing.id);
         } else {
           await supabase.from("skill_progress").insert({
-            profile_id: profile.id,
+            profile_id: profileId,
             skill_slug: slug,
             current_level: 0,
             current_xp: xpPerSkill,
@@ -169,7 +172,7 @@ export function useDjPerformance() {
       // 7. Record performance
       await supabase.from("player_dj_performances").insert({
         user_id: user.id,
-        profile_id: profile.id,
+        profile_id: profileId,
         club_id: club.id,
         performance_score: djOutcome.performanceScore,
         cash_earned: djOutcome.cashEarned,
@@ -190,6 +193,7 @@ export function useDjPerformance() {
     },
     onSuccess: (outcome) => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["addictions"] });
       queryClient.invalidateQueries({ queryKey: ["dj-performances"] });
       queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
@@ -207,19 +211,19 @@ export function useDjPerformance() {
   // Recent performances at a specific club
   const useClubPerformances = (clubId: string | undefined) =>
     useQuery({
-      queryKey: ["dj-performances", clubId],
+      queryKey: ["dj-performances", profileId, clubId],
       queryFn: async () => {
-        if (!user?.id || !clubId) return [];
+        if (!profileId || !clubId) return [];
         const { data } = await supabase
           .from("player_dj_performances")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("club_id", clubId)
           .order("created_at", { ascending: false })
           .limit(5);
         return data ?? [];
       },
-      enabled: !!user?.id && !!clubId,
+      enabled: !!profileId && !!clubId,
     });
 
   return {

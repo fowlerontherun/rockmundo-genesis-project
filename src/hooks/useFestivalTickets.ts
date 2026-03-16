@@ -21,7 +21,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
   const { profileId } = useActiveProfile();
 
   const { data: tickets = [], isLoading } = useQuery<FestivalTicket[]>({
-    queryKey: ["festival-tickets", festivalId, user?.id],
+    queryKey: ["festival-tickets", festivalId, profileId],
     queryFn: async () => {
       if (!festivalId || !user?.id) return [];
       const { data, error } = await (supabase as any)
@@ -56,6 +56,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       festivalEnd: string;
     }) => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Deduct cash from active profile
       const { data: profile } = await supabase
@@ -108,6 +109,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["festival-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       toast.success("Ticket purchased! Your schedule has been blocked.");
     },
     onError: (error: Error) => toast.error(error.message),
