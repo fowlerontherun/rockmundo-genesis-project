@@ -35,7 +35,7 @@ export function BandSettingsTab({
   genreLastChangedAt,
   onBandUpdate 
 }: BandSettingsTabProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
