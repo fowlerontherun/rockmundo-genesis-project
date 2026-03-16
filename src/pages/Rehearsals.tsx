@@ -43,7 +43,7 @@ interface Rehearsal {
 
 const Rehearsals = () => {
   const { profile } = useGameData();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
