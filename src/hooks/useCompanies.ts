@@ -233,12 +233,12 @@ export const useUpdateCompany = () => {
 };
 
 export const useCompanyFinancialSummary = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["company-financial-summary", user?.id],
+    queryKey: ["company-financial-summary", profileId],
     queryFn: async (): Promise<CompanyFinancialSummary> => {
-      if (!user?.id) {
+      if (!profileId) {
         return {
           total_balance: 0,
           monthly_income: 0,
