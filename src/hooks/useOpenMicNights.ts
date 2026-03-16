@@ -166,7 +166,7 @@ export function useOpenMicSongPerformances(performanceId: string | null) {
 }
 
 export function useSignUpForOpenMic() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
