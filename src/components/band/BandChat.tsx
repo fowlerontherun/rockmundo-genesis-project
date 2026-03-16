@@ -122,7 +122,7 @@ export function BandChat({ bandId }: BandChatProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !user) return;
+    if (!newMessage.trim() || !profileId) return;
 
     setSending(true);
     try {
@@ -130,7 +130,7 @@ export function BandChat({ bandId }: BandChatProps) {
         .from('band_chat_messages')
         .insert({
           band_id: bandId,
-          user_id: user.id,
+          user_id: profileId,
           message: newMessage.trim(),
         });
 
