@@ -156,6 +156,7 @@ serve(async (req) => {
         id,
         band_id,
         user_id,
+        created_at,
         release_type,
         hype_score,
         manufacturing_complete_at,
