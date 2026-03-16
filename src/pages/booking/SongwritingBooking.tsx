@@ -32,9 +32,9 @@ export default function SongwritingBooking() {
 
   // Fetch user's open songwriting projects
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["songwriting-projects", user?.id],
+    queryKey: ["songwriting-projects", profileId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from("songwriting_projects")
@@ -49,14 +49,14 @@ export default function SongwritingBooking() {
           created_at,
           updated_at
         `)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "in_progress")
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const handleBookSession = async () => {
