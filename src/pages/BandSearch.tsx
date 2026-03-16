@@ -18,7 +18,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function BandSearch() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
