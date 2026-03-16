@@ -28,16 +28,18 @@ export const useJamSessionBooking = () => {
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
 
-  // Fetch user profile with current city
+  // Fetch active profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile-jam", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash, current_city_id, user_id")
         .eq("user_id", user.id)
-        .single();
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
