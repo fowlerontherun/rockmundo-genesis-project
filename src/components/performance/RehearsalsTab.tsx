@@ -95,13 +95,8 @@ export function RehearsalsTab() {
         setCities(citiesData || []);
 
         // Get user's current city
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('current_city_id')
-          .eq('user_id', user.id)
-          .single();
-
-        setCurrentCityId(profileData?.current_city_id || null);
+        // Get current city from active profile
+        setCurrentCityId(activeProfile?.current_city_id || null);
 
         // Load band songs from setlists and member songs
         const { data: setlistSongs, error: setlistSongsError } = await supabase
