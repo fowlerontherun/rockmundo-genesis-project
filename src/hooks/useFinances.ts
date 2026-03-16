@@ -164,7 +164,6 @@ const INVESTMENT_OPTIONS: InvestmentOption[] = [
 ];
 
 export const useFinances = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   // Fetch player's cash from profiles

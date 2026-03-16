@@ -53,14 +53,13 @@ export const useTraitsByCategory = () => {
 };
 
 export const usePlayerCharacterIdentity = () => {
-  const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["player-character-identity", profileId],
     queryFn: () => fetchPlayerCharacterIdentity(profileId!),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 };

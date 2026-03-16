@@ -95,7 +95,7 @@ export function useAddictions() {
 
   const therapySessionMutation = useMutation({
     mutationFn: async (addictionId: string) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const addiction = addictions?.find(a => a.id === addictionId);
       if (!addiction) throw new Error("Addiction not found");

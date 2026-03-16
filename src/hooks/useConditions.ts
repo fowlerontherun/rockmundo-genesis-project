@@ -113,7 +113,7 @@ export function useConditions() {
 
   const checkRecoveryMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) return;
+      if (!profileId) return;
       const now = new Date().toISOString();
       const treatingConditions = conditions.filter(
         (c) => c.status === "treating" && c.estimated_recovery_at && c.estimated_recovery_at <= now
