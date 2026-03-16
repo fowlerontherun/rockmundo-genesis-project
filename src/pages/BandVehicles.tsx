@@ -99,7 +99,7 @@ export default function BandVehicles() {
       
       return bandData || null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch vehicle catalog
