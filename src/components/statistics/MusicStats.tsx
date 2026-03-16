@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Music, Disc, Mic2, Radio, TrendingUp, Play } from "lucide-react";
 
 export function MusicStats() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({

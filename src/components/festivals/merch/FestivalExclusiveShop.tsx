@@ -45,7 +45,7 @@ export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: F
 
       // Log as activity
       await (supabase as any).from("activity_feed").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         activity_type: "festival_purchase",
         message: `Bought ${item.name} at ${festivalTitle}`,

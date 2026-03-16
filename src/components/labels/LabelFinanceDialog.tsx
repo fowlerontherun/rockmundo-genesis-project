@@ -221,7 +221,7 @@ export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: L
       toast({ title: "Withdrawal successful", description: `$${amount.toLocaleString()} withdrawn to personal account` });
       setWithdrawAmount("");
       queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["user-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
       queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
       queryClient.invalidateQueries({ queryKey: ["my-labels"] });
     } catch (error) {

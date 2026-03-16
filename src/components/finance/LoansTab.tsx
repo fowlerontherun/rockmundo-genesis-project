@@ -97,7 +97,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   };
 
   const handlePayment = async (loan: PlayerLoan, amount: number) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     if (amount > cash) {
       toast.error("Insufficient funds");
       return;

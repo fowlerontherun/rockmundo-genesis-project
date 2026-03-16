@@ -88,7 +88,7 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
     queryClient.invalidateQueries({ queryKey: ["label-management", labelId] });
-    queryClient.invalidateQueries({ queryKey: ["user-balance", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
     queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
     queryClient.invalidateQueries({ queryKey: ["my-labels"] });
   };

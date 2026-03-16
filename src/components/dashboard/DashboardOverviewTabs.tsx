@@ -140,9 +140,9 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch upcoming events
   const { data: upcomingEvents } = useQuery({
-    queryKey: ["dashboard-upcoming-events", user?.id],
+    queryKey: ["dashboard-upcoming-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const now = new Date().toISOString();
       const client: any = supabase;
       const { data } = await client
@@ -154,7 +154,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
         .limit(3);
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 30000
   });
 

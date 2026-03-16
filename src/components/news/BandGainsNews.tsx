@@ -7,7 +7,6 @@ import { Music, Users, Flame, Star, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 export const BandGainsNews = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 

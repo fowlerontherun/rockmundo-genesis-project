@@ -213,7 +213,7 @@ export function AiAvatarCreator() {
         body: {
           photoBase64: uploadedPhoto,
           genre: activeGenre,
-          userId: user.id,
+          userId: profileId,
         },
       });
 
