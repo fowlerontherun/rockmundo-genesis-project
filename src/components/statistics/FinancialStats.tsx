@@ -21,7 +21,7 @@ export function FinancialStats() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Get earnings by source
