@@ -77,7 +77,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: cash - amount })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 
