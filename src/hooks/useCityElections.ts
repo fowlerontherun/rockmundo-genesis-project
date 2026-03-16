@@ -7,7 +7,7 @@ import type {
   CandidateStatus,
   ProposedPolicies 
 } from "@/types/city-governance";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 

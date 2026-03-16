@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.074",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useVipStatus VIP subscription lookup uses profileId" },
+      { type: 'improvement', description: "useCityElections voting/registration uses profileId" },
+      { type: 'improvement', description: "useRetirementCheck removed useAuth dependency" },
+      { type: 'improvement', description: "useTravelStatus travel queries and cancellation use profileId" },
+      { type: 'improvement', description: "useFestivalTickets ticket purchase and queries use profileId" },
+      { type: 'improvement', description: "useHospitalization check-in/discharge use profileId" },
+    ],
+  },
+  {
     version: "1.1.073",
     date: "2026-03-16",
     changes: [
