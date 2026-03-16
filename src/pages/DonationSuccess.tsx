@@ -81,7 +81,7 @@ export default function DonationSuccess() {
           const { data: existingPlayerAchievement } = await supabase
             .from("player_achievements")
             .select("id")
-            .eq("user_id", profileId)
+            .eq("profile_id", profileId)
             .eq("achievement_id", achievementId)
             .single();
 
