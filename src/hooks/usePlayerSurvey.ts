@@ -21,7 +21,6 @@ export interface SurveyConfig {
 }
 
 export function usePlayerSurvey() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
