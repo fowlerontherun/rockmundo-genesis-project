@@ -33,6 +33,8 @@ export function useActiveProfile() {
   return {
     profile,
     profileId: profile?.id ?? null,
+    /** The auth-level user ID — use for tables where user_id stores auth.users.id */
+    userId: user?.id ?? null,
     isLoading,
   };
 }
