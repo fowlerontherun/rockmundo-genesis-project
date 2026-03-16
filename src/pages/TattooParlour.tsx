@@ -211,7 +211,7 @@ export default function TattooParlour() {
       if ((profile?.cash || 0) < data.quotedPrice) throw new Error('Insufficient funds');
 
       // Deduct cash
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq('user_id', user.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq('id', profileId!);
 
       // Calculate quality with custom boost
       const baseQuality = calculateTattooQuality(currentParlour.quality_tier);
