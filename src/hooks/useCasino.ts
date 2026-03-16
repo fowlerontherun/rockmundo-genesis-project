@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import type { CasinoGameType } from "@/lib/casino/types";
 
 export function useCasino() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
