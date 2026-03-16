@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface RadioStation {
@@ -40,6 +41,7 @@ export interface RadioSubmission {
 }
 
 export const useRadioStations = () => {
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all stations with city info
@@ -58,10 +60,9 @@ export const useRadioStations = () => {
 
   // Fetch my submissions
   const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
-    queryKey: ["my-radio-submissions"],
+    queryKey: ["my-radio-submissions", profileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select(`
@@ -69,12 +70,13 @@ export const useRadioStations = () => {
           station:radio_stations!inner(id, name, station_type, quality_level),
           song:songs!inner(id, title, genre)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
     },
+    enabled: !!profileId,
   });
 
   // Fetch submissions for specific station
@@ -110,8 +112,7 @@ export const useRadioStations = () => {
       songId: string;
       bandId?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Check if already submitted
       const { data: existing } = await supabase
@@ -119,7 +120,7 @@ export const useRadioStations = () => {
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {
@@ -131,7 +132,7 @@ export const useRadioStations = () => {
         .insert({
           station_id: stationId,
           song_id: songId,
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId || null,
           status: "pending",
         })

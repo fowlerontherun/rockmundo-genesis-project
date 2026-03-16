@@ -20,7 +20,7 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
       const { data } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('user_id', userId);
+        .eq('profile_id', userId);
       return data?.map(b => b.band_id) || [];
     }
   });
@@ -382,7 +382,7 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
       </Card>
 
       {/* Platform Comparison */}
-      <PlatformComparisonChart userId={userId} />
+      <PlatformComparisonChart userId={userId} /> {/* userId here is actually profileId passed from parent */}
     </div>
   );
 }

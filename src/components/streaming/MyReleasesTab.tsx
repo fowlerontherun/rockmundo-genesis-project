@@ -19,7 +19,7 @@ export const MyReleasesTab = ({ userId }: MyReleasesTabProps) => {
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", userId);
       return data?.map(b => b.band_id) || [];
     }
   });
@@ -44,7 +44,7 @@ export const MyReleasesTab = ({ userId }: MyReleasesTabProps) => {
 
       // Build OR condition for user releases or band releases
       if (userBandIds && userBandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`);
+        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`) as any;
       } else {
         query = query.eq("user_id", userId);
       }

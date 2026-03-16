@@ -1,22 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, MessageCircle, Heart, Video, Share2, TrendingUp } from "lucide-react";
 
 export function SocialStats() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({
-    queryKey: ["social-stats", user?.id],
+    queryKey: ["social-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       // Get Twaater account
       const { data: account } = await supabase
         .from("twaater_accounts")
         .select("id, follower_count, following_count, engagement_score")
-        .eq("owner_id", user.id)
+        .eq("owner_id", profileId)
         .eq("owner_type", "persona")
         .single();
 
@@ -56,7 +58,7 @@ export function SocialStats() {
         videoCount: videos?.length || 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading social stats...</div>;

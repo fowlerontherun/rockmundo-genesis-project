@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { 
   TourWizardState, 
   DEFAULT_WIZARD_STATE,
@@ -49,6 +50,7 @@ const WIZARD_STEPS = [
 export function useTourWizard(options: UseTourWizardOptions = {}) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   
   const [state, setState] = useState<TourWizardState>({
@@ -74,20 +76,20 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     enabled: !!options.bandId,
   });
 
-  // Fetch player's current city
+  // Fetch player's current city (using profileId)
   const { data: playerProfile } = useQuery({
-    queryKey: ['player-profile-for-tour', user?.id],
+    queryKey: ['player-profile-for-tour', profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch available countries based on scope
@@ -501,7 +503,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   // Book tour mutation
   const bookTourMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !state.bandId) throw new Error('Missing user or band');
+      if (!profileId || !state.bandId) throw new Error('Missing profile or band');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
@@ -518,7 +520,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         .from('tours')
         .insert({
           name: state.name,
-          user_id: user.id,
+          user_id: profileId,
           band_id: state.bandId,
           start_date: state.startDate,
           end_date: endDate,

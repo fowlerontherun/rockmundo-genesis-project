@@ -17,11 +17,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EnhancedPlatformCard } from "@/components/streaming/EnhancedPlatformCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const StreamingPlatforms = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile } = useGameData();
+  const { profileId } = useActiveProfile();
   const userId = profile?.user_id;
 
   // Fetch platforms
@@ -37,18 +39,18 @@ const StreamingPlatforms = () => {
     },
   });
 
-  // Fetch user's band IDs first
+  // Fetch user's band IDs first (using profileId for character isolation)
   const { data: userBandIds = [] } = useQuery({
-    queryKey: ["user-band-ids", userId],
+    queryKey: ["user-band-ids", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       const { data: members } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
       return members?.map(m => m.band_id) || [];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch user stats per platform from song_releases (correct source)
@@ -167,20 +169,20 @@ const StreamingPlatforms = () => {
         </TabsContent>
 
         <TabsContent value="releases">
-          <StreamingMyReleasesTab userId={userId} />
+          <StreamingMyReleasesTab userId={profileId || ""} />
         </TabsContent>
 
 
         <TabsContent value="analytics">
-          <AnalyticsTab userId={userId} />
+          <AnalyticsTab userId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="detailed-analytics">
-          <DetailedAnalyticsTab userId={userId} />
+          <DetailedAnalyticsTab userId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="playlists">
-          <PlaylistsTab userId={userId} />
+          <PlaylistsTab userId={profileId || ""} />
         </TabsContent>
       </Tabs>
     </PageLayout>

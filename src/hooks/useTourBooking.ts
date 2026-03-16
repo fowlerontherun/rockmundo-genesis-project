@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface TourBookingData {
   name: string;
@@ -20,6 +21,7 @@ export interface TourBookingData {
 
 export function useTourBooking() {
   const { toast } = useToast();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const calculateTourCosts = async (tourData: TourBookingData) => {
@@ -74,15 +76,13 @@ export function useTourBooking() {
     mutationFn: async (tourData: TourBookingData) => {
       const costs = await calculateTourCosts(tourData);
 
-      // Get current user for tour ownership
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Create the tour with correct column names
       const { data: tour, error: tourError } = await supabase
         .from('tours')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           band_id: tourData.artistId,
           name: tourData.name,
           start_date: tourData.startDate,

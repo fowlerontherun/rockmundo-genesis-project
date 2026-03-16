@@ -1,29 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, MapPin, Clock, DollarSign, Calendar, Trophy } from "lucide-react";
 
 export function CareerStats() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({
-    queryKey: ["career-stats", user?.id],
+    queryKey: ["career-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       // Get profile data
       const { data: profile } = await supabase
         .from("profiles")
         .select("total_hours_played, created_at, cash, fame, fans")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Get band count
       const { count: bandCount } = await supabase
         .from("band_members")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       // Get gigs played
       const { count: gigsPlayed } = await supabase
@@ -45,7 +47,7 @@ export function CareerStats() {
       const { data: earnings } = await supabase
         .from("band_earnings")
         .select("amount")
-        .eq("earned_by_user_id", user.id);
+        .eq("profile_id", profileId);
 
       const totalEarnings = earnings?.reduce((sum, e) => sum + e.amount, 0) || 0;
 
@@ -53,7 +55,7 @@ export function CareerStats() {
       const { count: achievements } = await supabase
         .from("player_achievements")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .not("unlocked_at", "is", null);
 
       return {
@@ -69,7 +71,7 @@ export function CareerStats() {
         achievements: achievements || 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading career stats...</div>;

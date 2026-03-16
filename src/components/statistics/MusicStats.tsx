@@ -1,23 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Music, Disc, Mic2, Radio, TrendingUp, Play } from "lucide-react";
 
 export function MusicStats() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({
-    queryKey: ["music-stats", user?.id],
+    queryKey: ["music-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       // Get songs written
       const { count: songsWritten } = await supabase
         .from("songs")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       // Get songs recorded
       const { count: songsRecorded } = await supabase
@@ -38,8 +40,8 @@ export function MusicStats() {
       // Get chart entries
       const { data: chartEntries } = await supabase
         .from("chart_entries")
-        .select("rank, songs!inner(user_id)")
-        .eq("songs.user_id", user.id);
+        .select("rank, songs!inner(profile_id)")
+        .eq("songs.profile_id", profileId);
 
       const chartAppearances = chartEntries?.length || 0;
       const highestRank = chartEntries?.length
@@ -72,7 +74,7 @@ export function MusicStats() {
         totalRadioPlays,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading music stats...</div>;

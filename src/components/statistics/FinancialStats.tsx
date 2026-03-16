@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
@@ -9,24 +10,25 @@ const COLORS = ["hsl(var(--primary))", "hsl(142.1 76.2% 36.3%)", "hsl(262.1 83.3
 
 export function FinancialStats() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({
-    queryKey: ["financial-stats", user?.id],
+    queryKey: ["financial-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       // Get current cash
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Get earnings by source
       const { data: earnings } = await supabase
         .from("band_earnings")
         .select("source, amount")
-        .eq("earned_by_user_id", user.id);
+        .eq("profile_id", profileId);
 
       const earningsBySource: Record<string, number> = {};
       earnings?.forEach((e) => {
@@ -39,7 +41,7 @@ export function FinancialStats() {
       const { data: expenses } = await supabase
         .from("experience_ledger")
         .select("activity_type, metadata")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .in("activity_type", ["therapy", "nutrition", "travel", "equipment_purchase"]);
 
       let totalExpenses = 0;
@@ -65,7 +67,7 @@ export function FinancialStats() {
         incomeData,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading financial stats...</div>;
