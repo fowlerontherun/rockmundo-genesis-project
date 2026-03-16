@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useBandRiders, RIDER_TIERS, BandRider } from '@/hooks/useBandRiders';
 import { RiderBuilder } from '@/components/riders/RiderBuilder';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from '@/hooks/usePrimaryBand';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
