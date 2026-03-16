@@ -14,11 +14,22 @@ export function usePromoTourCompletion(userId: string | undefined) {
     queryKey: ["promo-tour-completable", userId],
     queryFn: async () => {
       if (!userId) return [];
+
+      // Get active profile
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+      if (!activeProfile) return [];
+
       const now = new Date().toISOString();
       const { data, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", activeProfile.id)
         .eq("activity_type", "release_promo")
         .eq("status", "scheduled")
         .lte("scheduled_end", now);
