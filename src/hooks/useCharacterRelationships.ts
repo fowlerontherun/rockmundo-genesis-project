@@ -88,9 +88,7 @@ export const useCharacterRelationships = (entityBType?: RelationshipEntityType) 
 // ─── Fetch Single Relationship ───────────────────────────
 
 export const useCharacterRelationship = (entityBId: string | undefined, entityBType: RelationshipEntityType) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId, entityBId, entityBType],
