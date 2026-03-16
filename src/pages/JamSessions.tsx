@@ -62,7 +62,7 @@ const DEFAULT_FORM_STATE: FormState = {
 const GENRE_OPTIONS = MUSIC_GENRES;
 
 const JamSessions = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
 
