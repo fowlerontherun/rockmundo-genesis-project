@@ -186,11 +186,8 @@ const SelfPromotionBrowser = () => {
       const startTime = new Date();
       const endTime = addMinutes(startTime, activity.duration_minutes);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
+      const profileRow = { id: userId };
+      const profile = profileRow;
 
       if (!profile) throw new Error("Profile not found");
 
