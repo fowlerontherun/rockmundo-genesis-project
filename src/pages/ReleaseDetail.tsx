@@ -18,7 +18,7 @@ export default function ReleaseDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "songs";
-  const { profile: activeProfile, profileId } = useActiveProfile();
+  const { profile: activeProfile, profileId, userId } = useActiveProfile();
 
   // Fetch current user + profile for promo tour
   const { data: userData } = useQuery({
@@ -32,7 +32,7 @@ export default function ReleaseDetail() {
         .eq("role", "leader")
         .maybeSingle();
       return {
-        userId: profileId,
+        userId: userId ?? undefined,
         cash: activeProfile?.cash ?? 0,
         health: activeProfile?.health ?? 100,
         energy: activeProfile?.energy ?? 100,
@@ -40,7 +40,7 @@ export default function ReleaseDetail() {
         bandFame: (bandMember as any)?.bands?.fame || 0,
       };
     },
-    enabled: !!profileId,
+    enabled: !!profileId && !!userId,
   });
 
   usePromoTourCompletion(userData?.userId);
