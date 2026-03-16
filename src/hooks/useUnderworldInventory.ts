@@ -48,7 +48,7 @@ export const useUnderworldInventory = () => {
       if (error) throw error;
       return (data || []) as InventoryItem[];
     },
-    enabled: !!user?.id && !!profileId,
+    enabled: !!profileId,
   });
 
   // Use an item from inventory
