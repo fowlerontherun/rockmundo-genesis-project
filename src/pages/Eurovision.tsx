@@ -65,7 +65,7 @@ interface EurovisionEntry {
 }
 
 export default function Eurovision() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const queryClient = useQueryClient();
   const [selectedSongId, setSelectedSongId] = useState<string>("");
