@@ -95,7 +95,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  if (!user) {
+  if (!profileId) {
     return (
       <Card>
         <CardContent className="p-6">

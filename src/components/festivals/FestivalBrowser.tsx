@@ -190,7 +190,7 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
     },
   });
 
-  const { profileId } = useActiveProfile();
+  // profileId already available from useActiveProfile above
 
   const { data: profile } = useQuery({
     queryKey: ["profile-cash-festival", profileId],

@@ -215,7 +215,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   // Batch submission mutation
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !selectedSong || selectedStations.size === 0) {
+      if (!profileId || !selectedSong || selectedStations.size === 0) {
         throw new Error("Missing required data");
       }
 

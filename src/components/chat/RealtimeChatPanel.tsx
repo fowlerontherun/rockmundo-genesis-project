@@ -290,7 +290,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     </div>
   );
 
-  if (!user) {
+  if (!profileId) {
     return (
       <Card className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}>
         <CardHeader>

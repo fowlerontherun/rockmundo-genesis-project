@@ -185,7 +185,7 @@ export function BandSettingsTab({
   };
 
   const handleDisbandBand = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     if (disbandConfirmation !== 'DISBAND') {
       toast({
