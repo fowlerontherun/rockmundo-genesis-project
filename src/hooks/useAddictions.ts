@@ -28,7 +28,7 @@ export function useAddictions() {
 
   const startRecoveryMutation = useMutation({
     mutationFn: async ({ addictionId, program }: { addictionId: string; program: RecoveryProgram }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const details = getRecoveryProgramDetails(program);
 
