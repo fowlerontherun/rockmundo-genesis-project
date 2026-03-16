@@ -73,7 +73,7 @@ function usePendingContractCount(labelId: string | undefined) {
 export default function LabelManagement() {
   const { labelId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: label, isLoading } = useLabelByIdOrCompanyId(labelId);
   const { data: pendingDemoCount = 0 } = useLabelDemoCount(label?.id);
