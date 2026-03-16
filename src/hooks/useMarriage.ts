@@ -130,7 +130,7 @@ export function useProposeMarriage() {
 
 export function useRespondToProposal() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ marriageId, accept }: { marriageId: string; accept: boolean }) => {
@@ -145,9 +145,10 @@ export function useRespondToProposal() {
       if (error) throw error;
 
       // Post activity feed
-      if (user?.id && accept) {
+      if (profileId && accept) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "marriage",
           message: "💒 Got married!",
           metadata: { marriage_id: marriageId },
