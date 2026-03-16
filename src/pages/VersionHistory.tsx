@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.080",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "LabelFinanceDialog migrated to profileId" },
+      { type: 'improvement', description: "AiAvatarCreator migrated to profileId" },
+      { type: 'improvement', description: "FestivalExclusiveShop migrated to profileId" },
+      { type: 'improvement', description: "BandGainsNews migrated to profileId" },
+      { type: 'improvement', description: "LabelFinanceTab migrated to profileId" },
+      { type: 'improvement', description: "CreateLabelDialog migrated to profileId" },
+      { type: 'improvement', description: "MusicStats migrated to profileId" },
+      { type: 'improvement', description: "LoansTab migrated to profileId" },
+      { type: 'improvement', description: "DashboardOverviewTabs migrated to profileId" },
+    ],
+  },
+  {
     version: "1.1.079",
     date: "2026-03-16",
     changes: [
