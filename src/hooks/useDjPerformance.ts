@@ -25,7 +25,6 @@ export interface DjPerformanceOutcome extends DjOutcome {
 const DJ_ENERGY_COST = 25;
 
 export function useDjPerformance() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { settings } = useBehaviorSettings();
   const queryClient = useQueryClient();
