@@ -315,17 +315,13 @@ export default function PerformGig() {
   };
 
   const handleStartGig = async () => {
-    if (!gigId) return;
+    if (!gigId || !profileId) return;
     
-    // Check for scheduling conflicts before starting
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     // Check if player is in the correct city for the gig
     const { data: profile } = await supabase
       .from('profiles')
       .select('current_city_id')
-      .eq('user_id', user.id)
+      .eq('id', profileId)
       .single();
 
     const venueCityId = gig?.venues?.city_id;
@@ -353,7 +349,7 @@ export default function PerformGig() {
       const gigEnd = new Date(gigStart.getTime() + 2 * 60 * 60 * 1000); // Assume 2 hour gig
 
       const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-        p_user_id: user.id,
+        p_user_id: profileId,
         p_start: gigStart.toISOString(),
         p_end: gigEnd.toISOString(),
         p_exclude_id: null,
