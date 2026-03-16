@@ -77,7 +77,7 @@ export function PersonalUpdates() {
 
       return results.slice(0, 6);
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const getIcon = (type: string) => {
