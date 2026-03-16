@@ -20,7 +20,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 const SkillsPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { skillProgress, loading, xpWallet, profile, dailyXpGrant } = useGameData();
   const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);
   const [rawAttributes, setRawAttributes] = useState<Database["public"]["Tables"]["player_attributes"]["Row"] | null>(null);
