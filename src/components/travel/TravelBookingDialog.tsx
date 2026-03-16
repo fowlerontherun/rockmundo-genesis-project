@@ -140,7 +140,7 @@ export function TravelBookingDialog({
     scheduledDeparture.setHours(departureHour, 0, 0, 0);
 
     await travelMutation.mutateAsync({
-      profileId: user.id,
+      profileId: profileId!,
       fromCityId: currentCityId,
       toCityId: selectedRoute.to_city_id,
       routeId: selectedRoute.id,
