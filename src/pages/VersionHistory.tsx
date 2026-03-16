@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.059",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Casino page profile cash and transaction stats scoped to profile_id" },
+      { type: 'improvement', description: "DikCok band membership query uses profile_id instead of user_id" },
+      { type: 'improvement', description: "Song Rankings band lookup for covers uses profile_id" },
+      { type: 'improvement', description: "Travel page profile and city loading uses profile_id" },
+      { type: 'improvement', description: "Band Search ratings query and mutations use profile_id" },
+      { type: 'improvement', description: "Underworld Store active boosts, purchase history, and token holdings use profile_id" },
+      { type: 'improvement', description: "AI Avatar Creator profile fetch and save use profile_id" },
+    ],
+  },
+  {
     version: "1.1.058",
     date: "2026-03-16",
     changes: [
