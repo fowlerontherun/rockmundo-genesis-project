@@ -299,7 +299,7 @@ export function useHolidays() {
 
       // Create blocking scheduled activity
       await (supabase as any).from("player_scheduled_activities").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         activity_type: "holiday",
         scheduled_start: startDate.toISOString(),
