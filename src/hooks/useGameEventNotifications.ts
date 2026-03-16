@@ -464,7 +464,7 @@ export const useGameEventNotifications = () => {
             const { data: existingCooldown } = await supabase
               .from('chart_notification_cooldowns' as any)
               .select('id, last_notified_at')
-              .eq('user_id', user.id)
+              .eq('profile_id', profileId)
               .eq('song_id', entry.song_id)
               .eq('chart_type', entry.chart_type)
               .gte('last_notified_at', twelveHoursAgo)
