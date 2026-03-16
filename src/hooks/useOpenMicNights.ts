@@ -204,7 +204,7 @@ export function useSignUpForOpenMic() {
       const { data, error } = await supabase
         .from('open_mic_performances')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId,
           venue_id: venueId,
           song_1_id: song1Id,
