@@ -236,8 +236,8 @@ export default function TattooParlour() {
       if (tattooError) throw tattooError;
 
       // Create the request record
-      await supabase.from('custom_tattoo_requests').insert({
-        user_id: user.id,
+      await (supabase as any).from('custom_tattoo_requests').insert({
+        profile_id: profileId,
         artist_id: customArtist.id,
         description: data.description,
         body_slot: data.bodySlot,
