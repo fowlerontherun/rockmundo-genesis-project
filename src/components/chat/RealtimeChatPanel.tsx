@@ -43,7 +43,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   onConnectionStatusChange,
   onParticipantCountChange
 }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
