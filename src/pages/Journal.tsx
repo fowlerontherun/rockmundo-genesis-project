@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useJournalEntries, useCreateJournalEntry, useUpdateJournalEntry, useDeleteJournalEntry, usePinJournalEntry } from "@/hooks/useJournal";
 import { JournalTimeline } from "@/components/journal/JournalTimeline";
