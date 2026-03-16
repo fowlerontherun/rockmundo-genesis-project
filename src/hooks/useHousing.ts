@@ -387,7 +387,7 @@ export function useToggleRentOut() {
           rental_income_daily: rentalIncome,
         })
         .eq("id", property.id)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
 
       return newRentedOut;
