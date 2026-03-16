@@ -151,7 +151,7 @@ export const useUnderworldStore = () => {
         const { error: cashError } = await supabase
           .from("profiles")
           .update({ cash: userBalance - product.price_cash })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
 
         if (cashError) throw cashError;
       } else {
