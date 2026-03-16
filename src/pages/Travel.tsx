@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TravelDestinationBrowser } from "@/components/travel/TravelDestinationBrowser";
 import { TransportComparison } from "@/components/travel/TransportComparison";
