@@ -35,7 +35,7 @@ export function useCasino() {
       payout: number;
       metadata: Record<string, unknown>;
     }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const { data: freshProfile } = await supabase
         .from("profiles")
