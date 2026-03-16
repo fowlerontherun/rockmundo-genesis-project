@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 
 interface BandEarningsProps {
   bandId: string;
