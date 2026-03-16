@@ -66,11 +66,11 @@ export default function PersonalVehicles() {
 
   const buyVehicle = useMutation({
     mutationFn: async (vehicle: PersonalVehicleCatalogItem) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active character");
       const { data: currentProfile, error: profileError } = await supabase
         .from("profiles")
         .select(PROFILE_QUERY_FIELDS)
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (profileError) throw profileError;
 
@@ -101,7 +101,7 @@ export default function PersonalVehicles() {
           cash: cash - vehicle.price,
           weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (updateError) throw updateError;
     },
