@@ -99,7 +99,7 @@ const AdvisorPage = () => {
   }, [greeting]);
 
   const loadInsights = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     setLoading(true);
     setError(null);
