@@ -45,7 +45,7 @@ export const useEmotionalState = () => {
 
       return data as unknown as CharacterEmotionalState;
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60,
   });
 };
