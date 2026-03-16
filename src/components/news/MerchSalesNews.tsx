@@ -7,22 +7,22 @@ import { ShoppingBag, DollarSign, TrendingUp, Globe } from "lucide-react";
 import { format } from "date-fns";
 
 export const MerchSalesNews = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Get user's bands
   const { data: userBands } = useQuery({
-    queryKey: ["user-bands-merch", user?.id],
+    queryKey: ["user-bands-merch", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("band_members")
         .select("band_id, bands(id, name)")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const bandIds = userBands?.map((b) => b.band_id) || [];

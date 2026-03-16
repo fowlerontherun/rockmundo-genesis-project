@@ -102,14 +102,14 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Add current value back to cash
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile?.cash || 0) + investment.current_value })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 

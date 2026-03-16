@@ -21,21 +21,21 @@ interface LinkTourDialogProps {
 }
 
 export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [search, setSearch] = useState("");
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["user-tours-for-twaater", user?.id],
+    queryKey: ["user-tours-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get user's bands
-      const { data: memberships } = await supabase
+      const { data: memberships } = await (supabase as any)
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
-      const bandIds = memberships?.map((m) => m.band_id) || [];
+      const bandIds = memberships?.map((m: any) => m.band_id) || [];
       if (bandIds.length === 0) return [];
 
       // Fetch tours

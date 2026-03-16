@@ -33,17 +33,9 @@ export const CurrentLearningSection = () => {
   });
 
   const { data: activeReading } = useQuery({
-    queryKey: ["current_reading", user?.id],
+    queryKey: ["current_reading", profileId],
     queryFn: async () => {
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
