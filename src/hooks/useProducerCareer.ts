@@ -56,11 +56,11 @@ export const useCreateProducerProfile = () => {
       mixing_skill: number;
       arrangement_skill: number;
     }) => {
-      // Get player's current city
+      // Get player's current city from active profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user!.id)
+        .eq('id', profileId)
         .single();
 
       const { data, error } = await (supabase as any)
