@@ -148,7 +148,7 @@ export function useHospitalization() {
 
   const dischargeMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !profileId || !activeHospitalization) throw new Error("No active hospitalization");
+      if (!profileId || !activeHospitalization) throw new Error("No active hospitalization");
 
       const admittedAt = new Date(activeHospitalization.admitted_at);
       const now = new Date();
