@@ -25,6 +25,7 @@ export interface BookJamSessionParams {
 
 export const useJamSessionBooking = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);

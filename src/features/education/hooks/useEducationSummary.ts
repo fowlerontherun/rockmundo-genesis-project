@@ -84,6 +84,7 @@ export interface YesterdayProgress {
 
 export const useEducationSummary = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   // Get profile
   const { data: profile } = useQuery({
