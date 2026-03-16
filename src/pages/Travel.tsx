@@ -42,6 +42,7 @@ const TRANSPORT_ICONS = {
 
 const Travel = () => {
   const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentCity, setCurrentCity] = useState<any>(null);
