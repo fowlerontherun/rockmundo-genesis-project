@@ -12,6 +12,7 @@ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useFestivalStages, useFestivalStageSlots } from "@/hooks/useFestivalStages";
 import { useFestivalQuality } from "@/hooks/useFestivalFinances";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import { FestivalMerchStand } from "./merch/FestivalMerchStand";
 import { FestivalExclusiveShop } from "./merch/FestivalExclusiveShop";
