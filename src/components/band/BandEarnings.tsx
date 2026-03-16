@@ -75,7 +75,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const loadLeaderProfile = useCallback(async () => {
-    if (!user) {
+    if (!profileId) {
       setLeaderProfile(null);
       return null;
     }
@@ -84,7 +84,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, cash')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
 
       if (error) {
@@ -103,7 +103,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       console.error('Error loading leader profile balance:', profileError);
       return null;
     }
-  }, [user]);
+  }, [profileId]);
 
   const loadEarningsData = useCallback(async () => {
     setLoading(true);
