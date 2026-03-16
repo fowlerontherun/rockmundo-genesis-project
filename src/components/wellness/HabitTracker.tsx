@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,31 +13,31 @@ import { toast } from "sonner";
 import { format, subDays, isSameDay } from "date-fns";
 
 export function HabitTracker() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [newHabit, setNewHabit] = useState("");
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: habits, isLoading } = useQuery({
-    queryKey: ["player-habits", user?.id],
+    queryKey: ["player-habits", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_habits")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: completions } = useQuery({
-    queryKey: ["habit-completions", user?.id],
+    queryKey: ["habit-completions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       // Get completions for the last 7 days
       const startDate = format(subDays(new Date(), 7), "yyyy-MM-dd");
       const { data, error } = await supabase
@@ -47,15 +47,15 @@ export function HabitTracker() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const addHabitMutation = useMutation({
     mutationFn: async (name: string) => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!profileId) throw new Error("No active profile");
       const { error } = await supabase
         .from("player_habits")
-        .insert({ user_id: user.id, name, category: "custom" });
+        .insert({ user_id: profileId, name, category: "custom" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -74,7 +74,7 @@ export function HabitTracker() {
         if (error) throw error;
 
         // Award health and energy for completing a habit
-        if (user?.id) {
+        if (profileId) {
           const habit = habits?.find(h => h.id === habitId);
           const category = habit?.category || 'custom';
           
@@ -89,7 +89,7 @@ export function HabitTracker() {
           const { data: profile } = await supabase
             .from("profiles")
             .select("health, energy")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
 
           if (profile) {
@@ -98,7 +98,7 @@ export function HabitTracker() {
             await supabase
               .from("profiles")
               .update({ health: newHealth, energy: newEnergy })
-              .eq("user_id", user.id);
+              .eq("id", profileId);
           }
         }
       } else {

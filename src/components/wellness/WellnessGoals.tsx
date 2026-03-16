@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,36 +21,36 @@ const goalTypes = [
 ];
 
 export function WellnessGoals() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [goalType, setGoalType] = useState("");
   const [targetValue, setTargetValue] = useState("");
 
   const { data: goals, isLoading } = useQuery({
-    queryKey: ["wellness-goals", user?.id],
+    queryKey: ["wellness-goals", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_wellness_goals")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const addGoalMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!profileId) throw new Error("No active profile");
       const deadline = format(addDays(new Date(), 7), "yyyy-MM-dd");
       const { error } = await supabase
         .from("player_wellness_goals")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           goal_type: goalType,
           target_value: parseInt(targetValue),
           deadline,

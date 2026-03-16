@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { getUtcWeekStart, formatUtcDate } from "@/utils/week";
 import { toast } from "@/hooks/use-toast";
@@ -47,17 +47,17 @@ export function useCurrentDraw() {
 const MAX_TICKETS_PER_DRAW = 10;
 
 export function useMyTicketsForDraw(drawId: string | undefined) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["lottery-tickets-draw", drawId, user?.id],
-    enabled: !!drawId && !!user?.id,
+    queryKey: ["lottery-tickets-draw", drawId, profileId],
+    enabled: !!drawId && !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*")
         .eq("draw_id", drawId!)
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -67,16 +67,16 @@ export function useMyTicketsForDraw(drawId: string | undefined) {
 }
 
 export function useMyTickets() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["lottery-tickets", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["lottery-tickets", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -87,7 +87,7 @@ export function useMyTickets() {
 }
 
 export function useBuyTicket() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const queryClient = useQueryClient();
 
@@ -101,7 +101,7 @@ export function useBuyTicket() {
       selectedNumbers: number[];
       bonusNumber: number;
     }) => {
-      if (!user?.id || !profile?.id) throw new Error("Not authenticated");
+      if (!profileId || !profile?.id) throw new Error("Not authenticated");
       if ((profile as any).cash < TICKET_COST) throw new Error("Not enough cash");
       if (selectedNumbers.length !== 7) throw new Error("Select 7 numbers");
       if (bonusNumber < 1 || bonusNumber > 10) throw new Error("Invalid bonus number");
@@ -111,7 +111,7 @@ export function useBuyTicket() {
         .from("lottery_tickets")
         .select("*", { count: "exact", head: true })
         .eq("draw_id", drawId)
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
 
       if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
 
@@ -127,7 +127,7 @@ export function useBuyTicket() {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profile.id,
           draw_id: drawId,
           selected_numbers: selectedNumbers,
@@ -169,19 +169,19 @@ export function useDrawHistory() {
 }
 
 export function useClaimPrize() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (ticketId: string) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get ticket
       const { data: ticket, error: fetchError } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
         .eq("id", ticketId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .single();
 
       if (fetchError) throw fetchError;
@@ -203,9 +203,7 @@ export function useClaimPrize() {
         const { data: currentProfile } = await supabase
           .from("profiles")
           .select("id, cash, fame")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .is("died_at", null)
+          .eq("id", profileId)
           .single();
 
         if (currentProfile) {

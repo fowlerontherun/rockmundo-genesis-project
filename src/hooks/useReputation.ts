@@ -1,7 +1,7 @@
 // Reputation Hook - Manages player's reputation across 4 axes
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import {
   fetchPlayerReputation,
@@ -17,14 +17,13 @@ import type {
 } from "@/types/roleplaying";
 
 export const usePlayerReputation = () => {
-  const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["player-reputation", profileId],
     queryFn: () => fetchPlayerReputation(profileId!),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -81,14 +80,13 @@ export const useUpdateReputation = () => {
 };
 
 export const useReputationEvents = (limit = 20) => {
-  const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["reputation-events", profileId, limit],
     queryFn: () => fetchReputationEvents(profileId!, limit),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };

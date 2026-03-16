@@ -1,26 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Mail, Gift, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 export function PersonalUpdates() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = new Date().toISOString().split('T')[0];
 
   const { data: updates } = useQuery({
-    queryKey: ["personal-updates", user?.id, today],
+    queryKey: ["personal-updates", profileId, today],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const results: Array<{ type: string; title: string; detail: string; time: string }> = [];
 
       // Band invitations
       const { data: invites } = await supabase
         .from("band_invitations")
         .select("created_at, status, bands(name)")
-        .eq("invited_user_id", user.id)
+        .eq("invited_user_id", profileId)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(3);
@@ -60,7 +60,7 @@ export function PersonalUpdates() {
       const { data: activities } = await supabase
         .from("player_scheduled_activities")
         .select("activity_type, scheduled_start")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("status", "scheduled")
         .gte("scheduled_start", new Date().toISOString())
         .order("scheduled_start", { ascending: true })
@@ -77,7 +77,7 @@ export function PersonalUpdates() {
 
       return results.slice(0, 6);
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const getIcon = (type: string) => {
@@ -89,7 +89,7 @@ export function PersonalUpdates() {
     }
   };
 
-  if (!user) return null;
+  if (!profileId) return null;
 
   return (
     <Card className="border-primary/20 bg-primary/5">

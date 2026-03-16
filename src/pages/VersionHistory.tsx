@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.068",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Lottery tickets, purchases, and prize claims scoped to active profile" },
+      { type: 'improvement', description: "Marriage proposals, responses, and divorce activity feed entries use profileId" },
+      { type: 'improvement', description: "Habit tracker queries, inserts, and stat boosts use profileId" },
+      { type: 'improvement', description: "Wellness goals scoped to active profile" },
+      { type: 'improvement', description: "Personal updates (band invites, scheduled activities) use profileId" },
+      { type: 'improvement', description: "Reputation hooks removed unnecessary useAuth dependency" },
+    ],
+  },
+  {
     version: "1.1.067",
     date: "2026-03-16",
     changes: [

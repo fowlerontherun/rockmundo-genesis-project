@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
 import { toast } from "sonner";
 
@@ -83,7 +83,7 @@ export function useMarriageHistory(profileId: string | undefined) {
 
 export function useProposeMarriage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ partnerAId, partnerBId, weddingDate }: {
@@ -105,9 +105,10 @@ export function useProposeMarriage() {
       if (error) throw error;
 
       // Post activity feed entry
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "marriage_proposal",
           message: "💍 Proposed marriage!",
           metadata: { marriage_id: (data as any)?.id },
@@ -129,7 +130,7 @@ export function useProposeMarriage() {
 
 export function useRespondToProposal() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ marriageId, accept }: { marriageId: string; accept: boolean }) => {
@@ -144,9 +145,10 @@ export function useRespondToProposal() {
       if (error) throw error;
 
       // Post activity feed
-      if (user?.id && accept) {
+      if (profileId && accept) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "marriage",
           message: "💒 Got married!",
           metadata: { marriage_id: marriageId },
@@ -166,24 +168,25 @@ export function useRespondToProposal() {
 
 export function useInitiateDivorce() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
-    mutationFn: async ({ marriageId, profileId }: { marriageId: string; profileId: string }) => {
+    mutationFn: async ({ marriageId, profileId: targetProfileId }: { marriageId: string; profileId: string }) => {
       const { error } = await supabase
         .from(asAny("marriages"))
         .update(asAny({
           status: "divorced",
           ended_at: new Date().toISOString(),
-          ended_by: profileId,
+          ended_by: targetProfileId,
           end_reason: "divorce",
         }))
         .eq("id", marriageId);
       if (error) throw error;
 
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "divorce",
           message: "📝 Filed for divorce",
           metadata: { marriage_id: marriageId },
