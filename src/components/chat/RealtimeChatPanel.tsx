@@ -147,7 +147,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           channel: channelKey,
           message: message.trim()
         } as any);
