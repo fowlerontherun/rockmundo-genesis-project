@@ -278,6 +278,151 @@ const TourManager = () => {
     },
   });
 
+  // Add remaining tour travel for members who joined after booking
+  const addNewMemberTravelMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      const nowIso = new Date().toISOString();
+
+      const { data: tour, error: tourError } = await supabase
+        .from('tours')
+        .select('id, name, band_id')
+        .eq('id', tourId)
+        .single();
+      if (tourError || !tour) throw new Error('Tour not found');
+
+      const { data: members, error: membersError } = await supabase
+        .from('band_members')
+        .select('user_id, profile_id')
+        .eq('band_id', tour.band_id)
+        .eq('member_status', 'active')
+        .eq('travels_with_band', true)
+        .not('user_id', 'is', null)
+        .not('profile_id', 'is', null);
+      if (membersError) throw membersError;
+
+      const { data: remainingLegs, error: legsError } = await supabase
+        .from('tour_travel_legs')
+        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours')
+        .eq('tour_id', tourId)
+        .gte('departure_date', nowIso)
+        .order('departure_date', { ascending: true });
+      if (legsError) throw legsError;
+
+      if (!remainingLegs || remainingLegs.length === 0) {
+        return { created: 0, skippedExisting: 0, tourName: tour.name };
+      }
+
+      const memberUserIds = (members || []).map((member) => member.user_id).filter(Boolean) as string[];
+
+      if (memberUserIds.length === 0) {
+        return { created: 0, skippedExisting: 0, tourName: tour.name };
+      }
+
+      const legIds = remainingLegs.map((leg) => leg.id);
+      const { data: existingTravel, error: existingError } = await supabase
+        .from('player_travel_history')
+        .select('tour_leg_id, user_id')
+        .in('tour_leg_id', legIds)
+        .in('user_id', memberUserIds);
+      if (existingError) throw existingError;
+
+      const existingKeys = new Set((existingTravel || []).map((row) => `${row.tour_leg_id}:${row.user_id}`));
+
+      const cityIds = [...new Set(remainingLegs.flatMap((leg) => [leg.from_city_id, leg.to_city_id]).filter(Boolean))] as string[];
+      const { data: citiesData, error: cityError } = await supabase
+        .from('cities')
+        .select('id, name, country')
+        .in('id', cityIds);
+      if (cityError) throw cityError;
+      const cityNameMap = new Map((citiesData || []).map((city) => [city.id, `${city.name}, ${city.country}`]));
+
+      let created = 0;
+      let skippedExisting = 0;
+
+      for (const leg of remainingLegs) {
+        for (const member of members || []) {
+          if (!member.user_id || !member.profile_id) continue;
+
+          const existingKey = `${leg.id}:${member.user_id}`;
+          if (existingKeys.has(existingKey)) {
+            skippedExisting += 1;
+            continue;
+          }
+
+          const fromCityName = cityNameMap.get(leg.from_city_id) || 'Unknown';
+          const toCityName = cityNameMap.get(leg.to_city_id) || 'Unknown';
+
+          const { data: travelRecord, error: travelError } = await (supabase as any)
+            .from('player_travel_history')
+            .insert({
+              user_id: member.user_id,
+              profile_id: member.profile_id,
+              from_city_id: leg.from_city_id,
+              to_city_id: leg.to_city_id,
+              transport_type: leg.travel_mode || 'bus',
+              cost_paid: 0,
+              departure_time: leg.departure_date,
+              scheduled_departure_time: leg.departure_date,
+              arrival_time: leg.arrival_date,
+              travel_duration_hours: Math.max(1, leg.travel_duration_hours || 1),
+              status: 'scheduled',
+              tour_leg_id: leg.id,
+            })
+            .select('id')
+            .single();
+
+          if (travelError) throw travelError;
+
+          const { error: activityError } = await (supabase as any)
+            .from('player_scheduled_activities')
+            .insert({
+              user_id: member.user_id,
+              profile_id: member.profile_id,
+              activity_type: 'travel',
+              status: 'scheduled',
+              scheduled_start: leg.departure_date,
+              scheduled_end: leg.arrival_date,
+              title: `Tour Travel: ${fromCityName} → ${toCityName}`,
+              description: `${leg.travel_mode || 'bus'} journey (${Math.max(1, leg.travel_duration_hours || 1)}h) — Tour`,
+              location: toCityName,
+              metadata: {
+                travel_history_id: travelRecord?.id,
+                tour_leg_id: leg.id,
+                tour_id: leg.tour_id,
+                from_city_id: leg.from_city_id,
+                to_city_id: leg.to_city_id,
+                transport_type: leg.travel_mode,
+              },
+            });
+
+          if (activityError) {
+            console.warn('Failed to create scheduled activity for tour travel:', activityError);
+          }
+
+          created += 1;
+          existingKeys.add(existingKey);
+        }
+      }
+
+      return { created, skippedExisting, tourName: tour.name };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['travel-status'] });
+      queryClient.invalidateQueries({ queryKey: ['travel-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tours'] });
+
+      if (result.created > 0) {
+        toast.success(`Booked ${result.created} remaining tour travel legs for active band members.`);
+      } else {
+        toast.info(`No new travel bookings were needed for ${result.tourName}.`);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to add travel for new members: ${error.message}`);
+    },
+  });
+
   const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
     queryKey: ['other-tours', currentBandId, fameFilter, genreFilter, otherToursPage],
     queryFn: async () => {
@@ -1065,6 +1210,22 @@ const TourManager = () => {
                 })()}
 
                 {/* Regenerate Travel Legs Button - only if missing */}
+                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => addNewMemberTravelMutation.mutate(selectedTour.id)}
+                    disabled={addNewMemberTravelMutation.isPending}
+                  >
+                    {addNewMemberTravelMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Users className="h-4 w-4 mr-2" />
+                    )}
+                    Add Remaining Travel for New Members
+                  </Button>
+                )}
+
                 {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
                   <Button 
                     variant="outline" 
