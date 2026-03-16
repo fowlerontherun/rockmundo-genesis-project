@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/useTranslation";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,8 +33,8 @@ const defaultTabs = ["my-labels", "directory", "contracts", "releases", "royalti
 type RecordLabelTab = (typeof defaultTabs)[number];
 
 const RecordLabel = () => {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { profileId } = useActiveProfile();
+  const userId = profileId;
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
   const [activeTab, setActiveTab] = useState<RecordLabelTab>("my-labels");
@@ -61,12 +61,12 @@ const RecordLabel = () => {
         supabase
           .from("profiles")
           .select("id, display_name, cash, has_active_lawyer")
-          .eq("user_id", userId)
+          .eq("id", userId)
           .maybeSingle(),
         supabase
           .from("band_members")
           .select("band_id, role, bands:bands!band_members_band_id_fkey(id, name, genre)")
-          .eq("user_id", userId),
+          .eq("profile_id", userId),
       ]);
 
       const entities: ArtistEntity[] = [];
@@ -377,7 +377,7 @@ const RecordLabel = () => {
           </TabsContent>
 
           <TabsContent value="contracts" className="mt-6">
-            <MyContractsTab artistEntities={artistEntities} userId={user?.id ?? ""} />
+            <MyContractsTab artistEntities={artistEntities} userId={userId ?? ""} />
           </TabsContent>
 
           <TabsContent value="releases" className="mt-6">

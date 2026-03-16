@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { 
@@ -36,7 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function OpenMicNights() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { data: primaryBand } = usePrimaryBand();
   const userBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } : null;
@@ -47,7 +47,7 @@ export default function OpenMicNights() {
   const { data: venues = [], isLoading: venuesLoading } = useOpenMicVenues(
     selectedCityId === 'all' ? undefined : selectedCityId
   );
-  const { data: myPerformances = [] } = useOpenMicPerformances(user?.id);
+  const { data: myPerformances = [] } = useOpenMicPerformances(profileId ?? undefined);
   const signUp = useSignUpForOpenMic();
 
   const { data: cities = [] } = useQuery({

@@ -19,7 +19,7 @@ import { useCityElection, useElectionCandidates, useUserVote, useCastVote } from
 import { useCityMayor } from "@/hooks/useMayorDashboard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import { CandidateCard } from "@/components/city/CandidateCard";
 import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistrationDialog";
@@ -28,7 +28,7 @@ import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
 export default function CityElection() {
   const { cityId } = useParams<{ cityId: string }>();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
 
   // Fetch city info
@@ -56,18 +56,18 @@ export default function CityElection() {
 
   // Check if user is already a candidate
   const { data: userProfile } = useQuery({
-    queryKey: ["user-profile", user?.id],
+    queryKey: ["user-profile", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) return null;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const isCandidate = candidates?.some(c => c.profile_id === userProfile?.id);
@@ -206,7 +206,7 @@ export default function CityElection() {
       </Card>
 
       {/* User Status Alerts */}
-      {user && (
+      {profileId && (
         <div className="space-y-3">
           {hasVoted && (
             <Alert className="border-primary/50 bg-primary/5">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { 
   useMajorEvents, useMajorEventPerformances, useMajorEventHistory, 
@@ -39,12 +39,12 @@ const MAX_EVENTS_PER_YEAR = 2;
 const COOLDOWN_YEARS = 3;
 
 export default function MajorEvents() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const activeBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } as any : null;
   const navigate = useNavigate();
   const { data: events = [], isLoading } = useMajorEvents();
-  const { data: performances = [] } = useMajorEventPerformances(user?.id);
+  const { data: performances = [] } = useMajorEventPerformances(profileId ?? undefined);
   const { data: historyInstances = [], isLoading: loadingHistory } = useMajorEventHistory();
   const { data: calendar } = useGameCalendar();
   const acceptEvent = useAcceptMajorEvent();

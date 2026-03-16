@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
 import { AttendanceCard } from "@/components/university/AttendanceCard";
@@ -61,7 +60,6 @@ export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -267,7 +265,7 @@ export default function UniversityDetail() {
       const { error: enrollError } = await supabase
         .from("player_university_enrollments")
         .insert({
-          user_id: user!.id,
+          user_id: profileId!,
           profile_id: profile.id,
           university_id: university.id,
           course_id: courseId,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useJournalEntries, useCreateJournalEntry, useUpdateJournalEntry, useDeleteJournalEntry, usePinJournalEntry } from "@/hooks/useJournal";
 import { JournalTimeline } from "@/components/journal/JournalTimeline";
@@ -16,14 +16,14 @@ export type JournalCategory = "all" | "career" | "performance" | "chart" | "fan"
 
 const Journal = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const [filterType, setFilterType] = useState<JournalFilterType>("all");
   const [category, setCategory] = useState<JournalCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
-  const { data: entries, isLoading, refetch } = useJournalEntries(user?.id || null, {
+  const { data: entries, isLoading, refetch } = useJournalEntries(profileId || null, {
     type: filterType === "all" ? undefined : filterType,
     category: category === "all" ? undefined : category,
     search: searchQuery || undefined,
@@ -38,10 +38,10 @@ const Journal = () => {
   const noteCount = entries?.filter(e => e.entry_type === "note").length || 0;
 
   const handleCreateNote = async (data: { title: string; content: string; category: string }) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     
     await createMutation.mutateAsync({
-      profile_id: user.id,
+      profile_id: profileId,
       band_id: null,
       entry_type: "note",
       category: data.category,

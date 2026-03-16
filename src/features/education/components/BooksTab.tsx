@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBookReading } from "@/hooks/useBookReading";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,7 @@ type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 
 export const BooksTab = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
@@ -45,7 +45,7 @@ export const BooksTab = () => {
     !activeSession && selectedBook && isPurchased(selectedBook.id) && !isCompleted(selectedBook.id);
 
   const handlePurchase = async (book: SkillBook) => {
-    if (!user) return;
+    if (!profileId) return;
     
     // Check if already completed
     if (isCompleted(book.id)) {
@@ -58,32 +58,26 @@ export const BooksTab = () => {
       return;
     }
     
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profile) return;
-
     purchaseBook({
       bookId: book.id,
-      userId: user.id,
-      profileId: profile.id,
+      userId: profileId,
+      profileId: profileId,
       price: book.price,
     });
     setSelectedBook(null);
   };
 
   const handleStartReading = async () => {
-    if (!user || !selectedBook) return;
+    if (!profileId || !selectedBook) return;
     
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
 
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profile) return;
-
     startReading({
       purchaseId: purchase.id,
       bookId: selectedBook.id,
-      userId: user.id,
-      profileId: profile.id,
+      userId: profileId,
+      profileId: profileId,
       readingDays: selectedBook.base_reading_days,
       autoRead,
     });
