@@ -174,7 +174,7 @@ export function RehearsalsTab() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [profileId, activeProfile, toast]);
 
   useEffect(() => {
     void loadData();

@@ -54,7 +54,7 @@ export const JamSessionsEnhanced = () => {
     } else {
       setActiveSessionId(null);
     }
-  }, [activeSessions, user?.id, profile?.id]);
+  }, [activeSessions, profileId, profile?.id]);
 
   // Show results dialog when session completes
   useEffect(() => {

@@ -61,18 +61,18 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
 
   // Fetch all companies owned by the user (for transfer tab)
   const { data: ownedCompanies = [] } = useQuery({
-    queryKey: ["owned-companies-for-transfer", user?.id],
+    queryKey: ["owned-companies-for-transfer", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data } = await supabase
         .from("companies")
         .select("id, name, balance, company_type")
-        .eq("owner_id", user.id)
+        .eq("owner_id", profileId)
         .eq("status", "active")
         .neq("id", companyId);
       return data || [];
     },
-    enabled: !!user?.id && open,
+    enabled: !!profileId && open,
   });
 
   const balance = Number(companyData?.balance ?? 0);

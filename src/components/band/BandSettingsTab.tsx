@@ -198,7 +198,7 @@ export function BandSettingsTab({
 
     try {
       setLoading(true);
-      await disbandBand(bandId, user.id);
+      await disbandBand(bandId, profileId!);
       
       toast({
         title: 'Band Disbanded',

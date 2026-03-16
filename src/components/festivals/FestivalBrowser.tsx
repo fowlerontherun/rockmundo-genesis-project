@@ -169,7 +169,7 @@ const FestivalCard = ({
 };
 
 const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onGoLive: () => void }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: stages = [] } = useFestivalStages(festivalId);
   const { data: slots = [] } = useFestivalStageSlots(festivalId);
   const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);

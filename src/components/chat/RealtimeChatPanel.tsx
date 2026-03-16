@@ -236,7 +236,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
           setIsConnected(true);
           onConnectionStatusChange?.(true);
           void channel
-            .track({ user_id: user.id })
+            .track({ user_id: profileId })
             .then(() => {
               if (isMounted) {
                 updatePresence();

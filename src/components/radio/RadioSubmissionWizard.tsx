@@ -234,7 +234,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
             .insert({
               station_id: stationId,
               song_id: selectedSong.id,
-              user_id: user.id,
+              user_id: profileId,
               band_id: bandId,
               status: shouldAutoAccept ? "accepted" : "pending",
               reviewed_at: shouldAutoAccept ? new Date().toISOString() : null,

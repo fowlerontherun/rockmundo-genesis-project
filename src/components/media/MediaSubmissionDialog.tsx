@@ -114,7 +114,7 @@ export function MediaSubmissionDialog({
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !bandId) throw new Error("Not authenticated");
+      if (!profileId || !bandId) throw new Error("Not authenticated");
       
       const submission: Record<string, unknown> = {
         band_id: bandId,

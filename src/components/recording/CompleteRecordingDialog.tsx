@@ -72,7 +72,7 @@ export const CompleteRecordingDialog = ({
     setGeneratingAudio(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: user.id }
+        body: { songId, userId: profileId }
       });
 
       if (error) {

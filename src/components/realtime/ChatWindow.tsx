@@ -67,7 +67,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           channel: selectedChannel,
           message: message.trim()
         } as any);

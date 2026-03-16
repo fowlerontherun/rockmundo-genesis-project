@@ -149,7 +149,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       }
 
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: user.id }
+        body: { songId, userId: profileId }
       });
 
       if (error) {
