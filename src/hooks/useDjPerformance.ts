@@ -50,7 +50,7 @@ export function useDjPerformance() {
       const { data: attrs } = await supabase
         .from("player_attributes")
         .select("stage_presence, charisma")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       const energy = profile.energy ?? 100;
