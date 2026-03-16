@@ -95,7 +95,7 @@ const Schedule = () => {
       </div>
 
       {viewMode === 'day' ? (
-        <DaySchedule date={currentDate} userId={user?.id} />
+        <DaySchedule date={currentDate} userId={profileId ?? undefined} />
       ) : (
         <Tabs defaultValue={format(weekDays[0], 'yyyy-MM-dd')} className="w-full">
           <TabsList className="w-full grid grid-cols-7 h-auto">
