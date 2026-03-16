@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -25,15 +24,15 @@ export interface PlayerProducerProfile {
 }
 
 export const useProducerProfile = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-profile', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['producer-profile', profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('player_producer_profiles')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', profileId!)
         .maybeSingle();
       if (error) throw error;
       return data as PlayerProducerProfile | null;
@@ -43,7 +42,6 @@ export const useProducerProfile = () => {
 
 export const useCreateProducerProfile = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useMutation({
@@ -66,7 +64,7 @@ export const useCreateProducerProfile = () => {
       const { data, error } = await (supabase as any)
         .from('player_producer_profiles')
         .insert({
-          user_id: user!.id,
+          user_id: profileId!,
           display_name: input.display_name,
           cost_per_hour: Math.max(10, input.cost_per_hour),
           specialty_genre: input.specialty_genre,
@@ -91,7 +89,6 @@ export const useCreateProducerProfile = () => {
 
 export const useUpdateProducerProfile = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useMutation({
@@ -123,7 +120,7 @@ export const useUpdateProducerProfile = () => {
       const { error } = await (supabase as any)
         .from('player_producer_profiles')
         .update(updateData)
-        .eq('user_id', user!.id);
+        .eq('user_id', profileId!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,15 +152,15 @@ export const useAvailablePlayerProducers = (cityId?: string, genre?: string) => 
 };
 
 export const useProducerSessionHistory = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-session-history', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['producer-session-history', profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const { data: profile } = await (supabase as any)
         .from('player_producer_profiles')
         .select('id')
-        .eq('user_id', user!.id)
+        .eq('user_id', profileId!)
         .maybeSingle();
 
       if (!profile) return [];
@@ -183,7 +180,7 @@ export const useProducerSessionHistory = () => {
 
 export const useSubmitProducerReview = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {
@@ -196,7 +193,7 @@ export const useSubmitProducerReview = () => {
         .from('producer_session_reviews')
         .insert({
           session_id: input.session_id,
-          reviewer_user_id: user!.id,
+          reviewer_user_id: profileId!,
           producer_profile_id: input.producer_profile_id,
           rating: input.rating,
           comment: input.comment || null,

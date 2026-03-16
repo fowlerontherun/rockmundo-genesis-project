@@ -14,6 +14,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.078",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useEmotionalEngine migrated to profileId via useActiveProfile" },
+      { type: 'improvement', description: "useFestivalScheduleConflict removed useAuth dependency" },
+      { type: 'improvement', description: "useCharacterRelationships migrated to profileId" },
+      { type: 'improvement', description: "useClothingBrand migrated to profileId" },
+      { type: 'improvement', description: "useProducerCareer migrated to profileId" },
+      { type: 'improvement', description: "useUnderworldStore migrated to profileId" },
+      { type: 'improvement', description: "useSkinStore migrated to profileId, removed redundant profile lookups" },
+      { type: 'improvement', description: "useInterviewSession migrated to profileId" },
+      { type: 'improvement', description: "useNPCRelationship removed useAuth dependency" },
+    ],
+  },
+  {
     version: "1.1.077",
     date: "2026-03-16",
     changes: [

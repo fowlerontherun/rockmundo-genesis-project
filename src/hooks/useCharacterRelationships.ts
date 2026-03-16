@@ -2,8 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useOptionalGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import type {
   CharacterRelationship,
   CreateRelationshipInput,
@@ -62,9 +61,7 @@ function detectThresholdEvents(
 // ─── Fetch All Relationships ─────────────────────────────
 
 export const useCharacterRelationships = (entityBType?: RelationshipEntityType) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId, entityBType],
@@ -83,7 +80,7 @@ export const useCharacterRelationships = (entityBType?: RelationshipEntityType) 
       if (error) throw error;
       return (data ?? []) as unknown as CharacterRelationship[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };
@@ -91,9 +88,7 @@ export const useCharacterRelationships = (entityBType?: RelationshipEntityType) 
 // ─── Fetch Single Relationship ───────────────────────────
 
 export const useCharacterRelationship = (entityBId: string | undefined, entityBType: RelationshipEntityType) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId, entityBId, entityBType],
@@ -109,7 +104,7 @@ export const useCharacterRelationship = (entityBId: string | undefined, entityBT
       if (error) throw error;
       return data as unknown as CharacterRelationship | null;
     },
-    enabled: !!user && !!profileId && !!entityBId,
+    enabled: !!profileId && !!entityBId,
     staleTime: 1000 * 60 * 2,
   });
 };
@@ -265,9 +260,7 @@ export const useRelationshipInteractions = (relationshipId: string | undefined) 
 // ─── Fetch Unprocessed Events ────────────────────────────
 
 export const useUnprocessedRelationshipEvents = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, "events", profileId],
@@ -291,7 +284,7 @@ export const useUnprocessedRelationshipEvents = () => {
       if (error) throw error;
       return (data ?? []) as unknown as RelationshipThresholdEvent[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 30,
   });
 };
@@ -300,8 +293,7 @@ export const useUnprocessedRelationshipEvents = () => {
 
 export const useGetOrCreateCharacterRelationship = () => {
   const createRel = useCreateCharacterRelationship();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const getOrCreate = async (
     entityBId: string,

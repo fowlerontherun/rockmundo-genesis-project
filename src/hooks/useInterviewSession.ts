@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import type { InterviewQuestion, InterviewAnswer, InterviewPhase } from "@/data/interviewQuestions";
 
@@ -26,7 +26,7 @@ const INTERVIEW_COOLDOWN_KEY = "interview_last_shown";
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes between interview prompts
 
 export const useInterviewSession = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   const bandId = band?.id || null;
@@ -44,7 +44,7 @@ export const useInterviewSession = () => {
 
   // Check for pending interviews with cooldown
   useEffect(() => {
-    if (!user?.id || !bandId || checkedRef.current) return;
+    if (!profileId || !bandId || checkedRef.current) return;
 
     const check = async () => {
       checkedRef.current = true;
@@ -92,7 +92,7 @@ export const useInterviewSession = () => {
       }
     };
     check();
-  }, [user?.id, bandId]);
+  }, [profileId, bandId]);
 
   useEffect(() => {
     checkedRef.current = false;
@@ -199,12 +199,12 @@ export const useInterviewSession = () => {
   };
 
   const finishInterview = useCallback(async () => {
-    if (!pending || !totalEffects || !user?.id || !bandId) return;
+    if (!pending || !totalEffects || !profileId || !bandId) return;
     setLoading(true);
 
     // Save results
     await (supabase as any).from("interview_results").insert({
-      user_id: user.id,
+      user_id: profileId,
       band_id: bandId,
       offer_id: pending.offerId,
       media_type: pending.mediaType,
@@ -243,7 +243,7 @@ export const useInterviewSession = () => {
     setPending(null);
     setPhase("intro");
     setLoading(false);
-  }, [pending, totalEffects, user?.id, bandId, answers]);
+  }, [pending, totalEffects, profileId, bandId, answers]);
 
   // Skip/dismiss: mark as completed without applying effects
   const skipInterview = useCallback(async () => {

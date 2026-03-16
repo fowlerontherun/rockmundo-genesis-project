@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
@@ -52,7 +51,6 @@ export interface UnderworldPurchase {
 }
 
 export const useUnderworldStore = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -107,7 +105,7 @@ export const useUnderworldStore = () => {
       if (error) throw error;
       return (data || []) as ActiveBoost[];
     },
-    enabled: !!profileId && !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch purchase history
@@ -140,7 +138,7 @@ export const useUnderworldStore = () => {
       product: UnderworldProduct;
       paymentMethod: "cash" | "crypto";
     }) => {
-      if (!user?.id || !profileId) throw new Error("Not logged in");
+      if (!profileId) throw new Error("Not logged in");
 
       // Validate payment
       if (paymentMethod === "cash") {
@@ -305,7 +303,7 @@ export const useUnderworldStore = () => {
         const { error: boostError } = await supabase
           .from("player_active_boosts")
           .insert({
-            user_id: user.id,
+            user_id: profileId,
             product_id: product.id,
             boost_type: boostType,
             boost_value: boostValue,
@@ -319,7 +317,7 @@ export const useUnderworldStore = () => {
       const { error: purchaseError } = await supabase
         .from("underworld_purchases")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           product_id: product.id,
           paid_with: paymentMethod,
           cash_amount: paymentMethod === "cash" ? product.price_cash : null,

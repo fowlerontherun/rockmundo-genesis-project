@@ -2,8 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useOptionalGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
 import type {
   CharacterEmotionalState,
@@ -18,9 +17,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 // ─── Fetch Emotional State ───────────────────────────────
 
 export const useEmotionalState = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, profileId],
@@ -48,7 +45,7 @@ export const useEmotionalState = () => {
 
       return data as unknown as CharacterEmotionalState;
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60,
   });
 };
@@ -136,9 +133,7 @@ export const useApplyEmotion = () => {
 // ─── Fetch Emotional Event History ───────────────────────
 
 export const useEmotionalHistory = (limit = 20) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, "history", profileId, limit],
@@ -153,7 +148,7 @@ export const useEmotionalHistory = (limit = 20) => {
       if (error) throw error;
       return (data ?? []) as unknown as EmotionalStateEvent[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 30,
   });
 };
@@ -169,8 +164,7 @@ import { EMOTION_EVENT_PRESETS } from "@/types/emotional-engine";
  */
 export const useApplyEmotionPreset = () => {
   const applyEmotion = useApplyEmotion();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const applyPreset = async (
     presetKey: keyof typeof EMOTION_EVENT_PRESETS,

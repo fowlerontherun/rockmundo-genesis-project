@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface ScheduleConflict {
@@ -20,7 +19,6 @@ export const useFestivalScheduleConflict = (
   festivalEndDate?: string,
   enabled = true
 ) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data, isLoading } = useQuery({
@@ -87,7 +85,6 @@ function getActivityDescription(activityType: string): string {
 }
 
 export const useCheckFestivalConflict = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const checkConflict = async (startDate: string, endDate: string): Promise<ScheduleConflict> => {

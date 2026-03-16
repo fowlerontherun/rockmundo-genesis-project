@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { ClothingScores } from "@/utils/clothingQuality";
@@ -44,7 +43,6 @@ export interface ClothingItem {
 }
 
 export const useClothingBrand = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -55,7 +53,7 @@ export const useClothingBrand = () => {
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .maybeSingle();
       if (error) throw error;
       return data as ClothingBrand | null;
@@ -80,10 +78,10 @@ export const useClothingBrand = () => {
 
   const createBrand = useMutation({
     mutationFn: async (input: { brand_name: string; brand_description?: string; genre_focus: string; city_id?: string }) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
-        .insert({ ...input, user_id: user.id } as never)
+        .insert({ ...input, user_id: profileId } as never)
         .select()
         .single();
       if (error) throw error;
@@ -106,14 +104,14 @@ export const useClothingBrand = () => {
       stock_quantity: number;
       scores: ClothingScores;
     }) => {
-      if (!user || !brand) throw new Error("Brand required");
+      if (!profileId || !brand) throw new Error("Brand required");
       const { scores, ...rest } = input;
       const { data, error } = await supabase
         .from("player_clothing_items" as never)
         .insert({
           ...rest,
           brand_id: brand.id,
-          creator_user_id: user.id,
+          creator_user_id: profileId,
           quality_score: scores.qualityScore,
           style_score: scores.styleScore,
           rarity: scores.rarity,
