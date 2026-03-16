@@ -38,17 +38,10 @@ export const TransferLabelDialog = ({
 
   // Fetch user's labels that are NOT already linked to a company
   const { data: availableLabels = [], isLoading: labelsLoading } = useQuery<CompanyLabel[]>({
-    queryKey: ["available-labels-for-transfer", user?.id],
-    enabled: !!user?.id && open,
+    queryKey: ["available-labels-for-transfer", profileId],
+    enabled: !!profileId && open,
     queryFn: async () => {
-      // Get user's profile ID
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("labels")

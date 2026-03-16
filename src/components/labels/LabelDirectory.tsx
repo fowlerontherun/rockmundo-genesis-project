@@ -510,7 +510,7 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
       <SubmitDemoDialog
         open={isDemoDialogOpen}
         onOpenChange={setIsDemoDialogOpen}
-        userId={user?.id ?? ""}
+        userId={profileId ?? ""}
         bandId={primaryBand?.bandId}
         preselectedLabelId={selectedLabelId}
       />

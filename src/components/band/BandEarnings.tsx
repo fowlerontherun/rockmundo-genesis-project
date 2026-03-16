@@ -341,7 +341,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
           amount: bandDelta,
           source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
           description: note || null,
-          earned_by_user_id: user.id,
+          earned_by_user_id: profileId,
         });
 
       if (earningsError) throw earningsError;

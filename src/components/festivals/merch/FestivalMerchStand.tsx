@@ -52,7 +52,7 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
       const { error } = await (supabase as any)
         .from("player_merchandise")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profileId,
           band_id: bandId,
           design_name: `${festivalTitle} - ${designName}`,

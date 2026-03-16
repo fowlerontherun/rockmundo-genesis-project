@@ -7,7 +7,6 @@ import { TrendingUp, Zap, Star } from "lucide-react";
 import { format } from "date-fns";
 
 export const PlayerGainsNews = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 

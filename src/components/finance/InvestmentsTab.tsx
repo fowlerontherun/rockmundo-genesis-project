@@ -62,7 +62,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
     try {
       // Create investment
       const { error: investError } = await supabase.from("player_investments").insert({
-        user_id: user.id,
+        user_id: profileId,
         investment_name: selectedOption.name,
         category: selectedOption.category,
         invested_amount: amount,

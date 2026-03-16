@@ -20,7 +20,7 @@ interface LiveFestivalViewProps {
 }
 
 export const LiveFestivalView = ({ festivalId, onBack }: LiveFestivalViewProps) => {
-  const { user } = useAuth();
+  // auth removed — no longer needed
   const { data: stages = [] } = useFestivalStages(festivalId);
   const { data: allSlots = [] } = useFestivalStageSlots(festivalId);
   const { hasTicket } = useFestivalTickets(festivalId);
