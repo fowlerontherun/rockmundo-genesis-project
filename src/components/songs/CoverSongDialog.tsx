@@ -21,7 +21,7 @@ interface CoverSongDialogProps {
 export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongDialogProps) => {
   const [paymentType, setPaymentType] = useState<"flat_fee" | "royalty_split" | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch band member skills
