@@ -28,7 +28,7 @@ export const GigLocationWarning = () => {
   }
 
   const handleCharterFlight = async () => {
-    if (!user?.id || !profile) return;
+    if (!profileId || !profile) return;
 
     setIsBooking(true);
     try {
