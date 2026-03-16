@@ -158,14 +158,14 @@ export default function TattooParlour() {
       const { error: cashError } = await supabase
         .from('profiles')
         .update({ cash: (profile?.cash || 0) - price })
-        .eq('user_id', user.id);
+        .eq('id', profileId!);
       if (cashError) throw cashError;
 
       // Insert tattoo
-      const { error: tattooError } = await supabase
+      const { error: tattooError } = await (supabase as any)
         .from('player_tattoos')
         .insert({
-          user_id: user.id,
+          profile_id: profileId,
           tattoo_design_id: selectedDesign.id,
           parlour_id: currentParlour.id,
           artist_id: selectedArtist?.id || null,
