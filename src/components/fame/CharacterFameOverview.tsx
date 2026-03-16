@@ -39,23 +39,23 @@ const getProgressToNextTier = (fame: number) => {
 };
 
 export const CharacterFameOverview = ({ profileId }: CharacterFameOverviewProps) => {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { profileId: activeProfileId } = useActiveProfile();
+  const resolvedId = profileId || activeProfileId;
 
   // Fetch profile data
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["character-fame-profile", userId],
+    queryKey: ["character-fame-profile", resolvedId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!resolvedId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("fame, fans, display_name, username")
-        .eq("user_id", userId)
+        .eq("id", resolvedId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!resolvedId,
   });
 
   // Fetch band membership for comparison
