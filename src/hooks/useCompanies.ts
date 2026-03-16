@@ -378,7 +378,7 @@ export const useCloseSubsidiary = () => {
       }
 
       // Transfer remaining balance to player if requested
-      if (transferBalance && Number(company.balance) > 0 && profileId) {
+      if (transferBalance && Number(company.balance) > 0 && inputProfileId) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("cash")
