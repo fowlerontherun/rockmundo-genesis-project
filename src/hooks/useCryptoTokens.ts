@@ -53,7 +53,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(*)
         `)
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
 
       if (error) throw error;
       return data as any as TokenHolding[];
