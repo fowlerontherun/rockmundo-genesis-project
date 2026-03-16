@@ -52,7 +52,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
       const { data: messageData, error: messageError } = await supabase
