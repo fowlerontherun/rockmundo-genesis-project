@@ -193,7 +193,7 @@ export const useSubmitProducerReview = () => {
         .from('producer_session_reviews')
         .insert({
           session_id: input.session_id,
-          reviewer_user_id: user!.id,
+          reviewer_user_id: profileId!,
           producer_profile_id: input.producer_profile_id,
           rating: input.rating,
           comment: input.comment || null,
