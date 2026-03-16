@@ -31,11 +31,11 @@ const TRANSPORT_ICONS = {
   ship: Ship,
 } as const;
 
-export const PastTravelList = ({ userId }: PastTravelListProps) => {
+export const PastTravelList = ({ profileId }: PastTravelListProps) => {
   const { t } = useTranslation();
 
   const { data: travelHistory, isLoading } = useQuery({
-    queryKey: ["past-travel", userId],
+    queryKey: ["past-travel", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("player_travel_history")
@@ -50,7 +50,7 @@ export const PastTravelList = ({ userId }: PastTravelListProps) => {
           arrival_time,
           status
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .in("status", ["completed", "cancelled"])
         .order("departure_time", { ascending: false })
         .limit(50);
