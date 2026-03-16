@@ -16,6 +16,7 @@ export interface FestivalAttendance {
 
 export const useFestivalAttendance = (festivalId: string | undefined) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: attendance, isLoading } = useQuery<FestivalAttendance | null>({
