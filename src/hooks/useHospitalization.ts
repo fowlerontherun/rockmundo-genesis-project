@@ -104,7 +104,7 @@ export function useHospitalization() {
       const { error: hospError } = await (supabase as any)
         .from("player_hospitalizations")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profileId,
           hospital_id: nearestHospital.id,
           admitted_at: new Date().toISOString(),
