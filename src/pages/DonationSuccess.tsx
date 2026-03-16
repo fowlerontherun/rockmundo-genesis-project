@@ -87,7 +87,7 @@ export default function DonationSuccess() {
 
           if (!existingPlayerAchievement) {
             await supabase.from("player_achievements").insert({
-              user_id: user.id,
+              user_id: profileId,
               achievement_id: achievementId,
               progress: { donation: true },
               unlocked_at: new Date().toISOString(),
