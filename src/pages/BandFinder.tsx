@@ -193,7 +193,7 @@ export default function BandFinder() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/bands/${band.id}/management`)}
+                          onClick={() => navigate(`/band/${band.id}`)}
                           className="ml-4 shrink-0"
                         >
                           <Eye className="h-4 w-4 mr-2" />
