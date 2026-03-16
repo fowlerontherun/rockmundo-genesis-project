@@ -464,7 +464,7 @@ export const useGameEventNotifications = () => {
             const { data: existingCooldown } = await supabase
               .from('chart_notification_cooldowns' as any)
               .select('id, last_notified_at')
-              .eq('user_id', user.id)
+              .eq('profile_id', profileId)
               .eq('song_id', entry.song_id)
               .eq('chart_type', entry.chart_type)
               .gte('last_notified_at', twelveHoursAgo)
@@ -477,11 +477,11 @@ export const useGameEventNotifications = () => {
             await supabase
               .from('chart_notification_cooldowns' as any)
               .upsert({
-                user_id: user.id,
+                profile_id: profileId,
                 song_id: entry.song_id,
                 chart_type: entry.chart_type,
                 last_notified_at: new Date().toISOString(),
-              }, { onConflict: 'user_id,song_id,chart_type' });
+              }, { onConflict: 'profile_id,song_id,chart_type' });
             
             const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
                             entry.chart_type === 'radio_airplay' ? 'Radio Charts' :

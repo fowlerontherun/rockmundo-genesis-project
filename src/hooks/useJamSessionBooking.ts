@@ -28,16 +28,18 @@ export const useJamSessionBooking = () => {
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
 
-  // Fetch user profile with current city
+  // Fetch active profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile-jam", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash, current_city_id, user_id")
         .eq("user_id", user.id)
-        .single();
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -53,7 +55,7 @@ export const useJamSessionBooking = () => {
     const { data: conflicts } = await supabase
       .from("player_scheduled_activities")
       .select("title")
-      .eq("user_id", userId)
+      .eq("profile_id", userId)
       .in("status", ["scheduled", "in_progress"])
       .lte("scheduled_start", endTime.toISOString())
       .gte("scheduled_end", startTime.toISOString())
@@ -140,7 +142,7 @@ export const useJamSessionBooking = () => {
 
       // Check for activity conflicts
       const { hasConflict, conflictTitle } = await checkActivityConflict(
-        user.id,
+        profile.id,
         scheduledStart,
         scheduledEnd
       );
@@ -272,7 +274,7 @@ export const useJamSessionBooking = () => {
     // Check for activity conflicts during the session time
     if (session.scheduled_start && session.scheduled_end) {
       const { hasConflict, conflictTitle } = await checkActivityConflict(
-        user.id,
+        profile.id,
         new Date(session.scheduled_start),
         new Date(session.scheduled_end)
       );
@@ -399,7 +401,7 @@ export const useJamSessionBooking = () => {
     await (supabase as any)
       .from("player_scheduled_activities")
       .update({ status: "cancelled" })
-      .eq("user_id", user.id)
+      .eq("profile_id", profile.id)
       .eq("linked_jam_session_id", sessionId);
 
     // Add leave message

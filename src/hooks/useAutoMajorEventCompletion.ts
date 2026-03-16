@@ -16,7 +16,7 @@ export function useAutoMajorEventCompletion(userId: string | null) {
   const processingRef = useRef(false);
 
   useEffect(() => {
-    if (!userId || !calendar || processingRef.current) return;
+    if (!userId || !profile?.id || !calendar || processingRef.current) return;
 
     const checkAndAutoComplete = async () => {
       processingRef.current = true;
@@ -32,7 +32,7 @@ export function useAutoMajorEventCompletion(userId: string | null) {
             song_2:songs!major_event_performances_song_2_id_fkey(id, quality_score, genre),
             song_3:songs!major_event_performances_song_3_id_fkey(id, quality_score, genre)
           `)
-          .eq('user_id', userId)
+          .eq('profile_id', profile?.id)
           .eq('status', 'accepted');
 
         if (error || !pendingPerformances?.length) {
@@ -114,5 +114,5 @@ export function useAutoMajorEventCompletion(userId: string | null) {
     };
 
     checkAndAutoComplete();
-  }, [userId, calendar?.gameMonth, calendar?.gameYear]);
+  }, [userId, profile?.id, calendar?.gameMonth, calendar?.gameYear]);
 }

@@ -106,7 +106,7 @@ export function usePlayerProperties() {
       const { data, error } = await supabase
         .from("player_properties")
         .select("*, housing_types(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PlayerProperty[];
@@ -125,7 +125,7 @@ export function usePlayerRental() {
       const { data, error } = await supabase
         .from("player_rentals")
         .select("*, rental_types(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
@@ -211,7 +211,7 @@ export function useStartRental() {
       const { data: existing } = await supabase
         .from("player_rentals")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (existing) throw new Error("You already have an active rental. End it first.");
@@ -254,17 +254,18 @@ export function useStartRental() {
 
 export function useEndRental() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (rentalId: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !profileId) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("player_rentals")
         .update({ status: "ended", ended_at: new Date().toISOString() })
         .eq("id", rentalId)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -351,7 +352,7 @@ export function useSellProperty() {
         .from("player_properties")
         .delete()
         .eq("id", property.id)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (deleteError) throw deleteError;
 
       return sellPrice;
@@ -370,6 +371,7 @@ export function useSellProperty() {
 
 export function useToggleRentOut() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -386,7 +388,7 @@ export function useToggleRentOut() {
           rental_income_daily: rentalIncome,
         })
         .eq("id", property.id)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
 
       return newRentedOut;

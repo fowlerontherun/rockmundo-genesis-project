@@ -169,10 +169,22 @@ export const useAutoRehearsalCompletion = (userId: string | null) => {
       console.log(`[AutoRehearsal] Using client-side fallback`);
 
       // Get user's bands
+      // Get active profile for this user
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+
+      if (!activeProfile) return;
+
       const { data: bandIds } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", activeProfile.id)
+        .eq("member_status", "active");
 
       if (!bandIds || bandIds.length === 0) return;
 
