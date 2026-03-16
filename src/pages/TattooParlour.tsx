@@ -142,7 +142,7 @@ export default function TattooParlour() {
   // Purchase tattoo mutation
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedDesign || !currentParlour || !user) throw new Error('Missing data');
+      if (!selectedDesign || !currentParlour || !profileId) throw new Error('Missing data');
       
       const price = getPrice(selectedDesign.base_price);
       if ((profile?.cash || 0) < price) throw new Error('Insufficient funds');
