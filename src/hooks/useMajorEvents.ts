@@ -261,11 +261,11 @@ export function useAcceptMajorEvent() {
       eventEnd: string;
       eventName: string;
     }) => {
-      if (!user) throw new Error('Must be logged in');
+      if (!profileId) throw new Error('Must be logged in');
 
       // Create scheduled activity to block the time slot
       await createScheduledActivity({
-        userId: user.id,
+        userId: profileId,
         bandId,
         activityType: 'major_event' as any,
         scheduledStart: new Date(eventStart),
