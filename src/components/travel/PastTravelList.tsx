@@ -9,7 +9,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { format } from "date-fns";
 
 interface PastTravelListProps {
-  userId: string;
+  profileId: string;
 }
 
 interface TravelHistoryEntry {
