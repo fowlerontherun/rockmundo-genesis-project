@@ -32,7 +32,7 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
     queryKey: ['recordable-songs', userId, bandId],
     queryFn: async () => {
       // Get songs with their recording history
-      const { data, error } = await supabase
+      let songsQuery = supabase
         .from('songs')
         .select(`
           *,
@@ -43,10 +43,15 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
             band_id
           )
         `)
-        .eq('profile_id', userId)
         .in('status', ['draft', 'recorded'])
         .neq('archived', true)
         .order('created_at', { ascending: false });
+
+      songsQuery = bandId
+        ? songsQuery.eq('band_id', bandId)
+        : songsQuery.eq('user_id', userId);
+
+      const { data, error } = await songsQuery;
       
       if (error) throw error;
 
