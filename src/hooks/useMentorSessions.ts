@@ -182,7 +182,7 @@ export function useMentorSessions() {
       const { error: sessionError } = await supabase
         .from("player_mentor_sessions")
         .insert({
-          user_id: user.id,
+          user_id: profileId!,
           profile_id: profile.id,
           mentor_id: mentorId,
           xp_earned: xpEarned,
