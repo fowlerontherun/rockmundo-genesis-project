@@ -47,7 +47,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
   const overallRoi = totalInvested > 0 ? totalGain / totalInvested : 0;
 
   const handleInvest = async () => {
-    if (!user?.id || !selectedOption) return;
+    if (!profileId || !selectedOption) return;
     const amount = parseInt(investAmount);
     
     if (isNaN(amount) || amount < selectedOption.minInvestment) {
