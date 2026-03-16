@@ -125,7 +125,7 @@ export function usePlayerRental() {
       const { data, error } = await supabase
         .from("player_rentals")
         .select("*, rental_types(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
