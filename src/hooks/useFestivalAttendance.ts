@@ -112,7 +112,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .update({ is_active: false })
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {

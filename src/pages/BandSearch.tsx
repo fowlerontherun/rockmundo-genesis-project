@@ -115,7 +115,7 @@ export default function BandSearch() {
         const { error } = await (supabase as any)
           .from("band_ratings")
           .upsert(
-            { band_id: bandId, user_id: profileId, rating },
+            { band_id: bandId, user_id: userId, rating },
             { onConflict: "band_id,user_id" }
           );
         if (error) throw error;

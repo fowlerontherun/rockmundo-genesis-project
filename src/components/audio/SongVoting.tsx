@@ -99,7 +99,7 @@ export const SongVoting = ({
         // New vote
         const { error } = await supabase.from("song_votes").insert({
           song_id: songId,
-          user_id: profileId,
+          user_id: userId,
           vote_type: voteType,
         });
         if (error) throw error;

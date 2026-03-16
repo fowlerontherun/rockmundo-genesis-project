@@ -20,7 +20,7 @@ export const RandomEventsNews = () => {
           id, status, created_at,
           random_events(id, title, description, rarity, category)
         `)
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .eq("status", "pending_choice")
         .order("created_at", { ascending: false })
         .limit(5);

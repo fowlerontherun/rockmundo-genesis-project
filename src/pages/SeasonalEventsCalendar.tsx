@@ -54,7 +54,7 @@ const SeasonalEventsCalendar = () => {
       const { data } = await supabase
         .from("player_events")
         .select("event_id")
-        .eq("user_id", profileId);
+        .eq("profile_id", profileId);
       return data?.map((e) => e.event_id) || [];
     },
     enabled: !!profileId,

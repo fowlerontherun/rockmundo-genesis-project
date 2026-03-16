@@ -193,7 +193,7 @@ export async function fetchArtistMetrics(profileId: string): Promise<BandMetrics
   const { count: releaseCount } = await supabase
     .from("releases")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", profileId)
+    .eq("profile_id", profileId)
     .eq("release_status", "released");
 
   return {
