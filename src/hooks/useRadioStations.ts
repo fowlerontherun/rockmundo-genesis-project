@@ -40,7 +40,8 @@ export interface RadioSubmission {
   band?: any;
 }
 
-const { profileId } = useActiveProfile();
+export const useRadioStations = () => {
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all stations with city info
