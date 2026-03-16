@@ -164,7 +164,7 @@ export const useUnderworldStore = () => {
         const { data: holding, error: holdingError } = await supabase
           .from("player_token_holdings")
           .select("id, quantity")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("token_id", product.price_token_id)
           .maybeSingle();
 

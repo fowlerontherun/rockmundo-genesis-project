@@ -43,39 +43,39 @@ const GAMES = [
 export default function Casino() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { addictions } = useAddictions();
 
   const gamblingAddiction = addictions.find(a => a.addiction_type === "gambling");
 
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash", user?.id],
+    queryKey: ["profile-cash", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["casino-stats", user?.id],
+    queryKey: ["casino-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return { totalWon: 0, totalLost: 0, gamesPlayed: 0 };
+      if (!profileId) return { totalWon: 0, totalLost: 0, gamesPlayed: 0 };
       const { data } = await (supabase as any)
         .from("casino_transactions")
         .select("net_result")
-        .eq("profile_id", user.id);
+        .eq("profile_id", profileId);
       if (!data) return { totalWon: 0, totalLost: 0, gamesPlayed: 0 };
       const totalWon = data.filter((d: any) => d.net_result > 0).reduce((s: number, d: any) => s + d.net_result, 0);
       const totalLost = data.filter((d: any) => d.net_result < 0).reduce((s: number, d: any) => s + Math.abs(d.net_result), 0);
       return { totalWon, totalLost, gamesPlayed: data.length };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   return (

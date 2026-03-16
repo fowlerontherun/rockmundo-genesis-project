@@ -82,7 +82,7 @@ const Travel = () => {
     };
 
     loadTravelData();
-  }, [user]);
+  }, [profileId]);
 
   const handleSelectDestination = (destination: SelectedDestination) => {
     setSelectedDestination(destination);
