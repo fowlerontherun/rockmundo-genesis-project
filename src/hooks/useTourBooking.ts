@@ -21,6 +21,7 @@ export interface TourBookingData {
 
 export function useTourBooking() {
   const { toast } = useToast();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const calculateTourCosts = async (tourData: TourBookingData) => {
