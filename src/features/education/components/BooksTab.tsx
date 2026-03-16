@@ -131,13 +131,68 @@ export const BooksTab = () => {
   const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Your Library</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Skill books offer passive learning. Choose how long to read each day, then let daily attendance build experience
           over time until completion unlocks the skill gain.
         </p>
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search books by title, author, or skill..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedSkill === "all" ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => setSelectedSkill("all")}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            All Skills
+          </Button>
+          {skillCategories.map((cat) => (
+            <Button
+              key={cat}
+              variant={selectedSkill === cat ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setSelectedSkill(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Active filters:</span>
+            {searchQuery.trim() && (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                "{searchQuery}"
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery("")} />
+              </Badge>
+            )}
+            {selectedSkill !== "all" && (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                {selectedSkill}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedSkill("all")} />
+              </Badge>
+            )}
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSearchQuery(""); setSelectedSkill("all"); }}>
+              Clear all
+            </Button>
+          </div>
+        )}
       </div>
 
       {isLoading && (
