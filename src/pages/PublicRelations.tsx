@@ -38,7 +38,6 @@ import { SelfPromotionPanel } from "@/components/pr/SelfPromotionPanel";
 type TabValue = "offers" | "appearances" | "self-promo" | "film" | "consultant";
 
 export default function PublicRelations() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabValue>("offers");
