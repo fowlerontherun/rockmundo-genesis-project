@@ -24,7 +24,7 @@ export interface PlayerProducerProfile {
 }
 
 export const useProducerProfile = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   return useQuery({
     queryKey: ['producer-profile', profileId],
     enabled: !!profileId,
