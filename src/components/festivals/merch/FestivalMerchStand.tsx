@@ -9,6 +9,7 @@ import { ShoppingBag, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 interface FestivalMerchStandProps {
@@ -28,6 +29,7 @@ const MERCH_TYPES = [
 
 export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: FestivalMerchStandProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [designName, setDesignName] = useState("");
   const [itemType, setItemType] = useState("");
@@ -48,11 +50,12 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
 
   const createMerch = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !designName || !itemType) throw new Error("Missing fields");
+      if (!user?.id || !profileId || !designName || !itemType) throw new Error("Missing fields");
       const { error } = await (supabase as any)
         .from("player_merchandise")
         .insert({
           user_id: user.id,
+          profile_id: profileId,
           band_id: bandId,
           design_name: `${festivalTitle} - ${designName}`,
           item_type: itemType,

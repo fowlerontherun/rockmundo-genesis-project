@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Zap, Star } from "lucide-react";
@@ -8,38 +9,39 @@ import { format } from "date-fns";
 
 export const PlayerGainsNews = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = format(new Date(), "yyyy-MM-dd");
 
   const { data: xpGains } = useQuery({
-    queryKey: ["news-xp-gains", user?.id, today],
+    queryKey: ["news-xp-gains", profileId, today],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("experience_ledger")
         .select("xp_amount, activity_type, created_at")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .gte("created_at", `${today}T00:00:00`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: skillGains } = useQuery({
-    queryKey: ["news-skill-gains", user?.id, today],
+    queryKey: ["news-skill-gains", profileId, today],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("skill_improvements")
         .select("skill_name, previous_value, new_value, improvement_amount, improved_at")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .gte("improved_at", `${today}T00:00:00`)
         .order("improved_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const totalXp = xpGains?.reduce((sum, g) => sum + (g.xp_amount || 0), 0) || 0;

@@ -12,6 +12,7 @@ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useFestivalStages, useFestivalStageSlots } from "@/hooks/useFestivalStages";
 import { useFestivalQuality } from "@/hooks/useFestivalFinances";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import { FestivalMerchStand } from "./merch/FestivalMerchStand";
 import { FestivalExclusiveShop } from "./merch/FestivalExclusiveShop";
@@ -190,28 +191,30 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
     },
   });
 
+  const { profileId } = useActiveProfile();
+
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash-festival", user?.id],
+    queryKey: ["profile-cash-festival", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase.from("profiles").select("cash").eq("user_id", user.id).single();
+      if (!profileId) return null;
+      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
-  // Check if user has a performing band at this festival
+  // Check if character has a performing band at this festival
   const { data: userBandSlot } = useQuery({
-    queryKey: ["user-band-slot", festivalId, user?.id],
+    queryKey: ["user-band-slot", festivalId, profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data: members } = await supabase.from("band_members").select("band_id").eq("user_id", user.id);
+      if (!profileId) return null;
+      const { data: members } = await supabase.from("band_members").select("band_id").eq("profile_id", profileId).eq("member_status", "active");
       if (!members?.length) return null;
       const bandIds = members.map(m => m.band_id);
       const matchingSlot = slots.find((s: any) => s.band_id && bandIds.includes(s.band_id));
       return matchingSlot ? { bandId: matchingSlot.band_id } : null;
     },
-    enabled: !!user?.id && slots.length > 0,
+    enabled: !!profileId && slots.length > 0,
   });
 
   // Ticket count

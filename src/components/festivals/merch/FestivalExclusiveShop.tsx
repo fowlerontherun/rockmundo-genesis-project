@@ -6,6 +6,7 @@ import { ShoppingCart, Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 interface FestivalExclusiveShopProps {
@@ -23,29 +24,31 @@ const COLLECTIBLES = [
 
 export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: FestivalExclusiveShopProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
 
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash", user?.id],
+    queryKey: ["profile-cash", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase.from("profiles").select("cash").eq("user_id", user.id).single();
+      if (!profileId) return null;
+      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const buyItem = useMutation({
     mutationFn: async (item: typeof COLLECTIBLES[0]) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!user?.id || !profileId) throw new Error("Not authenticated");
       if (!profile || profile.cash < item.price) throw new Error("Not enough cash");
 
-      await supabase.from("profiles").update({ cash: profile.cash - item.price }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ cash: profile.cash - item.price }).eq("id", profileId);
 
       // Log as activity
       await (supabase as any).from("activity_feed").insert({
         user_id: user.id,
+        profile_id: profileId,
         activity_type: "festival_purchase",
         message: `Bought ${item.name} at ${festivalTitle}`,
         earnings: -item.price,

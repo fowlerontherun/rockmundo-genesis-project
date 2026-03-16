@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePlayerLevel } from "@/hooks/usePlayerLevel";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +40,7 @@ interface OverviewTabsProps {
 export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const [citySearch, setCitySearch] = useState("");
 
@@ -114,18 +116,18 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch career stats
   const { data: careerStats } = useQuery({
-    queryKey: ["dashboard-career-stats", user?.id],
+    queryKey: ["dashboard-career-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       const client: any = supabase;
-      // Get user's bands first, then count gig outcomes via band_id
-      const bandsResult = await client.from("band_members").select("band_id").eq("user_id", user.id);
+      // Get character's bands first, then count gig outcomes via band_id
+      const bandsResult = await client.from("band_members").select("band_id").eq("profile_id", profileId).eq("member_status", "active");
       const bandIds = (bandsResult.data || []).map((b: any) => b.band_id);
       const gigsResult = bandIds.length > 0
         ? await client.from("gig_outcomes").select("id").in("band_id", bandIds)
         : { data: [] };
-      const songsResult = await client.from("songs").select("id, status").eq("original_writer_id", user.id);
+      const songsResult = await client.from("songs").select("id, status").eq("profile_id", profileId);
 
       const totalGigs = gigsResult.data?.length || 0;
       const totalSongs = songsResult.data?.length || 0;
@@ -133,7 +135,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
       return { totalGigs, totalSongs, recordedSongs, totalStreams: 0 };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 60000
   });
 
@@ -159,19 +161,19 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch financial summary
   const { data: financialSummary } = useQuery({
-    queryKey: ["dashboard-financial-summary", user?.id],
+    queryKey: ["dashboard-financial-summary", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const client: any = supabase;
       const { data: earnings } = await client
         .from("band_earnings")
         .select("amount, source")
-        .eq("earned_by_user_id", user.id)
+        .eq("profile_id", profileId)
         .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
       const weeklyEarnings = earnings?.reduce((acc: number, e: any) => acc + (e.amount || 0), 0) || 0;
       return { weeklyEarnings };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 60000
   });
 
