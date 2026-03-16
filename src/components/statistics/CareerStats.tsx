@@ -55,7 +55,7 @@ export function CareerStats() {
       const { count: achievements } = await supabase
         .from("player_achievements")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .not("unlocked_at", "is", null);
 
       return {
