@@ -322,7 +322,7 @@ export const useJamSessionBooking = () => {
     // Create scheduled activity for the joiner
     if (session.scheduled_start && session.scheduled_end) {
       await createScheduledActivity(
-        user.id,
+        profile.user_id,
         profile.id,
         sessionId,
         session.name,
