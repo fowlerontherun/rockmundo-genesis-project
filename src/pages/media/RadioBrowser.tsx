@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useRadioStations } from "@/hooks/useRadioStations";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe, Zap, Send } from "lucide-react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
