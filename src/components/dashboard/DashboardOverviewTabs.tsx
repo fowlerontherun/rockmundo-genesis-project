@@ -39,7 +39,6 @@ interface OverviewTabsProps {
 
 export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProps) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const [citySearch, setCitySearch] = useState("");
