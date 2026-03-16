@@ -65,7 +65,7 @@ export interface JamSessionResults {
 }
 
 export const useJamSessions = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [lastResults, setLastResults] = useState<JamSessionResults | null>(null);
