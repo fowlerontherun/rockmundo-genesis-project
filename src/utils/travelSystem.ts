@@ -25,11 +25,11 @@ export interface TravelBookingData {
   scheduledDepartureTime?: string;
 }
 
-export async function validateTravelEligibility(userId: string, cost: number) {
+export async function validateTravelEligibility(profileId: string, cost: number) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("cash")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .maybeSingle();
 
   if (profileError) {
