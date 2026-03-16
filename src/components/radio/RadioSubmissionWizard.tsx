@@ -138,7 +138,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
     queryFn: async () => {
-      if (!selectedSong || !user) return [];
+      if (!selectedSong || !profileId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select("station_id")
