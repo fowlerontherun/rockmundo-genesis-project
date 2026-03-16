@@ -52,7 +52,7 @@ export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogP
       if (error) throw error;
       return tours || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredTours = tours.filter((t: any) =>

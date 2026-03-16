@@ -34,6 +34,7 @@ interface InvestmentsTabProps {
 
 export const InvestmentsTab = ({ investments, investmentOptions, cash }: InvestmentsTabProps) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOption, setSelectedOption] = useState<InvestmentOption | null>(null);
   const [investAmount, setInvestAmount] = useState("");

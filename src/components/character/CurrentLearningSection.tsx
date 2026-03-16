@@ -50,7 +50,7 @@ export const CurrentLearningSection = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   if (!activeEnrollment && !activeReading) {
