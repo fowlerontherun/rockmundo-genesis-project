@@ -14,13 +14,24 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.090",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "CRITICAL: Fixed progression edge function loadActiveProfile — was loading oldest character instead of active one (broke XP/AP claiming after switching)" },
+      { type: 'fix', description: "Fixed 14+ hooks passing profileId to user_id columns: achievements, holidays, equipment, crypto, festivals, lottery, playlists, fan management, clothing brands, wellness" },
+      { type: 'fix', description: "Tables with profile_id column now correctly use .eq('profile_id', profileId) for character isolation (achievements, habits, scheduled activities, lottery, experience ledger)" },
+      { type: 'fix', description: "Tables with only user_id column now correctly use auth userId (equipment, holidays, festivals, crypto, fan mgmt, playlists, wellness)" },
+      { type: 'fix', description: "Fixed NightClubDetail querying profiles by user_id instead of id" },
+      { type: 'fix', description: "Fixed inbox realtime subscription filtering by profileId instead of userId" },
+    ],
+  },
+  {
     version: "1.1.089",
     date: "2026-03-16",
     changes: [
       { type: 'fix', description: "CRITICAL: Fixed useActiveProfile to expose userId (auth) alongside profileId" },
       { type: 'fix', description: "Fixed VIP status query — was using profileId instead of auth user_id" },
       { type: 'fix', description: "Fixed inbox, radio, tutorial, conditions, prison, survey, producer hooks to use auth userId for user_id columns" },
-      { type: 'fix', description: "~20 more files still need user_id→userId fix (holidays, achievements, equipment, crypto, etc.)" },
     ],
   },
   {
