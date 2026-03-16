@@ -34,28 +34,28 @@ export function StagePracticeResults({
   onPlayAgain,
   onExit,
 }: StagePracticeResultsProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [xpResult, setXpResult] = useState<XpRewardResult | null>(null);
   const [saved, setSaved] = useState(false);
 
   // Fetch today's sessions for diminishing returns
   const { data: todayData } = useQuery({
-    queryKey: ['practice-today', user?.id],
+    queryKey: ['practice-today', profileId],
     queryFn: async () => {
-      if (!user?.id) return { sessions: 0, xp: 0 };
+      if (!profileId) return { sessions: 0, xp: 0 };
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const { data, error } = await supabase
         .from('stage_practice_sessions')
         .select('xp_earned')
-        .eq('user_id', user.id)
+        .eq('user_id', profileId)
         .gte('played_at', today.toISOString());
       if (error) throw error;
       const sessions = data?.length || 0;
       const xp = data?.reduce((sum, s) => sum + (s.xp_earned || 0), 0) || 0;
       return { sessions, xp };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Calculate XP when today data loads
