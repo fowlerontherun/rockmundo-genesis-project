@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.062",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "PersonalVehicles buy/sell operations use profileId directly" },
+      { type: 'improvement', description: "RpmAvatarCreator saves avatar to active profile instead of user_id lookup" },
+      { type: 'improvement', description: "UniversityDetail profile cash lookup uses profileId" },
+      { type: 'improvement', description: "useEducationSummary profile lookup uses profileId" },
+      { type: 'improvement', description: "CreateLabelDialog profile lookup eliminated, uses profileId directly" },
+      { type: 'improvement', description: "LabelFinanceTab balance lookup uses profileId" },
+      { type: 'improvement', description: "useJamSessionBooking profile lookup uses profileId" },
+      { type: 'improvement', description: "usePlayerEquipmentMutations equip/unequip scoped to profileId" },
+      { type: 'improvement', description: "PlaylistsTab, StreamingMyReleasesTab release queries scoped to band membership" },
+      { type: 'improvement', description: "MusicVideoReleaseTab release and config queries scoped to band membership" },
+    ],
+  },
+  {
     version: "1.1.061",
     date: "2026-03-16",
     changes: [
