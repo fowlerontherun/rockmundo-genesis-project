@@ -60,7 +60,7 @@ export function useConditions() {
 
   const treatMutation = useMutation({
     mutationFn: async ({ conditionId, treatmentType }: { conditionId: string; treatmentType: TreatmentType }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const condition = conditions.find((c) => c.id === conditionId);
       if (!condition) throw new Error("Condition not found");
