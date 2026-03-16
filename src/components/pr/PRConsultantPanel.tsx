@@ -87,7 +87,7 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
       const { error } = await supabase
         .from("player_pr_consultants")
         .insert({
-          user_id: userId,
+          profile_id: profileId,
           consultant_id: consultantId as any,
           expires_at: expiresAt.toISOString(),
           monthly_fee: consultant.weekly_fee * 4 || CONSULTANT_MONTHLY_FEE,
