@@ -255,7 +255,7 @@ export const useCompanyFinancialSummary = () => {
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
         .select("id, balance, weekly_operating_costs, company_type")
-        .eq("owner_id", user.id);
+        .eq("owner_id", profileId);
 
       if (companiesError) throw companiesError;
 
