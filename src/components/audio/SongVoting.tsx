@@ -124,7 +124,7 @@ export const SongVoting = ({
   });
 
   const handleVote = (voteType: "up" | "down") => {
-    if (!user) {
+    if (!profileId) {
       toast.error("Please log in to vote");
       return;
     }

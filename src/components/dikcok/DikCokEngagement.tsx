@@ -128,7 +128,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
         </div>
 
         {/* Comment Input */}
-        {user && (
+        {profileId && (
           <form onSubmit={handleSubmitComment} className="flex gap-2">
             <Input
               placeholder="Add a comment..."
