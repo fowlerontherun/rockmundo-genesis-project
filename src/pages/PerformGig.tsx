@@ -30,6 +30,7 @@ export default function PerformGig() {
   const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
 
   const [gig, setGig] = useState<GigWithVenue | null>(null);
