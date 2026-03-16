@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.075",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useHousing (7 hooks) fully migrated to profileId" },
+      { type: 'improvement', description: "usePrisonStatus queries and bail use profileId" },
+      { type: 'improvement', description: "useFestivalAttendance join/move/leave use profileId" },
+      { type: 'improvement', description: "useCurrentEnrollment queries profileId directly" },
+      { type: 'improvement', description: "usePlayerEvents removed useAuth dependency" },
+      { type: 'fix', description: "EventNotificationModal aligned with actual hook types" },
+    ],
+  },
+  {
     version: "1.1.074",
     date: "2026-03-16",
     changes: [

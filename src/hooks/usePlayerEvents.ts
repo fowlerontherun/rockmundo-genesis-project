@@ -19,7 +19,7 @@ export interface RandomEvent {
   event_type: string | null;
 }
 
-interface PlayerEvent {
+export interface PlayerEvent {
   id: string;
   profile_id: string;
   random_event_id: string;
