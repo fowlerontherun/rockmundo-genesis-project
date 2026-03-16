@@ -54,7 +54,7 @@ export function BandSettingsTab({
   const [disbandConfirmation, setDisbandConfirmation] = useState('');
 
   const handleLeaveBand = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     try {
       setLoading(true);
