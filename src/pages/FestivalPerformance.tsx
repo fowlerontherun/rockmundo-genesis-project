@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FestivalPerformanceOutcome } from "@/components/festivals/FestivalPerformanceOutcome";
@@ -38,7 +38,7 @@ export default function FestivalPerformance() {
   const { participationId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const primaryBandQuery = usePrimaryBand();
   const primaryBand = primaryBandQuery.data?.bands;
 

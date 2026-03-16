@@ -6,7 +6,7 @@ import {
   type AdvisorSuggestion,
 } from "@/lib/services/advisor";
 import { streamAdvisorChat } from "@/lib/api/advisor-chat";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,7 @@ const formatCurrency = (value: number): string => {
 };
 
 const AdvisorPage = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
   const [messages, setMessages] = useState<AdvisorChatMessage[]>([]);
@@ -99,13 +99,13 @@ const AdvisorPage = () => {
   }, [greeting]);
 
   const loadInsights = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const result = await generateAdvisorInsights(user.id);
+      const result = await generateAdvisorInsights(profileId);
       setInsights(result);
 
       setMessages((previous) => {
@@ -137,13 +137,13 @@ const AdvisorPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void loadInsights();
     }
-  }, [user, loadInsights]);
+  }, [profileId, loadInsights]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

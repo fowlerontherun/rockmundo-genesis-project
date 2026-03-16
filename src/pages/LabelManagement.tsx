@@ -12,7 +12,7 @@ import { LabelContractsTab } from "@/components/labels/management/LabelContracts
 import { LabelReleasesTab } from "@/components/labels/management/LabelReleasesTab";
 import { LabelStaffTab } from "@/components/labels/management/LabelStaffTab";
 import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
   return useQuery({
@@ -73,7 +73,7 @@ function usePendingContractCount(labelId: string | undefined) {
 export default function LabelManagement() {
   const { labelId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: label, isLoading } = useLabelByIdOrCompanyId(labelId);
   const { data: pendingDemoCount = 0 } = useLabelDemoCount(label?.id);
@@ -104,9 +104,9 @@ export default function LabelManagement() {
   }
   
   // Get user profile ID for direct ownership check
-  const isDirectOwner = label.owner_id && user && label.owner_id === user.id; // Rough check, real check would need profile ID
+  const isDirectOwner = label.owner_id && profileId && label.owner_id === profileId;
   // Check company ownership
-  const isCompanyOwner = label.companies?.owner_id === user?.id;
+  const isCompanyOwner = label.companies?.owner_id === profileId;
   const isPlayerOwned = isDirectOwner || isCompanyOwner;
   
   return (

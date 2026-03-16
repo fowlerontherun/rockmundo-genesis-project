@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Music, Edit, Trash2, Lock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useSetlists, useDeleteSetlist } from "@/hooks/useSetlists";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SetlistManager = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const navigate = useNavigate();
   const [editingSetlistId, setEditingSetlistId] = useState<string | null>(null);
   const [managingSongsSetlistId, setManagingSongsSetlistId] = useState<string | null>(null);
@@ -32,14 +32,14 @@ const SetlistManager = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: band } = useQuery({
-    queryKey: ["user-band", user?.id],
+    queryKey: ["user-band", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
 
       const { data: memberData, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, bands!band_id(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       console.log("Member data:", memberData);
@@ -49,7 +49,7 @@ const SetlistManager = () => {
       const { data: leaderData, error: leaderError } = await supabase
         .from("bands")
         .select("*")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
 
@@ -57,7 +57,7 @@ const SetlistManager = () => {
 
       return leaderData;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: setlists, isLoading } = useSetlists(band?.id || null);
@@ -70,7 +70,7 @@ const SetlistManager = () => {
     setDeletingSetlistId(null);
   };
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="text-center py-12">Please log in to manage setlists.</div>
     );

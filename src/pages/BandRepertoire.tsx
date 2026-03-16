@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +32,7 @@ interface RepertoireSong {
 }
 
 const BandRepertoire = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");

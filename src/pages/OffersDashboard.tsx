@@ -39,7 +39,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
@@ -73,11 +72,10 @@ const statusBadge = (status: string) => {
 };
 
 const OffersDashboard = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
 
-  const userId = user?.id;
+  const userId = profileId;
 
   // Fetch user's band id
   const { data: bandData } = useQuery({
@@ -231,7 +229,7 @@ const OffersDashboard = () => {
 
   const uniqueSources = ["Modeling", "Media", "Gig", "Sponsorship"];
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="container mx-auto p-6">
         <p className="text-muted-foreground">Please log in to view your offers.</p>

@@ -32,7 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCityMayor, useIsCurrentMayor, useUpdateCityLaws } from "@/hooks/useMayorDashboard";
 import { useCityLaws, useCityLawHistory } from "@/hooks/useCityLaws";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";
@@ -42,7 +42,7 @@ import { MUSIC_GENRES } from "@/data/genres";
 
 export default function MayorDashboard() {
   const { cityId } = useParams<{ cityId: string }>();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: city } = useQuery({
     queryKey: ["city", cityId],

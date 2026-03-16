@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
 import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
@@ -20,14 +20,14 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 const SkillsPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { skillProgress, loading, xpWallet, profile, dailyXpGrant } = useGameData();
   const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);
   const [rawAttributes, setRawAttributes] = useState<Database["public"]["Tables"]["player_attributes"]["Row"] | null>(null);
   
   // Get practice restrictions for current date
   const today = new Date();
-  const { data: restrictions } = useSkillPracticeRestrictions(user?.id, today);
+  const { data: restrictions } = useSkillPracticeRestrictions(profileId ?? undefined, today);
 
   // Fetch full attributes row
   useEffect(() => {

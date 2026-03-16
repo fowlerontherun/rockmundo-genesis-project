@@ -9,7 +9,7 @@ import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, Key
 import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworldInventory";
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -28,7 +28,7 @@ const rarityStyles: Record<string, string> = {
 };
 
 const InventoryManager = () => {
-  const { user } = useAuth();
+  // profileId already available from useActiveProfile below
   const { profileId } = useActiveProfile();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -138,7 +138,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!user ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your inventory.</p>
               ) : inventoryLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your items...</p>
@@ -256,7 +256,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!user ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your book inventory.</p>
               ) : booksLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your books...</p>
@@ -352,7 +352,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!user ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your property keys.</p>
               ) : propertiesLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your property keys...</p>

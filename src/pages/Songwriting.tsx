@@ -4,7 +4,7 @@ import { MusicOwnershipReminder } from "@/components/legal/MusicOwnershipReminde
 import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useGameData } from "@/hooks/useGameData";
@@ -399,7 +399,7 @@ const getProgressPercent = (value?: number | null) => {
 };
 const Songwriting = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  // useAuth removed — profileId from useActiveProfile below
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
