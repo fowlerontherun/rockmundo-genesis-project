@@ -14,7 +14,7 @@ export interface TravelRoute {
 }
 
 export interface TravelBookingData {
-  userId: string;
+  profileId: string;
   fromCityId: string;
   toCityId: string;
   routeId: string;
