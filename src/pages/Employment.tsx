@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import type { Database } from "@/lib/supabase-types";
 import { computePlayerLevel } from "@/hooks/usePlayerLevel";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"] & {
   cities?: { name: string; country: string } | null;
