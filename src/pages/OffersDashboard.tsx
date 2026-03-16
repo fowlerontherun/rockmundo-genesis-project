@@ -122,7 +122,7 @@ const OffersDashboard = () => {
     queryKey: ["offers-media", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("pr_media_offers")
         .select("id, status, compensation, fame_boost, created_at, show_name, outlet_name")
         .eq("profile_id", profileId);

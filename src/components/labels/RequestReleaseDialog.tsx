@@ -60,7 +60,7 @@ export function RequestReleaseDialog({
           amount: -terminationFee,
           source: "contract_termination",
           description: `Early contract termination fee paid to ${labelName}`,
-          earned_by_user_id: userId,
+          earned_by_user_id: profileId,
         });
       } else {
         const { data: profile } = await supabase.from("profiles").select("cash").eq("id", profileId).single();

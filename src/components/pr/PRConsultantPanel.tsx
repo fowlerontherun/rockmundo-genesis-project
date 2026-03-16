@@ -59,7 +59,7 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
   const { data: activeConsultant, isLoading: subscriptionLoading } = useQuery({
     queryKey: ["player-pr-consultant", profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_pr_consultants")
         .select(`
           *,

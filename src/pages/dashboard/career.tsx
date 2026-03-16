@@ -99,6 +99,7 @@ const getBestGigLabel = (gig: CareerGigHighlight | null) => {
 };
 
 const CareerDashboardPage = () => {
+  const { profileId } = useActiveProfile();
   const [overview, setOverview] = useState<CareerOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -15,7 +15,7 @@ export function ReleaseSelector({ profileId, bandId, value, onValueChange, place
   const { data: releases, isLoading } = useQuery({
     queryKey: ["user-releases", profileId, bandId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("releases")
         .select("id, title, release_status, created_at")
         .eq("release_status", "released")
