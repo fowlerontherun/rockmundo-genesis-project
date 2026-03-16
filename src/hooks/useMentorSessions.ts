@@ -297,10 +297,7 @@ export function useMentorSessions() {
     const mentor = mentors?.find((m) => m.id === mentorId);
     if (!mentor) return { canBook: false, reason: "Master not found" };
 
-    // Check discovery first
-    if (!isMentorDiscovered(mentorId)) {
-      return { canBook: false, reason: "Not discovered" };
-    }
+    // Discovery check removed — all mentors unlocked
 
     // Check city requirement
     if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
