@@ -81,7 +81,7 @@ const promoFocusOptions = [
 ];
 
 const SelfPromotionBrowser = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: userBand, isLoading: bandLoading } = useUserBand();
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
