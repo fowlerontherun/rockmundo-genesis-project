@@ -334,7 +334,7 @@ export const useCompanyFinancialSummary = () => {
         effective_tax_rate: effectiveTaxRate,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
 
