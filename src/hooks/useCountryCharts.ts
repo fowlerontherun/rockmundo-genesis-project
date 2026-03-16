@@ -74,6 +74,7 @@ export const getMetricLabels = (chartType: ChartType, timeRange: ChartTimeRange 
     case "vinyl_sales":
     case "cassette_sales":
     case "record_sales":
+    case "physical_sales":
       return { weekly: timeLabel, total: "All-Time Sales" };
     default:
       return { weekly: timeLabel, total: timeLabel };
