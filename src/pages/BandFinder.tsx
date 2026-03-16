@@ -161,6 +161,11 @@ export default function BandFinder() {
                             </p>
                           )}
                           <div className="flex flex-wrap gap-2">
+                            {band.is_recruiting && (
+                              <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+                                Recruiting
+                              </Badge>
+                            )}
                             {band.genre && (
                               <Badge variant="secondary" className="text-xs">
                                 <Music className="h-3 w-3 mr-1" />
