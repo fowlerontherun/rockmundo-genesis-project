@@ -103,7 +103,7 @@ export function MediaSubmissionDialog({
   bandId,
   bandFame,
 }: MediaSubmissionDialogProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const config = mediaConfig[mediaType];
   const Icon = config.icon;
