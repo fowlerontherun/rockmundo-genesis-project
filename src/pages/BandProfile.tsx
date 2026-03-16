@@ -8,11 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, TrendingUp, Music, User } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
+import { BandApplicationDialog } from "@/components/band/BandApplicationDialog";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export default function BandProfile() {
   const { t } = useTranslation();
   const { bandId } = useParams();
+  const { profileId } = useActiveProfile();
 
   const { data: band, isLoading } = useQuery({
     queryKey: ["band-profile", bandId],
@@ -31,13 +34,15 @@ export default function BandProfile() {
           cohesion_score,
           created_at,
           logo_url,
+          is_recruiting,
           band_members(
             id,
             instrument_role,
             vocal_role,
             role,
             joined_at,
-            profiles:user_id(
+            profile_id,
+            profiles:profile_id(
               id,
               username,
               display_name,
@@ -52,6 +57,27 @@ export default function BandProfile() {
       return data;
     },
     enabled: !!bandId,
+  });
+
+  // Check if user is already a member
+  const isMember = band?.band_members?.some(
+    (m: any) => m.profile_id === profileId
+  );
+
+  // Check if user already applied
+  const { data: existingApplication } = useQuery({
+    queryKey: ["band-application", bandId, profileId],
+    queryFn: async () => {
+      if (!bandId || !profileId) return null;
+      const { data } = await supabase
+        .from("band_applications")
+        .select("id, status")
+        .eq("band_id", bandId)
+        .eq("applicant_profile_id", profileId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!bandId && !!profileId,
   });
 
   if (isLoading) {
@@ -78,6 +104,8 @@ export default function BandProfile() {
     );
   }
 
+  const canApply = band.is_recruiting && !isMember && !existingApplication && profileId;
+
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-6">
       <Card>
@@ -96,9 +124,14 @@ export default function BandProfile() {
             )}
 
             <div className="flex-1 space-y-3">
-              <div>
+              <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">{band.name}</h1>
-                {band.genre && <Badge variant="secondary" className="mt-2">{band.genre}</Badge>}
+                {band.genre && <Badge variant="secondary">{band.genre}</Badge>}
+                {band.is_recruiting && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                    Recruiting
+                  </Badge>
+                )}
               </div>
 
               {band.description && (
@@ -120,9 +153,24 @@ export default function BandProfile() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Formed {format(new Date(band.created_at), "MMMM yyyy")}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Formed {format(new Date(band.created_at), "MMMM yyyy")}
+                </p>
+                {/* Apply button */}
+                {canApply && (
+                  <BandApplicationDialog
+                    bandId={band.id}
+                    bandName={band.name}
+                    profileId={profileId!}
+                  />
+                )}
+                {existingApplication && (
+                  <Badge variant="outline" className="text-xs">
+                    {existingApplication.status === 'pending' ? 'Application Pending' : `Application ${existingApplication.status}`}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
