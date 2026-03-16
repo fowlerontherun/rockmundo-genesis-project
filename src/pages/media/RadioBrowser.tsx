@@ -26,7 +26,7 @@ import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { stations, mySubmissions, isLoading } = useRadioStations();
   
