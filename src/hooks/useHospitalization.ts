@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -28,7 +27,6 @@ export interface Hospitalization {
 }
 
 export function useHospitalization() {
-  const { user } = useAuth();
   const { profileId, profile: activeProfile } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -76,7 +74,7 @@ export function useHospitalization() {
 
   const checkInMutation = useMutation({
     mutationFn: async (params?: { conditionId?: string; reason?: string }) => {
-      if (!user?.id || !profileId || !nearestHospital) throw new Error("No hospital available");
+      if (!profileId || !nearestHospital) throw new Error("No hospital available");
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -106,7 +104,7 @@ export function useHospitalization() {
       const { error: hospError } = await (supabase as any)
         .from("player_hospitalizations")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profileId,
           hospital_id: nearestHospital.id,
           admitted_at: new Date().toISOString(),
@@ -121,7 +119,7 @@ export function useHospitalization() {
       if (hospError) throw hospError;
 
       await (supabase as any).from("player_scheduled_activities").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         activity_type: "hospital",
         scheduled_start: new Date().toISOString(),
@@ -150,7 +148,7 @@ export function useHospitalization() {
 
   const dischargeMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !profileId || !activeHospitalization) throw new Error("No active hospitalization");
+      if (!profileId || !activeHospitalization) throw new Error("No active hospitalization");
 
       const admittedAt = new Date(activeHospitalization.admitted_at);
       const now = new Date();

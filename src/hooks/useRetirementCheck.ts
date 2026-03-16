@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { shouldPromptRetirement, RETIREMENT_AGES } from "@/utils/skillDecline";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface RetirementCheckResult {
@@ -21,7 +20,6 @@ interface RetirementCheckResult {
 }
 
 export function useRetirementCheck(): RetirementCheckResult {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState(false);

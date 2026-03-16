@@ -7,7 +7,7 @@ import type {
   CandidateStatus,
   ProposedPolicies 
 } from "@/types/city-governance";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -95,7 +95,6 @@ export function useElectionCandidates(electionId: string | undefined) {
 
 // Check if current user has voted in an election
 export function useUserVote(electionId: string | undefined) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery({
@@ -120,7 +119,6 @@ export function useUserVote(electionId: string | undefined) {
 // Cast a vote
 export function useCastVote() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useMutation({
@@ -160,7 +158,6 @@ export function useCastVote() {
 // Register as a candidate
 export function useRegisterCandidate() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useMutation({

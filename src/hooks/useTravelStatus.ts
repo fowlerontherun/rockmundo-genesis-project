@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "@/hooks/use-toast";
 
@@ -16,7 +15,6 @@ interface TravelStatus {
 }
 
 export function useTravelStatus() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -76,7 +74,7 @@ export function useTravelStatus() {
 
   const cancelTravelMutation = useMutation({
     mutationFn: async (travelId: string) => {
-      if (!user || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const { data: travel, error: travelError } = await supabase
         .from("player_travel_history")

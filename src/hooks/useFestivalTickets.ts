@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { createScheduledActivity } from "./useActivityBooking";
@@ -17,22 +16,21 @@ export interface FestivalTicket {
 }
 
 export const useFestivalTickets = (festivalId: string | undefined) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: tickets = [], isLoading } = useQuery<FestivalTicket[]>({
     queryKey: ["festival-tickets", festivalId, profileId],
     queryFn: async () => {
-      if (!festivalId || !user?.id) return [];
+      if (!festivalId || !profileId) return [];
       const { data, error } = await (supabase as any)
         .from("festival_tickets")
         .select("*")
         .eq("festival_id", festivalId)
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!festivalId && !!user?.id,
+    enabled: !!festivalId && !!profileId,
   });
 
   const queryClient = useQueryClient();
@@ -55,8 +53,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       festivalStart: string;
       festivalEnd: string;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (!profileId) throw new Error("No active profile");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Deduct cash from active profile
       const { data: profile } = await supabase
@@ -79,7 +76,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
         .from("festival_tickets")
         .insert({
           festival_id: festivalId,
-          user_id: user.id,
+          user_id: profileId,
           ticket_type: ticketType,
           purchase_price: price,
           day_number: dayNumber || null,
@@ -92,7 +89,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       // Block schedule for festival duration
       try {
         await createScheduledActivity({
-          userId: user.id,
+          userId: profileId,
           activityType: "festival_attendance",
           scheduledStart: new Date(festivalStart),
           scheduledEnd: new Date(festivalEnd),
