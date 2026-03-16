@@ -11,9 +11,9 @@ export function PersonalUpdates() {
   const today = new Date().toISOString().split('T')[0];
 
   const { data: updates } = useQuery({
-    queryKey: ["personal-updates", user?.id, today],
+    queryKey: ["personal-updates", profileId, today],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const results: Array<{ type: string; title: string; detail: string; time: string }> = [];
 
       // Band invitations
