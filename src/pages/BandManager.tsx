@@ -166,7 +166,7 @@ export default function BandManager() {
   };
 
   const handleReactivate = async () => {
-    if (!user || !selectedBandId) return;
+    if (!profileId || !selectedBandId) return;
 
     try {
       const result = await reactivateBand(selectedBandId, profileId || user.id);
