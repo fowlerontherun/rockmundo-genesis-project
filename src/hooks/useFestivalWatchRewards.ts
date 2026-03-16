@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export type RewardType = "xp" | "song_gift" | "attribute_point";
@@ -50,7 +50,7 @@ function rollWatchReward(bandId: string): WatchRewardResult | null {
 }
 
 export const useClaimWatchReward = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -63,14 +63,14 @@ export const useClaimWatchReward = () => {
       bandId: string;
       stageSlotId: string;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
 
       // Check if already claimed for this slot
       const { data: existing } = await (supabase as any)
         .from("festival_watch_rewards")
         .select("id")
         .eq("festival_id", festivalId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("stage_slot_id", stageSlotId)
         .maybeSingle();
 
@@ -83,7 +83,7 @@ export const useClaimWatchReward = () => {
         .from("festival_watch_rewards")
         .insert({
           festival_id: festivalId,
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId,
           stage_slot_id: stageSlotId,
           reward_type: reward.reward_type,
@@ -100,14 +100,14 @@ export const useClaimWatchReward = () => {
         const { data: profile } = await supabase
           .from("profiles")
           .select("experience")
-          .eq("user_id", user.id)
+          .eq("id", profileId)
           .single();
 
         if (profile) {
           await supabase
             .from("profiles")
             .update({ experience: profile.experience + xpAmount })
-            .eq("user_id", user.id);
+            .eq("id", profileId);
         }
       }
 

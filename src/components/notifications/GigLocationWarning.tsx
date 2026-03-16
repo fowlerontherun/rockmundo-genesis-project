@@ -33,7 +33,7 @@ export const GigLocationWarning = () => {
     setIsBooking(true);
     try {
       const result = await bookCharterFlight(
-        user.id,
+        profileId,
         profile.cash || 0,
         warning.gigId,
         warning.gigDate,
