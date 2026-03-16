@@ -292,12 +292,11 @@ export default function Busking() {
     const now = new Date();
     const sessionEnds = new Date(now.getTime() + selectedLength * 60_000);
     
-    // Check for scheduling conflicts
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Check for scheduling conflicts using profile id
+    if (!profile?.id) {
       toast({
         title: 'Error',
-        description: 'Not authenticated',
+        description: 'No active profile',
         variant: 'destructive',
       });
       setIsStartingSession(false);
@@ -305,7 +304,7 @@ export default function Busking() {
     }
 
     const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-      p_user_id: user.id,
+      p_user_id: profile.id,
       p_start: now.toISOString(),
       p_end: sessionEnds.toISOString(),
       p_exclude_id: null,
