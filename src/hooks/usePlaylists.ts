@@ -177,7 +177,7 @@ export const usePlaylists = (profileId?: string) => {
         .select("id")
         .eq("playlist_id", playlistId)
         .eq("release_id", releaseId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {
