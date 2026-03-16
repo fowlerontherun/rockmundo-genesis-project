@@ -1205,21 +1205,25 @@ serve(async (req) => {
       .order("chart_date", { ascending: true });
 
     if (allHistoricalEntries) {
-      const weeksMap = new Map<string, number>();
+      // Track distinct chart dates per song+chart+country.
+      // chart_entries stores one row per chart run date, so counting distinct dates
+      // already yields "weeks on chart" because charts are updated daily/weekly snapshots.
+      const weeksMap = new Map<string, Set<string>>();
       for (const entry of allHistoricalEntries) {
         const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        const current = weeksMap.get(key) || 0;
-        weeksMap.set(key, current + 1);
+        const dates = weeksMap.get(key) || new Set<string>();
+        dates.add(entry.chart_date);
+        weeksMap.set(key, dates);
       }
 
       // Update weeks for today's entries
       for (const entry of chartEntries) {
         const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        const weeks = weeksMap.get(key) || 1;
+        const weeks = weeksMap.get(key)?.size || 1;
 
         await supabaseClient
           .from("chart_entries")
-          .update({ weeks_on_chart: Math.ceil(weeks / 7) })
+          .update({ weeks_on_chart: weeks })
           .eq("song_id", entry.song_id)
           .eq("chart_type", entry.chart_type)
           .eq("chart_date", chartDate)
