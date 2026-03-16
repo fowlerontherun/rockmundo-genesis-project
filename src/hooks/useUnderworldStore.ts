@@ -317,7 +317,7 @@ export const useUnderworldStore = () => {
       const { error: purchaseError } = await supabase
         .from("underworld_purchases")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           product_id: product.id,
           paid_with: paymentMethod,
           cash_amount: paymentMethod === "cash" ? product.price_cash : null,

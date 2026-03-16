@@ -243,7 +243,7 @@ export const useInterviewSession = () => {
     setPending(null);
     setPhase("intro");
     setLoading(false);
-  }, [pending, totalEffects, user?.id, bandId, answers]);
+  }, [pending, totalEffects, profileId, bandId, answers]);
 
   // Skip/dismiss: mark as completed without applying effects
   const skipInterview = useCallback(async () => {

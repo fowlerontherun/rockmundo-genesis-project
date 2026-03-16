@@ -130,7 +130,7 @@ export const useOwnedSkins = () => {
 };
 
 export const usePurchaseSkin = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -142,7 +142,7 @@ export const usePurchaseSkin = () => {
       itemType: string;
       price: number;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get active profile_id
       const { data: profile } = await supabase

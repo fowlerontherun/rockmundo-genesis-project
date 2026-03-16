@@ -293,8 +293,7 @@ export const useUnprocessedRelationshipEvents = () => {
 
 export const useGetOrCreateCharacterRelationship = () => {
   const createRel = useCreateCharacterRelationship();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const getOrCreate = async (
     entityBId: string,
