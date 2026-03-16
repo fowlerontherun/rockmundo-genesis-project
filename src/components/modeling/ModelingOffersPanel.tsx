@@ -87,7 +87,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
     queryKey: ["modeling-contracts-active", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_modeling_contracts")
         .select("*, gig:modeling_gigs(title, gig_type, duration_hours)")
         .eq("profile_id", profileId)
