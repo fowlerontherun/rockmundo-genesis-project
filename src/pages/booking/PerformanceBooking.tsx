@@ -197,17 +197,11 @@ export default function PerformanceBooking() {
 
       if (balanceError) throw balanceError;
 
-      // Create scheduled activity - fetch profile_id first
-      const { data: userProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (userProfile) {
+      // Create scheduled activity using profileId directly
+      if (profileId) {
         await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: user.id,
-          profile_id: userProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "rehearsal",
           scheduled_start: scheduledStart.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
