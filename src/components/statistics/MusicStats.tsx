@@ -40,7 +40,7 @@ export function MusicStats() {
       // Get chart entries
       const { data: chartEntries } = await supabase
         .from("chart_entries")
-        .select("rank, songs!inner(user_id)")
+        .select("rank, songs!inner(profile_id)")
         .eq("songs.user_id", user.id);
 
       const chartAppearances = chartEntries?.length || 0;
