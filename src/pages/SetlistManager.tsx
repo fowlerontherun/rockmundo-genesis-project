@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SetlistManager = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const navigate = useNavigate();
   const [editingSetlistId, setEditingSetlistId] = useState<string | null>(null);
   const [managingSongsSetlistId, setManagingSongsSetlistId] = useState<string | null>(null);
