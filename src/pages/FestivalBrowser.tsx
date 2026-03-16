@@ -33,7 +33,7 @@ const SLOT_TYPES = [
 
 export default function FestivalBrowser() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   
