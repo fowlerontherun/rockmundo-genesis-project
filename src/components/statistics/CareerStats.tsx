@@ -47,7 +47,7 @@ export function CareerStats() {
       const { data: earnings } = await supabase
         .from("band_earnings")
         .select("amount")
-        .eq("earned_by_user_id", user.id);
+        .eq("profile_id", profileId);
 
       const totalEarnings = earnings?.reduce((sum, e) => sum + e.amount, 0) || 0;
 
