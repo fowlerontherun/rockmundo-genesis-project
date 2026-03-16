@@ -186,26 +186,38 @@ export function useRehearsalBooking() {
         },
       });
 
-      // Log activity
+      // Log activity - use the profile context from band membership
+      // logGameActivity accepts userId which maps to profile in character-isolated context
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        logGameActivity({
-          userId: user.id,
-          bandId: params.bandId,
-          activityType: 'rehearsal_booked',
-          activityCategory: 'rehearsal',
-          description: `Booked ${params.duration}-hour rehearsal at ${params.roomName}`,
-          amount: -params.totalCost,
-          metadata: {
-            rehearsalId: rehearsalData.id,
-            roomId: params.roomId,
-            songId: params.songId,
-            setlistId: params.setlistId,
-            duration: params.duration,
-            chemistryGain: params.chemistryGain,
-            xpEarned: params.xpEarned
-          }
-        });
+        // Get active profile for activity logging
+        const { data: activeProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .is("died_at", null)
+          .maybeSingle();
+
+        if (activeProfile) {
+          logGameActivity({
+            userId: activeProfile.id,
+            bandId: params.bandId,
+            activityType: 'rehearsal_booked',
+            activityCategory: 'rehearsal',
+            description: `Booked ${params.duration}-hour rehearsal at ${params.roomName}`,
+            amount: -params.totalCost,
+            metadata: {
+              rehearsalId: rehearsalData.id,
+              roomId: params.roomId,
+              songId: params.songId,
+              setlistId: params.setlistId,
+              duration: params.duration,
+              chemistryGain: params.chemistryGain,
+              xpEarned: params.xpEarned
+            }
+          });
+        }
       }
 
       toast({

@@ -250,7 +250,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("id")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .in("status", ["completed", "active"])
         .gte("created_at", fourteenDaysAgo.toISOString())
         .limit(1);
@@ -285,7 +285,7 @@ export function useHolidays() {
       const { error: holidayError } = await supabase
         .from("player_holidays")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           destination: destination.name,
           started_at: startDate.toISOString(),
           ends_at: endDate.toISOString(),
@@ -299,7 +299,7 @@ export function useHolidays() {
 
       // Create blocking scheduled activity
       await (supabase as any).from("player_scheduled_activities").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         activity_type: "holiday",
         scheduled_start: startDate.toISOString(),

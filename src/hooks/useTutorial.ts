@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface TutorialStep {
   id: string;
@@ -20,7 +20,7 @@ interface TutorialProgress {
 }
 
 export const useTutorial = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all active tutorial steps
@@ -39,30 +39,30 @@ export const useTutorial = () => {
 
   // Fetch user's completed steps
   const { data: progress = [] } = useQuery({
-    queryKey: ["tutorial-progress", user?.id],
+    queryKey: ["tutorial-progress", profileId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_tutorial_progress")
         .select("step_key, completed_at")
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       if (error) throw error;
       return data as TutorialProgress[];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Mark step as complete
   const completeMutation = useMutation({
     mutationFn: async (stepKey: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active profile");
       const { error } = await supabase
         .from("player_tutorial_progress")
-        .insert({ user_id: user.id, step_key: stepKey });
+        .insert({ user_id: profileId, step_key: stepKey });
       if (error && !error.message.includes("duplicate")) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", profileId] });
     },
   });
 
