@@ -19,7 +19,6 @@ export const useFestivalScheduleConflict = (
   festivalEndDate?: string,
   enabled = true
 ) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data, isLoading } = useQuery({
