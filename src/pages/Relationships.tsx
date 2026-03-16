@@ -33,6 +33,18 @@ import type { CharacterRelationship } from "@/types/character-relationships";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
 import { FamilyDashboard } from "@/components/family/FamilyDashboard";
+import {
+  communicationChannels,
+  collaborationOpportunities,
+  friendshipMilestones,
+  friendshipTiers,
+  playerProfileSections,
+  privacyControls,
+  relationshipStatuses,
+  socialRewards,
+  socialSpaces,
+  tradingOptions,
+} from "@/data/socialSystems";
 
 // ── Filter categories ─────────────────────────────────────────
 const FILTER_CATEGORIES = [
@@ -315,6 +327,7 @@ export default function RelationshipsPage() {
           <TabsTrigger value="drama" className="gap-2"><Theater className="h-4 w-4" /> Drama Feed</TabsTrigger>
           <TabsTrigger value="romance" className="gap-2"><Flame className="h-4 w-4" /> Romance</TabsTrigger>
           <TabsTrigger value="legacy" className="gap-2"><Baby className="h-4 w-4" /> Family</TabsTrigger>
+          <TabsTrigger value="systems" className="gap-2"><Sparkles className="h-4 w-4" /> Systems</TabsTrigger>
         </TabsList>
 
         {/* ── FRIENDS TAB ──────────────────────────────────────── */}
@@ -764,6 +777,144 @@ export default function RelationshipsPage() {
         {/* ── FAMILY TAB ──────────────────────────────────────── */}
         <TabsContent value="legacy" className="space-y-4">
           <FamilyDashboard />
+        </TabsContent>
+
+        {/* ── SOCIAL SYSTEMS TAB ─────────────────────────────── */}
+        <TabsContent value="systems" className="space-y-4">
+          <Card className="border-social-trust/20">
+            <CardHeader>
+              <CardTitle>Social &amp; Relationships Systems Overview</CardTitle>
+              <CardDescription>
+                A consolidated view of progression, communication, collaboration, and privacy features.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Friendship Tiers</h3>
+                <div className="space-y-3">
+                  {friendshipTiers.map((tier) => (
+                    <div key={tier.level} className="rounded-md border border-border/80 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-sm">{tier.level}</p>
+                        <Badge variant="outline" className="text-[10px]">{tier.range}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Perks: {tier.perks.join(" • ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Relationship Statuses</h3>
+                <div className="space-y-2">
+                  {relationshipStatuses.map((status) => (
+                    <div key={status.name} className="rounded-md border border-border/80 p-3">
+                      <p className="text-sm font-medium">{status.icon} {status.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{status.reputation}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Communication Channels</h3>
+                <div className="space-y-2">
+                  {communicationChannels.map((channel) => (
+                    <div key={channel.name} className="rounded-md border border-border/80 p-3">
+                      <p className="text-sm font-medium">{channel.icon} {channel.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{channel.features.join(" • ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Trading &amp; Sharing</h3>
+                <div className="space-y-2">
+                  {tradingOptions.map((option) => (
+                    <div key={option.title} className="rounded-md border border-border/80 p-3">
+                      <p className="text-sm font-medium">{option.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{option.details.join(" • ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Collaboration Opportunities</h3>
+                <div className="space-y-2">
+                  {collaborationOpportunities.map((opportunity) => (
+                    <div key={opportunity.name} className="rounded-md border border-border/80 p-3">
+                      <p className="text-sm font-medium">{opportunity.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{opportunity.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold mb-3">Profile &amp; Privacy</h3>
+                <div className="space-y-2">
+                  {playerProfileSections.map((section) => (
+                    <div key={section.title} className="rounded-md border border-border/80 p-3">
+                      <p className="text-sm font-medium">{section.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{section.description}</p>
+                    </div>
+                  ))}
+                  {privacyControls.map((control) => (
+                    <div key={control.name} className="rounded-md border border-border/80 p-3 bg-muted/20">
+                      <p className="text-xs font-medium">{control.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">{control.options.join(" • ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Milestones</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {friendshipMilestones.map((milestone) => (
+                  <div key={milestone.label} className="rounded-md border border-border p-3">
+                    <p className="text-sm font-medium">{milestone.label}</p>
+                    <p className="text-xs text-muted-foreground">{milestone.reward}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Social Spaces</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {socialSpaces.map((space) => (
+                  <div key={space.name} className="rounded-md border border-border p-3">
+                    <p className="text-sm font-medium">{space.name}</p>
+                    <p className="text-xs text-muted-foreground">{space.tagline}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Social Rewards</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {socialRewards.map((reward) => (
+                  <div key={reward.name} className="rounded-md border border-border p-3">
+                    <p className="text-sm font-medium">{reward.name}</p>
+                    <p className="text-xs text-muted-foreground">{reward.reward}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
