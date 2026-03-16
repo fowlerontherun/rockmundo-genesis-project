@@ -10,6 +10,7 @@ import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworl
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const categoryIcons: Record<string, React.ElementType> = {
   consumable: Zap,
