@@ -72,7 +72,7 @@ export default function BandSearch() {
       const { data, error } = await (supabase as any)
         .from("band_ratings")
         .select("band_id, rating")
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return (data as any[]).reduce((acc: Record<string, string>, r: any) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
     },
