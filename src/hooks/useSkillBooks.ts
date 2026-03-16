@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/lib/supabase-types";
 import { mergeSkillDefinitions } from "@/utils/skillDefinitions";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export type SkillBook = Tables<"skill_books">;
 export type BookPurchase = Tables<"player_book_purchases">;
