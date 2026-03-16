@@ -34,13 +34,13 @@ export function RequestReleaseDialog({
   const terminationFee = Math.round((contractValue || 0) * ((terminationFeePct || 50) / 100));
 
   const { data: canAfford } = useQuery({
-    queryKey: ["can-afford-termination", bandId, userId, terminationFee],
+    queryKey: ["can-afford-termination", bandId, profileId, terminationFee],
     queryFn: async () => {
       if (bandId) {
         const { data } = await supabase.from("bands").select("band_balance").eq("id", bandId).single();
         return (data?.band_balance || 0) >= terminationFee;
       }
-      const { data } = await supabase.from("profiles").select("cash").eq("user_id", userId).single();
+      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
       return (data?.cash || 0) >= terminationFee;
     },
     enabled: open,
