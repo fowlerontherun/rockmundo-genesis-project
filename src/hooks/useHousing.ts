@@ -4,66 +4,84 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 
 export interface MarketPrice {
-  id: string;
   country: string;
   price_multiplier: number;
-  updated_at: string;
+  trend: 'rising' | 'falling' | 'stable';
+  trend_strength: number;
+  last_updated_at: string;
+  updated_at?: string;
 }
 
 export interface HousingType {
   id: string;
+  country: string;
   name: string;
+  description: string;
+  tier: number;
   base_price: number;
-  description: string | null;
   image_url: string | null;
-  prestige_level: number;
-  max_occupants: number;
+  style_tags: string[];
+  bedrooms: number;
+  is_active: boolean;
+  created_at: string;
+  prestige_level?: number;
+  max_occupants?: number;
 }
 
 export interface PlayerProperty {
   id: string;
-  profile_id: string;
+  user_id: string;
   housing_type_id: string;
   country: string;
+  purchased_at: string;
   purchase_price: number;
+  is_primary: boolean;
   daily_upkeep: number;
   is_rented_out: boolean;
   rental_income_daily: number;
-  purchased_at: string;
+  created_at: string;
   housing_types?: HousingType;
 }
 
 export interface RentalType {
   id: string;
   name: string;
+  description: string;
   base_weekly_cost: number;
-  description: string | null;
-  prestige_level: number;
+  tier: number;
+  created_at: string;
+  prestige_level?: number;
 }
 
 export interface PlayerRental {
   id: string;
-  profile_id: string;
+  user_id: string;
   rental_type_id: string;
   country: string;
   weekly_cost: number;
-  status: string;
   started_at: string;
   ended_at: string | null;
+  last_charged_at: string;
+  status: string;
+  created_at: string;
   rental_types?: RentalType;
 }
 
-export function useHousingTypes() {
+export function useHousingTypes(country: string | null) {
   return useQuery({
-    queryKey: ["housing-types"],
+    queryKey: ["housing-types", country],
     queryFn: async () => {
+      if (!country) return [];
       const { data, error } = await supabase
         .from("housing_types")
         .select("*")
-        .order("base_price", { ascending: true });
+        .eq("country", country)
+        .eq("is_active", true)
+        .order("tier", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as HousingType[];
+      return (data ?? []) as unknown as HousingType[];
     },
+    enabled: !!country,
   });
 }
 
@@ -74,9 +92,9 @@ export function useRentalTypes() {
       const { data, error } = await supabase
         .from("rental_types")
         .select("*")
-        .order("base_weekly_cost", { ascending: true });
+        .order("tier", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as RentalType[];
+      return (data ?? []) as unknown as RentalType[];
     },
   });
 }
@@ -93,7 +111,7 @@ export function usePlayerProperties() {
         .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as PlayerProperty[];
+      return (data ?? []) as unknown as PlayerProperty[];
     },
     enabled: !!profileId,
   });
@@ -112,7 +130,7 @@ export function usePlayerRental() {
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
-      return data as PlayerRental | null;
+      return data as unknown as PlayerRental | null;
     },
     enabled: !!profileId,
   });
@@ -129,7 +147,6 @@ export function useBuyProperty() {
 
       const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
 
-      // Get player cash
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
@@ -140,14 +157,12 @@ export function useBuyProperty() {
         throw new Error("Not enough cash to buy this property");
       }
 
-      // Deduct cash
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile.cash || 0) - marketPrice })
         .eq("id", profileId);
       if (cashError) throw cashError;
 
-      // Create property record with upkeep based on market price
       const dailyUpkeep = Math.round(marketPrice * 0.001);
       const { error: insertError } = await supabase
         .from("player_properties")
@@ -188,7 +203,6 @@ export function useStartRental() {
     }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      // Check no active rental
       const { data: existing } = await supabase
         .from("player_rentals")
         .select("id")
@@ -197,7 +211,6 @@ export function useStartRental() {
         .maybeSingle();
       if (existing) throw new Error("You already have an active rental. End it first.");
 
-      // Check cash for first week
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
@@ -207,13 +220,11 @@ export function useStartRental() {
         throw new Error("Not enough cash for the first week's rent");
       }
 
-      // Deduct first week
       await supabase
         .from("profiles")
         .update({ cash: (profile.cash || 0) - weeklyCost })
         .eq("id", profileId);
 
-      // Create rental
       const { error } = await supabase.from("player_rentals").insert({
         user_id: profileId,
         rental_type_id: rentalType.id,
@@ -258,20 +269,20 @@ export function useEndRental() {
   });
 }
 
-export function calculateWeeklyRent(baseWeeklyCost: number, marketMultiplier: number = 1): number {
-  return Math.round(baseWeeklyCost * marketMultiplier);
+export function calculateWeeklyRent(baseWeeklyCost: number, costOfLiving: number): number {
+  return Math.round(baseWeeklyCost * (0.4 + (costOfLiving / 100) * 1.2));
 }
 
-export function calculateDailyUpkeep(purchasePrice: number): number {
-  return Math.round(purchasePrice * 0.001);
+export function calculateDailyUpkeep(basePrice: number): number {
+  return Math.round(basePrice * 0.001);
 }
 
 export function calculateSellPrice(purchasePrice: number, marketMultiplier: number = 1): number {
-  return Math.round(purchasePrice * 0.85 * marketMultiplier);
+  return Math.round(purchasePrice * marketMultiplier * 0.7);
 }
 
-export function getMarketPrice(basePrice: number, marketMultiplier: number = 1): number {
-  return Math.round(basePrice * marketMultiplier);
+export function getMarketPrice(basePrice: number, multiplier: number): number {
+  return Math.round(basePrice * multiplier);
 }
 
 export function useMarketPrices() {
@@ -283,9 +294,9 @@ export function useMarketPrices() {
         .select("*")
         .order("country");
       if (error) throw error;
-      return (data ?? []) as MarketPrice[];
+      return (data ?? []) as unknown as MarketPrice[];
     },
-    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+    refetchInterval: 5 * 60 * 1000,
   });
 }
 
@@ -309,7 +320,6 @@ export function useSellProperty() {
       if (!profileId) throw new Error("Not authenticated");
       const sellPrice = calculateSellPrice(property.purchase_price, marketMultiplier);
 
-      // Credit cash back
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
@@ -323,7 +333,6 @@ export function useSellProperty() {
         .eq("id", profileId);
       if (cashError) throw cashError;
 
-      // Delete property
       const { error: deleteError } = await supabase
         .from("player_properties")
         .delete()
