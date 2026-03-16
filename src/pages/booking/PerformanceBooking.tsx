@@ -55,9 +55,9 @@ export default function PerformanceBooking() {
 
   // Fetch songs for selected band
   const { data: bandSongs = [] } = useQuery({
-    queryKey: ["band-songs", selectedBand, user?.id],
+    queryKey: ["band-songs", selectedBand, profileId],
     queryFn: async () => {
-      if (!selectedBand || !user?.id) return [];
+      if (!selectedBand || !profileId) return [];
       const { data, error } = await supabase
         .from("songs")
         .select(`
@@ -66,7 +66,7 @@ export default function PerformanceBooking() {
           genre,
           band_song_familiarity!song_id(familiarity_minutes, band_id)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .order("title");
       if (error) throw error;
       return data?.map(song => ({
@@ -74,7 +74,7 @@ export default function PerformanceBooking() {
         band_song_familiarity: song.band_song_familiarity?.filter((f: any) => f.band_id === selectedBand)
       })) || [];
     },
-    enabled: !!selectedBand && !!user?.id,
+    enabled: !!selectedBand && !!profileId,
   });
 
   // Fetch setlists for selected band
