@@ -90,7 +90,7 @@ const SelfPromotionBrowser = () => {
 
   const bandId = userBand?.id;
   const bandFame = userBand?.fame || 0;
-  const userId = user?.id;
+  const userId = profileId;
 
   // Fetch player's personal cash balance from profiles
   const { data: playerProfile, isLoading: profileLoading } = useQuery({
