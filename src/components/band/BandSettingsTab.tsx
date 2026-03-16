@@ -255,6 +255,33 @@ export function BandSettingsTab({
             </Badge>
           </div>
 
+          {/* Recruiting Toggle (Leaders only) */}
+          {isLeader && bandStatus === 'active' && !isSoloArtist && (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Open for Recruiting</p>
+                <p className="text-xs text-muted-foreground">Allow players to find your band and apply to join</p>
+              </div>
+              <Switch
+                checked={isRecruiting}
+                onCheckedChange={async (checked) => {
+                  setIsRecruiting(checked);
+                  const { error } = await supabase
+                    .from('bands')
+                    .update({ is_recruiting: checked })
+                    .eq('id', bandId);
+                  if (error) {
+                    setIsRecruiting(!checked);
+                    toast({ title: 'Error', description: 'Failed to update recruiting status', variant: 'destructive' });
+                  } else {
+                    toast({ title: checked ? 'Recruiting Enabled' : 'Recruiting Disabled', description: checked ? 'Players can now apply to join your band.' : 'Applications are now closed.' });
+                    onBandUpdate();
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* Leave Band (Non-leaders only) */}
           {!isLeader && bandStatus !== 'disbanded' && (
             <Button
