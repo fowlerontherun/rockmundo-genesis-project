@@ -9,7 +9,7 @@ import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, Key
 import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworldInventory";
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const categoryIcons: Record<string, React.ElementType> = {
