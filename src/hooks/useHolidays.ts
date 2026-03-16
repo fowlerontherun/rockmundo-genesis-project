@@ -227,7 +227,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("*")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
