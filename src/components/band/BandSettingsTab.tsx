@@ -153,7 +153,7 @@ export function BandSettingsTab({
   };
 
   const openTransferDialog = async () => {
-    const leaders = await getEligibleLeaders(bandId, user?.id || '');
+    const leaders = await getEligibleLeaders(bandId, profileId || '');
     setEligibleLeaders(leaders);
     setTransferDialogOpen(true);
   };
