@@ -63,9 +63,11 @@ export function usePromoTourCompletion(userId: string | undefined) {
         // Apply health and energy drain
         const { data: profile } = await supabase
           .from("profiles")
-          .select("health, energy")
+          .select("id, health, energy")
           .eq("user_id", userId)
-          .single();
+          .eq("is_active", true)
+          .is("died_at", null)
+          .maybeSingle();
 
         if (profile) {
           const newHealth = Math.max(0, (profile.health ?? 100) - healthDrain);
@@ -77,7 +79,7 @@ export function usePromoTourCompletion(userId: string | undefined) {
               energy: newEnergy,
               last_health_update: new Date().toISOString(),
             })
-            .eq("user_id", userId);
+            .eq("id", profile.id);
         }
 
         // Add hype to release
