@@ -48,7 +48,6 @@ const WIZARD_STEPS = [
 
 export function useTourWizard(options: UseTourWizardOptions = {}) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   

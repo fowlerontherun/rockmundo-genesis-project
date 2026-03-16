@@ -25,7 +25,7 @@ export const useEquipPlayerEquipment = () => {
 
   const mutation = useMutation<EquipGearResult, Error, EquipGearVariables>({
     mutationFn: async (variables) => {
-      if (!user?.id) {
+      if (!profileId) {
         throw new Error("You must be signed in to update equipment");
       }
 

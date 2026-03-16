@@ -74,8 +74,7 @@ export const useUpdateNPCRelationship = () => {
  */
 export const useGetOrCreateRelationship = () => {
   const createRelationship = useCreateNPCRelationship();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const getOrCreate = async (
     npcType: string,

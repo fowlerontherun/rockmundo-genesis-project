@@ -263,7 +263,7 @@ export function useMentorSessions() {
 
       // Log to experience ledger
       const { error: ledgerError } = await supabase.from("experience_ledger").insert({
-        user_id: user.id,
+        user_id: profileId!,
         profile_id: profile.id,
         activity_type: "mentor_session",
         xp_amount: xpEarned,

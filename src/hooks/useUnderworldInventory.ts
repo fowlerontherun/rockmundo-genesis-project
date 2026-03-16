@@ -181,12 +181,12 @@ export const useUnderworldInventory = () => {
       return { success: true, product };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["underworld-inventory", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["underworld-inventory", profileId] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["user-cash-balance", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["purchase-history", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["active-boosts", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["addictions", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-cash-balance", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-history", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["active-boosts", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["addictions", profileId] });
 
       toast({
         title: "Item Used",

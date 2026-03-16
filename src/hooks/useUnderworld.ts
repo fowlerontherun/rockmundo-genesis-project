@@ -21,7 +21,7 @@ export interface CryptoToken {
 }
 
 export const useUnderworld = () => {
-  const { user } = useAuth();
+  export const useUnderworld = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
