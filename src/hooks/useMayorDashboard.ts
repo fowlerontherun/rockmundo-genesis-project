@@ -61,7 +61,7 @@ export function useIsCurrentMayor(cityId: string | undefined) {
       if (error) return false;
       return !!data;
     },
-    enabled: !!cityId && !!user?.id,
+    enabled: !!cityId && !!profileId,
   });
 }
 
