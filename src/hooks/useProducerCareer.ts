@@ -26,13 +26,13 @@ export interface PlayerProducerProfile {
 export const useProducerProfile = () => {
   const { userId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-profile', profileId],
-    enabled: !!profileId,
+    queryKey: ['producer-profile', userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('player_producer_profiles')
         .select('*')
-        .eq('user_id', profileId!)
+        .eq('user_id', userId!)
         .maybeSingle();
       if (error) throw error;
       return data as PlayerProducerProfile | null;
