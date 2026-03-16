@@ -1013,6 +1013,64 @@ export type Database = {
           },
         ]
       }
+      band_applications: {
+        Row: {
+          applicant_profile_id: string
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        Insert: {
+          applicant_profile_id: string
+          band_id: string
+          created_at?: string
+          id?: string
+          instrument_role?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          vocal_role?: string | null
+        }
+        Update: {
+          applicant_profile_id?: string
+          band_id?: string
+          created_at?: string
+          id?: string
+          instrument_role?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          vocal_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_applications_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_avatar_presets: {
         Row: {
           avatar_model_path: string | null
@@ -2609,6 +2667,7 @@ export type Database = {
           hidden_skill_rating: number | null
           home_city_id: string | null
           id: string
+          is_recruiting: boolean
           is_solo_artist: boolean | null
           jam_count: number | null
           last_chemistry_update: string | null
@@ -2666,6 +2725,7 @@ export type Database = {
           hidden_skill_rating?: number | null
           home_city_id?: string | null
           id?: string
+          is_recruiting?: boolean
           is_solo_artist?: boolean | null
           jam_count?: number | null
           last_chemistry_update?: string | null
@@ -2723,6 +2783,7 @@ export type Database = {
           hidden_skill_rating?: number | null
           home_city_id?: string | null
           id?: string
+          is_recruiting?: boolean
           is_solo_artist?: boolean | null
           jam_count?: number | null
           last_chemistry_update?: string | null

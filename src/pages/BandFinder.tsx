@@ -20,6 +20,7 @@ interface Band {
   chemistry_level: number | null;
   description: string | null;
   total_fans: number | null;
+  is_recruiting: boolean | null;
   member_count: number;
   song_count: number;
 }
@@ -44,6 +45,7 @@ export default function BandFinder() {
           chemistry_level,
           description,
           total_fans,
+          is_recruiting,
           band_members!band_members_band_id_fkey(id)
         `)
         .eq("status", "active")
@@ -159,6 +161,11 @@ export default function BandFinder() {
                             </p>
                           )}
                           <div className="flex flex-wrap gap-2">
+                            {band.is_recruiting && (
+                              <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+                                Recruiting
+                              </Badge>
+                            )}
                             {band.genre && (
                               <Badge variant="secondary" className="text-xs">
                                 <Music className="h-3 w-3 mr-1" />
@@ -186,7 +193,7 @@ export default function BandFinder() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/bands/${band.id}/management`)}
+                          onClick={() => navigate(`/band/${band.id}`)}
                           className="ml-4 shrink-0"
                         >
                           <Eye className="h-4 w-4 mr-2" />

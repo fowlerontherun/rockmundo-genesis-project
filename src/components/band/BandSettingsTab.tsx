@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Settings, LogOut, Users, Ban, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
+import { supabase } from '@/integrations/supabase/client';
 import { leaveBand, transferLeadership, disbandBand, getEligibleLeaders } from '@/utils/bandMembers';
 import { putBandOnHiatus, reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
@@ -19,6 +21,7 @@ interface BandSettingsTabProps {
   isLeader: boolean;
   bandStatus: string;
   isSoloArtist: boolean;
+  isRecruiting?: boolean;
   primaryGenre?: string | null;
   secondaryGenres?: string[] | null;
   genreLastChangedAt?: string | null;
@@ -30,6 +33,7 @@ export function BandSettingsTab({
   isLeader, 
   bandStatus,
   isSoloArtist,
+  isRecruiting: initialRecruiting,
   primaryGenre,
   secondaryGenres,
   genreLastChangedAt,
@@ -38,6 +42,7 @@ export function BandSettingsTab({
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
   
   // Hiatus dialog state
   const [hiatusDialogOpen, setHiatusDialogOpen] = useState(false);
@@ -249,6 +254,33 @@ export function BandSettingsTab({
               {getBandStatusLabel(bandStatus)}
             </Badge>
           </div>
+
+          {/* Recruiting Toggle (Leaders only) */}
+          {isLeader && bandStatus === 'active' && !isSoloArtist && (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Open for Recruiting</p>
+                <p className="text-xs text-muted-foreground">Allow players to find your band and apply to join</p>
+              </div>
+              <Switch
+                checked={isRecruiting}
+                onCheckedChange={async (checked) => {
+                  setIsRecruiting(checked);
+                  const { error } = await supabase
+                    .from('bands')
+                    .update({ is_recruiting: checked })
+                    .eq('id', bandId);
+                  if (error) {
+                    setIsRecruiting(!checked);
+                    toast({ title: 'Error', description: 'Failed to update recruiting status', variant: 'destructive' });
+                  } else {
+                    toast({ title: checked ? 'Recruiting Enabled' : 'Recruiting Disabled', description: checked ? 'Players can now apply to join your band.' : 'Applications are now closed.' });
+                    onBandUpdate();
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {/* Leave Band (Non-leaders only) */}
           {!isLeader && bandStatus !== 'disbanded' && (

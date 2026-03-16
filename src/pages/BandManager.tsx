@@ -19,6 +19,7 @@ import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
+import { BandApplicationsList } from '@/components/band/BandApplicationsList';
 
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
@@ -326,6 +327,14 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
+          {/* Pending Applications (Leader only) */}
+          {isLeader && selectedBand.status === 'active' && (
+            <BandApplicationsList 
+              bandId={selectedBand.id} 
+              onMemberAdded={() => loadBandMembers(selectedBand.id)} 
+            />
+          )}
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -394,6 +403,7 @@ export default function BandManager() {
             isLeader={isLeader}
             bandStatus={selectedBand.status}
             isSoloArtist={selectedBand.is_solo_artist}
+            isRecruiting={selectedBand.is_recruiting}
             primaryGenre={selectedBand.primary_genre}
             secondaryGenres={selectedBand.secondary_genres}
             genreLastChangedAt={selectedBand.genre_last_changed_at}

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.096",
+    date: "2026-03-16",
+    changes: [
+      { type: 'feature', description: "Band recruiting system — bands can now toggle 'Open for Recruiting' in settings, players can apply to join via Band Finder or Band Profile, and leaders can accept/reject applications from the Members tab" },
+      { type: 'fix', description: "Band Finder now links to the public Band Profile page instead of the management page" },
+      { type: 'feature', description: "Recruiting badge shown on bands that are open for applications in both Band Finder and Band Profile" },
+    ],
+  },
+  {
     version: "1.1.095",
     date: "2026-03-16",
     changes: [
