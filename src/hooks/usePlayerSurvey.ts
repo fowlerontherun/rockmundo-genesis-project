@@ -104,7 +104,7 @@ export function usePlayerSurvey() {
   // Submit all answers + claim reward
   const submitMutation = useMutation({
     mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
-      if (!profileId || !surveyConfig) throw new Error("Not ready");
+      if (!userId || !surveyConfig) throw new Error("Not ready");
 
       const round = surveyConfig.round;
 
