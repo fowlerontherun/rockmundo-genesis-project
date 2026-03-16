@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { calculateTrendingScore, type ViralityFactors, type ViralityScore } from "@/utils/dikCokVirality";
+import { calculateTrendingScore, type ViralityFactors } from "@/utils/dikCokVirality";
 import { differenceInHours } from "date-fns";
+import { calculateDikCokOutcome } from "@/utils/dikcokMetrics";
 
 export const useDikCokVideos = (bandId?: string) => {
   const { toast } = useToast();
@@ -89,13 +90,41 @@ export const useDikCokVideos = (bandId?: string) => {
       // Extract metadata before inserting (not DB columns)
       const { bandName, bandGenre, videoTypeName, songTitle, ...insertData } = videoData;
 
+      const { data: bandMetrics, error: bandError } = await supabase
+        .from("bands")
+        .select("fame, total_fans, band_balance")
+        .eq("id", insertData.band_id)
+        .single();
+
+      if (bandError) throw bandError;
+
+      const outcome = calculateDikCokOutcome({
+        followers: bandMetrics?.total_fans || 0,
+        bandFame: bandMetrics?.fame || 0,
+        hasTrendingTag: !!insertData.trending_tag,
+      });
+
       const { data, error } = await supabase
         .from("dikcok_videos")
-        .insert(insertData)
+        .insert({
+          ...insertData,
+          views: outcome.views,
+          hype_gained: outcome.hypeGain,
+          fan_gain: outcome.fanGain,
+          engagement_velocity: outcome.velocity,
+        })
         .select()
         .single();
 
       if (error) throw error;
+
+      await supabase
+        .from("bands")
+        .update({
+          total_fans: (bandMetrics?.total_fans || 0) + outcome.fanGain,
+          band_balance: Number((bandMetrics?.band_balance || 0) + outcome.revenue),
+        })
+        .eq("id", insertData.band_id);
 
       // If linked to a release, boost its hype_score
       if (insertData.release_id) {
@@ -138,14 +167,14 @@ export const useDikCokVideos = (bandId?: string) => {
         }
       });
 
-      return data;
+      return { ...data, revenue_generated: outcome.revenue } as typeof data & { revenue_generated: number };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["dikcok-videos"] });
       queryClient.invalidateQueries({ queryKey: ["dikcok-trending"] });
       toast({
         title: "Video created! 🎬",
-        description: "Your DikCok video is live. AI thumbnail generating...",
+        description: `Your DikCok video is live (+$${((data as any).revenue_generated || 0).toFixed(2)} revenue). AI thumbnail generating...`,
       });
     },
     onError: (error: any) => {

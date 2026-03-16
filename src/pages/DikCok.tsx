@@ -2,26 +2,22 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, Trophy } from "lucide-react";
+import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
-import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
 import { useDikCokChallenges } from "@/hooks/useDikCokChallenges";
 import { DikCokVideoCard } from "@/components/dikcok/DikCokVideoCard";
 import { DikCokCreateDialog } from "@/components/dikcok/DikCokCreateDialog";
 import { DikCokBandAnalytics } from "@/components/dikcok/DikCokBandAnalytics";
-import { Badge } from "@/components/ui/badge";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "@/hooks/useTranslation";
 
 export default function DikCok() {
-  const { t } = useTranslation();
   const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
@@ -33,7 +29,7 @@ export default function DikCok() {
       if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
-        .select("band_id, bands!band_members_band_id_fkey(id, name, genre, logo_url)")
+        .select("band_id, bands!band_members_band_id_fkey(id, name, genre, logo_url, fame, total_fans, band_balance)")
         .eq("profile_id", profileId)
         .eq("member_status", "active");
       if (error) throw error;
@@ -50,7 +46,6 @@ export default function DikCok() {
   const effectiveBandId = selectedBand?.id || null;
 
   const { videos, trending, isLoading, incrementViews } = useDikCokVideos(effectiveBandId);
-  const { videoTypes, isLoading: typesLoading } = useDikCokVideoTypes();
   const { challenges } = useDikCokChallenges();
 
   if (!profile || bandsLoading) return <div className="container mx-auto p-6 flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -76,6 +71,15 @@ export default function DikCok() {
   }
 
   const myBandVideos = videos?.filter(v => v.band_id === effectiveBandId) || [];
+  const totalViews = myBandVideos.reduce((sum, v) => sum + (v.views || 0), 0);
+  const totalHype = myBandVideos.reduce((sum, v) => sum + (v.hype_gained || 0), 0);
+  const dikCokFollowers = Math.max(0, Number(selectedBand?.total_fans || 0));
+  const estimatedRevenue = myBandVideos.reduce((sum, v) => {
+    const views = Number(v.views || 0);
+    const fame = Number(v.band?.fame || selectedBand?.fame || 0);
+    return sum + views * (0.0012 + fame / 500000);
+  }, 0);
+
 
   return (
     <PageLayout>
@@ -110,10 +114,10 @@ export default function DikCok() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <Video className="h-8 w-8 text-primary" />
+            <Users className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-2xl font-bold">{myBandVideos.length}</p>
-              <p className="text-sm text-muted-foreground">Videos Created</p>
+              <p className="text-2xl font-bold">{dikCokFollowers.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">DikCok Followers</p>
             </div>
           </CardContent>
         </Card>
@@ -121,7 +125,7 @@ export default function DikCok() {
           <CardContent className="p-4 flex items-center gap-3">
             <Users className="h-8 w-8 text-green-500" />
             <div>
-              <p className="text-2xl font-bold">{myBandVideos.reduce((sum, v) => sum + (v.views || 0), 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold">{totalViews.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Total Views</p>
             </div>
           </CardContent>
@@ -130,17 +134,17 @@ export default function DikCok() {
           <CardContent className="p-4 flex items-center gap-3">
             <Flame className="h-8 w-8 text-orange-500" />
             <div>
-              <p className="text-2xl font-bold">{myBandVideos.reduce((sum, v) => sum + (v.hype_gained || 0), 0)}</p>
+              <p className="text-2xl font-bold">{totalHype}</p>
               <p className="text-sm text-muted-foreground">Hype Generated</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-yellow-500" />
+            <DollarSign className="h-8 w-8 text-yellow-500" />
             <div>
-              <p className="text-2xl font-bold">{myBandVideos.reduce((sum, v) => sum + (v.fan_gain || 0), 0)}</p>
-              <p className="text-sm text-muted-foreground">Fans Gained</p>
+              <p className="text-2xl font-bold">${estimatedRevenue.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">Estimated Revenue</p>
             </div>
           </CardContent>
         </Card>
