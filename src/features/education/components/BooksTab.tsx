@@ -45,7 +45,7 @@ export const BooksTab = () => {
     !activeSession && selectedBook && isPurchased(selectedBook.id) && !isCompleted(selectedBook.id);
 
   const handlePurchase = async (book: SkillBook) => {
-    if (!profileId) return;
+    if (!profileId || !userId) return;
     
     // Check if already completed
     if (isCompleted(book.id)) {
@@ -60,7 +60,7 @@ export const BooksTab = () => {
     
     purchaseBook({
       bookId: book.id,
-      userId: profileId,
+      userId: userId,
       profileId: profileId,
       price: book.price,
     });
