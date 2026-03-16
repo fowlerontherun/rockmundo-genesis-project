@@ -55,7 +55,7 @@ export const SongVoting = ({
           .from("song_votes")
           .select("vote_type")
           .eq("song_id", songId)
-          .eq("user_id", profileId)
+          .eq("user_id", userId)
           .maybeSingle();
 
         userVote = (userVoteData?.vote_type as "up" | "down") || null;
