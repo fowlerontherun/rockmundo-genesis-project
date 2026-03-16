@@ -59,10 +59,9 @@ const { profileId } = useActiveProfile();
 
   // Fetch my submissions
   const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
-    queryKey: ["my-radio-submissions"],
+    queryKey: ["my-radio-submissions", profileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select(`
@@ -70,12 +69,13 @@ const { profileId } = useActiveProfile();
           station:radio_stations!inner(id, name, station_type, quality_level),
           song:songs!inner(id, title, genre)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
     },
+    enabled: !!profileId,
   });
 
   // Fetch submissions for specific station
