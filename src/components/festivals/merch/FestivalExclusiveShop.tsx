@@ -38,7 +38,7 @@ export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: F
 
   const buyItem = useMutation({
     mutationFn: async (item: typeof COLLECTIBLES[0]) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       if (!profile || profile.cash < item.price) throw new Error("Not enough cash");
 
       await supabase.from("profiles").update({ cash: profile.cash - item.price }).eq("id", profileId);
