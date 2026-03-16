@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Music, Disc, Mic2, Radio, TrendingUp, Play } from "lucide-react";
 
 export function MusicStats() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({

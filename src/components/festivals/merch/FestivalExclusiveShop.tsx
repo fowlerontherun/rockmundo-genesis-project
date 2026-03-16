@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -23,7 +22,6 @@ const COLLECTIBLES = [
 ];
 
 export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: FestivalExclusiveShopProps) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
@@ -40,14 +38,14 @@ export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: F
 
   const buyItem = useMutation({
     mutationFn: async (item: typeof COLLECTIBLES[0]) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       if (!profile || profile.cash < item.price) throw new Error("Not enough cash");
 
       await supabase.from("profiles").update({ cash: profile.cash - item.price }).eq("id", profileId);
 
       // Log as activity
       await (supabase as any).from("activity_feed").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         activity_type: "festival_purchase",
         message: `Bought ${item.name} at ${festivalTitle}`,

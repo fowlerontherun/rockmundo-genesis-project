@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ interface LabelFinanceTabProps {
 const MINIMUM_BALANCE = 100_000;
 
 export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWentNegativeAt }: LabelFinanceTabProps) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [depositAmount, setDepositAmount] = useState("");
@@ -90,7 +88,7 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
     queryClient.invalidateQueries({ queryKey: ["label-management", labelId] });
-    queryClient.invalidateQueries({ queryKey: ["user-balance", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
     queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
     queryClient.invalidateQueries({ queryKey: ["my-labels"] });
   };

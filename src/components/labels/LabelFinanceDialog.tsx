@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ interface Transaction {
 }
 
 export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: LabelFinanceDialogProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [depositAmount, setDepositAmount] = useState("");
@@ -68,13 +68,13 @@ export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: L
 
   // Fetch user's personal balance
   const { data: profileData } = useQuery({
-    queryKey: ["user-balance", user?.id],
-    enabled: open && !!user?.id,
+    queryKey: ["user-balance", profileId],
+    enabled: open && !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user!.id)
+        .eq("id", profileId!)
         .single();
 
       if (error) throw error;
@@ -165,7 +165,7 @@ export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: L
       toast({ title: "Deposit successful", description: `$${amount.toLocaleString()} deposited to label` });
       setDepositAmount("");
       queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["user-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
       queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
       queryClient.invalidateQueries({ queryKey: ["my-labels"] });
     } catch (error) {
@@ -221,7 +221,7 @@ export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: L
       toast({ title: "Withdrawal successful", description: `$${amount.toLocaleString()} withdrawn to personal account` });
       setWithdrawAmount("");
       queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["user-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
       queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
       queryClient.invalidateQueries({ queryKey: ["my-labels"] });
     } catch (error) {

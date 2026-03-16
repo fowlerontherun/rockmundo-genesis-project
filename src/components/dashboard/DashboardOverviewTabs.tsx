@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { usePlayerLevel } from "@/hooks/usePlayerLevel";
@@ -39,7 +38,6 @@ interface OverviewTabsProps {
 
 export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProps) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const [citySearch, setCitySearch] = useState("");
@@ -141,9 +139,9 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch upcoming events
   const { data: upcomingEvents } = useQuery({
-    queryKey: ["dashboard-upcoming-events", user?.id],
+    queryKey: ["dashboard-upcoming-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const now = new Date().toISOString();
       const client: any = supabase;
       const { data } = await client
@@ -155,7 +153,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
         .limit(3);
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 30000
   });
 

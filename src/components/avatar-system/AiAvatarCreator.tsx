@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useUserBand } from "@/hooks/useUserBand";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,7 +86,6 @@ function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
 }
 
 export function AiAvatarCreator() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { data: band } = useUserBand();
   const queryClient = useQueryClient();
@@ -193,7 +191,7 @@ export function AiAvatarCreator() {
   };
 
   const handleGenerate = async () => {
-    if (!uploadedPhoto || !user?.id) return;
+    if (!uploadedPhoto || !profileId) return;
 
     if (!canAfford) {
       toast.error(`You need $${cost} to regenerate your avatar`);
@@ -215,7 +213,7 @@ export function AiAvatarCreator() {
         body: {
           photoBase64: uploadedPhoto,
           genre: activeGenre,
-          userId: user.id,
+          userId: profileId,
         },
       });
 

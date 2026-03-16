@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Landmark, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -29,7 +28,6 @@ interface LoansTabProps {
 }
 
 export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null);
@@ -42,7 +40,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   const weeklyPayments = activeLoans.reduce((sum, l) => sum + l.weekly_payment, 0);
 
   const handleApplyLoan = async () => {
-    if (!user?.id || !selectedOffer) return;
+    if (!profileId || !selectedOffer) return;
     const amount = parseInt(loanAmount);
     
     if (isNaN(amount) || amount <= 0 || amount > selectedOffer.maxAmount) {
@@ -64,7 +62,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
 
       // Create loan
       const { error: loanError } = await supabase.from("player_loans").insert({
-        user_id: user.id!,
+        user_id: profileId!,
         profile_id: profileId,
         loan_name: selectedOffer.name,
         principal: amount,
@@ -98,7 +96,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   };
 
   const handlePayment = async (loan: PlayerLoan, amount: number) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     if (amount > cash) {
       toast.error("Insufficient funds");
       return;
