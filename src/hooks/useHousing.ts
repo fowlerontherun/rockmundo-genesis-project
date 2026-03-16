@@ -106,7 +106,7 @@ export function usePlayerProperties() {
       const { data, error } = await supabase
         .from("player_properties")
         .select("*, housing_types(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PlayerProperty[];
