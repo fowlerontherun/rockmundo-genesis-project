@@ -48,7 +48,7 @@ const VENUE_SIZE_FILTERS = [
 ];
 
 const GigBooking = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile, skills, attributes, addActivity, currentCity } = useGameData();
   const { toast } = useToast();
   const { t } = useTranslation();
