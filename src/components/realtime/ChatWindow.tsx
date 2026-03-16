@@ -61,7 +61,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [profileId, selectedChannel]);
 
   const sendMessage = async () => {
-    if (!user || !message.trim()) return;
+    if (!profileId || !message.trim()) return;
 
     try {
       const { error } = await supabase
