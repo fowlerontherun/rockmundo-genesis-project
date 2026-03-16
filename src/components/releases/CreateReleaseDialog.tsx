@@ -46,19 +46,22 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
 
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   // Auto-detect user's active band
   const { data: userBand } = useQuery({
-    queryKey: ["user-active-band", userId],
+    queryKey: ["user-active-band", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(*)")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .limit(1)
         .single();
       return data?.bands || null;
-    }
+    },
+    enabled: !!profileId,
   });
 
   // Get band's home country & region from home city
