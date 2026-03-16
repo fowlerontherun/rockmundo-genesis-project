@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.103",
+    date: "2026-03-16",
+    changes: [
+      { type: 'feature', description: "Replaced vehicle catalog with 14 real cars and motorbikes — Honda PCX, Kawasaki Ninja, Harley Street Bob, Ducati Panigale, VW Golf GTI, Toyota GR86, BMW 3 Series, Mercedes-AMG C63, Range Rover Sport, Porsche 911, Lamborghini Huracán, Rolls-Royce Ghost, Bugatti Chiron, and Triumph Bonneville" },
+      { type: 'feature', description: "Added realistic pricing ($3,500 – $3,200,000) with daily insurance costs alongside upkeep" },
+      { type: 'feature', description: "Added AI-generated images for every vehicle and category banners for Cars and Motorbikes" },
+    ],
+  },
+  {
     version: "1.1.102",
     date: "2026-03-16",
     changes: [
