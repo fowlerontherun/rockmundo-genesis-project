@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth-context';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { BandCreationForm } from '@/components/band/BandCreationForm';
 import { BandOverview } from '@/components/band/BandOverview';
