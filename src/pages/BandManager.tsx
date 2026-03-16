@@ -35,6 +35,7 @@ import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [userBands, setUserBands] = useState<any[]>([]);
