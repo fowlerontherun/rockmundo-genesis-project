@@ -288,7 +288,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   };
 
   const handleSell = () => {
-    if (!selectedTokenData || !sellQuantity || !user) return;
+    if (!selectedTokenData || !sellQuantity || !profileId) return;
     const qty = parseFloat(sellQuantity);
     if (isNaN(qty) || qty <= 0) return;
     sellToken({
