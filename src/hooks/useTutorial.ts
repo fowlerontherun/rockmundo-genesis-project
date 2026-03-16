@@ -39,17 +39,17 @@ export const useTutorial = () => {
 
   // Fetch user's completed steps
   const { data: progress = [] } = useQuery({
-    queryKey: ["tutorial-progress", profileId],
+    queryKey: ["tutorial-progress", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       const { data, error } = await supabase
         .from("player_tutorial_progress")
         .select("step_key, completed_at")
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return data as TutorialProgress[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Mark step as complete
