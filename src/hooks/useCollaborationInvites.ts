@@ -108,11 +108,13 @@ export const useCollaborationInvites = (projectId?: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // First get the user's profile id
+      // Get the user's active profile id
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
         .single();
 
       if (!profile) return [];
