@@ -28,7 +28,7 @@ import {
   Trophy,
   TrendingUp
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
 
