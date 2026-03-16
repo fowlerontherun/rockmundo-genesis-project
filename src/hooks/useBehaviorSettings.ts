@@ -6,6 +6,7 @@ import { toast } from "sonner";
 export interface BehaviorSettings {
   id: string;
   user_id: string;
+  profile_id: string;
   travel_comfort: "budget" | "standard" | "luxury";
   hotel_standard: "hostel" | "budget" | "standard" | "luxury" | "suite";
   partying_intensity: "abstinent" | "light" | "moderate" | "heavy" | "legendary";
@@ -18,7 +19,7 @@ export interface BehaviorSettings {
   updated_at: string;
 }
 
-const DEFAULT_SETTINGS: Omit<BehaviorSettings, "id" | "user_id" | "created_at" | "updated_at"> = {
+const DEFAULT_SETTINGS: Omit<BehaviorSettings, "id" | "user_id" | "profile_id" | "created_at" | "updated_at"> = {
   travel_comfort: "standard",
   hotel_standard: "standard",
   partying_intensity: "moderate",
@@ -136,18 +137,18 @@ export const getRiskLevel = (score: number): { label: string; color: string; des
 };
 
 export function useBehaviorSettings() {
-  const { userId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading, error } = useQuery({
-    queryKey: ["behavior-settings", userId],
+    queryKey: ["behavior-settings", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!userId || !profileId) return null;
 
       const { data, error } = await (supabase as any)
         .from("player_behavior_settings")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
@@ -157,7 +158,7 @@ export function useBehaviorSettings() {
       if (!data) {
         const { data: newData, error: insertError } = await (supabase as any)
           .from("player_behavior_settings")
-          .insert({ user_id: userId, ...DEFAULT_SETTINGS })
+          .insert({ user_id: userId, profile_id: profileId, ...DEFAULT_SETTINGS })
           .select()
           .single();
 
@@ -167,7 +168,7 @@ export function useBehaviorSettings() {
 
       return data as BehaviorSettings;
     },
-    enabled: !!userId,
+    enabled: !!userId && !!profileId,
   });
 
   // Fetch unlocked advanced behaviors
@@ -200,7 +201,7 @@ export function useBehaviorSettings() {
       return data as BehaviorSettings;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["behavior-settings", userId], data);
+      queryClient.setQueryData(["behavior-settings", profileId], data);
       toast.success("Lifestyle settings updated");
     },
     onError: (error: any) => {
