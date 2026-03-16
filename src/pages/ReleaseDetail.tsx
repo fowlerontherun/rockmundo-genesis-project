@@ -32,7 +32,7 @@ export default function ReleaseDetail() {
         .eq("role", "leader")
         .maybeSingle();
       return {
-        userId: user.id,
+        userId: profileId,
         cash: activeProfile?.cash ?? 0,
         health: activeProfile?.health ?? 100,
         energy: activeProfile?.energy ?? 100,
