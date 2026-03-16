@@ -143,7 +143,7 @@ const MyGear: React.FC = () => {
     : null;
 
   const handleRepair = useCallback(async (itemId: string, condition: number, price: number) => {
-    if (!user?.id || repairingId) return;
+    if (!profileId || repairingId) return;
     setRepairingId(itemId);
     try {
       const { cost } = calculateRepairCost(condition, price, 100);
