@@ -155,7 +155,7 @@ export default function BandProfile() {
 
               <div className="flex items-center gap-3">
                 <p className="text-xs text-muted-foreground">
-                  Formed {format(new Date(band.created_at), "MMMM yyyy")}
+                  {band.created_at && `Formed ${format(new Date(band.created_at), "MMMM yyyy")}`}
                 </p>
                 {/* Apply button */}
                 {canApply && (
