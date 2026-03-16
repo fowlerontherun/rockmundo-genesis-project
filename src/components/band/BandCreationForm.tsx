@@ -116,8 +116,8 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         .from('band_members')
         .insert({
           band_id: band.id,
-          user_id: user.id,
-          profile_id: activeProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           role: 'Founder',
           instrument_role: instrumentRole,
           vocal_role: vocalRole === 'None' ? null : vocalRole,
