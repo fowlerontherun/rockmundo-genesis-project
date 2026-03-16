@@ -30,7 +30,7 @@ export const useGameEventNotifications = () => {
   }, [profileId]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !profileId) return;
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
