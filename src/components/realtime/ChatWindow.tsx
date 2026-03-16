@@ -29,7 +29,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onOnlineCountChange,
   onConnectionStatusChange,
 }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const selectedChannel = channel ?? 'general';
