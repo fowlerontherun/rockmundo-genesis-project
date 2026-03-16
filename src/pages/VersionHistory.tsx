@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.066",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "BandSearch ratings scoped to active profile instead of auth user" },
+      { type: 'improvement', description: "Player inbox (useInbox) queries and real-time subscriptions use profileId" },
+      { type: 'improvement', description: "BandVehicles band membership lookup uses profile_id" },
+      { type: 'improvement', description: "MyCharacterEdit avatar update targets profile by id instead of user_id" },
+      { type: 'improvement', description: "Child birth activity feed entries include profile_id" },
+      { type: 'improvement', description: "Busking history query and scheduling conflict check use profile id" },
+    ],
+  },
+  {
     version: "1.1.065",
     date: "2026-03-16",
     changes: [

@@ -196,13 +196,13 @@ export default function Busking() {
   const [showHistory, setShowHistory] = React.useState(false);
   
   const { data: buskingHistory } = useQuery({
-    queryKey: ["busking-history", user?.id],
+    queryKey: ["busking-history", profile?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profile?.id) return [];
       const { data, error } = await supabase
         .from("activity_feed")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", profile.id)
         .eq("activity_type", "busking_session")
         .order("created_at", { ascending: false })
         .limit(10);
@@ -210,7 +210,7 @@ export default function Busking() {
       if (error) throw error;
       return data as Tables<"activity_feed">[];
     },
-    enabled: !!user && showHistory,
+    enabled: !!profile?.id && showHistory,
   });
   const [selectedLength, setSelectedLength] = React.useState<SessionLength>(SESSION_LENGTHS[0]);
   const [statusLoading, setStatusLoading] = React.useState(false);
@@ -292,12 +292,11 @@ export default function Busking() {
     const now = new Date();
     const sessionEnds = new Date(now.getTime() + selectedLength * 60_000);
     
-    // Check for scheduling conflicts
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Check for scheduling conflicts using profile id
+    if (!profile?.id) {
       toast({
         title: 'Error',
-        description: 'Not authenticated',
+        description: 'No active profile',
         variant: 'destructive',
       });
       setIsStartingSession(false);
@@ -305,7 +304,7 @@ export default function Busking() {
     }
 
     const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
-      p_user_id: user.id,
+      p_user_id: profile.id,
       p_start: now.toISOString(),
       p_end: sessionEnds.toISOString(),
       p_exclude_id: null,

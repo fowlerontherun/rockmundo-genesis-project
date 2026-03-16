@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
 import { toast } from "sonner";
 
@@ -185,7 +186,7 @@ export function calculateInheritedPotentials(
 
 export function useCompleteChildBirth() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (params: {
@@ -225,9 +226,10 @@ export function useCompleteChildBirth() {
         .eq("id", params.requestId);
 
       // Post activity feed entry
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "child_born",
           message: `👶 Welcome ${params.name} ${params.surname} to the family!`,
           metadata: { child_id: (data as any)?.id },

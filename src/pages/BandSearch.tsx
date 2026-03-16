@@ -68,17 +68,17 @@ export default function BandSearch() {
 
   // Fetch user's ratings
   const { data: userRatings } = useQuery({
-    queryKey: ["user-band-ratings", user?.id],
+    queryKey: ["user-band-ratings", profileId],
     queryFn: async () => {
-      if (!user) return {};
+      if (!profileId) return {};
       const { data, error } = await (supabase as any)
         .from("band_ratings")
         .select("band_id, rating")
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       if (error) throw error;
       return (data as any[]).reduce((acc: Record<string, string>, r: any) => ({ ...acc, [r.band_id]: r.rating }), {} as Record<string, string>);
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch rating counts for all bands
@@ -102,7 +102,7 @@ export default function BandSearch() {
   // Rate band mutation
   const rateMutation = useMutation({
     mutationFn: async ({ bandId, rating }: { bandId: string; rating: "up" | "down" }) => {
-      if (!user) throw new Error("Must be logged in to rate");
+      if (!profileId) throw new Error("Must have active profile to rate");
       
       const currentRating = userRatings?.[bandId];
       
@@ -111,13 +111,13 @@ export default function BandSearch() {
           .from("band_ratings")
           .delete()
           .eq("band_id", bandId)
-          .eq("user_id", user.id);
+          .eq("user_id", profileId);
         if (error) throw error;
       } else {
         const { error } = await (supabase as any)
           .from("band_ratings")
           .upsert(
-            { band_id: bandId, user_id: user.id, rating },
+            { band_id: bandId, user_id: profileId, rating },
             { onConflict: "band_id,user_id" }
           );
         if (error) throw error;

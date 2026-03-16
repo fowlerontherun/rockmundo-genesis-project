@@ -1,7 +1,7 @@
-import { useState, useContext } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ const VEHICLE_ICONS: Record<string, typeof Car> = {
 };
 
 export default function BandVehicles() {
-  const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCatalogItem | null>(null);
   const [purchaseType, setPurchaseType] = useState<"buy" | "rent" | "lease">("buy");
@@ -79,13 +79,13 @@ export default function BandVehicles() {
 
   // Fetch user's band
   const { data: band } = useQuery({
-    queryKey: ["user-band", user?.id],
+    queryKey: ["user-band", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data: membership } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .limit(1)
         .single();
       
@@ -99,7 +99,7 @@ export default function BandVehicles() {
       
       return bandData || null;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch vehicle catalog
@@ -153,7 +153,7 @@ export default function BandVehicles() {
       vehicleId: string;
       type: "buy" | "rent" | "lease";
     }) => {
-      if (!band?.id || !user) throw new Error("No band found");
+      if (!band?.id) throw new Error("No band found");
 
       const vehicle = catalog.find((v) => v.id === vehicleId);
       if (!vehicle) throw new Error("Vehicle not found");
