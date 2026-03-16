@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Send } from 'lucide-react';
 import { format } from 'date-fns';
@@ -25,7 +25,7 @@ interface ChatMessage {
 }
 
 export function BandChat({ bandId }: BandChatProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -122,7 +122,7 @@ export function BandChat({ bandId }: BandChatProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !user) return;
+    if (!newMessage.trim() || !profileId) return;
 
     setSending(true);
     try {
@@ -130,7 +130,7 @@ export function BandChat({ bandId }: BandChatProps) {
         .from('band_chat_messages')
         .insert({
           band_id: bandId,
-          user_id: user.id,
+          user_id: profileId,
           message: newMessage.trim(),
         });
 
@@ -149,7 +149,7 @@ export function BandChat({ bandId }: BandChatProps) {
     }
   };
 
-  const isOwnMessage = (userId: string) => userId === user?.id;
+  const isOwnMessage = (userId: string) => userId === profileId;
 
   return (
     <Card className="flex flex-col h-[600px]">

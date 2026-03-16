@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -61,7 +61,7 @@ const DEFAULT_FORM_STATE: FormState = {
 const GENRE_OPTIONS = [...MUSIC_GENRES];
 
 export function JamSessionsTab() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
 
@@ -139,7 +139,7 @@ export function JamSessionsTab() {
   };
 
   const handleCreateSession = async () => {
-    if (!user) {
+    if (!profileId) {
       toast({
         title: "Sign in required",
         description: "You need to be logged in to host a jam session.",
@@ -210,7 +210,7 @@ export function JamSessionsTab() {
   };
 
   const handleJoinSession = async (session: JamSessionWithHost) => {
-    if (!user) {
+    if (!profileId) {
       toast({
         title: "Sign in required",
         description: "Log in to join a jam session.",
@@ -288,14 +288,14 @@ export function JamSessionsTab() {
 
   // If actively jamming, show the gameplay component
   const activeSession = activeJamSessionId ? jamSessions.find(s => s.id === activeJamSessionId) : null;
-  if (activeSession && user) {
+  if (activeSession && profileId) {
     return (
       <div className="max-w-2xl mx-auto">
         <JamSessionGameplay
           sessionId={activeSession.id}
           sessionName={activeSession.name}
           genre={activeSession.genre || "Rock"}
-          userId={user.id}
+          userId={profileId}
           bandId={undefined}
           onComplete={() => setActiveJamSessionId(null)}
         />
@@ -464,7 +464,7 @@ export function JamSessionsTab() {
           ) : (
             jamSessions.map((session) => {
               const isHost = session.host_id === profile?.id;
-              const alreadyJoined = session.participant_ids?.includes(user?.id ?? "");
+              const alreadyJoined = session.participant_ids?.includes(profileId ?? "");
               const isFull = (session.current_participants ?? 0) >= session.max_participants;
 
               return (

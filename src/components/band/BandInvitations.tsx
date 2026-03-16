@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Users, Mail } from "lucide-react";
 
 interface BandInvitation {
@@ -21,14 +21,14 @@ interface BandInvitation {
 }
 
 export const BandInvitations = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: invitations, isLoading } = useQuery({
-    queryKey: ["band-invitations", user?.id],
+    queryKey: ["band-invitations", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from("band_invitations")
@@ -41,31 +41,20 @@ export const BandInvitations = () => {
           created_at,
           bands(name, genre)
         `)
-        .eq("invited_user_id", user.id)
+        .eq("invited_user_id", profileId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as BandInvitation[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const acceptInviteMutation = useMutation({
     mutationFn: async (invitationId: string) => {
       const invitation = invitations?.find((i) => i.id === invitationId);
-      if (!invitation || !user?.id) throw new Error("Invalid invitation");
-
-      // Get active profile
-      const { data: activeProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      if (!activeProfile) throw new Error("No active character found");
+      if (!invitation || !profileId) throw new Error("Invalid invitation");
 
       // Update invitation status
       const { error: inviteError } = await supabase
@@ -75,13 +64,14 @@ export const BandInvitations = () => {
 
       if (inviteError) throw inviteError;
 
+
       // Add member to band with profile_id
       const { error: memberError } = await supabase
         .from("band_members")
         .insert({
           band_id: invitation.band_id,
-          user_id: user.id,
-          profile_id: activeProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           role: "member",
           instrument_role: invitation.instrument_role,
           vocal_role: invitation.vocal_role,

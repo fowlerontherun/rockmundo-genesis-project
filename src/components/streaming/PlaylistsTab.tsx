@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ListMusic, TrendingUp, Users, DollarSign, Send, Music, CheckCircle, Clock, XCircle } from "lucide-react";
 import { usePlaylists } from "@/hooks/usePlaylists";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +15,8 @@ interface PlaylistsTabProps {
 }
 
 export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
-  const { user } = useAuth();
-  const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting, processPending, isProcessingPending } = usePlaylists(user?.id);
+  const { profileId } = useActiveProfile();
+  const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting, processPending, isProcessingPending } = usePlaylists(profileId ?? undefined);
   const [selectedRelease, setSelectedRelease] = useState<string>("");
 
   // Fetch user's active streaming releases (song_releases) - these are what get submitted
