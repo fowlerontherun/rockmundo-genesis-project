@@ -26,7 +26,7 @@ const INTERVIEW_COOLDOWN_KEY = "interview_last_shown";
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes between interview prompts
 
 export const useInterviewSession = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   const bandId = band?.id || null;
