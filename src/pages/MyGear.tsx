@@ -173,7 +173,7 @@ const MyGear: React.FC = () => {
     } finally {
       setRepairingId(null);
     }
-  }, [user?.id, repairingId, toast, queryClient]);
+  }, [profileId, repairingId, toast, queryClient]);
 
   const presetGear = useMemo(
     () =>

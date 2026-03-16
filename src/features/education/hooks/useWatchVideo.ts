@@ -148,7 +148,7 @@ export const useWatchVideo = () => {
       
       // Log to experience ledger
       await supabase.from("experience_ledger").insert({
-        user_id: user.id,
+        user_id: profile.user_id,
         profile_id: profile.id,
         activity_type: "youtube_video",
         xp_amount: XP_PER_VIDEO,
