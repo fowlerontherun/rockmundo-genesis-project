@@ -80,7 +80,7 @@ export const useCharacterRelationships = (entityBType?: RelationshipEntityType) 
       if (error) throw error;
       return (data ?? []) as unknown as CharacterRelationship[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };
