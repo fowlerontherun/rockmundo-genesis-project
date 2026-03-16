@@ -17,7 +17,7 @@ type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 
 export const BooksTab = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
