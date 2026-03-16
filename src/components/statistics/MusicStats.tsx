@@ -19,7 +19,7 @@ export function MusicStats() {
       const { count: songsWritten } = await supabase
         .from("songs")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       // Get songs recorded
       const { count: songsRecorded } = await supabase
