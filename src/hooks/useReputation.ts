@@ -17,14 +17,13 @@ import type {
 } from "@/types/roleplaying";
 
 export const usePlayerReputation = () => {
-  const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["player-reputation", profileId],
     queryFn: () => fetchPlayerReputation(profileId!),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 };
