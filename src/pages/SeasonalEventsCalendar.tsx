@@ -28,7 +28,7 @@ const SEASON_ICONS: Record<Season, React.ReactNode> = {
 };
 
 const SeasonalEventsCalendar = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: calendar } = useGameCalendar();
   const currentSeason = calendar?.season ?? "spring";
   const [activeTab, setActiveTab] = useState<string>(currentSeason);
