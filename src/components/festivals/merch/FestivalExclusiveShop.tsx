@@ -24,17 +24,18 @@ const COLLECTIBLES = [
 
 export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: FestivalExclusiveShopProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
 
   const { data: profile } = useQuery({
-    queryKey: ["profile-cash", user?.id],
+    queryKey: ["profile-cash", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase.from("profiles").select("cash").eq("user_id", user.id).single();
+      if (!profileId) return null;
+      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const buyItem = useMutation({
