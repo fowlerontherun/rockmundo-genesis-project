@@ -37,18 +37,18 @@ const RadioBrowser = () => {
 
   // Get user's primary band
   const { data: primaryBand } = useQuery({
-    queryKey: ["primary-band-radio", user?.id],
+    queryKey: ["primary-band-radio", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, fame")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch countries the band has visited (performed in)
