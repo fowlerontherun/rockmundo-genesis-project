@@ -126,7 +126,7 @@ export function BandSettingsTab({
 
     try {
       setLoading(true);
-      const result = await reactivateBand(bandId, user.id);
+      const result = await reactivateBand(bandId, profileId);
       
       if (result.success) {
         toast({
