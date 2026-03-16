@@ -92,7 +92,7 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         .eq('is_touring_member', false);
 
       const isSolo = creationMode === 'solo';
-      const bandName = isSolo ? (artistName || `${user.email?.split('@')[0]} (Solo)`) : name;
+      const bandName = isSolo ? (artistName || 'Solo Artist') : name;
 
       const { data: band, error: bandError } = await supabase
         .from('bands')
