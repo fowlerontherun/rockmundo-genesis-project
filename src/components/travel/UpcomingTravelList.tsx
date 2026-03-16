@@ -210,17 +210,19 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
       if (updateError) throw updateError;
 
       // Refund the cost by updating profile directly
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("user_id", userId)
-        .single();
-
-      if (profile) {
-        await supabase
+      if (profileId) {
+        const { data: profile } = await supabase
           .from("profiles")
-          .update({ cash: (profile.cash || 0) + travel.cost_paid })
-          .eq("user_id", userId);
+          .select("cash")
+          .eq("id", profileId)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({ cash: (profile.cash || 0) + travel.cost_paid })
+            .eq("id", profileId);
+        }
       }
 
       return travel;
