@@ -105,7 +105,7 @@ const AdvisorPage = () => {
     setError(null);
 
     try {
-      const result = await generateAdvisorInsights(user.id);
+      const result = await generateAdvisorInsights(profileId);
       setInsights(result);
 
       setMessages((previous) => {
