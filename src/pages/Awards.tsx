@@ -368,7 +368,7 @@ export default function Awards() {
             <Button variant="outline" onClick={() => setShowNominateDialog(false)}>Cancel</Button>
             <Button
               onClick={() => {
-                if (!userBand || !user || !selectedCategory || !selectedShow) return;
+                if (!userBand || !profileId || !selectedCategory || !selectedShow) return;
                 submitNomination({
                   award_show_id: selectedShow.id,
                   category_name: selectedCategory,

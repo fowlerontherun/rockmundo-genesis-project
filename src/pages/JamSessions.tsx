@@ -210,7 +210,7 @@ const JamSessions = () => {
   };
 
   const handleJoinSession = async (session: JamSessionWithHost) => {
-    if (!user) {
+    if (!profileId) {
       toast({
         title: "Sign in required",
         description: "Log in to join a jam session.",

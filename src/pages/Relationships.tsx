@@ -22,7 +22,7 @@ import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharact
 import { useSocialDramaEvents } from "@/hooks/useSocialDramaGenerator";
 import { useEmotionalState, useEmotionalModifiers } from "@/hooks/useEmotionalEngine";
 import { useOptionalGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { FriendshipList } from "@/features/relationships/components/FriendshipList";
 import { FriendSearchDialog } from "@/features/relationships/components/FriendSearchDialog";
