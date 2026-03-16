@@ -70,7 +70,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       const { data: bandMemberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .or(`profile_id.eq.${userId},user_id.eq.${userId}`)
+        .eq("member_status", "active");
       
       const bandIds = bandMemberships?.map(d => d.band_id) || [];
       
