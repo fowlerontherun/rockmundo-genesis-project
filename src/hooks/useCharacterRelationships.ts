@@ -104,7 +104,7 @@ export const useCharacterRelationship = (entityBId: string | undefined, entityBT
       if (error) throw error;
       return data as unknown as CharacterRelationship | null;
     },
-    enabled: !!user && !!profileId && !!entityBId,
+    enabled: !!profileId && !!entityBId,
     staleTime: 1000 * 60 * 2,
   });
 };
