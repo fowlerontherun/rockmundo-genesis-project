@@ -61,7 +61,7 @@ export function useAddictions() {
         endDate.setDate(endDate.getDate() + rehabDays);
 
         await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profileId,
           activity_type: "rehab",
           scheduled_start: new Date().toISOString(),
