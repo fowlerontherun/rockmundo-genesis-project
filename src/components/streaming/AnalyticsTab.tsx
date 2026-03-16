@@ -5,10 +5,10 @@ import { BarChart3, TrendingUp } from "lucide-react";
 import { StreamingStatsCard } from "./StreamingStatsCard";
 
 interface AnalyticsTabProps {
-  userId: string;
+  profileId: string;
 }
 
-export const AnalyticsTab = ({ userId }: AnalyticsTabProps) => {
+export const AnalyticsTab = ({ profileId }: AnalyticsTabProps) => {
   const { data: releases } = useQuery({
     queryKey: ["song-releases-analytics", userId],
     queryFn: async () => {
