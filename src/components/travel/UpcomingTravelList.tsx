@@ -49,12 +49,14 @@ const TRANSPORT_ICONS = {
 export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedTravelId, setSelectedTravelId] = useState<string | null>(null);
 
   const { data: upcomingTravel, isLoading } = useQuery({
-    queryKey: ["upcoming-travel", userId],
+    queryKey: ["upcoming-travel", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       // Fetch manual travel bookings that are scheduled or in progress
       const { data: manualTravel, error: manualError } = await supabase
         .from("player_travel_history")
@@ -69,7 +71,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
           arrival_time,
           status
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .in("status", ["scheduled", "in_progress"])
         .order("departure_time", { ascending: true });
 
@@ -79,7 +81,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
       const { data: bandMemberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       const bandIds = bandMemberships?.map(m => m.band_id) || [];
 
