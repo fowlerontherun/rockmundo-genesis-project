@@ -64,6 +64,8 @@ export default function UniversityDetail() {
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
+  const [courseSearch, setCourseSearch] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState<string>("all");
 
   const { data: university } = useQuery({
     queryKey: ["university", id],
