@@ -39,7 +39,7 @@ const MAX_EVENTS_PER_YEAR = 2;
 const COOLDOWN_YEARS = 3;
 
 export default function MajorEvents() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const activeBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } as any : null;
   const navigate = useNavigate();
