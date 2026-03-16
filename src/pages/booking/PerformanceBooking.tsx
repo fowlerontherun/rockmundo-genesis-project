@@ -236,7 +236,7 @@ export default function PerformanceBooking() {
       return;
     }
 
-    if (!date || !activityType || !timeSlot || !user) {
+    if (!date || !activityType || !timeSlot || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, activity type, and time slot.",
