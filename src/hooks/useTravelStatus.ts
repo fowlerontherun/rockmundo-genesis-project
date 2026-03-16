@@ -15,7 +15,6 @@ interface TravelStatus {
 }
 
 export function useTravelStatus() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
