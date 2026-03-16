@@ -135,7 +135,7 @@ export function usePlayerSurvey() {
         const walletTable = supabase.from("player_xp_wallet") as any;
         const walletQuery = await walletTable
           .select("attribute_points_balance, attribute_points_lifetime")
-          .eq("user_id", user.id)
+          .eq("user_id", profileId)
           .maybeSingle();
         const wallet = walletQuery.data;
         if (wallet) {
@@ -144,7 +144,7 @@ export function usePlayerSurvey() {
               attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
               attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
             })
-            .eq("user_id", user.id);
+            .eq("user_id", profileId);
         }
       } catch (e) {
         console.warn("Attribute points award failed:", e);
