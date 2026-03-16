@@ -37,17 +37,9 @@ const InventoryManager = () => {
 
   // Fetch books from player_book_reading_sessions (the real book ownership table)
   const { data: bookSessions = [], isLoading: booksLoading } = useQuery({
-    queryKey: ["inventory-book-sessions", user?.id],
+    queryKey: ["inventory-book-sessions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
@@ -55,13 +47,13 @@ const InventoryManager = () => {
           *,
           skill_books (id, title, author, skill_slug, price, base_reading_days, skill_percentage_gain, category)
         `)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch house keys from player_properties
