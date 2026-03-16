@@ -226,9 +226,10 @@ export function useCompleteChildBirth() {
         .eq("id", params.requestId);
 
       // Post activity feed entry
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "child_born",
           message: `👶 Welcome ${params.name} ${params.surname} to the family!`,
           metadata: { child_id: (data as any)?.id },

@@ -71,7 +71,7 @@ const VEHICLE_ICONS: Record<string, typeof Car> = {
 };
 
 export default function BandVehicles() {
-  const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCatalogItem | null>(null);
   const [purchaseType, setPurchaseType] = useState<"buy" | "rent" | "lease">("buy");
@@ -79,13 +79,13 @@ export default function BandVehicles() {
 
   // Fetch user's band
   const { data: band } = useQuery({
-    queryKey: ["user-band", user?.id],
+    queryKey: ["user-band", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data: membership } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .limit(1)
         .single();
       
