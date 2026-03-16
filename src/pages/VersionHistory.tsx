@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.070",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Stage practice sessions and XP awards scoped to profileId" },
+      { type: 'improvement', description: "Twaater LinkSongDialog band membership uses profile_id" },
+      { type: 'improvement', description: "GigPerformanceTab band membership lookup uses profile_id" },
+      { type: 'improvement', description: "BandCreationForm uses profileId directly instead of fetching active profile" },
+      { type: 'improvement', description: "CoverSongDialog authentication check uses profileId" },
+    ],
+  },
+  {
     version: "1.1.069",
     date: "2026-03-16",
     changes: [

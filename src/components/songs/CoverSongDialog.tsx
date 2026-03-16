@@ -69,7 +69,7 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
 
   const coverMutation = useMutation({
     mutationFn: async () => {
-      if (!song || !paymentType || !user) throw new Error("Missing data");
+      if (!song || !paymentType || !profileId) throw new Error("Missing data");
 
       const skills = memberSkills || [];
       const { coverQuality, skillMultiplier } = calculateCoverQuality(song.quality_score, skills);
