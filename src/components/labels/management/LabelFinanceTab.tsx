@@ -33,7 +33,6 @@ interface LabelFinanceTabProps {
 const MINIMUM_BALANCE = 100_000;
 
 export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWentNegativeAt }: LabelFinanceTabProps) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [depositAmount, setDepositAmount] = useState("");
