@@ -59,7 +59,7 @@ export const CompleteRecordingDialog = ({
     !cannotRegenerate;
 
   const generateAudio = async (songId: string) => {
-    if (!vipStatus?.isVip || !user?.id) return;
+    if (!vipStatus?.isVip || !profileId) return;
 
     // Check limits
     if (limits && !limits.can_generate && !limits.is_admin) {
