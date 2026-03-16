@@ -39,14 +39,14 @@ export function useInbox(category?: InboxCategory | 'all') {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['inbox', profileId, category],
+    queryKey: ['inbox', userId, category],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
 
       let queryBuilder = supabase
         .from('player_inbox')
         .select('*')
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
