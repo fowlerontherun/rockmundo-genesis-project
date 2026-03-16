@@ -631,5 +631,5 @@ export const useGameEventNotifications = () => {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [user?.id, addNotification, navigate]);
+  }, [user?.id, profileId, addNotification, navigate]);
 };
