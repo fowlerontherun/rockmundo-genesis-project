@@ -68,7 +68,7 @@ export const BooksTab = () => {
   };
 
   const handleStartReading = async () => {
-    if (!user || !selectedBook) return;
+    if (!profileId || !selectedBook) return;
     
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
