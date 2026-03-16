@@ -11,7 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Music, Sparkles, Loader2, Clock, Star, Image } from "lucide-react";
 import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface DikCokCreateVideoFormProps {
   bandId: string;
