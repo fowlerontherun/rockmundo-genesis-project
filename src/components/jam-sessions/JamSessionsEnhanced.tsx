@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const {
     sessions,
