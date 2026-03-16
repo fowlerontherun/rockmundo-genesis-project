@@ -143,8 +143,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { error: activityError } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
-      user_id: userId,
-      profile_id: profile.id,
+      profile_id: profileId,
       activity_type: 'travel',
       status: startsImmediately ? 'in_progress' : 'scheduled',
       scheduled_start: departureDate.toISOString(),
