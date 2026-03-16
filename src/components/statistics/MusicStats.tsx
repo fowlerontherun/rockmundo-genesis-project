@@ -41,7 +41,7 @@ export function MusicStats() {
       const { data: chartEntries } = await supabase
         .from("chart_entries")
         .select("rank, songs!inner(profile_id)")
-        .eq("songs.user_id", user.id);
+        .eq("songs.profile_id", profileId);
 
       const chartAppearances = chartEntries?.length || 0;
       const highestRank = chartEntries?.length
