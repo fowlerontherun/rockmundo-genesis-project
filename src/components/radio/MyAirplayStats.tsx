@@ -92,7 +92,7 @@ export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
         topSong,
       };
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   if (isLoading) {

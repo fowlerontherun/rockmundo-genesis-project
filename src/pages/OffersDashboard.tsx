@@ -74,24 +74,25 @@ const statusBadge = (status: string) => {
 
 const OffersDashboard = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
 
   const userId = user?.id;
 
   // Fetch user's band id
   const { data: bandData } = useQuery({
-    queryKey: ["user-band-id", userId],
+    queryKey: ["user-band-id", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .limit(1)
         .single();
       return data?.band_id || null;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
   const bandId = bandData;
 

@@ -44,9 +44,10 @@ export const MyReleasesTab = ({ userId }: MyReleasesTabProps) => {
 
       // Build OR condition for user releases or band releases
       if (userBandIds && userBandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`) as any;
+        query = query.or(`band_id.in.(${userBandIds.join(',')})`) as any;
       } else {
-        query = query.eq("user_id", userId);
+        // No bands - return nothing for now (solo releases would need profile_id)
+        return [];
       }
 
       const { data, error } = await query;

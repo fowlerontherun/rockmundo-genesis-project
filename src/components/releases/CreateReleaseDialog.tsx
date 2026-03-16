@@ -89,15 +89,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         filters.push(`band_id.eq.${userBand.id}`);
       }
       
-      // Get profile ID for solo artist check
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-      
-      if (profile?.id) {
-        filters.push(`artist_profile_id.eq.${profile.id}`);
+      if (profileId) {
+        filters.push(`artist_profile_id.eq.${profileId}`);
       }
 
       if (filters.length === 0) return null;

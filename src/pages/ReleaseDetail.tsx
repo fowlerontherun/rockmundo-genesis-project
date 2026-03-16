@@ -11,39 +11,38 @@ import { PromotionalCampaignCard } from "@/components/releases/PromotionalCampai
 import { PromoTourCard } from "@/components/releases/PromoTourCard";
 import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 import { HypeMeter } from "@/components/releases/HypeMeter";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useAuth } from "@/hooks/use-auth-context";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "songs";
+  const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
 
   // Fetch current user + profile for promo tour
   const { data: userData } = useQuery({
-    queryKey: ["current-user-profile-release"],
+    queryKey: ["current-user-profile-release", profileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash, health, energy, user_id")
-        .eq("user_id", user.id)
-        .single();
+      if (!profileId || !user) return null;
       const { data: bandMember } = await supabase
         .from("band_members")
         .select("band_id, bands(fame)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("role", "leader")
         .maybeSingle();
       return {
         userId: user.id,
-        cash: profile?.cash ?? 0,
-        health: profile?.health ?? 100,
-        energy: profile?.energy ?? 100,
+        cash: activeProfile?.cash ?? 0,
+        health: activeProfile?.health ?? 100,
+        energy: activeProfile?.energy ?? 100,
         bandId: (bandMember as any)?.band_id || "",
         bandFame: (bandMember as any)?.bands?.fame || 0,
       };
     },
+    enabled: !!profileId && !!user,
   });
 
   usePromoTourCompletion(userData?.userId);

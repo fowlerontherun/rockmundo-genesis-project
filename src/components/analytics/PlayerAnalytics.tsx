@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Music, Mic2, DollarSign } from "lucide-react";
 import { CardSkeleton } from "@/components/ui/loading-skeletons";
@@ -24,17 +24,17 @@ interface EarningStat {
 }
 
 export const PlayerAnalytics = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: gigStats, isLoading: loadingGigs } = useQuery<GigStat[]>({
-    queryKey: ["analytics", "gigs", user?.id],
+    queryKey: ["analytics", "gigs", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
       const { data: bands } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       if (!bands?.length) return [];
 
@@ -60,18 +60,18 @@ export const PlayerAnalytics = () => {
       }
       return results;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: songStats, isLoading: loadingSongs } = useQuery<SongStat[]>({
-    queryKey: ["analytics", "songs", user?.id],
+    queryKey: ["analytics", "songs", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
       const { data } = await supabase
         .from("songs")
         .select("genre, quality_score")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       const genreCounts: Record<string, number> = {};
       data?.forEach(song => {
@@ -81,18 +81,18 @@ export const PlayerAnalytics = () => {
 
       return Object.entries(genreCounts).map(([name, value]) => ({ name, value }));
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const { data: earningsData, isLoading: loadingEarnings } = useQuery<EarningStat[]>({
-    queryKey: ["analytics", "earnings", user?.id],
+    queryKey: ["analytics", "earnings", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       
       const { data: bands } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       if (!bands?.length) return [];
 
@@ -117,7 +117,7 @@ export const PlayerAnalytics = () => {
 
       return Object.entries(grouped).map(([date, amount]) => ({ date, amount }));
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (loadingGigs || loadingSongs || loadingEarnings) {

@@ -61,9 +61,9 @@ export async function getUserBands(profileId: string) {
   }
 }
 
-export async function canJoinAnotherBand(userId: string): Promise<ActiveBandCheck> {
+export async function canJoinAnotherBand(profileId: string): Promise<ActiveBandCheck> {
   try {
-    const activeBand = await getUserActiveBand(userId);
+    const activeBand = await getUserActiveBand(profileId);
     
     if (!activeBand) {
       return { allowed: true };
