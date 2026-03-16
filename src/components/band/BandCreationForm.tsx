@@ -60,34 +60,15 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!profileId) return;
 
     setLoading(true);
     try {
-      // Get active profile for this user
-      const { data: activeProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .maybeSingle();
-
-      if (!activeProfile) {
-        toast({
-          title: 'No active character',
-          description: 'Please select an active character first.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
       // Check if this profile is already in an active band
       const { data: existingBands } = await supabase
         .from('band_members')
         .select('band_id, is_touring_member, bands!inner(name, status)')
-        .eq('profile_id', activeProfile.id)
+        .eq('profile_id', profileId)
         .eq('is_touring_member', false)
         .eq('bands.status', 'active')
         .limit(1);
