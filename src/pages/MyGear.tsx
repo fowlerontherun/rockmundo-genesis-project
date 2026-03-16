@@ -152,7 +152,7 @@ const MyGear: React.FC = () => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
 
       const balance = (profile as any)?.balance ?? 0;
