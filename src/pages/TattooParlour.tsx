@@ -43,16 +43,16 @@ export default function TattooParlour() {
 
   // Fetch player's current city
   const { data: profile } = useQuery({
-    queryKey: ['profile-city', user?.id],
+    queryKey: ['profile-city', profileId],
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
         .select('current_city_id, cash')
-        .eq('user_id', user!.id)
+        .eq('id', profileId!)
         .single();
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch parlours in current city
