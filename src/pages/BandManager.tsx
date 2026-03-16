@@ -218,9 +218,9 @@ export default function BandManager() {
     : undefined;
 
   const isLeader = Boolean(
-    (user && selectedBand.leader_id === user.id) ||
+    (profileId && selectedBand.leader_id === profileId) ||
       currentMembership?.role === 'leader' ||
-      (user && currentMembership?.bands?.leader_id === user.id)
+      (profileId && currentMembership?.bands?.leader_id === profileId)
   );
 
   return (
