@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/dashboard/StatCard";
