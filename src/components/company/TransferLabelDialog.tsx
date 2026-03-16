@@ -46,7 +46,7 @@ export const TransferLabelDialog = ({
       const { data, error } = await supabase
         .from("labels")
         .select("id, name, logo_url, company_id, balance, is_bankrupt, headquarters_city, reputation_score")
-        .eq("owner_id", profile.id)
+        .eq("owner_id", profileId!)
         .is("company_id", null)
         .order("name");
 

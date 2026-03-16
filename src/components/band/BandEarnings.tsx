@@ -257,7 +257,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       return;
     }
 
-    if (!user) {
+    if (!profileId) {
       toast({
         title: 'Authentication required',
         description: 'You must be signed in to manage band funds.',
