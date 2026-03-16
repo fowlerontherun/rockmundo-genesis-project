@@ -190,7 +190,7 @@ export async function fetchArtistMetrics(profileId: string): Promise<BandMetrics
     .eq("id", profileId)
     .single();
 
-  const { count: releaseCount } = await supabase
+  const { count: releaseCount } = await (supabase as any)
     .from("releases")
     .select("*", { count: "exact", head: true })
     .eq("profile_id", profileId)
