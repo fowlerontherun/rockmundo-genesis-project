@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Mail, Gift, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 export function PersonalUpdates() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const today = new Date().toISOString().split('T')[0];
 
   const { data: updates } = useQuery({
