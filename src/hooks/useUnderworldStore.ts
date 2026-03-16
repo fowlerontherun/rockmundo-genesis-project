@@ -74,19 +74,19 @@ export const useUnderworldStore = () => {
 
   // Fetch user's cash balance
   const { data: userBalance = 0, isLoading: balanceLoading } = useQuery({
-    queryKey: ["user-cash-balance", user?.id],
+    queryKey: ["user-cash-balance", profileId],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!profileId) return 0;
       const { data, error } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (error) throw error;
       return data?.cash || 0;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch user's active boosts
