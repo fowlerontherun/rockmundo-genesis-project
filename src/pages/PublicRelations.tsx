@@ -247,7 +247,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="self-promo" className="mt-4">
-            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={user.id} />
+            <SelfPromotionPanel bandId={userBand.id} bandFame={userBand.fame || 0} bandBalance={userBand.band_balance || 0} userId={profileId!} />
           </TabsContent>
 
           <TabsContent value="appearances" className="mt-4">
