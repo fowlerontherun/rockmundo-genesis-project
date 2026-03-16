@@ -78,13 +78,7 @@ export function useNightclubQuests(clubId: string | undefined) {
   const { data: progress, isLoading: progressLoading } = useQuery({
     queryKey: ["nightclub-quest-progress", clubId, user?.id],
     queryFn: async () => {
-      if (!user?.id || !clubId) return [];
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      if (!profile) return [];
+      if (!profileId || !clubId) return [];
 
       const questIds = quests?.map((q) => q.id) ?? [];
       if (!questIds.length) return [];
