@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingBag, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
