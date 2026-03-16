@@ -57,7 +57,7 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
 
   // Fetch current consultant subscription
   const { data: activeConsultant, isLoading: subscriptionLoading } = useQuery({
-    queryKey: ["player-pr-consultant", userId],
+    queryKey: ["player-pr-consultant", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("player_pr_consultants")
@@ -65,14 +65,14 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
           *,
           pr_consultants(name, specialty, success_rate, tier)
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .gte("expires_at", new Date().toISOString())
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
     staleTime: 5 * 60 * 1000,
   });
 
