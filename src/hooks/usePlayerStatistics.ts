@@ -146,7 +146,7 @@ export const usePlayerStatistics = (userId?: string) => {
         } : null,
       } as SongwritingStats;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   return {
