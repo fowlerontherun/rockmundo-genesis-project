@@ -16,7 +16,7 @@ export default function EducationBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
