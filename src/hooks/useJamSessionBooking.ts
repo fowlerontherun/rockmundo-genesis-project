@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { REHEARSAL_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
 
 export interface BookJamSessionParams {
@@ -24,26 +25,25 @@ export interface BookJamSessionParams {
 
 export const useJamSessionBooking = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
 
   // Fetch active profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile-jam", user?.id],
+    queryKey: ["profile-jam", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash, current_city_id, user_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
+        .eq("id", profileId)
+        .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Check if user has conflicting activities during a time range

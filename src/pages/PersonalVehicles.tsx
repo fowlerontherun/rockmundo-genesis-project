@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,24 +38,24 @@ const VEHICLE_CATALOG: PersonalVehicleCatalogItem[] = [
 const PROFILE_QUERY_FIELDS = "cash, weekly_bonus_metadata";
 
 export default function PersonalVehicles() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [categoryFilter, setCategoryFilter] = useState<VehicleCategory | "all">("all");
 
   const { data: profile } = useQuery({
-    queryKey: ["personal-vehicles-profile", user?.id],
+    queryKey: ["personal-vehicles-profile", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select(PROFILE_QUERY_FIELDS)
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const ownedVehicles = useMemo(() => {
@@ -66,11 +66,11 @@ export default function PersonalVehicles() {
 
   const buyVehicle = useMutation({
     mutationFn: async (vehicle: PersonalVehicleCatalogItem) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active character");
       const { data: currentProfile, error: profileError } = await supabase
         .from("profiles")
         .select(PROFILE_QUERY_FIELDS)
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (profileError) throw profileError;
 
@@ -101,7 +101,7 @@ export default function PersonalVehicles() {
           cash: cash - vehicle.price,
           weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (updateError) throw updateError;
     },
@@ -117,11 +117,11 @@ export default function PersonalVehicles() {
 
   const sellVehicle = useMutation({
     mutationFn: async (vehicleId: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("No active character");
       const { data: currentProfile, error: profileError } = await supabase
         .from("profiles")
         .select(PROFILE_QUERY_FIELDS)
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (profileError) throw profileError;
 
@@ -141,7 +141,7 @@ export default function PersonalVehicles() {
           cash: (currentProfile.cash ?? 0) + sellPrice,
           weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
         })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (updateError) throw updateError;
       return sellPrice;

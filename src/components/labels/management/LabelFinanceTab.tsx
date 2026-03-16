@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,19 +35,21 @@ const MINIMUM_BALANCE = 100_000;
 
 export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWentNegativeAt }: LabelFinanceTabProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: profileData } = useQuery({
-    queryKey: ["user-balance", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["user-balance", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user!.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;

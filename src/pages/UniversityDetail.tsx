@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
 import { AttendanceCard } from "@/components/university/AttendanceCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -61,6 +62,7 @@ export default function UniversityDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: university } = useQuery({
@@ -150,17 +152,18 @@ export default function UniversityDetail() {
   });
 
   const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user!.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: skillProgress } = useQuery({

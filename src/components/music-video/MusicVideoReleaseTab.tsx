@@ -55,9 +55,9 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         .order("created_at", { ascending: false });
 
       if (bandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+        query = query.or(`band_id.in.(${bandIds.join(",")})`);
       } else {
-        query = query.eq("user_id", userId);
+        return [];
       }
 
       const { data, error } = await query;
@@ -80,9 +80,9 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         .order("created_at", { ascending: false });
 
       if (bandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+        query = query.or(`band_id.in.(${bandIds.join(",")})`);
       } else {
-        query = query.eq("user_id", userId);
+        return [];
       }
 
       const { data, error } = await query;

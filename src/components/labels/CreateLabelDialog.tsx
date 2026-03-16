@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export function CreateLabelDialog({
   minimumBalance,
 }: CreateLabelDialogProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [headquartersCityId, setHeadquartersCityId] = useState("");
@@ -71,16 +73,11 @@ export function CreateLabelDialog({
 
   // Fetch user's profile ID
   const { data: profile } = useQuery({
-    queryKey: ["profile-for-label", user?.id],
-    enabled: open && !!user?.id,
+    queryKey: ["profile-for-label", profileId],
+    enabled: open && !!profileId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-      if (error) throw error;
-      return data;
+      if (!profileId) return null;
+      return { id: profileId };
     },
   });
 
