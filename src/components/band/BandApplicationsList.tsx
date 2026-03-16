@@ -16,6 +16,7 @@ interface BandApplicationsListProps {
 export function BandApplicationsList({ bandId, onMemberAdded }: BandApplicationsListProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: applications, isLoading } = useQuery({
     queryKey: ['band-applications', bandId],
