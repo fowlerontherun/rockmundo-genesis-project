@@ -116,7 +116,7 @@ const NightClubDetail = () => {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash, energy")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
       if ((profile.cash ?? 0) < drink.price) {
