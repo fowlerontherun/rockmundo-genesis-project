@@ -124,7 +124,7 @@ export const useOwnedSkins = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 2 * 60 * 1000,
   });
 };

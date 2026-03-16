@@ -111,7 +111,7 @@ export const useClothingBrand = () => {
         .insert({
           ...rest,
           brand_id: brand.id,
-          creator_user_id: user.id,
+          creator_user_id: profileId,
           quality_score: scores.qualityScore,
           style_score: scores.styleScore,
           rarity: scores.rarity,

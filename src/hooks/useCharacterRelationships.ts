@@ -284,7 +284,7 @@ export const useUnprocessedRelationshipEvents = () => {
       if (error) throw error;
       return (data ?? []) as unknown as RelationshipThresholdEvent[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 30,
   });
 };

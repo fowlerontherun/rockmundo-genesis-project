@@ -17,7 +17,6 @@ export interface NPCRelationship {
 }
 
 export function useNPCRelationship(npcId: string | undefined) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 

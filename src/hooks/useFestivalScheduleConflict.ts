@@ -85,7 +85,6 @@ function getActivityDescription(activityType: string): string {
 }
 
 export const useCheckFestivalConflict = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const checkConflict = async (startDate: string, endDate: string): Promise<ScheduleConflict> => {

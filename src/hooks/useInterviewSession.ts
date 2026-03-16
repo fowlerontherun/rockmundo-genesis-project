@@ -92,7 +92,7 @@ export const useInterviewSession = () => {
       }
     };
     check();
-  }, [user?.id, bandId]);
+  }, [profileId, bandId]);
 
   useEffect(() => {
     checkedRef.current = false;

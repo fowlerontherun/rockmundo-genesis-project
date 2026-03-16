@@ -164,8 +164,7 @@ import { EMOTION_EVENT_PRESETS } from "@/types/emotional-engine";
  */
 export const useApplyEmotionPreset = () => {
   const applyEmotion = useApplyEmotion();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const applyPreset = async (
     presetKey: keyof typeof EMOTION_EVENT_PRESETS,
