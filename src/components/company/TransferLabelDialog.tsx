@@ -32,7 +32,7 @@ export const TransferLabelDialog = ({
   const [open, setOpen] = useState(false);
   const [selectedLabelId, setSelectedLabelId] = useState<string>("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
