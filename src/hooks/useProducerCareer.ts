@@ -24,15 +24,15 @@ export interface PlayerProducerProfile {
 }
 
 export const useProducerProfile = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-profile', profileId],
-    enabled: !!profileId,
+    queryKey: ['producer-profile', userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('player_producer_profiles')
         .select('*')
-        .eq('user_id', profileId!)
+        .eq('user_id', userId!)
         .maybeSingle();
       if (error) throw error;
       return data as PlayerProducerProfile | null;
@@ -89,7 +89,7 @@ export const useCreateProducerProfile = () => {
 
 export const useUpdateProducerProfile = () => {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: Partial<{
@@ -120,7 +120,7 @@ export const useUpdateProducerProfile = () => {
       const { error } = await (supabase as any)
         .from('player_producer_profiles')
         .update(updateData)
-        .eq('user_id', profileId!);
+        .eq('user_id', userId!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -152,15 +152,15 @@ export const useAvailablePlayerProducers = (cityId?: string, genre?: string) => 
 };
 
 export const useProducerSessionHistory = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   return useQuery({
-    queryKey: ['producer-session-history', profileId],
-    enabled: !!profileId,
+    queryKey: ['producer-session-history', userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data: profile } = await (supabase as any)
         .from('player_producer_profiles')
         .select('id')
-        .eq('user_id', profileId!)
+        .eq('user_id', userId!)
         .maybeSingle();
 
       if (!profile) return [];

@@ -21,7 +21,7 @@ export interface SurveyConfig {
 }
 
 export function usePlayerSurvey() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,14 +59,14 @@ export function usePlayerSurvey() {
 
   // Check if player already completed current round
   const { data: hasCompleted, isSuccess: completionChecked } = useQuery({
-    queryKey: ["survey-completion", profileId, surveyConfig?.round],
-    enabled: !!profileId && !!surveyConfig?.enabled && !!surveyConfig?.round,
+    queryKey: ["survey-completion", userId, surveyConfig?.round],
+    enabled: !!userId && !!surveyConfig?.enabled && !!surveyConfig?.round,
     refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("player_survey_completions")
         .select("id")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .eq("survey_round", surveyConfig!.round)
         .maybeSingle();
       return !!data;
@@ -78,7 +78,7 @@ export function usePlayerSurvey() {
     configLoaded &&
     completionChecked &&
     surveyConfig?.enabled &&
-    profileId &&
+    userId &&
     hasCompleted === false
   );
 
@@ -104,13 +104,13 @@ export function usePlayerSurvey() {
   // Submit all answers + claim reward
   const submitMutation = useMutation({
     mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
-      if (!profileId || !surveyConfig) throw new Error("Not ready");
+      if (!userId || !surveyConfig) throw new Error("Not ready");
 
       const round = surveyConfig.round;
 
       // Insert responses
       const rows = answers.map((a) => ({
-        user_id: profileId,
+        user_id: userId,
         profile_id: profileId,
         question_id: a.questionId,
         survey_round: round,
@@ -135,7 +135,7 @@ export function usePlayerSurvey() {
         const walletTable = supabase.from("player_xp_wallet") as any;
         const walletQuery = await walletTable
           .select("attribute_points_balance, attribute_points_lifetime")
-          .eq("user_id", profileId)
+          .eq("user_id", userId)
           .maybeSingle();
         const wallet = walletQuery.data;
         if (wallet) {
@@ -144,7 +144,7 @@ export function usePlayerSurvey() {
               attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
               attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
             })
-            .eq("user_id", profileId);
+            .eq("user_id", userId);
         }
       } catch (e) {
         console.warn("Attribute points award failed:", e);
@@ -154,7 +154,7 @@ export function usePlayerSurvey() {
       const { error: compError } = await supabase
         .from("player_survey_completions")
         .insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           survey_round: round,
           xp_awarded: 250,

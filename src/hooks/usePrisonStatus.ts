@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export function usePrisonStatus() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: imprisonment, isLoading } = useQuery({
@@ -44,7 +44,7 @@ export function usePrisonStatus() {
       const { data, error } = await supabase
         .from("player_prison_events")
         .select("*, prison_events(*)")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "pending");
       if (error) throw error;
       return data || [];
@@ -59,7 +59,7 @@ export function usePrisonStatus() {
       const { data, error } = await supabase
         .from("community_service_assignments")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;

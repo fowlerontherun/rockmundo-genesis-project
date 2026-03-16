@@ -29,7 +29,7 @@ export interface PlayerCondition {
 }
 
 export function useConditions() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: conditions = [], isLoading } = useQuery({
@@ -39,7 +39,7 @@ export function useConditions() {
       const { data, error } = await (supabase as any)
         .from("player_conditions")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .in("status", ["active", "treating"])
         .order("created_at", { ascending: false });
       if (error) throw error;

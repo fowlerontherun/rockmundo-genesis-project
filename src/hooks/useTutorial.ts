@@ -20,7 +20,7 @@ interface TutorialProgress {
 }
 
 export const useTutorial = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all active tutorial steps
@@ -39,30 +39,30 @@ export const useTutorial = () => {
 
   // Fetch user's completed steps
   const { data: progress = [] } = useQuery({
-    queryKey: ["tutorial-progress", profileId],
+    queryKey: ["tutorial-progress", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       const { data, error } = await supabase
         .from("player_tutorial_progress")
         .select("step_key, completed_at")
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return data as TutorialProgress[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Mark step as complete
   const completeMutation = useMutation({
     mutationFn: async (stepKey: string) => {
-      if (!profileId) throw new Error("No active profile");
+      if (!userId) throw new Error("No active profile");
       const { error } = await supabase
         .from("player_tutorial_progress")
-        .insert({ user_id: profileId, step_key: stepKey });
+        .insert({ user_id: userId, step_key: stepKey });
       if (error && !error.message.includes("duplicate")) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["tutorial-progress", userId] });
     },
   });
 

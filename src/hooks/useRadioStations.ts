@@ -41,7 +41,7 @@ export interface RadioSubmission {
 }
 
 export const useRadioStations = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all stations with city info
@@ -60,9 +60,9 @@ export const useRadioStations = () => {
 
   // Fetch my submissions
   const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
-    queryKey: ["my-radio-submissions", profileId],
+    queryKey: ["my-radio-submissions", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select(`
@@ -70,13 +70,13 @@ export const useRadioStations = () => {
           station:radio_stations!inner(id, name, station_type, quality_level),
           song:songs!inner(id, title, genre)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Fetch submissions for specific station
@@ -112,7 +112,7 @@ export const useRadioStations = () => {
       songId: string;
       bandId?: string;
     }) => {
-      if (!profileId) throw new Error("No active profile");
+      if (!userId) throw new Error("No active profile");
 
       // Check if already submitted
       const { data: existing } = await supabase
@@ -120,7 +120,7 @@ export const useRadioStations = () => {
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {
@@ -132,7 +132,7 @@ export const useRadioStations = () => {
         .insert({
           station_id: stationId,
           song_id: songId,
-          user_id: profileId,
+          user_id: userId,
           band_id: bandId || null,
           status: "pending",
         })

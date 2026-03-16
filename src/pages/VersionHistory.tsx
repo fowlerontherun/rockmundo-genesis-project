@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.089",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "CRITICAL: Fixed useActiveProfile to expose userId (auth) alongside profileId" },
+      { type: 'fix', description: "Fixed VIP status query — was using profileId instead of auth user_id" },
+      { type: 'fix', description: "Fixed inbox, radio, tutorial, conditions, prison, survey, producer hooks to use auth userId for user_id columns" },
+      { type: 'fix', description: "~20 more files still need user_id→userId fix (holidays, achievements, equipment, crypto, etc.)" },
+    ],
+  },
+  {
     version: "1.1.088",
     date: "2026-03-16",
     changes: [

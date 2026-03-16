@@ -35,18 +35,18 @@ export interface InboxMessage {
 }
 
 export function useInbox(category?: InboxCategory | 'all') {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['inbox', profileId, category],
+    queryKey: ['inbox', userId, category],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
 
       let queryBuilder = supabase
         .from('player_inbox')
         .select('*')
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
@@ -110,12 +110,12 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!profileId) return;
+      if (!userId) return;
 
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_read: true })
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_read', false);
 
       if (error) throw error;
@@ -169,17 +169,17 @@ export function useInbox(category?: InboxCategory | 'all') {
 }
 
 export function useUnreadInboxCount() {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ['inbox-unread-count', profileId],
+    queryKey: ['inbox-unread-count', userId],
     queryFn: async () => {
-      if (!profileId) return 0;
+      if (!userId) return 0;
 
       const { count, error } = await supabase
         .from('player_inbox')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', profileId)
+        .eq('user_id', userId)
         .eq('is_read', false)
         .eq('is_archived', false);
 
@@ -190,7 +190,7 @@ export function useUnreadInboxCount() {
 
       return count || 0;
     },
-    enabled: !!profileId,
+    enabled: !!userId,
     refetchInterval: 30000,
   });
 }
