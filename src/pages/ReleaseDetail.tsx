@@ -18,7 +18,6 @@ export default function ReleaseDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "songs";
-  const { user } = useAuth();
   const { profile: activeProfile, profileId } = useActiveProfile();
 
   // Fetch current user + profile for promo tour
