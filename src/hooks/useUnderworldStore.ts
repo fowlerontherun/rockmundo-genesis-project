@@ -140,7 +140,7 @@ export const useUnderworldStore = () => {
       product: UnderworldProduct;
       paymentMethod: "cash" | "crypto";
     }) => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!user?.id || !profileId) throw new Error("Not logged in");
 
       // Validate payment
       if (paymentMethod === "cash") {
