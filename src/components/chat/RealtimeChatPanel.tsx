@@ -141,7 +141,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }, [profileId, channelKey]);
 
   const sendMessage = useCallback(async () => {
-    if (!user || !message.trim()) return;
+    if (!profileId || !message.trim()) return;
 
     try {
       const { error } = await supabase
