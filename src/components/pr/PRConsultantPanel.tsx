@@ -28,13 +28,13 @@ import { format, parseISO, addDays } from "date-fns";
 import { useState } from "react";
 
 interface PRConsultantPanelProps {
-  userId: string;
+  profileId: string;
   bandId: string;
 }
 
 const CONSULTANT_MONTHLY_FEE = 10000;
 
-export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
+export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps) {
   const queryClient = useQueryClient();
   const { data: vipStatus, isLoading: vipLoading } = useVipStatus();
   const [selectedConsultant, setSelectedConsultant] = useState<string>("");
