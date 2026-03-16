@@ -35,9 +35,9 @@ export function HabitTracker() {
   });
 
   const { data: completions } = useQuery({
-    queryKey: ["habit-completions", user?.id],
+    queryKey: ["habit-completions", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       // Get completions for the last 7 days
       const startDate = format(subDays(new Date(), 7), "yyyy-MM-dd");
       const { data, error } = await supabase
@@ -47,7 +47,7 @@ export function HabitTracker() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const addHabitMutation = useMutation({
