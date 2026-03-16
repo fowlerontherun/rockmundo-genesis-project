@@ -115,13 +115,20 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
       <CardContent className="space-y-3">
         {applications.map((app: any) => (
           <div key={app.id} className="flex items-center justify-between rounded-lg border p-3">
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
+              onClick={() => navigate(`/player/${app.applicant_profile_id}`)}
+              title="View player profile & skills"
+            >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={app.profiles?.avatar_url} />
                 <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium">{app.profiles?.display_name || app.profiles?.username || 'Unknown'}</p>
+              <div className="min-w-0">
+                <p className="font-medium text-primary underline-offset-2 hover:underline flex items-center gap-1">
+                  {app.profiles?.display_name || app.profiles?.username || 'Unknown'}
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                </p>
                 <div className="flex gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-xs">{app.instrument_role}</Badge>
                   {app.vocal_role && app.vocal_role !== 'None' && (
