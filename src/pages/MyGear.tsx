@@ -126,7 +126,7 @@ const MyGear: React.FC = () => {
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
   const [repairingId, setRepairingId] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const {
