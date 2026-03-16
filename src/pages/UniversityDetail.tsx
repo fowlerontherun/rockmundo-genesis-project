@@ -641,16 +641,18 @@ export default function UniversityDetail() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
+              {courseFilterUI}
               <div className="grid gap-4 md:grid-cols-2">
-                {courses?.map(renderCourseCard)}
+                {filteredCourses.map(renderCourseCard)}
               </div>
             </CollapsibleContent>
           </Collapsible>
         ) : (
           <div>
             <h2 className="text-2xl font-bold mb-4">Available Courses</h2>
+            {courseFilterUI}
             <div className="grid gap-4 md:grid-cols-2">
-              {courses?.map(renderCourseCard)}
+              {filteredCourses.map(renderCourseCard)}
             </div>
           </div>
         )}
