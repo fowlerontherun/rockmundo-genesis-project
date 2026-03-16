@@ -55,7 +55,7 @@ export const useJamSessionBooking = () => {
     const { data: conflicts } = await supabase
       .from("player_scheduled_activities")
       .select("title")
-      .eq("user_id", userId)
+      .eq("profile_id", userId)
       .in("status", ["scheduled", "in_progress"])
       .lte("scheduled_start", endTime.toISOString())
       .gte("scheduled_end", startTime.toISOString())
