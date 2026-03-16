@@ -58,13 +58,10 @@ export const BooksTab = () => {
       return;
     }
     
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profile) return;
-
     purchaseBook({
       bookId: book.id,
-      userId: user.id,
-      profileId: profile.id,
+      userId: profileId,
+      profileId: profileId,
       price: book.price,
     });
     setSelectedBook(null);
