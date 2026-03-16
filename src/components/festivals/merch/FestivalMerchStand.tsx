@@ -48,7 +48,7 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
 
   const createMerch = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !profileId || !designName || !itemType) throw new Error("Missing fields");
+      if (!profileId || !designName || !itemType) throw new Error("Missing fields");
       const { error } = await (supabase as any)
         .from("player_merchandise")
         .insert({
