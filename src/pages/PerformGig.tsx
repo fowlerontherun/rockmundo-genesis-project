@@ -29,7 +29,7 @@ type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
 export default function PerformGig() {
   const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  // profileId already available from useActiveProfile below
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
 
