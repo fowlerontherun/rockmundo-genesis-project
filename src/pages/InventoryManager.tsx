@@ -256,7 +256,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!user ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your book inventory.</p>
               ) : booksLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your books...</p>
