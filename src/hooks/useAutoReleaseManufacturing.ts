@@ -2,16 +2,20 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useActiveProfile } from "./useActiveProfile";
 
 export const useAutoReleaseManufacturing = (userId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !profileId) return;
 
     const checkManufacturing = async () => {
       try {
+        const bandIds = await getBandIds(profileId);
+
         // Get releases that should be completing manufacturing
         const { data: readyReleases, error } = await supabase
           .from('releases')
@@ -19,7 +23,7 @@ export const useAutoReleaseManufacturing = (userId: string | null) => {
           .eq('release_status', 'manufacturing')
           .not('manufacturing_complete_at', 'is', null)
           .lte('manufacturing_complete_at', new Date().toISOString())
-          .or(`user_id.eq.${userId},band_id.in.(${await getBandIds(userId)})`);
+          .or(`user_id.eq.${userId},band_id.in.(${bandIds})`);
 
         if (error) throw error;
 
@@ -46,11 +50,12 @@ export const useAutoReleaseManufacturing = (userId: string | null) => {
       }
     };
 
-    async function getBandIds(userId: string) {
+    async function getBandIds(profileId: string) {
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
       return data?.map(d => d.band_id).join(",") || "null";
     }
 
@@ -61,5 +66,5 @@ export const useAutoReleaseManufacturing = (userId: string | null) => {
     const interval = setInterval(checkManufacturing, 10 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [userId, toast, queryClient]);
+  }, [userId, profileId, toast, queryClient]);
 };

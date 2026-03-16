@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.054",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "DJ performance hook uses profileId for profile queries, updates, skill progress, and club performance history" },
+      { type: 'improvement', description: "Character sprites hook replaced manual profile query with useActiveProfile" },
+      { type: 'improvement', description: "Gig notifications use profile_id-based band membership lookup" },
+      { type: 'improvement', description: "Player avatar hook migrated to useActiveProfile, removing redundant profile query" },
+      { type: 'improvement', description: "Auto release manufacturing uses profile_id for band membership lookups" },
+      { type: 'fix', description: "Festival tickets query key now scoped to profileId for proper cache isolation" },
+    ],
+  },
+  {
     version: "1.1.053",
     date: "2026-03-16",
     changes: [

@@ -1,25 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
-import { useAuth } from './use-auth-context';
+import { useActiveProfile } from './useActiveProfile';
 
 /**
  * Hook that listens for gig completions and shows notifications
  */
 export const useGigNotifications = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const notifiedGigs = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     const checkCompletedGigs = async () => {
-      // Get user's bands
+      // Get user's bands via profile_id
       const { data: bandMemberships } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('user_id', user.id);
+        .eq('profile_id', profileId)
+        .eq('member_status', 'active');
 
       if (!bandMemberships || bandMemberships.length === 0) return;
 
@@ -76,5 +77,5 @@ export const useGigNotifications = () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [user, toast]);
+  }, [profileId, toast]);
 };

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface AvatarConfig {
@@ -88,13 +88,10 @@ export interface AvatarConfig {
 }
 
 export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
-  // Body - Basic
   skin_tone: '#e0ac69',
   body_type: 'average',
   height: 1.0,
   gender: 'male',
-  
-  // Body - Advanced
   weight: 1.0,
   muscle_definition: 0.5,
   shoulder_width: 1.0,
@@ -103,52 +100,34 @@ export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
   arm_length: 1.0,
   leg_length: 1.0,
   age_appearance: 'adult',
-  
-  // Hair
   hair_style_key: 'messy',
   hair_color: '#2d1a0a',
-  
-  // Face - Structure
   face_width: 1.0,
   face_length: 1.0,
   jaw_shape: 'round',
   cheekbone: 0.5,
   chin_prominence: 0.5,
-  
-  // Face - Eyes
   eye_style: 'default',
   eye_color: '#2d1a0a',
   eye_size: 1.0,
   eye_spacing: 1.0,
   eye_tilt: 0.0,
-  
-  // Face - Eyebrows
   eyebrow_style: 'normal',
   eyebrow_color: '#1a1a1a',
   eyebrow_thickness: 1.0,
-  
-  // Face - Nose
   nose_style: 'default',
   nose_width: 1.0,
   nose_length: 1.0,
   nose_bridge: 0.5,
-  
-  // Face - Mouth
   mouth_style: 'default',
   lip_fullness: 1.0,
   lip_width: 1.0,
   lip_color: '#c4777f',
-  
-  // Face - Ears
   ear_size: 1.0,
   ear_angle: 0.0,
-  
-  // Face - Extras
   beard_style: null,
   tattoo_style: null,
   scar_style: null,
-  
-  // Clothing
   shirt_id: null,
   shirt_color: '#2d0a0a',
   pants_id: null,
@@ -157,62 +136,42 @@ export const defaultConfig: Omit<AvatarConfig, 'id' | 'profile_id'> = {
   jacket_color: null,
   shoes_id: null,
   shoes_color: '#1a1a1a',
-  
-  // Accessories
   accessory_1_id: null,
   accessory_2_id: null,
-  
-  // Ready Player Me
   rpm_avatar_url: null,
   rpm_avatar_id: null,
   use_rpm_avatar: false,
 };
 
 export const usePlayerAvatar = () => {
-  const { user } = useAuth();
+  const { profile, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, cash')
-        .eq('user_id', user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
   const { data: avatarConfig, isLoading } = useQuery({
-    queryKey: ['player-avatar-config', profile?.id],
+    queryKey: ['player-avatar-config', profileId],
     queryFn: async () => {
-      if (!profile?.id) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from('player_avatar_config')
         .select('*')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .maybeSingle();
 
       if (error) throw error;
 
       if (!data) {
-        return { ...defaultConfig, profile_id: profile.id } as AvatarConfig;
+        return { ...defaultConfig, profile_id: profileId } as AvatarConfig;
       }
 
       // Map all DB fields to our interface with defaults
       return {
         id: data.id,
         profile_id: data.profile_id,
-        // Body - Basic
         skin_tone: data.skin_tone || defaultConfig.skin_tone,
         body_type: (data.body_type as AvatarConfig['body_type']) || defaultConfig.body_type,
         height: data.height || defaultConfig.height,
         gender: data.gender || defaultConfig.gender,
-        // Body - Advanced
         weight: data.weight ?? defaultConfig.weight,
         muscle_definition: data.muscle_definition ?? defaultConfig.muscle_definition,
         shoulder_width: data.shoulder_width ?? defaultConfig.shoulder_width,
@@ -221,43 +180,34 @@ export const usePlayerAvatar = () => {
         arm_length: data.arm_length ?? defaultConfig.arm_length,
         leg_length: data.leg_length ?? defaultConfig.leg_length,
         age_appearance: (data.age_appearance as AvatarConfig['age_appearance']) || defaultConfig.age_appearance,
-        // Hair
         hair_style_key: data.hair_style_key || defaultConfig.hair_style_key,
         hair_color: data.hair_color || defaultConfig.hair_color,
-        // Face - Structure
         face_width: data.face_width ?? defaultConfig.face_width,
         face_length: data.face_length ?? defaultConfig.face_length,
         jaw_shape: (data.jaw_shape as AvatarConfig['jaw_shape']) || defaultConfig.jaw_shape,
         cheekbone: data.cheekbone ?? defaultConfig.cheekbone,
         chin_prominence: data.chin_prominence ?? defaultConfig.chin_prominence,
-        // Face - Eyes
         eye_style: data.eye_style || defaultConfig.eye_style,
         eye_color: data.eye_color || defaultConfig.eye_color,
         eye_size: data.eye_size ?? defaultConfig.eye_size,
         eye_spacing: data.eye_spacing ?? defaultConfig.eye_spacing,
         eye_tilt: data.eye_tilt ?? defaultConfig.eye_tilt,
-        // Face - Eyebrows
         eyebrow_style: (data.eyebrow_style as AvatarConfig['eyebrow_style']) || defaultConfig.eyebrow_style,
         eyebrow_color: data.eyebrow_color || defaultConfig.eyebrow_color,
         eyebrow_thickness: data.eyebrow_thickness ?? defaultConfig.eyebrow_thickness,
-        // Face - Nose
         nose_style: data.nose_style || defaultConfig.nose_style,
         nose_width: data.nose_width ?? defaultConfig.nose_width,
         nose_length: data.nose_length ?? defaultConfig.nose_length,
         nose_bridge: data.nose_bridge ?? defaultConfig.nose_bridge,
-        // Face - Mouth
         mouth_style: data.mouth_style || defaultConfig.mouth_style,
         lip_fullness: data.lip_fullness ?? defaultConfig.lip_fullness,
         lip_width: data.lip_width ?? defaultConfig.lip_width,
         lip_color: data.lip_color || defaultConfig.lip_color,
-        // Face - Ears
         ear_size: data.ear_size ?? defaultConfig.ear_size,
         ear_angle: data.ear_angle ?? defaultConfig.ear_angle,
-        // Face - Extras
         beard_style: data.beard_style || null,
         tattoo_style: data.tattoo_style || null,
         scar_style: data.scar_style || null,
-        // Clothing
         shirt_id: data.shirt_id || null,
         shirt_color: data.shirt_color || defaultConfig.shirt_color,
         pants_id: data.pants_id || null,
@@ -268,13 +218,12 @@ export const usePlayerAvatar = () => {
         shoes_color: data.shoes_color || defaultConfig.shoes_color,
         accessory_1_id: data.accessory_1_id || null,
         accessory_2_id: data.accessory_2_id || null,
-        // Ready Player Me
         rpm_avatar_url: data.rpm_avatar_url || null,
         rpm_avatar_id: data.rpm_avatar_id || null,
         use_rpm_avatar: data.use_rpm_avatar || false,
       } as AvatarConfig;
     },
-    enabled: !!profile?.id,
+    enabled: !!profileId,
   });
 
   const { data: hairStyles } = useQuery({
@@ -314,47 +263,44 @@ export const usePlayerAvatar = () => {
   });
 
   const { data: ownedSkins } = useQuery({
-    queryKey: ['player-owned-skins', profile?.id],
+    queryKey: ['player-owned-skins', profileId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from('player_owned_skins')
         .select('*')
-        .eq('profile_id', profile.id);
+        .eq('profile_id', profileId);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.id,
+    enabled: !!profileId,
   });
 
   // Fetch player-purchased clothing from the clothing marketplace
   const { data: purchasedClothing = [] } = useQuery({
-    queryKey: ['player-purchased-clothing', user?.id],
+    queryKey: ['player-purchased-clothing', profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from('player_clothing_purchases' as never)
         .select('*, item:player_clothing_items!inner(*)')
-        .eq('buyer_user_id', user.id)
+        .eq('buyer_user_id', profile?.user_id)
         .order('purchased_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as Array<{ item: Record<string, unknown> }>;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const saveConfigMutation = useMutation({
     mutationFn: async (config: Partial<AvatarConfig>) => {
-      if (!profile?.id) throw new Error('Not authenticated');
+      if (!profileId) throw new Error('No active profile');
 
-      // Save ALL config fields to database
       const dbConfig = {
-        // Body - Basic
         skin_tone: config.skin_tone,
         body_type: config.body_type,
         height: config.height,
         gender: config.gender,
-        // Body - Advanced
         weight: config.weight,
         muscle_definition: config.muscle_definition,
         shoulder_width: config.shoulder_width,
@@ -363,43 +309,34 @@ export const usePlayerAvatar = () => {
         arm_length: config.arm_length,
         leg_length: config.leg_length,
         age_appearance: config.age_appearance,
-        // Hair
         hair_style_key: config.hair_style_key,
         hair_color: config.hair_color,
-        // Face - Structure
         face_width: config.face_width,
         face_length: config.face_length,
         jaw_shape: config.jaw_shape,
         cheekbone: config.cheekbone,
         chin_prominence: config.chin_prominence,
-        // Face - Eyes
         eye_style: config.eye_style,
         eye_color: config.eye_color,
         eye_size: config.eye_size,
         eye_spacing: config.eye_spacing,
         eye_tilt: config.eye_tilt,
-        // Face - Eyebrows
         eyebrow_style: config.eyebrow_style,
         eyebrow_color: config.eyebrow_color,
         eyebrow_thickness: config.eyebrow_thickness,
-        // Face - Nose
         nose_style: config.nose_style,
         nose_width: config.nose_width,
         nose_length: config.nose_length,
         nose_bridge: config.nose_bridge,
-        // Face - Mouth
         mouth_style: config.mouth_style,
         lip_fullness: config.lip_fullness,
         lip_width: config.lip_width,
         lip_color: config.lip_color,
-        // Face - Ears
         ear_size: config.ear_size,
         ear_angle: config.ear_angle,
-        // Face - Extras
         beard_style: config.beard_style,
         tattoo_style: config.tattoo_style,
         scar_style: config.scar_style,
-        // Clothing
         shirt_id: config.shirt_id,
         shirt_color: config.shirt_color,
         pants_id: config.pants_id,
@@ -410,7 +347,6 @@ export const usePlayerAvatar = () => {
         shoes_color: config.shoes_color,
         accessory_1_id: config.accessory_1_id,
         accessory_2_id: config.accessory_2_id,
-        // Ready Player Me
         rpm_avatar_url: config.rpm_avatar_url,
         rpm_avatar_id: config.rpm_avatar_id,
         use_rpm_avatar: config.use_rpm_avatar,
@@ -419,19 +355,19 @@ export const usePlayerAvatar = () => {
       const { data: existing } = await supabase
         .from('player_avatar_config')
         .select('id')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .maybeSingle();
 
       if (existing) {
         const { error } = await supabase
           .from('player_avatar_config')
           .update(dbConfig)
-          .eq('profile_id', profile.id);
+          .eq('profile_id', profileId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('player_avatar_config')
-          .insert({ ...dbConfig, profile_id: profile.id });
+          .insert({ ...dbConfig, profile_id: profileId });
         if (error) throw error;
       }
     },
@@ -446,12 +382,12 @@ export const usePlayerAvatar = () => {
 
   const purchaseSkinMutation = useMutation({
     mutationFn: async ({ itemId, itemType, price }: { itemId: string; itemType: string; price: number }) => {
-      if (!profile?.id) throw new Error('Not authenticated');
+      if (!profileId) throw new Error('No active profile');
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('cash')
-        .eq('id', profile.id)
+        .eq('id', profileId)
         .single();
 
       if (profileError) throw profileError;
@@ -462,13 +398,13 @@ export const usePlayerAvatar = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ cash: (profileData?.cash || 0) - price })
-        .eq('id', profile.id);
+        .eq('id', profileId);
       if (updateError) throw updateError;
 
       const { error: insertError } = await supabase
         .from('player_owned_skins')
         .insert({
-          profile_id: profile.id,
+          profile_id: profileId,
           item_type: itemType,
           item_id: itemId,
         });
@@ -477,6 +413,7 @@ export const usePlayerAvatar = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['player-owned-skins'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['active-profile'] });
       toast.success('Item purchased!');
     },
     onError: (error) => {
@@ -504,13 +441,12 @@ export const usePlayerAvatar = () => {
     faceOptions,
     ownedSkins,
     purchasedClothing,
-    profile,
     saveConfig: saveConfigMutation.mutate,
     isSaving: saveConfigMutation.isPending,
     purchaseSkin: purchaseSkinMutation.mutate,
     isPurchasing: purchaseSkinMutation.isPending,
     isItemOwned,
     getClothingColor,
-    defaultConfig,
+    profileCash: profile?.cash ?? 0,
   };
 };
