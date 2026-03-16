@@ -97,19 +97,20 @@ export const PromoTourCard = ({
 
   // Fetch completed promo day activities for this tour
   const { data: completedDays } = useQuery({
-    queryKey: ["promo-tour-days", releaseId],
+    queryKey: ["promo-tour-days", releaseId, profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("activity_type", "release_promo")
         .eq("metadata->>release_id", releaseId)
         .in("status", ["completed", "scheduled", "in_progress"]);
       if (error) throw error;
       return (data || []) as any[];
     },
-    enabled: !!activeTour,
+    enabled: !!activeTour && !!profileId,
   });
 
   const fameMultiplier = 1 + Math.min(bandFame, 5000) / 5000; // up to 2x at 5000 fame
