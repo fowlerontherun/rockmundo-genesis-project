@@ -13,7 +13,7 @@ import { DikCokVideoCard } from "@/components/dikcok/DikCokVideoCard";
 import { DikCokCreateDialog } from "@/components/dikcok/DikCokCreateDialog";
 import { DikCokBandAnalytics } from "@/components/dikcok/DikCokBandAnalytics";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
