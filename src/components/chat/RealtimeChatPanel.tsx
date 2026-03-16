@@ -191,7 +191,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     const channelName = `global-chat-${channelKey}`;
     const channel = supabase.channel(channelName, {
       config: {
-        presence: { key: user.id }
+        presence: { key: profileId }
       }
     });
 
