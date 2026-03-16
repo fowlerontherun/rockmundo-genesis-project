@@ -98,7 +98,7 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         .from('bands')
         .insert({
           name: bandName,
-          leader_id: user.id,
+          leader_id: profileId,
           genre,
           description: description || (isSolo ? 'Solo artist' : 'A new band'),
           max_members: isSolo ? 1 : maxMembers,
