@@ -101,7 +101,7 @@ const OffersDashboard = () => {
     queryKey: ["offers-modeling", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("player_modeling_contracts")
         .select("id, status, compensation, fame_boost, created_at, gig:modeling_gigs(title)")
         .eq("profile_id", profileId);
