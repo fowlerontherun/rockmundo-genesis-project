@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.097",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Band leader detection now correctly compares auth user_id to leader_id instead of profile_id — fixes recruiting toggle, applications, and leader-only actions not showing for band leaders" },
+      { type: 'fix', description: "Band Profile page null-safety for date formatting to prevent crashes when navigating from Band Finder" },
+    ],
+  },
+  {
     version: "1.1.096",
     date: "2026-03-16",
     changes: [

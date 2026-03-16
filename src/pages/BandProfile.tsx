@@ -155,7 +155,7 @@ export default function BandProfile() {
 
               <div className="flex items-center gap-3">
                 <p className="text-xs text-muted-foreground">
-                  Formed {format(new Date(band.created_at), "MMMM yyyy")}
+                  {band.created_at && `Formed ${format(new Date(band.created_at), "MMMM yyyy")}`}
                 </p>
                 {/* Apply button */}
                 {canApply && (
@@ -214,7 +214,7 @@ export default function BandProfile() {
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      Joined {format(new Date(member.joined_at), "MMM yyyy")}
+                      {member.joined_at ? `Joined ${format(new Date(member.joined_at), "MMM yyyy")}` : ''}
                     </div>
                   </div>
                   {idx < band.band_members.length - 1 && <Separator className="mt-4" />}

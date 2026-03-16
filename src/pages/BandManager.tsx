@@ -34,7 +34,7 @@ import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
 import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [userBands, setUserBands] = useState<any[]>([]);
@@ -219,9 +219,9 @@ export default function BandManager() {
     : undefined;
 
   const isLeader = Boolean(
-    (profileId && selectedBand.leader_id === profileId) ||
+    (userId && selectedBand.leader_id === userId) ||
       currentMembership?.role === 'leader' ||
-      (profileId && currentMembership?.bands?.leader_id === profileId)
+      (userId && currentMembership?.bands?.leader_id === userId)
   );
 
   return (
@@ -364,10 +364,10 @@ export default function BandManager() {
                 <BandMemberCard
                   key={member.id}
                   member={member}
-                  isLeader={member.user_id === selectedBand.leader_id}
+                  isLeader={member.role === 'leader'}
                   canManage={isLeader && selectedBand.status === 'active'}
                   onRemove={
-                    isLeader && member.user_id !== selectedBand.leader_id && selectedBand.status === 'active'
+                    isLeader && member.role !== 'leader' && selectedBand.status === 'active'
                       ? () => handleRemoveMember(member.id)
                       : undefined
                   }
