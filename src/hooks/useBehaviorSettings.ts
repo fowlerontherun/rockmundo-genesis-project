@@ -136,18 +136,18 @@ export const getRiskLevel = (score: number): { label: string; color: string; des
 };
 
 export function useBehaviorSettings() {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading, error } = useQuery({
-    queryKey: ["behavior-settings", profileId],
+    queryKey: ["behavior-settings", userId],
     queryFn: async () => {
-      if (!profileId) return null;
+      if (!userId) return null;
 
       const { data, error } = await (supabase as any)
         .from("player_behavior_settings")
         .select("*")
-        .eq("profile_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
@@ -157,7 +157,7 @@ export function useBehaviorSettings() {
       if (!data) {
         const { data: newData, error: insertError } = await (supabase as any)
           .from("player_behavior_settings")
-          .insert({ profile_id: profileId, ...DEFAULT_SETTINGS })
+          .insert({ user_id: userId, ...DEFAULT_SETTINGS })
           .select()
           .single();
 
@@ -167,27 +167,27 @@ export function useBehaviorSettings() {
 
       return data as BehaviorSettings;
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Fetch unlocked advanced behaviors
   const { data: unlockedBehaviors } = useQuery({
-    queryKey: ["unlocked-behaviors", profileId],
+    queryKey: ["unlocked-behaviors", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       const { data, error } = await (supabase as any)
         .from("player_unlocked_behaviors")
         .select("behavior_key")
-        .eq("profile_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return (data || []).map((r: any) => r.behavior_key as string);
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<BehaviorSettings>) => {
-      if (!profileId || !settings?.id) throw new Error("No profile or settings");
+      if (!userId || !settings?.id) throw new Error("No user or settings");
 
       const { data, error } = await (supabase as any)
         .from("player_behavior_settings")
@@ -200,7 +200,7 @@ export function useBehaviorSettings() {
       return data as BehaviorSettings;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["behavior-settings", profileId], data);
+      queryClient.setQueryData(["behavior-settings", userId], data);
       toast.success("Lifestyle settings updated");
     },
     onError: (error: any) => {
