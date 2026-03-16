@@ -32,7 +32,7 @@ export function useAutoMajorEventCompletion(userId: string | null) {
             song_2:songs!major_event_performances_song_2_id_fkey(id, quality_score, genre),
             song_3:songs!major_event_performances_song_3_id_fkey(id, quality_score, genre)
           `)
-          .eq('user_id', userId)
+          .eq('profile_id', profile?.id)
           .eq('status', 'accepted');
 
         if (error || !pendingPerformances?.length) {
