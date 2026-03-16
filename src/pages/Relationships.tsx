@@ -129,7 +129,7 @@ function buildInteractionOption(actionKey: string, rel: CharacterRelationship): 
 
 // ── Main Page ──────────────────────────────────────────────────
 export default function RelationshipsPage() {
-  const { user } = useAuth();
+  const { profileId: activeProfileId } = useActiveProfile();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
   const profileUserId = gameData?.profile?.user_id;
