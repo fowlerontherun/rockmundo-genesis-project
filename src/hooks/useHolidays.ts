@@ -248,7 +248,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("id")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .in("status", ["completed", "active"])
         .gte("created_at", fourteenDaysAgo.toISOString())
         .limit(1);
