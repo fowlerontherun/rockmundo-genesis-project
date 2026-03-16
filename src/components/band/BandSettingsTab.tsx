@@ -98,7 +98,7 @@ export function BandSettingsTab({
         bandId,
         reason: hiatusReason,
         duration: durationDays,
-        leaderId: user.id
+        leaderId: profileId!
       });
       
       toast({
