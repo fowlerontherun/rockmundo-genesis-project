@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.072",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "BandInvitations uses profileId, removes redundant profile fetch on accept" },
+      { type: 'improvement', description: "BandChat messages sent with profileId for character isolation" },
+      { type: 'improvement', description: "JamSessionsTab join/create/display uses profileId" },
+      { type: 'improvement', description: "CreateCompanyDialog profile lookup uses profileId directly" },
+      { type: 'improvement', description: "PlaylistsTab passes profileId to usePlaylists hook" },
+      { type: 'improvement', description: "CharacterFameOverview queries profile/band/activity by profile_id" },
+    ],
+  },
+  {
     version: "1.1.071",
     date: "2026-03-16",
     changes: [
