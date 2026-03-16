@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { CalendarClock, Heart, Zap, AlertTriangle, Flame, CheckCircle2, Clock } from "lucide-react";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { addDays, setHours, setMinutes } from "date-fns";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface PromoTourCardProps {
   releaseId: string;
