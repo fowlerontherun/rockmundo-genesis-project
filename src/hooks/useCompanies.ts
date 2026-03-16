@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import type { Company, CreateCompanyInput, CompanyFinancialSummary } from "@/types/company";
 import { COMPANY_CREATION_COSTS } from "@/types/company";
