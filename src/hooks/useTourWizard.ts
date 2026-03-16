@@ -76,20 +76,20 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     enabled: !!options.bandId,
   });
 
-  // Fetch player's current city
+  // Fetch player's current city (using profileId)
   const { data: playerProfile } = useQuery({
-    queryKey: ['player-profile-for-tour', user?.id],
+    queryKey: ['player-profile-for-tour', profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from('profiles')
         .select('current_city_id')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch available countries based on scope
