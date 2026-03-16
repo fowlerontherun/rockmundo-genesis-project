@@ -66,7 +66,7 @@ const RecordLabel = () => {
         supabase
           .from("band_members")
           .select("band_id, role, bands:bands!band_members_band_id_fkey(id, name, genre)")
-          .eq("user_id", userId),
+          .eq("profile_id", userId),
       ]);
 
       const entities: ArtistEntity[] = [];
