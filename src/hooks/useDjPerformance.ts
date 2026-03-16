@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBehaviorSettings } from "@/hooks/useBehaviorSettings";
 import { toast } from "sonner";
@@ -26,15 +25,13 @@ export interface DjPerformanceOutcome extends DjOutcome {
 const DJ_ENERGY_COST = 25;
 
 export function useDjPerformance() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { settings } = useBehaviorSettings();
   const queryClient = useQueryClient();
 
   const performDjSet = useMutation({
     mutationFn: async (club: CityNightClub): Promise<DjPerformanceOutcome> => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (!profileId) throw new Error("No active profile");
+      if (!profileId) throw new Error("Not authenticated");
       if (!settings) throw new Error("Behavior settings not loaded");
 
       // 1. Get player profile
@@ -116,7 +113,7 @@ export function useDjPerformance() {
         } else {
           addictionSeverityGain = 20;
           await supabase.from("player_addictions").insert({
-            user_id: user.id,
+            user_id: profileId,
             profile_id: profileId,
             addiction_type: addictionType,
             severity: 20,
@@ -172,7 +169,7 @@ export function useDjPerformance() {
 
       // 7. Record performance
       await supabase.from("player_dj_performances").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         club_id: club.id,
         performance_score: djOutcome.performanceScore,

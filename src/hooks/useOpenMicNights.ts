@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 
@@ -166,7 +166,7 @@ export function useOpenMicSongPerformances(performanceId: string | null) {
 }
 
 export function useSignUpForOpenMic() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -186,23 +186,12 @@ export function useSignUpForOpenMic() {
       scheduledDate: Date;
       venueName: string;
     }) => {
-      if (!user) throw new Error('Must be logged in');
-
-      // Get profile_id for scheduled activity
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .single();
-
-      if (!profile) throw new Error('Profile not found');
+      if (!profileId) throw new Error('Must be logged in');
 
       // Check if time slot is available (open mic is ~30 min for 2 songs)
       const endDate = new Date(scheduledDate.getTime() + 30 * 60 * 1000);
       const { available, conflictingActivity } = await checkTimeSlotAvailable(
-        user.id,
+        profileId,
         scheduledDate,
         endDate
       );
@@ -215,7 +204,7 @@ export function useSignUpForOpenMic() {
       const { data, error } = await supabase
         .from('open_mic_performances')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId,
           venue_id: venueId,
           song_1_id: song1Id,
@@ -232,8 +221,8 @@ export function useSignUpForOpenMic() {
       const { error: activityError } = await (supabase as any)
         .from('player_scheduled_activities')
         .insert({
-          user_id: user.id,
-          profile_id: profile.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: 'open_mic',
           status: 'scheduled',
           scheduled_start: scheduledDate.toISOString(),

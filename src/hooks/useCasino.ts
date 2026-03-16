@@ -1,13 +1,11 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { CasinoGameType } from "@/lib/casino/types";
 
 export function useCasino() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -37,7 +35,7 @@ export function useCasino() {
       payout: number;
       metadata: Record<string, unknown>;
     }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const { data: freshProfile } = await supabase
         .from("profiles")
@@ -83,7 +81,7 @@ export function useCasino() {
             .eq("id", existing.id);
         } else {
           await (supabase as any).from("player_addictions").insert({
-            user_id: user.id,
+            user_id: profileId,
             profile_id: profileId,
             addiction_type: "gambling",
             severity: 10,

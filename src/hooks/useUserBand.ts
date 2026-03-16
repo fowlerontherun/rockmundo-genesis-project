@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface UserBand {
   id: string;
@@ -11,29 +11,18 @@ export interface UserBand {
 }
 
 export function useUserBand() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["user-band", user?.id],
+    queryKey: ["user-band", profileId],
     queryFn: async (): Promise<UserBand | null> => {
-      if (!user?.id) return null;
-
-      // Get the active profile for this user
-      const { data: activeProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      if (!activeProfile) return null;
+      if (!profileId) return null;
 
       // Get band membership for the active profile
       const { data: membership, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, role")
-        .eq("profile_id", activeProfile.id)
+        .eq("profile_id", profileId)
         .eq("member_status", "active")
         .order("role", { ascending: true })
         .limit(1)
@@ -58,7 +47,7 @@ export function useUserBand() {
         total_fans: band.total_fans ?? 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 5 * 60 * 1000,
   });
 }

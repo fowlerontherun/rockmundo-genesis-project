@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.076",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useDjPerformance migrated to profileId" },
+      { type: 'improvement', description: "useCasino migrated to profileId" },
+      { type: 'improvement', description: "useNightlifeEvents migrated to profileId" },
+      { type: 'improvement', description: "useNightclubQuests migrated to profileId" },
+      { type: 'improvement', description: "useCompanyFinance.useUserCashBalance migrated to profileId" },
+      { type: 'improvement', description: "usePrimaryBand queries profileId directly" },
+      { type: 'improvement', description: "useUserBand queries profileId directly" },
+      { type: 'improvement', description: "useOpenMicNights sign-up uses profileId" },
+    ],
+  },
+  {
     version: "1.1.075",
     date: "2026-03-16",
     changes: [

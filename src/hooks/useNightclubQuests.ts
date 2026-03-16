@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
@@ -48,7 +47,6 @@ export interface QuestProgress {
 }
 
 export function useNightclubQuests(clubId: string | undefined) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -76,7 +74,7 @@ export function useNightclubQuests(clubId: string | undefined) {
 
   // Fetch player progress for this club's quests
   const { data: progress, isLoading: progressLoading } = useQuery({
-    queryKey: ["nightclub-quest-progress", clubId, user?.id],
+    queryKey: ["nightclub-quest-progress", clubId, profileId],
     queryFn: async () => {
       if (!profileId || !clubId) return [];
 

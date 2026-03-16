@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface PrimaryBandRecord {
   id: string;
@@ -23,25 +23,12 @@ export interface PrimaryBandRecord {
 }
 
 export const usePrimaryBand = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["primary-band", user?.id],
+    queryKey: ["primary-band", profileId],
     queryFn: async () => {
-      if (!user?.id) {
-        return null;
-      }
-
-      // Get the active profile for this user
-      const { data: activeProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      if (!activeProfile) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("band_members")
@@ -66,7 +53,7 @@ export const usePrimaryBand = () => {
             )
           `
         )
-        .eq("profile_id", activeProfile.id)
+        .eq("profile_id", profileId)
         .eq("bands.status", "active")
         .order("joined_at", { ascending: false })
         .limit(1)
@@ -76,25 +63,14 @@ export const usePrimaryBand = () => {
         throw error;
       }
 
-      if (!data) {
-        return null;
-      }
-
-      if (data.is_touring_member) {
-        return null;
-      }
-
-      if (data.member_status && data.member_status !== "active") {
-        return null;
-      }
-
-      if (data.bands?.status && data.bands.status !== "active") {
-        return null;
-      }
+      if (!data) return null;
+      if (data.is_touring_member) return null;
+      if (data.member_status && data.member_status !== "active") return null;
+      if (data.bands?.status && data.bands.status !== "active") return null;
 
       return data as PrimaryBandRecord;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 60 * 1000,
   });
 };
