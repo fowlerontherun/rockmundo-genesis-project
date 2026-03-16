@@ -41,7 +41,7 @@ export function FinancialStats() {
       const { data: expenses } = await supabase
         .from("experience_ledger")
         .select("activity_type, metadata")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .in("activity_type", ["therapy", "nutrition", "travel", "equipment_purchase"]);
 
       let totalExpenses = 0;
