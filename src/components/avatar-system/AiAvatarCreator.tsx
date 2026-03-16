@@ -86,7 +86,6 @@ function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
 }
 
 export function AiAvatarCreator() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { data: band } = useUserBand();
   const queryClient = useQueryClient();
