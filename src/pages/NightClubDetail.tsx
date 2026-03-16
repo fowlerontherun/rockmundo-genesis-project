@@ -13,7 +13,7 @@ import { normalizeNightClubRecord, type CityNightClub, type NightClubDrink } fro
 import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
 import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerformance";
 import { useNightclubQuests } from "@/hooks/useNightclubQuests";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
