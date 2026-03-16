@@ -124,7 +124,7 @@ export default function PerformanceBooking() {
   const totalCost = selectedRoomData ? selectedRoomData.hourly_rate * parseInt(duration) : 0;
 
   const handleBookRehearsal = async () => {
-    if (!date || !timeSlot || !user || !selectedBand || !selectedRoom) {
+    if (!date || !timeSlot || !profileId || !selectedBand || !selectedRoom) {
       toast({
         title: "Missing Information",
         description: "Please select all required fields.",

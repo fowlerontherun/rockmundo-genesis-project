@@ -123,7 +123,7 @@ export default function DonationSuccess() {
     };
 
     processRewards();
-  }, [user, processed, sessionId, toast]);
+  }, [profileId, processed, sessionId, toast]);
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-2xl">

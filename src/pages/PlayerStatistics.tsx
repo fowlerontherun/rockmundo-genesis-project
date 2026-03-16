@@ -21,7 +21,7 @@ export default function PlayerStatistics() {
     attributeStars: 0,
   });
 
-  if (!user || !profile) {
+  if (!profileId || !profile) {
     return (
       <div className="container mx-auto p-6">
         <Card>

@@ -105,7 +105,7 @@ export default function PublicRelations() {
     staleTime: 2 * 60 * 1000,
   });
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="container mx-auto p-6">
         <Alert>
