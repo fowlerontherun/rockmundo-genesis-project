@@ -171,11 +171,12 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
   }
 
   // Fetch skills from skill_progress via profile
-  const { data: playerProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  let skillRows: { skill_slug: string; current_level: number }[] = [];
+  {
+    const { data: progressData, error: skillsError } = await supabase
+      .from("skill_progress")
+      .select("skill_slug, current_level")
+      .eq("profile_id", profileId);
 
   let skillRows: { skill_slug: string; current_level: number }[] = [];
   if (playerProfile?.id) {
