@@ -259,7 +259,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       onParticipantCountChange?.(0);
       supabase.removeChannel(channel);
     };
-  }, [user, channelKey, fetchMessages, onConnectionStatusChange, onParticipantCountChange]);
+  }, [profileId, channelKey, fetchMessages, onConnectionStatusChange, onParticipantCountChange]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
