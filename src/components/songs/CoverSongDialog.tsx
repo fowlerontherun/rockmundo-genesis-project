@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +21,7 @@ interface CoverSongDialogProps {
 export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongDialogProps) => {
   const [paymentType, setPaymentType] = useState<"flat_fee" | "royalty_split" | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch band member skills
@@ -69,7 +69,7 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
 
   const coverMutation = useMutation({
     mutationFn: async () => {
-      if (!song || !paymentType || !user) throw new Error("Missing data");
+      if (!song || !paymentType || !profileId) throw new Error("Missing data");
 
       const skills = memberSkills || [];
       const { coverQuality, skillMultiplier } = calculateCoverQuality(song.quality_score, skills);
@@ -131,13 +131,13 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
         duration_display: originalSong.duration_display,
         lyrics: originalSong.lyrics,
         band_id: bandId,
-        user_id: user.id,
+        user_id: profileId,
         parent_song_id: song.id,
         ownership_type: "cover",
         version: "cover",
         status: "recorded",
         added_to_repertoire_at: new Date().toISOString(),
-        added_to_repertoire_by: user.id,
+        added_to_repertoire_by: profileId,
       });
 
       if (songError) throw songError;

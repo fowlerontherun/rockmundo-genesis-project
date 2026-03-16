@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { Users, User, MapPin } from 'lucide-react';
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from '@/utils/touringMembers';
 import { MUSIC_GENRES } from '@/data/genres';
@@ -20,7 +20,7 @@ interface BandCreationFormProps {
 }
 
 export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [creationMode, setCreationMode] = useState<'band' | 'solo'>('band');
@@ -60,34 +60,15 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!profileId) return;
 
     setLoading(true);
     try {
-      // Get active profile for this user
-      const { data: activeProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .maybeSingle();
-
-      if (!activeProfile) {
-        toast({
-          title: 'No active character',
-          description: 'Please select an active character first.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
       // Check if this profile is already in an active band
       const { data: existingBands } = await supabase
         .from('band_members')
         .select('band_id, is_touring_member, bands!inner(name, status)')
-        .eq('profile_id', activeProfile.id)
+        .eq('profile_id', profileId)
         .eq('is_touring_member', false)
         .eq('bands.status', 'active')
         .limit(1);
@@ -107,17 +88,17 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
       await supabase
         .from('band_members')
         .delete()
-        .eq('profile_id', activeProfile.id)
+        .eq('profile_id', profileId)
         .eq('is_touring_member', false);
 
       const isSolo = creationMode === 'solo';
-      const bandName = isSolo ? (artistName || `${user.email?.split('@')[0]} (Solo)`) : name;
+      const bandName = isSolo ? (artistName || 'Solo Artist') : name;
 
       const { data: band, error: bandError } = await supabase
         .from('bands')
         .insert({
           name: bandName,
-          leader_id: user.id,
+          leader_id: profileId,
           genre,
           description: description || (isSolo ? 'Solo artist' : 'A new band'),
           max_members: isSolo ? 1 : maxMembers,
@@ -135,8 +116,8 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         .from('band_members')
         .insert({
           band_id: band.id,
-          user_id: user.id,
-          profile_id: activeProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           role: 'Founder',
           instrument_role: instrumentRole,
           vocal_role: vocalRole === 'None' ? null : vocalRole,
