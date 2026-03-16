@@ -98,7 +98,7 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
       return { consultant, expiresAt };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", userId] });
+      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", profileId] });
       toast.success(`Hired ${data.consultant.name}!`, {
         description: `Your PR consultant will handle offers until ${format(data.expiresAt, "MMM d, yyyy")}`,
       });
