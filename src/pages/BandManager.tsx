@@ -19,6 +19,7 @@ import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
+import { BandApplicationsList } from '@/components/band/BandApplicationsList';
 
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
