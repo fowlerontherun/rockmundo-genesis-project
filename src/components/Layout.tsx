@@ -28,6 +28,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
+  const { profileId } = useActiveProfile();
   const { navStyle } = useNavStyle();
   const isHorizontal = navStyle === "horizontal";
 
