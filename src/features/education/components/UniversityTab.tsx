@@ -92,7 +92,7 @@ function formatSkillSlug(slug: string): string {
 }
 
 export const UniversityTab = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
