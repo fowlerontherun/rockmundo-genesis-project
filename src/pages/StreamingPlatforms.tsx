@@ -17,11 +17,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EnhancedPlatformCard } from "@/components/streaming/EnhancedPlatformCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const StreamingPlatforms = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile } = useGameData();
+  const { profileId } = useActiveProfile();
   const userId = profile?.user_id;
 
   // Fetch platforms
