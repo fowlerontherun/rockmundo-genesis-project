@@ -33,6 +33,8 @@ import type { CharacterRelationship } from "@/types/character-relationships";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
 import { FamilyDashboard } from "@/components/family/FamilyDashboard";
+import { useEquipmentStore } from "@/hooks/useEquipmentStore";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   communicationChannels,
   collaborationOpportunities,
