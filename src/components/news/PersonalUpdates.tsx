@@ -89,7 +89,7 @@ export function PersonalUpdates() {
     }
   };
 
-  if (!user) return null;
+  if (!profileId) return null;
 
   return (
     <Card className="border-primary/20 bg-primary/5">

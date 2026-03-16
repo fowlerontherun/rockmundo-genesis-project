@@ -169,19 +169,19 @@ export function useDrawHistory() {
 }
 
 export function useClaimPrize() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (ticketId: string) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get ticket
       const { data: ticket, error: fetchError } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
         .eq("id", ticketId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .single();
 
       if (fetchError) throw fetchError;
@@ -203,9 +203,7 @@ export function useClaimPrize() {
         const { data: currentProfile } = await supabase
           .from("profiles")
           .select("id, cash, fame")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .is("died_at", null)
+          .eq("id", profileId)
           .single();
 
         if (currentProfile) {

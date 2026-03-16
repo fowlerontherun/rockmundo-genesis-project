@@ -80,14 +80,13 @@ export const useUpdateReputation = () => {
 };
 
 export const useReputationEvents = (limit = 20) => {
-  const { user } = useAuth();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["reputation-events", profileId, limit],
     queryFn: () => fetchReputationEvents(profileId!, limit),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };

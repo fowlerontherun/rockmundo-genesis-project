@@ -168,24 +168,25 @@ export function useRespondToProposal() {
 
 export function useInitiateDivorce() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
-    mutationFn: async ({ marriageId, profileId }: { marriageId: string; profileId: string }) => {
+    mutationFn: async ({ marriageId, profileId: targetProfileId }: { marriageId: string; profileId: string }) => {
       const { error } = await supabase
         .from(asAny("marriages"))
         .update(asAny({
           status: "divorced",
           ended_at: new Date().toISOString(),
-          ended_by: profileId,
+          ended_by: targetProfileId,
           end_reason: "divorce",
         }))
         .eq("id", marriageId);
       if (error) throw error;
 
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "divorce",
           message: "📝 Filed for divorce",
           metadata: { marriage_id: marriageId },

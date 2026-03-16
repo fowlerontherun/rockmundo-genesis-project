@@ -74,7 +74,7 @@ export function HabitTracker() {
         if (error) throw error;
 
         // Award health and energy for completing a habit
-        if (user?.id) {
+        if (profileId) {
           const habit = habits?.find(h => h.id === habitId);
           const category = habit?.category || 'custom';
           
@@ -89,7 +89,7 @@ export function HabitTracker() {
           const { data: profile } = await supabase
             .from("profiles")
             .select("health, energy")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
 
           if (profile) {
@@ -98,7 +98,7 @@ export function HabitTracker() {
             await supabase
               .from("profiles")
               .update({ health: newHealth, energy: newEnergy })
-              .eq("user_id", user.id);
+              .eq("id", profileId);
           }
         }
       } else {

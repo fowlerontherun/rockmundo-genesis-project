@@ -45,12 +45,12 @@ export function WellnessGoals() {
 
   const addGoalMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!profileId) throw new Error("No active profile");
       const deadline = format(addDays(new Date(), 7), "yyyy-MM-dd");
       const { error } = await supabase
         .from("player_wellness_goals")
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           goal_type: goalType,
           target_value: parseInt(targetValue),
           deadline,
