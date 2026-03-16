@@ -29,14 +29,14 @@ type GigWithVenue = GigRow & {
 };
 
 export function GigPerformanceTab() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [scheduledGigs, setScheduledGigs] = useState<GigWithVenue[]>([]);
   const { isLoading: isCancelling, calculateCancellationDetails, cancelGig } = useGigCancellation();
 
   const loadScheduledGigs = useCallback(async () => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     setLoading(true);
     try {
@@ -44,7 +44,7 @@ export function GigPerformanceTab() {
       const { data: bandMemberships, error: memberError } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('user_id', user.id);
+        .eq('profile_id', profileId);
 
       if (memberError) throw memberError;
 

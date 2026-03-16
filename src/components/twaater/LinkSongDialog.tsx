@@ -21,27 +21,27 @@ interface LinkSongDialogProps {
 }
 
 export const LinkSongDialog = ({ open, onOpenChange, onSelect }: LinkSongDialogProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [search, setSearch] = useState("");
 
   const { data: songs = [], isLoading } = useQuery({
-    queryKey: ["user-songs-for-twaater", user?.id],
+    queryKey: ["user-songs-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get user's bands
       const { data: memberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
 
-      // Fetch songs from bands or user
+      // Fetch songs from bands
       const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, audio_url, status, band:bands(id, name)")
-        .or(`band_id.in.(${bandIds.join(",")}),user_id.eq.${user.id}`)
+        .or(`band_id.in.(${bandIds.join(",")}),user_id.eq.${profileId}`)
         .in("status", ["recorded", "released"])
         .neq("archived", true)
         .order("created_at", { ascending: false });
@@ -49,7 +49,7 @@ export const LinkSongDialog = ({ open, onOpenChange, onSelect }: LinkSongDialogP
       if (error) throw error;
       return songs || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredSongs = songs.filter((s: any) =>

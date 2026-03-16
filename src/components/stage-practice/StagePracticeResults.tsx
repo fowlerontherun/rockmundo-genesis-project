@@ -99,7 +99,7 @@ export function StagePracticeResults({
         const { data: existingSkill } = await supabase
           .from('skill_progress')
           .select('id, current_xp, required_xp, current_level')
-          .eq('profile_id', profile.id)
+          .eq('profile_id', profileId)
           .eq('skill_slug', instrumentSlug)
           .single();
 

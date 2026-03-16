@@ -88,7 +88,7 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
       await supabase
         .from('band_members')
         .delete()
-        .eq('profile_id', activeProfile.id)
+        .eq('profile_id', profileId)
         .eq('is_touring_member', false);
 
       const isSolo = creationMode === 'solo';
