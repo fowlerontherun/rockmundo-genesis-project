@@ -58,7 +58,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  }, [user, selectedChannel]);
+  }, [profileId, selectedChannel]);
 
   const sendMessage = async () => {
     if (!user || !message.trim()) return;
