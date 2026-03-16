@@ -33,18 +33,18 @@ export default function Awards() {
 
   // Fetch the user's primary band
   const { data: userBand } = useQuery({
-    queryKey: ["user-primary-band", user?.id],
+    queryKey: ["user-primary-band", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("bands")
         .select("id, name, fame, status")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const {
