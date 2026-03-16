@@ -37,7 +37,7 @@ interface PresenceState {
 }
 
 export const useJamVoiceChat = (sessionId: string | null): UseJamVoiceChatReturn => {
-  const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
