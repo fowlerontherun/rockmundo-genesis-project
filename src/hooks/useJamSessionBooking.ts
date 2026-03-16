@@ -274,7 +274,7 @@ export const useJamSessionBooking = () => {
     // Check for activity conflicts during the session time
     if (session.scheduled_start && session.scheduled_end) {
       const { hasConflict, conflictTitle } = await checkActivityConflict(
-        user.id,
+        profile.id,
         new Date(session.scheduled_start),
         new Date(session.scheduled_end)
       );
