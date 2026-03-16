@@ -11,7 +11,6 @@ import { Calendar, MapPin, Music, Ticket, Users, Star, ChevronRight, ChevronDown
 import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useFestivalStages, useFestivalStageSlots } from "@/hooks/useFestivalStages";
 import { useFestivalQuality } from "@/hooks/useFestivalFinances";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import { FestivalMerchStand } from "./merch/FestivalMerchStand";
@@ -170,7 +169,7 @@ const FestivalCard = ({
 };
 
 const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onGoLive: () => void }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: stages = [] } = useFestivalStages(festivalId);
   const { data: slots = [] } = useFestivalStageSlots(festivalId);
   const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);
@@ -191,7 +190,7 @@ const FestivalDetailPanel = ({ festivalId, onGoLive }: { festivalId: string; onG
     },
   });
 
-  const { profileId } = useActiveProfile();
+  // profileId already available from useActiveProfile above
 
   const { data: profile } = useQuery({
     queryKey: ["profile-cash-festival", profileId],

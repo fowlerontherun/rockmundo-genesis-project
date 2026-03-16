@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Music2, Plus } from 'lucide-react';
@@ -23,7 +23,7 @@ type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'] & {
 type Band = Database['public']['Tables']['bands']['Row'];
 
 export function RehearsalsTab() {
-  const { user } = useAuth();
+  const { profile: activeProfile, profileId } = useActiveProfile();
   const { toast } = useToast();
   const { bookRehearsal, isBooking } = useRehearsalBooking();
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export function RehearsalsTab() {
   const [bandSongs, setBandSongs] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     setLoading(true);
     try {
@@ -44,7 +44,7 @@ export function RehearsalsTab() {
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
         .select('bands!band_members_band_id_fkey(*)')
-        .eq('user_id', user.id)
+        .eq('user_id', profileId)
         .order('joined_at', { ascending: false });
 
       if (memberError) throw memberError;
@@ -95,13 +95,8 @@ export function RehearsalsTab() {
         setCities(citiesData || []);
 
         // Get user's current city
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('current_city_id')
-          .eq('user_id', user.id)
-          .single();
-
-        setCurrentCityId(profileData?.current_city_id || null);
+        // Get current city from active profile
+        setCurrentCityId(activeProfile?.current_city_id || null);
 
         // Load band songs from setlists and member songs
         const { data: setlistSongs, error: setlistSongsError } = await supabase
@@ -179,7 +174,7 @@ export function RehearsalsTab() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [profileId, activeProfile, toast]);
 
   useEffect(() => {
     void loadData();

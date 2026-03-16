@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, Music, AlertTriangle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVipStatus } from "@/hooks/useVipStatus";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { GenerationLimitBadge } from "./GenerationLimitBadge";
@@ -34,7 +34,7 @@ export const CompleteRecordingDialog = ({
   const [currentSongId, setCurrentSongId] = useState<string | null>(propSongId || null);
   const queryClient = useQueryClient();
   const { data: vipStatus } = useVipStatus();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: limits } = useSongGenerationLimits();
   const { isCompleted, hasAudio, cannotRegenerate } = useSongGenerationStatus(currentSongId);
 
@@ -59,7 +59,7 @@ export const CompleteRecordingDialog = ({
     !cannotRegenerate;
 
   const generateAudio = async (songId: string) => {
-    if (!vipStatus?.isVip || !user?.id) return;
+    if (!vipStatus?.isVip || !profileId) return;
 
     // Check limits
     if (limits && !limits.can_generate && !limits.is_admin) {
@@ -72,7 +72,7 @@ export const CompleteRecordingDialog = ({
     setGeneratingAudio(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: user.id }
+        body: { songId, userId: profileId }
       });
 
       if (error) {

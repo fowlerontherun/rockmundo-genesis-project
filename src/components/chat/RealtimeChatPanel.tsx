@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,7 +43,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   onConnectionStatusChange,
   onParticipantCountChange
 }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -52,7 +52,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
       const { data: messageData, error: messageError } = await supabase
@@ -138,16 +138,16 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  }, [user, channelKey]);
+  }, [profileId, channelKey]);
 
   const sendMessage = useCallback(async () => {
-    if (!user || !message.trim()) return;
+    if (!profileId || !message.trim()) return;
 
     try {
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           channel: channelKey,
           message: message.trim()
         } as any);
@@ -160,13 +160,13 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  }, [channelKey, fetchMessages, message, user]);
+  }, [channelKey, fetchMessages, message, profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void fetchMessages();
     }
-  }, [user, channelKey, fetchMessages]);
+  }, [profileId, channelKey, fetchMessages]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector(
@@ -179,7 +179,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }, [messages]);
 
   useEffect(() => {
-    if (!user) {
+    if (!profileId) {
       setIsConnected(false);
       setParticipantCount(0);
       onConnectionStatusChange?.(false);
@@ -191,7 +191,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     const channelName = `global-chat-${channelKey}`;
     const channel = supabase.channel(channelName, {
       config: {
-        presence: { key: user.id }
+        presence: { key: profileId }
       }
     });
 
@@ -236,7 +236,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
           setIsConnected(true);
           onConnectionStatusChange?.(true);
           void channel
-            .track({ user_id: user.id })
+            .track({ user_id: profileId })
             .then(() => {
               if (isMounted) {
                 updatePresence();
@@ -259,7 +259,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       onParticipantCountChange?.(0);
       supabase.removeChannel(channel);
     };
-  }, [user, channelKey, fetchMessages, onConnectionStatusChange, onParticipantCountChange]);
+  }, [profileId, channelKey, fetchMessages, onConnectionStatusChange, onParticipantCountChange]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -290,7 +290,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     </div>
   );
 
-  if (!user) {
+  if (!profileId) {
     return (
       <Card className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}>
         <CardHeader>

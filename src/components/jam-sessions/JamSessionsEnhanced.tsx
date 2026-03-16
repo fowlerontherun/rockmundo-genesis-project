@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useJamSessions } from "@/hooks/useJamSessions";
 import { useJamSessionBooking } from "@/hooks/useJamSessionBooking";
 import { JamSessionCard } from "./JamSessionCard";
@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const {
     sessions,
@@ -42,7 +42,7 @@ export const JamSessionsEnhanced = () => {
 
   // Find user's active session for chat/commentary
   useEffect(() => {
-    if (!user?.id || !profile?.id) return;
+    if (!profileId || !profile?.id) return;
     
     const myActiveSession = activeSessions.find(s => 
       s.status === 'active' && 
@@ -54,7 +54,7 @@ export const JamSessionsEnhanced = () => {
     } else {
       setActiveSessionId(null);
     }
-  }, [activeSessions, user?.id, profile?.id]);
+  }, [activeSessions, profileId, profile?.id]);
 
   // Show results dialog when session completes
   useEffect(() => {

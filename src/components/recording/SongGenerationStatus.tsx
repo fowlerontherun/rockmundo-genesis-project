@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ interface SongGenerationStatusProps {
 }
 
 export function SongGenerationStatus({ songId, songTitle, showRetry = true }: SongGenerationStatusProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState(false);
   const [showLyricsDialog, setShowLyricsDialog] = useState(false);
@@ -39,7 +39,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const { data: limits } = useSongGenerationLimits();
 
   const handleReset = async () => {
-    if (!user?.id) return;
+    if (!profileId) return;
     setRetrying(true);
     try {
       // Reset the stuck status to 'failed' so it can be retried
@@ -83,7 +83,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   };
 
   const handleAdminRegenerate = async (updatedLyrics?: string) => {
-    if (!user?.id || !limits?.is_admin) return;
+    if (!profileId || !limits?.is_admin) return;
     setRetrying(true);
     setShowLyricsDialog(false);
     try {
@@ -97,7 +97,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         .update(updatePayload)
         .eq('id', songId);
 
-      const body: Record<string, any> = { songId, userId: user.id };
+      const body: Record<string, any> = { songId, userId: profileId };
       if (updatedLyrics !== undefined) {
         body.overrideLyrics = updatedLyrics;
       }
@@ -126,7 +126,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   };
 
   const handleRetry = async () => {
-    if (!user?.id || !canRegenerate) return;
+    if (!profileId || !canRegenerate) return;
 
     // Check limits before retrying
     if (limits && !limits.can_generate && !limits.is_admin) {
@@ -149,7 +149,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       }
 
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: user.id }
+        body: { songId, userId: profileId }
       });
 
       if (error) {

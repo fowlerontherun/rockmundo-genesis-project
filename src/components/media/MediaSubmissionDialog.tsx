@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -103,7 +103,7 @@ export function MediaSubmissionDialog({
   bandId,
   bandFame,
 }: MediaSubmissionDialogProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const config = mediaConfig[mediaType];
   const Icon = config.icon;
@@ -114,7 +114,7 @@ export function MediaSubmissionDialog({
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !bandId) throw new Error("Not authenticated");
+      if (!profileId || !bandId) throw new Error("Not authenticated");
       
       const submission: Record<string, unknown> = {
         band_id: bandId,

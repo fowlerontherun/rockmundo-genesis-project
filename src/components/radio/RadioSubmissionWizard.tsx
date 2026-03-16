@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ interface Song {
 }
 
 export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWizardProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
   const queryClient = useQueryClient();
@@ -138,16 +138,16 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
     queryFn: async () => {
-      if (!selectedSong || !user) return [];
+      if (!selectedSong || !profileId) return [];
       const { data, error } = await supabase
         .from("radio_submissions")
         .select("station_id")
         .eq("song_id", selectedSong.id)
-        .eq("profile_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
       return data.map(s => s.station_id);
     },
-    enabled: !!selectedSong && !!user,
+    enabled: !!selectedSong && !!profileId,
   });
 
   // Calculate eligible stations
@@ -215,7 +215,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   // Batch submission mutation
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !selectedSong || selectedStations.size === 0) {
+      if (!profileId || !selectedSong || selectedStations.size === 0) {
         throw new Error("Missing required data");
       }
 
@@ -234,7 +234,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
             .insert({
               station_id: stationId,
               song_id: selectedSong.id,
-              user_id: user.id,
+              user_id: profileId,
               band_id: bandId,
               status: shouldAutoAccept ? "accepted" : "pending",
               reviewed_at: shouldAutoAccept ? new Date().toISOString() : null,

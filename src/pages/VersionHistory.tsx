@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.082",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "All remaining components migrated from useAuth to profileId" },
+      { type: 'improvement', description: "ChatWindow, RealtimeChatPanel, JamSessionsEnhanced, RadioSubmissionWizard migrated" },
+      { type: 'improvement', description: "SongGenerationStatus, CompleteRecordingDialog, CompanyFinanceDialog migrated" },
+      { type: 'improvement', description: "BandSettingsTab, RehearsalsTab, MediaSubmissionDialog, FestivalBrowser migrated" },
+    ],
+  },
+  {
     version: "1.1.081",
     date: "2026-03-16",
     changes: [

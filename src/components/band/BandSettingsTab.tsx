@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Settings, LogOut, Users, Ban, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { leaveBand, transferLeadership, disbandBand, getEligibleLeaders } from '@/utils/bandMembers';
 import { putBandOnHiatus, reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
@@ -35,7 +35,7 @@ export function BandSettingsTab({
   genreLastChangedAt,
   onBandUpdate 
 }: BandSettingsTabProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -54,11 +54,11 @@ export function BandSettingsTab({
   const [disbandConfirmation, setDisbandConfirmation] = useState('');
 
   const handleLeaveBand = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     try {
       setLoading(true);
-      await leaveBand(user.id, bandId);
+      await leaveBand(profileId, bandId);
       
       toast({
         title: 'Left Band',
@@ -78,7 +78,7 @@ export function BandSettingsTab({
   };
 
   const handlePutOnHiatus = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     if (!hiatusReason.trim()) {
       toast({
@@ -98,7 +98,7 @@ export function BandSettingsTab({
         bandId,
         reason: hiatusReason,
         duration: durationDays,
-        leaderId: user.id
+        leaderId: profileId!
       });
       
       toast({
@@ -122,11 +122,11 @@ export function BandSettingsTab({
   };
 
   const handleReactivate = async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
       setLoading(true);
-      const result = await reactivateBand(bandId, user.id);
+      const result = await reactivateBand(bandId, profileId);
       
       if (result.success) {
         toast({
@@ -153,17 +153,17 @@ export function BandSettingsTab({
   };
 
   const openTransferDialog = async () => {
-    const leaders = await getEligibleLeaders(bandId, user?.id || '');
+    const leaders = await getEligibleLeaders(bandId, profileId || '');
     setEligibleLeaders(leaders);
     setTransferDialogOpen(true);
   };
 
   const handleTransferLeadership = async () => {
-    if (!user || !newLeaderId) return;
+    if (!profileId || !newLeaderId) return;
 
     try {
       setLoading(true);
-      await transferLeadership(bandId, user.id, newLeaderId);
+      await transferLeadership(bandId, profileId, newLeaderId);
       
       toast({
         title: 'Leadership Transferred',
@@ -185,7 +185,7 @@ export function BandSettingsTab({
   };
 
   const handleDisbandBand = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     if (disbandConfirmation !== 'DISBAND') {
       toast({
@@ -198,7 +198,7 @@ export function BandSettingsTab({
 
     try {
       setLoading(true);
-      await disbandBand(bandId, user.id);
+      await disbandBand(bandId, profileId!);
       
       toast({
         title: 'Band Disbanded',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,14 +29,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onOnlineCountChange,
   onConnectionStatusChange,
 }) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const selectedChannel = channel ?? 'general';
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const fetchMessages = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
       const { data: messageData, error: messageError } = await supabase
@@ -58,16 +58,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  }, [user, selectedChannel]);
+  }, [profileId, selectedChannel]);
 
   const sendMessage = async () => {
-    if (!user || !message.trim()) return;
+    if (!profileId || !message.trim()) return;
 
     try {
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: user.id,
+          user_id: profileId,
           channel: selectedChannel,
           message: message.trim()
         } as any);
@@ -83,10 +83,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       void fetchMessages();
     }
-  }, [user, fetchMessages]);
+  }, [profileId, fetchMessages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -95,7 +95,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  if (!user) {
+  if (!profileId) {
     return (
       <Card>
         <CardContent className="p-6">
