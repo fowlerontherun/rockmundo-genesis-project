@@ -34,7 +34,7 @@ import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
 import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [userBands, setUserBands] = useState<any[]>([]);
