@@ -92,6 +92,7 @@ export const useCreateProducerProfile = () => {
 export const useUpdateProducerProfile = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: Partial<{
