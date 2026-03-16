@@ -39,18 +39,18 @@ const StreamingPlatforms = () => {
     },
   });
 
-  // Fetch user's band IDs first
+  // Fetch user's band IDs first (using profileId for character isolation)
   const { data: userBandIds = [] } = useQuery({
-    queryKey: ["user-band-ids", userId],
+    queryKey: ["user-band-ids", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       const { data: members } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
       return members?.map(m => m.band_id) || [];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   // Fetch user stats per platform from song_releases (correct source)
