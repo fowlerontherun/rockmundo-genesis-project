@@ -38,10 +38,19 @@ export const useAutoRecordingCompletion = (userId: string | null) => {
     };
 
     async function getBandIds(userId: string) {
+      const { data: activeProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+      if (!activeProfile) return "null";
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", activeProfile.id)
+        .eq("member_status", "active");
       return data?.map(d => d.band_id).join(",") || "null";
     }
 

@@ -102,8 +102,7 @@ export function usePromoTourCompletion(userId: string | undefined) {
         const { data: bandMember } = await supabase
           .from("band_members")
           .select("band_id")
-          .eq("user_id", userId)
-          .eq("role", "leader")
+          .eq("profile_id", profile?.id)
           .maybeSingle();
 
         if (bandMember?.band_id) {

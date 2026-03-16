@@ -189,11 +189,11 @@ export function useNightclubQuests(clubId: string | undefined) {
       progressId: string;
       rewards: Record<string, any>;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, cash, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
 
@@ -207,7 +207,7 @@ export function useNightclubQuests(clubId: string | undefined) {
             cash: (profile.cash ?? 0) + cashReward,
             fame: (profile.fame ?? 0) + fameReward,
           })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
       }
 
       await supabase

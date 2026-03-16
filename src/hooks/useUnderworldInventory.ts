@@ -56,14 +56,14 @@ export const useUnderworldInventory = () => {
   // Use an item from inventory
   const useItem = useMutation({
     mutationFn: async (purchaseId: string) => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!profileId) throw new Error("Not logged in");
 
       // Get the purchase and product details
       const { data: purchase, error: fetchError } = await supabase
         .from("underworld_purchases")
         .select(`*, product:underworld_products(*)`)
         .eq("id", purchaseId)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .single();
 
       if (fetchError || !purchase) throw new Error("Item not found in inventory");
