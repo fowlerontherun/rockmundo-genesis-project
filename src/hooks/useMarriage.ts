@@ -83,7 +83,7 @@ export function useMarriageHistory(profileId: string | undefined) {
 
 export function useProposeMarriage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ partnerAId, partnerBId, weddingDate }: {
@@ -105,9 +105,10 @@ export function useProposeMarriage() {
       if (error) throw error;
 
       // Post activity feed entry
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: "marriage_proposal",
           message: "💍 Proposed marriage!",
           metadata: { marriage_id: (data as any)?.id },
