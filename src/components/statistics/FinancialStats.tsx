@@ -28,7 +28,7 @@ export function FinancialStats() {
       const { data: earnings } = await supabase
         .from("band_earnings")
         .select("source, amount")
-        .eq("earned_by_user_id", user.id);
+        .eq("profile_id", profileId);
 
       const earningsBySource: Record<string, number> = {};
       earnings?.forEach((e) => {
