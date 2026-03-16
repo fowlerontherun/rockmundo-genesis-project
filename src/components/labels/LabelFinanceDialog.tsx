@@ -68,13 +68,13 @@ export function LabelFinanceDialog({ open, onOpenChange, labelId, labelName }: L
 
   // Fetch user's personal balance
   const { data: profileData } = useQuery({
-    queryKey: ["user-balance", user?.id],
-    enabled: open && !!user?.id,
+    queryKey: ["user-balance", profileId],
+    enabled: open && !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user!.id)
+        .eq("id", profileId!)
         .single();
 
       if (error) throw error;
