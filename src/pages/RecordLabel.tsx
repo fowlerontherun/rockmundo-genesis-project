@@ -33,8 +33,8 @@ const defaultTabs = ["my-labels", "directory", "contracts", "releases", "royalti
 type RecordLabelTab = (typeof defaultTabs)[number];
 
 const RecordLabel = () => {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { profileId } = useActiveProfile();
+  const userId = profileId;
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
   const [activeTab, setActiveTab] = useState<RecordLabelTab>("my-labels");

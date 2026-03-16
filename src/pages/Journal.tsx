@@ -38,10 +38,10 @@ const Journal = () => {
   const noteCount = entries?.filter(e => e.entry_type === "note").length || 0;
 
   const handleCreateNote = async (data: { title: string; content: string; category: string }) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     
     await createMutation.mutateAsync({
-      profile_id: user.id,
+      profile_id: profileId,
       band_id: null,
       entry_type: "note",
       category: data.category,

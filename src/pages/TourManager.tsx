@@ -74,7 +74,7 @@ interface TourVenue {
 const OTHER_TOURS_PER_PAGE = 10;
 
 const TourManager = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.bands?.id;
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);

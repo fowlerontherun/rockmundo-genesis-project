@@ -14,9 +14,9 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { t } = useTranslation();
-  const userId = user?.id;
+  const userId = profileId;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 

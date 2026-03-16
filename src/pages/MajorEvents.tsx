@@ -44,7 +44,7 @@ export default function MajorEvents() {
   const activeBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } as any : null;
   const navigate = useNavigate();
   const { data: events = [], isLoading } = useMajorEvents();
-  const { data: performances = [] } = useMajorEventPerformances(user?.id);
+  const { data: performances = [] } = useMajorEventPerformances(profileId ?? undefined);
   const { data: historyInstances = [], isLoading: loadingHistory } = useMajorEventHistory();
   const { data: calendar } = useGameCalendar();
   const acceptEvent = useAcceptMajorEvent();

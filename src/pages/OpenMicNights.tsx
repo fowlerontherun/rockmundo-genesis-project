@@ -47,7 +47,7 @@ export default function OpenMicNights() {
   const { data: venues = [], isLoading: venuesLoading } = useOpenMicVenues(
     selectedCityId === 'all' ? undefined : selectedCityId
   );
-  const { data: myPerformances = [] } = useOpenMicPerformances(user?.id);
+  const { data: myPerformances = [] } = useOpenMicPerformances(profileId ?? undefined);
   const signUp = useSignUpForOpenMic();
 
   const { data: cities = [] } = useQuery({

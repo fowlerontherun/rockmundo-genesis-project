@@ -73,14 +73,11 @@ export const BooksTab = () => {
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
 
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-    if (!profile) return;
-
     startReading({
       purchaseId: purchase.id,
       bookId: selectedBook.id,
-      userId: user.id,
-      profileId: profile.id,
+      userId: profileId,
+      profileId: profileId,
       readingDays: selectedBook.base_reading_days,
       autoRead,
     });

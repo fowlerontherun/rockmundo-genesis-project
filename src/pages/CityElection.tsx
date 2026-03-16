@@ -56,18 +56,18 @@ export default function CityElection() {
 
   // Check if user is already a candidate
   const { data: userProfile } = useQuery({
-    queryKey: ["user-profile", user?.id],
+    queryKey: ["user-profile", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, fame")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) return null;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const isCandidate = candidates?.some(c => c.profile_id === userProfile?.id);
