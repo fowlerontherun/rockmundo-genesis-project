@@ -251,7 +251,7 @@ export const useJamSessionBooking = () => {
 
   const joinJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
-    if (!user) throw new Error("User not found");
+    if (!profile) throw new Error("Profile not found");
 
     // Get session details with city info
     const { data: session } = await supabase
