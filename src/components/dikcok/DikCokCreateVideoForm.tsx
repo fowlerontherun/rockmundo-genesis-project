@@ -40,7 +40,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs =
 
   const createVideoMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       if (!formData.videoTypeId) throw new Error("Please select a video type");
       
       // Simulate video creation with outcome calculation
