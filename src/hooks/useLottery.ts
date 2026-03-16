@@ -47,17 +47,17 @@ export function useCurrentDraw() {
 const MAX_TICKETS_PER_DRAW = 10;
 
 export function useMyTicketsForDraw(drawId: string | undefined) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["lottery-tickets-draw", drawId, user?.id],
-    enabled: !!drawId && !!user?.id,
+    queryKey: ["lottery-tickets-draw", drawId, profileId],
+    enabled: !!drawId && !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*")
         .eq("draw_id", drawId!)
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
