@@ -53,8 +53,9 @@ export const useSkillBooks = () => {
   });
 
   const { data: purchases } = useQuery({
-    queryKey: ["my_book_purchases"],
+    queryKey: ["my_book_purchases", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_book_purchases")
         .select(`
@@ -66,11 +67,13 @@ export const useSkillBooks = () => {
             days_read,
             actual_completion_date
           )
-        `);
+        `)
+        .eq("profile_id", profileId);
 
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   const { data: activeSession } = useQuery({
