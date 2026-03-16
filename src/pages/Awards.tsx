@@ -52,7 +52,7 @@ export default function Awards() {
     fetchShowNominations, fetchVoteCountForShow,
     submitNomination, castVote, bookPerformance, attendRedCarpet,
     isSubmitting, isVoting, isBooking, isAttending,
-  } = useAwards(user?.id, userBand?.id);
+  } = useAwards(profileId ?? undefined, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
   const [showVotingDialog, setShowVotingDialog] = useState(false);
