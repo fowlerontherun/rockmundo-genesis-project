@@ -215,7 +215,7 @@ export const useJamSessionBooking = () => {
 
       // Create scheduled activity for the creator
       await createScheduledActivity(
-        user.id,
+        profile.user_id,
         profile.id,
         session.id,
         params.name,
