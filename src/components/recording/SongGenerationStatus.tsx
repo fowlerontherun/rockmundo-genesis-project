@@ -18,7 +18,7 @@ interface SongGenerationStatusProps {
 }
 
 export function SongGenerationStatus({ songId, songTitle, showRetry = true }: SongGenerationStatusProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState(false);
   const [showLyricsDialog, setShowLyricsDialog] = useState(false);
