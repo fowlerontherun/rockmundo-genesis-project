@@ -141,24 +141,22 @@ export const useAllCompanyTaxRecords = (companyIds: string[]) => {
 };
 
 export const useUserCashBalance = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   return useQuery({
-    queryKey: ["user-cash-balance", user?.id],
+    queryKey: ["user-cash-balance", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
+        .eq("id", profileId)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
 

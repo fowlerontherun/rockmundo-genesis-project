@@ -221,8 +221,8 @@ export function useSignUpForOpenMic() {
       const { error: activityError } = await (supabase as any)
         .from('player_scheduled_activities')
         .insert({
-          user_id: user.id,
-          profile_id: profile.id,
+          user_id: profileId,
+          profile_id: profileId,
           activity_type: 'open_mic',
           status: 'scheduled',
           scheduled_start: scheduledDate.toISOString(),

@@ -74,7 +74,7 @@ export function useNightclubQuests(clubId: string | undefined) {
 
   // Fetch player progress for this club's quests
   const { data: progress, isLoading: progressLoading } = useQuery({
-    queryKey: ["nightclub-quest-progress", clubId, user?.id],
+    queryKey: ["nightclub-quest-progress", clubId, profileId],
     queryFn: async () => {
       if (!profileId || !clubId) return [];
 

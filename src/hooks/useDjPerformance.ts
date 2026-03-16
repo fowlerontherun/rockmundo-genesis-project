@@ -169,7 +169,7 @@ export function useDjPerformance() {
 
       // 7. Record performance
       await supabase.from("player_dj_performances").insert({
-        user_id: user.id,
+        user_id: profileId,
         profile_id: profileId,
         club_id: club.id,
         performance_score: djOutcome.performanceScore,

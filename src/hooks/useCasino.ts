@@ -81,7 +81,7 @@ export function useCasino() {
             .eq("id", existing.id);
         } else {
           await (supabase as any).from("player_addictions").insert({
-            user_id: user.id,
+            user_id: profileId,
             profile_id: profileId,
             addiction_type: "gambling",
             severity: 10,
