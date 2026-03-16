@@ -126,7 +126,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   };
 
   const handleRetry = async () => {
-    if (!user?.id || !canRegenerate) return;
+    if (!profileId || !canRegenerate) return;
 
     // Check limits before retrying
     if (limits && !limits.can_generate && !limits.is_admin) {
