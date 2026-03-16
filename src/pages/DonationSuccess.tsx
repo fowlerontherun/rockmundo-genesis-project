@@ -39,7 +39,7 @@ export default function DonationSuccess() {
         const { data: profile } = await supabase
           .from("profiles")
           .select("experience")
-          .eq("user_id", profileId)
+          .eq("id", profileId)
           .single();
 
         if (profile) {
