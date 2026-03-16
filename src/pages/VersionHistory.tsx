@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.098",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Band Profile page was showing 'Band not found' due to ambiguous foreign key from band_members to bands — now uses explicit FK hint" },
+      { type: 'fix', description: "Band Profile now correctly displays touring members with their role instead of 'Unknown'" },
+    ],
+  },
+  {
     version: "1.1.097",
     date: "2026-03-16",
     changes: [

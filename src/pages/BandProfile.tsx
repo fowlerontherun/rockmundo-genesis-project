@@ -35,12 +35,13 @@ export default function BandProfile() {
           created_at,
           logo_url,
           is_recruiting,
-          band_members(
+          band_members:band_members!band_members_band_id_fkey(
             id,
             instrument_role,
             vocal_role,
             role,
             joined_at,
+            is_touring_member,
             profile_id,
             profiles:profile_id(
               id,
@@ -201,7 +202,9 @@ export default function BandProfile() {
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {member.profiles?.display_name || member.profiles?.username || "Unknown"}
+                          {member.is_touring_member 
+                            ? `${member.instrument_role} Player (Touring)` 
+                            : (member.profiles?.display_name || member.profiles?.username || "Unknown")}
                         </span>
                         <Badge variant={member.role === "leader" ? "default" : "outline"}>
                           {member.role}
