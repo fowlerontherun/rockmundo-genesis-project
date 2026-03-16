@@ -81,7 +81,7 @@ export function GigPerformanceTab() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [profileId, toast]);
 
   useEffect(() => {
     void loadScheduledGigs();
