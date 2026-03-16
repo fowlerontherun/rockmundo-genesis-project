@@ -73,7 +73,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(symbol, name)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
 
