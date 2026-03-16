@@ -100,8 +100,8 @@ export const useUnderworldStore = () => {
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user!.id)
-        .eq("is_active", true)
+      .eq("profile_id", profileId)
+      .eq("is_active", true)
         .gt("expires_at", new Date().toISOString());
 
       if (error) throw error;
