@@ -45,10 +45,10 @@ export async function validateTravelEligibility(profileId: string, cost: number)
 }
 
 export async function bookTravel(bookingData: TravelBookingData) {
-  const { userId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
+  const { profileId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
 
   // Validate eligibility
-  await validateTravelEligibility(userId, cost);
+  await validateTravelEligibility(profileId, cost);
 
   // Calculate times first for conflict check
   const departureTime = scheduledDepartureTime || new Date().toISOString();
@@ -57,7 +57,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   // Check for scheduling conflicts before booking
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
-    userId,
+    profileId,
     departureDate,
     arrivalTimeCalc
   );
@@ -72,7 +72,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, cash, display_name")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .maybeSingle();
 
   if (profileError) {
@@ -81,7 +81,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   }
   
   if (!profile) {
-    throw new Error("Profile not found for this user");
+    throw new Error("Profile not found");
   }
 
   // Determine if travel starts immediately or is scheduled for later
@@ -96,7 +96,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
       is_traveling: startsImmediately,
       travel_arrives_at: startsImmediately ? arrivalTimeCalc.toISOString() : null,
     })
-    .eq("user_id", userId);
+    .eq("id", profileId);
 
   if (updateError) throw updateError;
 
