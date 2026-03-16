@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserBand } from "@/hooks/useUserBand";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,7 @@ const promoFocusOptions = [
 ];
 
 const SelfPromotionBrowser = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: userBand, isLoading: bandLoading } = useUserBand();
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
@@ -90,7 +90,7 @@ const SelfPromotionBrowser = () => {
 
   const bandId = userBand?.id;
   const bandFame = userBand?.fame || 0;
-  const userId = user?.id;
+  const userId = profileId;
 
   // Fetch player's personal cash balance from profiles
   const { data: playerProfile, isLoading: profileLoading } = useQuery({
@@ -100,7 +100,7 @@ const SelfPromotionBrowser = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -186,11 +186,8 @@ const SelfPromotionBrowser = () => {
       const startTime = new Date();
       const endTime = addMinutes(startTime, activity.duration_minutes);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
+      const profileRow = { id: userId };
+      const profile = profileRow;
 
       if (!profile) throw new Error("Profile not found");
 
@@ -198,7 +195,7 @@ const SelfPromotionBrowser = () => {
       const { error: deductError } = await supabase
         .from("profiles")
         .update({ cash: playerCash - activity.base_cost })
-        .eq("user_id", userId);
+        .eq("id", userId);
 
       if (deductError) throw deductError;
 

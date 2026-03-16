@@ -22,7 +22,7 @@ import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharact
 import { useSocialDramaEvents } from "@/hooks/useSocialDramaGenerator";
 import { useEmotionalState, useEmotionalModifiers } from "@/hooks/useEmotionalEngine";
 import { useOptionalGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { FriendshipList } from "@/features/relationships/components/FriendshipList";
 import { FriendSearchDialog } from "@/features/relationships/components/FriendSearchDialog";
@@ -129,7 +129,7 @@ function buildInteractionOption(actionKey: string, rel: CharacterRelationship): 
 
 // ── Main Page ──────────────────────────────────────────────────
 export default function RelationshipsPage() {
-  const { user } = useAuth();
+  const { profileId: activeProfileId } = useActiveProfile();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
   const profileUserId = gameData?.profile?.user_id;
@@ -271,7 +271,7 @@ export default function RelationshipsPage() {
     return Object.keys(QUICK_ACTION_MAP).map(key => buildInteractionOption(key, interactionTarget));
   }, [interactionTarget]);
 
-  if (!user) {
+  if (!activeProfileId) {
     return (
       <div className="container mx-auto py-20 text-center">
         <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useFestivals, Festival, FestivalParticipant } from "@/hooks/useFestivals";
 import { useFestivalHistory } from "@/hooks/useFestivalHistory";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useSetlists } from "@/hooks/useSetlists";
 import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
@@ -33,7 +33,7 @@ const SLOT_TYPES = [
 
 export default function FestivalBrowser() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   
@@ -48,7 +48,7 @@ export default function FestivalBrowser() {
     isApplying,
     isWithdrawing,
     isPerforming
-  } = useFestivals(user?.id, band?.id);
+  } = useFestivals(profileId ?? undefined, band?.id);
   
   const { data: setlists } = useSetlists(band?.id);
   const { performances, stats, isLoading: historyLoading } = useFestivalHistory(band?.id);

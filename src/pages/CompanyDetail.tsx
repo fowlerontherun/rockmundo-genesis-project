@@ -20,7 +20,7 @@ import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { COMPANY_TYPE_INFO } from "@/types/company";
@@ -31,7 +31,7 @@ const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
@@ -357,7 +357,7 @@ const CompanyDetailContent = () => {
 
 
         <TabsContent value="shares" className="space-y-4">
-          <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === user?.id} />
+          <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === profileId} />
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-4">

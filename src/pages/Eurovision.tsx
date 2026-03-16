@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ interface EurovisionEntry {
 }
 
 export default function Eurovision() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const queryClient = useQueryClient();
   const [selectedSongId, setSelectedSongId] = useState<string>("");
@@ -128,17 +128,17 @@ export default function Eurovision() {
 
   // Check user's votes
   const { data: userVotes = [] } = useQuery({
-    queryKey: ["eurovision-user-votes", currentEvent?.id, user?.id],
+    queryKey: ["eurovision-user-votes", currentEvent?.id, profileId],
     queryFn: async () => {
-      if (!currentEvent?.id || !user?.id) return [];
+      if (!currentEvent?.id || !profileId) return [];
       const { data, error } = await supabase
         .from("eurovision_votes")
         .select("entry_id")
-        .eq("voter_id", user.id);
+        .eq("voter_id", profileId);
       if (error) throw error;
       return data.map(v => v.entry_id);
     },
-    enabled: !!currentEvent?.id && !!user?.id,
+    enabled: !!currentEvent?.id && !!profileId,
   });
 
   // Submit entry mutation
@@ -171,10 +171,10 @@ export default function Eurovision() {
   // Vote mutation
   const voteMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      if (!user?.id) throw new Error("Must be logged in to vote");
+      if (!profileId) throw new Error("Must be logged in to vote");
       const { error } = await supabase
         .from("eurovision_votes")
-        .insert({ entry_id: entryId, voter_id: user.id });
+        .insert({ entry_id: entryId, voter_id: profileId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -190,12 +190,12 @@ export default function Eurovision() {
   // Remove vote mutation
   const removeVoteMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       const { error } = await supabase
         .from("eurovision_votes")
         .delete()
         .eq("entry_id", entryId)
-        .eq("voter_id", user.id);
+        .eq("voter_id", profileId);
       if (error) throw error;
     },
     onSuccess: () => {

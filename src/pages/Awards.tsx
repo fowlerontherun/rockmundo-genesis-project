@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useAwards, type AwardShow, type AwardNomination } from "@/hooks/useAwards";
 import { useQuery } from "@tanstack/react-query";
@@ -28,23 +28,23 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Awards() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
 
   // Fetch the user's primary band
   const { data: userBand } = useQuery({
-    queryKey: ["user-primary-band", user?.id],
+    queryKey: ["user-primary-band", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data } = await supabase
         .from("bands")
         .select("id, name, fame, status")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const {
@@ -52,7 +52,7 @@ export default function Awards() {
     fetchShowNominations, fetchVoteCountForShow,
     submitNomination, castVote, bookPerformance, attendRedCarpet,
     isSubmitting, isVoting, isBooking, isAttending,
-  } = useAwards(user?.id, userBand?.id);
+  } = useAwards(profileId ?? undefined, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
   const [showVotingDialog, setShowVotingDialog] = useState(false);
@@ -70,9 +70,9 @@ export default function Awards() {
   });
 
   const { data: voteCount = 0 } = useQuery({
-    queryKey: ["award-show-vote-count", selectedShow?.id, user?.id],
+    queryKey: ["award-show-vote-count", selectedShow?.id, profileId],
     queryFn: () => fetchVoteCountForShow(selectedShow!.id),
-    enabled: !!selectedShow?.id && !!user?.id && showVotingDialog,
+    enabled: !!selectedShow?.id && !!profileId && showVotingDialog,
   });
 
   const activeShows = shows.filter(s => s.status !== 'completed');
@@ -368,7 +368,7 @@ export default function Awards() {
             <Button variant="outline" onClick={() => setShowNominateDialog(false)}>Cancel</Button>
             <Button
               onClick={() => {
-                if (!userBand || !user || !selectedCategory || !selectedShow) return;
+                if (!userBand || !profileId || !selectedCategory || !selectedShow) return;
                 submitNomination({
                   award_show_id: selectedShow.id,
                   category_name: selectedCategory,

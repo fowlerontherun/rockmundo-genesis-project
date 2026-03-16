@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.085",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Batch 25: Migrated 12 files from useAuth to profileId" },
+      { type: 'improvement', description: "EducationBooking, Awards, FestivalBrowser, JamSessions migrated" },
+      { type: 'improvement', description: "Relationships, UniversityTab, CompanyDetail, Eurovision migrated" },
+      { type: 'improvement', description: "TattooParlour, SelfPromotionBrowser, RadioBrowser migrated" },
+    ],
+  },
+  {
     version: "1.1.084",
     date: "2026-03-16",
     changes: [

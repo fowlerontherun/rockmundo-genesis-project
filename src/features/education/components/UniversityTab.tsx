@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,7 +92,7 @@ function formatSkillSlug(slug: string): string {
 }
 
 export const UniversityTab = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
@@ -100,7 +100,7 @@ export const UniversityTab = () => {
 
   // Fetch profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile_with_city", user?.id],
+    queryKey: ["profile_with_city", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -112,12 +112,12 @@ export const UniversityTab = () => {
             name
           )
         `)
-        .eq("user_id", user!.id)
+        .eq("id", profileId!)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const currentCityName = (profile?.cities as any)?.name || null;

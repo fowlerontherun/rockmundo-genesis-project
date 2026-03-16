@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useRadioStations } from "@/hooks/useRadioStations";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe, Zap, Send } from "lucide-react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
@@ -26,7 +26,7 @@ import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { stations, mySubmissions, isLoading } = useRadioStations();
   
@@ -37,18 +37,18 @@ const RadioBrowser = () => {
 
   // Get user's primary band
   const { data: primaryBand } = useQuery({
-    queryKey: ["primary-band-radio", user?.id],
+    queryKey: ["primary-band-radio", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, fame")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch countries the band has visited (performed in)
@@ -461,10 +461,10 @@ const RadioBrowser = () => {
         {/* Airplay Stats Tab */}
         <TabsContent value="airplay" className="mt-6 space-y-6">
           {/* My Airplay Stats */}
-          {user && <MyAirplayStats userId={user.id} />}
+          {profileId && <MyAirplayStats userId={profileId} />}
           
           {/* Songs in Rotation */}
-          {user && <SongsInRotation userId={user.id} />}
+          {profileId && <SongsInRotation userId={profileId} />}
           
           {/* Submission Breakdown */}
           <AirplayDashboard stats={airplayStats} submissions={mySubmissions} />

@@ -9,14 +9,14 @@ import { BookOpen, GraduationCap, Users, Video } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 
 export default function EducationBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
@@ -43,7 +43,7 @@ export default function EducationBooking() {
   });
 
   const handleBookActivity = async () => {
-    if (!date || !activityType || !timeSlot || !user) {
+    if (!date || !activityType || !timeSlot || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, activity type, and time slot.",
@@ -69,7 +69,7 @@ export default function EducationBooking() {
     if (activityType === "mentorship") metadata.mentor_id = selectedMentor;
 
     const { error } = await (supabase as any).from("scheduled_activities").insert({
-      user_id: user.id,
+      user_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + 60 * 60 * 1000).toISOString(),

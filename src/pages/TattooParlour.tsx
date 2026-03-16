@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +29,6 @@ import {
 } from "@/data/tattooDesigns";
 
 export default function TattooParlour() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedParlour, setSelectedParlour] = useState<string | null>(null);
@@ -144,7 +142,7 @@ export default function TattooParlour() {
   // Purchase tattoo mutation
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedDesign || !currentParlour || !user) throw new Error('Missing data');
+      if (!selectedDesign || !currentParlour || !profileId) throw new Error('Missing data');
       
       const price = getPrice(selectedDesign.base_price);
       if ((profile?.cash || 0) < price) throw new Error('Insufficient funds');
@@ -207,7 +205,7 @@ export default function TattooParlour() {
   // Custom tattoo mutation
   const customMutation = useMutation({
     mutationFn: async (data: { description: string; bodySlot: BodySlot; quotedPrice: number; estimatedQuality: number }) => {
-      if (!customArtist || !currentParlour || !user) throw new Error('Missing data');
+      if (!customArtist || !currentParlour || !profileId) throw new Error('Missing data');
       if ((profile?.cash || 0) < data.quotedPrice) throw new Error('Insufficient funds');
 
       // Deduct cash
@@ -271,7 +269,7 @@ export default function TattooParlour() {
   // Text tattoo mutation
   const textTattooMutation = useMutation({
     mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
-      if (!currentParlour || !user) throw new Error('Missing data');
+      if (!currentParlour || !profileId) throw new Error('Missing data');
       if ((profile?.cash || 0) < data.price) throw new Error('Insufficient funds');
 
       const artistBonus = selectedArtist?.quality_bonus || 0;
