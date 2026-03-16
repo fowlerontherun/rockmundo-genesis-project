@@ -68,7 +68,7 @@ export const usePlaylists = (profileId?: string) => {
           *,
           playlist:playlists(*)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("submitted_at", { ascending: false });
       
       if (error) {
