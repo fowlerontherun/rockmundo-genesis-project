@@ -237,7 +237,7 @@ export function useBandYearEventCount(bandId?: string) {
 }
 
 export function useAcceptMajorEvent() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
