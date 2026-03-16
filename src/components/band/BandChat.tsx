@@ -25,7 +25,7 @@ interface ChatMessage {
 }
 
 export function BandChat({ bandId }: BandChatProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
