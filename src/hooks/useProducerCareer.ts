@@ -64,7 +64,7 @@ export const useCreateProducerProfile = () => {
       const { data, error } = await (supabase as any)
         .from('player_producer_profiles')
         .insert({
-          user_id: user!.id,
+          user_id: profileId!,
           display_name: input.display_name,
           cost_per_hour: Math.max(10, input.cost_per_hour),
           specialty_genre: input.specialty_genre,
