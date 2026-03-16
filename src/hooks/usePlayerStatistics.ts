@@ -99,7 +99,7 @@ export const usePlayerStatistics = (userId?: string) => {
         } : null,
       } as PerformanceStats;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: songwritingStats, isLoading: isLoadingSongwriting } = useQuery({
