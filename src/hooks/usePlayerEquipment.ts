@@ -2,7 +2,6 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { type EquipmentItemRecord } from "@/types/gear";
 
@@ -47,7 +46,6 @@ export interface PlayerEquipmentData {
 }
 
 export const usePlayerEquipment = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery<PlayerEquipmentData>({
@@ -64,12 +62,12 @@ export const usePlayerEquipment = () => {
             `id, equipment_id, condition, is_equipped, created_at, available_for_loadout, available_at, loadout_slot_kind, pool_category,
              equipment:equipment_items!equipment_id (id, name, category, subcategory, price, rarity, description, stat_boosts, stock)`
           )
-          .eq("user_id", user!.id)
+          .eq("user_id", profileId)
           .order("created_at", { ascending: false }),
         supabase
           .from("player_gear_pool_status")
           .select("user_id, category, slot_kind, capacity, used_count, available_slots, default_capacity, catalog_slot_kind, updated_at")
-          .eq("user_id", user!.id),
+          .eq("user_id", profileId),
       ]);
 
       if (equipmentResult.error) {

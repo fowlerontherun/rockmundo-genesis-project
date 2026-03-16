@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface FinancialTransaction {
@@ -164,7 +164,6 @@ const INVESTMENT_OPTIONS: InvestmentOption[] = [
 ];
 
 export const useFinances = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   // Fetch player's cash from profiles

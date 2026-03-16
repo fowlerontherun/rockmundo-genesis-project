@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.073",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useFinances hook fully uses profileId, removed useAuth" },
+      { type: 'improvement', description: "useConditions queries and mutations use profileId" },
+      { type: 'improvement', description: "useCharacterIdentity removed useAuth dependency" },
+      { type: 'improvement', description: "useAddictions recovery/therapy mutations use profileId" },
+      { type: 'improvement', description: "usePlayerEquipment gear queries use profileId" },
+      { type: 'improvement', description: "usePlayerSurvey completion/responses use profileId" },
+    ],
+  },
+  {
     version: "1.1.072",
     date: "2026-03-16",
     changes: [

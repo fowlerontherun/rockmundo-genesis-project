@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { awardSpecialXp } from "@/utils/progression";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +21,6 @@ export interface SurveyConfig {
 }
 
 export function usePlayerSurvey() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -61,14 +59,14 @@ export function usePlayerSurvey() {
 
   // Check if player already completed current round
   const { data: hasCompleted, isSuccess: completionChecked } = useQuery({
-    queryKey: ["survey-completion", user?.id, surveyConfig?.round],
-    enabled: !!user && !!surveyConfig?.enabled && !!surveyConfig?.round,
+    queryKey: ["survey-completion", profileId, surveyConfig?.round],
+    enabled: !!profileId && !!surveyConfig?.enabled && !!surveyConfig?.round,
     refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("player_survey_completions")
         .select("id")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId!)
         .eq("survey_round", surveyConfig!.round)
         .maybeSingle();
       return !!data;
@@ -80,7 +78,7 @@ export function usePlayerSurvey() {
     configLoaded &&
     completionChecked &&
     surveyConfig?.enabled &&
-    user &&
+    profileId &&
     hasCompleted === false
   );
 
@@ -106,15 +104,14 @@ export function usePlayerSurvey() {
   // Submit all answers + claim reward
   const submitMutation = useMutation({
     mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
-      if (!user || !surveyConfig) throw new Error("Not ready");
+      if (!profileId || !surveyConfig) throw new Error("Not ready");
 
-      // Use profileId directly
       const round = surveyConfig.round;
 
       // Insert responses
       const rows = answers.map((a) => ({
-        user_id: user.id,
-        profile_id: profileId ?? null,
+        user_id: profileId,
+        profile_id: profileId,
         question_id: a.questionId,
         survey_round: round,
         answer_value: a.answerValue,
@@ -138,7 +135,7 @@ export function usePlayerSurvey() {
         const walletTable = supabase.from("player_xp_wallet") as any;
         const walletQuery = await walletTable
           .select("attribute_points_balance, attribute_points_lifetime")
-          .eq("user_id", user.id)
+          .eq("user_id", profileId)
           .maybeSingle();
         const wallet = walletQuery.data;
         if (wallet) {
@@ -147,7 +144,7 @@ export function usePlayerSurvey() {
               attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
               attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
             })
-            .eq("user_id", user.id);
+            .eq("user_id", profileId);
         }
       } catch (e) {
         console.warn("Attribute points award failed:", e);
@@ -157,8 +154,8 @@ export function usePlayerSurvey() {
       const { error: compError } = await supabase
         .from("player_survey_completions")
         .insert({
-          user_id: user.id,
-          profile_id: profileId ?? null,
+          user_id: profileId,
+          profile_id: profileId,
           survey_round: round,
           xp_awarded: 250,
           attribute_points_awarded: 25,

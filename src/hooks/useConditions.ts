@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import {
@@ -30,7 +29,6 @@ export interface PlayerCondition {
 }
 
 export function useConditions() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -38,17 +36,16 @@ export function useConditions() {
     queryKey: ["player-conditions", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      // player_conditions table may not exist — use user_id fallback
       const { data, error } = await (supabase as any)
         .from("player_conditions")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", profileId)
         .in("status", ["active", "treating"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as PlayerCondition[];
     },
-    enabled: !!profileId && !!user?.id,
+    enabled: !!profileId,
   });
 
   const activeConditions = conditions.filter((c) => c.status === "active" || c.status === "treating");
@@ -63,7 +60,7 @@ export function useConditions() {
 
   const treatMutation = useMutation({
     mutationFn: async ({ conditionId, treatmentType }: { conditionId: string; treatmentType: TreatmentType }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const condition = conditions.find((c) => c.id === conditionId);
       if (!condition) throw new Error("Condition not found");
@@ -116,7 +113,7 @@ export function useConditions() {
 
   const checkRecoveryMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) return;
+      if (!profileId) return;
       const now = new Date().toISOString();
       const treatingConditions = conditions.filter(
         (c) => c.status === "treating" && c.estimated_recovery_at && c.estimated_recovery_at <= now

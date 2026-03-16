@@ -1,13 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { AddictionRecord, RecoveryProgram } from "@/utils/addictionSystem";
 import { getRecoveryProgramDetails } from "@/utils/addictionSystem";
 
 export function useAddictions() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -30,7 +28,7 @@ export function useAddictions() {
 
   const startRecoveryMutation = useMutation({
     mutationFn: async ({ addictionId, program }: { addictionId: string; program: RecoveryProgram }) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const details = getRecoveryProgramDetails(program);
 
@@ -63,7 +61,7 @@ export function useAddictions() {
         endDate.setDate(endDate.getDate() + rehabDays);
 
         await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: user.id,
+          user_id: profileId,
           profile_id: profileId,
           activity_type: "rehab",
           scheduled_start: new Date().toISOString(),
@@ -97,7 +95,7 @@ export function useAddictions() {
 
   const therapySessionMutation = useMutation({
     mutationFn: async (addictionId: string) => {
-      if (!user?.id || !profileId) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const addiction = addictions?.find(a => a.id === addictionId);
       if (!addiction) throw new Error("Addiction not found");
