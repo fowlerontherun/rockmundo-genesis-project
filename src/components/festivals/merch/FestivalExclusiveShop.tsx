@@ -22,7 +22,6 @@ const COLLECTIBLES = [
 ];
 
 export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: FestivalExclusiveShopProps) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [purchased, setPurchased] = useState<Set<string>>(new Set());
