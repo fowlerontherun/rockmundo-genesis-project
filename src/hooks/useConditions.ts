@@ -29,7 +29,7 @@ export interface PlayerCondition {
 }
 
 export function useConditions() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: conditions = [], isLoading } = useQuery({
