@@ -21,7 +21,7 @@ const goalTypes = [
 ];
 
 export function WellnessGoals() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [goalType, setGoalType] = useState("");
