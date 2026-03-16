@@ -41,7 +41,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   const weeklyPayments = activeLoans.reduce((sum, l) => sum + l.weekly_payment, 0);
 
   const handleApplyLoan = async () => {
-    if (!user?.id || !selectedOffer) return;
+    if (!profileId || !selectedOffer) return;
     const amount = parseInt(loanAmount);
     
     if (isNaN(amount) || amount <= 0 || amount > selectedOffer.maxAmount) {
