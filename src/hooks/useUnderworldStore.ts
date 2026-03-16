@@ -105,7 +105,7 @@ export const useUnderworldStore = () => {
       if (error) throw error;
       return (data || []) as ActiveBoost[];
     },
-    enabled: !!profileId && !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch purchase history
