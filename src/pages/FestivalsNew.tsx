@@ -345,6 +345,7 @@ export default function Festivals() {
     festivalsLoading, 
     participations,
     participationsLoading,
+    fetchFestivalLineup,
     applyToFestival,
     withdrawFromFestival,
     updateSetlist,
