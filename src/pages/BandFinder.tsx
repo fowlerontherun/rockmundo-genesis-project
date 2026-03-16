@@ -45,6 +45,7 @@ export default function BandFinder() {
           chemistry_level,
           description,
           total_fans,
+          is_recruiting,
           band_members!band_members_band_id_fkey(id)
         `)
         .eq("status", "active")
