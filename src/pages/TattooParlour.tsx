@@ -31,6 +31,7 @@ import {
 
 export default function TattooParlour() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedParlour, setSelectedParlour] = useState<string | null>(null);
   const [selectedDesign, setSelectedDesign] = useState<TattooDesign | null>(null);
