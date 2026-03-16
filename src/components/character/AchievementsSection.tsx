@@ -129,12 +129,12 @@ export function AchievementsSection() {
   }, []);
 
   const loadPlayerAchievements = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('player_achievements')
         .select(`*, achievements!player_achievements_achievement_id_fkey(*)`)
-        .eq('user_id', user.id);
+        .eq('profile_id', profileId);
       if (error) throw error;
       const rows: unknown[] = Array.isArray(data) ? data : [];
       const parsedPlayerAchievements = rows.reduce<PlayerAchievement[]>((acc, item) => {
@@ -159,7 +159,7 @@ export function AchievementsSection() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
     if (user) {
