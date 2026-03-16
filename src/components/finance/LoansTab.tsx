@@ -63,7 +63,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
 
       // Create loan
       const { error: loanError } = await supabase.from("player_loans").insert({
-        user_id: user.id!,
+        user_id: profileId!,
         profile_id: profileId,
         loan_name: selectedOffer.name,
         principal: amount,
