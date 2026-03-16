@@ -96,7 +96,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
   };
 
   const handleWithdraw = async (investment: PlayerInvestment) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     setIsWithdrawing(investment.id);
     try {
       // Get current cash
