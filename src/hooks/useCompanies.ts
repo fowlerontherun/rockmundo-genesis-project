@@ -363,7 +363,7 @@ export const useCloseSubsidiary = () => {
         .single();
 
       if (companyError || !company) throw new Error("Company not found");
-      if (company.owner_id !== user.id) throw new Error("You don't own this company");
+      if (company.owner_id !== profileId) throw new Error("You don't own this company");
       if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
 
       // Check for active contracts/obligations
