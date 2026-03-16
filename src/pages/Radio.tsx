@@ -195,6 +195,23 @@ export default function Radio() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: userBandIds = [] } = useQuery<string[]>({
+    queryKey: ["radio-user-band-ids", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      return (data ?? []).map((row) => row.band_id).filter((bandId): bandId is string => !!bandId);
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Stations query with staleTime
   const { data: stations, isLoading: stationsLoading } = useQuery<RadioStationRecord[]>({
     queryKey: ["radio-stations", filter],
@@ -265,20 +282,36 @@ export default function Radio() {
 
   // Recorded songs - fetch songs with status 'recorded' (simplified query)
   const { data: releasedSongs, isLoading: songsLoading } = useQuery<any[]>({
-    queryKey: ["recorded-songs-for-radio", user?.id],
+    queryKey: ["recorded-songs-for-radio", user?.id, userBandIds],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Get user's recorded songs directly - much simpler and faster
-      const { data: songs, error } = await supabase
+      const { data: songsByUser, error: songsByUserError } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, band_id")
         .eq("user_id", user.id)
         .eq("status", "recorded")
         .order("updated_at", { ascending: false });
 
-      if (error) throw error;
-      return songs || [];
+      if (songsByUserError) throw songsByUserError;
+
+      if (userBandIds.length === 0) {
+        return songsByUser || [];
+      }
+
+      const { data: songsByBand, error: songsByBandError } = await supabase
+        .from("songs")
+        .select("id, title, genre, quality_score, band_id")
+        .in("band_id", userBandIds)
+        .eq("status", "recorded")
+        .order("updated_at", { ascending: false });
+
+      if (songsByBandError) throw songsByBandError;
+
+      const mergedSongs = new Map<string, any>();
+      for (const song of songsByUser || []) mergedSongs.set(song.id, song);
+      for (const song of songsByBand || []) mergedSongs.set(song.id, song);
+      return Array.from(mergedSongs.values());
     },
     enabled: !!user?.id && activeTab === "submit",
     staleTime: 5 * 60 * 1000,
@@ -312,16 +345,36 @@ export default function Radio() {
 
   // Submissions - lazy load
   const { data: submissions, isLoading: submissionsLoading } = useQuery<RadioSubmissionRow[]>({
-    queryKey: ["my-radio-submissions", user?.id],
+    queryKey: ["my-radio-submissions", user?.id, userBandIds],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      const { data: userSubmissions, error: userSubmissionsError } = await supabase
         .from("radio_submissions")
         .select("id, status, submitted_at, reviewed_at, rejection_reason, station_id, song_id, songs(title), radio_stations(name)")
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
+
+      if (userSubmissionsError) throw userSubmissionsError;
+
+      if (userBandIds.length === 0) {
+        return (userSubmissions ?? []) as any[];
+      }
+
+      const { data: bandSubmissions, error: bandSubmissionsError } = await supabase
+        .from("radio_submissions")
+        .select("id, status, submitted_at, reviewed_at, rejection_reason, station_id, song_id, songs(title), radio_stations(name)")
+        .in("band_id", userBandIds)
+        .order("submitted_at", { ascending: false });
+
+      if (bandSubmissionsError) throw bandSubmissionsError;
+
+      const mergedSubmissions = new Map<string, any>();
+      for (const submission of userSubmissions ?? []) mergedSubmissions.set(submission.id, submission);
+      for (const submission of bandSubmissions ?? []) mergedSubmissions.set(submission.id, submission);
+
+      return Array.from(mergedSubmissions.values()).sort(
+        (a: any, b: any) => new Date(b.submitted_at ?? 0).getTime() - new Date(a.submitted_at ?? 0).getTime(),
+      ) as any[];
     },
     enabled: !!user?.id && activeTab === "submissions",
     staleTime: 2 * 60 * 1000,
