@@ -35,7 +35,7 @@ export interface InboxMessage {
 }
 
 export function useInbox(category?: InboxCategory | 'all') {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const query = useQuery({
