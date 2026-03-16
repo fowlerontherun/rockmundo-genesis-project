@@ -35,11 +35,11 @@ export const useEquipPlayerEquipment = () => {
       const unequipIds = (variables.unequipIds ?? []).filter((id) => id && id !== targetId);
 
       if (unequipIds.length > 0) {
-        const { error: unequipError } = await supabase
+        const { error: unequipError } = await (supabase
           .from("player_equipment_inventory")
           .update({ is_equipped: false })
           .in("id", unequipIds)
-          .eq("profile_id", profileId!) as any;
+          .eq("profile_id", profileId!) as any);
 
         if (unequipError) {
           throw unequipError;
