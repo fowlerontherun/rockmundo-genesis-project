@@ -91,23 +91,23 @@ export const useUnderworldStore = () => {
 
   // Fetch user's active boosts
   const { data: activeBoosts = [], isLoading: boostsLoading } = useQuery({
-    queryKey: ["active-boosts", user?.id],
+    queryKey: ["active-boosts", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_active_boosts")
         .select(`
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("is_active", true)
         .gt("expires_at", new Date().toISOString());
 
       if (error) throw error;
       return (data || []) as ActiveBoost[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId && !!user?.id,
   });
 
   // Fetch purchase history
