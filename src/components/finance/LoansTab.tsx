@@ -30,6 +30,7 @@ interface LoansTabProps {
 
 export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null);
   const [loanAmount, setLoanAmount] = useState("");
