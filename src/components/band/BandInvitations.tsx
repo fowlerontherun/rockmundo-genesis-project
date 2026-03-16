@@ -54,18 +54,15 @@ export const BandInvitations = () => {
   const acceptInviteMutation = useMutation({
     mutationFn: async (invitationId: string) => {
       const invitation = invitations?.find((i) => i.id === invitationId);
-      if (!invitation || !user?.id) throw new Error("Invalid invitation");
+      if (!invitation || !profileId) throw new Error("Invalid invitation");
 
-      // Get active profile
-      const { data: activeProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
+      // Update invitation status
+      const { error: inviteError } = await supabase
+        .from("band_invitations")
+        .update({ status: "accepted", responded_at: new Date().toISOString() })
+        .eq("id", invitationId);
 
-      if (!activeProfile) throw new Error("No active character found");
+      if (inviteError) throw inviteError;
 
       // Update invitation status
       const { error: inviteError } = await supabase
