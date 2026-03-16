@@ -5,14 +5,14 @@ import { BarChart3, TrendingUp } from "lucide-react";
 import { StreamingStatsCard } from "./StreamingStatsCard";
 
 interface AnalyticsTabProps {
-  userId: string;
+  profileId: string;
 }
 
-export const AnalyticsTab = ({ userId }: AnalyticsTabProps) => {
+export const AnalyticsTab = ({ profileId }: AnalyticsTabProps) => {
   const { data: releases } = useQuery({
-    queryKey: ["song-releases-analytics", userId],
+    queryKey: ["song-releases-analytics", profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("song_releases")
         .select(`
           *,
@@ -22,7 +22,7 @@ export const AnalyticsTab = ({ userId }: AnalyticsTabProps) => {
             quality_score
           )
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("is_active", true)
         .order("total_streams", { ascending: false });
 

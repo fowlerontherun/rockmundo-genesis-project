@@ -272,7 +272,7 @@ const Travel = () => {
 
         {/* Past Travel Tab */}
         <TabsContent value="history" className="space-y-6">
-          {user && <PastTravelList userId={user.id} />}
+          {profileId && <PastTravelList profileId={profileId} />}
         </TabsContent>
       </Tabs>
 

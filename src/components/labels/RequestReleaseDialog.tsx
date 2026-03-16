@@ -16,7 +16,7 @@ interface RequestReleaseDialogProps {
   terminationFeePct: number;
   contractValue: number;
   bandId: string | null;
-  userId: string;
+  profileId: string;
 }
 
 export function RequestReleaseDialog({
@@ -27,20 +27,20 @@ export function RequestReleaseDialog({
   terminationFeePct,
   contractValue,
   bandId,
-  userId,
+  profileId,
 }: RequestReleaseDialogProps) {
   const queryClient = useQueryClient();
 
   const terminationFee = Math.round((contractValue || 0) * ((terminationFeePct || 50) / 100));
 
   const { data: canAfford } = useQuery({
-    queryKey: ["can-afford-termination", bandId, userId, terminationFee],
+    queryKey: ["can-afford-termination", bandId, profileId, terminationFee],
     queryFn: async () => {
       if (bandId) {
         const { data } = await supabase.from("bands").select("band_balance").eq("id", bandId).single();
         return (data?.band_balance || 0) >= terminationFee;
       }
-      const { data } = await supabase.from("profiles").select("cash").eq("user_id", userId).single();
+      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
       return (data?.cash || 0) >= terminationFee;
     },
     enabled: open,
@@ -60,13 +60,13 @@ export function RequestReleaseDialog({
           amount: -terminationFee,
           source: "contract_termination",
           description: `Early contract termination fee paid to ${labelName}`,
-          earned_by_user_id: userId,
+          earned_by_user_id: profileId,
         });
       } else {
-        const { data: profile } = await supabase.from("profiles").select("cash").eq("user_id", userId).single();
+        const { data: profile } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
         if (!profile || (profile.cash || 0) < terminationFee) throw new Error("Insufficient funds for termination fee");
         
-        await supabase.from("profiles").update({ cash: (profile.cash || 0) - terminationFee }).eq("user_id", userId);
+        await supabase.from("profiles").update({ cash: (profile.cash || 0) - terminationFee }).eq("id", profileId);
       }
 
       // Get contract's label_id to credit the label

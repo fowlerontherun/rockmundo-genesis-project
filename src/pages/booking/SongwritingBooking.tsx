@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +19,7 @@ export default function SongwritingBooking() {
   const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
@@ -30,9 +32,9 @@ export default function SongwritingBooking() {
 
   // Fetch user's open songwriting projects
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["songwriting-projects", user?.id],
+    queryKey: ["songwriting-projects", profileId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profileId) return [];
       
       const { data, error } = await supabase
         .from("songwriting_projects")
@@ -47,14 +49,14 @@ export default function SongwritingBooking() {
           created_at,
           updated_at
         `)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "in_progress")
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const handleBookSession = async () => {
@@ -76,7 +78,8 @@ export default function SongwritingBooking() {
     const project = projects.find(p => p.id === selectedProjectId);
 
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: user.id,
+      user_id: user!.id,
+      profile_id: profileId,
       activity_type: "songwriting",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),

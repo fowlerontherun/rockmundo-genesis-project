@@ -5,12 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
  * Hook to track player's total hours played.
  * Updates the profile's total_hours_played every 5 minutes while the user is active.
  */
-export const usePlaytimeTracker = (userId: string | null) => {
+export const usePlaytimeTracker = (profileId: string | null) => {
   const lastUpdateRef = useRef<number>(Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!profileId) return;
 
     const UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -25,7 +25,7 @@ export const usePlaytimeTracker = (userId: string | null) => {
         const { data: profile, error: fetchError } = await supabase
           .from('profiles')
           .select('total_hours_played')
-          .eq('user_id', userId)
+          .eq('id', profileId)
           .single();
 
         if (fetchError) {
@@ -44,7 +44,7 @@ export const usePlaytimeTracker = (userId: string | null) => {
             total_hours_played: Math.round(newTotalHours),
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', userId);
+          .eq('id', profileId);
 
         if (updateError) {
           console.warn('Failed to update playtime:', updateError.message);
@@ -77,5 +77,5 @@ export const usePlaytimeTracker = (userId: string | null) => {
       // Final update on unmount
       updatePlaytime();
     };
-  }, [userId]);
+  }, [profileId]);
 };

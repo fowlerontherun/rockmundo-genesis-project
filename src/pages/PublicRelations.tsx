@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ type TabValue = "offers" | "appearances" | "self-promo" | "film" | "consultant";
 
 export default function PublicRelations() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabValue>("offers");
 
@@ -259,7 +261,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="consultant" className="mt-4">
-            <PRConsultantPanel userId={user.id} bandId={userBand.id} />
+            <PRConsultantPanel profileId={profileId || ""} bandId={userBand.id} />
           </TabsContent>
         </Tabs>
       </div>

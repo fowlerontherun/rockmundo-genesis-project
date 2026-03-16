@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -98,6 +99,7 @@ const getBestGigLabel = (gig: CareerGigHighlight | null) => {
 };
 
 const CareerDashboardPage = () => {
+  const { profileId } = useActiveProfile();
   const [overview, setOverview] = useState<CareerOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,20 +111,13 @@ const CareerDashboardPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+        const activeProfileId = profileId;
 
-        if (authError) {
-          throw authError;
+        if (!activeProfileId) {
+          throw new Error("No active character found.");
         }
 
-        if (!user) {
-          throw new Error("You need to be logged in to view your career dashboard.");
-        }
-
-        const data = await fetchCareerOverview(user.id);
+        const data = await fetchCareerOverview(activeProfileId);
         if (active) {
           setOverview(data);
         }
@@ -142,7 +137,7 @@ const CareerDashboardPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [profileId]);
 
   const topSkill = useMemo(() => getTopSkillLabel(overview), [overview]);
   const lastGigRelative = useMemo(

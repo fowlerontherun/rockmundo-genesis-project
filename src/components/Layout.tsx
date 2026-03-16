@@ -4,6 +4,7 @@ import Navigation from "@/components/ui/navigation";
 import HorizontalNavigation from "@/components/ui/HorizontalNavigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useNavStyle } from "@/hooks/useNavStyle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,6 +28,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
+  const { profileId } = useActiveProfile();
   const { navStyle } = useNavStyle();
   const isHorizontal = navStyle === "horizontal";
 
@@ -40,7 +42,7 @@ const Layout = () => {
   useGlobalGigExecution(user?.id || null);
 
   // Track total hours played
-  usePlaytimeTracker(user?.id || null);
+  usePlaytimeTracker(profileId || null);
 
   // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);

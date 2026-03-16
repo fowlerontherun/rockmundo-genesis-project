@@ -98,13 +98,13 @@ const OffersDashboard = () => {
 
   // Fetch all offer sources in parallel
   const { data: modelingOffers, isLoading: loadingModeling } = useQuery({
-    queryKey: ["offers-modeling", userId],
+    queryKey: ["offers-modeling", profileId],
     queryFn: async () => {
-      if (!userId) return [];
-      const { data } = await supabase
+      if (!profileId) return [];
+      const { data } = await (supabase as any)
         .from("player_modeling_contracts")
         .select("id, status, compensation, fame_boost, created_at, gig:modeling_gigs(title)")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
       return (data || []).map((r: any) => ({
         id: r.id,
         source: "Modeling",
@@ -115,17 +115,17 @@ const OffersDashboard = () => {
         fameImpact: r.fame_boost || 0,
       }));
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: mediaOffers, isLoading: loadingMedia } = useQuery({
-    queryKey: ["offers-media", userId],
+    queryKey: ["offers-media", profileId],
     queryFn: async () => {
-      if (!userId) return [];
-      const { data } = await supabase
+      if (!profileId) return [];
+      const { data } = await (supabase as any)
         .from("pr_media_offers")
         .select("id, status, compensation, fame_boost, created_at, show_name, outlet_name")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
       return (data || []).map((r: any) => ({
         id: r.id,
         source: "Media",
@@ -136,7 +136,7 @@ const OffersDashboard = () => {
         fameImpact: r.fame_boost || 0,
       }));
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: gigOffers, isLoading: loadingGigs } = useQuery({

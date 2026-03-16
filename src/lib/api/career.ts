@@ -120,14 +120,14 @@ const mapGigToHighlight = (gig: GigOutcomeWithDetails): CareerGigHighlight => ({
   netProfit: gig.net_profit ?? 0,
 });
 
-export const fetchCareerOverview = async (userId: string): Promise<CareerOverview> => {
+export const fetchCareerOverview = async (profileId: string): Promise<CareerOverview> => {
   // Fetch ALL band memberships for this player
   const { data: memberships, error: membershipError } = await supabase
     .from("band_members")
     .select(
       `band_id, band:bands (id, name, fame, popularity, weekly_fans)`
     )
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .order("joined_at", { ascending: false });
 
   if (membershipError) {
@@ -171,18 +171,12 @@ export const fetchCareerOverview = async (userId: string): Promise<CareerOvervie
   }
 
   // Fetch skills from skill_progress via profile
-  const { data: playerProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
   let skillRows: { skill_slug: string; current_level: number }[] = [];
-  if (playerProfile?.id) {
+  {
     const { data: progressData, error: skillsError } = await supabase
       .from("skill_progress")
       .select("skill_slug, current_level")
-      .eq("profile_id", playerProfile.id);
+      .eq("profile_id", profileId);
 
     if (skillsError) {
       throw skillsError;

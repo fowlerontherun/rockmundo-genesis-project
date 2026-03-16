@@ -28,13 +28,13 @@ import { format, parseISO, addDays } from "date-fns";
 import { useState } from "react";
 
 interface PRConsultantPanelProps {
-  userId: string;
+  profileId: string;
   bandId: string;
 }
 
 const CONSULTANT_MONTHLY_FEE = 10000;
 
-export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
+export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps) {
   const queryClient = useQueryClient();
   const { data: vipStatus, isLoading: vipLoading } = useVipStatus();
   const [selectedConsultant, setSelectedConsultant] = useState<string>("");
@@ -57,22 +57,22 @@ export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
 
   // Fetch current consultant subscription
   const { data: activeConsultant, isLoading: subscriptionLoading } = useQuery({
-    queryKey: ["player-pr-consultant", userId],
+    queryKey: ["player-pr-consultant", profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_pr_consultants")
         .select(`
           *,
           pr_consultants(name, specialty, success_rate, tier)
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .gte("expires_at", new Date().toISOString())
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -84,11 +84,11 @@ export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
 
       const expiresAt = addDays(new Date(), 30);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("player_pr_consultants")
         .insert({
-          user_id: userId,
-          consultant_id: consultantId as any,
+          profile_id: profileId,
+          consultant_id: consultantId,
           expires_at: expiresAt.toISOString(),
           monthly_fee: consultant.weekly_fee * 4 || CONSULTANT_MONTHLY_FEE,
           auto_accept_enabled: true,
@@ -98,7 +98,7 @@ export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
       return { consultant, expiresAt };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", userId] });
+      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", profileId] });
       toast.success(`Hired ${data.consultant.name}!`, {
         description: `Your PR consultant will handle offers until ${format(data.expiresAt, "MMM d, yyyy")}`,
       });
@@ -121,7 +121,7 @@ export function PRConsultantPanel({ userId, bandId }: PRConsultantPanelProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", userId] });
+      queryClient.invalidateQueries({ queryKey: ["player-pr-consultant", profileId] });
       toast.success("Auto-accept disabled");
     },
     onError: (error: Error) => {

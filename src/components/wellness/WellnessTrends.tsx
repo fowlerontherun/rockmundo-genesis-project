@@ -1,25 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 
 export function WellnessTrends() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: trends } = useQuery({
-    queryKey: ["wellness-trends", user?.id],
+    queryKey: ["wellness-trends", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get activities from the last 7 days
       const startDate = subDays(new Date(), 7);
       const { data: activities } = await supabase
         .from("experience_ledger")
         .select("activity_type, xp_amount, created_at")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .in("activity_type", ["rest", "exercise", "meditation", "therapy", "nutrition", "yoga"])
         .gte("created_at", startDate.toISOString())
         .order("created_at", { ascending: true });
@@ -55,7 +55,7 @@ export function WellnessTrends() {
 
       return dailyData;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const totalXp = trends?.reduce((sum, d) => sum + d.total, 0) || 0;

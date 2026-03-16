@@ -174,7 +174,7 @@ const StreamingPlatforms = () => {
 
 
         <TabsContent value="analytics">
-          <AnalyticsTab userId={profileId || ""} />
+          <AnalyticsTab profileId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="detailed-analytics">

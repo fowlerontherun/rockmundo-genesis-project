@@ -4,18 +4,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Music2 } from "lucide-react";
 
 interface ReleaseSelectorProps {
-  userId?: string;
+  profileId?: string;
   bandId?: string;
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
 }
 
-export function ReleaseSelector({ userId, bandId, value, onValueChange, placeholder = "Select a release" }: ReleaseSelectorProps) {
+export function ReleaseSelector({ profileId, bandId, value, onValueChange, placeholder = "Select a release" }: ReleaseSelectorProps) {
   const { data: releases, isLoading } = useQuery({
-    queryKey: ["user-releases", userId, bandId],
+    queryKey: ["user-releases", profileId, bandId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("releases")
         .select("id, title, release_status, created_at")
         .eq("release_status", "released")
@@ -23,15 +23,15 @@ export function ReleaseSelector({ userId, bandId, value, onValueChange, placehol
 
       if (bandId) {
         query = query.eq("band_id", bandId);
-      } else if (userId) {
-        query = query.eq("user_id", userId);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!userId || !!bandId,
+    enabled: !!profileId || !!bandId,
   });
 
   if (isLoading) {
