@@ -144,22 +144,11 @@ export const usePurchaseSkin = () => {
     }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      // Get active profile_id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
-
       // Check if already owned
       const { data: existing } = await supabase
         .from("player_owned_skins")
         .select("id")
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("item_id", itemId)
         .maybeSingle();
 
@@ -169,7 +158,7 @@ export const usePurchaseSkin = () => {
       const { error: insertError } = await supabase
         .from("player_owned_skins")
         .insert({
-          profile_id: profile.id,
+          profile_id: profileId,
           item_id: itemId,
           item_type: itemType,
         });
