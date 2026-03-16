@@ -44,7 +44,7 @@ interface Song {
 }
 
 export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWizardProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
   const queryClient = useQueryClient();
