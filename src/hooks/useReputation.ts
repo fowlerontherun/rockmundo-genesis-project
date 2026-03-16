@@ -1,7 +1,7 @@
 // Reputation Hook - Manages player's reputation across 4 axes
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import {
   fetchPlayerReputation,
