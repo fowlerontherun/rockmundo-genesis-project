@@ -218,10 +218,10 @@ export default function TattooParlour() {
       const qualityScore = Math.min(100, baseQuality + customArtist.quality_bonus + 10); // +10% custom boost
 
       // Create the tattoo directly (instant completion for MVP)
-      const { data: tattoo, error: tattooError } = await supabase
+      const { data: tattoo, error: tattooError } = await (supabase as any)
         .from('player_tattoos')
         .insert({
-          user_id: user.id,
+          profile_id: profileId,
           tattoo_design_id: null,
           parlour_id: currentParlour.id,
           artist_id: customArtist.id,
@@ -229,7 +229,7 @@ export default function TattooParlour() {
           quality_score: qualityScore,
           ink_color: '#1a1a2e',
           price_paid: data.quotedPrice,
-          is_infected: false, // Custom artists don't cause infections
+          is_infected: false,
         })
         .select()
         .single();
