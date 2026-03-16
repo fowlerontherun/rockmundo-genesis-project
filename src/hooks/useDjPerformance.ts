@@ -31,8 +31,7 @@ export function useDjPerformance() {
 
   const performDjSet = useMutation({
     mutationFn: async (club: CityNightClub): Promise<DjPerformanceOutcome> => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (!profileId) throw new Error("No active profile");
+      if (!profileId) throw new Error("Not authenticated");
       if (!settings) throw new Error("Behavior settings not loaded");
 
       // 1. Get player profile
