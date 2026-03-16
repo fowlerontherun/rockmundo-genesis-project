@@ -208,7 +208,7 @@ export const useUnderworldStore = () => {
           const { data: profile, error: profileFetchError } = await supabase
             .from("profiles")
             .select("health, energy, experience, fame")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
 
           if (profileFetchError) throw profileFetchError;
@@ -231,7 +231,7 @@ export const useUnderworldStore = () => {
             const { error: updateError } = await supabase
               .from("profiles")
               .update(updates)
-              .eq("user_id", user.id);
+              .eq("id", profileId);
 
             if (updateError) throw updateError;
           }
