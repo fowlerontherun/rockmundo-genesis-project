@@ -582,10 +582,10 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
                           </div>
                         </div>
                       </div>
-                      <Button className="w-full" onClick={handleBuy} disabled={isBuying || !user || !buyQuantity}>
+                      <Button className="w-full" onClick={handleBuy} disabled={isBuying || !profileId || !buyQuantity}>
                         {isBuying ? "Processing..." : `Buy ${selectedTokenData.symbol} at ${formatPrice(selectedTokenData.current_price)}`}
                       </Button>
-                      {!user && <p className="text-xs text-muted-foreground text-center">Log in to trade</p>}
+                      {!profileId && <p className="text-xs text-muted-foreground text-center">Log in to trade</p>}
                     </TabsContent>
                     <TabsContent value="sell" className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
