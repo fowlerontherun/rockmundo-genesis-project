@@ -52,10 +52,10 @@ export function HabitTracker() {
 
   const addHabitMutation = useMutation({
     mutationFn: async (name: string) => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!profileId) throw new Error("No active profile");
       const { error } = await supabase
         .from("player_habits")
-        .insert({ user_id: user.id, name, category: "custom" });
+        .insert({ user_id: profileId, name, category: "custom" });
       if (error) throw error;
     },
     onSuccess: () => {
