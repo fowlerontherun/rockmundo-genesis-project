@@ -6,20 +6,12 @@ import { BookOpen, GraduationCap } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export const CurrentLearningSection = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const { data: activeEnrollment } = useQuery({
-    queryKey: ["current_enrollment", user?.id],
+    queryKey: ["current_enrollment", profileId],
     queryFn: async () => {
-      if (!user) return null;
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return null;
+      if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("player_university_enrollments")
@@ -28,7 +20,7 @@ export const CurrentLearningSection = () => {
           universities (name),
           university_courses (name, skill_slug)
         `)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .in("status", ["enrolled", "in_progress"])
         .order("created_at", { ascending: false })
         .limit(1)
@@ -37,7 +29,7 @@ export const CurrentLearningSection = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: activeReading } = useQuery({
