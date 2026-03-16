@@ -312,7 +312,7 @@ export function FamilyDashboard() {
               parentAId: birthDialogRequest.parent_a_id,
               parentBId: birthDialogRequest.parent_b_id,
               marriageId: birthDialogRequest.marriage_id,
-              controllerUserId: user?.id ?? "",
+              controllerUserId: profileId ?? "",
               surname: deriveSurname(birthDialogRequest),
               inheritedPotentials: birthPotentials,
             }, {
