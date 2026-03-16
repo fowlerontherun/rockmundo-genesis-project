@@ -34,7 +34,7 @@ const MANUFACTURING_DAYS: Record<string, number> = {
 export function ReorderStockDialog({ open, onOpenChange, format, release }: ReorderStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const [quantity, setQuantity] = useState(100);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
