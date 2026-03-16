@@ -34,7 +34,7 @@ export const useUnderworldInventory = () => {
 
   // Fetch unused inventory items (not used or boosters)
   const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery({
-    queryKey: ["underworld-inventory", user?.id],
+    queryKey: ["underworld-inventory", profileId],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const useUnderworldInventory = () => {
       if (error) throw error;
       return (data || []) as InventoryItem[];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profileId,
   });
 
   // Use an item from inventory
@@ -147,11 +147,10 @@ export const useUnderworldInventory = () => {
       // Check addiction trigger if product has addiction_type
       if (product?.addiction_type) {
         const addictionType = product.addiction_type as AddictionType;
-        // Check if player already has this addiction
         const { data: existingAddiction } = await supabase
           .from("player_addictions")
           .select("id, severity")
-          .eq("user_id", user.id)
+          .eq("profile_id", profileId)
           .eq("addiction_type", addictionType)
           .in("status", ["active", "recovering", "relapsed"])
           .maybeSingle();
@@ -171,6 +170,7 @@ export const useUnderworldInventory = () => {
           if (Math.random() < 0.30) {
             await supabase.from("player_addictions").insert({
               user_id: user.id,
+              profile_id: profileId,
               addiction_type: addictionType,
               severity: 20,
               status: "active",

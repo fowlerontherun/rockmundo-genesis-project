@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface FestivalAttendance {
@@ -15,10 +16,11 @@ export interface FestivalAttendance {
 
 export const useFestivalAttendance = (festivalId: string | undefined) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: attendance, isLoading } = useQuery<FestivalAttendance | null>({
-    queryKey: ["festival-attendance", festivalId, user?.id],
+    queryKey: ["festival-attendance", festivalId, profileId],
     queryFn: async () => {
       if (!festivalId || !user?.id) return null;
       const { data, error } = await (supabase as any)

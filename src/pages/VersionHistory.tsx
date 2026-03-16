@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.052",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Underworld store now queries cash balance and applies effects by profileId instead of user_id lookup" },
+      { type: 'improvement', description: "Underworld inventory addiction checks now use profile_id for character-specific addiction tracking" },
+      { type: 'fix', description: "Festival attendance queries scoped to active profile for correct character isolation" },
+      { type: 'fix', description: "Scheduled activity creation now fetches active profile (is_active=true, died_at=null) instead of any profile" },
+      { type: 'fix', description: "Skill practice profile lookup uses active profile filter for correct character" },
+    ],
+  },
+  {
     version: "1.1.051",
     date: "2026-03-16",
     changes: [

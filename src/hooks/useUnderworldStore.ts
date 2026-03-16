@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
 export interface UnderworldProduct {
@@ -52,6 +53,7 @@ export interface UnderworldPurchase {
 
 export const useUnderworldStore = () => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -72,40 +74,40 @@ export const useUnderworldStore = () => {
 
   // Fetch user's cash balance
   const { data: userBalance = 0, isLoading: balanceLoading } = useQuery({
-    queryKey: ["user-cash-balance", user?.id],
+    queryKey: ["user-cash-balance", profileId],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!profileId) return 0;
       const { data, error } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       if (error) throw error;
       return data?.cash || 0;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch user's active boosts
   const { data: activeBoosts = [], isLoading: boostsLoading } = useQuery({
-    queryKey: ["active-boosts", user?.id],
+    queryKey: ["active-boosts", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_active_boosts")
         .select(`
           *,
           product:underworld_products(*)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .eq("is_active", true)
         .gt("expires_at", new Date().toISOString());
 
       if (error) throw error;
       return (data || []) as ActiveBoost[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId && !!user?.id,
   });
 
   // Fetch purchase history
@@ -138,7 +140,7 @@ export const useUnderworldStore = () => {
       product: UnderworldProduct;
       paymentMethod: "cash" | "crypto";
     }) => {
-      if (!user?.id) throw new Error("Not logged in");
+      if (!user?.id || !profileId) throw new Error("Not logged in");
 
       // Validate payment
       if (paymentMethod === "cash") {
@@ -149,7 +151,7 @@ export const useUnderworldStore = () => {
         const { error: cashError } = await supabase
           .from("profiles")
           .update({ cash: userBalance - product.price_cash })
-          .eq("user_id", user.id);
+          .eq("id", profileId);
 
         if (cashError) throw cashError;
       } else {
@@ -206,7 +208,7 @@ export const useUnderworldStore = () => {
           const { data: profile, error: profileFetchError } = await supabase
             .from("profiles")
             .select("health, energy, experience, fame")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
 
           if (profileFetchError) throw profileFetchError;
@@ -229,7 +231,7 @@ export const useUnderworldStore = () => {
             const { error: updateError } = await supabase
               .from("profiles")
               .update(updates)
-              .eq("user_id", user.id);
+              .eq("id", profileId);
 
             if (updateError) throw updateError;
           }
@@ -237,17 +239,11 @@ export const useUnderworldStore = () => {
 
         // Apply skill XP if applicable (for non-inventory items)
         if (effects.skill_slug && effects.skill_xp) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("user_id", user.id)
-            .single();
-
-          if (profile?.id) {
+          if (profileId) {
             const { data: skillProgress, error: skillFetchError } = await supabase
               .from("skill_progress")
               .select("*")
-              .eq("profile_id", profile.id)
+              .eq("profile_id", profileId)
               .eq("skill_slug", String(effects.skill_slug))
               .single();
 
@@ -348,7 +344,7 @@ export const useUnderworldStore = () => {
           const { data: profile } = await supabase
             .from("profiles")
             .select("current_city_id, fame")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
           
           if (profile?.current_city_id) {
