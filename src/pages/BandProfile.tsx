@@ -35,12 +35,13 @@ export default function BandProfile() {
           created_at,
           logo_url,
           is_recruiting,
-          band_members(
+          band_members:band_members!band_members_band_id_fkey(
             id,
             instrument_role,
             vocal_role,
             role,
             joined_at,
+            is_touring_member,
             profile_id,
             profiles:profile_id(
               id,
