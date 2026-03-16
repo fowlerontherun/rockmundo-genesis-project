@@ -44,19 +44,19 @@ export default function PublicRelations() {
 
   // Fetch user's band
   const { data: userBand, isLoading: bandLoading } = useQuery({
-    queryKey: ["user-band-pr", user?.id],
+    queryKey: ["user-band-pr", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, fame, total_fans, band_balance")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 5 * 60 * 1000,
   });
 
