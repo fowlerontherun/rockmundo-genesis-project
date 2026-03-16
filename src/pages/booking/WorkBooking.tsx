@@ -19,7 +19,7 @@ const ACTIVITY_TYPES = [
 export default function WorkBooking() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [date, setDate] = useState<Date>();
   const [activityType, setActivityType] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<string>("");
