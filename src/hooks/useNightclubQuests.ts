@@ -86,7 +86,7 @@ export function useNightclubQuests(clubId: string | undefined) {
       const { data, error } = await supabase
         .from("player_nightclub_quest_progress")
         .select("*")
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .in("quest_id", questIds);
       if (error) throw error;
       return (data ?? []) as unknown as QuestProgress[];
