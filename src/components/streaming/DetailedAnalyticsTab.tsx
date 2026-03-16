@@ -382,7 +382,7 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
       </Card>
 
       {/* Platform Comparison */}
-      <PlatformComparisonChart userId={userId} />
+      <PlatformComparisonChart userId={userId} /> {/* userId here is actually profileId passed from parent */}
     </div>
   );
 }

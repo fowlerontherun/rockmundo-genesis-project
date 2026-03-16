@@ -71,7 +71,7 @@ export function CareerStats() {
         achievements: achievements || 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading career stats...</div>;

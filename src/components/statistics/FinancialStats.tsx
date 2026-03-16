@@ -67,7 +67,7 @@ export function FinancialStats() {
         incomeData,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading financial stats...</div>;

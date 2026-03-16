@@ -74,7 +74,7 @@ export function MusicStats() {
         totalRadioPlays,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading music stats...</div>;

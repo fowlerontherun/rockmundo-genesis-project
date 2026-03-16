@@ -22,7 +22,7 @@ export const AnalyticsTab = ({ userId }: AnalyticsTabProps) => {
             quality_score
           )
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", userId)
         .eq("is_active", true)
         .order("total_streams", { ascending: false });
 

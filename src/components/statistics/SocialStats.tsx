@@ -58,7 +58,7 @@ export function SocialStats() {
         videoCount: videos?.length || 0,
       };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   if (!stats) return <div>Loading social stats...</div>;

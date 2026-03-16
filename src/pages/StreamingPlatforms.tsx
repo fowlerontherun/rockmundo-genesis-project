@@ -169,20 +169,20 @@ const StreamingPlatforms = () => {
         </TabsContent>
 
         <TabsContent value="releases">
-          <StreamingMyReleasesTab userId={userId} />
+          <StreamingMyReleasesTab userId={profileId || ""} />
         </TabsContent>
 
 
         <TabsContent value="analytics">
-          <AnalyticsTab userId={userId} />
+          <AnalyticsTab userId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="detailed-analytics">
-          <DetailedAnalyticsTab userId={userId} />
+          <DetailedAnalyticsTab userId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="playlists">
-          <PlaylistsTab userId={userId} />
+          <PlaylistsTab userId={profileId || ""} />
         </TabsContent>
       </Tabs>
     </PageLayout>

@@ -31,9 +31,9 @@ export function PlatformComparisonChart({ userId }: PlatformComparisonChartProps
         .eq('is_active', true);
 
       if (userBandIds && userBandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`);
+        query = query.or(`profile_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`);
       } else {
-        query = query.eq('user_id', userId);
+        query = query.eq('profile_id', userId);
       }
 
       const { data: releases } = await query;
