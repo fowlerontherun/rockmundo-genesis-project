@@ -88,13 +88,13 @@ export const useCompanySubsidiaries = (parentCompanyId: string | undefined) => {
 };
 
 export const useCreateCompany = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateCompanyInput & { profileId?: string }): Promise<Company> => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get creation costs
       const costs = COMPANY_CREATION_COSTS[input.company_type];
