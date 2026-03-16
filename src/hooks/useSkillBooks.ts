@@ -12,6 +12,7 @@ export type ReadingSession = Tables<"player_book_reading_sessions">;
 export const useSkillBooks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["skill_books"],
