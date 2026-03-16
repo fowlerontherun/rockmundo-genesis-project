@@ -185,7 +185,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
 
       return allTravel;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
