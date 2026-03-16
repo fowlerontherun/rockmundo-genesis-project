@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.050",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Profile isolation extended to streaming components: MyReleasesTab, ReleaseSongTab, PlaylistsTab, AnalyticsTab, DetailedAnalyticsTab, PlatformComparisonChart, StreamingMyReleasesTab" },
+      { type: 'improvement', description: "Statistics components (CareerStats, FinancialStats, MusicStats, SocialStats) now query by active profile instead of auth user" },
+      { type: 'fix', description: "Tour booking and tour wizard hooks now use profileId for tour ownership and profile lookups" },
+      { type: 'fix', description: "Radio station submissions now use profileId for submission tracking and duplicate checking" },
+      { type: 'improvement', description: "StreamingPlatforms page passes profileId to all child streaming tabs for character-specific data" },
+    ],
+  },
+  {
     version: "1.1.049",
     date: "2026-03-15",
     changes: [
