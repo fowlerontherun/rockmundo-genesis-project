@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.055",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Housing hooks (properties, rentals, buy, sell, toggle rent) migrated from user_id to profile_id" },
+      { type: 'improvement', description: "Lottery ticket queries and prize claims now use profileId for character isolation" },
+      { type: 'improvement', description: "Auto rehearsal completion uses profile_id-based band membership lookup" },
+      { type: 'improvement', description: "Auto major event completion queries by profile_id instead of user_id" },
+      { type: 'fix', description: "Chart notification cooldowns use profile_id instead of user_id" },
+      { type: 'improvement', description: "Jam session booking uses active profile filter and profile_id for conflict checks" },
+    ],
+  },
+  {
     version: "1.1.054",
     date: "2026-03-16",
     changes: [
