@@ -78,10 +78,10 @@ export const useClothingBrand = () => {
 
   const createBrand = useMutation({
     mutationFn: async (input: { brand_name: string; brand_description?: string; genre_focus: string; city_id?: string }) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
-        .insert({ ...input, user_id: user.id } as never)
+        .insert({ ...input, user_id: profileId } as never)
         .select()
         .single();
       if (error) throw error;
