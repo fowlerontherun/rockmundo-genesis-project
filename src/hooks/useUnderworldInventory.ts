@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import type { UnderworldProduct } from "@/hooks/useUnderworldStore";
@@ -27,7 +26,6 @@ export interface InventoryItem {
 type EffectsRecord = Record<string, number | string>;
 
 export const useUnderworldInventory = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,7 +48,7 @@ export const useUnderworldInventory = () => {
       if (error) throw error;
       return (data || []) as InventoryItem[];
     },
-    enabled: !!user?.id && !!profileId,
+    enabled: !!profileId,
   });
 
   // Use an item from inventory
@@ -169,7 +167,7 @@ export const useUnderworldInventory = () => {
           // Roll for new addiction (30% chance from direct substance use)
           if (Math.random() < 0.30) {
             await supabase.from("player_addictions").insert({
-              user_id: user.id,
+              user_id: profileId,
               profile_id: profileId,
               addiction_type: addictionType,
               severity: 20,
@@ -183,12 +181,12 @@ export const useUnderworldInventory = () => {
       return { success: true, product };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["underworld-inventory", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["underworld-inventory", profileId] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["user-cash-balance", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["purchase-history", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["active-boosts", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["addictions", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-cash-balance", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-history", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["active-boosts", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["addictions", profileId] });
 
       toast({
         title: "Item Used",

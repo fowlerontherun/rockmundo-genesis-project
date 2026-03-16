@@ -1,8 +1,7 @@
 // NPC Relationships Hook - Manages player's relationships with NPCs
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useOptionalGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   fetchNPCRelationships,
   fetchNPCRelationship,
@@ -14,35 +13,30 @@ import {
 import type { NPCRelationship, RelationshipStage } from "@/types/roleplaying";
 
 export const useNPCRelationships = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: ["npc-relationships", profileId],
     queryFn: () => fetchNPCRelationships(profileId!),
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 5,
   });
 };
 
 export const useNPCRelationship = (npcType: string, npcId: string) => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: ["npc-relationship", profileId, npcType, npcId],
     queryFn: () => fetchNPCRelationship(profileId!, npcType, npcId),
-    enabled: !!user && !!profileId && !!npcType && !!npcId,
+    enabled: !!profileId && !!npcType && !!npcId,
     staleTime: 1000 * 60 * 5,
   });
 };
 
 export const useCreateNPCRelationship = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: (input: Omit<CreateNPCRelationshipInput, 'profile_id'>) => {
@@ -57,8 +51,7 @@ export const useCreateNPCRelationship = () => {
 
 export const useUpdateNPCRelationship = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: ({
@@ -81,8 +74,7 @@ export const useUpdateNPCRelationship = () => {
  */
 export const useGetOrCreateRelationship = () => {
   const createRelationship = useCreateNPCRelationship();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   const getOrCreate = async (
     npcType: string,

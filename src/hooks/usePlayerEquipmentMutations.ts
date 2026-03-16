@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 
@@ -20,14 +19,13 @@ interface EquipGearResult {
 }
 
 export const useEquipPlayerEquipment = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { addActivity } = useGameData();
   const queryClient = useQueryClient();
 
   const mutation = useMutation<EquipGearResult, Error, EquipGearVariables>({
     mutationFn: async (variables) => {
-      if (!user?.id) {
+      if (!profileId) {
         throw new Error("You must be signed in to update equipment");
       }
 

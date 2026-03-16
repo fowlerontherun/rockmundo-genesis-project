@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 
@@ -9,7 +8,6 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export function useMentorSessions() {
   const { toast } = useToast();
-  const { user } = useAuth();
   const { profile: activeProfile, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
@@ -136,7 +134,7 @@ export function useMentorSessions() {
 
   const bookSessionMutation = useMutation({
     mutationFn: async (mentorId: string) => {
-      if (!user || !profile) throw new Error("User not authenticated");
+      if (!profile) throw new Error("Profile not found");
 
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
@@ -184,7 +182,7 @@ export function useMentorSessions() {
       const { error: sessionError } = await supabase
         .from("player_mentor_sessions")
         .insert({
-          user_id: user.id,
+          user_id: profileId!,
           profile_id: profile.id,
           mentor_id: mentorId,
           xp_earned: xpEarned,
@@ -265,7 +263,7 @@ export function useMentorSessions() {
 
       // Log to experience ledger
       const { error: ledgerError } = await supabase.from("experience_ledger").insert({
-        user_id: user.id,
+        user_id: profileId!,
         profile_id: profile.id,
         activity_type: "mentor_session",
         xp_amount: xpEarned,

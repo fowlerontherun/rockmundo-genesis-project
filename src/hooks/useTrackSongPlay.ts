@@ -1,24 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export function useTrackSongPlay() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const trackPlayMutation = useMutation({
     mutationFn: async ({ songId, source = "app" }: { songId: string; source?: string }) => {
-      if (!user?.id) {
+      if (!profileId) {
         throw new Error("Must be logged in to track plays");
       }
 
-      // Use upsert - the unique constraint will prevent duplicate plays from same user
       const { error } = await supabase
         .from("song_plays")
         .upsert(
           {
             song_id: songId,
-            user_id: user.id,
+            user_id: profileId,
             source,
             played_at: new Date().toISOString(),
           },
@@ -32,12 +31,10 @@ export function useTrackSongPlay() {
       return { success: true };
     },
     onSuccess: () => {
-      // Invalidate top played songs queries to update counts
       queryClient.invalidateQueries({ queryKey: ["top-played-songs"] });
       queryClient.invalidateQueries({ queryKey: ["news-top-tracks"] });
     },
     onError: (error) => {
-      // Silently fail - don't interrupt user experience for tracking
       console.error("Failed to track song play:", error);
     },
   });

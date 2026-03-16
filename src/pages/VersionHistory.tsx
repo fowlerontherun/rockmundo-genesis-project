@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.077",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "useTourWizard removed useAuth dependency" },
+      { type: 'improvement', description: "useTrackSongPlay migrated to profileId" },
+      { type: 'improvement', description: "useUnderworld removed unused useAuth" },
+      { type: 'improvement', description: "useUnderworldInventory migrated to profileId" },
+      { type: 'improvement', description: "usePlayerEquipmentMutations migrated to profileId" },
+      { type: 'improvement', description: "useMentorSessions migrated to profileId" },
+      { type: 'improvement', description: "useNPCRelationships migrated to profileId via useActiveProfile" },
+    ],
+  },
+  {
     version: "1.1.076",
     date: "2026-03-16",
     changes: [
