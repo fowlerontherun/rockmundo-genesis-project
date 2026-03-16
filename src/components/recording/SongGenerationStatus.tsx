@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
