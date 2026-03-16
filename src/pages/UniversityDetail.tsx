@@ -265,7 +265,7 @@ export default function UniversityDetail() {
       const { error: enrollError } = await supabase
         .from("player_university_enrollments")
         .insert({
-          user_id: user!.id,
+          user_id: profileId!,
           profile_id: profile.id,
           university_id: university.id,
           course_id: courseId,

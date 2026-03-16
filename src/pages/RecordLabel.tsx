@@ -377,7 +377,7 @@ const RecordLabel = () => {
           </TabsContent>
 
           <TabsContent value="contracts" className="mt-6">
-            <MyContractsTab artistEntities={artistEntities} userId={user?.id ?? ""} />
+            <MyContractsTab artistEntities={artistEntities} userId={userId ?? ""} />
           </TabsContent>
 
           <TabsContent value="releases" className="mt-6">

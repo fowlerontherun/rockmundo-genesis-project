@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle, ListMusic, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";

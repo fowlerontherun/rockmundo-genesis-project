@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { 
   useMajorEvents, useMajorEventPerformances, useMajorEventHistory, 

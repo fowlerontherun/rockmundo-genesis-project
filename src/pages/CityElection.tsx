@@ -206,7 +206,7 @@ export default function CityElection() {
       </Card>
 
       {/* User Status Alerts */}
-      {user && (
+      {profileId && (
         <div className="space-y-3">
           {hasVoted && (
             <Alert className="border-primary/50 bg-primary/5">
