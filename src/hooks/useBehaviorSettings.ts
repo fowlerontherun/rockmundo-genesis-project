@@ -172,17 +172,17 @@ export function useBehaviorSettings() {
 
   // Fetch unlocked advanced behaviors
   const { data: unlockedBehaviors } = useQuery({
-    queryKey: ["unlocked-behaviors", user?.id],
+    queryKey: ["unlocked-behaviors", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!profileId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_unlocked_behaviors")
         .select("behavior_key")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
       return (data || []).map((r: any) => r.behavior_key as string);
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const updateMutation = useMutation({
