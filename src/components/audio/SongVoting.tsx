@@ -68,14 +68,13 @@ export const SongVoting = ({
 
   const voteMutation = useMutation({
     mutationFn: async (voteType: "up" | "down") => {
-      if (!user?.id) throw new Error("Must be logged in to vote");
+      if (!profileId) throw new Error("Must be logged in to vote");
 
-      // Check if user already voted
       const { data: existing } = await supabase
         .from("song_votes")
         .select("id, vote_type")
         .eq("song_id", songId)
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .maybeSingle();
 
       if (existing) {

@@ -53,7 +53,7 @@ export const DikCokCreateVideoForm = ({ bandId, bandName, bandGenre, bandSongs =
 
       const { data: videoData, error } = await supabase.from("dikcok_videos").insert({
         band_id: bandId,
-        creator_user_id: user.id,
+        creator_user_id: profileId,
         video_type_id: formData.videoTypeId,
         title: formData.title.trim(),
         description: formData.description.trim() || null,

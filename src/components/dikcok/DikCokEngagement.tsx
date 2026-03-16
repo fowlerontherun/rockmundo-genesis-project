@@ -66,7 +66,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   // Add reaction mutation
   const addReactionMutation = useMutation({
     mutationFn: async (reactionType: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       toast({ title: "Reactions coming soon!" });
       return { action: "pending" };
     },

@@ -84,19 +84,19 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
   // Fetch user's bands for hashtag feature
   const { data: userBands = [] } = useQuery({
-    queryKey: ["user-bands-for-twaater", user?.id],
+    queryKey: ["user-bands-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await (supabase as any)
         .from("band_members")
         .select("band_id, bands:bands(id, name)")
-        .eq("profile_id", user.id)
+        .eq("profile_id", profileId)
         .eq("member_status", "active");
       
       if (error) throw error;
       return data?.map((m: any) => m.bands).filter(Boolean) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   useEffect(() => {
