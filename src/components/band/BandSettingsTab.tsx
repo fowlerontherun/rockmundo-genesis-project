@@ -33,6 +33,7 @@ export function BandSettingsTab({
   isLeader, 
   bandStatus,
   isSoloArtist,
+  isRecruiting: initialRecruiting,
   primaryGenre,
   secondaryGenres,
   genreLastChangedAt,
@@ -41,6 +42,7 @@ export function BandSettingsTab({
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
   
   // Hiatus dialog state
   const [hiatusDialogOpen, setHiatusDialogOpen] = useState(false);
