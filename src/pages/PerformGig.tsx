@@ -58,7 +58,7 @@ export default function PerformGig() {
   const equippedGearCount = bandGearData?.gearItems.length ?? 0;
 
   const loadGig = useCallback(async () => {
-    if (!gigId || !user) return;
+    if (!gigId || !profileId) return;
 
     try {
       // Load gig details
