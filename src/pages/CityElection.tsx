@@ -28,7 +28,7 @@ import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
 export default function CityElection() {
   const { cityId } = useParams<{ cityId: string }>();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
 
   // Fetch city info
