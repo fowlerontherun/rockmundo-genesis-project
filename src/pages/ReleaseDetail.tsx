@@ -24,7 +24,7 @@ export default function ReleaseDetail() {
   const { data: userData } = useQuery({
     queryKey: ["current-user-profile-release", profileId],
     queryFn: async () => {
-      if (!profileId || !user) return null;
+      if (!profileId) return null;
       const { data: bandMember } = await supabase
         .from("band_members")
         .select("band_id, bands(fame)")
