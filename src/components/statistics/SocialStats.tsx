@@ -12,7 +12,7 @@ export function SocialStats() {
   const { data: stats } = useQuery({
     queryKey: ["social-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       // Get Twaater account
       const { data: account } = await supabase
