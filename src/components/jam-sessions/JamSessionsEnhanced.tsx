@@ -42,7 +42,7 @@ export const JamSessionsEnhanced = () => {
 
   // Find user's active session for chat/commentary
   useEffect(() => {
-    if (!user?.id || !profile?.id) return;
+    if (!profileId || !profile?.id) return;
     
     const myActiveSession = activeSessions.find(s => 
       s.status === 'active' && 
