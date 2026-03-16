@@ -109,28 +109,17 @@ export const useNewArrivals = () => {
 };
 
 export const useOwnedSkins = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["owned-skins", user?.id],
+    queryKey: ["owned-skins", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      // Get active profile_id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("player_owned_skins")
         .select("item_id, item_type")
-        .eq("profile_id", profile.id);
+        .eq("profile_id", profileId);
 
       if (error) throw error;
       return data || [];
