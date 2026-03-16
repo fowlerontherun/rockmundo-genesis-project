@@ -160,7 +160,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  }, [channelKey, fetchMessages, message, user]);
+  }, [channelKey, fetchMessages, message, profileId]);
 
   useEffect(() => {
     if (user) {
