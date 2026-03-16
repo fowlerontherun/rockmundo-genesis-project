@@ -20,7 +20,7 @@ import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { COMPANY_TYPE_INFO } from "@/types/company";
