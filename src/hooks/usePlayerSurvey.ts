@@ -78,7 +78,7 @@ export function usePlayerSurvey() {
     configLoaded &&
     completionChecked &&
     surveyConfig?.enabled &&
-    user &&
+    profileId &&
     hasCompleted === false
   );
 
