@@ -260,9 +260,7 @@ export const useRelationshipInteractions = (relationshipId: string | undefined) 
 // ─── Fetch Unprocessed Events ────────────────────────────
 
 export const useUnprocessedRelationshipEvents = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: [QUERY_KEY, "events", profileId],
