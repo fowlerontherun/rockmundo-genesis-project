@@ -32,14 +32,14 @@ const SetlistManager = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: band } = useQuery({
-    queryKey: ["user-band", user?.id],
+    queryKey: ["user-band", profileId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!profileId) return null;
 
       const { data: memberData, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, bands!band_id(*)")
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .maybeSingle();
 
       console.log("Member data:", memberData);
@@ -49,7 +49,7 @@ const SetlistManager = () => {
       const { data: leaderData, error: leaderError } = await supabase
         .from("bands")
         .select("*")
-        .eq("leader_id", user.id)
+        .eq("leader_id", profileId)
         .eq("status", "active")
         .maybeSingle();
 
@@ -57,7 +57,7 @@ const SetlistManager = () => {
 
       return leaderData;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const { data: setlists, isLoading } = useSetlists(band?.id || null);
