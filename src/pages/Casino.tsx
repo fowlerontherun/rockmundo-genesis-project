@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAddictions } from "@/hooks/useAddictions";
 import { Dices, Club, CircleDot, Cherry, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
