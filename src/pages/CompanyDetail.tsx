@@ -31,7 +31,7 @@ const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
