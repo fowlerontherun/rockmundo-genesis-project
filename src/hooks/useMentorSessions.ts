@@ -77,9 +77,9 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  // Helper to check if a mentor is discovered
-  const isMentorDiscovered = (mentorId: string) => {
-    return discoveries?.some(d => d.mentor_id === mentorId) ?? false;
+  // All mentors are now unlocked for all players
+  const isMentorDiscovered = (_mentorId: string) => {
+    return true;
   };
 
   // Helper to get day name
