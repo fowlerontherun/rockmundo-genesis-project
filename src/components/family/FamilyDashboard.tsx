@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Baby, Crown, Heart, Plus, Clock, Users, Activity, Star } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+// useAuth removed — profileId sourced from useOptionalGameData
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { useMarriageStatus, usePartnerProfile, useRespondToProposal, useInitiateDivorce } from "@/hooks/useMarriage";
 import {
@@ -20,7 +20,7 @@ import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { formatDistanceToNow } from "date-fns";
 
 export function FamilyDashboard() {
-  const { user } = useAuth();
+  // profileId derived from gameData below
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
   const profileName = gameData?.profile?.display_name ?? gameData?.profile?.username ?? "You";
@@ -312,7 +312,7 @@ export function FamilyDashboard() {
               parentAId: birthDialogRequest.parent_a_id,
               parentBId: birthDialogRequest.parent_b_id,
               marriageId: birthDialogRequest.marriage_id,
-              controllerUserId: user?.id ?? "",
+              controllerUserId: profileId ?? "",
               surname: deriveSurname(birthDialogRequest),
               inheritedPotentials: birthPotentials,
             }, {

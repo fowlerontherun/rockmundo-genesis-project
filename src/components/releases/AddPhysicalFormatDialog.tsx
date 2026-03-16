@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,7 @@ const VINYL_COLORS = ["black", "red", "blue", "green", "white", "clear", "pictur
 export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhysicalFormatDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(100);
@@ -146,9 +146,9 @@ export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhys
       if (releaseError) throw releaseError;
 
       // Log the activity - use current user's ID for RLS compliance
-      if (user?.id) {
+      if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
           activity_type: "physical_format_added",
           message: `Added ${selectedFormat} format to "${release.title}"`,
           metadata: {

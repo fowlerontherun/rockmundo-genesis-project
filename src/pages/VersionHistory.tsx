@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.071",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "LinkGigDialog band membership lookup uses profile_id" },
+      { type: 'improvement', description: "MyLabelsTab uses profileId directly, removes redundant profile fetch" },
+      { type: 'improvement', description: "ReorderStockDialog activity feed scoped to profileId" },
+      { type: 'improvement', description: "AddPhysicalFormatDialog activity feed scoped to profileId" },
+      { type: 'improvement', description: "FamilyDashboard removed unused useAuth import" },
+    ],
+  },
+  {
     version: "1.1.070",
     date: "2026-03-16",
     changes: [

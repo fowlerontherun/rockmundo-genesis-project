@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -21,19 +21,19 @@ interface LinkGigDialogProps {
 }
 
 export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [search, setSearch] = useState("");
 
   const { data: gigs = [], isLoading } = useQuery({
-    queryKey: ["user-gigs-for-twaater", user?.id],
+    queryKey: ["user-gigs-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get user's bands
       const { data: memberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
       if (bandIds.length === 0) return [];
@@ -54,7 +54,7 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
       if (error) throw error;
       return gigs || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredGigs = gigs.filter((g: any) =>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,21 +33,14 @@ interface MyLabel {
 }
 
 export function MyLabelsTab() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const navigate = useNavigate();
 
   const { data: myLabels = [], isLoading } = useQuery<MyLabel[]>({
-    queryKey: ["my-labels", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["my-labels", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
-      // First get user's profile ID
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       // Get labels where:
       // 1. owner_id = profile.id (directly owned)
@@ -73,8 +66,8 @@ export function MyLabelsTab() {
       
       // Filter to show labels where user is direct owner OR owns the parent company
       const filteredLabels = (data || []).filter((label: any) => {
-        const isDirectOwner = label.owner_id === profile.id;
-        const ownsParentCompany = label.companies?.owner_id === user!.id;
+        const isDirectOwner = label.owner_id === profileId;
+        const ownsParentCompany = label.companies?.owner_id === profileId;
         return isDirectOwner || ownsParentCompany;
       });
       
