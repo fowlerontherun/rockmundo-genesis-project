@@ -27,9 +27,9 @@ export const useVipStatus = () => {
   const { userId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["vip-status", profileId],
+    queryKey: ["vip-status", userId],
     queryFn: async (): Promise<VipStatus> => {
-      if (!profileId) {
+      if (!userId) {
         return {
           isVip: false,
           subscriptionType: null,
@@ -39,12 +39,12 @@ export const useVipStatus = () => {
         };
       }
 
-      console.log('[useVipStatus] Checking VIP for profile:', profileId);
+      console.log('[useVipStatus] Checking VIP for user:', userId);
       
       const { data, error } = await supabase
         .from("vip_subscriptions")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "active")
         .gte("expires_at", new Date().toISOString())
         .order("expires_at", { ascending: false })
@@ -80,7 +80,7 @@ export const useVipStatus = () => {
         subscription: data as VipSubscription,
       };
     },
-    enabled: !!profileId,
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 };
