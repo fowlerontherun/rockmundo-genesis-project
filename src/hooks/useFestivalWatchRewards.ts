@@ -50,7 +50,7 @@ function rollWatchReward(bandId: string): WatchRewardResult | null {
 }
 
 export const useClaimWatchReward = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   return useMutation({
