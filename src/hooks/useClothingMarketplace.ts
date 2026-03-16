@@ -48,7 +48,7 @@ export const useClothingMarketplace = (filters?: {
 
   const purchaseItem = useMutation({
     mutationFn: async (item: MarketplaceItem) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get buyer's cash
       const { data: profile } = await supabase
