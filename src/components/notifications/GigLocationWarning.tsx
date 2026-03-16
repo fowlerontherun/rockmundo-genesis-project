@@ -6,7 +6,7 @@ import { AlertTriangle, Plane, MapPin, Clock, Crown } from "lucide-react";
 import { useUpcomingGigWarning } from "@/hooks/useUpcomingGigWarning";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { bookCharterFlight, CHARTER_FLIGHT_COST } from "@/utils/charterFlight";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
