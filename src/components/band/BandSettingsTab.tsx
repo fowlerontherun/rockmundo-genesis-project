@@ -163,7 +163,7 @@ export function BandSettingsTab({
 
     try {
       setLoading(true);
-      await transferLeadership(bandId, user.id, newLeaderId);
+      await transferLeadership(bandId, profileId, newLeaderId);
       
       toast({
         title: 'Leadership Transferred',
