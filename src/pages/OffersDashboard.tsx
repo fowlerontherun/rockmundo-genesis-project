@@ -230,7 +230,7 @@ const OffersDashboard = () => {
 
   const uniqueSources = ["Modeling", "Media", "Gig", "Sponsorship"];
 
-  if (!user) {
+  if (!profileId) {
     return (
       <div className="container mx-auto p-6">
         <p className="text-muted-foreground">Please log in to view your offers.</p>
