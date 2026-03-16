@@ -30,6 +30,7 @@ export interface PlaylistSubmission {
 }
 
 export const usePlaylists = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
