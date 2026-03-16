@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/components/ui/use-toast";
-import { calculateInGameDate } from "@/utils/gameCalendar";
 
 export interface CompanyShareholder {
   id: string;
@@ -176,104 +175,19 @@ export const useDistributeAnnualProfit = () => {
     mutationFn: async ({ companyId }: { companyId: string }) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      const gameYear = calculateInGameDate().gameYear;
-      const { data: existing } = await supabase
-        .from("company_profit_distributions" as any)
-        .select("id")
-        .eq("company_id", companyId)
-        .eq("game_year", gameYear)
-        .maybeSingle();
-
-      if (existing) throw new Error("Profit already distributed for this game year");
-
-      const { data: company, error: companyError } = await supabase
-        .from("companies")
-        .select("balance")
-        .eq("id", companyId)
-        .single();
-      if (companyError) throw companyError;
-
-      const { data: latestDist } = await supabase
-        .from("company_profit_distributions" as any)
-        .select("distributed_at")
-        .eq("company_id", companyId)
-        .order("distributed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let txQuery = supabase
-        .from("company_transactions")
-        .select("amount")
-        .eq("company_id", companyId);
-
-      if (latestDist?.distributed_at) {
-        txQuery = txQuery.gt("created_at", latestDist.distributed_at);
-      }
-
-      const { data: txns, error: txError } = await txQuery;
-      if (txError) throw txError;
-
-      const profit = (txns || []).reduce((sum, t) => sum + Number(t.amount), 0);
-      const distributableProfit = Math.max(0, Math.floor(profit));
-      if (distributableProfit <= 0) throw new Error("No profit available to distribute");
-      if (Number(company.balance) < distributableProfit) throw new Error("Insufficient company balance");
-
-      const { data: shareholders, error: shError } = await supabase
-        .from("company_shareholders" as any)
-        .select("user_id, shares")
-        .eq("company_id", companyId);
-      if (shError) throw shError;
-      if (!shareholders || shareholders.length === 0) throw new Error("No shareholders found");
-
-      const totalShares = shareholders.reduce((sum: number, sh: any) => sum + Number(sh.shares), 0);
-      if (totalShares <= 0) throw new Error("Invalid total shares");
-
-      const userIds = shareholders.map((s: any) => s.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, user_id, cash")
-        .in("user_id", userIds);
-
-      const profileByUserId = new Map((profiles || []).map((p: any) => [p.user_id, p]));
-
-      for (const sh of shareholders as any[]) {
-        const payout = Math.floor((distributableProfit * Number(sh.shares)) / totalShares);
-        if (payout <= 0) continue;
-        const profile = profileByUserId.get(sh.user_id);
-        if (!profile) continue;
-
-        const { error: profileUpdateError } = await supabase
-          .from("profiles")
-          .update({ cash: Number(profile.cash) + payout })
-          .eq("id", profile.id);
-        if (profileUpdateError) throw profileUpdateError;
-      }
-
-      const { error: companyUpdateError } = await supabase
-        .from("companies")
-        .update({ balance: Number(company.balance) - distributableProfit })
-        .eq("id", companyId);
-      if (companyUpdateError) throw companyUpdateError;
-
-      await supabase.from("company_transactions").insert({
-        company_id: companyId,
-        transaction_type: "dividend",
-        amount: -distributableProfit,
-        description: `Annual profit distribution (Game Year ${gameYear})`,
-        category: "owner_transfer",
+      const { data, error } = await supabase.rpc("distribute_company_annual_profit", {
+        p_company_id: companyId,
       });
 
-      const { error: distError } = await supabase
-        .from("company_profit_distributions" as any)
-        .insert({
-          company_id: companyId,
-          game_year: gameYear,
-          distributed_profit: distributableProfit,
-          distributed_by: user.id,
-        });
-      if (distError) throw distError;
+      if (error) throw error;
 
-      return { distributableProfit, gameYear };
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result) throw new Error("Distribution failed");
+
+      return {
+        distributableProfit: Number(result.distributed_profit),
+        gameYear: Number(result.game_year),
+      };
     },
     onSuccess: ({ distributableProfit, gameYear }, vars) => {
       queryClient.invalidateQueries({ queryKey: ["company", vars.companyId] });
