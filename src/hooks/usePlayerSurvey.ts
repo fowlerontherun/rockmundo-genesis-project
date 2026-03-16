@@ -135,7 +135,7 @@ export function usePlayerSurvey() {
         const walletTable = supabase.from("player_xp_wallet") as any;
         const walletQuery = await walletTable
           .select("attribute_points_balance, attribute_points_lifetime")
-          .eq("user_id", profileId)
+          .eq("user_id", userId)
           .maybeSingle();
         const wallet = walletQuery.data;
         if (wallet) {
