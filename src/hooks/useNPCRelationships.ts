@@ -13,9 +13,7 @@ import {
 import type { NPCRelationship, RelationshipStage } from "@/types/roleplaying";
 
 export const useNPCRelationships = () => {
-  const { user } = useAuth();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useQuery({
     queryKey: ["npc-relationships", profileId],
