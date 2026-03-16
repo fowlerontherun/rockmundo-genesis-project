@@ -339,21 +339,21 @@ export const useCompanyFinancialSummary = () => {
 };
 
 export const useCloseSubsidiary = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ 
       companyId, 
-      profileId,
+      profileId: inputProfileId,
       transferBalance = true 
     }: { 
       companyId: string; 
       profileId?: string;
       transferBalance?: boolean;
     }): Promise<void> => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Get company details
       const { data: company, error: companyError } = await supabase
