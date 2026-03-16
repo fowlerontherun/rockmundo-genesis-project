@@ -112,7 +112,7 @@ export const useRadioStations = () => {
       songId: string;
       bandId?: string;
     }) => {
-      if (!profileId) throw new Error("No active profile");
+      if (!userId) throw new Error("No active profile");
 
       // Check if already submitted
       const { data: existing } = await supabase
