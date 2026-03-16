@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { TrendingUp, Plus, AlertTriangle, ArrowDownToLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { PlayerInvestment, InvestmentOption } from "@/hooks/useFinances";
@@ -33,6 +34,7 @@ interface InvestmentsTabProps {
 
 export const InvestmentsTab = ({ investments, investmentOptions, cash }: InvestmentsTabProps) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOption, setSelectedOption] = useState<InvestmentOption | null>(null);
   const [investAmount, setInvestAmount] = useState("");
@@ -45,7 +47,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
   const overallRoi = totalInvested > 0 ? totalGain / totalInvested : 0;
 
   const handleInvest = async () => {
-    if (!user?.id || !selectedOption) return;
+    if (!profileId || !selectedOption) return;
     const amount = parseInt(investAmount);
     
     if (isNaN(amount) || amount < selectedOption.minInvestment) {
@@ -76,7 +78,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: cash - amount })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 
@@ -94,21 +96,21 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
   };
 
   const handleWithdraw = async (investment: PlayerInvestment) => {
-    if (!user?.id) return;
+    if (!profileId) return;
     setIsWithdrawing(investment.id);
     try {
       // Get current cash
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Add current value back to cash
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: (profile?.cash || 0) + investment.current_value })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (cashError) throw cashError;
 

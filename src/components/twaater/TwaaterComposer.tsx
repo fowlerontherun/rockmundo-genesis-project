@@ -87,14 +87,14 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     queryKey: ["user-bands-for-twaater", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("band_members")
         .select("band_id, bands:bands(id, name)")
-        .eq("user_id", user.id)
+        .eq("profile_id", user.id)
         .eq("member_status", "active");
       
       if (error) throw error;
-      return data?.map(m => m.bands).filter(Boolean) || [];
+      return data?.map((m: any) => m.bands).filter(Boolean) || [];
     },
     enabled: !!user?.id,
   });

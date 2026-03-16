@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -21,21 +21,21 @@ interface LinkTourDialogProps {
 }
 
 export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [search, setSearch] = useState("");
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["user-tours-for-twaater", user?.id],
+    queryKey: ["user-tours-for-twaater", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       // Get user's bands
-      const { data: memberships } = await supabase
+      const { data: memberships } = await (supabase as any)
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
-      const bandIds = memberships?.map((m) => m.band_id) || [];
+      const bandIds = memberships?.map((m: any) => m.band_id) || [];
       if (bandIds.length === 0) return [];
 
       // Fetch tours
@@ -52,7 +52,7 @@ export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogP
       if (error) throw error;
       return tours || [];
     },
-    enabled: open && !!user?.id,
+    enabled: open && !!profileId,
   });
 
   const filteredTours = tours.filter((t: any) =>

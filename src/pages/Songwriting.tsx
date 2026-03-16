@@ -5,6 +5,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -399,6 +400,7 @@ const getProgressPercent = (value?: number | null) => {
 const Songwriting = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
   const {
@@ -480,20 +482,18 @@ const Songwriting = () => {
   }, [skills]);
 
   const fetchSongs = useCallback(async () => {
-    const userId = user?.id ?? null;
-
-    if (!userId) {
+    if (!profileId) {
       setSongs([]);
       return;
     }
 
-    logger.info("Fetching songs for songwriting", { userId });
+    logger.info("Fetching songs for songwriting", { profileId });
 
     try {
       const { data, error } = await supabase
         .from("songs")
         .select(SONG_SELECT_COLUMNS)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -503,11 +503,11 @@ const Songwriting = () => {
       const resolvedSongs = Array.isArray(data) ? (data as unknown as Song[]) : [];
       setSongs(resolvedSongs);
     } catch (error) {
-      logger.error("Error fetching songs for songwriting", { userId, error });
+      logger.error("Error fetching songs for songwriting", { profileId, error });
       toast.error("Failed to load songs");
       setSongs([]);
     }
-  }, [user?.id]);
+  }, [profileId]);
 
   useEffect(() => {
     void fetchSongs();

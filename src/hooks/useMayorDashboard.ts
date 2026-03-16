@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { CityMayor, CityLaws } from "@/types/city-governance";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 // Fetch current mayor for a city
@@ -43,33 +43,25 @@ export function useCityMayor(cityId: string | undefined) {
 
 // Check if current user is mayor of a city
 export function useIsCurrentMayor(cityId: string | undefined) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["is-mayor", cityId, user?.id],
+    queryKey: ["is-mayor", cityId, profileId],
     queryFn: async () => {
-      if (!cityId || !user?.id) return false;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return false;
+      if (!cityId || !profileId) return false;
 
       const { data, error } = await supabase
         .from("city_mayors")
         .select("id")
         .eq("city_id", cityId)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("is_current", true)
         .maybeSingle();
 
       if (error) return false;
       return !!data;
     },
-    enabled: !!cityId && !!user?.id,
+    enabled: !!cityId && !!profileId,
   });
 }
 
@@ -118,7 +110,7 @@ export function useMayorHistory(cityId: string | undefined) {
 // Update city laws (mayor only)
 export function useUpdateCityLaws() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({
@@ -132,23 +124,14 @@ export function useUpdateCityLaws() {
       changeReason?: string;
       gameYear?: number;
     }) => {
-      if (!user?.id) throw new Error("Must be logged in");
-
-      // Get user's profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
+      if (!profileId) throw new Error("Must be logged in");
 
       // Verify user is mayor
       const { data: mayor, error: mayorError } = await supabase
         .from("city_mayors")
         .select("id, policies_enacted")
         .eq("city_id", cityId)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("is_current", true)
         .single();
 

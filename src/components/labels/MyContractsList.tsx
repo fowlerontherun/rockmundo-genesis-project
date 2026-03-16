@@ -4,35 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ContractNegotiationDialog } from "./ContractNegotiationDialog";
 import { useState } from "react";
 import { FileText, Building2, DollarSign, Percent, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { formatDistanceToNow, parseISO, isPast } from "date-fns";
 
 export const MyContractsList = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [selectedContract, setSelectedContract] = useState<any>(null);
 
   const { data: contracts, isLoading } = useQuery({
-    queryKey: ["my-contracts", user?.id],
+    queryKey: ["my-contracts", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      // Get profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       // Get contracts for this artist or their bands
       const { data: bandMembers } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       const bandIds = bandMembers?.map(bm => bm.band_id) || [];
 
@@ -43,13 +34,13 @@ export const MyContractsList = () => {
           label:labels(name, reputation_score),
           deal_type:label_deal_types(name, description)
         `)
-        .or(`artist_profile_id.eq.${profile.id}${bandIds.length ? `,band_id.in.(${bandIds.join(",")})` : ""}`)
+        .or(`artist_profile_id.eq.${profileId}${bandIds.length ? `,band_id.in.(${bandIds.join(",")})` : ""}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const getStatusBadge = (status: string) => {
