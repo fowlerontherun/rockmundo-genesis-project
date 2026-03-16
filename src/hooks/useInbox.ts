@@ -69,7 +69,7 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   // Real-time subscription for new messages
   useEffect(() => {
-    if (!profileId) return;
+    if (!userId) return;
 
     const channel = supabase
       .channel('inbox-changes')
@@ -79,7 +79,7 @@ export function useInbox(category?: InboxCategory | 'all') {
           event: '*',
           schema: 'public',
           table: 'player_inbox',
-          filter: `user_id=eq.${profileId}`,
+          filter: `user_id=eq.${userId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['inbox'] });
@@ -91,7 +91,7 @@ export function useInbox(category?: InboxCategory | 'all') {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profileId, queryClient]);
+  }, [userId, queryClient]);
 
   const markAsRead = useMutation({
     mutationFn: async (messageId: string) => {

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface FanCampaign {
@@ -34,6 +35,7 @@ export interface FanInteraction {
 }
 
 export const useFanManagement = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch campaigns
@@ -45,7 +47,7 @@ export const useFanManagement = (profileId?: string) => {
       const { data, error } = await supabase
         .from("fan_campaigns")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -63,7 +65,7 @@ export const useFanManagement = (profileId?: string) => {
       const { data, error } = await supabase
         .from("fan_segments")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("fan_count", { ascending: false });
 
       if (error) throw error;
@@ -81,7 +83,7 @@ export const useFanManagement = (profileId?: string) => {
       const { data, error } = await supabase
         .from("fan_interactions")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(100);
 

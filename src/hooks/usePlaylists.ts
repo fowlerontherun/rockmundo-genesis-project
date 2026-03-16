@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Playlist {
@@ -29,6 +30,7 @@ export interface PlaylistSubmission {
 }
 
 export const usePlaylists = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -66,7 +68,7 @@ export const usePlaylists = (profileId?: string) => {
           *,
           playlist:playlists(*)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("submitted_at", { ascending: false });
       
       if (error) {
@@ -175,7 +177,7 @@ export const usePlaylists = (profileId?: string) => {
         .select("id")
         .eq("playlist_id", playlistId)
         .eq("release_id", releaseId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {

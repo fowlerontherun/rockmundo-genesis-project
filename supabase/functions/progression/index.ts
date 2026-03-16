@@ -99,8 +99,8 @@ export const loadActiveProfile = async (
     .from("profiles")
     .select("*")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("is_active", true)
+    .is("died_at", null)
     .maybeSingle();
 
   if (profileResponse.error) {

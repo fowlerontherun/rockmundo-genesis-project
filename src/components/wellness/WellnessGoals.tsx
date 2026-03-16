@@ -21,7 +21,7 @@ const goalTypes = [
 ];
 
 export function WellnessGoals() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [goalType, setGoalType] = useState("");
@@ -34,7 +34,7 @@ export function WellnessGoals() {
       const { data, error } = await supabase
         .from("player_wellness_goals")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
       if (error) throw error;

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface EquipmentItem {
@@ -31,6 +32,7 @@ export interface PlayerEquipment {
 }
 
 export const useEquipmentStore = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch equipment catalog
@@ -60,7 +62,7 @@ export const useEquipmentStore = (profileId?: string) => {
           *,
           equipment:equipment_catalog(*)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;

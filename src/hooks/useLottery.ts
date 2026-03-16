@@ -57,7 +57,7 @@ export function useMyTicketsForDraw(drawId: string | undefined) {
         .from("lottery_tickets")
         .select("*")
         .eq("draw_id", drawId!)
-        .eq("user_id", profileId!)
+        .eq("profile_id", profileId!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -76,7 +76,7 @@ export function useMyTickets() {
       const { data, error } = await supabase
         .from("lottery_tickets")
         .select("*, lottery_draws(*)")
-        .eq("user_id", profileId!)
+        .eq("profile_id", profileId!)
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -111,7 +111,7 @@ export function useBuyTicket() {
         .from("lottery_tickets")
         .select("*", { count: "exact", head: true })
         .eq("draw_id", drawId)
-        .eq("user_id", profileId);
+        .eq("profile_id", profileId);
 
       if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
 

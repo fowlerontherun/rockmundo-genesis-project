@@ -216,7 +216,7 @@ export interface PlayerHoliday {
 }
 
 export function useHolidays() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch active holiday
@@ -227,7 +227,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("*")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -248,7 +248,7 @@ export function useHolidays() {
       const { data } = await supabase
         .from("player_holidays")
         .select("id")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .in("status", ["completed", "active"])
         .gte("created_at", fourteenDaysAgo.toISOString())
         .limit(1);
@@ -283,7 +283,7 @@ export function useHolidays() {
       const { error: holidayError } = await supabase
         .from("player_holidays")
         .insert({
-          user_id: profileId,
+          user_id: userId!,
           destination: destination.name,
           started_at: startDate.toISOString(),
           ends_at: endDate.toISOString(),
@@ -297,7 +297,7 @@ export function useHolidays() {
 
       // Create blocking scheduled activity
       await (supabase as any).from("player_scheduled_activities").insert({
-        user_id: profileId,
+        user_id: userId!,
         profile_id: profileId,
         activity_type: "holiday",
         scheduled_start: startDate.toISOString(),

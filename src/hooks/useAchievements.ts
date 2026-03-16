@@ -47,7 +47,7 @@ export const useAchievements = (profileId?: string) => {
           *,
           achievement:achievement_id(*)
         `)
-        .eq("user_id", profileId)
+        .eq("profile_id", profileId)
         .order("unlocked_at", { ascending: false });
 
       if (error) throw error;

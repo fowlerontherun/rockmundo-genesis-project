@@ -16,17 +16,17 @@ export interface FestivalTicket {
 }
 
 export const useFestivalTickets = (festivalId: string | undefined) => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   const { data: tickets = [], isLoading } = useQuery<FestivalTicket[]>({
     queryKey: ["festival-tickets", festivalId, profileId],
     queryFn: async () => {
-      if (!festivalId || !profileId) return [];
+      if (!festivalId || !userId) return [];
       const { data, error } = await (supabase as any)
         .from("festival_tickets")
         .select("*")
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
       if (error) throw error;
       return data || [];
     },

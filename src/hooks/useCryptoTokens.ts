@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 export interface CryptoToken {
@@ -20,6 +21,7 @@ export interface TokenHolding {
 }
 
 export const useCryptoTokens = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all tokens
@@ -51,7 +53,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(*)
         `)
-        .eq("user_id", profileId);
+        .eq("user_id", userId);
 
       if (error) throw error;
       return data as any as TokenHolding[];
@@ -71,7 +73,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(symbol, name)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -117,7 +119,7 @@ export const useCryptoTokens = (profileId?: string) => {
 
       // Record transaction
       const { error: txError } = await supabase.from("token_transactions").insert({
-        user_id: profileId,
+        user_id: userId,
         token_id: tokenId,
         transaction_type: "buy",
         quantity,
@@ -131,7 +133,7 @@ export const useCryptoTokens = (profileId?: string) => {
       const { data: existingHoldings } = await supabase
         .from("player_token_holdings")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("token_id", tokenId)
         .limit(1);
 
@@ -155,7 +157,7 @@ export const useCryptoTokens = (profileId?: string) => {
         const { error: holdingError } = await supabase
           .from("player_token_holdings")
           .insert({
-            user_id: profileId,
+            user_id: userId,
             token_id: tokenId,
             quantity,
             average_buy_price: price,
@@ -191,7 +193,7 @@ export const useCryptoTokens = (profileId?: string) => {
       const { data: freshHoldings } = await supabase
         .from("player_token_holdings")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("token_id", tokenId)
         .limit(1);
 

@@ -43,7 +43,7 @@ export interface ClothingItem {
 }
 
 export const useClothingBrand = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const { data: brand, isLoading: brandLoading } = useQuery({
@@ -53,7 +53,7 @@ export const useClothingBrand = () => {
       const { data, error } = await supabase
         .from("player_clothing_brands" as never)
         .select("*")
-        .eq("user_id", profileId!)
+        .eq("user_id", userId!)
         .maybeSingle();
       if (error) throw error;
       return data as ClothingBrand | null;
