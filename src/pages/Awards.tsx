@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useAwards, type AwardShow, type AwardNomination } from "@/hooks/useAwards";
 import { useQuery } from "@tanstack/react-query";
