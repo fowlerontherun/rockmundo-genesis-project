@@ -169,7 +169,7 @@ export const useCreateCompany = () => {
       // Initialize share ownership for founder
       await supabase.from("company_shareholders" as any).insert({
         company_id: data.id,
-        user_id: user.id,
+        user_id: profileId,
         shares: 100,
       });
 
