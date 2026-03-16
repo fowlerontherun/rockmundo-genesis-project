@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useEffect } from "react";
 
 export type InboxCategory = 
@@ -35,18 +35,18 @@ export interface InboxMessage {
 }
 
 export function useInbox(category?: InboxCategory | 'all') {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['inbox', user?.id, category],
+    queryKey: ['inbox', profileId, category],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       let queryBuilder = supabase
         .from('player_inbox')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', profileId)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
@@ -63,13 +63,13 @@ export function useInbox(category?: InboxCategory | 'all') {
 
       return (data || []) as InboxMessage[];
     },
-    enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!profileId,
+    refetchInterval: 30000,
   });
 
   // Real-time subscription for new messages
   useEffect(() => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     const channel = supabase
       .channel('inbox-changes')
@@ -79,7 +79,7 @@ export function useInbox(category?: InboxCategory | 'all') {
           event: '*',
           schema: 'public',
           table: 'player_inbox',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${profileId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['inbox'] });
@@ -91,7 +91,7 @@ export function useInbox(category?: InboxCategory | 'all') {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [profileId, queryClient]);
 
   const markAsRead = useMutation({
     mutationFn: async (messageId: string) => {
@@ -110,12 +110,12 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!user?.id) return;
+      if (!profileId) return;
 
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_read: true })
-        .eq('user_id', user.id)
+        .eq('user_id', profileId)
         .eq('is_read', false);
 
       if (error) throw error;
@@ -169,17 +169,17 @@ export function useInbox(category?: InboxCategory | 'all') {
 }
 
 export function useUnreadInboxCount() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ['inbox-unread-count', user?.id],
+    queryKey: ['inbox-unread-count', profileId],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!profileId) return 0;
 
       const { count, error } = await supabase
         .from('player_inbox')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+        .eq('user_id', profileId)
         .eq('is_read', false)
         .eq('is_archived', false);
 
@@ -190,7 +190,7 @@ export function useUnreadInboxCount() {
 
       return count || 0;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     refetchInterval: 30000,
   });
 }
