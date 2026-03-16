@@ -161,6 +161,18 @@ const versionHistory: VersionEntry[] = [
     version: "1.1.052",
     date: "2026-03-16",
     changes: [
+      { type: 'improvement', description: "PastTravelList, AnalyticsTab, PRConsultantPanel, WellnessTrends now use profileId for character isolation" },
+      { type: 'improvement', description: "RadioSubmissionWizard, SongwritingBooking, ReleaseSelector scoped to active profile" },
+      { type: 'improvement', description: "Playtime tracker now updates profile by id instead of user_id" },
+      { type: 'improvement', description: "Career overview (fetchCareerOverview) queries band memberships and skills by profileId" },
+      { type: 'improvement', description: "OffersDashboard modeling/media offers scoped to active profile" },
+      { type: 'fix', description: "RequestReleaseDialog cash checks and deductions use profile id" },
+    ],
+  },
+  {
+    version: "1.1.062",
+    date: "2026-03-16",
+    changes: [
       { type: 'improvement', description: "Underworld store now queries cash balance and applies effects by profileId instead of user_id lookup" },
       { type: 'improvement', description: "Underworld inventory addiction checks now use profile_id for character-specific addiction tracking" },
       { type: 'fix', description: "Festival attendance queries scoped to active profile for correct character isolation" },
