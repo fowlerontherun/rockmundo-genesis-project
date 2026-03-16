@@ -152,6 +152,21 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
     throw new Error("Failed to create character profile");
   }
 
+  // Seed XP wallet with starter balances
+  const STARTER_SXP = 500;
+  const STARTER_AP = 10;
+  await supabase
+    .from("player_xp_wallet")
+    .upsert({
+      profile_id: insertedProfile.id,
+      xp_balance: STARTER_SXP,
+      lifetime_xp: STARTER_SXP,
+      skill_xp_balance: STARTER_SXP,
+      skill_xp_lifetime: STARTER_SXP,
+      attribute_points_balance: STARTER_AP,
+      attribute_points_lifetime: STARTER_AP,
+    }, { onConflict: "profile_id" });
+
   await switchActiveCharacter(userId, insertedProfile.id);
 
   return insertedProfile.id;

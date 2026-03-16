@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/lib/supabase-types";
 import { mergeSkillDefinitions } from "@/utils/skillDefinitions";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export type SkillBook = Tables<"skill_books">;
 export type BookPurchase = Tables<"player_book_purchases">;
@@ -11,6 +12,7 @@ export type ReadingSession = Tables<"player_book_reading_sessions">;
 export const useSkillBooks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["skill_books"],
@@ -51,8 +53,9 @@ export const useSkillBooks = () => {
   });
 
   const { data: purchases } = useQuery({
-    queryKey: ["my_book_purchases"],
+    queryKey: ["my_book_purchases", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_book_purchases")
         .select(`
@@ -64,16 +67,19 @@ export const useSkillBooks = () => {
             days_read,
             actual_completion_date
           )
-        `);
+        `)
+        .eq("profile_id", profileId);
 
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   const { data: activeSession } = useQuery({
-    queryKey: ["active_reading_session"],
+    queryKey: ["active_reading_session", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
         .select(`
@@ -81,12 +87,14 @@ export const useSkillBooks = () => {
           skill_books (title, author, base_reading_days),
           player_book_reading_attendance (*)
         `)
+        .eq("profile_id", profileId)
         .eq("status", "reading")
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   const purchaseBook = useMutation({
