@@ -364,7 +364,7 @@ export default function BandManager() {
                 <BandMemberCard
                   key={member.id}
                   member={member}
-                  isLeader={member.profile_id === profileId ? (userId === selectedBand.leader_id) : (member.user_id === selectedBand.leader_id)}
+                  isLeader={member.role === 'leader'}
                   canManage={isLeader && selectedBand.status === 'active'}
                   onRemove={
                     isLeader && member.user_id !== selectedBand.leader_id && selectedBand.status === 'active'
