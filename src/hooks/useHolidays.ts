@@ -217,7 +217,6 @@ export interface PlayerHoliday {
 }
 
 export function useHolidays() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
