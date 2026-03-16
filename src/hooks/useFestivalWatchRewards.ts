@@ -70,7 +70,7 @@ export const useClaimWatchReward = () => {
         .from("festival_watch_rewards")
         .select("id")
         .eq("festival_id", festivalId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("stage_slot_id", stageSlotId)
         .maybeSingle();
 
