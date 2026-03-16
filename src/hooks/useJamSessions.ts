@@ -87,28 +87,20 @@ export const useJamSessions = () => {
   });
 
   const { data: myOutcomes = [] } = useQuery({
-    queryKey: ["jam-session-outcomes", user?.id],
+    queryKey: ["jam-session-outcomes", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("jam_session_outcomes")
         .select("*")
-        .eq("participant_id", profile.id)
+        .eq("participant_id", profileId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as JamSessionOutcome[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const startSessionMutation = useMutation({

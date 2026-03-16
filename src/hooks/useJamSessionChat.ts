@@ -25,10 +25,17 @@ export interface ChatPresence {
 }
 
 export const useJamSessionChat = (sessionId: string | null) => {
-  const { user } = useAuth();
+  const { profile } = useActiveProfile();
   const queryClient = useQueryClient();
   const [presence, setPresence] = useState<ChatPresence[]>([]);
   const [isSending, setIsSending] = useState(false);
+
+  const myProfile = profile ? {
+    id: profile.id,
+    display_name: profile.display_name,
+    username: profile.username,
+    avatar_url: profile.avatar_url,
+  } : null;
 
   // Fetch chat messages
   const { data: messages = [], isLoading } = useQuery({
@@ -49,21 +56,6 @@ export const useJamSessionChat = (sessionId: string | null) => {
       return (data || []) as ChatMessage[];
     },
     enabled: !!sessionId,
-  });
-
-  // Get current user's profile
-  const { data: myProfile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, display_name, username, avatar_url")
-        .eq("user_id", user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id,
   });
 
   // Subscribe to real-time chat updates

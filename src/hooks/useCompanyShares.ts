@@ -279,7 +279,7 @@ export const useDistributeAnnualProfit = () => {
           company_id: companyId,
           game_year: gameYear,
           distributed_profit: distributableProfit,
-          distributed_by: user.id,
+          distributed_by: user.id, // account-level action, user_id is correct here
         });
       if (distError) throw distError;
 
