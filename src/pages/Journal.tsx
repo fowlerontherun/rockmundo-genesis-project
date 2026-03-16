@@ -16,7 +16,7 @@ export type JournalCategory = "all" | "career" | "performance" | "chart" | "fan"
 
 const Journal = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   
   const [filterType, setFilterType] = useState<JournalFilterType>("all");
   const [category, setCategory] = useState<JournalCategory>("all");
