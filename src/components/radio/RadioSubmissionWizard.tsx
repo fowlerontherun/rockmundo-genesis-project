@@ -147,7 +147,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       if (error) throw error;
       return data.map(s => s.station_id);
     },
-    enabled: !!selectedSong && !!user,
+    enabled: !!selectedSong && !!profileId,
   });
 
   // Calculate eligible stations
