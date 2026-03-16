@@ -82,11 +82,13 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     userId = user.id;
   }
 
-  // Fetch the profile_id from the profiles table
+  // Fetch the active profile for this user
   const { data: profileData } = await supabase
     .from('profiles')
     .select('id')
     .eq('user_id', userId)
+    .eq('is_active', true)
+    .is('died_at', null)
     .maybeSingle();
 
   const profileId = profileData?.id;

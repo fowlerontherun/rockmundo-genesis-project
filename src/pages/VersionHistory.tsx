@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.051",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Jam session chat now uses active profile directly instead of separate profile lookup query" },
+      { type: 'improvement', description: "Jam session outcomes query filtered by profileId instead of user_id lookup" },
+      { type: 'fix', description: "Activity booking now fetches active profile (is_active=true, died_at=null) instead of any profile" },
+      { type: 'improvement', description: "Game event notifications band membership check uses profile_id with active member_status filter" },
+      { type: 'fix', description: "Company share transfers correctly reference active profile's user_id" },
+    ],
+  },
+  {
     version: "1.1.050",
     date: "2026-03-16",
     changes: [

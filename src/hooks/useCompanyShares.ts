@@ -126,9 +126,18 @@ export const useIssueCompanyShares = () => {
         if (insertSharesError) throw insertSharesError;
       }
 
+      // Look up the current user's profile for the transfer record
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .is("died_at", null)
+        .maybeSingle();
+
       await supabase.from("company_share_transfers" as any).insert({
         company_id: companyId,
-        from_user_id: user.id,
+        from_user_id: senderProfile?.user_id ?? user.id,
         to_user_id: recipient.user_id,
         shares,
         price_per_share: pricePerShare,
@@ -270,7 +279,7 @@ export const useDistributeAnnualProfit = () => {
           company_id: companyId,
           game_year: gameYear,
           distributed_profit: distributableProfit,
-          distributed_by: user.id,
+          distributed_by: user.id, // account-level action, user_id is correct here
         });
       if (distError) throw distError;
 

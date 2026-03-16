@@ -2,32 +2,35 @@ import { useEffect, useRef } from "react";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNavigate } from "react-router-dom";
 
 export const useGameEventNotifications = () => {
   const { addNotification } = useNotifications();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const navigate = useNavigate();
   const userBandIdsRef = useRef<string[]>([]);
 
-  // Fetch user's band IDs for filtering band-related notifications
+  // Fetch active profile's band IDs for filtering band-related notifications
   useEffect(() => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     const fetchBandIds = async () => {
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
       
       userBandIdsRef.current = data?.map(d => d.band_id) || [];
     };
 
     fetchBandIds();
-  }, [user?.id]);
+  }, [profileId]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !profileId) return;
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
@@ -628,5 +631,5 @@ export const useGameEventNotifications = () => {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [user?.id, addNotification, navigate]);
+  }, [user?.id, profileId, addNotification, navigate]);
 };
