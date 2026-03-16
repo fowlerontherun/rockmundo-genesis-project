@@ -186,23 +186,12 @@ export function useSignUpForOpenMic() {
       scheduledDate: Date;
       venueName: string;
     }) => {
-      if (!user) throw new Error('Must be logged in');
-
-      // Get profile_id for scheduled activity
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .single();
-
-      if (!profile) throw new Error('Profile not found');
+      if (!profileId) throw new Error('Must be logged in');
 
       // Check if time slot is available (open mic is ~30 min for 2 songs)
       const endDate = new Date(scheduledDate.getTime() + 30 * 60 * 1000);
       const { available, conflictingActivity } = await checkTimeSlotAvailable(
-        user.id,
+        profileId,
         scheduledDate,
         endDate
       );
