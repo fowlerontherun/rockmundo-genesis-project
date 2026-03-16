@@ -74,7 +74,7 @@ export const SongVoting = ({
         .from("song_votes")
         .select("id, vote_type")
         .eq("song_id", songId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {
