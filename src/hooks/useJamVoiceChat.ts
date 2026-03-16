@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Peer, { MediaConnection } from "peerjs";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { AudioLevelMonitor, createAudioElement, requestMicrophoneAccess, stopMediaStream } from "@/utils/audioUtils";
 
