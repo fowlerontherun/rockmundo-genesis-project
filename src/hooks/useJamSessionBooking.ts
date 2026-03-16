@@ -401,7 +401,7 @@ export const useJamSessionBooking = () => {
     await (supabase as any)
       .from("player_scheduled_activities")
       .update({ status: "cancelled" })
-      .eq("user_id", user.id)
+      .eq("profile_id", profile.id)
       .eq("linked_jam_session_id", sessionId);
 
     // Add leave message

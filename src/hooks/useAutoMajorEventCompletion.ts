@@ -114,5 +114,5 @@ export function useAutoMajorEventCompletion(userId: string | null) {
     };
 
     checkAndAutoComplete();
-  }, [userId, calendar?.gameMonth, calendar?.gameYear]);
+  }, [userId, profile?.id, calendar?.gameMonth, calendar?.gameYear]);
 }

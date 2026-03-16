@@ -371,6 +371,7 @@ export function useSellProperty() {
 
 export function useToggleRentOut() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
