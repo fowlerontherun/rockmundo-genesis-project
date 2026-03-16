@@ -254,17 +254,18 @@ export function useStartRental() {
 
 export function useEndRental() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (rentalId: string) => {
-      if (!user) throw new Error("Not authenticated");
+      if (!user || !profileId) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("player_rentals")
         .update({ status: "ended", ended_at: new Date().toISOString() })
         .eq("id", rentalId)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (error) throw error;
     },
     onSuccess: () => {
