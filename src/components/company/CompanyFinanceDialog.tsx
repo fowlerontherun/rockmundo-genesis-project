@@ -30,7 +30,7 @@ import {
   useWithdrawFromCompany,
   useTransferBetweenCompanies,
 } from "@/hooks/useCompanyFinance";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
