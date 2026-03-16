@@ -58,7 +58,7 @@ export function BandSettingsTab({
     
     try {
       setLoading(true);
-      await leaveBand(user.id, bandId);
+      await leaveBand(profileId, bandId);
       
       toast({
         title: 'Left Band',
