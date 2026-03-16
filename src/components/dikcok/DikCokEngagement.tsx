@@ -91,7 +91,7 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
   };
 
   const hasReacted = (type: string) => {
-    return reactions?.some(r => r.user_id === user?.id && r.reaction_type === type);
+    return reactions?.some(r => r.user_id === profileId && r.reaction_type === type);
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
