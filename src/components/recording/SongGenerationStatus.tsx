@@ -97,7 +97,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         .update(updatePayload)
         .eq('id', songId);
 
-      const body: Record<string, any> = { songId, userId: user.id };
+      const body: Record<string, any> = { songId, userId: profileId };
       if (updatedLyrics !== undefined) {
         body.overrideLyrics = updatedLyrics;
       }
