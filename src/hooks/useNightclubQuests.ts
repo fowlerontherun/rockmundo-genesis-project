@@ -47,7 +47,6 @@ export interface QuestProgress {
 }
 
 export function useNightclubQuests(clubId: string | undefined) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
