@@ -25,7 +25,7 @@ export function CareerStats() {
       const { count: bandCount } = await supabase
         .from("band_members")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       // Get gigs played
       const { count: gigsPlayed } = await supabase
