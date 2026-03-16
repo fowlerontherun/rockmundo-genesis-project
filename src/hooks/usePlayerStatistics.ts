@@ -62,7 +62,7 @@ export const usePlayerStatistics = (userId?: string) => {
             venue:venues(name)
           )
         `)
-        .eq("gigs.band_id.bands.leader_id", userId)
+        .in("gig.band_id", bandIds)
         .order("created_at", { ascending: false });
 
       if (!outcomes || outcomes.length === 0) {
