@@ -61,7 +61,7 @@ export const useEquipmentStore = (profileId?: string) => {
           *,
           equipment:equipment_catalog(*)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;
