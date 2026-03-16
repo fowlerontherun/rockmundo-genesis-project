@@ -21,26 +21,26 @@ const goalTypes = [
 ];
 
 export function WellnessGoals() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [goalType, setGoalType] = useState("");
   const [targetValue, setTargetValue] = useState("");
 
   const { data: goals, isLoading } = useQuery({
-    queryKey: ["wellness-goals", user?.id],
+    queryKey: ["wellness-goals", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_wellness_goals")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const addGoalMutation = useMutation({
