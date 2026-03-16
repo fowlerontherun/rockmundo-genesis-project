@@ -18,7 +18,7 @@ export function CareerStats() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("total_hours_played, created_at, cash, fame, fans")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
 
       // Get band count
