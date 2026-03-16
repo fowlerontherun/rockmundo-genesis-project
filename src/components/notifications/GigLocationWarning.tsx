@@ -6,7 +6,7 @@ import { AlertTriangle, Plane, MapPin, Clock, Crown } from "lucide-react";
 import { useUpcomingGigWarning } from "@/hooks/useUpcomingGigWarning";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { bookCharterFlight, CHARTER_FLIGHT_COST } from "@/utils/charterFlight";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,7 +17,7 @@ export const GigLocationWarning = () => {
   const { data: warning, isLoading } = useUpcomingGigWarning();
   const { data: vipStatus } = useVipStatus();
   const { profile } = useGameData();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -28,12 +28,12 @@ export const GigLocationWarning = () => {
   }
 
   const handleCharterFlight = async () => {
-    if (!user?.id || !profile) return;
+    if (!profileId || !profile) return;
 
     setIsBooking(true);
     try {
       const result = await bookCharterFlight(
-        user.id,
+        profileId,
         profile.cash || 0,
         warning.gigId,
         warning.gigDate,

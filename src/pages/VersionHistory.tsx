@@ -14,7 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.062",
+    version: "1.1.065",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Charter flight booking now scoped to active profile instead of auth user" },
+      { type: 'improvement', description: "GigLocationWarning passes profileId to charter flight utility" },
+      { type: 'improvement', description: "Festival watch rewards claimed and XP applied on active profile" },
+      { type: 'improvement', description: "Loan creation includes profile_id for character-level debt tracking" },
+      { type: 'improvement', description: "Band reactivation triggered_by uses profileId" },
+      { type: 'improvement', description: "Travel history and activity feed entries from charter flights include profile_id" },
+    ],
+  },
+  {
+    version: "1.1.064",
     date: "2026-03-16",
     changes: [
       { type: 'improvement', description: "PersonalVehicles buy/sell operations use profileId directly" },

@@ -171,7 +171,7 @@ export default function BandManager() {
     if (!user || !selectedBandId) return;
 
     try {
-      const result = await reactivateBand(selectedBandId, user.id);
+      const result = await reactivateBand(selectedBandId, profileId || user.id);
       
       if (result.success) {
         toast({

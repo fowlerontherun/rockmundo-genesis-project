@@ -10,7 +10,7 @@ export interface CharterFlightResult {
 }
 
 export async function bookCharterFlight(
-  userId: string,
+  profileId: string,
   currentBalance: number,
   gigId: string,
   gigDate: Date,
@@ -40,7 +40,7 @@ export async function bookCharterFlight(
       travel_status: 'arrived',
       arrival_time: arrivalTime.toISOString()
     })
-    .eq("id", userId);
+    .eq("id", profileId);
 
   if (updateError) {
     console.error("Failed to update profile:", updateError);
@@ -52,7 +52,8 @@ export async function bookCharterFlight(
 
   // Log the travel
   await supabase.from("player_travel_history").insert({
-    user_id: userId,
+    user_id: profileId,
+    profile_id: profileId,
     from_city_id: originCityId,
     to_city_id: destinationCityId,
     transport_type: "private_charter",
@@ -65,7 +66,8 @@ export async function bookCharterFlight(
 
   // Create activity feed entry
   await supabase.from("activity_feed").insert({
-    user_id: userId,
+    user_id: profileId,
+    profile_id: profileId,
     activity_type: "travel",
     message: `Chartered private jet from ${originCityName} to ${destinationCityName} for gig`,
     earnings: -CHARTER_FLIGHT_COST,
