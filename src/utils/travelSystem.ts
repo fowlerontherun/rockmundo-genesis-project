@@ -164,9 +164,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
   }
 
   // Log activity
-  
-  await supabase.from("activity_feed").insert({
-    user_id: userId,
+  await (supabase as any).from("activity_feed").insert({
+    profile_id: profileId,
     activity_type: "travel",
     message: `Traveled from ${fromCityName} to ${toCityName} by ${transportType}`,
     metadata: {
@@ -179,8 +178,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
   });
 
   // Award XP for travel (5 XP per travel)
-  await supabase.from("experience_ledger").insert({
-    user_id: userId,
+  await (supabase as any).from("experience_ledger").insert({
+    profile_id: profileId,
     activity_type: "travel",
     xp_amount: 5,
     metadata: {

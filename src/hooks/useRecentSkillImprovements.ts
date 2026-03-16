@@ -29,6 +29,6 @@ export const useRecentSkillImprovements = (profileId?: string, hoursAgo: number 
       if (error) throw error;
       return data as SkillImprovement[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 };

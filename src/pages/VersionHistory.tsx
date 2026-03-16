@@ -158,6 +158,19 @@ const versionHistory: VersionEntry[] = [
     ],
   },
   {
+    version: "1.1.064",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "TravelSystem bookTravel/validateEligibility now use profileId for all profile queries and inserts" },
+      { type: 'improvement', description: "BehaviorSettings, AchievementsSection, ActivityStatusIndicator scoped to active profile" },
+      { type: 'improvement', description: "TattooParlour profile/cash/tattoo queries and inserts migrated to profileId" },
+      { type: 'improvement', description: "BandEarnings leader profile balance uses profile id" },
+      { type: 'improvement', description: "InventoryManager book sessions and properties scoped to active profile" },
+      { type: 'improvement', description: "LoansTab cash updates use profile id instead of user_id" },
+      { type: 'fix', description: "useRecentSkillImprovements queries by profile_id" },
+    ],
+  },
+  {
     version: "1.1.052",
     date: "2026-03-16",
     changes: [

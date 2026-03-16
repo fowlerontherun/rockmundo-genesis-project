@@ -291,7 +291,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       const { data: latestProfile } = await supabase
         .from('profiles')
         .select('id, cash')
-        .eq('user_id', user.id)
+        .eq('id', profileId!)
         .single();
 
       if (!latestProfile) {

@@ -58,23 +58,23 @@ const InventoryManager = () => {
 
   // Fetch house keys from player_properties
   const { data: properties = [], isLoading: propertiesLoading } = useQuery({
-    queryKey: ["inventory-properties", user?.id],
+    queryKey: ["inventory-properties", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_properties")
         .select(`
           *,
           housing_types (name, country, tier, bedrooms, description, base_price, image_url)
         `)
-        .eq("user_id", user.id)
+        .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const handleItemClick = (item: InventoryItem) => {

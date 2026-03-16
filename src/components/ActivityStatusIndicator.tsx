@@ -38,7 +38,7 @@ export function ActivityStatusIndicator() {
     return () => clearInterval(interval);
   }, [profileId]);
 
-  if (loading || !user) return null;
+  if (loading || !profileId) return null;
 
   const isBusy = !!currentActivity;
 

@@ -187,9 +187,9 @@ export function useBehaviorSettings() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<BehaviorSettings>) => {
-      if (!user?.id || !settings?.id) throw new Error("No user or settings");
+      if (!profileId || !settings?.id) throw new Error("No profile or settings");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("player_behavior_settings")
         .update(updates)
         .eq("id", settings.id)
@@ -200,10 +200,10 @@ export function useBehaviorSettings() {
       return data as BehaviorSettings;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["behavior-settings", user?.id], data);
+      queryClient.setQueryData(["behavior-settings", profileId], data);
       toast.success("Lifestyle settings updated");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("Failed to update settings: " + error.message);
     },
   });

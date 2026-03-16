@@ -162,11 +162,11 @@ export function AchievementsSection() {
   }, [profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       loadAchievements();
       loadPlayerAchievements();
     }
-  }, [user, loadAchievements, loadPlayerAchievements]);
+  }, [profileId, loadAchievements, loadPlayerAchievements]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {

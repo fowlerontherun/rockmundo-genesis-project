@@ -317,7 +317,7 @@ export default function TattooParlour() {
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
       if ((profile?.cash || 0) < 200) throw new Error('Need $200 for treatment');
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - 200 }).eq('user_id', user!.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - 200 }).eq('id', profileId!);
       await supabase.from('player_tattoos').update({ is_infected: false, infection_cleared_at: new Date().toISOString() }).eq('id', tattooId);
     },
     onSuccess: () => {
