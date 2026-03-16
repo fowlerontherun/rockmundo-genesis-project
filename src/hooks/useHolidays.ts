@@ -262,7 +262,7 @@ export function useHolidays() {
   // Book a holiday
   const bookHolidayMutation = useMutation({
     mutationFn: async ({ destination, durationDays }: { destination: HolidayDestination; durationDays: number }) => {
-      if (!profileId || !user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
 
       const totalCost = destination.costPerDay * durationDays;
 

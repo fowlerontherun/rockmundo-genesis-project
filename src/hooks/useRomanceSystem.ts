@@ -270,8 +270,7 @@ export const useRomanceInteraction = () => {
 
 export const useEndRomance = () => {
   const queryClient = useQueryClient();
-  const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (input: {

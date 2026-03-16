@@ -104,7 +104,7 @@ export const useClothingMarketplace = (filters?: {
       const { error: purchaseError } = await supabase
         .from("player_clothing_purchases" as never)
         .insert({
-          buyer_user_id: user.id,
+          buyer_user_id: profileId,
           item_id: item.id,
           seller_user_id: item.creator_user_id,
           price_paid: item.sale_price,

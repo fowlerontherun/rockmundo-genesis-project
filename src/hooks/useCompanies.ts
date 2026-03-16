@@ -389,7 +389,7 @@ export const useCloseSubsidiary = () => {
           await supabase
             .from("profiles")
             .update({ cash: Number(profile.cash) + Number(company.balance) })
-            .eq("id", profileId);
+            .eq("id", inputProfileId);
 
           // Record the withdrawal transaction
           await supabase.from("company_transactions").insert({

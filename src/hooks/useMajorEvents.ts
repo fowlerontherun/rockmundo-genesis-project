@@ -279,7 +279,7 @@ export function useAcceptMajorEvent() {
         .from('major_event_performances')
         .insert({
           instance_id: instanceId,
-          user_id: user.id,
+          user_id: profileId,
           band_id: bandId,
           song_1_id: song1Id,
           song_2_id: song2Id,
