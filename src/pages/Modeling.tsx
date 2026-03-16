@@ -1,5 +1,5 @@
 import { useGameData } from "@/hooks/useGameData";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
