@@ -283,7 +283,7 @@ export function useHolidays() {
       const { error: holidayError } = await supabase
         .from("player_holidays")
         .insert({
-          user_id: profileId,
+          user_id: userId!,
           destination: destination.name,
           started_at: startDate.toISOString(),
           ends_at: endDate.toISOString(),
