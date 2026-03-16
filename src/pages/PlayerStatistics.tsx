@@ -11,7 +11,7 @@ import { PlayerAchievements } from '@/components/player-stats/PlayerAchievements
 import { PerformanceHistory } from '@/components/player-stats/PerformanceHistory';
 
 export default function PlayerStatistics() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile, skills, attributes, xpWallet } = useGameData();
   
   const levelData = usePlayerLevel({
