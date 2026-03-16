@@ -110,7 +110,7 @@ export function usePlayerSurvey() {
 
       // Insert responses
       const rows = answers.map((a) => ({
-        user_id: profileId,
+        user_id: userId,
         profile_id: profileId,
         question_id: a.questionId,
         survey_round: round,
