@@ -60,9 +60,9 @@ export const CharacterFameOverview = ({ profileId }: CharacterFameOverviewProps)
 
   // Fetch band membership for comparison
   const { data: bandMembership } = useQuery({
-    queryKey: ["character-band-membership", userId],
+    queryKey: ["character-band-membership", resolvedId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!resolvedId) return null;
       const { data, error } = await supabase
         .from("band_members")
         .select(`
@@ -72,31 +72,31 @@ export const CharacterFameOverview = ({ profileId }: CharacterFameOverviewProps)
             id, name, fame, total_fans, genre
           )
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", resolvedId)
         .eq("member_status", "active")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!resolvedId,
   });
 
   // Fetch recent fame events (from gigs, releases, etc.)
   const { data: recentActivity } = useQuery({
-    queryKey: ["character-fame-activity", userId],
+    queryKey: ["character-fame-activity", resolvedId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!resolvedId) return [];
       const { data, error } = await supabase
         .from("game_activity_logs")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", resolvedId)
         .in("activity_type", ["gig_completed", "song_released", "chart_entry", "radio_play"])
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!userId,
+    enabled: !!resolvedId,
   });
 
   if (profileLoading) {

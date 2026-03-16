@@ -149,7 +149,7 @@ export function BandChat({ bandId }: BandChatProps) {
     }
   };
 
-  const isOwnMessage = (userId: string) => userId === user?.id;
+  const isOwnMessage = (userId: string) => userId === profileId;
 
   return (
     <Card className="flex flex-col h-[600px]">

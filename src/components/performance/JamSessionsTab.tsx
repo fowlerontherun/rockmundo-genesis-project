@@ -139,7 +139,7 @@ export function JamSessionsTab() {
   };
 
   const handleCreateSession = async () => {
-    if (!user) {
+    if (!profileId) {
       toast({
         title: "Sign in required",
         description: "You need to be logged in to host a jam session.",

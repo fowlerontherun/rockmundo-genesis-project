@@ -99,23 +99,23 @@ export const CreateCompanyDialog = ({
 }: CreateCompanyDialogProps) => {
   const [open, setOpen] = useState(false);
   const { currentCity } = useGameData();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const createCompany = useCreateCompany();
 
   // Fetch player profile for cash balance
   const { data: profile } = useQuery({
-    queryKey: ["profile-for-company", user?.id],
+    queryKey: ["profile-for-company", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && open,
+    enabled: !!profileId && open,
   });
 
   // Fetch cities for headquarters selection

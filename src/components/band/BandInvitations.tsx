@@ -77,8 +77,8 @@ export const BandInvitations = () => {
         .from("band_members")
         .insert({
           band_id: invitation.band_id,
-          user_id: user.id,
-          profile_id: activeProfile.id,
+          user_id: profileId,
+          profile_id: profileId,
           role: "member",
           instrument_role: invitation.instrument_role,
           vocal_role: invitation.vocal_role,
