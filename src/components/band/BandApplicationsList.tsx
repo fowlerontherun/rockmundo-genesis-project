@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, ClipboardList, User } from 'lucide-react';
+import { Check, X, ClipboardList, User, ExternalLink } from 'lucide-react';
 
 interface BandApplicationsListProps {
   bandId: string;
@@ -15,6 +16,7 @@ interface BandApplicationsListProps {
 export function BandApplicationsList({ bandId, onMemberAdded }: BandApplicationsListProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: applications, isLoading } = useQuery({
     queryKey: ['band-applications', bandId],
@@ -113,13 +115,20 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
       <CardContent className="space-y-3">
         {applications.map((app: any) => (
           <div key={app.id} className="flex items-center justify-between rounded-lg border p-3">
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
+              onClick={() => navigate(`/player/${app.applicant_profile_id}`)}
+              title="View player profile & skills"
+            >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={app.profiles?.avatar_url} />
                 <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium">{app.profiles?.display_name || app.profiles?.username || 'Unknown'}</p>
+              <div className="min-w-0">
+                <p className="font-medium text-primary underline-offset-2 hover:underline flex items-center gap-1">
+                  {app.profiles?.display_name || app.profiles?.username || 'Unknown'}
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                </p>
                 <div className="flex gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-xs">{app.instrument_role}</Badge>
                   {app.vocal_role && app.vocal_role !== 'None' && (

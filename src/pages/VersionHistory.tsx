@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.099",
+    date: "2026-03-16",
+    changes: [
+      { type: 'feature', description: "Pending band applications now link to the applicant's player profile — click their name to view skills, attributes, and stats before accepting or rejecting" },
+    ],
+  },
+  {
     version: "1.1.098",
     date: "2026-03-16",
     changes: [
