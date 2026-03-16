@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 
-interface RandomEvent {
+export interface RandomEvent {
   id: string;
   name: string;
   description: string;
