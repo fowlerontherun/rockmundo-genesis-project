@@ -40,6 +40,7 @@ export function CreateLabelDialog({
   minimumBalance,
 }: CreateLabelDialogProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [headquartersCityId, setHeadquartersCityId] = useState("");
