@@ -148,7 +148,7 @@ export const useEmotionalHistory = (limit = 20) => {
       if (error) throw error;
       return (data ?? []) as unknown as EmotionalStateEvent[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 30,
   });
 };
