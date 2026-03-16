@@ -19,7 +19,7 @@ export default function DonationSuccess() {
 
   useEffect(() => {
     const processRewards = async () => {
-      if (!user || processed) return;
+      if (!profileId || processed) return;
 
       try {
         // Award XP via experience_ledger
