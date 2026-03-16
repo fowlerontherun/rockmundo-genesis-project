@@ -128,17 +128,17 @@ export default function Eurovision() {
 
   // Check user's votes
   const { data: userVotes = [] } = useQuery({
-    queryKey: ["eurovision-user-votes", currentEvent?.id, user?.id],
+    queryKey: ["eurovision-user-votes", currentEvent?.id, profileId],
     queryFn: async () => {
-      if (!currentEvent?.id || !user?.id) return [];
+      if (!currentEvent?.id || !profileId) return [];
       const { data, error } = await supabase
         .from("eurovision_votes")
         .select("entry_id")
-        .eq("voter_id", user.id);
+        .eq("voter_id", profileId);
       if (error) throw error;
       return data.map(v => v.entry_id);
     },
-    enabled: !!currentEvent?.id && !!user?.id,
+    enabled: !!currentEvent?.id && !!profileId,
   });
 
   // Submit entry mutation
