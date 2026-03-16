@@ -352,7 +352,7 @@ export function useSellProperty() {
         .from("player_properties")
         .delete()
         .eq("id", property.id)
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
       if (deleteError) throw deleteError;
 
       return sellPrice;
