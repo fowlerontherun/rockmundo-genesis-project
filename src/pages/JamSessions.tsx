@@ -462,7 +462,7 @@ const JamSessions = () => {
             ) : (
               jamSessions.map((session) => {
                 const isHost = session.host_id === profile?.id;
-                const alreadyJoined = session.participant_ids?.includes(user?.id ?? "");
+                const alreadyJoined = session.participant_ids?.includes(profileId ?? "");
                 const isFull = (session.current_participants ?? 0) >= session.max_participants;
 
                 return (

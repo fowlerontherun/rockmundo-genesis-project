@@ -48,7 +48,7 @@ export default function FestivalBrowser() {
     isApplying,
     isWithdrawing,
     isPerforming
-  } = useFestivals(user?.id, band?.id);
+  } = useFestivals(profileId ?? undefined, band?.id);
   
   const { data: setlists } = useSetlists(band?.id);
   const { performances, stats, isLoading: historyLoading } = useFestivalHistory(band?.id);

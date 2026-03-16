@@ -269,7 +269,7 @@ export default function TattooParlour() {
   // Text tattoo mutation
   const textTattooMutation = useMutation({
     mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
-      if (!currentParlour || !user) throw new Error('Missing data');
+      if (!currentParlour || !profileId) throw new Error('Missing data');
       if ((profile?.cash || 0) < data.price) throw new Error('Insufficient funds');
 
       const artistBonus = selectedArtist?.quality_bonus || 0;

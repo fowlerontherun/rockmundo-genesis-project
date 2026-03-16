@@ -357,7 +357,7 @@ const CompanyDetailContent = () => {
 
 
         <TabsContent value="shares" className="space-y-4">
-          <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === user?.id} />
+          <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === profileId} />
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-4">

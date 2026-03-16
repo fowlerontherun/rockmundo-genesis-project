@@ -190,12 +190,12 @@ export default function Eurovision() {
   // Remove vote mutation
   const removeVoteMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      if (!user?.id) throw new Error("Must be logged in");
+      if (!profileId) throw new Error("Must be logged in");
       const { error } = await supabase
         .from("eurovision_votes")
         .delete()
         .eq("entry_id", entryId)
-        .eq("voter_id", user.id);
+        .eq("voter_id", profileId);
       if (error) throw error;
     },
     onSuccess: () => {

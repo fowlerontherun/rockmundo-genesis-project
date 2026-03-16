@@ -461,10 +461,10 @@ const RadioBrowser = () => {
         {/* Airplay Stats Tab */}
         <TabsContent value="airplay" className="mt-6 space-y-6">
           {/* My Airplay Stats */}
-          {user && <MyAirplayStats userId={user.id} />}
+          {profileId && <MyAirplayStats userId={profileId} />}
           
           {/* Songs in Rotation */}
-          {user && <SongsInRotation userId={user.id} />}
+          {profileId && <SongsInRotation userId={profileId} />}
           
           {/* Submission Breakdown */}
           <AirplayDashboard stats={airplayStats} submissions={mySubmissions} />

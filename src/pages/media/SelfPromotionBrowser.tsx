@@ -195,7 +195,7 @@ const SelfPromotionBrowser = () => {
       const { error: deductError } = await supabase
         .from("profiles")
         .update({ cash: playerCash - activity.base_cost })
-        .eq("user_id", userId);
+        .eq("id", userId);
 
       if (deductError) throw deductError;
 

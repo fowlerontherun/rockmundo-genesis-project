@@ -100,7 +100,7 @@ export const UniversityTab = () => {
 
   // Fetch profile with current city
   const { data: profile } = useQuery({
-    queryKey: ["profile_with_city", user?.id],
+    queryKey: ["profile_with_city", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -112,12 +112,12 @@ export const UniversityTab = () => {
             name
           )
         `)
-        .eq("user_id", user!.id)
+        .eq("id", profileId!)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const currentCityName = (profile?.cities as any)?.name || null;

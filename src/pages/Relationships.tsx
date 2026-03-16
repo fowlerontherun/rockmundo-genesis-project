@@ -271,7 +271,7 @@ export default function RelationshipsPage() {
     return Object.keys(QUICK_ACTION_MAP).map(key => buildInteractionOption(key, interactionTarget));
   }, [interactionTarget]);
 
-  if (!user) {
+  if (!activeProfileId) {
     return (
       <div className="container mx-auto py-20 text-center">
         <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />

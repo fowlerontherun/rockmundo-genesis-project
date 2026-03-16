@@ -69,7 +69,7 @@ export default function EducationBooking() {
     if (activityType === "mentorship") metadata.mentor_id = selectedMentor;
 
     const { error } = await (supabase as any).from("scheduled_activities").insert({
-      user_id: user.id,
+      user_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + 60 * 60 * 1000).toISOString(),

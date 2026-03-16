@@ -70,9 +70,9 @@ export default function Awards() {
   });
 
   const { data: voteCount = 0 } = useQuery({
-    queryKey: ["award-show-vote-count", selectedShow?.id, user?.id],
+    queryKey: ["award-show-vote-count", selectedShow?.id, profileId],
     queryFn: () => fetchVoteCountForShow(selectedShow!.id),
-    enabled: !!selectedShow?.id && !!user?.id && showVotingDialog,
+    enabled: !!selectedShow?.id && !!profileId && showVotingDialog,
   });
 
   const activeShows = shows.filter(s => s.status !== 'completed');
