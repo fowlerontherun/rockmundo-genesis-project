@@ -120,9 +120,9 @@ const useTrainingData = (profileId: string | null | undefined) => {
 };
 
 const TrainingPage = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
-  const { courses, enrollments, setEnrollments, loading } = useTrainingData(user?.id);
+  const { courses, enrollments, setEnrollments, loading } = useTrainingData(profileId ?? undefined);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
 
   const coursesWithEnrollment = useMemo<CourseWithEnrollment[]>(() => {
