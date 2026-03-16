@@ -126,7 +126,7 @@ export const useJamSessionBooking = () => {
 
   const bookJamSession = async (params: BookJamSessionParams): Promise<string> => {
     if (!profile) throw new Error("Profile not found");
-    if (!user) throw new Error("User not found");
+    if (!profile) throw new Error("Profile not found");
 
     setIsBooking(true);
 
