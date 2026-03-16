@@ -76,6 +76,7 @@ export const PromoTourCard = ({
   userId,
 }: PromoTourCardProps) => {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<"morning" | "afternoon">("morning");
 
