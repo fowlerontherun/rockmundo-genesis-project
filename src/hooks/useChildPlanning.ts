@@ -186,7 +186,7 @@ export function calculateInheritedPotentials(
 
 export function useCompleteChildBirth() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (params: {

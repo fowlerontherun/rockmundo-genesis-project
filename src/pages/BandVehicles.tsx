@@ -153,7 +153,7 @@ export default function BandVehicles() {
       vehicleId: string;
       type: "buy" | "rent" | "lease";
     }) => {
-      if (!band?.id || !user) throw new Error("No band found");
+      if (!band?.id) throw new Error("No band found");
 
       const vehicle = catalog.find((v) => v.id === vehicleId);
       if (!vehicle) throw new Error("Vehicle not found");
