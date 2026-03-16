@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import {
   listTrainingCourses,
@@ -120,9 +120,9 @@ const useTrainingData = (profileId: string | null | undefined) => {
 };
 
 const TrainingPage = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
-  const { courses, enrollments, setEnrollments, loading } = useTrainingData(user?.id);
+  const { courses, enrollments, setEnrollments, loading } = useTrainingData(profileId ?? undefined);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
 
   const coursesWithEnrollment = useMemo<CourseWithEnrollment[]>(() => {
@@ -141,7 +141,7 @@ const TrainingPage = () => {
   }, [courses, enrollments]);
 
   const handleEnroll = async (course: TrainingCourseRecord) => {
-    if (!user?.id) {
+    if (!profileId) {
       toast({
         title: "Log in required",
         description: "Sign in to reserve a seat in this training cohort.",
@@ -153,7 +153,7 @@ const TrainingPage = () => {
     setEnrollingCourseId(course.id);
     try {
       const enrollment = await upsertTrainingEnrollment({
-        profileId: user.id,
+        profileId: profileId!,
         course,
         progress: 0,
         status: "enrolled",

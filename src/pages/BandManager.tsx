@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth-context';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { BandCreationForm } from '@/components/band/BandCreationForm';
 import { BandOverview } from '@/components/band/BandOverview';
@@ -34,7 +33,6 @@ import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
 import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -48,10 +46,10 @@ export default function BandManager() {
   useAutoGigExecution(selectedBandId);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       loadUserBands();
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
     if (selectedBandId) {
@@ -168,10 +166,10 @@ export default function BandManager() {
   };
 
   const handleReactivate = async () => {
-    if (!user || !selectedBandId) return;
+    if (!profileId || !selectedBandId) return;
 
     try {
-      const result = await reactivateBand(selectedBandId, profileId || user.id);
+      const result = await reactivateBand(selectedBandId, profileId);
       
       if (result.success) {
         toast({
@@ -220,9 +218,9 @@ export default function BandManager() {
     : undefined;
 
   const isLeader = Boolean(
-    (user && selectedBand.leader_id === user.id) ||
+    (profileId && selectedBand.leader_id === profileId) ||
       currentMembership?.role === 'leader' ||
-      (user && currentMembership?.bands?.leader_id === user.id)
+      (profileId && currentMembership?.bands?.leader_id === profileId)
   );
 
   return (
@@ -342,7 +340,7 @@ export default function BandManager() {
                     <InviteFriendToBand
                       bandId={selectedBand.id}
                       bandName={selectedBand.name}
-                      currentUserId={user!.id}
+                      currentUserId={profileId!}
                     />
                     <AddTouringMember 
                       bandId={selectedBand.id} 

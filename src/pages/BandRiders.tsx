@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useBandRiders, RIDER_TIERS, BandRider } from '@/hooks/useBandRiders';
 import { RiderBuilder } from '@/components/riders/RiderBuilder';
-import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from '@/hooks/usePrimaryBand';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function BandRiders() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: primaryBandRecord, isLoading: bandLoading } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
   const { riders, ridersLoading, deleteRider, setDefaultRider, createRider } = useBandRiders(band?.id || null);

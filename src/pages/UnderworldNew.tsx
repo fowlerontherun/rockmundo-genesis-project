@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { useUnderworld, type CryptoToken } from "@/hooks/useUnderworld";
 import { useCryptoTokens } from "@/hooks/useCryptoTokens";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import underworldVeil from "@/assets/underworld-veil.svg";
 import { UnderworldStoreTab } from "@/components/underworld/UnderworldStoreTab";
@@ -234,7 +233,6 @@ const RugAlertBanner = ({ ruggedSymbols }: { ruggedSymbols: string[] }) => {
 };
 
 export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoToken[]; tokensLoading: boolean }) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { holdings, buyToken, sellToken, isBuying, isSelling } = useCryptoTokens(profileId ?? undefined);
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
@@ -277,7 +275,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   const totalVolume = useMemo(() => activeTokens.reduce((s, t) => s + (t.volume_24h || 0), 0), [activeTokens]);
 
   const handleBuy = () => {
-    if (!selectedTokenData || !buyQuantity || !user) return;
+    if (!selectedTokenData || !buyQuantity || !profileId) return;
     const qty = parseFloat(buyQuantity);
     if (isNaN(qty) || qty <= 0) return;
     buyToken({
@@ -289,7 +287,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   };
 
   const handleSell = () => {
-    if (!selectedTokenData || !sellQuantity || !user) return;
+    if (!selectedTokenData || !sellQuantity || !profileId) return;
     const qty = parseFloat(sellQuantity);
     if (isNaN(qty) || qty <= 0) return;
     sellToken({
@@ -583,10 +581,10 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
                           </div>
                         </div>
                       </div>
-                      <Button className="w-full" onClick={handleBuy} disabled={isBuying || !user || !buyQuantity}>
+                      <Button className="w-full" onClick={handleBuy} disabled={isBuying || !profileId || !buyQuantity}>
                         {isBuying ? "Processing..." : `Buy ${selectedTokenData.symbol} at ${formatPrice(selectedTokenData.current_price)}`}
                       </Button>
-                      {!user && <p className="text-xs text-muted-foreground text-center">Log in to trade</p>}
+                      {!profileId && <p className="text-xs text-muted-foreground text-center">Log in to trade</p>}
                     </TabsContent>
                     <TabsContent value="sell" className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
@@ -613,7 +611,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
                           </div>
                         </div>
                       </div>
-                      <Button className="w-full" variant="destructive" onClick={handleSell} disabled={isSelling || !user || !sellQuantity}>
+                      <Button className="w-full" variant="destructive" onClick={handleSell} disabled={isSelling || !profileId || !sellQuantity}>
                         {isSelling ? "Processing..." : `Sell ${selectedTokenData.symbol} at ${formatPrice(selectedTokenData.current_price)}`}
                       </Button>
                     </TabsContent>

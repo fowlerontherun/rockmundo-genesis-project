@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 const Schedule = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
 
@@ -95,7 +95,7 @@ const Schedule = () => {
       </div>
 
       {viewMode === 'day' ? (
-        <DaySchedule date={currentDate} userId={user?.id} />
+        <DaySchedule date={currentDate} userId={profileId ?? undefined} />
       ) : (
         <Tabs defaultValue={format(weekDays[0], 'yyyy-MM-dd')} className="w-full">
           <TabsList className="w-full grid grid-cols-7 h-auto">
@@ -112,7 +112,7 @@ const Schedule = () => {
           </TabsList>
           {weekDays.map(day => (
             <TabsContent key={day.toISOString()} value={format(day, 'yyyy-MM-dd')}>
-              <DaySchedule date={day} userId={user?.id} />
+              <DaySchedule date={day} userId={profileId ?? undefined} />
             </TabsContent>
           ))}
         </Tabs>

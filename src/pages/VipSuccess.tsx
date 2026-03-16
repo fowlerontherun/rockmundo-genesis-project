@@ -4,23 +4,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export default function VipSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [countdown, setCountdown] = useState(5);
 
   const sessionId = searchParams.get("session_id");
 
   useEffect(() => {
     // Invalidate VIP status to refresh
-    if (user?.id) {
-      queryClient.invalidateQueries({ queryKey: ["vip-status", user.id] });
+    if (profileId) {
+      queryClient.invalidateQueries({ queryKey: ["vip-status", profileId] });
     }
-  }, [user?.id, queryClient]);
+  }, [profileId, queryClient]);
 
   useEffect(() => {
     // Auto-redirect countdown

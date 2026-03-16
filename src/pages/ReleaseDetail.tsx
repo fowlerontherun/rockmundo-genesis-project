@@ -12,21 +12,19 @@ import { PromoTourCard } from "@/components/releases/PromoTourCard";
 import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 import { HypeMeter } from "@/components/releases/HypeMeter";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useAuth } from "@/hooks/use-auth-context";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "songs";
-  const { user } = useAuth();
   const { profile: activeProfile, profileId } = useActiveProfile();
 
   // Fetch current user + profile for promo tour
   const { data: userData } = useQuery({
     queryKey: ["current-user-profile-release", profileId],
     queryFn: async () => {
-      if (!profileId || !user) return null;
+      if (!profileId) return null;
       const { data: bandMember } = await supabase
         .from("band_members")
         .select("band_id, bands(fame)")
@@ -34,7 +32,7 @@ export default function ReleaseDetail() {
         .eq("role", "leader")
         .maybeSingle();
       return {
-        userId: user.id,
+        userId: profileId,
         cash: activeProfile?.cash ?? 0,
         health: activeProfile?.health ?? 100,
         energy: activeProfile?.energy ?? 100,
@@ -42,7 +40,7 @@ export default function ReleaseDetail() {
         bandFame: (bandMember as any)?.bands?.fame || 0,
       };
     },
-    enabled: !!profileId && !!user,
+    enabled: !!profileId,
   });
 
   usePromoTourCompletion(userData?.userId);

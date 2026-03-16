@@ -8,7 +8,7 @@ import { Briefcase, MapPin, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const ACTIVITY_TYPES = [
   { value: "work", label: "Work Shift", icon: Briefcase },
@@ -19,14 +19,14 @@ const ACTIVITY_TYPES = [
 export default function WorkBooking() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [date, setDate] = useState<Date>();
   const [activityType, setActivityType] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [duration, setDuration] = useState<string>("8");
 
   const handleBookActivity = async () => {
-    if (!date || !activityType || !timeSlot || !user) {
+    if (!date || !activityType || !timeSlot || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, activity type, and time slot.",
@@ -41,7 +41,7 @@ export default function WorkBooking() {
     const durationHours = parseInt(duration);
 
     const { error } = await (supabase as any).from("scheduled_activities").insert({
-      user_id: user.id,
+      user_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),

@@ -8,7 +8,6 @@ import { Music, ArrowLeft, Clock } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,6 @@ export default function SongwritingBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const scheduledDate = location.state?.scheduledDate;
@@ -60,7 +58,7 @@ export default function SongwritingBooking() {
   });
 
   const handleBookSession = async () => {
-    if (!date || !timeSlot || !selectedProjectId || !user) {
+    if (!date || !timeSlot || !selectedProjectId || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, time slot, and project to work on.",
@@ -78,7 +76,7 @@ export default function SongwritingBooking() {
     const project = projects.find(p => p.id === selectedProjectId);
 
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: user!.id,
+      user_id: profileId,
       profile_id: profileId,
       activity_type: "songwriting",
       scheduled_start: scheduledStart.toISOString(),

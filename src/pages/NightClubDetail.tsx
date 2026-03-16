@@ -13,7 +13,7 @@ import { normalizeNightClubRecord, type CityNightClub, type NightClubDrink } fro
 import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
 import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerformance";
 import { useNightclubQuests } from "@/hooks/useNightclubQuests";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
@@ -44,7 +44,7 @@ const getScoreColor = (score: number) => {
 const NightClubDetail = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [club, setClub] = useState<CityNightClub | null>(null);
   const [cityName, setCityName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -110,13 +110,13 @@ const NightClubDetail = () => {
   };
 
   const handleBuyDrink = async (drink: NightClubDrink) => {
-    if (!user?.id || !drink.price) return;
+    if (!profileId || !drink.price) return;
     setBuyingDrinkId(drink.id);
     try {
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash, energy")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
       if ((profile.cash ?? 0) < drink.price) {
@@ -129,7 +129,7 @@ const NightClubDetail = () => {
           cash: Math.max(0, (profile.cash ?? 0) - drink.price),
           energy: Math.min(100, (profile.energy ?? 0) + 5),
         })
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       toast.success(`🍸 ${drink.name} — ${drink.effect || "+5 energy"}`);
     } catch (err: any) {
       toast.error(err.message);
