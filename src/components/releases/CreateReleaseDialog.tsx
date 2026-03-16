@@ -14,6 +14,7 @@ import { TerritorySelectionStep, TerritorySelection } from "./TerritorySelection
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import { Loader2, AlertTriangle, Building2, BadgeCheck } from "lucide-react";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { addDays, isBefore } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
