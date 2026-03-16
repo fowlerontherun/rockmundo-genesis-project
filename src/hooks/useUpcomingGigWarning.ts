@@ -20,19 +20,20 @@ export interface UpcomingGigWarning {
 }
 
 export const useUpcomingGigWarning = () => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile, currentCity } = useGameData();
 
   return useQuery({
-    queryKey: ["upcoming-gig-warning", user?.id, profile?.current_city_id],
+    queryKey: ["upcoming-gig-warning", profileId, profile?.current_city_id],
     queryFn: async (): Promise<UpcomingGigWarning | null> => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
-      // Get user's band memberships
+      // Get active profile's band memberships
       const { data: userBands } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       if (!userBands || userBands.length === 0) return null;
 
