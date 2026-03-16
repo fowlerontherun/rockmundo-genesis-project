@@ -17,7 +17,6 @@ export default function SongwritingBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const scheduledDate = location.state?.scheduledDate;
