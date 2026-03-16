@@ -77,9 +77,9 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  // Helper to check if a mentor is discovered
-  const isMentorDiscovered = (mentorId: string) => {
-    return discoveries?.some(d => d.mentor_id === mentorId) ?? false;
+  // All mentors are now unlocked for all players
+  const isMentorDiscovered = (_mentorId: string) => {
+    return true;
   };
 
   // Helper to get day name
@@ -139,10 +139,7 @@ export function useMentorSessions() {
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
 
-      // Check discovery
-      if (!isMentorDiscovered(mentorId)) {
-        throw new Error("You haven't discovered this master yet");
-      }
+      // Discovery check removed — all mentors unlocked
 
       // Check if player is in the mentor's city
       if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
@@ -300,10 +297,7 @@ export function useMentorSessions() {
     const mentor = mentors?.find((m) => m.id === mentorId);
     if (!mentor) return { canBook: false, reason: "Master not found" };
 
-    // Check discovery first
-    if (!isMentorDiscovered(mentorId)) {
-      return { canBook: false, reason: "Not discovered" };
-    }
+    // Discovery check removed — all mentors unlocked
 
     // Check city requirement
     if (mentor.city_id && !isInMentorCity(mentor.city_id)) {

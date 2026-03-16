@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.101",
+    date: "2026-03-16",
+    changes: [
+      { type: 'feature', description: "Added search and skill category filters to the Books tab — filter by title, author, or skill" },
+      { type: 'feature', description: "All Legendary Masters (instrument mentors) are now unlocked for all players — discovery gating removed" },
+    ],
+  },
+  {
     version: "1.1.100",
     date: "2026-03-16",
     changes: [

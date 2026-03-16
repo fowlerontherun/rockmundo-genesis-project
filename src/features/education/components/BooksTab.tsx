@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, X, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -85,13 +86,39 @@ export const BooksTab = () => {
     setAutoRead(false);
   };
 
+  // Get unique skill categories for filter
+  const skillCategories = useMemo(() => {
+    if (!typedBooks) return [];
+    const cats = new Set<string>();
+    for (const book of typedBooks) {
+      cats.add(book.skill_display_name || book.skill_slug || "Other");
+    }
+    return Array.from(cats).sort();
+  }, [typedBooks]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState<string>("all");
+
   const groupedBooks = useMemo(() => {
     if (!typedBooks) return null;
     
-    // Group by display name to consolidate skills with different slugs but same name
+    let filtered = typedBooks;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        (b.skill_display_name || b.skill_slug || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (selectedSkill !== "all") {
+      filtered = filtered.filter(b => (b.skill_display_name || b.skill_slug || "Other") === selectedSkill);
+    }
+
     const groups = new Map<string, EnrichedSkillBook[]>();
-    
-    for (const book of typedBooks) {
+    for (const book of filtered) {
       const groupKey = book.skill_display_name || book.skill_slug || "Other";
       const existing = groups.get(groupKey) || [];
       existing.push(book);
@@ -99,16 +126,73 @@ export const BooksTab = () => {
     }
     
     return Object.fromEntries(groups.entries());
-  }, [typedBooks]);
+  }, [typedBooks, searchQuery, selectedSkill]);
+
+  const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Your Library</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Skill books offer passive learning. Choose how long to read each day, then let daily attendance build experience
           over time until completion unlocks the skill gain.
         </p>
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search books by title, author, or skill..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedSkill === "all" ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => setSelectedSkill("all")}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            All Skills
+          </Button>
+          {skillCategories.map((cat) => (
+            <Button
+              key={cat}
+              variant={selectedSkill === cat ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setSelectedSkill(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Active filters:</span>
+            {searchQuery.trim() && (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                "{searchQuery}"
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery("")} />
+              </Badge>
+            )}
+            {selectedSkill !== "all" && (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                {selectedSkill}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedSkill("all")} />
+              </Badge>
+            )}
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setSearchQuery(""); setSelectedSkill("all"); }}>
+              Clear all
+            </Button>
+          </div>
+        )}
       </div>
 
       {isLoading && (
