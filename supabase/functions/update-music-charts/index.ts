@@ -546,7 +546,7 @@ serve(async (req) => {
               songSalesByCountry.set(saleCountry, new Map());
             }
             const countryMap = songSalesByCountry.get(saleCountry)!;
-            countryMap.set(song.id, (countryMap.get(song.id) || 0) + sale.quantity_sold);
+            countryMap.set(song.id, (countryMap.get(song.id) || 0) + perTrackSales);
           }
 
           // Track for combined chart
@@ -554,16 +554,16 @@ serve(async (req) => {
             digital: 0, cd: 0, vinyl: 0, cassette: 0, totalPhysical: 0
           };
           if (salesType.format === "digital") {
-            existingSales.digital += sale.quantity_sold;
+            existingSales.digital += perTrackSales;
           } else if (salesType.format === "cd") {
-            existingSales.cd += sale.quantity_sold;
-            existingSales.totalPhysical += sale.quantity_sold;
+            existingSales.cd += perTrackSales;
+            existingSales.totalPhysical += perTrackSales;
           } else if (salesType.format === "vinyl") {
-            existingSales.vinyl += sale.quantity_sold;
-            existingSales.totalPhysical += sale.quantity_sold;
+            existingSales.vinyl += perTrackSales;
+            existingSales.totalPhysical += perTrackSales;
           } else if (salesType.format === "cassette") {
-            existingSales.cassette += sale.quantity_sold;
-            existingSales.totalPhysical += sale.quantity_sold;
+            existingSales.cassette += perTrackSales;
+            existingSales.totalPhysical += perTrackSales;
           }
           weeklySalesMap.set(song.id, existingSales);
 
@@ -796,7 +796,15 @@ serve(async (req) => {
     console.log(`Generated ${combinedEntries.length} combined chart entries`);
 
     // Create combined_single entries
+    // combined_single should only include tracks released as singles
+    const singleSongIds = new Set(
+      Array.from(streamingAggregatedByScope.values())
+        .filter((entry) => entry.scope === "single")
+        .map((entry) => entry.song_id)
+    );
+
     const combinedSingleEntries = Array.from(combinedScores.values())
+      .filter((entry) => singleSongIds.has(entry.songId))
       .sort((a, b) => b.combinedScore - a.combinedScore)
       .slice(0, 100)
       .map((entry, index) => ({
