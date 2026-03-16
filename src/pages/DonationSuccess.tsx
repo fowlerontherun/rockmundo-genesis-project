@@ -97,7 +97,7 @@ export default function DonationSuccess() {
 
         // Log activity
         await supabase.from("activity_feed").insert({
-          user_id: user.id,
+          user_id: profileId,
           activity_type: "donation",
           message: "Made a generous donation to support Rockmundo! 💖",
           earnings: 0,

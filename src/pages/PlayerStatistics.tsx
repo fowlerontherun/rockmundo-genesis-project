@@ -179,7 +179,7 @@ export default function PlayerStatistics() {
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          <PerformanceHistory userId={user?.id} />
+          <PerformanceHistory userId={profileId ?? undefined} />
         </TabsContent>
       </Tabs>
     </div>

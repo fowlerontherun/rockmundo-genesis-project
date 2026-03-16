@@ -191,7 +191,7 @@ export default function PerformGig() {
       });
       navigate('/gig-booking');
     }
-  }, [gigId, user, navigate, toast]);
+  }, [gigId, profileId, navigate, toast]);
 
   useEffect(() => {
     loadGig();

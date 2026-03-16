@@ -49,7 +49,7 @@ type Song = {
 };
 
 export default function AISongGeneration() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);

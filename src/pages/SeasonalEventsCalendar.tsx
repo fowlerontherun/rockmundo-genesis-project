@@ -48,16 +48,16 @@ const SeasonalEventsCalendar = () => {
 
   // Fetch player's encountered events
   const { data: playerEvents } = useQuery({
-    queryKey: ["player-seasonal-events", user?.id],
+    queryKey: ["player-seasonal-events", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
       const { data } = await supabase
         .from("player_events")
         .select("event_id")
-        .eq("user_id", user.id);
+        .eq("user_id", profileId);
       return data?.map((e) => e.event_id) || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 
   const encounteredSet = useMemo(() => new Set(playerEvents || []), [playerEvents]);

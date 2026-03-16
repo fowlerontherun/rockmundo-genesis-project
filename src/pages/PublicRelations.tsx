@@ -255,7 +255,7 @@ export default function PublicRelations() {
           </TabsContent>
 
           <TabsContent value="film" className="mt-4">
-            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={user.id} />
+            <FilmOffersPanel bandId={userBand.id} bandFame={userBand.fame || 0} userId={profileId!} />
           </TabsContent>
 
           <TabsContent value="consultant" className="mt-4">

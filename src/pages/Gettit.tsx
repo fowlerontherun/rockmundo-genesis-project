@@ -75,7 +75,7 @@ type SortType = 'hot' | 'new' | 'top';
 
 const GettitPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();

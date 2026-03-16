@@ -261,7 +261,7 @@ export default function BandSearch() {
                         variant={userRating === "down" ? "default" : "outline"}
                         size="sm"
                         onClick={() => rateMutation.mutate({ bandId: band.id, rating: "down" })}
-                        disabled={rateMutation.isPending || !user}
+                        disabled={rateMutation.isPending || !profileId}
                         className={cn(
                           "gap-1",
                           userRating === "down" && "bg-red-600 hover:bg-red-700"

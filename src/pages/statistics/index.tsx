@@ -18,7 +18,7 @@ const PlayerStatistics = () => {
     isLoading: isLoadingAchievements,
   } = useAchievements(profileId ?? undefined);
 
-  const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(user?.id);
+  const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(profileId ?? undefined);
 
   if (isLoadingAchievements || isLoadingStats) {
     return (

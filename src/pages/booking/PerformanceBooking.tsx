@@ -262,16 +262,10 @@ export default function PerformanceBooking() {
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;
 
-    // Fetch profile_id first
-    const { data: userProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    
+    // Use profileId directly
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: user.id,
-      profile_id: userProfile?.id,
+      user_id: profileId,
+      profile_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),
