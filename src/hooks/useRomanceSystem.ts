@@ -39,7 +39,7 @@ export const useRomanticRelationships = (activeOnly = true) => {
       if (error) throw error;
       return (data ?? []) as unknown as RomanticRelationship[];
     },
-    enabled: !!user && !!profileId,
+    enabled: !!profileId,
     staleTime: 1000 * 60 * 2,
   });
 };
