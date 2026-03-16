@@ -35,6 +35,7 @@ export interface FanInteraction {
 }
 
 export const useFanManagement = (profileId?: string) => {
+  const { userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch campaigns
