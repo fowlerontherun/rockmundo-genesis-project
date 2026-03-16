@@ -125,7 +125,7 @@ const Travel = () => {
     setIsBooking(true);
     try {
       await bookTravel({
-        userId: user.id,
+        profileId: profileId!,
         fromCityId: currentCity.id,
         toCityId: selectedDestination.city.id,
         routeId: `dynamic-${currentCity.id}-${selectedDestination.city.id}`,

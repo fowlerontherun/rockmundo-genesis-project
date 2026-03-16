@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Star, Crown, Target, Clock, CheckCircle, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 type AchievementValue = number | string;
 type AchievementRequirements = Record<string, AchievementValue>;
@@ -104,7 +104,7 @@ const parseAchievementRow = (value: unknown): Achievement | null => {
 };
 
 export function AchievementsSection() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerAchievements, setPlayerAchievements] = useState<PlayerAchievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,12 +129,12 @@ export function AchievementsSection() {
   }, []);
 
   const loadPlayerAchievements = useCallback(async () => {
-    if (!user) return;
+    if (!profileId) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('player_achievements')
         .select(`*, achievements!player_achievements_achievement_id_fkey(*)`)
-        .eq('user_id', user.id);
+        .eq('profile_id', profileId);
       if (error) throw error;
       const rows: unknown[] = Array.isArray(data) ? data : [];
       const parsedPlayerAchievements = rows.reduce<PlayerAchievement[]>((acc, item) => {
@@ -159,14 +159,14 @@ export function AchievementsSection() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [profileId]);
 
   useEffect(() => {
-    if (user) {
+    if (profileId) {
       loadAchievements();
       loadPlayerAchievements();
     }
-  }, [user, loadAchievements, loadPlayerAchievements]);
+  }, [profileId, loadAchievements, loadPlayerAchievements]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {

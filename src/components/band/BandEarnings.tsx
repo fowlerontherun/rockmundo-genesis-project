@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth-context';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 
 interface BandEarningsProps {
   bandId: string;
@@ -51,6 +52,7 @@ interface LeaderProfileSummary {
 
 export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [bandInfo, setBandInfo] = useState<BandInfo | null>(null);
@@ -73,7 +75,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const loadLeaderProfile = useCallback(async () => {
-    if (!user) {
+    if (!profileId) {
       setLeaderProfile(null);
       return null;
     }
@@ -82,7 +84,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, cash')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
 
       if (error) {
@@ -101,7 +103,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       console.error('Error loading leader profile balance:', profileError);
       return null;
     }
-  }, [user]);
+  }, [profileId]);
 
   const loadEarningsData = useCallback(async () => {
     setLoading(true);
@@ -289,7 +291,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       const { data: latestProfile } = await supabase
         .from('profiles')
         .select('id, cash')
-        .eq('user_id', user.id)
+        .eq('id', profileId!)
         .single();
 
       if (!latestProfile) {

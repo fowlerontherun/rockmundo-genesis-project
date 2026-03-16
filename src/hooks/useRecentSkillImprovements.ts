@@ -11,24 +11,24 @@ export interface SkillImprovement {
   improved_at: string;
 }
 
-export const useRecentSkillImprovements = (userId?: string, hoursAgo: number = 24) => {
+export const useRecentSkillImprovements = (profileId?: string, hoursAgo: number = 24) => {
   return useQuery({
-    queryKey: ["skill-improvements", userId, hoursAgo],
+    queryKey: ["skill-improvements", profileId, hoursAgo],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       
       const cutoffTime = subHours(new Date(), hoursAgo).toISOString();
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("skill_improvements")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .gte("improved_at", cutoffTime)
         .order("improved_at", { ascending: false });
 
       if (error) throw error;
       return data as SkillImprovement[];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 };

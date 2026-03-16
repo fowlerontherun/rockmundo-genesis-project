@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Landmark, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, addWeeks } from "date-fns";
@@ -29,6 +30,7 @@ interface LoansTabProps {
 
 export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null);
   const [loanAmount, setLoanAmount] = useState("");
@@ -77,7 +79,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: cash + amount })
-        .eq("user_id", user.id);
+        .eq("id", profileId!);
 
       if (cashError) throw cashError;
 
@@ -120,7 +122,7 @@ export const LoansTab = ({ loans, loanOffers, cash }: LoansTabProps) => {
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: cash - amount })
-        .eq("user_id", user.id);
+        .eq("id", profileId!);
 
       if (cashError) throw cashError;
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTravelBooking } from "@/hooks/useTravelBooking";
 import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/travelSystem";
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
@@ -48,6 +49,7 @@ export function TravelBookingDialog({
   preselectedDestinationId,
 }: TravelBookingDialogProps) {
   const { user } = useContext(AuthContext);
+  const { profileId } = useActiveProfile();
   const travelMutation = useTravelBooking();
   const { data: calendar } = useGameCalendar();
   const { data: originWeather } = useWeather(currentCityId);
@@ -138,7 +140,7 @@ export function TravelBookingDialog({
     scheduledDeparture.setHours(departureHour, 0, 0, 0);
 
     await travelMutation.mutateAsync({
-      userId: user.id,
+      profileId: profileId!,
       fromCityId: currentCityId,
       toCityId: selectedRoute.to_city_id,
       routeId: selectedRoute.id,

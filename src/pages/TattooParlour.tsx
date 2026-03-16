@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
 
 export default function TattooParlour() {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedParlour, setSelectedParlour] = useState<string | null>(null);
   const [selectedDesign, setSelectedDesign] = useState<TattooDesign | null>(null);
@@ -41,16 +43,16 @@ export default function TattooParlour() {
 
   // Fetch player's current city
   const { data: profile } = useQuery({
-    queryKey: ['profile-city', user?.id],
+    queryKey: ['profile-city', profileId],
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
         .select('current_city_id, cash')
-        .eq('user_id', user!.id)
+        .eq('id', profileId!)
         .single();
       return data;
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch parlours in current city
@@ -91,33 +93,33 @@ export default function TattooParlour() {
 
   // Fetch player tattoos
   const { data: playerTattoos } = useQuery({
-    queryKey: ['player-tattoos', user?.id],
+    queryKey: ['player-tattoos', profileId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('player_tattoos')
         .select('*, tattoo_designs(*), tattoo_artists(*)')
-        .eq('user_id', user!.id);
+        .eq('profile_id', profileId!);
       return (data || []).map((t: any) => ({
         ...t,
         design: t.tattoo_designs,
         artist: t.tattoo_artists,
       })) as (PlayerTattoo & { artist?: TattooArtist })[];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   // Fetch custom requests
   const { data: customRequests } = useQuery({
-    queryKey: ['custom-tattoo-requests', user?.id],
+    queryKey: ['custom-tattoo-requests', profileId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('custom_tattoo_requests')
         .select('*, tattoo_artists(*)')
-        .eq('user_id', user!.id)
+        .eq('profile_id', profileId!)
         .order('created_at', { ascending: false });
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const currentParlour = parlours?.find(p => p.id === selectedParlour);
@@ -156,14 +158,14 @@ export default function TattooParlour() {
       const { error: cashError } = await supabase
         .from('profiles')
         .update({ cash: (profile?.cash || 0) - price })
-        .eq('user_id', user.id);
+        .eq('id', profileId!);
       if (cashError) throw cashError;
 
       // Insert tattoo
-      const { error: tattooError } = await supabase
+      const { error: tattooError } = await (supabase as any)
         .from('player_tattoos')
         .insert({
-          user_id: user.id,
+          profile_id: profileId,
           tattoo_design_id: selectedDesign.id,
           parlour_id: currentParlour.id,
           artist_id: selectedArtist?.id || null,
@@ -209,17 +211,17 @@ export default function TattooParlour() {
       if ((profile?.cash || 0) < data.quotedPrice) throw new Error('Insufficient funds');
 
       // Deduct cash
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq('user_id', user.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq('id', profileId!);
 
       // Calculate quality with custom boost
       const baseQuality = calculateTattooQuality(currentParlour.quality_tier);
       const qualityScore = Math.min(100, baseQuality + customArtist.quality_bonus + 10); // +10% custom boost
 
       // Create the tattoo directly (instant completion for MVP)
-      const { data: tattoo, error: tattooError } = await supabase
+      const { data: tattoo, error: tattooError } = await (supabase as any)
         .from('player_tattoos')
         .insert({
-          user_id: user.id,
+          profile_id: profileId,
           tattoo_design_id: null,
           parlour_id: currentParlour.id,
           artist_id: customArtist.id,
@@ -227,15 +229,15 @@ export default function TattooParlour() {
           quality_score: qualityScore,
           ink_color: '#1a1a2e',
           price_paid: data.quotedPrice,
-          is_infected: false, // Custom artists don't cause infections
+          is_infected: false,
         })
         .select()
         .single();
       if (tattooError) throw tattooError;
 
       // Create the request record
-      await supabase.from('custom_tattoo_requests').insert({
-        user_id: user.id,
+      await (supabase as any).from('custom_tattoo_requests').insert({
+        profile_id: profileId,
         artist_id: customArtist.id,
         description: data.description,
         body_slot: data.bodySlot,
@@ -276,10 +278,10 @@ export default function TattooParlour() {
       const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + artistBonus);
       const isInfected = rollForInfection(currentParlour.infection_risk);
 
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('user_id', user.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('id', profileId!);
 
-      const { error } = await supabase.from('player_tattoos').insert({
-        user_id: user.id,
+      const { error } = await (supabase as any).from('player_tattoos').insert({
+        profile_id: profileId,
         tattoo_design_id: null,
         parlour_id: currentParlour.id,
         artist_id: selectedArtist?.id || null,
@@ -315,7 +317,7 @@ export default function TattooParlour() {
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
       if ((profile?.cash || 0) < 200) throw new Error('Need $200 for treatment');
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - 200 }).eq('user_id', user!.id);
+      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - 200 }).eq('id', profileId!);
       await supabase.from('player_tattoos').update({ is_infected: false, infection_cleared_at: new Date().toISOString() }).eq('id', tattooId);
     },
     onSuccess: () => {

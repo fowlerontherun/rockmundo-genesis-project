@@ -14,7 +14,7 @@ export interface TravelRoute {
 }
 
 export interface TravelBookingData {
-  userId: string;
+  profileId: string;
   fromCityId: string;
   toCityId: string;
   routeId: string;
@@ -25,11 +25,11 @@ export interface TravelBookingData {
   scheduledDepartureTime?: string;
 }
 
-export async function validateTravelEligibility(userId: string, cost: number) {
+export async function validateTravelEligibility(profileId: string, cost: number) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("cash")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .maybeSingle();
 
   if (profileError) {
@@ -45,10 +45,10 @@ export async function validateTravelEligibility(userId: string, cost: number) {
 }
 
 export async function bookTravel(bookingData: TravelBookingData) {
-  const { userId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
+  const { profileId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
 
   // Validate eligibility
-  await validateTravelEligibility(userId, cost);
+  await validateTravelEligibility(profileId, cost);
 
   // Calculate times first for conflict check
   const departureTime = scheduledDepartureTime || new Date().toISOString();
@@ -57,7 +57,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   // Check for scheduling conflicts before booking
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
-    userId,
+    profileId,
     departureDate,
     arrivalTimeCalc
   );
@@ -72,7 +72,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, cash, display_name")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .maybeSingle();
 
   if (profileError) {
@@ -81,7 +81,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   }
   
   if (!profile) {
-    throw new Error("Profile not found for this user");
+    throw new Error("Profile not found");
   }
 
   // Determine if travel starts immediately or is scheduled for later
@@ -96,7 +96,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
       is_traveling: startsImmediately,
       travel_arrives_at: startsImmediately ? arrivalTimeCalc.toISOString() : null,
     })
-    .eq("user_id", userId);
+    .eq("id", profileId);
 
   if (updateError) throw updateError;
 
@@ -120,15 +120,14 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const status = startsImmediately ? 'in_progress' : 'scheduled';
   const travelDurationHoursStored = Math.max(1, Math.ceil(durationHours));
   
-  const { data: travelHistory, error: historyError } = await supabase
+  const { data: travelHistory, error: historyError } = await (supabase as any)
     .from("player_travel_history")
     .insert({
-      user_id: userId,
+      profile_id: profileId,
       from_city_id: fromCityId,
       to_city_id: toCityId,
       transport_type: transportType,
       cost_paid: cost,
-      // DB column is integer; durationHours can be fractional (e.g. 3.9)
       travel_duration_hours: travelDurationHoursStored,
       departure_time: departureTime,
       scheduled_departure_time: departureTime,
@@ -144,8 +143,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { error: activityError } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
-      user_id: userId,
-      profile_id: profile.id,
+      profile_id: profileId,
       activity_type: 'travel',
       status: startsImmediately ? 'in_progress' : 'scheduled',
       scheduled_start: departureDate.toISOString(),
@@ -166,9 +164,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
   }
 
   // Log activity
-  
-  await supabase.from("activity_feed").insert({
-    user_id: userId,
+  await (supabase as any).from("activity_feed").insert({
+    profile_id: profileId,
     activity_type: "travel",
     message: `Traveled from ${fromCityName} to ${toCityName} by ${transportType}`,
     metadata: {
@@ -181,8 +178,8 @@ export async function bookTravel(bookingData: TravelBookingData) {
   });
 
   // Award XP for travel (5 XP per travel)
-  await supabase.from("experience_ledger").insert({
-    user_id: userId,
+  await (supabase as any).from("experience_ledger").insert({
+    profile_id: profileId,
     activity_type: "travel",
     xp_amount: 5,
     metadata: {
