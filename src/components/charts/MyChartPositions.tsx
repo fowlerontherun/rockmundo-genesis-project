@@ -5,26 +5,30 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Minus, Trophy, Music, Radio, Video } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface MyChartPositionsProps {
   userId: string;
 }
 
 export function MyChartPositions({ userId }: MyChartPositionsProps) {
+  const { profileId } = useActiveProfile();
+
   const { data: chartPositions, isLoading } = useQuery({
-    queryKey: ["my-chart-positions", userId],
+    queryKey: ["my-chart-positions", profileId],
     queryFn: async () => {
-      // Get user's songs
+      if (!profileId) return [];
+      // Get character's songs
       const { data: userSongs } = await supabase
         .from("songs")
         .select("id, title, audio_url, audio_generation_status")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (!userSongs?.length) return [];
 
       const songIds = userSongs.map((s) => s.id);
 
-      // Get chart entries for user's songs
+      // Get chart entries for character's songs
       const { data: entries } = await supabase
         .from("chart_entries")
         .select("*")
@@ -69,7 +73,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
 
       return results.sort((a, b) => a.rank - b.rank);
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const getTrendIcon = (trend: string | null) => {

@@ -3,25 +3,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface RecentActivitySectionProps {
   userId: string | undefined;
 }
 
 export function RecentActivitySection({ userId }: RecentActivitySectionProps) {
+  const { profileId } = useActiveProfile();
+
   const { data: activities } = useQuery({
-    queryKey: ["recent-activity", userId],
+    queryKey: ["recent-activity", profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId) return [];
       const { data } = await supabase
         .from("activity_feed")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(5);
       return data || [];
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   if (!activities || activities.length === 0) {

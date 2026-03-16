@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export interface PerformanceStats {
   totalGigs: number;
@@ -34,10 +35,24 @@ export interface BandStats {
 }
 
 export const usePlayerStatistics = (userId?: string) => {
+  const { profileId } = useActiveProfile();
+
   const { data: performanceStats, isLoading: isLoadingPerformance } = useQuery({
-    queryKey: ["player-performance-stats", userId],
+    queryKey: ["player-performance-stats", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
+
+      // Get bands for this profile
+      const { data: memberships } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
+
+      const bandIds = memberships?.map(m => m.band_id) || [];
+      if (bandIds.length === 0) return {
+        totalGigs: 0, totalRevenue: 0, averageRating: 0, totalAttendance: 0, bestPerformance: null,
+      };
 
       const { data: outcomes } = await supabase
         .from("gig_outcomes")
@@ -47,7 +62,7 @@ export const usePlayerStatistics = (userId?: string) => {
             venue:venues(name)
           )
         `)
-        .eq("gigs.band_id.bands.leader_id", userId)
+        .in("gig.band_id", bandIds)
         .order("created_at", { ascending: false });
 
       if (!outcomes || outcomes.length === 0) {
@@ -84,18 +99,18 @@ export const usePlayerStatistics = (userId?: string) => {
         } : null,
       } as PerformanceStats;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: songwritingStats, isLoading: isLoadingSongwriting } = useQuery({
-    queryKey: ["player-songwriting-stats", userId],
+    queryKey: ["player-songwriting-stats", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
 
       const { data: songs } = await supabase
         .from("songs")
         .select("*")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (!songs || songs.length === 0) {
         return {
@@ -131,7 +146,7 @@ export const usePlayerStatistics = (userId?: string) => {
         } : null,
       } as SongwritingStats;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   return {

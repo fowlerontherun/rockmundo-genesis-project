@@ -13,6 +13,7 @@ import { buildPlanFromRow, derivePlanMetadata } from "@/lib/musicVideoMetrics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lightbulb, Video, Youtube, Tv, KanbanSquare, List } from "lucide-react";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface MusicVideoReleaseTabProps {
   userId: string;
@@ -20,18 +21,21 @@ interface MusicVideoReleaseTabProps {
 
 export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"list" | "board">("list");
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: bandMemberships, isLoading: bandLoading } = useQuery({
-    queryKey: ["music-video-band-memberships", userId],
-    enabled: !!userId,
+    queryKey: ["music-video-band-memberships", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       if (error) throw error;
       return data?.map((record) => record.band_id) ?? [];

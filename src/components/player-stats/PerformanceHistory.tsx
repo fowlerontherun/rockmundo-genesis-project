@@ -4,19 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Music2, TrendingUp, Star } from "lucide-react";
 import { format } from "date-fns";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface PerformanceHistoryProps {
   userId?: string;
 }
 
 export function PerformanceHistory({ userId }: PerformanceHistoryProps) {
+  const { profileId } = useActiveProfile();
+
   const { data: gigOutcomes, isLoading } = useQuery({
-    queryKey: ["gig-outcomes-history", userId],
+    queryKey: ["gig-outcomes-history", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data: bandMembers } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       if (!bandMembers || bandMembers.length === 0) return [];
 
@@ -39,7 +44,7 @@ export function PerformanceHistory({ userId }: PerformanceHistoryProps) {
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   if (isLoading) {

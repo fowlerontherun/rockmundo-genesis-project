@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { CalendarClock, Heart, Zap, AlertTriangle, Flame, CheckCircle2, Clock } from "lucide-react";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { addDays, setHours, setMinutes } from "date-fns";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface PromoTourCardProps {
   releaseId: string;
@@ -75,6 +76,7 @@ export const PromoTourCard = ({
   userId,
 }: PromoTourCardProps) => {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<"morning" | "afternoon">("morning");
 
@@ -95,19 +97,20 @@ export const PromoTourCard = ({
 
   // Fetch completed promo day activities for this tour
   const { data: completedDays } = useQuery({
-    queryKey: ["promo-tour-days", releaseId],
+    queryKey: ["promo-tour-days", releaseId, profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await (supabase as any)
         .from("player_scheduled_activities")
         .select("*")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("activity_type", "release_promo")
         .eq("metadata->>release_id", releaseId)
         .in("status", ["completed", "scheduled", "in_progress"]);
       if (error) throw error;
       return (data || []) as any[];
     },
-    enabled: !!activeTour,
+    enabled: !!activeTour && !!profileId,
   });
 
   const fameMultiplier = 1 + Math.min(bandFame, 5000) / 5000; // up to 2x at 5000 fame
@@ -174,17 +177,19 @@ export const PromoTourCard = ({
       });
 
       // Deduct cost from player cash
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("user_id", userId)
-        .single();
-
-      if (profile) {
-        await supabase
+      if (profileId) {
+        const { data: profile } = await supabase
           .from("profiles")
-          .update({ cash: (profile.cash ?? 0) - totalCost })
-          .eq("user_id", userId);
+          .select("cash")
+          .eq("id", profileId)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({ cash: (profile.cash ?? 0) - totalCost })
+            .eq("id", profileId);
+        }
       }
 
       return pkg;

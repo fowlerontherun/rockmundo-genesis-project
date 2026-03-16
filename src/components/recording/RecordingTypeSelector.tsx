@@ -59,15 +59,25 @@ export const RecordingTypeSelector = ({ studio, bandId, userId, selectedType, on
         }
       }
 
-      // Fetch player fame & level
-      const { data: profile } = await supabase
+      // Fetch player fame & level using active profile
+      const { data: activeProfile } = await supabase
         .from('profiles')
-        .select('fame, level')
+        .select('id')
         .eq('user_id', userId)
-        .single();
+        .eq('is_active', true)
+        .is('died_at', null)
+        .maybeSingle();
 
-      if (profile) {
-        setPlayerStats({ fame: profile.fame || 0, level: profile.level || 1 });
+      if (activeProfile) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('fame, level')
+          .eq('id', activeProfile.id)
+          .single();
+
+        if (profile) {
+          setPlayerStats({ fame: profile.fame || 0, level: profile.level || 1 });
+        }
       }
 
       setLoading(false);
