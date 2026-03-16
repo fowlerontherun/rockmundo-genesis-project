@@ -116,18 +116,18 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
   // Fetch career stats
   const { data: careerStats } = useQuery({
-    queryKey: ["dashboard-career-stats", user?.id],
+    queryKey: ["dashboard-career-stats", profileId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!profileId) return null;
 
       const client: any = supabase;
-      // Get user's bands first, then count gig outcomes via band_id
-      const bandsResult = await client.from("band_members").select("band_id").eq("user_id", user.id);
+      // Get character's bands first, then count gig outcomes via band_id
+      const bandsResult = await client.from("band_members").select("band_id").eq("profile_id", profileId).eq("member_status", "active");
       const bandIds = (bandsResult.data || []).map((b: any) => b.band_id);
       const gigsResult = bandIds.length > 0
         ? await client.from("gig_outcomes").select("id").in("band_id", bandIds)
         : { data: [] };
-      const songsResult = await client.from("songs").select("id, status").eq("original_writer_id", user.id);
+      const songsResult = await client.from("songs").select("id, status").eq("profile_id", profileId);
 
       const totalGigs = gigsResult.data?.length || 0;
       const totalSongs = songsResult.data?.length || 0;
@@ -135,7 +135,7 @@ export const DashboardOverviewTabs = ({ profile, currentCity }: OverviewTabsProp
 
       return { totalGigs, totalSongs, recordedSongs, totalStreams: 0 };
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
     staleTime: 60000
   });
 
