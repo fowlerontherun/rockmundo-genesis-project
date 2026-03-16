@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, Music, AlertTriangle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVipStatus } from "@/hooks/useVipStatus";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { useSongGenerationStatus } from "@/hooks/useSongGenerationStatus";
 import { GenerationLimitBadge } from "./GenerationLimitBadge";
