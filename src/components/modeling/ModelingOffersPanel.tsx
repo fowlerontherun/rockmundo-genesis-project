@@ -65,12 +65,13 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
 
   // Fetch pending offers
   const { data: pendingOffers, isLoading } = useQuery({
-    queryKey: ["modeling-offers-pending", userId],
+    queryKey: ["modeling-offers-pending", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_modeling_contracts")
         .select("*, gig:modeling_gigs(title, gig_type, duration_hours, description, agency:modeling_agencies(name, tier), brand:sponsorship_brands(name))")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("status", "pending")
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false });
@@ -78,37 +79,42 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   // Fetch active (accepted/shooting) contracts
   const { data: activeContracts } = useQuery({
-    queryKey: ["modeling-contracts-active", userId],
+    queryKey: ["modeling-contracts-active", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_modeling_contracts")
         .select("*, gig:modeling_gigs(title, gig_type, duration_hours)")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .in("status", ["accepted", "shooting"])
         .gte("shoot_date", new Date().toISOString().split("T")[0]);
 
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   // Fetch completed for career progress
   const { data: completedContracts } = useQuery({
-    queryKey: ["modeling-contracts-completed", userId],
+    queryKey: ["modeling-contracts-completed", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data, error } = await supabase
         .from("player_modeling_contracts")
         .select("*, gig:modeling_gigs(title, gig_type)")
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .eq("status", "completed");
 
       if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   const hasActiveContract = (activeContracts?.length ?? 0) > 0;
