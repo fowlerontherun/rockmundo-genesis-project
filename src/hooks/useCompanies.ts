@@ -30,7 +30,7 @@ export const useCompanies = () => {
 
       return (data || []) as Company[];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
 };
 
