@@ -20,7 +20,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
   const queryClient = useQueryClient();
 
   const { data: attendance, isLoading } = useQuery<FestivalAttendance | null>({
-    queryKey: ["festival-attendance", festivalId, user?.id],
+    queryKey: ["festival-attendance", festivalId, profileId],
     queryFn: async () => {
       if (!festivalId || !user?.id) return null;
       const { data, error } = await (supabase as any)

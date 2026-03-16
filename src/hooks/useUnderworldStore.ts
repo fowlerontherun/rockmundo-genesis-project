@@ -344,7 +344,7 @@ export const useUnderworldStore = () => {
           const { data: profile } = await supabase
             .from("profiles")
             .select("current_city_id, fame")
-            .eq("user_id", user.id)
+            .eq("id", profileId)
             .single();
           
           if (profile?.current_city_id) {

@@ -170,6 +170,7 @@ export const useUnderworldInventory = () => {
           if (Math.random() < 0.30) {
             await supabase.from("player_addictions").insert({
               user_id: user.id,
+              profile_id: profileId,
               addiction_type: addictionType,
               severity: 20,
               status: "active",
