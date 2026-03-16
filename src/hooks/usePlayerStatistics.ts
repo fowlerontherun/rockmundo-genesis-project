@@ -35,10 +35,24 @@ export interface BandStats {
 }
 
 export const usePlayerStatistics = (userId?: string) => {
+  const { profileId } = useActiveProfile();
+
   const { data: performanceStats, isLoading: isLoadingPerformance } = useQuery({
-    queryKey: ["player-performance-stats", userId],
+    queryKey: ["player-performance-stats", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
+
+      // Get bands for this profile
+      const { data: memberships } = await supabase
+        .from("band_members")
+        .select("band_id")
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
+
+      const bandIds = memberships?.map(m => m.band_id) || [];
+      if (bandIds.length === 0) return {
+        totalGigs: 0, totalRevenue: 0, averageRating: 0, totalAttendance: 0, bestPerformance: null,
+      };
 
       const { data: outcomes } = await supabase
         .from("gig_outcomes")
