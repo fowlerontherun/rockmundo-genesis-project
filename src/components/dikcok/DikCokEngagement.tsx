@@ -40,7 +40,7 @@ interface Comment {
 }
 
 export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
