@@ -84,11 +84,11 @@ export function PRConsultantPanel({ profileId, bandId }: PRConsultantPanelProps)
 
       const expiresAt = addDays(new Date(), 30);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("player_pr_consultants")
         .insert({
           profile_id: profileId,
-          consultant_id: consultantId as any,
+          consultant_id: consultantId,
           expires_at: expiresAt.toISOString(),
           monthly_fee: consultant.weekly_fee * 4 || CONSULTANT_MONTHLY_FEE,
           auto_accept_enabled: true,
