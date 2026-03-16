@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
 import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
