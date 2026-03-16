@@ -131,7 +131,7 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
         duration_display: originalSong.duration_display,
         lyrics: originalSong.lyrics,
         band_id: bandId,
-        user_id: user.id,
+        user_id: profileId,
         parent_song_id: song.id,
         ownership_type: "cover",
         version: "cover",
