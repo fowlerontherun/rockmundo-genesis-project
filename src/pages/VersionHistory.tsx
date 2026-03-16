@@ -14,6 +14,24 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.060",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Songwriting page song queries use profile_id for character isolation" },
+      { type: 'improvement', description: "MyContractsList eliminates redundant profile lookup, queries band_members by profile_id" },
+      { type: 'improvement', description: "BuskingTab activity feed history scoped to profile_id" },
+      { type: 'improvement', description: "TwaaterComposer and LinkTourDialog band membership queries use profile_id" },
+      { type: 'improvement', description: "Mayor dashboard hooks use profileId directly, eliminating profile lookup hops" },
+      { type: 'improvement', description: "Dashboard achievements query uses profile_id" },
+      { type: 'improvement', description: "CurrentLearningSection eliminates profile lookups, queries directly by profileId" },
+      { type: 'improvement', description: "MerchSalesNews band membership queries use profile_id" },
+      { type: 'improvement', description: "InvestmentsTab cash operations use profile_id instead of user_id" },
+      { type: 'improvement', description: "ReleaseSalesTab band membership queries use profile_id" },
+      { type: 'improvement', description: "Game notifications band lookup uses profile_id" },
+      { type: 'improvement', description: "Radio SubmitSongDialog uses active profile pattern for song and band queries" },
+    ],
+  },
+  {
     version: "1.1.059",
     date: "2026-03-16",
     changes: [
