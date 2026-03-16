@@ -74,7 +74,7 @@ export function useHospitalization() {
 
   const checkInMutation = useMutation({
     mutationFn: async (params?: { conditionId?: string; reason?: string }) => {
-      if (!user?.id || !profileId || !nearestHospital) throw new Error("No hospital available");
+      if (!profileId || !nearestHospital) throw new Error("No hospital available");
 
       const { data: profile } = await supabase
         .from("profiles")
