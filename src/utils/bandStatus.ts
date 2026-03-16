@@ -33,7 +33,7 @@ export async function getUserActiveBand(profileId: string): Promise<any | null> 
   }
 }
 
-export async function getUserBands(userId: string) {
+export async function getUserBands(profileId: string) {
   try {
     const { data, error } = await supabase
       .from('band_members')
@@ -46,7 +46,7 @@ export async function getUserBands(userId: string) {
         is_touring_member,
         bands!band_members_band_id_fkey(*)
       `)
-      .eq('user_id', userId)
+      .eq('profile_id', profileId)
       .order('joined_at', { ascending: false });
     
     if (error) {
