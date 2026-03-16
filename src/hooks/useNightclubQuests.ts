@@ -97,11 +97,11 @@ export function useNightclubQuests(clubId: string | undefined) {
   // Start a quest
   const startQuest = useMutation({
     mutationFn: async (questId: string) => {
-      if (!user?.id) throw new Error("Not authenticated");
+      if (!profileId) throw new Error("Not authenticated");
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, energy")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       if (!profile) throw new Error("Profile not found");
 
@@ -116,14 +116,14 @@ export function useNightclubQuests(clubId: string | undefined) {
       await supabase
         .from("profiles")
         .update({ energy: Math.max(0, (profile.energy ?? 100) - quest.energy_cost) })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       const firstNodeId = quest.dialogue?.[0]?.id ?? null;
 
       const { data, error } = await supabase
         .from("player_nightclub_quest_progress")
         .insert({
-          profile_id: profile.id,
+          profile_id: profileId,
           quest_id: questId,
           status: "active",
           started_at: new Date().toISOString(),
