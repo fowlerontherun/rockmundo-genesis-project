@@ -276,7 +276,7 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   const totalVolume = useMemo(() => activeTokens.reduce((s, t) => s + (t.volume_24h || 0), 0), [activeTokens]);
 
   const handleBuy = () => {
-    if (!selectedTokenData || !buyQuantity || !user) return;
+    if (!selectedTokenData || !buyQuantity || !profileId) return;
     const qty = parseFloat(buyQuantity);
     if (isNaN(qty) || qty <= 0) return;
     buyToken({
