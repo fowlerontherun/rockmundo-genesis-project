@@ -179,7 +179,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }, [messages]);
 
   useEffect(() => {
-    if (!user) {
+    if (!profileId) {
       setIsConnected(false);
       setParticipantCount(0);
       onConnectionStatusChange?.(false);
