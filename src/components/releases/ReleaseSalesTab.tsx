@@ -14,10 +14,10 @@ export function ReleaseSalesTab({ userId }: ReleaseSalesTabProps) {
     queryKey: ["release-sales", userId],
     queryFn: async () => {
       // Get user's band IDs
-      const { data: bandMembers } = await supabase
+      const { data: bandMembers } = await (supabase as any)
         .from("band_members")
         .select("band_id")
-        .eq("user_id", userId);
+        .eq("profile_id", userId);
       const bandIds = bandMembers?.map(bm => bm.band_id) || [];
 
       // Get releases
