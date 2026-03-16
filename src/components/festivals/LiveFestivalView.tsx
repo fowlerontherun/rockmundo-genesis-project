@@ -11,7 +11,7 @@ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useClaimWatchReward } from "@/hooks/useFestivalWatchRewards";
 import { FestivalVoiceChat } from "./FestivalVoiceChat";
 import { FestivalStageCommentary } from "./FestivalStageCommentary";
-import { useAuth } from "@/hooks/use-auth-context";
+
 import { toast } from "sonner";
 
 interface LiveFestivalViewProps {
@@ -20,7 +20,7 @@ interface LiveFestivalViewProps {
 }
 
 export const LiveFestivalView = ({ festivalId, onBack }: LiveFestivalViewProps) => {
-  const { user } = useAuth();
+  // auth removed — no longer needed
   const { data: stages = [] } = useFestivalStages(festivalId);
   const { data: allSlots = [] } = useFestivalStageSlots(festivalId);
   const { hasTicket } = useFestivalTickets(festivalId);

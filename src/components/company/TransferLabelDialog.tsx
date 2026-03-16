@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import type { Company, CompanyLabel } from "@/types/company";
 
 interface TransferLabelDialogProps {
@@ -32,28 +32,21 @@ export const TransferLabelDialog = ({
   const [open, setOpen] = useState(false);
   const [selectedLabelId, setSelectedLabelId] = useState<string>("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch user's labels that are NOT already linked to a company
   const { data: availableLabels = [], isLoading: labelsLoading } = useQuery<CompanyLabel[]>({
-    queryKey: ["available-labels-for-transfer", user?.id],
-    enabled: !!user?.id && open,
+    queryKey: ["available-labels-for-transfer", profileId],
+    enabled: !!profileId && open,
     queryFn: async () => {
-      // Get user's profile ID
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
-      if (!profile) return [];
+      if (!profileId) return [];
 
       const { data, error } = await supabase
         .from("labels")
         .select("id, name, logo_url, company_id, balance, is_bankrupt, headquarters_city, reputation_score")
-        .eq("owner_id", profile.id)
+        .eq("owner_id", profileId!)
         .is("company_id", null)
         .order("name");
 

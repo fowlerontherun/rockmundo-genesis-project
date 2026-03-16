@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, Plus, AlertTriangle, ArrowDownToLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -33,7 +32,6 @@ interface InvestmentsTabProps {
 }
 
 export const InvestmentsTab = ({ investments, investmentOptions, cash }: InvestmentsTabProps) => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [selectedOption, setSelectedOption] = useState<InvestmentOption | null>(null);
@@ -64,7 +62,7 @@ export const InvestmentsTab = ({ investments, investmentOptions, cash }: Investm
     try {
       // Create investment
       const { error: investError } = await supabase.from("player_investments").insert({
-        user_id: user.id,
+        user_id: profileId,
         investment_name: selectedOption.name,
         category: selectedOption.category,
         invested_amount: amount,

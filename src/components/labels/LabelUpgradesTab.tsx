@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +75,7 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
 ];
 
 export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -93,21 +93,8 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
     },
   });
 
-  // Fetch profile ID
-  const { data: profile } = useQuery({
-    queryKey: ["profile-id", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Use profileId directly from useActiveProfile
+  const profile = profileId ? { id: profileId } : null;
 
   const getUpgradeLevel = (type: string): number => {
     const upgrade = upgrades.find((u) => u.upgrade_type === type);

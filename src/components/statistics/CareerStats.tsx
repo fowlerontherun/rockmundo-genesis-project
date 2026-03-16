@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, MapPin, Clock, DollarSign, Calendar, Trophy } from "lucide-react";
 
 export function CareerStats() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({

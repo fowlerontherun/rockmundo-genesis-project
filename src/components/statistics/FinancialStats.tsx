@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
@@ -9,7 +8,6 @@ import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 const COLORS = ["hsl(var(--primary))", "hsl(142.1 76.2% 36.3%)", "hsl(262.1 83.3% 57.8%)", "hsl(24.6 95% 53.1%)", "hsl(173.4 80.4% 40%)"];
 
 export function FinancialStats() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({

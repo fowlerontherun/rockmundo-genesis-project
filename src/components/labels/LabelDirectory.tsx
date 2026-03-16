@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,7 +129,7 @@ function LabelExpandedDetails({ labelId, bandGenre }: { labelId: string; bandGen
 }
 
 export function LabelDirectory({ artistEntities, dealTypes, territories }: LabelDirectoryProps) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [searchTerm, setSearchTerm] = useState("");
   const [territoryFilter, setTerritoryFilter] = useState<string>("all");
   const [reputationFilter, setReputationFilter] = useState<string>("all");
@@ -142,20 +142,8 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
   // Get user's primary band for demo submission
   const primaryBand = artistEntities.find(e => e.type === 'band');
 
-  // Get user's profile ID
-  const { data: userProfile } = useQuery({
-    queryKey: ["user-profile-id", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Profile ID from useActiveProfile
+  const userProfile = profileId ? { id: profileId } : null;
 
   const { data: labels, isLoading } = useQuery<LabelWithRelations[]>({
     queryKey: ["labels-directory"],
@@ -522,7 +510,7 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
       <SubmitDemoDialog
         open={isDemoDialogOpen}
         onOpenChange={setIsDemoDialogOpen}
-        userId={user?.id ?? ""}
+        userId={profileId ?? ""}
         bandId={primaryBand?.bandId}
         preselectedLabelId={selectedLabelId}
       />

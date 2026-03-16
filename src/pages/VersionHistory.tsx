@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.081",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "InvestmentsTab, FestivalMerchStand, BandEarnings migrated to profileId" },
+      { type: 'improvement', description: "FinancialStats, SocialStats, CareerStats, PlayerGainsNews migrated to profileId" },
+      { type: 'improvement', description: "LabelDirectory, TransferLabelDialog, LabelUpgradesTab migrated to profileId (removed redundant profile queries)" },
+      { type: 'improvement', description: "LiveFestivalView removed unused useAuth" },
+    ],
+  },
+  {
     version: "1.1.080",
     date: "2026-03-16",
     changes: [

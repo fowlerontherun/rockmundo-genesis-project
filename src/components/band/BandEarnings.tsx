@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth-context';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 
 interface BandEarningsProps {
@@ -51,7 +50,6 @@ interface LeaderProfileSummary {
 }
 
 export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [earnings, setEarnings] = useState<Earning[]>([]);
@@ -259,7 +257,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       return;
     }
 
-    if (!user) {
+    if (!profileId) {
       toast({
         title: 'Authentication required',
         description: 'You must be signed in to manage band funds.',
@@ -343,7 +341,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
           amount: bandDelta,
           source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
           description: note || null,
-          earned_by_user_id: user.id,
+          earned_by_user_id: profileId,
         });
 
       if (earningsError) throw earningsError;

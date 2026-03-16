@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, MessageCircle, Heart, Video, Share2, TrendingUp } from "lucide-react";
 
 export function SocialStats() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   const { data: stats } = useQuery({
