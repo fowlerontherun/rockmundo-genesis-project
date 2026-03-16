@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.091",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Fixed remaining 13 files with user_id/profileId mismatch: BandSearch, RandomEventsNews, StagePracticeResults, SongVoting, DonationSuccess, SeasonalEventsCalendar, PerformanceBooking, RehearsalsTab, useFestivalAttendance, useContractOfferGeneration, useLottery claim, skillGearPerformance, shift-clock-out edge function" },
+      { type: 'fix', description: "Tables with profile_id column now correctly use profile_id: player_events, stage_practice_sessions, songs, band_members, lottery_tickets, releases" },
+      { type: 'fix', description: "Tables with only user_id now correctly use auth userId: band_ratings, song_votes, festival_attendance, activity_feed" },
+      { type: 'fix', description: "Fixed shift-clock-out edge function querying band_members by user_id instead of profile_id" },
+    ],
+  },
+  {
     version: "1.1.090",
     date: "2026-03-16",
     changes: [
