@@ -95,7 +95,6 @@ export function useElectionCandidates(electionId: string | undefined) {
 
 // Check if current user has voted in an election
 export function useUserVote(electionId: string | undefined) {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
 
   return useQuery({
