@@ -134,7 +134,7 @@ export function useMentorSessions() {
 
   const bookSessionMutation = useMutation({
     mutationFn: async (mentorId: string) => {
-      if (!user || !profile) throw new Error("User not authenticated");
+      if (!profile) throw new Error("Profile not found");
 
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
