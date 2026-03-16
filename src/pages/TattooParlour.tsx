@@ -110,16 +110,16 @@ export default function TattooParlour() {
 
   // Fetch custom requests
   const { data: customRequests } = useQuery({
-    queryKey: ['custom-tattoo-requests', user?.id],
+    queryKey: ['custom-tattoo-requests', profileId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('custom_tattoo_requests')
         .select('*, tattoo_artists(*)')
-        .eq('user_id', user!.id)
+        .eq('profile_id', profileId!)
         .order('created_at', { ascending: false });
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const currentParlour = parlours?.find(p => p.id === selectedParlour);
