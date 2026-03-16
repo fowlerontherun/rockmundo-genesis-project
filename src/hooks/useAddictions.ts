@@ -6,7 +6,6 @@ import type { AddictionRecord, RecoveryProgram } from "@/utils/addictionSystem";
 import { getRecoveryProgramDetails } from "@/utils/addictionSystem";
 
 export function useAddictions() {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
