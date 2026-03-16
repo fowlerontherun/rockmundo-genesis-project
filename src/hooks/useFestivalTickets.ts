@@ -53,8 +53,7 @@ export const useFestivalTickets = (festivalId: string | undefined) => {
       festivalStart: string;
       festivalEnd: string;
     }) => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (!profileId) throw new Error("No active profile");
+      if (!profileId) throw new Error("Not authenticated");
 
       // Deduct cash from active profile
       const { data: profile } = await supabase
