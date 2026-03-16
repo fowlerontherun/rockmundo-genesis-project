@@ -503,7 +503,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   // Book tour mutation
   const bookTourMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !state.bandId) throw new Error('Missing user or band');
+      if (!profileId || !state.bandId) throw new Error('Missing profile or band');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
