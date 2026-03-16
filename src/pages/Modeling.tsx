@@ -5,7 +5,7 @@ import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
 
 function ModelingInner() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const { progress } = useSkillSystem();
 
