@@ -56,7 +56,7 @@ const PRIORITY_CONFIG = {
 
 export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: RiderBuilderProps) {
   const { toast } = useToast();
-  const { catalog, createRider, updateRider, fetchRiderItems, addRiderItem, removeRiderItem } = useBandRiders(bandId);
+  const { riders, catalog, createRider, updateRider, fetchRiderItems, addRiderItem, updateRiderItem, removeRiderItem } = useBandRiders(bandId);
   const { grouped } = useGroupedRiderCatalog();
 
   const [riderName, setRiderName] = useState('');
@@ -67,7 +67,23 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
   const [activeCategory, setActiveCategory] = useState('technical');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load existing rider if editing
+  // Load existing rider metadata if editing
+  useEffect(() => {
+    if (!riderId) {
+      return;
+    }
+
+    const rider = riders?.find((r) => r.id === riderId);
+    if (!rider) {
+      return;
+    }
+
+    setRiderName(rider.name);
+    setRiderDescription(rider.description || '');
+    setRiderTier(rider.tier);
+  }, [riderId, riders]);
+
+  // Load existing rider items if editing
   useEffect(() => {
     if (riderId) {
       fetchRiderItems(riderId).then(items => {
@@ -206,10 +222,19 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
 
       // Add/update items
       for (const [catalogId, itemData] of selectedItems) {
-        if (!existingItemIds.has(catalogId)) {
+        const existingItemId = existingItemIds.get(catalogId);
+
+        if (!existingItemId) {
           await addRiderItem.mutateAsync({
             rider_id: targetRiderId!,
             catalog_item_id: catalogId,
+            quantity: itemData.quantity,
+            priority: itemData.priority as any,
+            custom_notes: itemData.notes || null,
+          });
+        } else {
+          await updateRiderItem.mutateAsync({
+            id: existingItemId,
             quantity: itemData.quantity,
             priority: itemData.priority as any,
             custom_notes: itemData.notes || null,
