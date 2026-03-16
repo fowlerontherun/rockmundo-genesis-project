@@ -120,7 +120,7 @@ export const useRadioStations = () => {
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (existing) {
