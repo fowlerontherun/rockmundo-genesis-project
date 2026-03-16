@@ -9,7 +9,7 @@ function ModelingInner() {
   const { profile } = useGameData();
   const { progress } = useSkillSystem();
 
-  if (!user || !profile) {
+  if (!profileId || !profile) {
     return (
       <div className="container mx-auto py-8">
         <p className="text-muted-foreground">Please log in to access modeling.</p>
