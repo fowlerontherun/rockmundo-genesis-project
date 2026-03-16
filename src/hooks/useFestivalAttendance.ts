@@ -65,7 +65,7 @@ export const useFestivalAttendance = (festivalId: string | undefined) => {
         .from("festival_attendance")
         .upsert({
           festival_id: festivalId,
-          user_id: profileId,
+          user_id: userId,
           current_stage_id: stageId,
           is_active: true,
           last_moved_at: new Date().toISOString(),
