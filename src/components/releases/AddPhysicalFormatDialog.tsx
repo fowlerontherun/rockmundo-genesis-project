@@ -42,7 +42,7 @@ const VINYL_COLORS = ["black", "red", "blue", "green", "white", "clear", "pictur
 export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhysicalFormatDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(100);
