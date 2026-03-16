@@ -193,7 +193,7 @@ export const useCryptoTokens = (profileId?: string) => {
       const { data: freshHoldings } = await supabase
         .from("player_token_holdings")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .eq("token_id", tokenId)
         .limit(1);
 

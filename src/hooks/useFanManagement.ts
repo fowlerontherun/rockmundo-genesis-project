@@ -83,7 +83,7 @@ export const useFanManagement = (profileId?: string) => {
       const { data, error } = await supabase
         .from("fan_interactions")
         .select("*")
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(100);
 
