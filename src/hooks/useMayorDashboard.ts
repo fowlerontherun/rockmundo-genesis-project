@@ -43,26 +43,18 @@ export function useCityMayor(cityId: string | undefined) {
 
 // Check if current user is mayor of a city
 export function useIsCurrentMayor(cityId: string | undefined) {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["is-mayor", cityId, user?.id],
+    queryKey: ["is-mayor", cityId, profileId],
     queryFn: async () => {
-      if (!cityId || !user?.id) return false;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile) return false;
+      if (!cityId || !profileId) return false;
 
       const { data, error } = await supabase
         .from("city_mayors")
         .select("id")
         .eq("city_id", cityId)
-        .eq("profile_id", profile.id)
+        .eq("profile_id", profileId)
         .eq("is_current", true)
         .maybeSingle();
 
