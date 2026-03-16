@@ -138,7 +138,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  }, [user, channelKey]);
+  }, [profileId, channelKey]);
 
   const sendMessage = useCallback(async () => {
     if (!user || !message.trim()) return;
