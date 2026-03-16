@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.100",
+    date: "2026-03-16",
+    changes: [
+      { type: 'fix', description: "Book reading (purchases, active sessions) now isolated per character — no longer shared across characters on the same account" },
+      { type: 'fix', description: "New characters now receive a starter XP wallet with 500 SXP and 10 AP on creation" },
+    ],
+  },
+  {
     version: "1.1.099",
     date: "2026-03-16",
     changes: [
