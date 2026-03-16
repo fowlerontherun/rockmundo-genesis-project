@@ -161,7 +161,7 @@ export const useUnderworldStore = () => {
         }
 
         // Fetch player's token holding
-        const { data: holding, error: holdingError } = await supabase
+        const { data: holding, error: holdingError } = await (supabase as any)
           .from("player_token_holdings")
           .select("id, quantity")
           .eq("profile_id", profileId)

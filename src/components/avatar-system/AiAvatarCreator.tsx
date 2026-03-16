@@ -171,13 +171,13 @@ export function AiAvatarCreator() {
   }, [processFile]);
 
   const handleSaveAvatar = async () => {
-    if (!generatedAvatar || !user?.id) return;
+    if (!generatedAvatar || !profileId) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ avatar_url: generatedAvatar })
-        .eq("user_id", user.id);
+        .eq("id", profileId);
 
       if (error) throw error;
 
