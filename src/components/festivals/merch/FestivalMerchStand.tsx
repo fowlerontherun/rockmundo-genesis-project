@@ -29,6 +29,7 @@ const MERCH_TYPES = [
 
 export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: FestivalMerchStandProps) {
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [designName, setDesignName] = useState("");
   const [itemType, setItemType] = useState("");
