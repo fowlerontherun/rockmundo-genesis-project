@@ -8,7 +8,6 @@ import { usePlayerStatistics } from "@/hooks/usePlayerStatistics";
 import { Trophy, Music, TrendingUp, Star, Award, Target } from "lucide-react";
 
 const PlayerStatistics = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const {
     allAchievements,
