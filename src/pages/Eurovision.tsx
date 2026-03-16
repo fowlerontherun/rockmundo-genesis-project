@@ -171,10 +171,10 @@ export default function Eurovision() {
   // Vote mutation
   const voteMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      if (!user?.id) throw new Error("Must be logged in to vote");
+      if (!profileId) throw new Error("Must be logged in to vote");
       const { error } = await supabase
         .from("eurovision_votes")
-        .insert({ entry_id: entryId, voter_id: user.id });
+        .insert({ entry_id: entryId, voter_id: profileId });
       if (error) throw error;
     },
     onSuccess: () => {
