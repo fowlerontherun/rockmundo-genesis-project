@@ -177,17 +177,19 @@ export const PromoTourCard = ({
       });
 
       // Deduct cost from player cash
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("user_id", userId)
-        .single();
-
-      if (profile) {
-        await supabase
+      if (profileId) {
+        const { data: profile } = await supabase
           .from("profiles")
-          .update({ cash: (profile.cash ?? 0) - totalCost })
-          .eq("user_id", userId);
+          .select("cash")
+          .eq("id", profileId)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({ cash: (profile.cash ?? 0) - totalCost })
+            .eq("id", profileId);
+        }
       }
 
       return pkg;
