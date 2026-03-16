@@ -33,6 +33,11 @@ import type { CharacterRelationship } from "@/types/character-relationships";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
 import { FamilyDashboard } from "@/components/family/FamilyDashboard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useEquipmentStore } from "@/hooks/useEquipmentStore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ── Filter categories ─────────────────────────────────────────
 const FILTER_CATEGORIES = [
@@ -129,6 +134,7 @@ function buildInteractionOption(actionKey: string, rel: CharacterRelationship): 
 
 // ── Main Page ──────────────────────────────────────────────────
 export default function RelationshipsPage() {
+  const queryClient = useQueryClient();
   const { profileId: activeProfileId } = useActiveProfile();
   const gameData = useOptionalGameData();
   const profileId = gameData?.profile?.id;
@@ -141,6 +147,10 @@ export default function RelationshipsPage() {
   // Friends state
   const [selectedFriendship, setSelectedFriendship] = useState<DecoratedFriendship | null>(null);
   const [friendSearchOpen, setFriendSearchOpen] = useState(false);
+  const [giftAmount, setGiftAmount] = useState("");
+  const [selectedGearInventoryId, setSelectedGearInventoryId] = useState<string>("");
+  const [isSendingMoney, setIsSendingMoney] = useState(false);
+  const [isSendingGear, setIsSendingGear] = useState(false);
 
   // Interaction modal state
   const [interactionTarget, setInteractionTarget] = useState<CharacterRelationship | null>(null);
@@ -162,6 +172,11 @@ export default function RelationshipsPage() {
     removeFriend,
     sendRequest,
   } = useFriendships(profileId);
+  const { inventory } = useEquipmentStore(profileId ?? undefined);
+
+  const giftableGear = useMemo(() => {
+    return inventory.filter((item) => !item.is_equipped);
+  }, [inventory]);
 
   // Pending friend request count for badge
   const pendingCount = useMemo(() => {
@@ -208,6 +223,102 @@ export default function RelationshipsPage() {
     setInteractionTarget(rel);
     setInteractionModalOpen(true);
   }, []);
+
+  const handleSendMoneyToFriend = useCallback(async () => {
+    if (!profileId || !selectedFriendship?.otherProfile?.id) {
+      toast.error("Select a friend first");
+      return;
+    }
+
+    const amount = Number(giftAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setIsSendingMoney(true);
+    try {
+      const { data: senderProfile, error: senderError } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("id", profileId)
+        .single();
+
+      if (senderError || !senderProfile) throw senderError ?? new Error("Sender profile not found");
+      if ((senderProfile.cash ?? 0) < amount) {
+        toast.error("You don't have enough cash");
+        return;
+      }
+
+      const { data: recipientProfile, error: recipientError } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("id", selectedFriendship.otherProfile.id)
+        .single();
+
+      if (recipientError || !recipientProfile) throw recipientError ?? new Error("Friend profile not found");
+
+      const { error: senderUpdateError } = await supabase
+        .from("profiles")
+        .update({ cash: (senderProfile.cash ?? 0) - amount })
+        .eq("id", profileId);
+
+      if (senderUpdateError) throw senderUpdateError;
+
+      const { error: recipientUpdateError } = await supabase
+        .from("profiles")
+        .update({ cash: (recipientProfile.cash ?? 0) + amount })
+        .eq("id", selectedFriendship.otherProfile.id);
+
+      if (recipientUpdateError) throw recipientUpdateError;
+
+      setGiftAmount("");
+      await queryClient.invalidateQueries({ queryKey: ["profile", profileId] });
+      toast.success(`Sent $${amount.toLocaleString()} to your friend`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not send money";
+      toast.error("Money transfer failed", { description: message });
+    } finally {
+      setIsSendingMoney(false);
+    }
+  }, [giftAmount, profileId, queryClient, selectedFriendship]);
+
+  const handleSendGearToFriend = useCallback(async () => {
+    if (!selectedGearInventoryId) {
+      toast.error("Choose gear to send");
+      return;
+    }
+
+    const recipientUserId = selectedFriendship?.otherProfile?.user_id;
+    if (!recipientUserId || !profileUserId) {
+      toast.error("Missing sender or recipient account");
+      return;
+    }
+
+    setIsSendingGear(true);
+    try {
+      const { error } = await supabase
+        .from("player_equipment_inventory")
+        .update({
+          user_id: recipientUserId,
+          is_equipped: false,
+        })
+        .eq("id", selectedGearInventoryId)
+        .eq("user_id", profileUserId);
+
+      if (error) throw error;
+
+      const sentItem = giftableGear.find((item) => item.id === selectedGearInventoryId);
+      setSelectedGearInventoryId("");
+      await queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
+      toast.success(`Sent ${sentItem?.equipment?.name ?? "gear"} to your friend`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not send gear";
+      toast.error("Gear transfer failed", { description: message });
+    } finally {
+      setIsSendingGear(false);
+    }
+  }, [giftableGear, profileId, profileUserId, queryClient, selectedFriendship, selectedGearInventoryId]);
 
   // Handle interaction selection from modal
   const handleInteractionSelect = useCallback(async (optionId: string): Promise<InteractionResult> => {
@@ -365,6 +476,62 @@ export default function RelationshipsPage() {
                           </Badge>
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base">Support this friend</CardTitle>
+                    <CardDescription>Gift cash or send spare gear from your inventory.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="w-full sm:w-56">
+                        <p className="text-xs font-medium mb-1">Money gift</p>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="Amount in cash"
+                          value={giftAmount}
+                          onChange={(event) => setGiftAmount(event.target.value)}
+                        />
+                      </div>
+                      <Button onClick={handleSendMoneyToFriend} disabled={isSendingMoney || !giftAmount.trim()}>
+                        {isSendingMoney ? "Sending..." : "Send Money"}
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="w-full sm:w-72">
+                        <p className="text-xs font-medium mb-1">Gear gift</p>
+                        <Select value={selectedGearInventoryId} onValueChange={setSelectedGearInventoryId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose unequipped gear" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {giftableGear.length === 0 ? (
+                              <SelectItem value="none" disabled>
+                                No unequipped gear available
+                              </SelectItem>
+                            ) : (
+                              giftableGear.map((item) => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.equipment.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleSendGearToFriend}
+                        disabled={isSendingGear || !selectedGearInventoryId || selectedGearInventoryId === "none"}
+                      >
+                        {isSendingGear ? "Sending..." : "Send Gear"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
