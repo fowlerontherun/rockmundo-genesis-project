@@ -103,14 +103,14 @@ export const usePlayerStatistics = (userId?: string) => {
   });
 
   const { data: songwritingStats, isLoading: isLoadingSongwriting } = useQuery({
-    queryKey: ["player-songwriting-stats", userId],
+    queryKey: ["player-songwriting-stats", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
 
       const { data: songs } = await supabase
         .from("songs")
         .select("*")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (!songs || songs.length === 0) {
         return {
