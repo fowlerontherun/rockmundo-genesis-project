@@ -104,7 +104,7 @@ const parseAchievementRow = (value: unknown): Achievement | null => {
 };
 
 export function AchievementsSection() {
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerAchievements, setPlayerAchievements] = useState<PlayerAchievement[]>([]);
   const [loading, setLoading] = useState(true);
