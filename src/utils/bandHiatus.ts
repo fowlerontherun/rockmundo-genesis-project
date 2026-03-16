@@ -90,7 +90,7 @@ export async function reactivateBand(
     // 1. Get all human members of the band
     const { data: members, error: membersError } = await supabase
       .from('band_members')
-      .select('user_id')
+      .select('profile_id')
       .eq('band_id', bandId)
       .eq('is_touring_member', false);
 
@@ -99,17 +99,18 @@ export async function reactivateBand(
     // 2. Check for conflicts with other active bands
     const conflicts = [];
     for (const member of members || []) {
-      const activeBand = await getUserActiveBand(member.user_id);
+      if (!member.profile_id) continue;
+      const activeBand = await getUserActiveBand(member.profile_id);
       if (activeBand && activeBand.id !== bandId) {
         // Fetch profile for display name
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name, username')
-          .eq('user_id', member.user_id)
+          .eq('id', member.profile_id)
           .single();
         
         conflicts.push({
-          userId: member.user_id,
+          userId: member.profile_id,
           userName: profile?.display_name || profile?.username || 'Unknown',
           conflictBandId: activeBand.id,
           conflictBandName: activeBand.name

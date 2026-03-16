@@ -60,10 +60,10 @@ export default function BandManager() {
   }, [selectedBandId]);
 
   const loadUserBands = async () => {
-    if (!user) return;
+    if (!profileId) return;
 
     try {
-      const bands = await getUserBands(user.id);
+      const bands = await getUserBands(profileId);
       
       // Filter out disbanded bands
       const activeBands = bands.filter((b: any) => b.bands.status !== 'disbanded');
