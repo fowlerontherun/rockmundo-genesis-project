@@ -26,7 +26,6 @@ export interface InventoryItem {
 type EffectsRecord = Record<string, number | string>;
 
 export const useUnderworldInventory = () => {
-  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
