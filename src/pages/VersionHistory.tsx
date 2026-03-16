@@ -14,6 +14,28 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.061",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "UpcomingTravelList travel history and band queries use profile_id" },
+      { type: 'improvement', description: "MyAirplayStats radio airplay song queries scoped to profile_id" },
+      { type: 'improvement', description: "CreateReleaseDialog band detection and label contract lookup use profileId" },
+      { type: 'improvement', description: "StagePracticeSelection skills and songs queries use profileId directly" },
+      { type: 'improvement', description: "OffersDashboard band membership lookup uses profile_id" },
+      { type: 'improvement', description: "WorldMap uses activeProfile for current city instead of auth lookup" },
+      { type: 'improvement', description: "PlayerAnalytics gig stats, song stats, earnings all query by profileId" },
+      { type: 'improvement', description: "SongSelector recording songs query uses profile_id" },
+      { type: 'improvement', description: "LinkReleaseDialog band membership and releases use profile_id" },
+      { type: 'improvement', description: "bandStatus utility functions accept profileId instead of userId" },
+      { type: 'improvement', description: "BandManager loads bands via profileId" },
+      { type: 'improvement', description: "bandHiatus reactivation conflict check uses profile_id" },
+      { type: 'improvement', description: "Employment profile lookup uses active profileId" },
+      { type: 'improvement', description: "ReleaseDetail uses activeProfile for cash/health/energy and band lookup" },
+      { type: 'improvement', description: "MyReleasesTab releases query scoped to band membership by profile_id" },
+      { type: 'improvement', description: "CollaboratorInviteDialog cash lookup uses active profile" },
+    ],
+  },
+  {
     version: "1.1.060",
     date: "2026-03-16",
     changes: [
