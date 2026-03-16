@@ -58,7 +58,7 @@ export default function SongwritingBooking() {
   });
 
   const handleBookSession = async () => {
-    if (!date || !timeSlot || !selectedProjectId || !user) {
+    if (!date || !timeSlot || !selectedProjectId || !profileId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, time slot, and project to work on.",
