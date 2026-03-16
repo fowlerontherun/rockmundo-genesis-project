@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const STORAGE_KEY = "video_watch_history";
 const MAX_VIDEOS = 2;
@@ -66,7 +66,7 @@ interface WatchVideoInput {
 
 export const useWatchVideo = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -77,7 +77,7 @@ export const useWatchVideo = () => {
         throw new Error("cooldown");
       }
       
-      if (!user) {
+      if (!profileId) {
         throw new Error("Not authenticated");
       }
       
@@ -85,7 +85,7 @@ export const useWatchVideo = () => {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, experience, user_id")
-        .eq("user_id", user.id)
+        .eq("id", profileId)
         .single();
       
       if (profileError || !profile) {
@@ -148,7 +148,7 @@ export const useWatchVideo = () => {
       
       // Log to experience ledger
       await supabase.from("experience_ledger").insert({
-        user_id: user.id,
+        user_id: profile.user_id,
         profile_id: profile.id,
         activity_type: "youtube_video",
         xp_amount: XP_PER_VIDEO,

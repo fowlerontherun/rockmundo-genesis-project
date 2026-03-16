@@ -3,7 +3,7 @@ import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench } from "lucide-r
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 import { calculateRepairCost } from "@/utils/equipmentDegradation";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -126,7 +126,7 @@ const MyGear: React.FC = () => {
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
   const [repairingId, setRepairingId] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const {
@@ -143,7 +143,7 @@ const MyGear: React.FC = () => {
     : null;
 
   const handleRepair = useCallback(async (itemId: string, condition: number, price: number) => {
-    if (!user?.id || repairingId) return;
+    if (!profileId || repairingId) return;
     setRepairingId(itemId);
     try {
       const { cost } = calculateRepairCost(condition, price, 100);
@@ -152,7 +152,7 @@ const MyGear: React.FC = () => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('id', profileId)
         .single();
 
       const balance = (profile as any)?.balance ?? 0;
@@ -162,7 +162,7 @@ const MyGear: React.FC = () => {
       }
 
       // Deduct and repair
-      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('user_id', user.id);
+      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('id', profileId);
       await supabase.from('player_equipment').update({ condition: 100 }).eq('id', itemId);
 
       toast({ title: "Equipment Repaired!", description: `Restored to pristine condition for $${cost.toLocaleString()}` });
@@ -173,7 +173,7 @@ const MyGear: React.FC = () => {
     } finally {
       setRepairingId(null);
     }
-  }, [user?.id, repairingId, toast, queryClient]);
+  }, [profileId, repairingId, toast, queryClient]);
 
   const presetGear = useMemo(
     () =>
