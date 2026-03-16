@@ -20,7 +20,7 @@ interface TutorialProgress {
 }
 
 export const useTutorial = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch all active tutorial steps
