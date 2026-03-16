@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.069",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "Song voting scoped to active profile instead of auth user" },
+      { type: 'improvement', description: "Earnings news band membership lookup uses profile_id" },
+      { type: 'improvement', description: "Random events news queries use profileId" },
+      { type: 'improvement', description: "DikCok engagement and video creation use profileId" },
+      { type: 'improvement', description: "Twaater composer band lookup uses profileId" },
+    ],
+  },
+  {
     version: "1.1.068",
     date: "2026-03-16",
     changes: [
