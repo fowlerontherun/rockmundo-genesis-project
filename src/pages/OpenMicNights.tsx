@@ -36,7 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function OpenMicNights() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { data: primaryBand } = usePrimaryBand();
   const userBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } : null;
