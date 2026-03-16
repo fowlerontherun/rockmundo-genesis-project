@@ -44,7 +44,7 @@ export const useInterviewSession = () => {
 
   // Check for pending interviews with cooldown
   useEffect(() => {
-    if (!user?.id || !bandId || checkedRef.current) return;
+    if (!profileId || !bandId || checkedRef.current) return;
 
     const check = async () => {
       checkedRef.current = true;
