@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.067",
+    date: "2026-03-16",
+    changes: [
+      { type: 'improvement', description: "PerformGig city check and scheduling conflict use profileId instead of auth user" },
+      { type: 'improvement', description: "Tutorial progress (useTutorial) scoped to active profile" },
+      { type: 'improvement', description: "Holiday booking and cooldown checks use profileId" },
+      { type: 'improvement', description: "Rehearsal booking activity log uses active profile id" },
+    ],
+  },
+  {
     version: "1.1.066",
     date: "2026-03-16",
     changes: [
