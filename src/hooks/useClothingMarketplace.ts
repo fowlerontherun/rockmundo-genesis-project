@@ -43,7 +43,7 @@ export const useClothingMarketplace = (filters?: {
         brand: item.player_clothing_brands as unknown as ClothingBrand,
       })) as MarketplaceItem[];
     },
-    enabled: !!user,
+    enabled: !!profileId,
   });
 
   const purchaseItem = useMutation({
