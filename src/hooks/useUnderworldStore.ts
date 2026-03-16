@@ -303,7 +303,7 @@ export const useUnderworldStore = () => {
         const { error: boostError } = await supabase
           .from("player_active_boosts")
           .insert({
-            user_id: user.id,
+            user_id: profileId,
             product_id: product.id,
             boost_type: boostType,
             boost_value: boostValue,
