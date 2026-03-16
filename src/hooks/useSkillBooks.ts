@@ -77,8 +77,9 @@ export const useSkillBooks = () => {
   });
 
   const { data: activeSession } = useQuery({
-    queryKey: ["active_reading_session"],
+    queryKey: ["active_reading_session", profileId],
     queryFn: async () => {
+      if (!profileId) return null;
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
         .select(`
@@ -86,12 +87,14 @@ export const useSkillBooks = () => {
           skill_books (title, author, base_reading_days),
           player_book_reading_attendance (*)
         `)
+        .eq("profile_id", profileId)
         .eq("status", "reading")
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) throw error;
       return data;
     },
+    enabled: !!profileId,
   });
 
   const purchaseBook = useMutation({
