@@ -78,7 +78,7 @@ export function BandSettingsTab({
   };
 
   const handlePutOnHiatus = async () => {
-    if (!user) return;
+    if (!profileId) return;
     
     if (!hiatusReason.trim()) {
       toast({
