@@ -92,10 +92,10 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
       if (!user) return [];
 
       // Get released songs
-      const { data: releasedSongs, error: releasedError } = await supabase
+      const { data: releasedSongs, error: releasedError } = await (supabase as any)
         .from("songs")
         .select("id, title, genre, quality_score, status, band_id")
-        .eq("user_id", user.id)
+        .eq("profile_id", user.id)
         .eq("status", "released")
         .order("created_at", { ascending: false });
 
