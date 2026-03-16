@@ -34,7 +34,7 @@ export const useUnderworldInventory = () => {
 
   // Fetch unused inventory items (not used or boosters)
   const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery({
-    queryKey: ["underworld-inventory", user?.id],
+    queryKey: ["underworld-inventory", profileId],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const useUnderworldInventory = () => {
       if (error) throw error;
       return (data || []) as InventoryItem[];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profileId,
   });
 
   // Use an item from inventory
