@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Gauge,
   Mic,
-  Masks,
   Music,
   Newspaper,
   PartyPopper,
