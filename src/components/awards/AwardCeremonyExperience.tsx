@@ -1,19 +1,24 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { 
-  Trophy, Star, Sparkles, Camera, Music, 
-  PartyPopper, Crown, Users, Mic, Award 
+import {
+  Award,
+  Camera,
+  Mic,
+  Music,
+  PartyPopper,
+  Sparkles,
+  Star,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AwardShow } from "@/hooks/useAwards";
 
 interface AwardCeremonyExperienceProps {
   show: AwardShow;
-  bandName?: string;
   bandId?: string;
   hasNomination: boolean;
   onAttendRedCarpet: (outfitChoice: string) => void;
@@ -22,13 +27,21 @@ interface AwardCeremonyExperienceProps {
   isBooking?: boolean;
 }
 
-type CeremonyPhase = "red_carpet" | "opening" | "categories" | "performance" | "finale";
+type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale";
+
+type RunOfShowSegment = {
+  type: "host_intro" | "award" | "performance";
+  title: string;
+  presenter?: string;
+  performer?: string;
+  songs?: string[];
+  commentary: string;
+};
 
 const CEREMONY_PHASES: { id: CeremonyPhase; label: string; icon: React.ElementType }[] = [
   { id: "red_carpet", label: "Red Carpet", icon: Camera },
   { id: "opening", label: "Opening", icon: Sparkles },
-  { id: "categories", label: "Awards", icon: Trophy },
-  { id: "performance", label: "Performance", icon: Music },
+  { id: "awards", label: "Awards Show", icon: Trophy },
   { id: "finale", label: "Finale", icon: PartyPopper },
 ];
 
@@ -41,15 +54,70 @@ const OUTFIT_OPTIONS = [
 ];
 
 const PERFORMANCE_SLOTS = [
-  { id: "opener", label: "Opening Act", stage: "main", prestige: 1 },
-  { id: "mid_show", label: "Mid-Show Performance", stage: "main", prestige: 2 },
-  { id: "tribute", label: "Tribute Performance", stage: "main", prestige: 3 },
-  { id: "closer", label: "Closing Act", stage: "main", prestige: 4 },
+  { id: "interlude_1", label: "Interlude 1", stage: "main", prestige: 1 },
+  { id: "interlude_2", label: "Interlude 2", stage: "main", prestige: 2 },
+  { id: "interlude_3", label: "Interlude 3", stage: "main", prestige: 3 },
+  { id: "interlude_4", label: "Interlude 4", stage: "main", prestige: 4 },
+  { id: "grand_closer", label: "Grand Closer", stage: "main", prestige: 5 },
 ];
+
+const defaultHost = "Avery Stone";
+
+const buildRunOfShow = (show: AwardShow): RunOfShowSegment[] => {
+  const categories = ((show.categories as any[]) || []).slice(0, 5);
+  const host = show.host_name || defaultHost;
+  const scripted = Array.isArray(show.run_of_show) ? (show.run_of_show as RunOfShowSegment[]) : [];
+  if (scripted.length > 0) return scripted;
+
+  const interludeBands = [
+    "Neon Parade",
+    "Glass Anthem",
+    "Night Echo",
+    "Silver Circuit",
+  ];
+
+  const segments: RunOfShowSegment[] = [
+    {
+      type: "host_intro",
+      title: "Host Welcome",
+      commentary:
+        show.host_intro ||
+        `${host} walks to center stage and welcomes the world to ${show.show_name}, promising surprise moments and emotional speeches.`,
+    },
+  ];
+
+  categories.forEach((cat: any, index: number) => {
+    segments.push({
+      type: "award",
+      title: cat.name || `Award Category ${index + 1}`,
+      presenter: `Presenter ${index + 1}`,
+      commentary: `${host} introduces ${cat.name || "the next category"} and teases the presenter before opening the envelope live.`,
+    });
+
+    if (index < 4) {
+      segments.push({
+        type: "performance",
+        title: `Interlude Performance ${index + 1}`,
+        performer: interludeBands[index],
+        songs: [`Interlude Song ${index + 1}`],
+        commentary: `${interludeBands[index]} performs a single song while the stage rotates for the next award setup.`,
+      });
+    }
+  });
+
+  segments.push({
+    type: "performance",
+    title: "Grand Closing Performance",
+    performer: "Headliner Collective",
+    songs: ["Finale Song I", "Finale Song II", "Finale Song III"],
+    commentary: `${host} closes the show with a three-song finale and thanks performers, presenters, and voters around the world.`,
+  });
+
+  return segments;
+};
 
 export function AwardCeremonyExperience({
   show,
-  bandName,
   bandId,
   hasNomination,
   onAttendRedCarpet,
@@ -61,20 +129,14 @@ export function AwardCeremonyExperience({
   const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null);
   const [showPerformanceDialog, setShowPerformanceDialog] = useState(false);
   const [redCarpetComplete, setRedCarpetComplete] = useState(false);
+  const [segmentIndex, setSegmentIndex] = useState(0);
 
-  const handleOutfitSelect = (outfitId: string) => {
-    setSelectedOutfit(outfitId);
-    onAttendRedCarpet(outfitId);
-    setRedCarpetComplete(true);
-    // Auto advance after a moment
-    setTimeout(() => setCurrentPhase("opening"), 1500);
-  };
-
-  const currentPhaseIndex = CEREMONY_PHASES.findIndex(p => p.id === currentPhase);
+  const runOfShow = useMemo(() => buildRunOfShow(show), [show]);
+  const activeSegment = runOfShow[segmentIndex];
+  const currentPhaseIndex = CEREMONY_PHASES.findIndex((phase) => phase.id === currentPhase);
 
   return (
     <div className="space-y-4">
-      {/* Ceremony Progress */}
       <Card className="bg-gradient-to-r from-amber-500/5 to-yellow-500/5 border-amber-500/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -82,16 +144,15 @@ export function AwardCeremonyExperience({
               const Icon = phase.icon;
               const isActive = phase.id === currentPhase;
               const isComplete = idx < currentPhaseIndex;
-
               return (
                 <div key={phase.id} className="flex items-center">
                   <button
                     onClick={() => setCurrentPhase(phase.id)}
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer",
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                       isActive && "bg-amber-500 text-white scale-110 shadow-lg",
                       isComplete && "bg-amber-500/30 text-amber-400",
-                      !isActive && !isComplete && "bg-muted text-muted-foreground hover:bg-muted/80"
+                      !isActive && !isComplete && "bg-muted text-muted-foreground"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -104,38 +165,36 @@ export function AwardCeremonyExperience({
             })}
           </div>
           <p className="text-sm text-center text-muted-foreground">
-            {CEREMONY_PHASES[currentPhaseIndex]?.label} — {show.show_name}
+            {CEREMONY_PHASES[currentPhaseIndex]?.label} — Hosted by {show.host_name || defaultHost}
           </p>
         </CardContent>
       </Card>
 
-      {/* Red Carpet Phase */}
       {currentPhase === "red_carpet" && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-amber-500" />
-              Red Carpet Arrival
-            </CardTitle>
-            <CardDescription>
-              Choose your outfit for the red carpet. Bolder choices earn more fame but carry higher risk.
-            </CardDescription>
+            <CardTitle>Red Carpet Arrival</CardTitle>
+            <CardDescription>Choose your style and make your entrance.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {redCarpetComplete ? (
               <div className="text-center py-6">
                 <Sparkles className="h-12 w-12 mx-auto mb-3 text-amber-500 animate-pulse" />
-                <p className="font-semibold text-lg">You're making an entrance!</p>
-                <p className="text-sm text-muted-foreground">Cameras are flashing, fans are cheering...</p>
+                <p className="font-semibold text-lg">You&apos;re making an entrance!</p>
               </div>
             ) : (
               OUTFIT_OPTIONS.map((outfit) => (
                 <button
                   key={outfit.id}
-                  onClick={() => handleOutfitSelect(outfit.id)}
+                  onClick={() => {
+                    setSelectedOutfit(outfit.id);
+                    onAttendRedCarpet(outfit.id);
+                    setRedCarpetComplete(true);
+                    setTimeout(() => setCurrentPhase("opening"), 1000);
+                  }}
                   disabled={isAttending}
                   className={cn(
-                    "w-full p-4 rounded-lg border text-left transition-all hover:border-amber-500/50 hover:bg-amber-500/5",
+                    "w-full p-4 rounded-lg border text-left transition-all hover:border-amber-500/50",
                     selectedOutfit === outfit.id && "border-amber-500 bg-amber-500/10"
                   )}
                 >
@@ -144,9 +203,7 @@ export function AwardCeremonyExperience({
                       <p className="font-medium">{outfit.label}</p>
                       <p className="text-sm text-muted-foreground">{outfit.description}</p>
                     </div>
-                    <Badge variant="secondary" className="text-amber-500">
-                      +{outfit.fame} fame
-                    </Badge>
+                    <Badge variant="secondary" className="text-amber-500">+{outfit.fame} fame</Badge>
                   </div>
                 </button>
               ))
@@ -155,129 +212,87 @@ export function AwardCeremonyExperience({
         </Card>
       )}
 
-      {/* Opening Phase */}
       {currentPhase === "opening" && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
-              Opening Ceremony
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Award className="h-4 w-4 text-amber-500" />Opening Ceremony</CardTitle>
           </CardHeader>
-          <CardContent className="text-center py-6 space-y-4">
-            <Award className="h-16 w-16 mx-auto text-amber-500" />
-            <p className="text-lg font-medium">Welcome to the {show.show_name}!</p>
+          <CardContent className="space-y-3 text-center">
+            <p className="text-lg font-medium">Welcome to {show.show_name}</p>
             <p className="text-muted-foreground">
-              The lights dim, the host takes the stage. {show.prestige_level >= 4 ? 
-                "This is one of the most prestigious nights in music." : 
-                "The anticipation is electric."}
+              {(show.host_intro || `${show.host_name || defaultHost} welcomes the audience and introduces the night.`)}
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {(show.broadcast_partners || []).map((partner, i) => (
-                <Badge key={i} variant="outline">{partner}</Badge>
-              ))}
-            </div>
-            <Button onClick={() => setCurrentPhase("categories")} className="mt-4">
-              Watch the Awards
-            </Button>
+            <Button onClick={() => setCurrentPhase("awards")}>Start Live Show</Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Categories Phase */}
-      {currentPhase === "categories" && (
+      {currentPhase === "awards" && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              Award Categories
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-500" />Live Awards Timeline</CardTitle>
             <CardDescription>
-              {hasNomination ? "You're nominated! Watch as the categories are announced." : "Watch the categories unfold."}
+              Winners are hidden until each segment plays out live.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {((show.categories as any[]) || []).map((cat: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <Trophy className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <span className="font-medium">{cat.name}</span>
+          <CardContent className="space-y-4">
+            <Progress value={((segmentIndex + 1) / Math.max(runOfShow.length, 1)) * 100} />
+            {activeSegment && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{activeSegment.title}</p>
+                  <Badge variant="outline">{activeSegment.type.replace("_", " ")}</Badge>
                 </div>
-                {hasNomination && (
-                  <Badge variant="secondary" className="text-amber-500">Nominated!</Badge>
+                {activeSegment.presenter && <p className="text-sm">Presenter: {activeSegment.presenter}</p>}
+                {activeSegment.performer && <p className="text-sm">Performer: {activeSegment.performer}</p>}
+                {activeSegment.songs && (
+                  <p className="text-sm text-muted-foreground">Songs: {activeSegment.songs.join(" • ")}</p>
                 )}
+                <p className="text-sm text-muted-foreground">{activeSegment.commentary}</p>
               </div>
-            ))}
-            <div className="flex gap-2 mt-4">
+            )}
+
+            {hasNomination && activeSegment?.type === "award" && (
+              <Badge className="bg-amber-500">Your band is in contention for this moment.</Badge>
+            )}
+
+            <div className="flex gap-2">
               {bandId && (
-                <Button variant="outline" onClick={() => setShowPerformanceDialog(true)} className="flex-1">
-                  <Music className="h-4 w-4 mr-2" />
-                  Book Performance
+                <Button variant="outline" onClick={() => setShowPerformanceDialog(true)}>
+                  <Music className="h-4 w-4 mr-1" />Book Performance Slot
                 </Button>
               )}
-              <Button onClick={() => setCurrentPhase("finale")} className="flex-1">
-                Skip to Finale
+              <Button
+                onClick={() => {
+                  if (segmentIndex >= runOfShow.length - 1) {
+                    setCurrentPhase("finale");
+                    return;
+                  }
+                  setSegmentIndex((current) => current + 1);
+                }}
+              >
+                {segmentIndex >= runOfShow.length - 1 ? "Go To Finale" : "Next Segment"}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Performance Phase */}
-      {currentPhase === "performance" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Music className="h-5 w-5 text-amber-500" />
-              Live Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center py-6 space-y-4">
-            <Mic className="h-16 w-16 mx-auto text-amber-500 animate-pulse" />
-            <p className="text-lg font-medium">Your moment on the biggest stage!</p>
-            <p className="text-muted-foreground">
-              Performing at {show.show_name} boosts your fame significantly.
-            </p>
-            <Button onClick={() => setCurrentPhase("finale")}>
-              Continue to Finale
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Finale Phase */}
       {currentPhase === "finale" && (
         <Card className="bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border-amber-500/30">
-          <CardContent className="text-center py-8 space-y-4">
+          <CardContent className="text-center py-8 space-y-3">
             <PartyPopper className="h-16 w-16 mx-auto text-amber-500" />
-            <h3 className="text-2xl font-bold">Ceremony Complete!</h3>
-            <p className="text-muted-foreground">
-              The {show.show_name} has concluded. Check the results!
-            </p>
-            <div className="flex justify-center gap-6">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Attendance Fame</p>
-                <p className="text-xl font-bold text-amber-500">+{show.attendance_fame_boost}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Winner Prize</p>
-                <p className="text-xl font-bold text-green-500">${show.winner_prize_money.toLocaleString()}</p>
-              </div>
-            </div>
+            <h3 className="text-2xl font-bold">Show Complete</h3>
+            <p className="text-muted-foreground">Final results are now revealed after the live envelope moments.</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Performance Booking Dialog */}
       <Dialog open={showPerformanceDialog} onOpenChange={setShowPerformanceDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Book a Performance Slot</DialogTitle>
-            <DialogDescription>
-              Perform live at {show.show_name} for fame and exposure
-            </DialogDescription>
+            <DialogTitle>Book Awards Performance</DialogTitle>
+            <DialogDescription>Reserve one interlude or the 3-song grand closer set.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {PERFORMANCE_SLOTS.map((slot) => (
@@ -286,15 +301,17 @@ export function AwardCeremonyExperience({
                 onClick={() => {
                   onBookPerformance(slot.label, slot.stage);
                   setShowPerformanceDialog(false);
-                  setCurrentPhase("performance");
                 }}
                 disabled={isBooking}
-                className="w-full p-4 rounded-lg border text-left transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="w-full p-4 rounded-lg border text-left transition-all hover:border-primary/50"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{slot.label}</p>
-                    <p className="text-sm text-muted-foreground">{slot.stage} stage</p>
+                  <div className="flex items-center gap-2">
+                    <Mic className="h-4 w-4 text-amber-500" />
+                    <div>
+                      <p className="font-medium">{slot.label}</p>
+                      <p className="text-sm text-muted-foreground">{slot.stage} stage</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: slot.prestige }, (_, i) => (
