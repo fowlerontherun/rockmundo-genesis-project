@@ -50,12 +50,16 @@ SET host_name = COALESCE(host_name, 'Avery Stone'),
     run_of_show = CASE
       WHEN jsonb_array_length(COALESCE(run_of_show, '[]'::jsonb)) > 0 THEN run_of_show
       ELSE jsonb_build_array(
-        jsonb_build_object('type','host_intro','title','Host Welcome','commentary','The host welcomes the audience and introduces the first category.'),
-        jsonb_build_object('type','award','title','Opening Category','presenter','Presenter 1','commentary','Presenter 1 introduces the category and announces nominees.'),
-        jsonb_build_object('type','performance','title','Interlude Performance 1','performer','Neon Parade','songs',jsonb_build_array('Interlude Song 1'),'commentary','One-song interlude between award announcements.'),
-        jsonb_build_object('type','award','title','Mid-Ceremony Category','presenter','Presenter 2','commentary','Another major category is introduced by the host and presenter.'),
-        jsonb_build_object('type','performance','title','Interlude Performance 2','performer','Glass Anthem','songs',jsonb_build_array('Interlude Song 2'),'commentary','Another one-song performance while the stage resets.'),
-        jsonb_build_object('type','award','title','Headliner Category','presenter','Presenter 3','commentary','Host and presenter reveal the headliner category winner.'),
-        jsonb_build_object('type','performance','title','Grand Closing Performance','performer','Headliner Collective','songs',jsonb_build_array('Finale Song I','Finale Song II','Finale Song III'),'commentary','The closing act performs a three-song medley to end the show.')
+        jsonb_build_object('type','host_intro','title','Host Welcome','commentary','The host welcomes the audience and introduces the first category.','audio_cue','host_intro_theme','crowd_profile','warm'),
+        jsonb_build_object('type','award','title','Opening Category','presenter','Presenter 1','commentary','Presenter 1 introduces the category and announces nominees.','audio_cue','envelope_suspense_sting','crowd_profile','hype'),
+        jsonb_build_object('type','performance','title','Interlude Performance 1','performer','Neon Parade','songs',jsonb_build_array('Interlude Song 1'),'commentary','One-song interlude between award announcements.','audio_cue','interlude_performance_bed','crowd_profile','chaotic'),
+        jsonb_build_object('type','award','title','Song of the Year','presenter','Presenter 2','commentary','The host introduces Song of the Year and brings out the presenter.','audio_cue','envelope_suspense_sting','crowd_profile','hype'),
+        jsonb_build_object('type','performance','title','Interlude Performance 2','performer','Glass Anthem','songs',jsonb_build_array('Interlude Song 2'),'commentary','Second one-song performance while the stage resets.','audio_cue','interlude_performance_bed','crowd_profile','chaotic'),
+        jsonb_build_object('type','award','title','Album of the Year','presenter','Presenter 3','commentary','Another major category is introduced by the host and presenter.','audio_cue','envelope_suspense_sting','crowd_profile','hype'),
+        jsonb_build_object('type','performance','title','Interlude Performance 3','performer','Night Echo','songs',jsonb_build_array('Interlude Song 3'),'commentary','Third one-song interlude keeps crowd momentum high.','audio_cue','interlude_performance_bed','crowd_profile','chaotic'),
+        jsonb_build_object('type','award','title','Best Live Show','presenter','Presenter 4','commentary','Host and presenter reveal the Best Live Show winner.','audio_cue','envelope_suspense_sting','crowd_profile','hype'),
+        jsonb_build_object('type','performance','title','Interlude Performance 4','performer','Silver Circuit','songs',jsonb_build_array('Interlude Song 4'),'commentary','Fourth one-song interlude closes the mid-show performances.','audio_cue','interlude_performance_bed','crowd_profile','chaotic'),
+        jsonb_build_object('type','award','title','Artist of the Year','presenter','Presenter 5','commentary','The final envelope before the closing set.','audio_cue','envelope_suspense_sting','crowd_profile','hype'),
+        jsonb_build_object('type','performance','title','Grand Closing Performance','performer','Headliner Collective','songs',jsonb_build_array('Finale Song I','Finale Song II','Finale Song III'),'commentary','The closing act performs a three-song medley to end the show.','audio_cue','grand_closer_fireworks','crowd_profile','chaotic')
       )
     END;

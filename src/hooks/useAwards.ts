@@ -302,15 +302,36 @@ export const useAwards = (userId?: string, bandId?: string) => {
       const voteId = params.voter_id || userId;
       const voteType = params.voter_type || "player";
 
-      const { count, error: countError } = await (supabase as any)
+      const { data: showNominations, error: showNominationError } = await (supabase as any)
+        .from("award_nominations")
+        .select("id")
+        .eq("award_show_id", params.show_id);
+
+      if (showNominationError) throw showNominationError;
+
+      const nominationIds = (showNominations || []).map((nomination: { id: string }) => nomination.id);
+
+      if (nominationIds.length > 0) {
+        const { count: showVoteCount, error: showVoteCountError } = await (supabase as any)
+          .from("award_votes")
+          .select("id", { count: "exact", head: true })
+          .eq("voter_id", voteId)
+          .in("nomination_id", nominationIds);
+
+        if (showVoteCountError) throw showVoteCountError;
+        enforceVoteCap(showVoteCount ?? 0, 3);
+      }
+
+      const { count: duplicateCount, error: duplicateError } = await (supabase as any)
         .from("award_votes")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("nomination_id", params.nomination_id)
         .eq("voter_id", voteId);
 
-      if (countError) throw countError;
-
-      enforceVoteCap(count ?? 0, 3);
+      if (duplicateError) throw duplicateError;
+      if ((duplicateCount ?? 0) > 0) {
+        throw new Error("You already voted for this nominee");
+      }
 
       const { data, error } = await (supabase as any)
         .from("award_votes")
@@ -348,7 +369,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       }
 
       if (typeof previousVoteCount === "number") {
-        queryClient.setQueryData(voteCountKey, Math.min(previousVoteCount + 1, 5));
+        queryClient.setQueryData(voteCountKey, Math.min(previousVoteCount + 1, 3));
       }
 
       return { previousNominations, previousVoteCount, showId: params.show_id };

@@ -65,9 +65,6 @@ export default function Awards() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [voteAs, setVoteAs] = useState<"player" | "band" | "movement">("player");
 
-  const { data: calendarData } = useGameCalendar();
-  const currentGameYear = calendarData?.gameYear ?? new Date().getFullYear();
-
   // Fetch nominations when a show is selected for voting
   const { data: showNominations = [], isLoading: nominationsLoading } = useQuery({
     queryKey: ["award-show-nominations", selectedShow?.id],
