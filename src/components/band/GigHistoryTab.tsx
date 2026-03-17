@@ -3,11 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award, Mic2, FileText } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award, Mic2 } from "lucide-react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
-import { GigReviewViewer } from "@/components/gig/GigReviewViewer";
 import { TopDownGigViewer } from "@/components/gig-viewer/TopDownGigViewer";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
@@ -61,9 +60,7 @@ type GigOutcomeWithDetails = GigHistoryOutcome & {
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
-  const [showReviewViewer, setShowReviewViewer] = useState(false);
   const [reviewGigId, setReviewGigId] = useState<string | null>(null);
-  const [reviewOutcomeId, setReviewOutcomeId] = useState<string | null>(null);
   const [showReviewChoice, setShowReviewChoice] = useState(false);
   const [pendingOutcome, setPendingOutcome] = useState<GigHistoryOutcome | null>(null);
   const [showTopDownViewer, setShowTopDownViewer] = useState(false);
@@ -146,9 +143,8 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const handleWatchWithCommentary = async () => {
     if (!pendingOutcome?.gigs?.id) return;
     setReviewGigId(pendingOutcome.gigs.id);
-    setReviewOutcomeId(pendingOutcome.id);
     setShowReviewChoice(false);
-    setShowReviewViewer(true);
+    setShowTopDownViewer(true);
   };
 
   const handleInstantOutcome = async () => {
@@ -352,29 +348,13 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             </DialogHeader>
             <div className="grid grid-cols-1 gap-4 mt-4">
               <Button
-                onClick={() => {
-                  if (!pendingOutcome?.gigs?.id) return;
-                  setReviewGigId(pendingOutcome.gigs.id);
-                  setReviewOutcomeId(pendingOutcome.id);
-                  setShowReviewChoice(false);
-                  setShowTopDownViewer(true);
-                }}
+                onClick={handleWatchWithCommentary}
                 size="lg"
                 className="h-auto flex-col gap-2 py-4"
               >
                 <Mic2 className="h-6 w-6" />
-                <span className="font-semibold">Live Commentary</span>
-                <span className="text-xs opacity-80">Full audio playback with immersive live commentary feed</span>
-              </Button>
-              <Button
-                onClick={handleWatchWithCommentary}
-                variant="secondary"
-                size="lg"
-                className="h-auto flex-col gap-2 py-4"
-              >
-                <FileText className="h-6 w-6" />
-                <span className="font-semibold">Commentary Mode</span>
-                <span className="text-xs opacity-80">Step-by-step review with detailed commentary</span>
+                <span className="font-semibold">Commentary</span>
+                <span className="text-xs opacity-80">Merged live + detailed commentary in a single playback mode</span>
               </Button>
               <Button
                 onClick={handleInstantOutcome}
@@ -395,29 +375,6 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           <Dialog open={showTopDownViewer} onOpenChange={setShowTopDownViewer}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <TopDownGigViewer gigId={reviewGigId} />
-            </DialogContent>
-          </Dialog>
-        )}
-
-        {/* Gig Review Viewer */}
-        {showReviewViewer && reviewGigId && reviewOutcomeId && (
-          <Dialog open={showReviewViewer} onOpenChange={setShowReviewViewer}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <GigReviewViewer
-                gigId={reviewGigId}
-                gigOutcomeId={reviewOutcomeId}
-                onClose={() => {
-                  setShowReviewViewer(false);
-                  setReviewGigId(null);
-                  setReviewOutcomeId(null);
-                }}
-                onInstantOutcome={() => {
-                  setShowReviewViewer(false);
-                  if (pendingOutcome) {
-                    handleViewDetails(pendingOutcome);
-                  }
-                }}
-              />
             </DialogContent>
           </Dialog>
         )}
