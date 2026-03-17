@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.105",
+    date: "2026-03-17",
+    changes: [
+      { type: 'feature', description: "Replaced 2D top-down pixel art gig viewer with immersive commentary-only mode — plays full song audio with volume controls and generates hundreds of live commentary lines covering crowd atmosphere, musician moments, production effects, and narrative beats" },
+      { type: 'improvement', description: "Removed all legacy pixel art viewer components (stage, crowd, HUD, venue features, weather, etc.) for cleaner codebase" },
+      { type: 'improvement', description: "Updated gig history review dialog to use commentary mode instead of pixel art viewer" },
+    ],
+  },
+  {
     version: "1.1.104",
     date: "2026-03-17",
     changes: [

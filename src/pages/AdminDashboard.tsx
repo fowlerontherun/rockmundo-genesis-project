@@ -111,15 +111,6 @@ const AdminDashboard = () => {
               <CardDescription>Manage admin & moderator access</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/gig-viewer-demo'}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LayoutDashboard className="h-5 w-5 text-primary" />
-                Gig Viewer Demo
-              </CardTitle>
-              <CardDescription>Test top-down gig viewer</CardDescription>
-            </CardHeader>
-          </Card>
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
             <CardHeader>
               <CardTitle>Production Notes</CardTitle>
