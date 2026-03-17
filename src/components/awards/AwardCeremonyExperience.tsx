@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import {
   Mic,
   Music,
   PartyPopper,
+  Masks,
   Sparkles,
   Star,
   Trophy,
@@ -25,9 +26,10 @@ interface AwardCeremonyExperienceProps {
   onBookPerformance: (slotLabel: string, stage: string) => void;
   isAttending?: boolean;
   isBooking?: boolean;
+  currentGameYear?: number;
 }
 
-type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale";
+type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale" | "after_party";
 
 type RunOfShowSegment = {
   type: "host_intro" | "award" | "performance";
@@ -38,11 +40,22 @@ type RunOfShowSegment = {
   commentary: string;
 };
 
+
+type AfterPartyOutcomeType = "event" | "action" | "negative";
+
+type AfterPartyOutcome = {
+  type: AfterPartyOutcomeType;
+  title: string;
+  description: string;
+  impact: string;
+};
+
 const CEREMONY_PHASES: { id: CeremonyPhase; label: string; icon: React.ElementType }[] = [
   { id: "red_carpet", label: "Red Carpet", icon: Camera },
   { id: "opening", label: "Opening", icon: Sparkles },
   { id: "awards", label: "Awards Show", icon: Trophy },
   { id: "finale", label: "Finale", icon: PartyPopper },
+  { id: "after_party", label: "After Party", icon: Masks },
 ];
 
 const OUTFIT_OPTIONS = [
@@ -116,6 +129,34 @@ const buildRunOfShow = (show: AwardShow): RunOfShowSegment[] => {
   return segments;
 };
 
+
+
+const AFTER_PARTY_OUTCOMES: AfterPartyOutcome[] = [
+  {
+    type: "event",
+    title: "Secret Festival Invite",
+    description: "A promoter from the VIP balcony slips you a private festival wristband.",
+    impact: "Unlocks a random special event opportunity.",
+  },
+  {
+    type: "action",
+    title: "Collaborative Spark",
+    description: "You jam backstage with another artist and create instant chemistry.",
+    impact: "Unlocks a random high-value action or collaboration option.",
+  },
+  {
+    type: "negative",
+    title: "Afterparty Scandal",
+    description: "A messy clip trends overnight and tabloids run wild.",
+    impact: "Triggers a negative random consequence (reputation, energy, or stress hit).",
+  },
+];
+
+const rollAfterPartyOutcome = (random: () => number = Math.random): AfterPartyOutcome => {
+  const index = Math.floor(random() * AFTER_PARTY_OUTCOMES.length);
+  return AFTER_PARTY_OUTCOMES[index] ?? AFTER_PARTY_OUTCOMES[0];
+};
+
 export function AwardCeremonyExperience({
   show,
   bandId,
@@ -124,16 +165,28 @@ export function AwardCeremonyExperience({
   onBookPerformance,
   isAttending,
   isBooking,
+  currentGameYear,
 }: AwardCeremonyExperienceProps) {
   const [currentPhase, setCurrentPhase] = useState<CeremonyPhase>("red_carpet");
   const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null);
   const [showPerformanceDialog, setShowPerformanceDialog] = useState(false);
   const [redCarpetComplete, setRedCarpetComplete] = useState(false);
   const [segmentIndex, setSegmentIndex] = useState(0);
+  const [afterPartyOutcome, setAfterPartyOutcome] = useState<AfterPartyOutcome | null>(null);
+  const hasRolledAfterPartyRef = useRef(false);
+
+  const lifetimeAwardActive = typeof currentGameYear === "number" ? currentGameYear % 4 === 0 : false;
 
   const runOfShow = useMemo(() => buildRunOfShow(show), [show]);
   const activeSegment = runOfShow[segmentIndex];
   const currentPhaseIndex = CEREMONY_PHASES.findIndex((phase) => phase.id === currentPhase);
+
+  useEffect(() => {
+    if (currentPhase !== "after_party" || hasRolledAfterPartyRef.current) return;
+    const outcome = rollAfterPartyOutcome();
+    setAfterPartyOutcome(outcome);
+    hasRolledAfterPartyRef.current = true;
+  }, [currentPhase]);
 
   return (
     <div className="space-y-4">
@@ -284,6 +337,40 @@ export function AwardCeremonyExperience({
             <PartyPopper className="h-16 w-16 mx-auto text-amber-500" />
             <h3 className="text-2xl font-bold">Show Complete</h3>
             <p className="text-muted-foreground">Final results are now revealed after the live envelope moments.</p>
+            <Button onClick={() => setCurrentPhase("after_party")}>Go to After Party</Button>
+          </CardContent>
+        </Card>
+      )}
+
+
+      {currentPhase === "after_party" && (
+        <Card className="border-primary/25 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Masks className="h-4 w-4" /> Awards After Party
+            </CardTitle>
+            <CardDescription>
+              Anything can happen here: unlocks, opportunities, or trouble.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {lifetimeAwardActive && (
+              <Badge className="bg-amber-500">Lifetime Achievement Year Bonus Active</Badge>
+            )}
+            {afterPartyOutcome ? (
+              <div className="rounded-lg border bg-background p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold">{afterPartyOutcome.title}</p>
+                  <Badge variant={afterPartyOutcome.type === "negative" ? "destructive" : "secondary"}>
+                    {afterPartyOutcome.type}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{afterPartyOutcome.description}</p>
+                <p className="text-sm">{afterPartyOutcome.impact}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Rolling your after party outcome...</p>
+            )}
           </CardContent>
         </Card>
       )}
