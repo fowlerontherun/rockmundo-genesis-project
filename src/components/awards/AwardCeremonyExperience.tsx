@@ -10,6 +10,7 @@ import {
   Camera,
   AlertCircle,
   Gauge,
+  Masks,
   Mic,
   Music,
   Newspaper,
