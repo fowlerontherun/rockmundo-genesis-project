@@ -74,6 +74,7 @@ export default function ReleasePump() {
       if (data?.error) throw new Error(data.error);
 
       setLastResult(data);
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
       if (data?.updated_release) {
         setSelectedRelease((prev: any) => {
           if (!prev || prev.id !== data.updated_release.id) return prev;
@@ -81,6 +82,8 @@ export default function ReleasePump() {
         });
       }
       await queryClient.invalidateQueries({ queryKey: ["admin-releases-search"] });
+=======
+>>>>>>> main
       toast.success(`Pumped ${amount} ${SALE_TYPE_LABELS[saleType].toLowerCase()} sales for "${selectedRelease.title}"`);
     } catch (err: any) {
       toast.error(err.message || "Failed to pump sales");

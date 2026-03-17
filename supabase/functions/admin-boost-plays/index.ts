@@ -140,7 +140,11 @@ Deno.serve(async (req) => {
       const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
       const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
 
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
       const { error: saleInsertError } = await supabaseAdmin.from("release_sales").insert({
+=======
+      await supabaseAdmin.from("release_sales").insert({
+>>>>>>> main
         release_format_id: selectedFormat.id,
         quantity_sold: amount,
         unit_price: retailPriceCents,
@@ -163,6 +167,7 @@ Deno.serve(async (req) => {
 
       const { data: currentRelease, error: currentReleaseError } = await supabaseAdmin
         .from("releases")
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
         .select("id, total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
         .eq("id", releaseId)
         .single();
@@ -185,6 +190,18 @@ Deno.serve(async (req) => {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+=======
+        .select("total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
+        .eq("id", releaseId)
+        .single();
+
+      if (currentRelease) {
+        const salesColumn = `${saleType}_sales`;
+        await supabaseAdmin.from("releases").update({
+          total_units_sold: (currentRelease.total_units_sold || 0) + amount,
+          [salesColumn]: ((currentRelease as any)[salesColumn] || 0) + amount,
+        }).eq("id", releaseId);
+>>>>>>> main
       }
 
       const { error: revenueError } = await supabaseAdmin.rpc("increment_release_revenue", {
@@ -249,6 +266,7 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Admin ${user.id} pumped release ${releaseId} (${release.title}) with ${amount} ${saleType} sales. Net: $${netRevenue}`);
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
 
       const { data: updatedRelease, error: updatedReleaseError } = await supabaseAdmin
         .from("releases")
@@ -262,6 +280,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+=======
+>>>>>>> main
 
       return new Response(JSON.stringify({
         success: true,
