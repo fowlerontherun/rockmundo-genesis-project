@@ -7,25 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Music, Mic2, Users, Star, Flame, Sparkles, Zap, Volume2, VolumeX, X } from "lucide-react";
 import {
-  generateEnhancedCommentary,
-  generateArrivalCommentary,
   generateSongCommentary,
   generateBetweenSongBanter,
   generateCrowdChant,
   generateTechnicalEvent,
-  generateMilestoneCommentary,
   getVenueType,
   getRandomItem,
   VENUE_ARRIVALS,
-  CROWD_CHANTS,
-  SPECIAL_MOMENTS,
-  TECHNICAL_EVENTS,
-  WEATHER_EFFECTS,
-  FAME_COMMENTARY,
-  FAN_FAVOURITE_COMMENTARY,
-  BETWEEN_SONG_BANTER,
-  MILESTONE_MOMENTS,
-  type VenueContext,
   type BandContext,
   type SongContext,
 } from "@/utils/enhancedCommentaryGenerator";
