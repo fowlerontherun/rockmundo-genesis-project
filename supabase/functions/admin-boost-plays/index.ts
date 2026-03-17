@@ -140,7 +140,11 @@ Deno.serve(async (req) => {
       const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
       const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
 
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
+      const { error: saleInsertError } = await supabaseAdmin.from("release_sales").insert({
+=======
       await supabaseAdmin.from("release_sales").insert({
+>>>>>>> main
         release_format_id: selectedFormat.id,
         quantity_sold: amount,
         unit_price: retailPriceCents,
@@ -154,8 +158,39 @@ Deno.serve(async (req) => {
         net_revenue: Math.round(netRevenue * 100),
       });
 
-      const { data: currentRelease } = await supabaseAdmin
+      if (saleInsertError) {
+        return new Response(JSON.stringify({ error: saleInsertError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: currentRelease, error: currentReleaseError } = await supabaseAdmin
         .from("releases")
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
+        .select("id, total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
+        .eq("id", releaseId)
+        .single();
+
+      if (currentReleaseError || !currentRelease) {
+        return new Response(JSON.stringify({ error: currentReleaseError?.message || "Failed to load release totals" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const salesColumn = `${saleType}_sales`;
+      const { error: releaseUpdateError } = await supabaseAdmin.from("releases").update({
+        total_units_sold: (currentRelease.total_units_sold || 0) + amount,
+        [salesColumn]: ((currentRelease as any)[salesColumn] || 0) + amount,
+      }).eq("id", releaseId);
+
+      if (releaseUpdateError) {
+        return new Response(JSON.stringify({ error: releaseUpdateError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+=======
         .select("total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
         .eq("id", releaseId)
         .single();
@@ -166,15 +201,23 @@ Deno.serve(async (req) => {
           total_units_sold: (currentRelease.total_units_sold || 0) + amount,
           [salesColumn]: ((currentRelease as any)[salesColumn] || 0) + amount,
         }).eq("id", releaseId);
+>>>>>>> main
       }
 
-      await supabaseAdmin.rpc("increment_release_revenue", {
+      const { error: revenueError } = await supabaseAdmin.rpc("increment_release_revenue", {
         release_id: releaseId,
         amount: grossRevenue,
       });
 
+      if (revenueError) {
+        return new Response(JSON.stringify({ error: revenueError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (release.band_id) {
-        await supabaseAdmin.from("band_earnings").insert({
+        const { error: earningsInsertError } = await supabaseAdmin.from("band_earnings").insert({
           band_id: release.band_id,
           amount: netRevenue,
           source: "release_sales",
@@ -189,21 +232,56 @@ Deno.serve(async (req) => {
           },
         });
 
-        const { data: band } = await supabaseAdmin
+        if (earningsInsertError) {
+          return new Response(JSON.stringify({ error: earningsInsertError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data: band, error: bandError } = await supabaseAdmin
           .from("bands")
           .select("band_balance")
           .eq("id", release.band_id)
           .single();
 
-        if (band) {
-          await supabaseAdmin
-            .from("bands")
-            .update({ band_balance: (band.band_balance || 0) + netRevenue })
-            .eq("id", release.band_id);
+        if (bandError || !band) {
+          return new Response(JSON.stringify({ error: bandError?.message || "Band not found" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { error: bandUpdateError } = await supabaseAdmin
+          .from("bands")
+          .update({ band_balance: (band.band_balance || 0) + netRevenue })
+          .eq("id", release.band_id);
+
+        if (bandUpdateError) {
+          return new Response(JSON.stringify({ error: bandUpdateError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
       }
 
       console.log(`Admin ${user.id} pumped release ${releaseId} (${release.title}) with ${amount} ${saleType} sales. Net: $${netRevenue}`);
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
+
+      const { data: updatedRelease, error: updatedReleaseError } = await supabaseAdmin
+        .from("releases")
+        .select("id, total_units_sold, total_revenue, digital_sales, cd_sales, vinyl_sales, cassette_sales")
+        .eq("id", releaseId)
+        .single();
+
+      if (updatedReleaseError || !updatedRelease) {
+        return new Response(JSON.stringify({ error: updatedReleaseError?.message || "Failed to load updated release totals" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+=======
+>>>>>>> main
 
       return new Response(JSON.stringify({
         success: true,
@@ -213,6 +291,7 @@ Deno.serve(async (req) => {
         net_revenue: netRevenue,
         sales_tax: salesTaxAmount,
         distribution_fee: distributionFee,
+        updated_release: updatedRelease,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

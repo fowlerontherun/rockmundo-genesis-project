@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Rocket, Search, DollarSign, Music, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 type PumpSaleType = "digital" | "cd" | "vinyl" | "cassette";
@@ -26,6 +26,7 @@ export default function ReleasePump() {
   const [saleType, setSaleType] = useState<PumpSaleType>("digital");
   const [pumping, setPumping] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   const { data: releases, isLoading } = useQuery({
     queryKey: ["admin-releases-search", searchTerm],
@@ -73,6 +74,16 @@ export default function ReleasePump() {
       if (data?.error) throw new Error(data.error);
 
       setLastResult(data);
+<<<<<<< codex/update-release-pump-for-physical-sales-lxtw1e
+      if (data?.updated_release) {
+        setSelectedRelease((prev: any) => {
+          if (!prev || prev.id !== data.updated_release.id) return prev;
+          return { ...prev, ...data.updated_release };
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["admin-releases-search"] });
+=======
+>>>>>>> main
       toast.success(`Pumped ${amount} ${SALE_TYPE_LABELS[saleType].toLowerCase()} sales for "${selectedRelease.title}"`);
     } catch (err: any) {
       toast.error(err.message || "Failed to pump sales");
