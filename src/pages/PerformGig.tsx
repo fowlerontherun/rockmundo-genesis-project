@@ -684,12 +684,7 @@ export default function PerformGig() {
               Outcome recorded on {format(new Date(gig.updated_at || gig.scheduled_date), 'PPP p')}.
             </div>
             
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => navigate('/gig-booking')}>
-                Back to Schedule
-              </Button>
-              <Button onClick={() => setShowOutcome(true)}>
-                View Report
+            <TopDownGigViewer gigId={gig.id} />
               </Button>
             </div>
             
