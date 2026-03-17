@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award, Monitor, FileText } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles, Play, FastForward, Music, Award, Mic2, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
@@ -362,9 +362,9 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                 size="lg"
                 className="h-auto flex-col gap-2 py-4"
               >
-                <Monitor className="h-6 w-6" />
-                <span className="font-semibold">Watch Performance</span>
-                <span className="text-xs opacity-80">Top-down pixel-art stage view with live commentary</span>
+                <Mic2 className="h-6 w-6" />
+                <span className="font-semibold">Live Commentary</span>
+                <span className="text-xs opacity-80">Full audio playback with immersive live commentary feed</span>
               </Button>
               <Button
                 onClick={handleWatchWithCommentary}
@@ -390,10 +390,10 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           </DialogContent>
         </Dialog>
         
-        {/* Top-Down Pixel Art Stage Viewer */}
+        {/* Commentary Viewer */}
         {showTopDownViewer && reviewGigId && (
           <Dialog open={showTopDownViewer} onOpenChange={setShowTopDownViewer}>
-            <DialogContent className="!fixed !inset-0 !left-0 !top-0 !w-screen !h-screen !max-w-none !max-h-none !translate-x-0 !translate-y-0 !rounded-none !border-0 !p-0 !shadow-none overflow-hidden bg-transparent">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <TopDownGigViewer gigId={reviewGigId} />
             </DialogContent>
           </Dialog>

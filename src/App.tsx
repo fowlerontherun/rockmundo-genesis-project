@@ -187,7 +187,7 @@ const BandRankings = lazyWithRetry(() => import("./pages/BandRankings"));
 const StagePractice = lazyWithRetry(() => import("./pages/StagePractice"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
-const GigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
+
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
 const TwaaterAdmin = lazyWithRetry(() => import("./pages/admin/TwaaterAdmin"));
 const LabelsAdmin = lazyWithRetry(() => import("./pages/admin/LabelsAdmin"));
@@ -524,7 +524,7 @@ function App() {
                     <Route path="admin/songwriting" element={<SongwritingAdmin />} />
                     <Route path="admin/ai-song-generation" element={<AISongGeneration />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
-                    <Route path="admin/gig-viewer-demo" element={<GigViewerDemo />} />
+                    
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
                     <Route path="admin/brands" element={<BrandsAdmin />} />
