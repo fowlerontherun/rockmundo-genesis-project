@@ -2,9 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   enforceVoteCap,
+  isLifetimeAchievementCategory,
+  isLifetimeAchievementYear,
   validateNominationSubmission,
 } from "@/lib/api/awards";
 import { toast } from "sonner";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 export interface AwardShow {
   id: string;
@@ -71,6 +74,10 @@ export interface AwardWin {
 
 export const useAwards = (userId?: string, bandId?: string) => {
   const queryClient = useQueryClient();
+
+
+  const { data: calendarData } = useGameCalendar();
+  const currentGameYear = calendarData?.gameYear ?? new Date().getFullYear();
 
   // Fetch all award shows
   const { data: shows = [], isLoading: showsLoading } = useQuery({
@@ -206,7 +213,11 @@ export const useAwards = (userId?: string, bandId?: string) => {
 
       validateNominationSubmission(nomination);
 
-      const { data, error } = await (supabase as any)
+      if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(currentGameYear)) {
+        throw new Error("Lifetime Achievement nominations are only available every 4 in-game years");
+      }
+
+      const { data: insertedNomination, error } = await (supabase as any)
         .from("award_nominations")
         .insert({
           ...nomination,
@@ -215,12 +226,62 @@ export const useAwards = (userId?: string, bandId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error("This band has already been nominated for this award category");
+        }
+        throw error;
+      }
+
+      const scoreData = (nomination.submission_data || {}) as Record<string, any>;
+      const autoNominationScore = Number(scoreData.auto_nomination_score ?? scoreData.critics_score ?? 0);
+      const autoNominationThreshold = Number(scoreData.auto_nomination_threshold ?? 85);
+
+      if (autoNominationScore >= autoNominationThreshold) {
+        const { error: autoNominationError } = await (supabase as any)
+          .from("award_nominations")
+          .upsert(
+            {
+              award_show_id: nomination.award_show_id,
+              category_name: nomination.category_name,
+              nominee_type: nomination.nominee_type,
+              nominee_id: nomination.nominee_id,
+              nominee_name: nomination.nominee_name,
+              band_id: nomination.band_id || null,
+              user_id: userId,
+              submission_data: {
+                ...scoreData,
+                auto_nominated: true,
+                auto_nomination_reason:
+                  scoreData.auto_nomination_reason || `Exceeded threshold (${autoNominationScore} / ${autoNominationThreshold})`,
+              },
+              status: "shortlisted",
+            },
+            {
+              onConflict: "award_show_id,category_name,nominee_id",
+              ignoreDuplicates: true,
+            },
+          );
+
+        if (autoNominationError) {
+          throw autoNominationError;
+        }
+      }
+
+      return insertedNomination;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["award-nominations"] });
-      toast.success("Nomination submitted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["award-show-nominations", variables.award_show_id] });
+      const scoreData = (variables.submission_data || {}) as Record<string, any>;
+      const score = Number(scoreData.auto_nomination_score ?? scoreData.critics_score ?? 0);
+      const threshold = Number(scoreData.auto_nomination_threshold ?? 85);
+      const autoNominationTriggered = score >= threshold;
+      toast.success(
+        autoNominationTriggered
+          ? "Nomination submitted and auto-shortlisted!"
+          : "Nomination submitted successfully!",
+      );
     },
     onError: (error: any) => {
       toast.error("Failed to submit nomination", { description: error.message });

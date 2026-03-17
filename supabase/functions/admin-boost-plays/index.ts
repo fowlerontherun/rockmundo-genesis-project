@@ -89,10 +89,18 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: RELEASE PUMP ───
     if (action === "release_pump") {
-      const { releaseId, amount } = body;
+      const { releaseId, amount, saleType = "digital" } = body;
+      const supportedSaleTypes = ["digital", "cd", "vinyl", "cassette"];
 
       if (!releaseId || !amount || amount < 1 || amount > 100000) {
         return new Response(JSON.stringify({ error: "Invalid releaseId or amount (1-100000)" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!supportedSaleTypes.includes(saleType)) {
+        return new Response(JSON.stringify({ error: "Invalid saleType (digital|cd|vinyl|cassette)" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -114,15 +122,15 @@ Deno.serve(async (req) => {
         });
       }
 
-      const digitalFormat = release.release_formats?.find((f: any) => f.format_type === "digital");
-      if (!digitalFormat) {
-        return new Response(JSON.stringify({ error: "No digital format found" }), {
+      const selectedFormat = release.release_formats?.find((f: any) => f.format_type === saleType);
+      if (!selectedFormat) {
+        return new Response(JSON.stringify({ error: `No ${saleType} format found` }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const retailPriceCents = digitalFormat.retail_price || 999;
+      const retailPriceCents = selectedFormat.retail_price || 999;
       const retailPriceDollars = retailPriceCents / 100;
       const grossRevenue = Math.round(amount * retailPriceDollars * 100) / 100;
 
@@ -133,7 +141,7 @@ Deno.serve(async (req) => {
       const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
 
       await supabaseAdmin.from("release_sales").insert({
-        release_format_id: digitalFormat.id,
+        release_format_id: selectedFormat.id,
         quantity_sold: amount,
         unit_price: retailPriceCents,
         total_amount: Math.round(grossRevenue * 100),
@@ -148,14 +156,15 @@ Deno.serve(async (req) => {
 
       const { data: currentRelease } = await supabaseAdmin
         .from("releases")
-        .select("total_units_sold, digital_sales")
+        .select("total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
         .eq("id", releaseId)
         .single();
 
       if (currentRelease) {
+        const salesColumn = `${saleType}_sales`;
         await supabaseAdmin.from("releases").update({
           total_units_sold: (currentRelease.total_units_sold || 0) + amount,
-          digital_sales: (currentRelease.digital_sales || 0) + amount,
+          [salesColumn]: ((currentRelease as any)[salesColumn] || 0) + amount,
         }).eq("id", releaseId);
       }
 
@@ -169,9 +178,9 @@ Deno.serve(async (req) => {
           band_id: release.band_id,
           amount: netRevenue,
           source: "release_sales",
-          description: `Admin pumped ${amount} digital sales`,
+          description: `Admin pumped ${amount} ${saleType} sales`,
           metadata: {
-            format: "digital",
+            format: saleType,
             units: amount,
             gross_revenue: grossRevenue,
             net_revenue: netRevenue,
@@ -194,11 +203,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`Admin ${user.id} pumped release ${releaseId} (${release.title}) with ${amount} digital sales. Net: $${netRevenue}`);
+      console.log(`Admin ${user.id} pumped release ${releaseId} (${release.title}) with ${amount} ${saleType} sales. Net: $${netRevenue}`);
 
       return new Response(JSON.stringify({
         success: true,
         added: amount,
+        sale_type: saleType,
         gross_revenue: grossRevenue,
         net_revenue: netRevenue,
         sales_tax: salesTaxAmount,

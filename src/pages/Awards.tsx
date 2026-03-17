@@ -16,6 +16,8 @@ import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Sh
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { format } from "date-fns";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { isLifetimeAchievementCategory, isLifetimeAchievementYear } from "@/lib/api/awards";
 import { cn } from "@/lib/utils";
 import { AwardCeremonyExperience } from "@/components/awards/AwardCeremonyExperience";
 
@@ -394,13 +396,22 @@ export default function Awards() {
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {((selectedShow?.categories as any[]) || []).map((cat: any, i: number) => (
-                  <SelectItem key={i} value={cat.name}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
+                {((selectedShow?.categories as any[]) || []).map((cat: any, i: number) => {
+                  const categoryName = String(cat.name || `Category ${i + 1}`);
+                  const lifetimeOnly = isLifetimeAchievementCategory(categoryName);
+                  const disabled = lifetimeOnly && !isLifetimeAchievementYear(currentGameYear);
+                  return (
+                    <SelectItem key={i} value={categoryName} disabled={disabled}>
+                      {categoryName}
+                      {disabled ? " (available every 4 in-game years)" : ""}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear) && (
+              <p className="text-xs text-destructive">Lifetime Achievement can only be nominated every 4 in-game years.</p>
+            )}
             {userBand && (
               <div className="p-3 rounded-lg bg-muted/50 space-y-1">
                 <p className="text-sm font-medium">Nominating: {userBand.name}</p>
@@ -422,10 +433,20 @@ export default function Awards() {
                   nominee_id: userBand.id,
                   nominee_name: userBand.name,
                   band_id: userBand.id,
+                  submission_data: {
+                    auto_nomination_score: Number(userBand.fame || 0),
+                    auto_nomination_threshold: 85,
+                    auto_nomination_reason: "Band fame reached automatic shortlist threshold",
+                    nomination_source: "player_submission",
+                  },
                 });
                 setShowNominateDialog(false);
               }}
-              disabled={isSubmitting || !selectedCategory}
+              disabled={
+                isSubmitting ||
+                !selectedCategory ||
+                (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear))
+              }
             >
               <Trophy className="h-4 w-4 mr-2" />
               Submit Nomination
@@ -466,6 +487,7 @@ export default function Awards() {
               }}
               isAttending={isAttending}
               isBooking={isBooking}
+              currentGameYear={currentGameYear}
             />
           )}
         </DialogContent>

@@ -30,6 +30,7 @@ interface AwardCeremonyExperienceProps {
   onBookPerformance: (slotLabel: string, stage: string) => void;
   isAttending?: boolean;
   isBooking?: boolean;
+  currentGameYear?: number;
 }
 
 type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale";
@@ -50,6 +51,7 @@ const CEREMONY_PHASES: { id: CeremonyPhase; label: string; icon: React.ElementTy
   { id: "opening", label: "Opening", icon: Sparkles },
   { id: "awards", label: "Awards Show", icon: Trophy },
   { id: "finale", label: "Finale", icon: PartyPopper },
+  { id: "after_party", label: "After Party", icon: Masks },
 ];
 
 const OUTFIT_OPTIONS = [
@@ -148,6 +150,7 @@ export function AwardCeremonyExperience({
   onBookPerformance,
   isAttending,
   isBooking,
+  currentGameYear,
 }: AwardCeremonyExperienceProps) {
   const [currentPhase, setCurrentPhase] = useState<CeremonyPhase>("red_carpet");
   const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null);

@@ -20,6 +20,8 @@ export interface CountrySubmission {
   [key: string]: any;
 }
 
+export const LIFETIME_ACHIEVEMENT_CYCLE = 4;
+
 const REQUIRED_FIELDS: (keyof NominationPayload)[] = [
   "award_show_id",
   "category_name",
@@ -85,4 +87,12 @@ export const getNextStatus = (current: AwardStatus, next: AwardStatus): AwardSta
     throw new Error(`Invalid status transition from ${current} to ${next}`);
   }
   return next;
+};
+
+export const isLifetimeAchievementYear = (year: number): boolean => {
+  return year % LIFETIME_ACHIEVEMENT_CYCLE === 0;
+};
+
+export const isLifetimeAchievementCategory = (categoryName: string): boolean => {
+  return /lifetime achievement/i.test(categoryName);
 };
