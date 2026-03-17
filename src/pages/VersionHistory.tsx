@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.104",
+    date: "2026-03-17",
+    changes: [
+      { type: 'feature', description: "Added hub tile image for Cars & Motorbikes category page" },
+      { type: 'fix', description: "Fixed build errors in Relationships page (missing imports for toast, supabase, Select components)" },
+      { type: 'fix', description: "Fixed TourManager and gigExecution type errors" },
+    ],
+  },
+  {
     version: "1.1.103",
     date: "2026-03-16",
     changes: [

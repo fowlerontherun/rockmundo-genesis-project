@@ -72,6 +72,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     // Fetch leader character's stage behavior setting
     supabase.from('bands').select('leader_id').eq('id', bandId).single().then(async (r) => {
       if (!r.data?.leader_id) return { data: null };
+      // @ts-ignore - deep type instantiation
       return supabase.from('player_behavior_settings').select('stage_behavior').eq('profile_id', r.data.leader_id).maybeSingle();
     }),
     // Fetch recent gigs for tour fatigue calculation

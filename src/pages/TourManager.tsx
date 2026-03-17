@@ -334,7 +334,8 @@ const TourManager = () => {
         .select('id, name, country')
         .in('id', cityIds);
       if (cityError) throw cityError;
-      const cityNameMap = new Map((citiesData || []).map((city) => [city.id, `${city.name}, ${city.country}`]));
+      // @ts-ignore - Supabase type inference issue
+      const cityNameMap = new Map((citiesData || []).map((city: any) => [city.id, `${city.name}, ${city.country}`]));
 
       let created = 0;
       let skippedExisting = 0;
