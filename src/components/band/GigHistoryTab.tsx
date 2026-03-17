@@ -362,9 +362,9 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                 size="lg"
                 className="h-auto flex-col gap-2 py-4"
               >
-                <Monitor className="h-6 w-6" />
-                <span className="font-semibold">Watch Performance</span>
-                <span className="text-xs opacity-80">Top-down pixel-art stage view with live commentary</span>
+                <Mic2 className="h-6 w-6" />
+                <span className="font-semibold">Live Commentary</span>
+                <span className="text-xs opacity-80">Full audio playback with immersive live commentary feed</span>
               </Button>
               <Button
                 onClick={handleWatchWithCommentary}
