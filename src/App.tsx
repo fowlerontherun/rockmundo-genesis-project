@@ -524,7 +524,7 @@ function App() {
                     <Route path="admin/songwriting" element={<SongwritingAdmin />} />
                     <Route path="admin/ai-song-generation" element={<AISongGeneration />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
-                    <Route path="admin/gig-viewer-demo" element={<GigViewerDemo />} />
+                    
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
                     <Route path="admin/brands" element={<BrandsAdmin />} />
