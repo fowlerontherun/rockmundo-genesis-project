@@ -26,6 +26,20 @@ export interface AwardShow {
   attendance_fame_boost: number;
   winner_fame_boost: number;
   winner_prize_money: number;
+  host_name?: string;
+  host_intro?: string;
+  run_of_show?: any[];
+}
+
+export interface AwardShowInvite {
+  id: string;
+  award_show_id: string;
+  invite_type: "attendee" | "presenter" | "performer" | "nominee";
+  invitee_user_id: string | null;
+  invitee_band_id: string | null;
+  category_name: string | null;
+  response_status: "pending" | "accepted" | "declined";
+  metadata: any;
 }
 
 export interface AwardNomination {
@@ -118,6 +132,30 @@ export const useAwards = (userId?: string, bandId?: string) => {
     enabled: !!userId,
   });
 
+  const { data: invites = [], isLoading: invitesLoading } = useQuery({
+    queryKey: ["award-invites", userId, bandId],
+    queryFn: async () => {
+      if (!userId && !bandId) return [];
+
+      let query = (supabase as any)
+        .from("award_show_invites")
+        .select("*");
+
+      if (userId && bandId) {
+        query = query.or(`invitee_user_id.eq.${userId},invitee_band_id.eq.${bandId}`);
+      } else if (userId) {
+        query = query.eq("invitee_user_id", userId);
+      } else if (bandId) {
+        query = query.eq("invitee_band_id", bandId);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as AwardShowInvite[];
+    },
+    enabled: !!userId || !!bandId,
+  });
+
   // Fetch nominations for a specific show
   const fetchShowNominations = async (showId: string) => {
     const { data, error } = await (supabase as any)
@@ -195,25 +233,51 @@ export const useAwards = (userId?: string, bandId?: string) => {
       nomination_id: string;
       show_id: string;
       weight?: number;
+      voter_type?: "player" | "npc" | "jury" | "band" | "movement";
+      voter_id?: string;
     }) => {
       if (!userId) throw new Error("User not authenticated");
 
-      const { count, error: countError } = await (supabase as any)
+      const voteId = params.voter_id || userId;
+      const voteType = params.voter_type || "player";
+
+      const { data: showNominations, error: showNominationError } = await (supabase as any)
+        .from("award_nominations")
+        .select("id")
+        .eq("award_show_id", params.show_id);
+
+      if (showNominationError) throw showNominationError;
+
+      const nominationIds = (showNominations || []).map((nomination: { id: string }) => nomination.id);
+
+      if (nominationIds.length > 0) {
+        const { count: showVoteCount, error: showVoteCountError } = await (supabase as any)
+          .from("award_votes")
+          .select("id", { count: "exact", head: true })
+          .eq("voter_id", voteId)
+          .in("nomination_id", nominationIds);
+
+        if (showVoteCountError) throw showVoteCountError;
+        enforceVoteCap(showVoteCount ?? 0, 3);
+      }
+
+      const { count: duplicateCount, error: duplicateError } = await (supabase as any)
         .from("award_votes")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("nomination_id", params.nomination_id)
-        .eq("voter_id", userId);
+        .eq("voter_id", voteId);
 
-      if (countError) throw countError;
-
-      enforceVoteCap(count ?? 0, 3);
+      if (duplicateError) throw duplicateError;
+      if ((duplicateCount ?? 0) > 0) {
+        throw new Error("You already voted for this nominee");
+      }
 
       const { data, error } = await (supabase as any)
         .from("award_votes")
         .insert({
           nomination_id: params.nomination_id,
-          voter_type: "player",
-          voter_id: userId,
+          voter_type: voteType,
+          voter_id: voteId,
           weight: params.weight || 1.0,
         })
         .select()
@@ -244,7 +308,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       }
 
       if (typeof previousVoteCount === "number") {
-        queryClient.setQueryData(voteCountKey, Math.min(previousVoteCount + 1, 5));
+        queryClient.setQueryData(voteCountKey, Math.min(previousVoteCount + 1, 3));
       }
 
       return { previousNominations, previousVoteCount, showId: params.show_id };
@@ -275,6 +339,34 @@ export const useAwards = (userId?: string, bandId?: string) => {
     onSettled: (_data, _error, params) => {
       queryClient.invalidateQueries({ queryKey: ["award-show-nominations", params.show_id] });
       queryClient.invalidateQueries({ queryKey: ["award-show-vote-count", params.show_id, userId] });
+    },
+  });
+
+  const respondToInvite = useMutation({
+    mutationFn: async (params: {
+      invite_id: string;
+      response_status: "accepted" | "declined";
+    }) => {
+      const { data, error } = await (supabase as any)
+        .from("award_show_invites")
+        .update({ response_status: params.response_status })
+        .eq("id", params.invite_id)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return data as AwardShowInvite;
+    },
+    onSuccess: (_, params) => {
+      queryClient.invalidateQueries({ queryKey: ["award-invites"] });
+      toast.success(
+        params.response_status === "accepted"
+          ? "Invitation accepted"
+          : "Invitation declined"
+      );
+    },
+    onError: (error: any) => {
+      toast.error("Failed to respond to invitation", { description: error.message });
     },
   });
 
@@ -372,14 +464,18 @@ export const useAwards = (userId?: string, bandId?: string) => {
     nominationsLoading,
     wins,
     winsLoading,
+    invites,
+    invitesLoading,
     fetchShowNominations,
     fetchVoteCountForShow,
     submitNomination: submitNomination.mutate,
     castVote: castVote.mutate,
+    respondToInvite: respondToInvite.mutate,
     bookPerformance: bookPerformance.mutate,
     attendRedCarpet: attendRedCarpet.mutate,
     isSubmitting: submitNomination.isPending,
     isVoting: castVote.isPending,
+    isRespondingInvite: respondToInvite.isPending,
     isBooking: bookPerformance.isPending,
     isAttending: attendRedCarpet.isPending,
   };

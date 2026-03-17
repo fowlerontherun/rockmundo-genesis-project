@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper } from "lucide-react";
+import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper, Mail } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { format } from "date-fns";
@@ -48,10 +48,10 @@ export default function Awards() {
   });
 
   const {
-    shows, showsLoading, nominations, wins,
+    shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,
-    submitNomination, castVote, bookPerformance, attendRedCarpet,
-    isSubmitting, isVoting, isBooking, isAttending,
+    submitNomination, castVote, bookPerformance, attendRedCarpet, respondToInvite,
+    isSubmitting, isVoting, isBooking, isAttending, isRespondingInvite,
   } = useAwards(profileId ?? undefined, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
@@ -61,6 +61,7 @@ export default function Awards() {
   const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [voteAs, setVoteAs] = useState<"player" | "band" | "movement">("player");
 
   // Fetch nominations when a show is selected for voting
   const { data: showNominations = [], isLoading: nominationsLoading } = useQuery({
@@ -77,10 +78,13 @@ export default function Awards() {
 
   const activeShows = shows.filter(s => s.status !== 'completed');
   const completedShows = shows.filter(s => s.status === 'completed');
+  const revealedWins = wins.filter((win) => shows.find((show) => show.id === win.award_show_id)?.status === 'completed');
 
   const handleVote = (nominationId: string) => {
     if (!selectedShow) return;
-    castVote({ nomination_id: nominationId, show_id: selectedShow.id });
+    const voterId = voteAs === "player" ? profileId : userBand?.id || profileId;
+    if (!voterId) return;
+    castVote({ nomination_id: nominationId, show_id: selectedShow.id, voter_type: voteAs, voter_id: voterId });
   };
 
   const handleRedCarpet = () => {
@@ -113,15 +117,44 @@ export default function Awards() {
         backLabel="Back to Band & Live"
       />
 
-        {/* Player wins summary */}
-        {wins.length > 0 && (
+      {/* Player wins summary */}
+      {invites.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Award Show Invitations ({invites.filter((invite) => invite.response_status === "pending").length} pending)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {invites.slice(0, 4).map((invite) => (
+              <div key={invite.id} className="flex items-center justify-between border rounded-md p-2">
+                <div>
+                  <p className="text-sm font-medium">{invite.invite_type.replace("_", " ")}</p>
+                  <p className="text-xs text-muted-foreground">{invite.category_name || "General ceremony invite"}</p>
+                </div>
+                {invite.response_status === "pending" ? (
+                  <div className="flex gap-1">
+                    <Button size="sm" onClick={() => respondToInvite({ invite_id: invite.id, response_status: "accepted" })} disabled={isRespondingInvite}>Accept</Button>
+                    <Button size="sm" variant="outline" onClick={() => respondToInvite({ invite_id: invite.id, response_status: "declined" })} disabled={isRespondingInvite}>Decline</Button>
+                  </div>
+                ) : (
+                  <Badge variant="secondary">{invite.response_status}</Badge>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {revealedWins.length > 0 && (
           <Card className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/20">
             <CardContent className="flex items-center gap-4 p-4">
               <Crown className="h-8 w-8 text-amber-400" />
               <div>
-                <p className="font-semibold">{wins.length} Award{wins.length !== 1 ? 's' : ''} Won</p>
+                <p className="font-semibold">{revealedWins.length} Award{revealedWins.length !== 1 ? 's' : ''} Won</p>
                 <p className="text-sm text-muted-foreground">
-                  Total fame earned: +{wins.reduce((s, w) => s + (w.fame_boost || 0), 0).toLocaleString()}
+                  Total fame earned: +{revealedWins.reduce((s, w) => s + (w.fame_boost || 0), 0).toLocaleString()}
                 </p>
               </div>
             </CardContent>
@@ -137,7 +170,7 @@ export default function Awards() {
           </TabsTrigger>
           <TabsTrigger value="wins" className="gap-2">
             <Trophy className="h-4 w-4" />
-            My Wins ({wins.length})
+            My Wins ({revealedWins.length})
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <Calendar className="h-4 w-4" />
@@ -161,7 +194,7 @@ export default function Awards() {
                   key={show.id}
                   show={show}
                   hasNomination={nominations.some(n => n.award_show_id === show.id)}
-                  hasWin={wins.some(w => w.award_show_id === show.id)}
+                  hasWin={false}
                   onVote={() => { setSelectedShow(show); setShowVotingDialog(true); }}
                   onRedCarpet={() => { setSelectedShow(show); setShowRedCarpetDialog(true); }}
                   onNominate={() => {
@@ -185,7 +218,7 @@ export default function Awards() {
 
         {/* My Wins */}
         <TabsContent value="wins" className="space-y-4 mt-6">
-          {wins.length === 0 ? (
+          {revealedWins.length === 0 ? (
             <Card className="bg-muted/50">
               <CardContent className="p-8 text-center text-muted-foreground">
                 <Medal className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -194,7 +227,7 @@ export default function Awards() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {wins.map((win) => {
+              {revealedWins.map((win) => {
                 const show = shows.find(s => s.id === win.award_show_id);
                 return (
                   <Card key={win.id} className="bg-gradient-to-br from-amber-500/5 to-yellow-500/5 border-amber-500/20">
@@ -244,10 +277,23 @@ export default function Awards() {
               <Vote className="h-5 w-5" />
               Vote - {selectedShow?.show_name}
             </DialogTitle>
-            <DialogDescription>
+          <DialogDescription>
               Cast your votes for nominees. You have {Math.max(0, 3 - voteCount)} votes remaining.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Vote as</p>
+            <Select value={voteAs} onValueChange={(value: "player" | "band" | "movement") => setVoteAs(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="player">Player</SelectItem>
+                <SelectItem value="band" disabled={!userBand}>Band</SelectItem>
+                <SelectItem value="movement" disabled={!userBand}>Movement</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <ScrollArea className="max-h-[50vh]">
             <div className="space-y-3 pr-4">
               {nominationsLoading ? (
@@ -399,7 +445,6 @@ export default function Awards() {
           {selectedShow && (
             <AwardCeremonyExperience
               show={selectedShow}
-              bandName={userBand?.name}
               bandId={userBand?.id}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
               onAttendRedCarpet={(outfit) => {
