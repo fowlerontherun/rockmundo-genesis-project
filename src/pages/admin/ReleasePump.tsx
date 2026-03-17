@@ -7,15 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Rocket, Search, DollarSign, Music, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+type PumpSaleType = "digital" | "cd" | "vinyl" | "cassette";
+
+const SALE_TYPE_LABELS: Record<PumpSaleType, string> = {
+  digital: "Digital",
+  cd: "CD",
+  vinyl: "Vinyl",
+  cassette: "Cassette",
+};
 
 export default function ReleasePump() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRelease, setSelectedRelease] = useState<any>(null);
   const [amount, setAmount] = useState(100);
+  const [saleType, setSaleType] = useState<PumpSaleType>("digital");
   const [pumping, setPumping] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   const { data: releases, isLoading } = useQuery({
     queryKey: ["admin-releases-search", searchTerm],
@@ -23,7 +34,7 @@ export default function ReleasePump() {
       let query = (supabase as any)
         .from("releases")
         .select(`
-          id, title, artist_name, release_status, total_units_sold, total_revenue, digital_sales,
+          id, title, artist_name, release_status, total_units_sold, total_revenue, digital_sales, cd_sales, vinyl_sales, cassette_sales,
           band_id, bands(name, fame),
           release_formats(id, format_type, retail_price)
         `)
@@ -44,19 +55,33 @@ export default function ReleasePump() {
 
   const handlePump = async () => {
     if (!selectedRelease || amount < 1) return;
+
+    const selectedFormat = selectedRelease.release_formats?.find((f: any) => f.format_type === saleType);
+    if (!selectedFormat) {
+      toast.error(`No ${SALE_TYPE_LABELS[saleType]} format found for this release`);
+      return;
+    }
+
     setPumping(true);
     setLastResult(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("admin-boost-plays", {
-        body: { action: "release_pump", releaseId: selectedRelease.id, amount },
+        body: { action: "release_pump", releaseId: selectedRelease.id, amount, saleType },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       setLastResult(data);
-      toast.success(`Pumped ${amount} digital sales for "${selectedRelease.title}"`);
+      if (data?.updated_release) {
+        setSelectedRelease((prev: any) => {
+          if (!prev || prev.id !== data.updated_release.id) return prev;
+          return { ...prev, ...data.updated_release };
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["admin-releases-search"] });
+      toast.success(`Pumped ${amount} ${SALE_TYPE_LABELS[saleType].toLowerCase()} sales for "${selectedRelease.title}"`);
     } catch (err: any) {
       toast.error(err.message || "Failed to pump sales");
     } finally {
@@ -72,7 +97,7 @@ export default function ReleasePump() {
             <Rocket className="h-8 w-8 text-primary" />
             Release Pump
           </h1>
-          <p className="text-muted-foreground">Boost a release's digital sales with a set amount of buys</p>
+          <p className="text-muted-foreground">Boost a release's digital or physical sales with a set amount of buys</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -102,7 +127,10 @@ export default function ReleasePump() {
                   <div className="text-center py-4 text-muted-foreground">No releases found</div>
                 ) : (
                   releases?.map((r: any) => {
-                    const hasDigital = r.release_formats?.some((f: any) => f.format_type === "digital");
+                    const availableFormats: PumpSaleType[] = (r.release_formats || [])
+                      .map((f: any) => f.format_type)
+                      .filter((f: string) => ["digital", "cd", "vinyl", "cassette"].includes(f));
+                    const hasPumpableFormat = availableFormats.length > 0;
                     return (
                       <div
                         key={r.id}
@@ -110,20 +138,30 @@ export default function ReleasePump() {
                           selectedRelease?.id === r.id
                             ? "border-primary bg-primary/5"
                             : "hover:border-primary/50"
-                        } ${!hasDigital ? "opacity-50" : ""}`}
-                        onClick={() => hasDigital && setSelectedRelease(r)}
+                        } ${!hasPumpableFormat ? "opacity-50" : ""}`}
+                        onClick={() => {
+                          if (!hasPumpableFormat) return;
+                          setSelectedRelease(r);
+                          if (!availableFormats.includes(saleType)) {
+                            setSaleType(availableFormats[0]);
+                          }
+                        }}
                       >
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium">{r.title}</p>
                             <p className="text-xs text-muted-foreground">
-                              {r.artist_name || r.bands?.name || "Unknown"} · {(r.digital_sales || 0).toLocaleString()} digital sales
+                              {r.artist_name || r.bands?.name || "Unknown"} · {(r.total_units_sold || 0).toLocaleString()} total units
                             </p>
                           </div>
-                          {!hasDigital ? (
-                            <Badge variant="secondary">No Digital</Badge>
+                          {!hasPumpableFormat ? (
+                            <Badge variant="secondary">No Formats</Badge>
                           ) : (
-                            <Badge variant="outline">${((r.total_revenue || 0)).toLocaleString()}</Badge>
+                            <div className="flex gap-1 flex-wrap justify-end">
+                              {availableFormats.map((format) => (
+                                <Badge key={format} variant="outline">{SALE_TYPE_LABELS[format]}</Badge>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -162,6 +200,9 @@ export default function ReleasePump() {
                           <div className="flex gap-3 mt-1 text-xs">
                             <span>{(selectedRelease.total_units_sold || 0).toLocaleString()} total units</span>
                             <span>{(selectedRelease.digital_sales || 0).toLocaleString()} digital</span>
+                            <span>{(selectedRelease.cd_sales || 0).toLocaleString()} CD</span>
+                            <span>{(selectedRelease.vinyl_sales || 0).toLocaleString()} vinyl</span>
+                            <span>{(selectedRelease.cassette_sales || 0).toLocaleString()} cassette</span>
                             <span className="text-green-500">${(selectedRelease.total_revenue || 0).toLocaleString()} revenue</span>
                           </div>
                         </div>
@@ -170,7 +211,28 @@ export default function ReleasePump() {
                   </Card>
 
                   <div>
-                    <Label>Number of digital buys to add</Label>
+                    <Label>Sales type to pump</Label>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {(["digital", "cd", "vinyl", "cassette"] as PumpSaleType[]).map((format) => {
+                        const isAvailable = selectedRelease.release_formats?.some((f: any) => f.format_type === format);
+                        return (
+                          <Button
+                            key={format}
+                            type="button"
+                            variant={saleType === format ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSaleType(format)}
+                            disabled={!isAvailable}
+                          >
+                            {SALE_TYPE_LABELS[format]}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Number of {SALE_TYPE_LABELS[saleType].toLowerCase()} buys to add</Label>
                     <Input
                       type="number"
                       min={1}
@@ -207,7 +269,7 @@ export default function ReleasePump() {
                     ) : (
                       <Rocket className="h-4 w-4" />
                     )}
-                    Pump {amount.toLocaleString()} Digital Sales
+                    Pump {amount.toLocaleString()} {SALE_TYPE_LABELS[saleType]} Sales
                   </Button>
 
                   {lastResult && (
@@ -219,6 +281,7 @@ export default function ReleasePump() {
                         </p>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>Units Added: <strong>{lastResult.added?.toLocaleString()}</strong></div>
+                          <div>Format: <strong>{SALE_TYPE_LABELS[lastResult.sale_type as PumpSaleType] || lastResult.sale_type}</strong></div>
                           <div>Gross Revenue: <strong>${lastResult.gross_revenue?.toLocaleString()}</strong></div>
                           <div>Sales Tax: <strong>${lastResult.sales_tax?.toLocaleString()}</strong></div>
                           <div>Distribution: <strong>${lastResult.distribution_fee?.toLocaleString()}</strong></div>

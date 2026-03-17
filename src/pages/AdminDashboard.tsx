@@ -132,7 +132,7 @@ const AdminDashboard = () => {
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/release-pump'}>
             <CardHeader>
               <CardTitle>Release Pump</CardTitle>
-              <CardDescription>Boost digital sales for releases</CardDescription>
+              <CardDescription>Boost digital and physical sales for releases</CardDescription>
             </CardHeader>
           </Card>
         </div>
