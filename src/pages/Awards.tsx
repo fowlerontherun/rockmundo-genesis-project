@@ -49,6 +49,9 @@ export default function Awards() {
     enabled: !!profileId,
   });
 
+  const { data: calendar } = useGameCalendar();
+  const currentGameYear = calendar?.gameYear ?? new Date().getFullYear();
+
   const {
     shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,

@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.106",
+    date: "2026-03-18",
+    changes: [
+      { type: 'fix', description: "Resolved git merge conflicts in admin-boost-plays edge function" },
+      { type: 'fix', description: "Fixed missing currentGameYear in Awards page by calling useGameCalendar hook" },
+      { type: 'fix', description: "Fixed invalid CeremonyPhase type and missing Masks icon in AwardCeremonyExperience" },
+      { type: 'fix', description: "Fixed setupTests.ts type import error for local stub package" },
+    ],
+  },
+  {
     version: "1.1.105",
     date: "2026-03-17",
     changes: [
