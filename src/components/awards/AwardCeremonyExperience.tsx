@@ -52,7 +52,7 @@ const CEREMONY_PHASES: { id: CeremonyPhase; label: string; icon: React.ElementTy
   { id: "opening", label: "Opening", icon: Sparkles },
   { id: "awards", label: "Awards Show", icon: Trophy },
   { id: "finale", label: "Finale", icon: PartyPopper },
-  { id: "after_party", label: "After Party", icon: Masks },
+  { id: "after_party", label: "After Party", icon: Drama },
 ];
 
 const OUTFIT_OPTIONS = [
