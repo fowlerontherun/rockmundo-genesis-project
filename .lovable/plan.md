@@ -1,15 +1,25 @@
 
 
-## Fix: Tutorial World Map Link Goes to 404
+## Fix Build Errors
 
-### Problem
-The tutorial step `visit_world_map` directs players to `/world-map`, but that route is commented out in `App.tsx` (line 532), causing a 404.
+There are 4 distinct issues causing the build to fail:
 
-### Solution
-Uncomment the `/world-map` route in `App.tsx` to re-enable the WorldMap page. The component (`WorldMap.tsx`) and its lazy import already exist and are functional.
+### 1. Git merge conflicts in `supabase/functions/admin-boost-plays/index.ts`
+The file has unresolved merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). I'll resolve them by taking the codex branch version which has better error handling (captures `saleInsertError`, `releaseUpdateError`, etc.) and includes the updated release response.
 
-### Files to modify
-- **`src/App.tsx`** — Uncomment line 532: `<Route path="world-map" element={<WorldMap />} />`
-- **`src/components/VersionHeader.tsx`** — Bump to v1.0.890
-- **`src/pages/VersionHistory.tsx`** — Add changelog entry
+### 2. Missing `currentGameYear` in `src/pages/Awards.tsx`
+The `useGameCalendar` hook is imported but never called. I'll add `const { data: calendar } = useGameCalendar();` and derive `const currentGameYear = calendar?.gameYear ?? new Date().getFullYear();` near the top of the component.
+
+### 3. Invalid `CeremonyPhase` and missing `Masks` icon in `src/components/awards/AwardCeremonyExperience.tsx`
+- `CeremonyPhase` type only allows 4 values but `CEREMONY_PHASES` array includes `"after_party"`. Fix: add `"after_party"` to the union type.
+- `Masks` is not exported from `lucide-react`. Fix: replace with `Drama` (which exists in lucide-react) or `PartyPopper` as a fallback.
+
+### 4. `src/setupTests.ts` TS error for `@testing-library/jest-dom/vitest`
+This is a type declaration issue with the local stub package. Fix: add a `skipLibCheck: true` or simply change the import to suppress the error, or add a `.d.ts` declaration file for the local package.
+
+### Files to edit:
+- `supabase/functions/admin-boost-plays/index.ts` — resolve merge conflicts
+- `src/pages/Awards.tsx` — add `useGameCalendar()` call and derive `currentGameYear`
+- `src/components/awards/AwardCeremonyExperience.tsx` — fix type union and replace `Masks` icon
+- `src/setupTests.ts` — fix type import issue
 
