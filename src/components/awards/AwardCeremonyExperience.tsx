@@ -34,7 +34,7 @@ interface AwardCeremonyExperienceProps {
   currentGameYear?: number;
 }
 
-type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale";
+type CeremonyPhase = "red_carpet" | "opening" | "awards" | "finale" | "after_party";
 
 type RunOfShowSegment = {
   type: "host_intro" | "award" | "performance";
