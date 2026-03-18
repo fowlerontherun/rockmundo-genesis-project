@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.107",
+    date: "2026-03-18",
+    changes: [
+      { type: 'fix', description: "Fixed behavior settings not loading — added missing profile_id column to player_behavior_settings table" },
+    ],
+  },
+  {
     version: "1.1.106",
     date: "2026-03-18",
     changes: [
