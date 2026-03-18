@@ -16412,6 +16412,7 @@ export type Database = {
           id: string
           media_behavior: string
           partying_intensity: string
+          profile_id: string | null
           stage_behavior: string
           travel_comfort: string
           updated_at: string
@@ -16426,6 +16427,7 @@ export type Database = {
           id?: string
           media_behavior?: string
           partying_intensity?: string
+          profile_id?: string | null
           stage_behavior?: string
           travel_comfort?: string
           updated_at?: string
@@ -16440,12 +16442,28 @@ export type Database = {
           id?: string
           media_behavior?: string
           partying_intensity?: string
+          profile_id?: string | null
           stage_behavior?: string
           travel_comfort?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_behavior_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_behavior_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_birthday_rewards: {
         Row: {
