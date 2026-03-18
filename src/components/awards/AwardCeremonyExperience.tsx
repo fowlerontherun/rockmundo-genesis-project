@@ -10,7 +10,7 @@ import {
   Camera,
   AlertCircle,
   Gauge,
-  Masks,
+  Drama,
   Mic,
   Music,
   Newspaper,
