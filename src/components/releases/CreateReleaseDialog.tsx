@@ -222,7 +222,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         await supabase.from("label_financial_transactions").insert({
           label_id: activeContract.label_id,
           transaction_type: "expense",
-          amount: labelPays,
+          amount: labelPaysDollars,
           description: `Manufacturing costs for "${title}" (contract benefit)`,
           related_contract_id: activeContract.id,
         });
