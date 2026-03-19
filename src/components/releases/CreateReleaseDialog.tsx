@@ -208,20 +208,21 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           .eq("id", activeContract.label_id)
           .single();
 
-        if (!label || (label.balance || 0) < labelPays) {
-          throw new Error(`Label doesn't have enough funds to cover manufacturing ($${(labelPays / 100).toFixed(2)})`);
+        const labelPaysDollars = labelPays / 100; // Convert cents to dollars
+        if (!label || (label.balance || 0) < labelPaysDollars) {
+          throw new Error(`Label doesn't have enough funds to cover manufacturing ($${labelPaysDollars.toFixed(2)}). Label balance: $${((label?.balance || 0)).toLocaleString()}`);
         }
 
         await supabase
           .from("labels")
-          .update({ balance: (label.balance || 0) - labelPays })
+          .update({ balance: (label.balance || 0) - labelPaysDollars })
           .eq("id", activeContract.label_id);
 
         // Record label transaction
         await supabase.from("label_financial_transactions").insert({
           label_id: activeContract.label_id,
           transaction_type: "expense",
-          amount: labelPays,
+          amount: labelPaysDollars,
           description: `Manufacturing costs for "${title}" (contract benefit)`,
           related_contract_id: activeContract.id,
         });
