@@ -267,7 +267,7 @@ const CompanyDetailContent = () => {
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
-                  onClick={() => navigate(`/companies/${company.parent_company!.id}`)}
+                  onClick={() => navigate(`/company/${company.parent_company!.id}`)}
                 >
                   <Building2 className="h-4 w-4 mr-2 text-primary" />
                   {company.parent_company.name}

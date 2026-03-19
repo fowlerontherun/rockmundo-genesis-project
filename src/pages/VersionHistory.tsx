@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.108",
+    date: "2026-03-19",
+    changes: [
+      { type: 'fix', description: "Fixed label release error saying label doesn't have money — manufacturing costs were compared in cents vs label balance in dollars" },
+      { type: 'fix', description: "Fixed parent company navigation link using wrong route (/companies/ instead of /company/)" },
+    ],
+  },
+  {
     version: "1.1.107",
     date: "2026-03-18",
     changes: [
