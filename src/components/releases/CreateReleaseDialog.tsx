@@ -338,7 +338,9 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       // Add formats
       const formatInserts = selectedFormats.map(format => ({
         release_id: release.id,
-        ...format
+        ...format,
+        // Convert retail_price from dollars to cents for DB storage
+        retail_price: Math.round((format.retail_price || 0) * 100),
       }));
 
       const { error: formatsError } = await supabase

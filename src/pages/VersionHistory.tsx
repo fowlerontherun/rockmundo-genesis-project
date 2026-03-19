@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.109",
+    date: "2026-03-19",
+    changes: [
+      { type: 'fix', description: "Fixed release retail prices being stored in dollars instead of cents — caused extremely low sales revenue for releases created after Feb 2026" },
+      { type: 'fix', description: "Repaired all affected release format prices in database (Red Dwarf, Como faz?, Cansei, etc.)" },
+    ],
+  },
+  {
     version: "1.1.108",
     date: "2026-03-19",
     changes: [
