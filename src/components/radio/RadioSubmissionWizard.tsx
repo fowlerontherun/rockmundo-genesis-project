@@ -41,10 +41,11 @@ interface Song {
   title: string;
   genre: string;
   quality_score: number;
+  status?: string | null;
 }
 
 export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWizardProps) {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { data: vipStatus } = useVipStatus();
   const isVip = vipStatus?.isVip ?? false;
   const queryClient = useQueryClient();
@@ -86,15 +87,15 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!bandId,
   });
 
-  // Fetch recorded songs
+  // Fetch songs that are ready for radio submissions
   const { data: songs = [], isLoading: songsLoading } = useQuery({
-    queryKey: ["band-recorded-songs", bandId],
+    queryKey: ["band-radio-ready-songs", bandId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score")
+        .select("id, title, genre, quality_score, status")
         .eq("band_id", bandId)
-        .eq("status", "recorded")
+        .in("status", ["recorded", "released", "manufacturing"])
         .order("quality_score", { ascending: false });
       if (error) throw error;
       return data as Song[];
@@ -138,16 +139,25 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
     queryFn: async () => {
-      if (!selectedSong || !profileId) return [];
-      const { data, error } = await supabase
+      if (!selectedSong || (!profileId && !userId)) return [];
+      let query = supabase
         .from("radio_submissions")
         .select("station_id")
-        .eq("song_id", selectedSong.id)
-        .eq("profile_id", profileId);
+        .eq("song_id", selectedSong.id);
+
+      if (profileId && userId) {
+        query = query.or(`profile_id.eq.${profileId},user_id.eq.${userId}`);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
+      } else if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data.map(s => s.station_id);
     },
-    enabled: !!selectedSong && !!profileId,
+    enabled: !!selectedSong && (!!profileId || !!userId),
   });
 
   // Calculate eligible stations
@@ -215,13 +225,20 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   // Batch submission mutation
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!profileId || !selectedSong || selectedStations.size === 0) {
+      if (!profileId || !userId || !selectedSong || selectedStations.size === 0) {
         throw new Error("Missing required data");
       }
 
       const results = { accepted: [] as string[], pending: [] as string[], failed: [] as string[] };
+      const selectedStationIds = Array.from(selectedStations).filter((stationId) =>
+        eligibleStations.some((station) => station.id === stationId && station.isEligible),
+      );
+
+      if (selectedStationIds.length === 0) {
+        throw new Error("No eligible stations selected");
+      }
       
-      for (const stationId of selectedStations) {
+      for (const stationId of selectedStationIds) {
         const station = eligibleStations.find(s => s.id === stationId);
         if (!station) continue;
 
@@ -234,7 +251,8 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
             .insert({
               station_id: stationId,
               song_id: selectedSong.id,
-              user_id: profileId,
+              profile_id: profileId,
+              user_id: userId,
               band_id: bandId,
               status: shouldAutoAccept ? "accepted" : "pending",
               reviewed_at: shouldAutoAccept ? new Date().toISOString() : null,
@@ -258,6 +276,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       setSubmissionResults(results);
       setStep(4);
       queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["existing-submissions", selectedSong?.id] });
       
       if (results.accepted.length > 0) {
         toast.success(`${results.accepted.length} stations auto-accepted your song!`);
@@ -265,6 +284,8 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       if (results.pending.length > 0) {
         toast.info(`${results.pending.length} submissions pending review`);
       }
+
+      onComplete?.();
     },
     onError: (error: any) => {
       toast.error("Submission failed", { description: error.message });
@@ -327,7 +348,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
               <Skeleton className="h-48 w-full" />
             ) : songs.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No recorded songs available. Record a song first!
+                No radio-ready songs available yet. Finish recording or release a song first.
               </p>
             ) : (
               <ScrollArea className="h-[300px]">
@@ -348,6 +369,9 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
                           <div>
                             <p className="font-medium">{song.title}</p>
                             <p className="text-sm text-muted-foreground">{song.genre}</p>
+                            {song.status && (
+                              <p className="text-xs text-muted-foreground/80 capitalize">Status: {song.status}</p>
+                            )}
                           </div>
                         </div>
                         <Badge variant="outline">Quality: {song.quality_score || 0}</Badge>

@@ -29,7 +29,8 @@ export interface RadioSubmission {
   id: string;
   station_id: string;
   song_id: string;
-  user_id: string;
+  user_id: string | null;
+  profile_id?: string | null;
   band_id: string | null;
   status: string;
   submitted_at: string;
@@ -60,23 +61,33 @@ export const useRadioStations = () => {
 
   // Fetch my submissions
   const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
-    queryKey: ["my-radio-submissions", userId],
+    queryKey: ["my-radio-submissions", userId, profileId],
     queryFn: async () => {
-      if (!userId) return [];
-      const { data, error } = await supabase
+      if (!userId && !profileId) return [];
+
+      let query = supabase
         .from("radio_submissions")
         .select(`
           *,
           station:radio_stations!inner(id, name, station_type, quality_level),
           song:songs!inner(id, title, genre)
         `)
-        .eq("user_id", userId)
         .order("submitted_at", { ascending: false });
+
+      if (userId && profileId) {
+        query = query.or(`user_id.eq.${userId},profile_id.eq.${profileId}`);
+      } else if (userId) {
+        query = query.eq("user_id", userId);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!userId,
+    enabled: !!userId || !!profileId,
   });
 
   // Fetch submissions for specific station
@@ -112,7 +123,7 @@ export const useRadioStations = () => {
       songId: string;
       bandId?: string;
     }) => {
-      if (!userId) throw new Error("No active profile");
+      if (!profileId || !userId) throw new Error("No active profile");
 
       // Check if already submitted
       const { data: existing } = await supabase
@@ -120,7 +131,7 @@ export const useRadioStations = () => {
         .select("id")
         .eq("station_id", stationId)
         .eq("song_id", songId)
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userId},profile_id.eq.${profileId}`)
         .maybeSingle();
 
       if (existing) {
@@ -133,6 +144,7 @@ export const useRadioStations = () => {
           station_id: stationId,
           song_id: songId,
           user_id: userId,
+          profile_id: profileId,
           band_id: bandId || null,
           status: "pending",
         })
