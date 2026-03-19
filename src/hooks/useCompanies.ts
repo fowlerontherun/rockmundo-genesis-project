@@ -6,12 +6,12 @@ import type { Company, CreateCompanyInput, CompanyFinancialSummary } from "@/typ
 import { COMPANY_CREATION_COSTS } from "@/types/company";
 
 export const useCompanies = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["companies", profileId],
+    queryKey: ["companies", userId],
     queryFn: async (): Promise<Company[]> => {
-      if (!profileId) return [];
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from("companies")
@@ -20,7 +20,7 @@ export const useCompanies = () => {
           headquarters_city:cities!headquarters_city_id(id, name, country),
           parent_company:companies!parent_company_id(id, name)
         `)
-        .eq("owner_id", profileId)
+        .eq("owner_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -30,7 +30,7 @@ export const useCompanies = () => {
 
       return (data || []) as Company[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 };
 
@@ -88,13 +88,13 @@ export const useCompanySubsidiaries = (parentCompanyId: string | undefined) => {
 };
 
 export const useCreateCompany = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateCompanyInput & { profileId?: string }): Promise<Company> => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!userId) throw new Error("Not authenticated");
 
       // Get creation costs
       const costs = COMPANY_CREATION_COSTS[input.company_type];
@@ -126,7 +126,7 @@ export const useCreateCompany = () => {
       const { data, error } = await supabase
         .from("companies")
         .insert({
-          owner_id: profileId,
+          owner_id: userId,
           name: input.name,
           company_type: input.company_type,
           description: input.description || null,
@@ -169,7 +169,7 @@ export const useCreateCompany = () => {
       // Initialize share ownership for founder
       await supabase.from("company_shareholders" as any).insert({
         company_id: data.id,
-        user_id: profileId,
+        user_id: userId,
         shares: 100,
       });
 
@@ -233,12 +233,12 @@ export const useUpdateCompany = () => {
 };
 
 export const useCompanyFinancialSummary = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["company-financial-summary", profileId],
+    queryKey: ["company-financial-summary", userId],
     queryFn: async (): Promise<CompanyFinancialSummary> => {
-      if (!profileId) {
+      if (!userId) {
         return {
           total_balance: 0,
           monthly_income: 0,
@@ -255,7 +255,7 @@ export const useCompanyFinancialSummary = () => {
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
         .select("id, balance, weekly_operating_costs, company_type")
-        .eq("owner_id", profileId);
+        .eq("owner_id", userId);
 
       if (companiesError) throw companiesError;
 
@@ -334,12 +334,12 @@ export const useCompanyFinancialSummary = () => {
         effective_tax_rate: effectiveTaxRate,
       };
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 };
 
 export const useCloseSubsidiary = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -353,7 +353,7 @@ export const useCloseSubsidiary = () => {
       profileId?: string;
       transferBalance?: boolean;
     }): Promise<void> => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!userId) throw new Error("Not authenticated");
 
       // Get company details
       const { data: company, error: companyError } = await supabase
@@ -363,7 +363,7 @@ export const useCloseSubsidiary = () => {
         .single();
 
       if (companyError || !company) throw new Error("Company not found");
-      if (company.owner_id !== profileId) throw new Error("You don't own this company");
+      if (company.owner_id !== userId) throw new Error("You don't own this company");
       if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
 
       // Check for active contracts/obligations
