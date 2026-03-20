@@ -260,6 +260,10 @@ Deno.serve(async (req) => {
     console.log(`Genre trend & seasonal modifiers active: season=${season} (${seasonalStreamMod}x), gameDay=${gameDaysElapsed}`);
 
     for (const release of streamingReleases || []) {
+      if (isNearTimeout()) {
+        console.warn(`[update-daily-streams] Approaching timeout after ${streamUpdates} stream updates. Finishing early.`);
+        break;
+      }
       try {
         const bandId = release.band_id || (release.songs as any)?.band_id;
         const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
