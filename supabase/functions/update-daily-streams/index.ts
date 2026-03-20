@@ -515,6 +515,10 @@ Deno.serve(async (req) => {
     }
 
     for (const format of physicalReleases || []) {
+      if (isNearTimeout()) {
+        console.warn(`[update-daily-streams] Approaching timeout during physical sales. Finishing early.`);
+        break;
+      }
       if (Math.random() > 0.5) {
         try {
           const baseQuantity = Math.floor(Math.random() * 10) + 1;
