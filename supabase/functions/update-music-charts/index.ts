@@ -1299,14 +1299,16 @@ serve(async (req) => {
     }
 
     await completeJobRun({
+      jobName: "update-music-charts",
       runId,
       supabaseClient,
-      result: {
+      durationMs: Date.now() - startedAt,
+      processedCount: chartsUpdated,
+      resultSummary: {
         chartsUpdated,
         chartDate,
         regionsProcessed: uniqueRegions.size,
       },
-      duration: Date.now() - startedAt,
     });
 
     return new Response(
