@@ -12,6 +12,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
 
+// Wall-clock safety: if we approach the edge function timeout, finish gracefully
+const WALL_CLOCK_LIMIT_MS = 140_000; // 140s (edge fn limit is ~150s)
+const functionStartedAt = Date.now();
+function isNearTimeout() {
+  return Date.now() - functionStartedAt > WALL_CLOCK_LIMIT_MS;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
