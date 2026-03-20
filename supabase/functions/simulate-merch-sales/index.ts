@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, production_cost)
+        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
       `)
       .gt("total_fans", 0);
 
