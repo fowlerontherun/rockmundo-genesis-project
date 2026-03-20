@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
         const country = selectedCountry.name;
 
         const unitPrice = Math.min(selectedMerch.selling_price || 20, 9999); // Cap at max price
-        const productionCost = selectedMerch.production_cost || 0;
+        const productionCost = selectedMerch.cost_to_produce || 0;
         const subtotal = unitPrice * quantity;
         const totalCost = productionCost * quantity;
 
