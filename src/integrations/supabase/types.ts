@@ -30015,6 +30015,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
       complete_song_sale: {
         Args: {

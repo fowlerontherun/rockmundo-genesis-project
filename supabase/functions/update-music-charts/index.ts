@@ -1299,14 +1299,16 @@ serve(async (req) => {
     }
 
     await completeJobRun({
+      jobName: "update-music-charts",
       runId,
       supabaseClient,
-      result: {
+      durationMs: Date.now() - startedAt,
+      processedCount: chartsUpdated,
+      resultSummary: {
         chartsUpdated,
         chartDate,
         regionsProcessed: uniqueRegions.size,
       },
-      duration: Date.now() - startedAt,
     });
 
     return new Response(
@@ -1323,10 +1325,11 @@ serve(async (req) => {
 
     if (runId) {
       await failJobRun({
+        jobName: "update-music-charts",
         runId,
         supabaseClient,
-        errorMessage: getErrorMessage(error),
-        duration: Date.now() - startedAt,
+        durationMs: Date.now() - startedAt,
+        error,
       });
     }
 

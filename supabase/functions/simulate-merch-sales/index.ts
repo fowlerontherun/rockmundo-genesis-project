@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, production_cost)
+        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
       `)
       .gt("total_fans", 0);
 
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
         const country = selectedCountry.name;
 
         const unitPrice = Math.min(selectedMerch.selling_price || 20, 9999); // Cap at max price
-        const productionCost = selectedMerch.production_cost || 0;
+        const productionCost = selectedMerch.cost_to_produce || 0;
         const subtotal = unitPrice * quantity;
         const totalCost = productionCost * quantity;
 

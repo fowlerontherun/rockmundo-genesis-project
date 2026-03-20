@@ -12,6 +12,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
 
+// Wall-clock safety: if we approach the edge function timeout, finish gracefully
+const WALL_CLOCK_LIMIT_MS = 140_000; // 140s (edge fn limit is ~150s)
+const functionStartedAt = Date.now();
+function isNearTimeout() {
+  return Date.now() - functionStartedAt > WALL_CLOCK_LIMIT_MS;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -253,6 +260,10 @@ Deno.serve(async (req) => {
     console.log(`Genre trend & seasonal modifiers active: season=${season} (${seasonalStreamMod}x), gameDay=${gameDaysElapsed}`);
 
     for (const release of streamingReleases || []) {
+      if (isNearTimeout()) {
+        console.warn(`[update-daily-streams] Approaching timeout after ${streamUpdates} stream updates. Finishing early.`);
+        break;
+      }
       try {
         const bandId = release.band_id || (release.songs as any)?.band_id;
         const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
@@ -504,6 +515,10 @@ Deno.serve(async (req) => {
     }
 
     for (const format of physicalReleases || []) {
+      if (isNearTimeout()) {
+        console.warn(`[update-daily-streams] Approaching timeout during physical sales. Finishing early.`);
+        break;
+      }
       if (Math.random() > 0.5) {
         try {
           const baseQuantity = Math.floor(Math.random() * 10) + 1;
