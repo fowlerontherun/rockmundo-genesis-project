@@ -1325,10 +1325,11 @@ serve(async (req) => {
 
     if (runId) {
       await failJobRun({
+        jobName: "update-music-charts",
         runId,
         supabaseClient,
-        errorMessage: getErrorMessage(error),
-        duration: Date.now() - startedAt,
+        durationMs: Date.now() - startedAt,
+        error,
       });
     }
 
