@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.110",
+    date: "2026-03-20",
+    changes: [
+      { type: 'fix', description: "Fixed simulate-merch-sales cron job failing — referenced non-existent 'production_cost' column instead of 'cost_to_produce'" },
+      { type: 'fix', description: "Fixed update-music-charts cron job failing — completeJobRun/failJobRun called with wrong parameter names" },
+      { type: 'fix', description: "Fixed update-daily-streams cron getting stuck in 'running' forever — added wall-clock timeout safety to finish gracefully before edge function limit" },
+      { type: 'fix', description: "Fixed check-character-health-decay build error — replaced incompatible npm: import with esm.sh" },
+      { type: 'fix', description: "Cleaned up all stuck 'running' cron job records and added auto-cleanup function for future timeouts" },
+    ],
+  },
+  {
     version: "1.1.109",
     date: "2026-03-19",
     changes: [
