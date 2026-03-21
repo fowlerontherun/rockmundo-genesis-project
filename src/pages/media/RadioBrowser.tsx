@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useRadioStations } from "@/hooks/useRadioStations";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe, Zap, Send } from "lucide-react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
@@ -35,21 +36,15 @@ const RadioBrowser = () => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showBatchSubmitWizard, setShowBatchSubmitWizard] = useState(false);
 
-  // Get user's primary band
-  const { data: primaryBand } = useQuery({
-    queryKey: ["primary-band-radio", profileId],
-    queryFn: async () => {
-      if (!profileId) return null;
-      const { data, error } = await supabase
-        .from("bands")
-        .select("id, name, fame")
-        .eq("leader_id", profileId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profileId,
-  });
+  // Get user's primary band from membership, not only leadership
+  const { data: primaryBandMembership } = usePrimaryBand();
+  const primaryBand = primaryBandMembership?.bands
+    ? {
+        id: primaryBandMembership.bands.id,
+        name: primaryBandMembership.bands.name ?? null,
+        fame: primaryBandMembership.bands.fame ?? 0,
+      }
+    : null;
 
   // Fetch countries the band has visited (performed in)
   const { data: visitedCountries = [] } = useQuery({

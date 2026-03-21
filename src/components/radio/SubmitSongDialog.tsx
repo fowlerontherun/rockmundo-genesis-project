@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Music, CheckCircle2, XCircle, AlertTriangle, Lock, MapPin } from "lucide-react";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { Music, CheckCircle2, XCircle, Lock, MapPin } from "lucide-react";
 import { useRadioStations, type RadioStation } from "@/hooks/useRadioStations";
 
 interface SubmitSongDialogProps {
@@ -19,34 +20,16 @@ interface SubmitSongDialogProps {
 export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDialogProps) => {
   const [selectedSongId, setSelectedSongId] = useState<string>("");
   const { submitToStation, isSubmitting } = useRadioStations();
+  const { data: primaryBand } = usePrimaryBand();
+  const bandData = primaryBand?.bands
+    ? {
+        id: primaryBand.bands.id,
+        name: primaryBand.bands.name ?? null,
+        fame: primaryBand.bands.fame ?? 0,
+      }
+    : null;
 
   // Fetch user's band and country fame
-  const { data: bandData } = useQuery({
-    queryKey: ["user-band-for-radio"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      if (!profile) return null;
-
-      const { data: band } = await supabase
-        .from("bands")
-        .select("id, name, fame")
-        .eq("leader_id", profile.id)
-        .maybeSingle();
-
-      return band;
-    },
-    enabled: open,
-  });
 
   // Check if band has visited this station's country
   const { data: hasVisitedCountry = false } = useQuery({
