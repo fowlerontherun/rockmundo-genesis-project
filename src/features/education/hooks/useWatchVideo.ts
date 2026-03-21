@@ -162,10 +162,10 @@ export const useWatchVideo = () => {
         metadata: { video_id: videoId, video_name: videoName },
       });
       
-      // Record watch timestamp
-      const history = getWatchHistory();
+      // Record watch timestamp per profile
+      const history = getWatchHistory(profileId);
       history.timestamps.push(Date.now());
-      saveWatchHistory(history);
+      saveWatchHistory(history, profileId);
       
       return { xpEarned: XP_PER_VIDEO, skillSlug };
     },
