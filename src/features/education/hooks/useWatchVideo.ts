@@ -180,7 +180,7 @@ export const useWatchVideo = () => {
     },
     onError: (error: Error) => {
       if (error.message === "cooldown") {
-        const status = getCooldownStatus();
+        const status = getCooldownStatus(profileId);
         const timeLeft = status.cooldownEndsAt
           ? Math.ceil((status.cooldownEndsAt.getTime() - Date.now()) / 60000)
           : 0;

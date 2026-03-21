@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.112",
+    date: "2026-03-21",
+    changes: [
+      { type: 'fix', description: "Fixed university enrollment auto-attendance using user_id instead of profile_id — broke multi-character support" },
+      { type: 'fix', description: "Fixed YouTube video watch cooldown being account-wide instead of per-character — now tracks separately per profile" },
+      { type: 'fix', description: "Added missing query invalidation for enrollment queries after attendance" },
+    ],
+  },
+  {
     version: "1.1.111",
     date: "2026-03-21",
     changes: [

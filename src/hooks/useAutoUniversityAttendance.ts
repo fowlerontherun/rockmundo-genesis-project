@@ -3,19 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-export const useAutoUniversityAttendance = (userId: string | null) => {
+export const useAutoUniversityAttendance = (profileId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!profileId) return;
 
     const checkAttendance = async () => {
       try {
         const { data: activeEnrollments, error } = await supabase
           .from('player_university_enrollments')
           .select('id, university_courses(name)')
-          .eq('user_id', userId)
+          .eq('profile_id', profileId)
           .eq('status', 'enrolled')
           .not('next_class_at', 'is', null)
           .lte('next_class_at', new Date().toISOString());
@@ -27,6 +27,8 @@ export const useAutoUniversityAttendance = (userId: string | null) => {
           
           queryClient.invalidateQueries({ queryKey: ["university-enrollments"] });
           queryClient.invalidateQueries({ queryKey: ["player-skills"] });
+          queryClient.invalidateQueries({ queryKey: ["current_enrollment", profileId] });
+          queryClient.invalidateQueries({ queryKey: ["current_enrollment_full", profileId] });
 
           toast({
             title: "Class Attended!",
@@ -42,5 +44,5 @@ export const useAutoUniversityAttendance = (userId: string | null) => {
     const interval = setInterval(checkAttendance, 10 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [userId, toast, queryClient]);
+  }, [profileId, toast, queryClient]);
 };
