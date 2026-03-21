@@ -30,8 +30,8 @@ const getWatchHistory = (profileId?: string | null): WatchHistory => {
   }
 };
 
-export const getCooldownStatus = () => {
-  const history = getWatchHistory();
+export const getCooldownStatus = (profileId?: string | null) => {
+  const history = getWatchHistory(profileId);
   const now = Date.now();
   
   // Filter out timestamps older than cooldown period
@@ -41,7 +41,7 @@ export const getCooldownStatus = () => {
   
   // Update storage if we filtered some out
   if (recentTimestamps.length !== history.timestamps.length) {
-    saveWatchHistory({ timestamps: recentTimestamps });
+    saveWatchHistory({ timestamps: recentTimestamps }, profileId);
   }
   
   const videosWatched = recentTimestamps.length;
@@ -49,7 +49,6 @@ export const getCooldownStatus = () => {
   
   let cooldownEndsAt: Date | null = null;
   if (!canWatch && recentTimestamps.length > 0) {
-    // Cooldown ends when the oldest recent timestamp expires
     const oldestTimestamp = Math.min(...recentTimestamps);
     cooldownEndsAt = new Date(oldestTimestamp + COOLDOWN_MS);
   }
