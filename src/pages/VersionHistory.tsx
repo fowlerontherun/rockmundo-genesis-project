@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.111",
+    date: "2026-03-21",
+    changes: [
+      { type: 'improvement', description: "Removed 26 unused/orphaned edge functions to reduce deployment size and improve maintainability" },
+      { type: 'fix', description: "Cleaned up duplicate cron job entries for generate-daily-sales and trigger-random-events" },
+      { type: 'improvement', description: "Slimmed down config.toml by removing entries for deleted functions" },
+    ],
+  },
+  {
     version: "1.1.110",
     date: "2026-03-20",
     changes: [
