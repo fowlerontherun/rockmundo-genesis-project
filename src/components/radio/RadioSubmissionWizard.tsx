@@ -136,6 +136,23 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   });
 
   // Fetch existing submissions
+  const { data: countryFame = [] } = useQuery({
+    queryKey: ["band-country-fame-wizard", bandId, visitedCountries],
+    queryFn: async () => {
+      if (!bandId || visitedCountries.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("band_country_fans")
+        .select("country, fame")
+        .eq("band_id", bandId)
+        .in("country", visitedCountries);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!bandId && visitedCountries.length > 0,
+  });
+
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
     queryFn: async () => {
@@ -165,6 +182,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     if (!selectedSong || !band) return [];
     
     const cityFanMap = new Set(cityFans.map(cf => cf.city_id));
+    const countryFameMap = new Map(countryFame.map((entry) => [entry.country, entry.fame || 0]));
     
     return stations.map(station => {
       const reasons: string[] = [];
@@ -191,10 +209,11 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         reasons.push(`Need ${station.min_fans_required} fans`);
       }
 
-      // Check fame requirement
-      if ((station.min_fame_required || 0) > (band.fame || 0)) {
+      // Check regional fame requirement
+      const stationCountryFame = countryFameMap.get(station.country) || 0;
+      if ((station.min_fame_required || 0) > stationCountryFame) {
         isEligible = false;
-        reasons.push(`Need ${station.min_fame_required} fame`);
+        reasons.push(`Need ${station.min_fame_required} fame in ${station.country}`);
       }
 
       // Check local presence for local stations
@@ -218,7 +237,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         eligibilityReason: reasons.join(", "),
       };
     });
-  }, [selectedSong, band, stations, cityFans, existingSubmissions]);
+  }, [selectedSong, band, stations, cityFans, countryFame, existingSubmissions]);
 
   const eligibleCount = eligibleStations.filter(s => s.isEligible).length;
 
