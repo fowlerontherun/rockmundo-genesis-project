@@ -3,18 +3,26 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
-const STORAGE_KEY = "video_watch_history";
+const STORAGE_KEY_PREFIX = "video_watch_history_";
 const MAX_VIDEOS = 2;
 const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const XP_PER_VIDEO = 15;
+
+// Keep a module-level profileId for the cooldown helper
+let _activeProfileId: string | null = null;
 
 interface WatchHistory {
   timestamps: number[];
 }
 
-const getWatchHistory = (): WatchHistory => {
+const getStorageKey = (profileId?: string | null): string => {
+  const id = profileId || _activeProfileId || "default";
+  return `${STORAGE_KEY_PREFIX}${id}`;
+};
+
+const getWatchHistory = (profileId?: string | null): WatchHistory => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(getStorageKey(profileId));
     if (!stored) return { timestamps: [] };
     return JSON.parse(stored);
   } catch {
@@ -22,12 +30,13 @@ const getWatchHistory = (): WatchHistory => {
   }
 };
 
-const saveWatchHistory = (history: WatchHistory) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+const saveWatchHistory = (history: WatchHistory, profileId?: string | null) => {
+  localStorage.setItem(getStorageKey(profileId), JSON.stringify(history));
 };
 
-export const getCooldownStatus = () => {
-  const history = getWatchHistory();
+
+export const getCooldownStatus = (profileId?: string | null) => {
+  const history = getWatchHistory(profileId);
   const now = Date.now();
   
   // Filter out timestamps older than cooldown period
@@ -37,7 +46,7 @@ export const getCooldownStatus = () => {
   
   // Update storage if we filtered some out
   if (recentTimestamps.length !== history.timestamps.length) {
-    saveWatchHistory({ timestamps: recentTimestamps });
+    saveWatchHistory({ timestamps: recentTimestamps }, profileId);
   }
   
   const videosWatched = recentTimestamps.length;
@@ -45,7 +54,6 @@ export const getCooldownStatus = () => {
   
   let cooldownEndsAt: Date | null = null;
   if (!canWatch && recentTimestamps.length > 0) {
-    // Cooldown ends when the oldest recent timestamp expires
     const oldestTimestamp = Math.min(...recentTimestamps);
     cooldownEndsAt = new Date(oldestTimestamp + COOLDOWN_MS);
   }
@@ -69,9 +77,12 @@ export const useWatchVideo = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   
+  // Keep module-level profileId in sync for getCooldownStatus calls outside this hook
+  _activeProfileId = profileId;
+  
   return useMutation({
     mutationFn: async ({ videoId, videoName, skillSlug }: WatchVideoInput) => {
-      const status = getCooldownStatus();
+      const status = getCooldownStatus(profileId);
       
       if (!status.canWatch) {
         throw new Error("cooldown");
@@ -156,10 +167,10 @@ export const useWatchVideo = () => {
         metadata: { video_id: videoId, video_name: videoName },
       });
       
-      // Record watch timestamp
-      const history = getWatchHistory();
+      // Record watch timestamp per profile
+      const history = getWatchHistory(profileId);
       history.timestamps.push(Date.now());
-      saveWatchHistory(history);
+      saveWatchHistory(history, profileId);
       
       return { xpEarned: XP_PER_VIDEO, skillSlug };
     },
@@ -174,7 +185,7 @@ export const useWatchVideo = () => {
     },
     onError: (error: Error) => {
       if (error.message === "cooldown") {
-        const status = getCooldownStatus();
+        const status = getCooldownStatus(profileId);
         const timeLeft = status.cooldownEndsAt
           ? Math.ceil((status.cooldownEndsAt.getTime() - Date.now()) / 60000)
           : 0;
