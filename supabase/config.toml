@@ -3,18 +3,6 @@ project_id = "yztogmdixmchsmimtent"
 [functions.complete-jam-session]
 verify_jwt = true
 
-[functions.generate-jam-commentary]
-verify_jwt = false
-
-[functions.promotions]
-verify_jwt = false
-
-[functions."auto-start-gigs"]
-verify_jwt = false
-
-[functions.progression]
-verify_jwt = false
-
 [functions.book-reading-attendance]
 verify_jwt = false
 
@@ -93,9 +81,6 @@ verify_jwt = false
 [functions.simulate-video-views]
 verify_jwt = false
 
-[functions.cleanup-song-generation]
-verify_jwt = false
-
 [functions.admin-generate-extended-audio]
 verify_jwt = true
 
@@ -111,9 +96,6 @@ verify_jwt = false
 [functions.choose-event-option]
 verify_jwt = true
 
-[functions.check-player-debt]
-verify_jwt = false
-
 [functions.release-prisoners]
 verify_jwt = false
 
@@ -123,16 +105,10 @@ verify_jwt = false
 [functions.pay-bail]
 verify_jwt = true
 
-[functions.community-service-check]
-verify_jwt = false
-
 [functions.choose-prison-event]
 verify_jwt = true
 
 [functions.complete-travel]
-verify_jwt = false
-
-[functions.auto-clock-in-shifts]
 verify_jwt = false
 
 [functions.process-open-mic-song]
@@ -153,9 +129,6 @@ verify_jwt = false
 [functions.process-demo-review]
 verify_jwt = false
 
-[functions.process-media-submissions]
-verify_jwt = false
-
 [functions.generate-radio-content-audio]
 verify_jwt = false
 
@@ -172,24 +145,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.process-company-payroll]
-verify_jwt = false
-
-[functions.process-company-operations]
-verify_jwt = false
-
-[functions.process-venue-bookings]
-verify_jwt = false
-
-[functions.process-studio-bookings]
-verify_jwt = false
-
-[functions.process-logistics-contracts]
-verify_jwt = false
-
-[functions.check-company-bankruptcy]
-verify_jwt = false
-
-[functions.generate-company-reports]
 verify_jwt = false
 
 [functions.process-tour-travel]
@@ -216,9 +171,6 @@ verify_jwt = false
 [functions.replicate-webhook]
 verify_jwt = false
 
-[functions.simulate-crypto-market]
-verify_jwt = false
-
 [functions.lottery-draw]
 verify_jwt = false
 
@@ -231,29 +183,20 @@ verify_jwt = false
 [functions.generate-merch-image]
 verify_jwt = false
 
-[functions.relationship-decay]
-verify_jwt = false
-
 [functions.simulate-merch-sales]
 verify_jwt = false
 
-[functions.stage-practice-sfx]
+[functions.progression]
 verify_jwt = false
 
-[functions.stage-practice-music]
-verify_jwt = false
-
-[functions.process-teaching-sessions]
-verify_jwt = false
-
-[functions.generate-hub-image]
-verify_jwt = false
-
-[functions.check-character-health-decay]
+[functions."auto-start-gigs"]
 verify_jwt = false
 
 [functions.create-slot-checkout]
 verify_jwt = false
 
 [functions.fulfill-slot-purchase]
+verify_jwt = false
+
+[functions.check-character-health-decay]
 verify_jwt = false
