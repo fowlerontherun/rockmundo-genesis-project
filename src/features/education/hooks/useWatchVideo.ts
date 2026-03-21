@@ -35,6 +35,7 @@ const saveWatchHistory = (history: WatchHistory, profileId?: string | null) => {
 };
 
 
+export const getCooldownStatus = (profileId?: string | null) => {
   const history = getWatchHistory(profileId);
   const now = Date.now();
   
