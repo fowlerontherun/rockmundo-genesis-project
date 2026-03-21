@@ -3,27 +3,31 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
-const STORAGE_KEY = "video_watch_history";
+const STORAGE_KEY_PREFIX = "video_watch_history_";
 const MAX_VIDEOS = 2;
 const COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const XP_PER_VIDEO = 15;
+
+// Keep a module-level profileId for the cooldown helper
+let _activeProfileId: string | null = null;
 
 interface WatchHistory {
   timestamps: number[];
 }
 
-const getWatchHistory = (): WatchHistory => {
+const getStorageKey = (profileId?: string | null): string => {
+  const id = profileId || _activeProfileId || "default";
+  return `${STORAGE_KEY_PREFIX}${id}`;
+};
+
+const getWatchHistory = (profileId?: string | null): WatchHistory => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(getStorageKey(profileId));
     if (!stored) return { timestamps: [] };
     return JSON.parse(stored);
   } catch {
     return { timestamps: [] };
   }
-};
-
-const saveWatchHistory = (history: WatchHistory) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
 };
 
 export const getCooldownStatus = () => {
