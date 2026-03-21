@@ -72,9 +72,12 @@ export const useWatchVideo = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   
+  // Keep module-level profileId in sync for getCooldownStatus calls outside this hook
+  _activeProfileId = profileId;
+  
   return useMutation({
     mutationFn: async ({ videoId, videoName, skillSlug }: WatchVideoInput) => {
-      const status = getCooldownStatus();
+      const status = getCooldownStatus(profileId);
       
       if (!status.canWatch) {
         throw new Error("cooldown");
