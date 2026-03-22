@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.114",
+    date: "2026-03-22",
+    changes: [
+      { type: 'improvement', description: "All business upgrade types now support up to 20 levels (previously 3-5) — Rehearsal Studios, Recording Studios, Venues, Merch Factories, Security Firms, and Logistics Companies" },
+      { type: 'improvement', description: "Upgrade costs now scale dynamically using a 1.5x multiplier per level instead of hardcoded arrays" },
+      { type: 'improvement', description: "Venue and Logistics upgrades now support multi-level progression instead of binary on/off" },
+    ],
+  },
+  {
     version: "1.1.113",
     date: "2026-03-22",
     changes: [
