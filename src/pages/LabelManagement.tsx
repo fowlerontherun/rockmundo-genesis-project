@@ -194,6 +194,10 @@ export default function LabelManagement() {
             <LabelReleasesTab labelId={label.id} />
           </TabsContent>
 
+          <TabsContent value="marketing">
+            <LabelMarketingBudgetCard labelId={label.id} labelBalance={label.balance} />
+          </TabsContent>
+
           <TabsContent value="staff">
             <LabelStaffTab labelId={label.id} labelBalance={label.balance} />
           </TabsContent>
