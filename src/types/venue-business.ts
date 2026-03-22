@@ -81,15 +81,15 @@ export const VENUE_STAFF_ROLES = [
 ] as const;
 
 export const VENUE_UPGRADE_TYPES = [
-  { value: 'sound_system', label: 'Sound System', baseCost: 25000, description: 'Improve audio quality' },
-  { value: 'lighting', label: 'Lighting Rig', baseCost: 15000, description: 'Better stage lighting' },
-  { value: 'capacity', label: 'Capacity Expansion', baseCost: 100000, description: 'Increase venue capacity' },
-  { value: 'backstage', label: 'Backstage Area', baseCost: 20000, description: 'Upgrade artist facilities' },
-  { value: 'bar', label: 'Bar Expansion', baseCost: 30000, description: 'Larger bar, more revenue' },
-  { value: 'parking', label: 'Parking Lot', baseCost: 50000, description: 'Add parking spaces' },
-  { value: 'green_room', label: 'Green Room', baseCost: 15000, description: 'Artist waiting area' },
-  { value: 'recording', label: 'Recording Setup', baseCost: 40000, description: 'Live recording capability' },
-  { value: 'security', label: 'Security System', baseCost: 10000, description: 'Cameras and access control' },
+  { value: 'sound_system', label: 'Sound System', baseCost: 25000, maxLevel: 20, description: 'Improve audio quality' },
+  { value: 'lighting', label: 'Lighting Rig', baseCost: 15000, maxLevel: 20, description: 'Better stage lighting' },
+  { value: 'capacity', label: 'Capacity Expansion', baseCost: 100000, maxLevel: 20, description: 'Increase venue capacity' },
+  { value: 'backstage', label: 'Backstage Area', baseCost: 20000, maxLevel: 20, description: 'Upgrade artist facilities' },
+  { value: 'bar', label: 'Bar Expansion', baseCost: 30000, maxLevel: 20, description: 'Larger bar, more revenue' },
+  { value: 'parking', label: 'Parking Lot', baseCost: 50000, maxLevel: 20, description: 'Add parking spaces' },
+  { value: 'green_room', label: 'Green Room', baseCost: 15000, maxLevel: 20, description: 'Artist waiting area' },
+  { value: 'recording', label: 'Recording Setup', baseCost: 40000, maxLevel: 20, description: 'Live recording capability' },
+  { value: 'security', label: 'Security System', baseCost: 10000, maxLevel: 20, description: 'Cameras and access control' },
 ] as const;
 
 export const BOOKING_TYPES = [
