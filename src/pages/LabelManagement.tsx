@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown } from "lucide-react";
+import { ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { VipGate } from "@/components/company/VipGate";
 import { LabelRosterTab } from "@/components/labels/management/LabelRosterTab";
