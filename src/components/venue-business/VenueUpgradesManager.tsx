@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wrench, Plus, Check } from "lucide-react";
+import { Wrench, Plus, ArrowUp, Check } from "lucide-react";
 import { useVenueUpgrades, useInstallVenueUpgrade } from "@/hooks/useVenueBusiness";
 import { VENUE_UPGRADE_TYPES } from "@/types/venue-business";
 import { formatDistanceToNow } from "date-fns";
@@ -12,19 +12,31 @@ interface VenueUpgradesManagerProps {
   venueId: string;
 }
 
+function getUpgradeCost(baseCost: number, level: number): number {
+  return Math.round(baseCost * Math.pow(1.5, level - 1));
+}
+
 export function VenueUpgradesManager({ venueId }: VenueUpgradesManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   const { data: upgrades, isLoading } = useVenueUpgrades(venueId);
   const installUpgrade = useInstallVenueUpgrade();
   
-  const installedTypes = upgrades?.map(u => u.upgrade_type) || [];
+  const getUpgradeLevel = (upgradeType: string) => {
+    const matching = upgrades?.filter(u => u.upgrade_type === upgradeType) || [];
+    return matching.length > 0 ? Math.max(...matching.map(u => u.upgrade_level)) : 0;
+  };
   
-  const handleInstall = async (upgradeType: string, cost: number) => {
+  const handleInstall = async (upgradeType: string, baseCost: number, maxLevel: number) => {
+    const currentLevel = getUpgradeLevel(upgradeType);
+    const nextLevel = currentLevel + 1;
+    if (nextLevel > maxLevel) return;
+    
+    const cost = getUpgradeCost(baseCost, nextLevel);
     await installUpgrade.mutateAsync({
       venue_id: venueId,
       upgrade_type: upgradeType,
-      upgrade_level: 1,
+      upgrade_level: nextLevel,
       cost: cost,
     });
     setDialogOpen(false);
@@ -54,36 +66,43 @@ export function VenueUpgradesManager({ venueId }: VenueUpgradesManagerProps) {
             </DialogHeader>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {VENUE_UPGRADE_TYPES.map((upgrade) => {
-                const isInstalled = installedTypes.includes(upgrade.value);
+                const currentLevel = getUpgradeLevel(upgrade.value);
+                const nextLevel = currentLevel + 1;
+                const isMaxed = nextLevel > upgrade.maxLevel;
+                const cost = isMaxed ? 0 : getUpgradeCost(upgrade.baseCost, nextLevel);
                 return (
                   <div 
                     key={upgrade.value}
-                    className={`p-3 rounded-lg border ${isInstalled ? 'bg-muted/50 border-primary/50' : 'hover:border-primary/50'}`}
+                    className={`p-3 rounded-lg border ${isMaxed ? 'bg-muted/50 opacity-50' : 'hover:border-primary/50'}`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{upgrade.label}</span>
-                          {isInstalled && (
+                          {isMaxed && (
                             <Badge variant="default" className="text-xs">
                               <Check className="h-3 w-3 mr-1" />
-                              Installed
+                              MAX
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{upgrade.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Level {currentLevel}/{upgrade.maxLevel}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-warning">${upgrade.baseCost.toLocaleString()}</p>
-                        {!isInstalled && (
-                          <Button 
-                            size="sm" 
-                            className="mt-1"
-                            onClick={() => handleInstall(upgrade.value, upgrade.baseCost)}
-                            disabled={installUpgrade.isPending}
-                          >
-                            Install
-                          </Button>
+                        {!isMaxed && (
+                          <>
+                            <p className="font-bold text-warning">${cost.toLocaleString()}</p>
+                            <Button 
+                              size="sm" 
+                              className="mt-1"
+                              onClick={() => handleInstall(upgrade.value, upgrade.baseCost, upgrade.maxLevel)}
+                              disabled={installUpgrade.isPending}
+                            >
+                              <ArrowUp className="h-4 w-4 mr-1" />
+                              Lvl {nextLevel}
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -103,25 +122,26 @@ export function VenueUpgradesManager({ venueId }: VenueUpgradesManagerProps) {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {upgrades?.map((upgrade) => {
-              const typeInfo = VENUE_UPGRADE_TYPES.find(t => t.value === upgrade.upgrade_type);
+            {VENUE_UPGRADE_TYPES.map((upgradeType) => {
+              const currentLevel = getUpgradeLevel(upgradeType.value);
+              if (currentLevel === 0) return null;
               return (
                 <div 
-                  key={upgrade.id}
+                  key={upgradeType.value}
                   className="p-3 rounded-lg border bg-primary/5 border-primary/20"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{typeInfo?.label || upgrade.upgrade_type}</p>
+                      <p className="font-medium">{upgradeType.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        Installed {formatDistanceToNow(new Date(upgrade.installed_at), { addSuffix: true })}
+                        +{currentLevel * 5}% Quality
                       </p>
                     </div>
-                    <Badge>Level {upgrade.upgrade_level}</Badge>
+                    <Badge>Level {currentLevel}</Badge>
                   </div>
                 </div>
               );
-            })}
+            }).filter(Boolean)}
           </div>
         )}
       </CardContent>
