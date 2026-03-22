@@ -132,12 +132,12 @@ export default function LabelManagement() {
         </div>
 
         <Tabs defaultValue="roster" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="roster" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="roster" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Roster</span>
             </TabsTrigger>
-            <TabsTrigger value="demos" className="flex items-center gap-2">
+            <TabsTrigger value="demos" className="flex items-center gap-1">
               <Music className="h-4 w-4" />
               <span className="hidden sm:inline">Demos</span>
               {pendingDemoCount > 0 && (
@@ -146,7 +146,7 @@ export default function LabelManagement() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <TabsTrigger value="contracts" className="flex items-center gap-1">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Contracts</span>
               {pendingContractCount > 0 && (
@@ -155,15 +155,19 @@ export default function LabelManagement() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="releases" className="flex items-center gap-2">
+            <TabsTrigger value="releases" className="flex items-center gap-1">
               <Disc className="h-4 w-4" />
               <span className="hidden sm:inline">Releases</span>
             </TabsTrigger>
-            <TabsTrigger value="staff" className="flex items-center gap-2">
+            <TabsTrigger value="marketing" className="flex items-center gap-1">
+              <Megaphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Marketing</span>
+            </TabsTrigger>
+            <TabsTrigger value="staff" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Staff</span>
             </TabsTrigger>
-            <TabsTrigger value="finances" className="flex items-center gap-2">
+            <TabsTrigger value="finances" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Finances</span>
             </TabsTrigger>
