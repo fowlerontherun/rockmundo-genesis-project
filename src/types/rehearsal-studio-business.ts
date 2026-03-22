@@ -87,13 +87,13 @@ export const STAFF_ROLES = [
 ] as const;
 
 export const UPGRADE_TYPES = [
-  { value: 'soundproofing', label: 'Soundproofing', icon: '🔇', maxLevel: 5 },
-  { value: 'equipment', label: 'Equipment Quality', icon: '🎸', maxLevel: 5 },
-  { value: 'recording_gear', label: 'Recording Gear', icon: '🎙️', maxLevel: 5 },
-  { value: 'climate_control', label: 'Climate Control', icon: '❄️', maxLevel: 5 },
-  { value: 'lounge_area', label: 'Lounge Area', icon: '🛋️', maxLevel: 5 },
-  { value: 'storage', label: 'Storage Space', icon: '📦', maxLevel: 5 },
-  { value: 'lighting', label: 'Stage Lighting', icon: '💡', maxLevel: 5 },
+  { value: 'soundproofing', label: 'Soundproofing', icon: '🔇', maxLevel: 20 },
+  { value: 'equipment', label: 'Equipment Quality', icon: '🎸', maxLevel: 20 },
+  { value: 'recording_gear', label: 'Recording Gear', icon: '🎙️', maxLevel: 20 },
+  { value: 'climate_control', label: 'Climate Control', icon: '❄️', maxLevel: 20 },
+  { value: 'lounge_area', label: 'Lounge Area', icon: '🛋️', maxLevel: 20 },
+  { value: 'storage', label: 'Storage Space', icon: '📦', maxLevel: 20 },
+  { value: 'lighting', label: 'Stage Lighting', icon: '💡', maxLevel: 20 },
 ] as const;
 
 export const EQUIPMENT_TYPES = [

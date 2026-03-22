@@ -94,15 +94,15 @@ export const STUDIO_STAFF_ROLES = [
 ] as const;
 
 export const STUDIO_UPGRADE_TYPES = [
-  { value: 'console', label: 'Mixing Console', icon: '🎛️', maxLevel: 5 },
-  { value: 'monitors', label: 'Studio Monitors', icon: '🔊', maxLevel: 5 },
-  { value: 'microphones', label: 'Microphone Collection', icon: '🎤', maxLevel: 5 },
-  { value: 'preamps', label: 'Preamps & Channel Strips', icon: '🎚️', maxLevel: 5 },
-  { value: 'outboard_gear', label: 'Outboard Gear', icon: '📻', maxLevel: 5 },
-  { value: 'live_room', label: 'Live Room Acoustics', icon: '🏠', maxLevel: 5 },
-  { value: 'isolation_booth', label: 'Isolation Booths', icon: '🚪', maxLevel: 5 },
-  { value: 'control_room', label: 'Control Room', icon: '🎬', maxLevel: 5 },
-  { value: 'mastering_suite', label: 'Mastering Suite', icon: '💿', maxLevel: 5 },
+  { value: 'console', label: 'Mixing Console', icon: '🎛️', maxLevel: 20 },
+  { value: 'monitors', label: 'Studio Monitors', icon: '🔊', maxLevel: 20 },
+  { value: 'microphones', label: 'Microphone Collection', icon: '🎤', maxLevel: 20 },
+  { value: 'preamps', label: 'Preamps & Channel Strips', icon: '🎚️', maxLevel: 20 },
+  { value: 'outboard_gear', label: 'Outboard Gear', icon: '📻', maxLevel: 20 },
+  { value: 'live_room', label: 'Live Room Acoustics', icon: '🏠', maxLevel: 20 },
+  { value: 'isolation_booth', label: 'Isolation Booths', icon: '🚪', maxLevel: 20 },
+  { value: 'control_room', label: 'Control Room', icon: '🎬', maxLevel: 20 },
+  { value: 'mastering_suite', label: 'Mastering Suite', icon: '💿', maxLevel: 20 },
 ] as const;
 
 export const STUDIO_EQUIPMENT_TYPES = [
