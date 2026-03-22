@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.113",
+    date: "2026-03-22",
+    changes: [
+      { type: 'fix', description: "Fixed label staff hiring — now properly deducts hiring cost from label balance with affordability checks" },
+      { type: 'feature', description: "Added weekly marketing budget system for labels — set a budget that auto-promotes signed artists' releases daily, building hype" },
+      { type: 'feature', description: "New Marketing tab in label management for configuring weekly marketing spend" },
+      { type: 'improvement', description: "Staff hiring now shows cost preview, balance display, and insufficient funds warnings" },
+      { type: 'improvement', description: "Daily sales cron now processes label marketing budgets — deducts spend and boosts hype for recent/upcoming releases" },
+    ],
+  },
+  {
     version: "1.1.112",
     date: "2026-03-21",
     changes: [

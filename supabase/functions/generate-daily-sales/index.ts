@@ -751,6 +751,104 @@ serve(async (req) => {
     }
     console.log(`Credited ${labelsCredited} labels with royalty revenue`);
 
+    // ── Label Daily Marketing Budget → Hype Boost ──
+    // Labels with a weekly_marketing_budget automatically promote releases of signed artists
+    let labelsMarketingProcessed = 0;
+    try {
+      const { data: labelsWithBudget } = await supabaseClient
+        .from("labels")
+        .select("id, weekly_marketing_budget, balance")
+        .gt("weekly_marketing_budget", 0)
+        .eq("is_bankrupt", false);
+
+      if (labelsWithBudget && labelsWithBudget.length > 0) {
+        for (const lbl of labelsWithBudget) {
+          try {
+            const weeklyBudget = (lbl as any).weekly_marketing_budget || 0;
+            const dailySpend = Math.round(weeklyBudget / 7);
+            if (dailySpend <= 0) continue;
+
+            // Check if label can afford
+            if ((lbl.balance || 0) < dailySpend) {
+              console.log(`Label ${lbl.id} cannot afford daily marketing spend of $${dailySpend}`);
+              continue;
+            }
+
+            // Find active contracts for this label
+            const { data: activeContracts } = await supabaseClient
+              .from("artist_label_contracts")
+              .select("id, band_id, artist_profile_id")
+              .eq("label_id", lbl.id)
+              .eq("status", "active");
+
+            if (!activeContracts || activeContracts.length === 0) continue;
+
+            // Find releases from signed artists (released within last 60 days or upcoming)
+            const bandIds = activeContracts.map(c => c.band_id).filter(Boolean);
+            if (bandIds.length === 0) continue;
+
+            const { data: eligibleReleases } = await supabaseClient
+              .from("releases")
+              .select("id, hype_score, band_id, release_status, manufacturing_complete_at")
+              .in("band_id", bandIds)
+              .in("release_status", ["released", "manufacturing"]);
+
+            if (!eligibleReleases || eligibleReleases.length === 0) continue;
+
+            // Filter: only releases within 90 days of manufacturing completion (or still manufacturing)
+            const now = Date.now();
+            const recentReleases = eligibleReleases.filter(r => {
+              if (r.release_status === "manufacturing") return true;
+              if (r.manufacturing_complete_at) {
+                const daysSince = (now - new Date(r.manufacturing_complete_at).getTime()) / (1000 * 60 * 60 * 24);
+                return daysSince <= 90;
+              }
+              return false;
+            });
+
+            if (recentReleases.length === 0) continue;
+
+            // Distribute daily spend across eligible releases
+            const perReleaseSpend = dailySpend / recentReleases.length;
+            // Hype gained: $100 spend = ~1 hype point, diminishing returns
+            const hypePerRelease = Math.min(50, Math.round(Math.sqrt(perReleaseSpend / 10)));
+
+            for (const rel of recentReleases) {
+              const currentHype = (rel as any).hype_score || 0;
+              const newHype = Math.min(1000, currentHype + hypePerRelease);
+              await supabaseClient.from("releases")
+                .update({ hype_score: newHype } as any)
+                .eq("id", rel.id);
+            }
+
+            // Deduct from label balance
+            await supabaseClient
+              .from("labels")
+              .update({ balance: (lbl.balance || 0) - dailySpend })
+              .eq("id", lbl.id);
+
+            // Record transaction
+            await supabaseClient.from("label_financial_transactions").insert({
+              label_id: lbl.id,
+              transaction_type: "marketing",
+              amount: dailySpend,
+              description: `Daily marketing spend: ${recentReleases.length} releases boosted (+${hypePerRelease} hype each)`,
+            });
+
+            labelsMarketingProcessed++;
+            console.log(`Label ${lbl.id}: spent $${dailySpend} marketing ${recentReleases.length} releases (+${hypePerRelease} hype each)`);
+          } catch (labelMarketError) {
+            console.error(`Error processing marketing for label ${lbl.id}:`, labelMarketError);
+            errorCount++;
+          }
+        }
+      }
+    } catch (marketingError) {
+      console.error("Error processing label marketing budgets:", marketingError);
+      errorCount++;
+    }
+    console.log(`Processed marketing for ${labelsMarketingProcessed} labels`);
+
     await completeJobRun({
       jobName: "generate-daily-sales",
       runId,
