@@ -1,0 +1,1 @@
+ALTER TABLE public.labels ADD COLUMN IF NOT EXISTS weekly_marketing_budget numeric DEFAULT 0;

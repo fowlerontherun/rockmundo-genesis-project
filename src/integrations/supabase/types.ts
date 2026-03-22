@@ -11588,6 +11588,7 @@ export type Database = {
           total_expenses_lifetime: number | null
           total_revenue_lifetime: number | null
           updated_at: string | null
+          weekly_marketing_budget: number | null
         }
         Insert: {
           a_and_r_budget?: number | null
@@ -11619,6 +11620,7 @@ export type Database = {
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
+          weekly_marketing_budget?: number | null
         }
         Update: {
           a_and_r_budget?: number | null
@@ -11650,6 +11652,7 @@ export type Database = {
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
+          weekly_marketing_budget?: number | null
         }
         Relationships: [
           {

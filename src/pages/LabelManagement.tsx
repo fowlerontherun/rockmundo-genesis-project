@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown } from "lucide-react";
+import { ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { VipGate } from "@/components/company/VipGate";
 import { LabelRosterTab } from "@/components/labels/management/LabelRosterTab";
@@ -12,6 +12,7 @@ import { LabelContractsTab } from "@/components/labels/management/LabelContracts
 import { LabelReleasesTab } from "@/components/labels/management/LabelReleasesTab";
 import { LabelStaffTab } from "@/components/labels/management/LabelStaffTab";
 import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab";
+import { LabelMarketingBudgetCard } from "@/components/labels/management/LabelMarketingBudgetCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
@@ -131,12 +132,12 @@ export default function LabelManagement() {
         </div>
 
         <Tabs defaultValue="roster" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="roster" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="roster" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Roster</span>
             </TabsTrigger>
-            <TabsTrigger value="demos" className="flex items-center gap-2">
+            <TabsTrigger value="demos" className="flex items-center gap-1">
               <Music className="h-4 w-4" />
               <span className="hidden sm:inline">Demos</span>
               {pendingDemoCount > 0 && (
@@ -145,7 +146,7 @@ export default function LabelManagement() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <TabsTrigger value="contracts" className="flex items-center gap-1">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Contracts</span>
               {pendingContractCount > 0 && (
@@ -154,15 +155,19 @@ export default function LabelManagement() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="releases" className="flex items-center gap-2">
+            <TabsTrigger value="releases" className="flex items-center gap-1">
               <Disc className="h-4 w-4" />
               <span className="hidden sm:inline">Releases</span>
             </TabsTrigger>
-            <TabsTrigger value="staff" className="flex items-center gap-2">
+            <TabsTrigger value="marketing" className="flex items-center gap-1">
+              <Megaphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Marketing</span>
+            </TabsTrigger>
+            <TabsTrigger value="staff" className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Staff</span>
             </TabsTrigger>
-            <TabsTrigger value="finances" className="flex items-center gap-2">
+            <TabsTrigger value="finances" className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Finances</span>
             </TabsTrigger>
@@ -187,6 +192,10 @@ export default function LabelManagement() {
 
           <TabsContent value="releases">
             <LabelReleasesTab labelId={label.id} />
+          </TabsContent>
+
+          <TabsContent value="marketing">
+            <LabelMarketingBudgetCard labelId={label.id} labelBalance={label.balance} />
           </TabsContent>
 
           <TabsContent value="staff">
