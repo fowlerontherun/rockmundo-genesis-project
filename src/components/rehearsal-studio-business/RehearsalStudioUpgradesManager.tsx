@@ -11,15 +11,20 @@ interface RehearsalStudioUpgradesManagerProps {
   roomId: string;
 }
 
-const UPGRADE_COSTS: Record<string, number[]> = {
-  soundproofing: [5000, 10000, 20000, 40000, 80000],
-  equipment: [3000, 6000, 12000, 25000, 50000],
-  recording_gear: [8000, 15000, 30000, 60000, 120000],
-  climate_control: [2000, 4000, 8000, 15000, 30000],
-  lounge_area: [2500, 5000, 10000, 20000, 40000],
-  storage: [1500, 3000, 6000, 12000, 24000],
-  lighting: [3000, 6000, 12000, 25000, 50000],
+const BASE_COSTS: Record<string, number> = {
+  soundproofing: 5000,
+  equipment: 3000,
+  recording_gear: 8000,
+  climate_control: 2000,
+  lounge_area: 2500,
+  storage: 1500,
+  lighting: 3000,
 };
+
+function getUpgradeCost(upgradeType: string, level: number): number {
+  const base = BASE_COSTS[upgradeType] || 5000;
+  return Math.round(base * Math.pow(1.5, level - 1));
+}
 
 export function RehearsalStudioUpgradesManager({ roomId }: RehearsalStudioUpgradesManagerProps) {
   const { data: upgrades, isLoading } = useRehearsalRoomUpgrades(roomId);
@@ -34,9 +39,10 @@ export function RehearsalStudioUpgradesManager({ roomId }: RehearsalStudioUpgrad
   const handleInstall = async (upgradeType: string) => {
     const currentLevel = getUpgradeLevel(upgradeType);
     const nextLevel = currentLevel + 1;
-    if (nextLevel > 5) return;
+    const maxLevel = UPGRADE_TYPES.find(t => t.value === upgradeType)?.maxLevel || 20;
+    if (nextLevel > maxLevel) return;
 
-    const cost = UPGRADE_COSTS[upgradeType][nextLevel - 1];
+    const cost = getUpgradeCost(upgradeType, nextLevel);
     const upgradeInfo = UPGRADE_TYPES.find(t => t.value === upgradeType);
 
     await installUpgrade.mutateAsync({
@@ -74,8 +80,8 @@ export function RehearsalStudioUpgradesManager({ roomId }: RehearsalStudioUpgrad
                 {UPGRADE_TYPES.map((type) => {
                   const currentLevel = getUpgradeLevel(type.value);
                   const nextLevel = currentLevel + 1;
-                  const isMaxed = nextLevel > 5;
-                  const cost = isMaxed ? 0 : UPGRADE_COSTS[type.value][nextLevel - 1];
+                  const isMaxed = nextLevel > type.maxLevel;
+                  const cost = isMaxed ? 0 : getUpgradeCost(type.value, nextLevel);
 
                   return (
                     <div
@@ -93,12 +99,11 @@ export function RehearsalStudioUpgradesManager({ roomId }: RehearsalStudioUpgrad
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {/* Level indicators */}
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((lvl) => (
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: type.maxLevel }, (_, i) => i + 1).map((lvl) => (
                               <div
                                 key={lvl}
-                                className={`w-2 h-4 rounded-sm ${
+                                className={`w-1.5 h-3 rounded-sm ${
                                   lvl <= currentLevel
                                     ? 'bg-primary'
                                     : 'bg-muted'
