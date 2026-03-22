@@ -82,8 +82,8 @@ export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgr
                 {STUDIO_UPGRADE_TYPES.map((type) => {
                   const currentLevel = getUpgradeLevel(type.value);
                   const nextLevel = currentLevel + 1;
-                  const isMaxed = nextLevel > 5;
-                  const cost = isMaxed ? 0 : UPGRADE_COSTS[type.value][nextLevel - 1];
+                  const isMaxed = nextLevel > type.maxLevel;
+                  const cost = isMaxed ? 0 : getUpgradeCost(type.value, nextLevel);
 
                   return (
                     <div
