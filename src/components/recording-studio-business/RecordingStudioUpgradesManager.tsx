@@ -100,11 +100,11 @@ export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgr
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((lvl) => (
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: type.maxLevel }, (_, i) => i + 1).map((lvl) => (
                             <div
                               key={lvl}
-                              className={`w-2 h-4 rounded-sm ${
+                              className={`w-1.5 h-3 rounded-sm ${
                                 lvl <= currentLevel ? 'bg-primary' : 'bg-muted'
                               }`}
                             />
