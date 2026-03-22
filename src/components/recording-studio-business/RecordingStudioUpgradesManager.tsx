@@ -41,9 +41,10 @@ export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgr
   const handleInstall = async (upgradeType: string) => {
     const currentLevel = getUpgradeLevel(upgradeType);
     const nextLevel = currentLevel + 1;
-    if (nextLevel > 5) return;
+    const maxLevel = STUDIO_UPGRADE_TYPES.find(t => t.value === upgradeType)?.maxLevel || 20;
+    if (nextLevel > maxLevel) return;
 
-    const cost = UPGRADE_COSTS[upgradeType][nextLevel - 1];
+    const cost = getUpgradeCost(upgradeType, nextLevel);
     const upgradeInfo = STUDIO_UPGRADE_TYPES.find(t => t.value === upgradeType);
 
     await installUpgrade.mutateAsync({
