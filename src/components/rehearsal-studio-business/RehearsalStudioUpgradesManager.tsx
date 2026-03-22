@@ -11,15 +11,20 @@ interface RehearsalStudioUpgradesManagerProps {
   roomId: string;
 }
 
-const UPGRADE_COSTS: Record<string, number[]> = {
-  soundproofing: [5000, 10000, 20000, 40000, 80000],
-  equipment: [3000, 6000, 12000, 25000, 50000],
-  recording_gear: [8000, 15000, 30000, 60000, 120000],
-  climate_control: [2000, 4000, 8000, 15000, 30000],
-  lounge_area: [2500, 5000, 10000, 20000, 40000],
-  storage: [1500, 3000, 6000, 12000, 24000],
-  lighting: [3000, 6000, 12000, 25000, 50000],
+const BASE_COSTS: Record<string, number> = {
+  soundproofing: 5000,
+  equipment: 3000,
+  recording_gear: 8000,
+  climate_control: 2000,
+  lounge_area: 2500,
+  storage: 1500,
+  lighting: 3000,
 };
+
+function getUpgradeCost(upgradeType: string, level: number): number {
+  const base = BASE_COSTS[upgradeType] || 5000;
+  return Math.round(base * Math.pow(1.5, level - 1));
+}
 
 export function RehearsalStudioUpgradesManager({ roomId }: RehearsalStudioUpgradesManagerProps) {
   const { data: upgrades, isLoading } = useRehearsalRoomUpgrades(roomId);
