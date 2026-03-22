@@ -12,6 +12,7 @@ import { LabelContractsTab } from "@/components/labels/management/LabelContracts
 import { LabelReleasesTab } from "@/components/labels/management/LabelReleasesTab";
 import { LabelStaffTab } from "@/components/labels/management/LabelStaffTab";
 import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab";
+import { LabelMarketingBudgetCard } from "@/components/labels/management/LabelMarketingBudgetCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
