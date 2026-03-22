@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, UserPlus, UserMinus, Star, DollarSign } from "lucide-react";
+import { Users, UserPlus, UserMinus, Star, DollarSign, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { STAFF_ROLES } from "@/types/label-business";
@@ -35,6 +35,22 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
   const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState<string>("");
 
+  // Fetch fresh label balance
+  const { data: labelData } = useQuery({
+    queryKey: ["label-balance", labelId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("labels")
+        .select("balance")
+        .eq("id", labelId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const currentBalance = labelData?.balance ?? labelBalance ?? 0;
+
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["label-staff", labelId],
     queryFn: async () => {
@@ -54,8 +70,29 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
       const roleInfo = STAFF_ROLES.find(r => r.value === role);
       if (!roleInfo) throw new Error("Invalid role");
 
-      const skillLevel = 30 + Math.floor(Math.random() * 40); // 30-70
       const salary = Math.round(roleInfo.baseSalary * (0.8 + Math.random() * 0.4));
+      const hiringCost = salary; // First month salary as hiring cost
+
+      // Check balance
+      const { data: label, error: labelError } = await supabase
+        .from("labels")
+        .select("balance")
+        .eq("id", labelId)
+        .single();
+
+      if (labelError || !label) throw new Error("Could not verify label funds");
+      if ((label.balance || 0) < hiringCost) {
+        throw new Error(`Insufficient funds. Need $${hiringCost.toLocaleString()} but only have $${(label.balance || 0).toLocaleString()}`);
+      }
+
+      // Deduct from label balance
+      const { error: updateError } = await supabase
+        .from("labels")
+        .update({ balance: (label.balance || 0) - hiringCost })
+        .eq("id", labelId);
+      if (updateError) throw new Error("Failed to deduct hiring cost");
+
+      const skillLevel = 30 + Math.floor(Math.random() * 40);
 
       const { error } = await supabase
         .from("label_staff")
@@ -68,14 +105,32 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
           performance_rating: 50,
         });
 
-      if (error) throw error;
+      if (error) {
+        // Refund on failure
+        await supabase
+          .from("labels")
+          .update({ balance: label.balance })
+          .eq("id", labelId);
+        throw error;
+      }
+
+      // Record transaction
+      await supabase.from("label_financial_transactions").insert({
+        label_id: labelId,
+        transaction_type: "expense",
+        amount: hiringCost,
+        description: `Hired ${roleInfo.label} (first month salary)`,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-staff", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-balance", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-management"] });
+      queryClient.invalidateQueries({ queryKey: ["my-labels"] });
       toast.success("Staff member hired!");
       setSelectedRole("");
     },
-    onError: (error: Error) => toast.error(`Failed to hire: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const fireMutation = useMutation({
@@ -94,6 +149,9 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
   });
 
   const totalMonthlySalary = staff.reduce((sum, s) => sum + (s.salary_monthly ?? 0), 0);
+  const selectedRoleInfo = STAFF_ROLES.find(r => r.value === selectedRole);
+  const estimatedCost = selectedRoleInfo ? selectedRoleInfo.baseSalary : 0;
+  const canAfford = currentBalance >= estimatedCost;
 
   if (isLoading) {
     return <Card><CardContent className="p-6 text-center text-muted-foreground">Loading staff...</CardContent></Card>;
@@ -110,7 +168,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
                 <UserPlus className="h-4 w-4" /> Hire Staff
               </h3>
               <p className="text-sm text-muted-foreground">
-                Monthly payroll: ${totalMonthlySalary.toLocaleString()}/mo
+                Monthly payroll: ${totalMonthlySalary.toLocaleString()}/mo • Balance: ${currentBalance.toLocaleString()}
               </p>
             </div>
           </div>
@@ -132,16 +190,27 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
             </Select>
             <Button
               onClick={() => selectedRole && hireMutation.mutate(selectedRole)}
-              disabled={!selectedRole || hireMutation.isPending}
+              disabled={!selectedRole || hireMutation.isPending || !canAfford}
             >
               <UserPlus className="h-4 w-4 mr-1" />
               Hire
             </Button>
           </div>
           {selectedRole && (
-            <p className="text-xs text-muted-foreground mt-2">
-              {STAFF_ROLES.find(r => r.value === selectedRole)?.description}
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-muted-foreground">
+                {selectedRoleInfo?.description}
+              </p>
+              <p className="text-xs flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
+                Hiring cost: ~${estimatedCost.toLocaleString()} (first month salary)
+                {!canAfford && (
+                  <span className="text-destructive flex items-center gap-1 ml-2">
+                    <AlertTriangle className="h-3 w-3" /> Insufficient funds
+                  </span>
+                )}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
