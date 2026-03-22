@@ -11,17 +11,22 @@ interface RecordingStudioUpgradesManagerProps {
   studioId: string;
 }
 
-const UPGRADE_COSTS: Record<string, number[]> = {
-  console: [25000, 50000, 100000, 200000, 500000],
-  monitors: [5000, 10000, 20000, 40000, 80000],
-  microphones: [8000, 15000, 30000, 60000, 120000],
-  preamps: [10000, 20000, 40000, 80000, 160000],
-  outboard_gear: [15000, 30000, 60000, 120000, 250000],
-  live_room: [20000, 40000, 80000, 160000, 320000],
-  isolation_booth: [10000, 20000, 40000, 80000, 160000],
-  control_room: [15000, 30000, 60000, 120000, 250000],
-  mastering_suite: [50000, 100000, 200000, 400000, 800000],
+const BASE_COSTS: Record<string, number> = {
+  console: 25000,
+  monitors: 5000,
+  microphones: 8000,
+  preamps: 10000,
+  outboard_gear: 15000,
+  live_room: 20000,
+  isolation_booth: 10000,
+  control_room: 15000,
+  mastering_suite: 50000,
 };
+
+function getUpgradeCost(upgradeType: string, level: number): number {
+  const base = BASE_COSTS[upgradeType] || 10000;
+  return Math.round(base * Math.pow(1.5, level - 1));
+}
 
 export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgradesManagerProps) {
   const { data: upgrades, isLoading } = useRecordingStudioUpgrades(studioId);
