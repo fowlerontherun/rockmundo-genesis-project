@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.116",
+    date: "2026-03-23",
+    changes: [
+      { type: 'fix', description: "Fixed admin Release Pump tool not working for physical sales (CD, Vinyl, Cassette) — function was not deployed" },
+      { type: 'fix', description: "Admin Release Pump now correctly deducts physical inventory when pumping non-digital sales" },
+      { type: 'improvement', description: "Release Pump UI now shows available stock quantity for physical formats" },
+    ],
+  },
+  {
     version: "1.1.115",
     date: "2026-03-23",
     changes: [
