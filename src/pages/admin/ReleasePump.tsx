@@ -36,7 +36,7 @@ export default function ReleasePump() {
         .select(`
           id, title, artist_name, release_status, total_units_sold, total_revenue, digital_sales, cd_sales, vinyl_sales, cassette_sales,
           band_id, bands(name, fame),
-          release_formats(id, format_type, retail_price)
+          release_formats(id, format_type, retail_price, quantity)
         `)
         .eq("release_status", "released")
         .order("created_at", { ascending: false })
