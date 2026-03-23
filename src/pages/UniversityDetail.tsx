@@ -62,7 +62,7 @@ export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<string>("all");
@@ -269,7 +269,7 @@ export default function UniversityDetail() {
       const { error: enrollError } = await supabase
         .from("player_university_enrollments")
         .insert({
-          user_id: profileId!,
+          user_id: userId!,
           profile_id: profile.id,
           university_id: university.id,
           course_id: courseId,
