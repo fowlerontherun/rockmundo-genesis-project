@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         .from("releases")
         .select(`
           id, band_id, user_id, title,
-          release_formats(id, format_type, retail_price)
+          release_formats(id, format_type, retail_price, quantity)
         `)
         .eq("id", releaseId)
         .single();
@@ -159,6 +159,18 @@ Deno.serve(async (req) => {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+
+      // Deduct physical inventory
+      if (saleType !== "digital" && saleType !== "streaming") {
+        const { error: inventoryError } = await supabaseAdmin
+          .from("release_formats")
+          .update({ quantity: Math.max(0, (selectedFormat.quantity || 0) - amount) })
+          .eq("id", selectedFormat.id);
+        
+        if (inventoryError) {
+          console.error(`Warning: Failed to deduct inventory: ${inventoryError.message}`);
+        }
       }
 
       const { data: currentRelease, error: currentReleaseError } = await supabaseAdmin
