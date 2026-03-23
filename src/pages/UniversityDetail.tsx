@@ -62,7 +62,7 @@ export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<string>("all");
