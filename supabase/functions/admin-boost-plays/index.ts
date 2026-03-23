@@ -161,6 +161,18 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Deduct physical inventory
+      if (saleType !== "digital" && saleType !== "streaming") {
+        const { error: inventoryError } = await supabaseAdmin
+          .from("release_formats")
+          .update({ quantity: Math.max(0, (selectedFormat.quantity || 0) - amount) })
+          .eq("id", selectedFormat.id);
+        
+        if (inventoryError) {
+          console.error(`Warning: Failed to deduct inventory: ${inventoryError.message}`);
+        }
+      }
+
       const { data: currentRelease, error: currentReleaseError } = await supabaseAdmin
         .from("releases")
         .select("id, total_units_sold, digital_sales, cd_sales, vinyl_sales, cassette_sales")
