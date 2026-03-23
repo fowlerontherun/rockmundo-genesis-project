@@ -119,6 +119,145 @@ function getSeverityStyle(severity: string) {
   }
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getRelationshipStage(rel: CharacterRelationship) {
+  const weightedScore =
+    rel.affection_score * 0.35 +
+    rel.trust_score * 0.3 +
+    rel.loyalty_score * 0.2 +
+    rel.attraction_score * 0.15 -
+    rel.jealousy_score * 0.2;
+
+  if ((rel.relationship_types ?? []).includes("ex_partner")) {
+    return {
+      label: "Aftermath",
+      summary: "The bond still matters, but history and unresolved tension can still shape new storylines.",
+      threshold: 0,
+    };
+  }
+
+  if (weightedScore >= 65) {
+    return {
+      label: "Inner Circle",
+      summary: "This relationship has enough trust to unlock high-value collabs, secrets, and long-term commitments.",
+      threshold: 85,
+    };
+  }
+
+  if (weightedScore >= 35) {
+    return {
+      label: "Building Momentum",
+      summary: "You know each other well enough for meaningful scenes, but consistency still matters.",
+      threshold: 65,
+    };
+  }
+
+  if (weightedScore >= 10) {
+    return {
+      label: "Getting Familiar",
+      summary: "The connection exists, but it still needs shared memories before it becomes strategically valuable.",
+      threshold: 35,
+    };
+  }
+
+  return {
+    label: "Unstable Ground",
+    summary: "This connection can still be shaped, but one bad interaction could define the tone of the whole arc.",
+    threshold: 10,
+  };
+}
+
+function getMomentumSummary(rel: CharacterRelationship) {
+  const composite = rel.trust_score + rel.loyalty_score + Math.max(rel.affection_score, 0) - rel.jealousy_score;
+  if (composite >= 170) return "Surging";
+  if (composite >= 120) return "Stable";
+  if (composite >= 70) return "Fragile";
+  return "Volatile";
+}
+
+function getRelationshipArchetype(rel: CharacterRelationship) {
+  const types = rel.relationship_types ?? [];
+  if (types.includes("partner")) return "Power couple";
+  if (types.includes("rival") || types.includes("nemesis")) return "Headline rivalry";
+  if (types.includes("bandmate")) return "Band chemistry";
+  if (types.includes("mentor") || types.includes("protege")) return "Career mentorship";
+  if (types.includes("friend") || types.includes("close_friend") || types.includes("best_friend")) return "Trusted ally";
+  return "Open social arc";
+}
+
+function getRelationshipCompatibility(rel: CharacterRelationship) {
+  const value = clamp(
+    Math.round(
+      rel.trust_score * 0.35 +
+      rel.loyalty_score * 0.25 +
+      Math.max(rel.affection_score, 0) * 0.2 +
+      rel.attraction_score * 0.15 -
+      rel.jealousy_score * 0.15,
+    ),
+    0,
+    100,
+  );
+
+  if (value >= 80) return { label: "Rare synergy", value };
+  if (value >= 60) return { label: "Strong fit", value };
+  if (value >= 40) return { label: "Situational", value };
+  return { label: "High maintenance", value };
+}
+
+function buildRelationshipLoop(rel: CharacterRelationship) {
+  const trustGap = Math.max(0, 80 - rel.trust_score);
+  const affectionGap = Math.max(0, 70 - Math.max(rel.affection_score, 0));
+  const jealousyRisk = rel.jealousy_score >= 70;
+  const types = rel.relationship_types ?? [];
+
+  return [
+    {
+      title: "Private hangout",
+      action: "Spend an in-game evening together to reduce decay and create shared memories.",
+      effect: `Best for recovering ${Math.min(20, trustGap)} trust points of missing depth before bigger moves.`,
+      badge: "Low risk",
+    },
+    {
+      title: types.includes("bandmate") ? "Rehearsal chemistry scene" : "Creative collaboration",
+      action: types.includes("bandmate")
+        ? "Schedule a rehearsal, backstage talk, or duo warm-up to convert trust into performance bonuses."
+        : "Use a songwriting sprint, jam, or guest feature to turn chemistry into gameplay rewards.",
+      effect: `Can convert this relationship into +${Math.max(5, Math.round(rel.trust_score * 0.2))}% collab value.`,
+      badge: "Progression",
+    },
+    {
+      title: types.includes("partner") ? "Commitment checkpoint" : "Status-defining moment",
+      action: types.includes("partner")
+        ? "Plan anniversaries, exclusivity decisions, or home/family milestones to deepen commitment."
+        : "Use flirting, public support, or loyalty tests to decide whether this turns serious or stalls out.",
+      effect: `Needs roughly ${Math.max(0, affectionGap)} more affection pressure to feel secure.`,
+      badge: types.includes("partner") ? "Long-term" : "Branching",
+    },
+    {
+      title: "Manage public fallout",
+      action: jealousyRisk
+        ? "Keep this off the front page or expect drama spikes, rival reactions, and media complications."
+        : "Choose whether to go public for buzz or stay private to preserve stability.",
+      effect: jealousyRisk ? "Current jealousy makes leaks and misunderstandings especially dangerous." : "Visibility is currently a strategic choice, not a crisis.",
+      badge: jealousyRisk ? "Risk" : "Media",
+    },
+  ];
+}
+
+function getRomanceTier(rel: CharacterRelationship) {
+  const score = rel.attraction_score * 0.4 + Math.max(rel.affection_score, 0) * 0.3 + rel.trust_score * 0.2 + rel.loyalty_score * 0.1;
+  if ((rel.relationship_types ?? []).includes("ex_partner")) {
+    return "Former partners";
+  }
+  if (score >= 78) return "Committed";
+  if (score >= 58) return "Serious";
+  if (score >= 38) return "Dating";
+  return "Flirting";
+}
+
 // Build InteractionOption from a quick action
 function buildInteractionOption(actionKey: string, rel: CharacterRelationship): InteractionOption {
   const mapping = QUICK_ACTION_MAP[actionKey];
@@ -228,6 +367,19 @@ export default function RelationshipsPage() {
       const types = r.relationship_types ?? [];
       return types.includes("partner") || types.includes("ex_partner");
     });
+  }, [relationships]);
+
+  const relationshipOverview = useMemo(() => {
+    const total = relationships.length || 1;
+    const positive = relationships.filter((rel) => deriveStatus(rel) === "positive" || deriveStatus(rel) === "romantic").length;
+    const volatile = relationships.filter((rel) => rel.jealousy_score >= 70 || rel.trust_score <= 25).length;
+    const collaborators = relationships.filter((rel) => (rel.relationship_types ?? []).some((type) => ["bandmate", "collaborator", "mentor", "protege"].includes(type))).length;
+
+    return {
+      positiveRate: Math.round((positive / total) * 100),
+      volatile,
+      collaborators,
+    };
   }, [relationships]);
 
   // Handle Quick Action click → open InteractionModal
@@ -682,6 +834,20 @@ export default function RelationshipsPage() {
             {/* Detail Panel */}
             {selected ? (() => {
               const status = deriveStatus(selected);
+              const stage = getRelationshipStage(selected);
+              const compatibility = getRelationshipCompatibility(selected);
+              const gameplayLoop = buildRelationshipLoop(selected);
+              const progressValue = clamp(
+                Math.round(
+                  selected.trust_score * 0.35 +
+                  Math.max(selected.affection_score, 0) * 0.3 +
+                  selected.loyalty_score * 0.2 +
+                  selected.attraction_score * 0.15 -
+                  selected.jealousy_score * 0.2,
+                ),
+                0,
+                100,
+              );
               return (
                 <Card className={cn("border transition-all duration-300", getStatusGlow(status))}>
                   <CardHeader>
@@ -712,6 +878,20 @@ export default function RelationshipsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      {[
+                        { label: "Arc", value: getRelationshipArchetype(selected), tone: "text-primary" },
+                        { label: "Momentum", value: getMomentumSummary(selected), tone: "text-social-chemistry" },
+                        { label: "Compatibility", value: `${compatibility.value}%`, tone: "text-social-love" },
+                        { label: "Public Risk", value: `${Math.min(100, Math.round(selected.jealousy_score * 0.7 + (selected.visibility === "public" ? 15 : 0)))}%`, tone: "text-social-tension" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-border p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                          <p className={cn("mt-1 text-sm font-semibold", item.tone)}>{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
                     {/* Emotional Metrics */}
                     <div>
                       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -724,6 +904,77 @@ export default function RelationshipsPage() {
                         <ScoreGauge label="Attraction" value={selected.attraction_score} max={100} color="social-attraction" variant="bar" size="sm" />
                         <ScoreGauge label="Loyalty" value={selected.loyalty_score} max={100} color="social-loyalty" variant="bar" size="sm" glowOnHigh />
                         <ScoreGauge label="Jealousy" value={selected.jealousy_score} max={100} color="social-tension" variant="bar" size="sm" />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+                      <div className="rounded-xl border border-border bg-muted/10 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold">Relationship Arc</h3>
+                            <p className="text-xs text-muted-foreground mt-1">{stage.summary}</p>
+                          </div>
+                          <Badge variant="outline">{stage.label}</Badge>
+                        </div>
+                        <div className="mt-4">
+                          <div className="mb-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>Progress toward next threshold</span>
+                            <span>{progressValue}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-social-friendship via-social-chemistry to-social-love transition-all"
+                              style={{ width: `${progressValue}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                          <div className="rounded-lg border border-border/70 p-3">
+                            <p className="text-xs font-medium">Next meaningful unlock</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {selected.trust_score < 60
+                                ? "Build enough trust to unlock confiding scenes, lower failure rates, and more reliable collabs."
+                                : selected.loyalty_score < 70
+                                  ? "Stabilize loyalty so this connection survives pressure, touring, and public gossip."
+                                  : "You are close to premium outcomes like exclusive duos, public declarations, or legacy decisions."}
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-border/70 p-3">
+                            <p className="text-xs font-medium">What can break it</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {selected.jealousy_score >= 70
+                                ? "Jealousy is the danger stat here; public scenes and neglect can quickly cascade into drama."
+                                : selected.affection_score < 0
+                                  ? "Emotional distance is the weak point; ignoring this relationship will push it into cold territory."
+                                  : "The biggest threat is inactivity. Without shared scenes, bonuses decay and the bond loses identity."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-border bg-muted/10 p-4">
+                        <h3 className="text-sm font-semibold">Why this relationship matters</h3>
+                        <div className="mt-3 space-y-3">
+                          {[
+                            {
+                              label: "Career impact",
+                              description: `${selected.trust_score >= 60 ? "Reliable chemistry boosts live and studio consistency." : "Low trust keeps big co-op plays risky."}`,
+                            },
+                            {
+                              label: "Social reputation",
+                              description: `${selected.visibility === "public" ? "This bond already affects how the world reads your storyline." : "You can still shape the narrative before going public."}`,
+                            },
+                            {
+                              label: "Long-term branch",
+                              description: `${(selected.relationship_types ?? []).includes("partner") ? "This can expand into commitment, marriage, and family gameplay." : "This can still become a romance, rivalry, alliance, or fallout arc."}`,
+                            },
+                          ].map((item) => (
+                            <div key={item.label} className="rounded-lg border border-border/70 p-3">
+                              <p className="text-xs font-medium">{item.label}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -768,6 +1019,25 @@ export default function RelationshipsPage() {
                         <p className="text-lg font-bold text-social-tension">
                           {Math.min(100, Math.round(selected.jealousy_score * 0.8 + (100 - selected.trust_score) * 0.2))}%
                         </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-social-love" />
+                        Social Gameplay Loop
+                      </h3>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {gameplayLoop.map((loop) => (
+                          <div key={loop.title} className="rounded-lg border border-border p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium">{loop.title}</p>
+                              <Badge variant="outline" className="text-[10px]">{loop.badge}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">{loop.action}</p>
+                            <p className="text-xs mt-3 text-foreground/80">{loop.effect}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
@@ -889,6 +1159,69 @@ export default function RelationshipsPage() {
 
         {/* ── ROMANCE TAB ─────────────────────────────────────── */}
         <TabsContent value="romance" className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+            <Card className="border-social-love/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-social-love" />
+                  Romance Progression Ladder
+                </CardTitle>
+                <CardDescription>
+                  Expand romance into a longer arc with dating, commitment, public image, and family consequences.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2">
+                {[
+                  {
+                    title: "Flirting",
+                    detail: "Light attraction, chemistry checks, and private scenes that test whether the spark is real.",
+                  },
+                  {
+                    title: "Dating",
+                    detail: "Unlocks repeated hangouts, loyalty checks, and early exclusivity tension.",
+                  },
+                  {
+                    title: "Committed",
+                    detail: "Shared homes, anniversary upkeep, and stronger consequences when trust is broken.",
+                  },
+                  {
+                    title: "Legacy",
+                    detail: "Marriage, children, and public family identity turn romance into a generational system.",
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-lg border border-border p-4">
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{item.detail}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-social-chemistry" />
+                  Commitment &amp; Family Hooks
+                </CardTitle>
+                <CardDescription>
+                  Relationship depth should feed long-term life simulation, not just one-off romance bonuses.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  "Proposal and exclusivity choices should require trust, loyalty, and time together.",
+                  "Marriage should open household perks, family events, and media-story consequences.",
+                  "Children and legacy progression should come from stable partnerships and co-parent decisions.",
+                  "Breakups should leave emotional residue, rivalries, and public fallout instead of resetting instantly.",
+                ].map((item) => (
+                  <div key={item} className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
+                    {item}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -913,6 +1246,7 @@ export default function RelationshipsPage() {
                   {romanticRelationships.map((rel) => {
                     const status = deriveStatus(rel);
                     const isActive = (rel.relationship_types ?? []).includes("partner");
+                    const compatibility = getRelationshipCompatibility(rel);
                     return (
                       <div key={rel.id} className={cn("rounded-lg border p-4", getStatusGlow(status))}>
                         <div className="flex items-center gap-3 mb-4">
@@ -922,7 +1256,7 @@ export default function RelationshipsPage() {
                           <div>
                             <p className="font-semibold">{rel.entity_b_name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {isActive ? "💕 Active Romance" : "💔 Former Flame"}
+                              {isActive ? `💕 ${getRomanceTier(rel)}` : "💔 Former Flame"}
                             </p>
                           </div>
                         </div>
@@ -931,6 +1265,18 @@ export default function RelationshipsPage() {
                           <ScoreGauge label="Jealousy Risk" value={rel.jealousy_score} max={100} color="social-tension" variant="bar" size="sm" />
                           <ScoreGauge label="Affection" value={Math.max(0, rel.affection_score)} max={100} color="social-love" variant="bar" size="sm" />
                           <ScoreGauge label="Loyalty" value={rel.loyalty_score} max={100} color="social-loyalty" variant="bar" size="sm" />
+                        </div>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-lg border border-border/70 p-3">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Relationship fit</p>
+                            <p className="mt-1 text-sm font-semibold text-social-love">{compatibility.label}</p>
+                          </div>
+                          <div className="rounded-lg border border-border/70 p-3">
+                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Next checkpoint</p>
+                            <p className="mt-1 text-sm font-semibold text-social-chemistry">
+                              {isActive ? "Anniversary / household arc" : "Dating / exclusivity scene"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -948,6 +1294,36 @@ export default function RelationshipsPage() {
 
         {/* ── SOCIAL SYSTEMS TAB ─────────────────────────────── */}
         <TabsContent value="systems" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-social-friendship/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Network Health</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-social-friendship">{relationshipOverview.positiveRate}%</p>
+                <p className="text-xs text-muted-foreground mt-1">of your active connections are positive or romantic.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-social-tension/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Volatile Arcs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-social-tension">{relationshipOverview.volatile}</p>
+                <p className="text-xs text-muted-foreground mt-1">connections are at risk of drama spikes or collapse.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-social-chemistry/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Career Links</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-social-chemistry">{relationshipOverview.collaborators}</p>
+                <p className="text-xs text-muted-foreground mt-1">connections directly support rehearsals, gigs, mentoring, or collabs.</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="border-social-trust/20">
             <CardHeader>
               <CardTitle>Social &amp; Relationships Systems Overview</CardTitle>
