@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.115",
+    date: "2026-03-23",
+    changes: [
+      { type: 'fix', description: "Fixed university XP not working for multi-character slots — enrollment was saving profile_id as user_id, causing activity_feed FK violation" },
+      { type: 'fix', description: "Fixed attendance trigger to look up auth user_id from profiles table instead of using broken enrollment user_id" },
+      { type: 'fix', description: "Repaired all existing enrollments with incorrect user_id values" },
+    ],
+  },
+  {
     version: "1.1.114",
     date: "2026-03-22",
     changes: [
