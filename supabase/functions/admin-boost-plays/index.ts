@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         .from("releases")
         .select(`
           id, band_id, user_id, title,
-          release_formats(id, format_type, retail_price)
+          release_formats(id, format_type, retail_price, quantity)
         `)
         .eq("id", releaseId)
         .single();
