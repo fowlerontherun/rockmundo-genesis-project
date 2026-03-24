@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.118",
+    date: "2026-03-24",
+    changes: [
+      { type: 'fix', description: "Fixed rehearsal/gig booking failing with 'Cannot perform this action while traveling' — trigger now only blocks if travel overlaps with the scheduled activity time, not at insert time" },
+    ],
+  },
+  {
     version: "1.1.117",
     date: "2026-03-24",
     changes: [
