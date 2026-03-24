@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   DollarSign,
   TrendingUp,
@@ -18,6 +20,8 @@ import {
   ArrowDownCircle,
   AlertTriangle,
   Clock,
+  Users,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -31,6 +35,15 @@ interface LabelFinanceTabProps {
 }
 
 const MINIMUM_BALANCE = 100_000;
+
+interface UnifiedTransaction {
+  id: string;
+  amount: number;
+  description: string | null;
+  transaction_type: string;
+  created_at: string;
+  source: "deposit_withdrawal" | "revenue";
+}
 
 export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWentNegativeAt }: LabelFinanceTabProps) {
   const { profileId } = useActiveProfile();
@@ -54,7 +67,8 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     },
   });
 
-  const { data: transactions = [] } = useQuery({
+  // Deposit/withdrawal transactions
+  const { data: depositTransactions = [] } = useQuery({
     queryKey: ["label-transactions", labelId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -62,11 +76,123 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
         .select("*")
         .eq("label_id", labelId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Revenue/expense transactions from label_financial_transactions
+  const { data: financialTransactions = [] } = useQuery({
+    queryKey: ["label-financials", labelId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("label_financial_transactions")
+        .select("*")
+        .eq("label_id", labelId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Per-artist revenue breakdown: contracts + band names
+  const { data: artistBreakdown = [] } = useQuery({
+    queryKey: ["label-artist-breakdown", labelId],
+    queryFn: async () => {
+      // Get all contracts for this label
+      const { data: contracts, error: cErr } = await supabase
+        .from("artist_label_contracts")
+        .select("id, band_id, royalty_artist_pct, royalty_label_pct, advance_amount, recouped_amount, status")
+        .eq("label_id", labelId);
+      if (cErr) throw cErr;
+      if (!contracts?.length) return [];
+
+      // Get band names
+      const bandIds = [...new Set(contracts.map(c => c.band_id).filter(Boolean))];
+      const { data: bands } = await supabase
+        .from("bands")
+        .select("id, name")
+        .in("id", bandIds);
+      const bandMap = new Map((bands || []).map(b => [b.id, b.name]));
+
+      // Get revenue per contract
+      const contractIds = contracts.map(c => c.id);
+      const { data: revTx } = await supabase
+        .from("label_financial_transactions")
+        .select("related_contract_id, transaction_type, amount")
+        .eq("label_id", labelId)
+        .in("related_contract_id", contractIds);
+
+      // Aggregate per contract
+      const contractRevMap = new Map<string, { revenue: number; marketing: number; expenses: number }>();
+      (revTx || []).forEach(tx => {
+        const cid = tx.related_contract_id;
+        if (!cid) return;
+        if (!contractRevMap.has(cid)) contractRevMap.set(cid, { revenue: 0, marketing: 0, expenses: 0 });
+        const entry = contractRevMap.get(cid)!;
+        if (tx.transaction_type === "revenue") entry.revenue += tx.amount;
+        else if (tx.transaction_type === "marketing") entry.marketing += Math.abs(tx.amount);
+        else entry.expenses += Math.abs(tx.amount);
+      });
+
+      return contracts.map(c => ({
+        contractId: c.id,
+        bandName: bandMap.get(c.band_id!) || "Unknown Artist",
+        status: c.status || "active",
+        royaltyArtistPct: c.royalty_artist_pct,
+        royaltyLabelPct: c.royalty_label_pct,
+        advanceAmount: c.advance_amount || 0,
+        recoupedAmount: c.recouped_amount || 0,
+        totalRevenue: contractRevMap.get(c.id)?.revenue || 0,
+        totalMarketing: contractRevMap.get(c.id)?.marketing || 0,
+        totalExpenses: contractRevMap.get(c.id)?.expenses || 0,
+      }));
+    },
+  });
+
+  // Merge transactions into unified timeline
+  const unifiedTransactions = useMemo<UnifiedTransaction[]>(() => {
+    const merged: UnifiedTransaction[] = [];
+    depositTransactions.forEach((tx: any) => {
+      merged.push({
+        id: tx.id,
+        amount: tx.amount,
+        description: tx.description,
+        transaction_type: tx.transaction_type,
+        created_at: tx.created_at,
+        source: "deposit_withdrawal",
+      });
+    });
+    financialTransactions.forEach((tx: any) => {
+      merged.push({
+        id: tx.id,
+        amount: tx.amount,
+        description: tx.description,
+        transaction_type: tx.transaction_type,
+        created_at: tx.created_at,
+        source: "revenue",
+      });
+    });
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return merged.slice(0, 100);
+  }, [depositTransactions, financialTransactions]);
+
+  // Summary stats from financial transactions
+  const summaryStats = useMemo(() => {
+    let totalRevenue = 0;
+    let totalMarketing = 0;
+    let totalExpenses = 0;
+    financialTransactions.forEach((tx: any) => {
+      if (tx.transaction_type === "revenue") totalRevenue += tx.amount;
+      else if (tx.transaction_type === "marketing") totalMarketing += Math.abs(tx.amount);
+      else if (["expense", "overhead", "advance", "royalty_payment"].includes(tx.transaction_type)) {
+        totalExpenses += Math.abs(tx.amount);
+      }
+    });
+    return { totalRevenue, totalMarketing, totalExpenses, netPL: totalRevenue - totalMarketing - totalExpenses };
+  }, [financialTransactions]);
 
   const personalBalance = Number(profileData?.cash ?? 0);
   const balance = labelBalance;
@@ -90,6 +216,8 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     queryClient.invalidateQueries({ queryKey: ["label-management", labelId] });
     queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
     queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
+    queryClient.invalidateQueries({ queryKey: ["label-financials", labelId] });
+    queryClient.invalidateQueries({ queryKey: ["label-artist-breakdown", labelId] });
     queryClient.invalidateQueries({ queryKey: ["my-labels"] });
   };
 
@@ -140,6 +268,22 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     finally { setIsProcessing(false); }
   };
 
+  const getTxColor = (type: string, amount: number) => {
+    if (type === "revenue") return "text-emerald-500";
+    if (type === "deposit") return "text-emerald-500";
+    if (type === "marketing") return "text-purple-500";
+    if (type === "transfer" && amount > 0) return "text-emerald-500";
+    if (amount > 0) return "text-emerald-500";
+    return "text-destructive";
+  };
+
+  const getTxIcon = (type: string, amount: number) => {
+    if (type === "revenue" || type === "deposit" || amount > 0) {
+      return <ArrowUpCircle className="h-4 w-4 text-emerald-500" />;
+    }
+    return <ArrowDownCircle className="h-4 w-4 text-destructive" />;
+  };
+
   return (
     <div className="space-y-4">
       {isBankrupt && (
@@ -156,53 +300,84 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
       )}
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="artists">Artists</TabsTrigger>
           <TabsTrigger value="transfer">Deposit / Withdraw</TabsTrigger>
           <TabsTrigger value="upgrades">Upgrades</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Summary cards */}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
             <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Label Balance</CardDescription>
-                <CardTitle className={cn("text-2xl", health.color)}>${balance.toLocaleString()}</CardTitle>
+              <CardHeader className="pb-2 p-3">
+                <CardDescription className="text-xs">Label Balance</CardDescription>
+                <CardTitle className={cn("text-lg md:text-2xl", health.color)}>${balance.toLocaleString()}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Badge className={cn(health.bg, health.color, "border-0")}>{health.label}</Badge>
+              <CardContent className="p-3 pt-0">
+                <Badge className={cn(health.bg, health.color, "border-0 text-xs")}>{health.label}</Badge>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Your Personal Balance</CardDescription>
-                <CardTitle className="text-2xl">${personalBalance.toLocaleString()}</CardTitle>
+              <CardHeader className="pb-2 p-3">
+                <CardDescription className="text-xs flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Total Revenue</CardDescription>
+                <CardTitle className="text-lg md:text-2xl text-emerald-500">${summaryStats.totalRevenue.toLocaleString()}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Available for deposit</p>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-muted-foreground">From signed artists</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 p-3">
+                <CardDescription className="text-xs flex items-center gap-1"><BarChart3 className="h-3 w-3" /> Marketing Spend</CardDescription>
+                <CardTitle className="text-lg md:text-2xl text-purple-500">${summaryStats.totalMarketing.toLocaleString()}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-muted-foreground">Campaigns & promos</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 p-3">
+                <CardDescription className="text-xs">Net P&L</CardDescription>
+                <CardTitle className={cn("text-lg md:text-2xl", summaryStats.netPL >= 0 ? "text-emerald-500" : "text-destructive")}>
+                  {summaryStats.netPL >= 0 ? "+" : ""}${summaryStats.netPL.toLocaleString()}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-muted-foreground">Revenue − expenses</p>
               </CardContent>
             </Card>
           </div>
 
+          {/* Personal balance */}
           <Card>
-            <CardHeader><CardTitle className="text-lg">Recent Transactions</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardDescription>Your Personal Balance</CardDescription>
+              <CardTitle className="text-xl">${personalBalance.toLocaleString()}</CardTitle>
+            </CardHeader>
+          </Card>
+
+          {/* Unified transaction feed */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg">All Transactions</CardTitle></CardHeader>
             <CardContent>
-              <ScrollArea className="h-48">
-                {transactions.length === 0 ? (
+              <ScrollArea className="h-64">
+                {unifiedTransactions.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {transactions.map((tx: any) => (
+                    {unifiedTransactions.map((tx) => (
                       <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
                         <div className="flex items-center gap-2">
-                          {tx.amount > 0 ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" /> : <ArrowDownCircle className="h-4 w-4 text-destructive" />}
+                          {getTxIcon(tx.transaction_type, tx.amount)}
                           <div>
                             <p className="text-sm font-medium capitalize">{tx.transaction_type.replace(/_/g, " ")}</p>
-                            <p className="text-xs text-muted-foreground">{tx.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{tx.description}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={cn("text-sm font-medium", tx.amount > 0 ? "text-emerald-500" : "text-destructive")}>
+                        <div className="text-right shrink-0">
+                          <p className={cn("text-sm font-medium", getTxColor(tx.transaction_type, tx.amount))}>
                             {tx.amount > 0 ? "+" : ""}${Math.abs(tx.amount).toLocaleString()}
                           </p>
                           <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
@@ -212,6 +387,89 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
                   </div>
                 )}
               </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Per-Artist Breakdown Tab */}
+        <TabsContent value="artists" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5" /> Signed Artist Revenue Breakdown
+              </CardTitle>
+              <CardDescription>Revenue, advances, and recoupment per signed artist</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {artistBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No signed artists yet</p>
+              ) : (
+                <ResponsiveTable>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Artist</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Label Rev</TableHead>
+                        <TableHead className="text-right">Marketing</TableHead>
+                        <TableHead className="text-right">Advance</TableHead>
+                        <TableHead className="text-right">Recouped</TableHead>
+                        <TableHead className="text-right">Net</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {artistBreakdown.map((artist) => {
+                        const outstanding = Math.max(0, artist.advanceAmount - artist.recoupedAmount);
+                        const net = artist.totalRevenue - artist.totalMarketing - artist.totalExpenses;
+                        return (
+                          <TableRow key={artist.contractId}>
+                            <TableCell className="font-medium">{artist.bandName}</TableCell>
+                            <TableCell>
+                              <Badge variant={artist.status === "active" ? "default" : "secondary"} className="text-xs capitalize">
+                                {artist.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-emerald-500">${artist.totalRevenue.toLocaleString()}</TableCell>
+                            <TableCell className="text-right text-purple-500">${artist.totalMarketing.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">${artist.advanceAmount.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={outstanding > 0 ? "text-amber-500" : "text-emerald-500"}>
+                                ${artist.recoupedAmount.toLocaleString()}
+                                {outstanding > 0 && (
+                                  <span className="text-xs text-muted-foreground ml-1">(-${outstanding.toLocaleString()})</span>
+                                )}
+                              </span>
+                            </TableCell>
+                            <TableCell className={cn("text-right font-medium", net >= 0 ? "text-emerald-500" : "text-destructive")}>
+                              {net >= 0 ? "+" : ""}${net.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {/* Totals row */}
+                      <TableRow className="font-bold border-t-2">
+                        <TableCell>Total</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right text-emerald-500">
+                          ${artistBreakdown.reduce((s, a) => s + a.totalRevenue, 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right text-purple-500">
+                          ${artistBreakdown.reduce((s, a) => s + a.totalMarketing, 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${artistBreakdown.reduce((s, a) => s + a.advanceAmount, 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${artistBreakdown.reduce((s, a) => s + a.recoupedAmount, 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className={cn("text-right", summaryStats.netPL >= 0 ? "text-emerald-500" : "text-destructive")}>
+                          {summaryStats.netPL >= 0 ? "+" : ""}${summaryStats.netPL.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </ResponsiveTable>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
