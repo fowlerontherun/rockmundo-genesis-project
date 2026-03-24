@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.117",
+    date: "2026-03-24",
+    changes: [
+      { type: 'fix', description: "Label Finance tab now shows ALL revenue from signed artists (streaming + sales) — was previously only showing deposits/withdrawals" },
+      { type: 'feature', description: "Added per-artist revenue breakdown table showing Total Revenue, Marketing Spend, Advance, Recouped, and Net P&L per signed artist" },
+      { type: 'feature', description: "Added summary cards: Total Revenue from Artists, Marketing Spend, and Net P&L on Finance overview" },
+      { type: 'improvement', description: "Unified transaction feed merges deposit/withdrawal history with revenue/expense transactions in chronological order" },
+    ],
+  },
+  {
     version: "1.1.116",
     date: "2026-03-23",
     changes: [
