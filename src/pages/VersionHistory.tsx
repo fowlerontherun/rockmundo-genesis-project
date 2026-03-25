@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.119",
+    date: "2026-03-25",
+    changes: [
+      { type: 'improvement', description: "Slowed down gig commentary pace from 3-6s to 10-18s between ambient lines for a more realistic feel" },
+      { type: 'feature', description: "Added 'Skip to Outcome' button in live gig commentary viewer" },
+      { type: 'fix', description: "Fixed gig commentary starting from last song — existing songs now process sequentially from first to last on load" },
+      { type: 'feature', description: "Gig commentary viewer now shows average quality score, current song name, and set progress bar" },
+      { type: 'feature', description: "Song commentary now includes quality score inline (e.g. '16.5/25 ⭐')" },
+      { type: 'feature', description: "Gig outcome report now shows individual band member performance ratings with skill level and contribution breakdown" },
+    ],
+  },
+  {
     version: "1.1.118",
     date: "2026-03-24",
     changes: [
