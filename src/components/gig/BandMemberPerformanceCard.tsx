@@ -57,7 +57,7 @@ export const BandMemberPerformanceCard = ({ bandId, overallRating }: BandMemberP
         : { data: [] };
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.stage_name]));
 
-      if (data) {
+      {
         // For each member, fetch their primary skill level
         const enriched = await Promise.all(data.map(async (m: any) => {
           let skillLevel = 50;
