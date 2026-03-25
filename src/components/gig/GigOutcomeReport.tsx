@@ -542,6 +542,9 @@ export const GigOutcomeReport = ({
             </Card>
           )}
 
+          {/* Band Member Performances */}
+          <BandMemberPerformanceCard bandId={bandId || null} overallRating={overallRating} />
+
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (
             <Card>
