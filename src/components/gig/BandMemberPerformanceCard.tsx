@@ -62,12 +62,12 @@ export const BandMemberPerformanceCard = ({ bandId, overallRating }: BandMemberP
         const enriched = await Promise.all(data.map(async (m: any) => {
           let skillLevel = 50;
           if (m.profile_id) {
-            const { data: skills } = await (supabase
+            const { data: skills } = await (supabase as any)
               .from('skill_progress')
               .select('current_level')
               .eq('profile_id', m.profile_id)
               .eq('skill_name', m.instrument_role === 'vocals' ? 'vocals' : m.instrument_role)
-              .maybeSingle() as any);
+              .maybeSingle();
             skillLevel = skills?.current_level || 50;
           }
 
