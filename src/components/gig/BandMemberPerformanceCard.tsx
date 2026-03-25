@@ -44,9 +44,18 @@ export const BandMemberPerformanceCard = ({ bandId, overallRating }: BandMemberP
     const load = async () => {
       const { data } = await supabase
         .from('band_members')
-        .select('id, instrument_role, vocal_role, profile_id, skill_contribution, profiles(stage_name)')
+        .select('id, instrument_role, vocal_role, profile_id, skill_contribution')
         .eq('band_id', bandId)
         .eq('member_status', 'active');
+
+      if (!data) { setLoading(false); return; }
+
+      // Fetch profile names separately
+      const profileIds = data.filter(m => m.profile_id).map(m => m.profile_id!);
+      const { data: profiles } = profileIds.length > 0 
+        ? await supabase.from('profiles').select('id, stage_name').in('id', profileIds)
+        : { data: [] };
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.stage_name]));
 
       if (data) {
         // For each member, fetch their primary skill level
