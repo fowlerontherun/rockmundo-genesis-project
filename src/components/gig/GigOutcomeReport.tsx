@@ -117,6 +117,7 @@ export const GigOutcomeReport = ({
   merchItemsSold = 0,
   ticketPrice = 20,
   stageBehaviorUsed,
+  bandId,
 }: Props) => {
   if (!outcome) return null;
 
