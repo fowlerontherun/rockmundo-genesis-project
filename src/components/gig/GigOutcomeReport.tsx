@@ -95,6 +95,7 @@ interface Props {
   merchItemsSold?: number;
   ticketPrice?: number;
   stageBehaviorUsed?: string | null;
+  bandId?: string | null;
 }
 
 export const GigOutcomeReport = ({
