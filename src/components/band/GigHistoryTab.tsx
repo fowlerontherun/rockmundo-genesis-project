@@ -398,6 +398,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             chemistryLevel={selectedOutcome.band_chemistry_level || 50}
             chemistryChange={selectedOutcome.chemistry_change || 0}
             stageBehaviorUsed={(selectedOutcome as any).stage_behavior_used}
+            bandId={bandId}
           />
         )}
       </>

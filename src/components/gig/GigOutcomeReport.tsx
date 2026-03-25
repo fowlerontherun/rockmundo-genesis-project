@@ -24,6 +24,7 @@ import type { GigMoment } from "@/utils/momentHighlightsGenerator";
 import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculator";
 import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 import { getBehavior } from "@/utils/stageBehaviors";
+import { BandMemberPerformanceCard } from "./BandMemberPerformanceCard";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -94,6 +95,7 @@ interface Props {
   merchItemsSold?: number;
   ticketPrice?: number;
   stageBehaviorUsed?: string | null;
+  bandId?: string | null;
 }
 
 export const GigOutcomeReport = ({
@@ -115,6 +117,7 @@ export const GigOutcomeReport = ({
   merchItemsSold = 0,
   ticketPrice = 20,
   stageBehaviorUsed,
+  bandId,
 }: Props) => {
   if (!outcome) return null;
 
@@ -538,6 +541,9 @@ export const GigOutcomeReport = ({
               </CardContent>
             </Card>
           )}
+
+          {/* Band Member Performances */}
+          <BandMemberPerformanceCard bandId={bandId || null} overallRating={overallRating} />
 
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (

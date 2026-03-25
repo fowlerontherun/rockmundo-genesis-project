@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Music, Mic2, Users, Star, Flame, Sparkles, Zap, Volume2, VolumeX, X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Music, Mic2, Users, Star, Flame, Sparkles, Zap, Volume2, VolumeX, X, SkipForward, FastForward } from "lucide-react";
 import {
   generateSongCommentary,
   generateBetweenSongBanter,
@@ -143,11 +144,13 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const [currentSongIndex, setCurrentSongIndex] = useState(-1);
   const processedIds = useRef<Set<string>>(new Set());
   const lastSongIndex = useRef(-1);
   const commentaryIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const initialLoadProcessed = useRef(false);
 
   const addComment = useCallback((type: string, message: string, variant?: CommentaryEntry['variant'], icon?: string) => {
     setCommentary(prev => {
@@ -211,7 +214,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
       }
     };
     load();
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 8000);
     return () => clearInterval(interval);
   }, [gigId]);
 
@@ -227,19 +230,18 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
       let msg = getRandomItem(templates).replace(/{band}/g, bandName).replace(/{venue}/g, venueName);
       addComment('arrival', msg, 'success', '🎭');
       
-      // Extra arrival commentary
-      setTimeout(() => addComment('atmosphere', `The crowd at ${venueName} is buzzing with anticipation!`, 'default', '👥'), 1500);
-      setTimeout(() => addComment('production', 'The lights sweep across the stage as the sound check hums to life...', 'default', '💡'), 3000);
-      setTimeout(() => addComment('atmosphere', `${gig.attendance || 0} fans packed into a venue that holds ${venueCapacity}!`, 'default', '🎟️'), 4500);
+      // Extra arrival commentary with more spacing
+      setTimeout(() => addComment('atmosphere', `The crowd at ${venueName} is buzzing with anticipation!`, 'default', '👥'), 3000);
+      setTimeout(() => addComment('production', 'The lights sweep across the stage as the sound check hums to life...', 'default', '💡'), 6000);
+      setTimeout(() => addComment('atmosphere', `${gig.attendance || 0} fans packed into a venue that holds ${venueCapacity}!`, 'default', '🎟️'), 9000);
     }
   }, [gig, hasArrived, addComment]);
 
-  // Continuous ambient commentary generator - runs every 3-6 seconds
+  // Continuous ambient commentary generator - runs every 10-18 seconds (slowed down significantly)
   useEffect(() => {
     if (!gig || !hasArrived) return;
 
     const bandName = (gig.bands as any)?.name || 'The band';
-    const venueName = (gig.venues as any)?.name || 'the venue';
 
     commentaryIntervalRef.current = setInterval(() => {
       const roll = Math.random();
@@ -258,13 +260,13 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
       } else {
         addComment('banter', generateBetweenSongBanter((gig.venues as any)?.location || undefined), 'default', '🎤');
       }
-    }, 3000 + Math.random() * 3000);
+    }, 10000 + Math.random() * 8000); // 10-18 seconds between ambient commentary
 
     return () => clearInterval(commentaryIntervalRef.current);
   }, [gig, hasArrived, addComment]);
 
   // Process song performances
-  const processPerf = useCallback((perf: any) => {
+  const processPerf = useCallback((perf: any, delay: number = 0) => {
     if (processedIds.current.has(perf.id)) return;
     processedIds.current.add(perf.id);
 
@@ -275,67 +277,72 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     const position = perf.position || 0;
     const audioUrl = songData?.songs?.audio_url;
 
-    // Update audio to current song
-    if (audioUrl) {
-      setCurrentSongAudioUrl(audioUrl);
-      setIsPlaying(true);
-    }
+    const doProcess = () => {
+      // Update current song index
+      setCurrentSongIndex(position);
 
-    const change = response === 'ecstatic' ? 1.5 : response === 'enthusiastic' ? 0.5 : response === 'engaged' ? 0 : response === 'mixed' ? -0.5 : -1;
-    setMomentum(prev => Math.max(-3, Math.min(3, prev + change)));
-
-    // Song transition commentary
-    if (position !== lastSongIndex.current) {
-      lastSongIndex.current = position;
-
-      if (position === 0) {
-        addComment('milestone', '🎵 Here we GO! Opening strong!', 'success', '🎵');
-      } else if (position === Math.floor(setlistSongs.length / 2)) {
-        addComment('milestone', "We're halfway through the set and the energy is INCREDIBLE!", 'success', '⚡');
-      } else if (position >= setlistSongs.length - 1) {
-        addComment('milestone', "This is it — the FINAL song of the main set!", 'warning', '🏁');
+      // Update audio to current song
+      if (audioUrl) {
+        setCurrentSongAudioUrl(audioUrl);
+        setIsPlaying(true);
       }
-    }
 
-    // Song start
-    const energyLabel = score >= 18 ? 'EXPLOSIVE' : score >= 14 ? 'solid' : 'mellow';
-    addComment('song_start', `🎵 Now playing: '${title}' — the band opens with ${energyLabel} energy!`, 'default', '🎵');
+      const change = response === 'ecstatic' ? 1.5 : response === 'enthusiastic' ? 0.5 : response === 'engaged' ? 0 : response === 'mixed' ? -0.5 : -1;
+      setMomentum(prev => Math.max(-3, Math.min(3, prev + change)));
 
-    // Multiple commentary lines per song for density
-    const delays = [1200, 2800, 4500, 6500, 8500, 11000, 14000];
-    const bandCtx: BandContext = { name: (gig?.bands as any)?.name || 'The band', fame: (gig?.bands as any)?.fame || 0, genre: (gig?.bands as any)?.genre };
-    const songCtx: SongContext = { title, genre: songData?.songs?.genre, position, totalSongs: setlistSongs.length, performanceScore: score, crowdResponse: response };
+      // Song transition commentary
+      if (position !== lastSongIndex.current) {
+        lastSongIndex.current = position;
 
-    delays.forEach((delay, i) => {
-      setTimeout(() => {
-        if (i === 0) {
-          addComment('song_mid', generateSongCommentary(songCtx, bandCtx), score >= 15 ? 'success' : 'default', '🎶');
-        } else if (i === 1) {
-          const crowdVariant = (response === 'ecstatic' || response === 'enthusiastic') ? 'success' : response === 'disappointed' ? 'destructive' : 'default';
-          const crowdLines: Record<string, string[]> = {
-            ecstatic: ["The crowd is going ABSOLUTELY WILD! 🔥", "PANDEMONIUM! The energy is OFF THE CHARTS!", "LEGENDARY performance! The crowd can't contain themselves!"],
-            enthusiastic: ["The crowd LOVES it! Hands in the air everywhere! 🎉", "Amazing response! People are singing along!", "Fantastic energy! The audience is completely hooked!"],
-            engaged: ["The crowd is into it — heads bobbing, good vibes 👍", "Solid response from the audience", "Nice energy building in the venue..."],
-            mixed: ["Mixed reactions... some love it, others unsure 😐", "The energy has dipped a bit", "Not everyone's feeling this one..."],
-            disappointed: ["Ouch... the crowd isn't feeling this one 😞", "The energy has tanked...", "Tough crowd tonight..."],
-          };
-          addComment('crowd_reaction', getRandomItem(crowdLines[response] || crowdLines.engaged), crowdVariant as any, '👥');
-        } else if (i === 2 && score >= 16) {
-          addComment('special', getRandomItem(MUSICIAN_MOMENTS), 'success', '🌟');
-        } else if (i === 3) {
-          addComment('atmosphere', getRandomItem(CROWD_ATMOSPHERE), 'default', '👥');
-        } else if (i === 4 && score >= 18) {
-          addComment('production', getRandomItem(PRODUCTION_MOMENTS), 'success', '💡');
-        } else if (i === 5) {
-          addComment('narrative', getRandomItem(NARRATIVE_MOMENTS), 'default', '✨');
-        } else if (i === 6) {
-          addComment('song_end', `'${title}' wraps up to ${response === 'ecstatic' ? 'THUNDEROUS applause!' : response === 'enthusiastic' ? 'huge cheers!' : response === 'engaged' ? 'warm applause.' : 'polite clapping.'}`, score >= 15 ? 'success' : 'default', '👏');
+        if (position === 0) {
+          addComment('milestone', '🎵 Here we GO! Opening strong!', 'success', '🎵');
+        } else if (position === Math.floor(setlistSongs.length / 2)) {
+          addComment('milestone', "We're halfway through the set and the energy is INCREDIBLE!", 'success', '⚡');
+        } else if (position >= setlistSongs.length - 1) {
+          addComment('milestone', "This is it — the FINAL song of the main set!", 'warning', '🏁');
         }
-      }, delay);
-    });
+      }
+
+      // Song start with quality info
+      const energyLabel = score >= 18 ? 'EXPLOSIVE' : score >= 14 ? 'solid' : 'mellow';
+      addComment('song_start', `🎵 Now playing: '${title}' (${score.toFixed(1)}/25 ⭐) — the band opens with ${energyLabel} energy!`, 'default', '🎵');
+
+      // Spread commentary lines with bigger gaps (5s, 12s, 20s, 30s)
+      const delays = [5000, 12000, 20000, 30000];
+      const bandCtx: BandContext = { name: (gig?.bands as any)?.name || 'The band', fame: (gig?.bands as any)?.fame || 0, genre: (gig?.bands as any)?.genre };
+      const songCtx: SongContext = { title, genre: songData?.songs?.genre, position, totalSongs: setlistSongs.length, performanceScore: score, crowdResponse: response };
+
+      delays.forEach((d, i) => {
+        setTimeout(() => {
+          if (i === 0) {
+            addComment('song_mid', generateSongCommentary(songCtx, bandCtx), score >= 15 ? 'success' : 'default', '🎶');
+          } else if (i === 1) {
+            const crowdVariant = (response === 'ecstatic' || response === 'enthusiastic') ? 'success' : response === 'disappointed' ? 'destructive' : 'default';
+            const crowdLines: Record<string, string[]> = {
+              ecstatic: ["The crowd is going ABSOLUTELY WILD! 🔥", "PANDEMONIUM! The energy is OFF THE CHARTS!", "LEGENDARY performance! The crowd can't contain themselves!"],
+              enthusiastic: ["The crowd LOVES it! Hands in the air everywhere! 🎉", "Amazing response! People are singing along!", "Fantastic energy! The audience is completely hooked!"],
+              engaged: ["The crowd is into it — heads bobbing, good vibes 👍", "Solid response from the audience", "Nice energy building in the venue..."],
+              mixed: ["Mixed reactions... some love it, others unsure 😐", "The energy has dipped a bit", "Not everyone's feeling this one..."],
+              disappointed: ["Ouch... the crowd isn't feeling this one 😞", "The energy has tanked...", "Tough crowd tonight..."],
+            };
+            addComment('crowd_reaction', getRandomItem(crowdLines[response] || crowdLines.engaged), crowdVariant as any, '👥');
+          } else if (i === 2 && score >= 16) {
+            addComment('special', getRandomItem(MUSICIAN_MOMENTS), 'success', '🌟');
+          } else if (i === 3) {
+            addComment('song_end', `'${title}' wraps up to ${response === 'ecstatic' ? 'THUNDEROUS applause!' : response === 'enthusiastic' ? 'huge cheers!' : response === 'engaged' ? 'warm applause.' : 'polite clapping.'}`, score >= 15 ? 'success' : 'default', '👏');
+          }
+        }, d);
+      });
+    };
+
+    if (delay > 0) {
+      setTimeout(doProcess, delay);
+    } else {
+      doProcess();
+    }
   }, [setlistSongs, addComment, gig]);
 
-  // Poll performances
+  // Poll performances - process existing songs sequentially on first load
   useEffect(() => {
     if (!gig?.id) return;
 
@@ -354,14 +361,23 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
           .order('position');
 
         if (perfs) {
-          perfs.forEach(p => processPerf(p));
+          if (!initialLoadProcessed.current && perfs.length > 0) {
+            // First load: process songs sequentially with delays so they appear in order
+            initialLoadProcessed.current = true;
+            perfs.forEach((p, idx) => {
+              processPerf(p, idx * 8000); // 8 seconds between each song on initial load
+            });
+          } else {
+            // Subsequent polls: process new songs immediately
+            perfs.forEach(p => processPerf(p));
+          }
           setPerformances(perfs);
         }
       }
     };
 
     loadPerfs();
-    const interval = setInterval(loadPerfs, 3000);
+    const interval = setInterval(loadPerfs, 5000);
 
     const channel = supabase
       .channel('commentary-perfs')
@@ -395,9 +411,19 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     return () => { supabase.removeChannel(channel); };
   }, [gigId, onComplete, addComment]);
 
+  // Skip to outcome handler
+  const handleSkipToOutcome = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    if (commentaryIntervalRef.current) {
+      clearInterval(commentaryIntervalRef.current);
+    }
+    onComplete?.();
+  }, [onComplete]);
+
   // Derived state
-  const currentSongIndex = gig?.current_song_position || 0;
-  const currentSong = setlistSongs[currentSongIndex];
+  const currentSong = setlistSongs[currentSongIndex >= 0 ? currentSongIndex : (gig?.current_song_position || 0)];
   const latestPerf = performances[performances.length - 1];
   const crowdMood = latestPerf?.crowd_response || 'engaged';
   const isLive = gig?.status === 'in_progress';
@@ -405,6 +431,10 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
   const venueName = (gig?.venues as any)?.name || 'Unknown Venue';
   const attendance = gig?.attendance || 0;
   const capacity = (gig?.venues as any)?.capacity || 100;
+
+  const avgScore = performances.length > 0
+    ? performances.reduce((sum: number, p: any) => sum + (p.performance_score || 0), 0) / performances.length
+    : 0;
 
   const moodColor = crowdMood === 'ecstatic' ? 'text-yellow-400' : crowdMood === 'enthusiastic' ? 'text-green-400' : crowdMood === 'engaged' ? 'text-blue-400' : crowdMood === 'mixed' ? 'text-orange-400' : 'text-red-400';
 
@@ -420,6 +450,10 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
     destructive: 'bg-red-500/10 border-red-500/20',
     default: 'bg-muted/30 border-border/50',
   };
+
+  const progress = setlistSongs.length > 0
+    ? Math.round((performances.length / setlistSongs.length) * 100)
+    : 0;
 
   return (
     <Card className="border-primary/30 bg-card">
@@ -448,33 +482,57 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
           <span className={`flex items-center gap-1 font-medium ${moodColor}`}>
             <Flame className="h-3 w-3" /> {crowdMood}
           </span>
-          {currentSong && (
-            <span className="flex items-center gap-1 font-medium text-primary">
-              🎵 {currentSong.songs?.title || 'Loading...'}
+          {avgScore > 0 && (
+            <span className="flex items-center gap-1 font-medium text-yellow-500">
+              ⭐ {avgScore.toFixed(1)}/25 avg
             </span>
           )}
         </div>
 
-        {/* Volume controls */}
-        <div className="flex items-center gap-2 mt-2">
+        {/* Current song & progress */}
+        {currentSong && (
+          <div className="mt-2 space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-primary flex items-center gap-1">
+                🎵 {currentSong.songs?.title || 'Loading...'}
+              </span>
+              <span className="text-xs text-muted-foreground">{progress}% complete</span>
+            </div>
+            <Progress value={progress} className="h-1.5" />
+          </div>
+        )}
+
+        {/* Controls row: volume + skip */}
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            </Button>
+            <Slider
+              value={[isMuted ? 0 : volume * 100]}
+              onValueChange={([val]) => {
+                setVolume(val / 100);
+                if (val > 0) setIsMuted(false);
+              }}
+              max={100}
+              step={1}
+              className="w-24"
+            />
+          </div>
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setIsMuted(!isMuted)}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={handleSkipToOutcome}
           >
-            {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            <FastForward className="h-3.5 w-3.5" />
+            Skip to Outcome
           </Button>
-          <Slider
-            value={[isMuted ? 0 : volume * 100]}
-            onValueChange={([val]) => {
-              setVolume(val / 100);
-              if (val > 0) setIsMuted(false);
-            }}
-            max={100}
-            step={1}
-            className="w-24"
-          />
         </div>
       </CardHeader>
 

@@ -713,6 +713,7 @@ export default function PerformGig() {
         chemistryChange={outcome?.chemistry_impact || outcome?.chemistry_change || 0}
         chemistryMoments={outcome?.chemistryMoments || []}
         stageBehaviorUsed={outcome?.stage_behavior_used}
+        bandId={gig.band_id}
       />
     </div>
   );
