@@ -23,6 +23,7 @@ const Index = () => {
     deadCharacters,
     hasLivingCharacter,
     hasLivingCharacterLoading,
+    resurrectCharacter,
     createChildCharacter,
     createFreshCharacter,
     updateLastLogin,
@@ -68,6 +69,11 @@ const Index = () => {
     return (
       <CharacterDeathScreen
         deadCharacter={mostRecentDeath}
+        onResurrect={(profileId) => {
+          resurrectCharacter.mutate(profileId, {
+            onSuccess: () => navigate("/dashboard"),
+          });
+        }}
         onCreateChild={(parentId) => {
           createChildCharacter.mutate(parentId, {
             onSuccess: () => navigate("/onboarding"),
@@ -78,7 +84,7 @@ const Index = () => {
             onSuccess: () => navigate("/onboarding"),
           });
         }}
-        isLoading={createChildCharacter.isPending || createFreshCharacter.isPending}
+        isLoading={resurrectCharacter.isPending || createChildCharacter.isPending || createFreshCharacter.isPending}
       />
     );
   }

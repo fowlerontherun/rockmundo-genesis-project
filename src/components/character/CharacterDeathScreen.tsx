@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Skull, Baby, Sparkles, Loader2 } from "lucide-react";
+import { Skull, Baby, Sparkles, Loader2, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,7 @@ import type { DeadCharacter } from "@/hooks/useCharacterDeath";
 
 interface CharacterDeathScreenProps {
   deadCharacter: DeadCharacter;
+  onResurrect: (profileId: string) => void;
   onCreateChild: (parentId: string) => void;
   onCreateFresh: () => void;
   isLoading: boolean;
@@ -15,14 +16,17 @@ interface CharacterDeathScreenProps {
 
 export function CharacterDeathScreen({
   deadCharacter,
+  onResurrect,
   onCreateChild,
   onCreateFresh,
   isLoading,
 }: CharacterDeathScreenProps) {
-  const [choice, setChoice] = useState<"child" | "fresh" | null>(null);
+  const [choice, setChoice] = useState<"resurrect" | "child" | "fresh" | null>(null);
 
   const skillCount = Object.keys(deadCharacter.final_skills || {}).length;
   const inheritedCash = Math.floor(deadCharacter.total_cash_at_death * 0.5);
+
+  const livesRemaining = deadCharacter.lives_remaining_at_death ?? 0;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
@@ -72,11 +76,37 @@ export function CharacterDeathScreen({
             <p className="text-sm text-muted-foreground italic">
               They have been immortalized in the Hall of Immortals.
             </p>
+            <p className="text-sm font-medium text-primary">
+              Resurrection lives remaining: {livesRemaining} / 3
+            </p>
           </CardContent>
         </Card>
 
         {/* Choices */}
         <div className="grid gap-4">
+          {livesRemaining > 0 && (
+            <Card
+              className={`cursor-pointer transition-all hover:border-emerald-500/50 ${
+                choice === "resurrect" ? "border-emerald-500 ring-2 ring-emerald-500/20" : ""
+              }`}
+              onClick={() => setChoice("resurrect")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+                    <HeartPulse className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold">Resurrect {deadCharacter.character_name}</h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Continue exactly where you left off. This uses <span className="font-medium text-emerald-500">1 life</span>.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card
             className={`cursor-pointer transition-all hover:border-primary/50 ${
               choice === "child" ? "border-primary ring-2 ring-primary/20" : ""
@@ -127,7 +157,8 @@ export function CharacterDeathScreen({
           size="lg"
           disabled={!choice || isLoading}
           onClick={() => {
-            if (choice === "child") onCreateChild(deadCharacter.id);
+            if (choice === "resurrect") onResurrect(deadCharacter.profile_id);
+            else if (choice === "child") onCreateChild(deadCharacter.id);
             else if (choice === "fresh") onCreateFresh();
           }}
         >
@@ -136,6 +167,8 @@ export function CharacterDeathScreen({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Creating character...
             </>
+          ) : choice === "resurrect" ? (
+            "Resurrect and Continue"
           ) : choice === "child" ? (
             "Continue the Legacy"
           ) : choice === "fresh" ? (

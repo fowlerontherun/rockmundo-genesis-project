@@ -27,7 +27,7 @@ serve(async (req) => {
     // 1. Get all living profiles that haven't logged in for >1 day
     const { data: staleProfiles, error: fetchError } = await supabase
       .from("profiles")
-      .select("id, user_id, health, last_login_at, display_name, username, avatar_url, bio, fame, cash, age, experience, level, generation_number, is_active, died_at")
+      .select("id, user_id, health, last_login_at, display_name, username, avatar_url, bio, fame, cash, age, experience, level, generation_number, is_active, died_at, resurrection_lives")
       .is("died_at", null)
       .eq("is_active", true)
       .lt("last_login_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
@@ -106,6 +106,7 @@ serve(async (req) => {
           final_skills: finalSkills,
           final_attributes: finalAttributes,
           generation_number: profile.generation_number || 1,
+          lives_remaining_at_death: Math.max(0, profile.resurrection_lives ?? 0),
         });
 
         // Mark profile as dead

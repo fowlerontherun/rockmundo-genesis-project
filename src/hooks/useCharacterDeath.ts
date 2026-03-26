@@ -13,6 +13,7 @@ export interface DeadCharacter {
   total_cash_at_death: number;
   final_skills: Record<string, number>;
   generation_number: number;
+  lives_remaining_at_death: number;
 }
 
 export function useCharacterDeath() {
@@ -27,7 +28,7 @@ export function useCharacterDeath() {
 
       const { data, error } = await supabase
         .from("hall_of_immortals")
-        .select("id, profile_id, character_name, avatar_url, cause_of_death, died_at, total_fame, total_cash_at_death, final_skills, generation_number")
+        .select("id, profile_id, character_name, avatar_url, cause_of_death, died_at, total_fame, total_cash_at_death, final_skills, generation_number, lives_remaining_at_death")
         .eq("user_id", user.id)
         .order("died_at", { ascending: false });
 
@@ -134,6 +135,25 @@ export function useCharacterDeath() {
     },
   });
 
+  const resurrectCharacter = useMutation({
+    mutationFn: async (profileId: string) => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const { error } = await supabase.rpc("resurrect_character" as any, {
+        p_profile_id: profileId,
+      } as any);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
+      queryClient.invalidateQueries({ queryKey: ["dead-characters"] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+
   // Create fresh random character (no inheritance)
   const createFreshCharacter = useMutation({
     mutationFn: async () => {
@@ -202,6 +222,7 @@ export function useCharacterDeath() {
     hasLivingCharacter: hasLivingCharacter.data ?? true,
     hasLivingCharacterLoading: hasLivingCharacter.isLoading,
     createChildCharacter,
+    resurrectCharacter,
     createFreshCharacter,
     updateLastLogin,
   };
