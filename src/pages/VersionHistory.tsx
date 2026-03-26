@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.121",
+    date: "2026-03-26",
+    changes: [
+      { type: 'fix', description: "Fixed Release Manager analytics showing wrong sales figures — was limited to 100 rows but releases can have thousands of sale records. Now uses releases table totals as source of truth" },
+      { type: 'fix', description: "Fixed financial breakdown in analytics dialog using row-limited aggregation instead of authoritative release table data" },
+      { type: 'feature', description: "Songs already on releases are now auto-hidden when creating new releases (singles/EPs hide all released songs, albums hide songs already on albums)" },
+      { type: 'improvement', description: "Added toggle to show/hide already-released songs in song selection step" },
+      { type: 'improvement', description: "Albums can now include songs previously released as singles or on EPs (only songs already on another album are blocked)" },
+    ],
+  },
+  {
     version: "1.1.120",
     date: "2026-03-26",
     changes: [
