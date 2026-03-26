@@ -85,52 +85,45 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch sales data
+  // Fetch sales data - use release table totals as source of truth, aggregate format breakdown
   const { data: salesData, isLoading: loadingSales } = useQuery({
     queryKey: ["release-sales-analytics", release?.id],
     queryFn: async () => {
       if (!release?.id) return null;
       
-      // Get release format IDs for this release
       const formatIds = release.release_formats?.map((f: any) => f.id) || [];
       if (formatIds.length === 0) return null;
-      
-      const { data, error } = await supabase
+
+      // Use release table totals as the authoritative source (pump updates these directly)
+      const totalUnits = release.total_units_sold || 0;
+      const totalRevenue = release.total_revenue || 0;
+
+      // Build format breakdown from the release's per-format sales columns
+      const formatStats: { format: string; units: number; revenue: number }[] = [];
+      const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
+      for (const ft of formatTypes) {
+        const units = release[`${ft}_sales`] || 0;
+        if (units > 0) {
+          // Find retail price for this format to estimate revenue split
+          const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
+          const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
+          formatStats.push({ format: ft, units, revenue: Math.round(units * pricePerUnit * 100) / 100 });
+        }
+      }
+
+      // Fetch only recent sales for display (not for totals)
+      const { data: recentSales } = await supabase
         .from("release_sales")
         .select("*, release_formats!inner(format_type)")
         .in("release_format_id", formatIds)
         .order("sale_date", { ascending: false })
-        .limit(100);
-      
-      if (error) {
-        console.error("Error fetching sales data:", error);
-        return null;
-      }
-
-      // Aggregate by format type
-      const formatStats: Record<string, { 
-        format: string; 
-        units: number; 
-        revenue: number;
-      }> = {};
-
-      data?.forEach((sale: any) => {
-        const format = sale.release_formats?.format_type || sale.platform || "unknown";
-        if (!formatStats[format]) {
-          formatStats[format] = { format, units: 0, revenue: 0 };
-        }
-        formatStats[format].units += sale.quantity_sold || 0;
-        formatStats[format].revenue += (sale.total_amount || 0) / 100;
-      });
-
-      const totalUnits = Object.values(formatStats).reduce((sum, f) => sum + f.units, 0);
-      const totalRevenue = Object.values(formatStats).reduce((sum, f) => sum + f.revenue, 0);
+        .limit(10);
 
       return {
-        formats: Object.values(formatStats).sort((a, b) => b.revenue - a.revenue),
+        formats: formatStats.sort((a, b) => b.revenue - a.revenue),
         totalUnits,
         totalRevenue,
-        recentSales: data?.slice(0, 10) || [],
+        recentSales: recentSales || [],
       };
     },
     enabled: open && !!release?.id,
