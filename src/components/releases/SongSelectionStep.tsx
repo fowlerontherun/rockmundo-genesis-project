@@ -49,6 +49,8 @@ export function SongSelectionStep({
   onBack,
   onNext
 }: SongSelectionStepProps) {
+  const [showReleasedSongs, setShowReleasedSongs] = useState(false);
+
   // Determine min/max songs based on release type
   const getSongLimits = () => {
     switch (releaseType) {
