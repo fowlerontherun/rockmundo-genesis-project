@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.120",
+    date: "2026-03-26",
+    changes: [
+      { type: 'fix', description: "Fixed recording sessions never completing for bands — location check was using band_members.current_city_id (always NULL) instead of profiles.current_city_id" },
+      { type: 'fix', description: "Fixed 3 songs showing as 'failed' despite having successfully generated audio (status corrected to 'completed')" },
+      { type: 'fix', description: "Reset 5 stuck/failed AI song generations to allow retry (including 'Nunca mais' stuck since Feb 14)" },
+      { type: 'fix', description: "Requeued 7 stuck recording sessions for reprocessing with the corrected location logic" },
+    ],
+  },
+  {
     version: "1.1.119",
     date: "2026-03-25",
     changes: [

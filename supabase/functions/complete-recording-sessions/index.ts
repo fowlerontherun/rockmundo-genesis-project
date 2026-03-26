@@ -80,15 +80,29 @@ Deno.serve(async (req) => {
           let missingMembers: string[] = []
 
           if (session.band_id) {
-            // Band session: check all active members
+            // Band session: check all active non-touring members
             const { data: members } = await supabase
               .from('band_members')
-              .select('user_id, current_city_id')
+              .select('user_id')
               .eq('band_id', session.band_id)
               .in('member_status', ['active'])
               .eq('is_touring_member', false)
 
-            missingMembers = (members || [])
+            // Look up each member's city from profiles (band_members.current_city_id is unreliable)
+            const memberCities = await Promise.all(
+              (members || []).filter(m => m.user_id).map(async (m) => {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('current_city_id')
+                  .eq('user_id', m.user_id)
+                  .eq('is_active', true)
+                  .is('died_at', null)
+                  .maybeSingle()
+                return { user_id: m.user_id, current_city_id: profile?.current_city_id ?? null }
+              })
+            )
+
+            missingMembers = memberCities
               .filter(m => m.current_city_id !== locationCityId)
               .map(m => m.user_id)
               .filter(Boolean) as string[]
