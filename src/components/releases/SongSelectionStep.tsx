@@ -248,12 +248,32 @@ export function SongSelectionStep({
 
   const isSelected = (songId: string) => selectedSongs.some(s => s.displayKey === songId);
   
-  // Songs already on any release (single/EP/album) are disabled - except for greatest hits
-  const isSongDisabled = (song: SongWithVersion) => {
-    if (isGreatestHits) return false; // Greatest hits can include any released song
-    if (song.onRelease) return true; // Can't add song that's already on a release
+  // Determine if a song should be hidden (not just disabled)
+  const isSongHidden = (song: SongWithVersion) => {
+    if (isGreatestHits) return false; // Greatest hits shows all released songs
+    if (!song.onRelease) return false; // Not on any release = show it
+    if (showReleasedSongs) return false; // User toggled to show all
+    // For albums: hide songs already on an album
+    if (releaseType === "album" && song.releaseType === "album") return true;
+    // For singles/EPs: hide songs already on any release
+    if (releaseType === "single" || releaseType === "ep") return true;
+    // For albums: songs on singles/EPs are still available for albums
     return false;
   };
+
+  // Songs already on any release are disabled (can't select) - except for greatest hits
+  const isSongDisabled = (song: SongWithVersion) => {
+    if (isGreatestHits) return false;
+    if (song.onRelease) {
+      // For albums: only disable if already on an album
+      if (releaseType === "album") return song.releaseType === "album";
+      return true; // Singles/EPs: any prior release = disabled
+    }
+    return false;
+  };
+
+  const visibleSongs = songs?.filter(song => !isSongHidden(song)) || [];
+  const hiddenCount = (songs?.length || 0) - visibleSongs.length;
 
   const getReleaseTypeDescription = () => {
     switch (releaseType) {
