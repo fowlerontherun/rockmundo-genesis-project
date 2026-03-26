@@ -129,28 +129,21 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch financial summary from release_sales
+  // Fetch financial summary - use release table total_revenue as source of truth
+  // and estimate tax/distribution from the standard rates
   const { data: financialData, isLoading: loadingFinancials } = useQuery({
     queryKey: ["release-financials", release?.id],
     queryFn: async () => {
       if (!release?.id) return null;
-      const formatIds = release.release_formats?.map((f: any) => f.id) || [];
-      if (formatIds.length === 0) return null;
-
-      const { data, error } = await supabase
-        .from("release_sales")
-        .select("total_amount, sales_tax_amount, distribution_fee, net_revenue, release_format_id, release_formats!inner(format_type)")
-        .in("release_format_id", formatIds);
-
-      if (error) return null;
-
-      let grossRevenue = 0, taxPaid = 0, distributionFees = 0, netRevenue = 0;
-      data?.forEach((s: any) => {
-        grossRevenue += (s.total_amount || 0) / 100;
-        taxPaid += (s.sales_tax_amount || 0) / 100;
-        distributionFees += (s.distribution_fee || 0) / 100;
-        netRevenue += (s.net_revenue || 0) / 100;
-      });
+      
+      // Use release.total_revenue as the authoritative gross revenue
+      const grossRevenue = release.total_revenue || 0;
+      // Standard rates from the pump function
+      const salesTaxRate = 0.10;
+      const distributionRate = 0.30;
+      const taxPaid = Math.round(grossRevenue * salesTaxRate * 100) / 100;
+      const distributionFees = Math.round(grossRevenue * distributionRate * 100) / 100;
+      const netRevenue = grossRevenue - taxPaid - distributionFees;
 
       return { grossRevenue, taxPaid, distributionFees, netRevenue };
     },
