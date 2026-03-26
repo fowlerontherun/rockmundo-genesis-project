@@ -1,44 +1,83 @@
 
 
-## Fix Label Revenue Visibility & Add Per-Artist Financial Breakdown
+## Fix Recording Session Completion & AI Song Generation Failures
 
-### Problem
-The label revenue splitting logic already works correctly in both `generate-daily-sales` and `update-daily-streams` — labels receive their cut of sales and streaming revenue, and it's credited to the label balance. However, the **Finance tab queries the wrong table**. Revenue is logged to `label_financial_transactions`, but the UI reads from `label_transactions` (which only tracks deposits/withdrawals). This makes it appear as though labels aren't earning anything.
+### Problem 1: Recording Sessions Never Complete
 
-Additionally, there's no per-artist breakdown showing how much each signed artist is generating for the label.
+**Root Cause Found**: The `complete-recording-sessions` edge function checks `band_members.current_city_id` (lines 85-93) to verify members are in the studio's city. However, `band_members.current_city_id` is **always NULL** for every member in the database. The actual city data lives on `profiles.current_city_id`.
 
-### Build Error
-The `npm:openai` error comes from Supabase's edge-runtime type definitions, not our code. Will suppress with a tsconfig adjustment or ignore — this is a known Supabase SDK issue.
+This means the location check always finds a mismatch (`null !== "studio-city-uuid"`), marking every band recording session as "failed" due to "members not in the studio city" — even though they are.
+
+**7 recording sessions** are currently stuck as `in_progress` with past `scheduled_end` dates, affecting songs: "Going up and out", "Coração", "Carinho", "Kvina 2", "My Lovely Horse".
+
+**Fix**: Update the `complete-recording-sessions` edge function to look up each band member's city from `profiles.current_city_id` via `user_id` instead of using the always-null `band_members.current_city_id`.
+
+---
+
+### Problem 2: AI Song Generation Failures
+
+Two separate issues:
+
+**A) Songs with audio but status="failed" (3 songs)**: "When I needed some one to talk to", "My Lovely Horse", "Rare Polluon" — these have valid `audio_url` but `audio_generation_status` is stuck at `failed`. The generate function already has auto-recovery logic for this (lines 49-63), but it only triggers on a regeneration attempt. These need a data fix to set status to `completed`.
+
+**B) Songs that genuinely failed (4 songs)**: "Ballad of the Rebel", "Nunca mais" (stuck generating since Feb 14), "Blue", "Red", "Violet" — these have no audio. They should have their status reset to allow retry.
+
+**Fix**: 
+- Data repair: Update the 3 songs with audio to `completed` status; reset the stuck/failed ones to allow retry
+- The `generate-song-audio` function itself is working correctly — these are stale state issues
 
 ---
 
 ### Plan
 
-#### 1. Fix Finance Tab to show revenue transactions
-**File: `src/components/labels/management/LabelFinanceTab.tsx`**
-- Add a second query fetching from `label_financial_transactions` (where daily sales/streaming revenue is recorded)
-- Merge both transaction sources into a unified timeline
-- Show revenue entries (green) alongside deposit/withdrawal entries
-- Add summary cards: Total Revenue from Artists, Total Marketing Spend, Net P&L
+#### 1. Fix `complete-recording-sessions` location check
+**File: `supabase/functions/complete-recording-sessions/index.ts`**
 
-#### 2. Add Per-Artist Revenue Breakdown
-**File: `src/components/labels/management/LabelFinanceTab.tsx`** (new section in the overview)
-- Query `label_financial_transactions` joined with `artist_label_contracts` to get per-contract revenue
-- Join contracts to bands to get artist names
-- Display a table: Artist Name | Total Revenue | Recouped | Outstanding Advance | Contract Split
-- Show both sales and streaming revenue breakdowns per artist
+Replace the band member location check (lines 83-94) to look up cities from `profiles` instead of `band_members`:
 
-#### 3. Fix build error
-**File: `supabase/functions/admin-boost-plays/index.ts`** or config
-- The openai import error is from `@supabase/functions-js` edge-runtime types, not our code. Will check if a deno.json or import_map needs updating, or if we just need to ensure the build doesn't type-check edge functions against that module.
+```
+// Instead of:
+const { data: members } = await supabase
+  .from('band_members')
+  .select('user_id, current_city_id')
+  ...
 
-### Technical Details
-- `label_financial_transactions` has columns: `label_id`, `transaction_type`, `amount`, `description`, `related_contract_id`, `related_release_id`, `related_band_id`, `created_at`
-- `label_transactions` has: `label_id`, `transaction_type`, `amount`, `description`, `initiated_by`, `created_at`
-- Revenue entries use `related_contract_id` which links to `artist_label_contracts` → `band_id` → `bands.name`
-- Both `generate-daily-sales` and `update-daily-streams` correctly insert to `label_financial_transactions` with `transaction_type: "revenue"`
+// Do:
+const { data: members } = await supabase
+  .from('band_members')
+  .select('user_id')
+  .eq('band_id', session.band_id)
+  .in('member_status', ['active'])
+  .eq('is_touring_member', false)
+
+// Then for each member with a user_id, look up their city from profiles
+const memberCities = await Promise.all(
+  members.filter(m => m.user_id).map(async (m) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('current_city_id')
+      .eq('user_id', m.user_id)
+      .eq('is_active', true)
+      .is('died_at', null)
+      .maybeSingle()
+    return { user_id: m.user_id, current_city_id: profile?.current_city_id }
+  })
+)
+```
+
+Then check `memberCities` for mismatches instead of the old `members` array.
+
+#### 2. Data repair via SQL insert tool
+- Set `audio_generation_status = 'completed'` for 3 songs that have audio but show failed
+- Reset `audio_generation_status = NULL, audio_generation_started_at = NULL` for "Nunca mais" (stuck generating since Feb 14)
+- Complete the 7 stuck recording sessions manually or let the fixed function handle them on next cron run
+
+#### 3. Version bump
+Update to v1.1.120.
 
 ### Files to edit
-- `src/components/labels/management/LabelFinanceTab.tsx` — merge both transaction tables, add per-artist breakdown
-- Edge function config/build fix for the openai type error
+- `supabase/functions/complete-recording-sessions/index.ts` — fix location lookup
+- `src/components/VersionHeader.tsx` — version bump
+- `src/pages/VersionHistory.tsx` — changelog
+- Database data repairs via insert tool
 
