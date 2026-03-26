@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Music2, Disc3, Album, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Music2, Disc3, Album, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { ReleaseType } from "./ReleaseTypeSelector";
 
 export interface SongSelection {
@@ -46,6 +49,8 @@ export function SongSelectionStep({
   onBack,
   onNext
 }: SongSelectionStepProps) {
+  const [showReleasedSongs, setShowReleasedSongs] = useState(false);
+
   // Determine min/max songs based on release type
   const getSongLimits = () => {
     switch (releaseType) {
@@ -243,12 +248,32 @@ export function SongSelectionStep({
 
   const isSelected = (songId: string) => selectedSongs.some(s => s.displayKey === songId);
   
-  // Songs already on any release (single/EP/album) are disabled - except for greatest hits
-  const isSongDisabled = (song: SongWithVersion) => {
-    if (isGreatestHits) return false; // Greatest hits can include any released song
-    if (song.onRelease) return true; // Can't add song that's already on a release
+  // Determine if a song should be hidden (not just disabled)
+  const isSongHidden = (song: SongWithVersion) => {
+    if (isGreatestHits) return false; // Greatest hits shows all released songs
+    if (!song.onRelease) return false; // Not on any release = show it
+    if (showReleasedSongs) return false; // User toggled to show all
+    // For albums: hide songs already on an album
+    if (releaseType === "album" && song.releaseType === "album") return true;
+    // For singles/EPs: hide songs already on any release
+    if (releaseType === "single" || releaseType === "ep") return true;
+    // For albums: songs on singles/EPs are still available for albums
     return false;
   };
+
+  // Songs already on any release are disabled (can't select) - except for greatest hits
+  const isSongDisabled = (song: SongWithVersion) => {
+    if (isGreatestHits) return false;
+    if (song.onRelease) {
+      // For albums: only disable if already on an album
+      if (releaseType === "album") return song.releaseType === "album";
+      return true; // Singles/EPs: any prior release = disabled
+    }
+    return false;
+  };
+
+  const visibleSongs = songs?.filter(song => !isSongHidden(song)) || [];
+  const hiddenCount = (songs?.length || 0) - visibleSongs.length;
 
   const getReleaseTypeDescription = () => {
     switch (releaseType) {
@@ -274,9 +299,26 @@ export function SongSelectionStep({
           <Alert className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              Songs can only be released once. Songs already on a release (single, EP, or album) are grayed out, but can still be used in greatest hits compilations.
+              {releaseType === "album" 
+                ? "Songs already on an album are hidden. Songs from singles/EPs can be included."
+                : "Songs already on a release are hidden."
+              }
             </AlertDescription>
           </Alert>
+        )}
+
+        {!isGreatestHits && hiddenCount > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <Switch 
+              id="show-released" 
+              checked={showReleasedSongs} 
+              onCheckedChange={setShowReleasedSongs} 
+            />
+            <Label htmlFor="show-released" className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1.5">
+              {showReleasedSongs ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {showReleasedSongs ? "Showing" : "Show"} {hiddenCount} already-released song{hiddenCount !== 1 ? 's' : ''}
+            </Label>
+          </div>
         )}
 
         {isGreatestHits && (
@@ -300,9 +342,15 @@ export function SongSelectionStep({
               }
             </p>
           </div>
+        ) : visibleSongs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Music2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium">All songs are already on releases</p>
+            <p className="text-sm mt-1">Record new songs or toggle the switch above to see them.</p>
+          </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {songs?.map((song) => {
+            {visibleSongs.map((song) => {
               const disabled = isSongDisabled(song);
               const selected = isSelected(song.id);
               
