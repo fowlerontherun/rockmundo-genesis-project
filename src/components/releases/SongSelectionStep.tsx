@@ -299,9 +299,26 @@ export function SongSelectionStep({
           <Alert className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              Songs can only be released once. Songs already on a release (single, EP, or album) are grayed out, but can still be used in greatest hits compilations.
+              {releaseType === "album" 
+                ? "Songs already on an album are hidden. Songs from singles/EPs can be included."
+                : "Songs already on a release are hidden."
+              }
             </AlertDescription>
           </Alert>
+        )}
+
+        {!isGreatestHits && hiddenCount > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <Switch 
+              id="show-released" 
+              checked={showReleasedSongs} 
+              onCheckedChange={setShowReleasedSongs} 
+            />
+            <Label htmlFor="show-released" className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1.5">
+              {showReleasedSongs ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {showReleasedSongs ? "Showing" : "Show"} {hiddenCount} already-released song{hiddenCount !== 1 ? 's' : ''}
+            </Label>
+          </div>
         )}
 
         {isGreatestHits && (
@@ -325,9 +342,15 @@ export function SongSelectionStep({
               }
             </p>
           </div>
+        ) : visibleSongs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Music2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium">All songs are already on releases</p>
+            <p className="text-sm mt-1">Record new songs or toggle the switch above to see them.</p>
+          </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {songs?.map((song) => {
+            {visibleSongs.map((song) => {
               const disabled = isSongDisabled(song);
               const selected = isSelected(song.id);
               
