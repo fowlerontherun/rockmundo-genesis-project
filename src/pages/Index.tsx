@@ -21,6 +21,7 @@ const Index = () => {
   const { data: characterIdentity, isLoading: identityLoading } = usePlayerCharacterIdentity();
   const {
     deadCharacters,
+    deadCharactersLoading,
     hasLivingCharacter,
     hasLivingCharacterLoading,
     resurrectCharacter,
@@ -45,7 +46,7 @@ const Index = () => {
 
   useEffect(() => {
     // Don't navigate until all loading is done
-    if (authLoading || identityLoading || hasLivingCharacterLoading) return;
+    if (authLoading || identityLoading || hasLivingCharacterLoading || deadCharactersLoading) return;
     if (!user) return;
 
     // If user has a living character, proceed normally
@@ -61,10 +62,10 @@ const Index = () => {
       }
     }
     // If no living character, the death screen or fresh start will render below
-  }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
+  }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, deadCharactersLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
 
   // Show death screen if no living character and there are dead ones
-  if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length > 0) {
+  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length > 0) {
     const mostRecentDeath = deadCharacters[0];
     return (
       <CharacterDeathScreen
@@ -97,7 +98,7 @@ const Index = () => {
   }
 
   // No living character and no dead ones — shouldn't happen but handle gracefully
-  if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length === 0) {
+  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
         <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
@@ -127,7 +128,7 @@ const Index = () => {
     );
   }
 
-  if (authLoading || identityLoading || hasLivingCharacterLoading || (!gameData && user) || (user && dataLoading)) {
+  if (authLoading || identityLoading || hasLivingCharacterLoading || deadCharactersLoading || (!gameData && user) || (user && dataLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

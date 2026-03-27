@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.123",
+    date: "2026-03-27",
+    changes: [
+      { type: 'fix', description: "Fixed race condition where dead players saw 'Create New Character' fallback instead of the death/resurrection screen because dead characters query hadn't finished loading yet" },
+    ],
+  },
+  {
     version: "1.1.122",
     date: "2026-03-27",
     changes: [
