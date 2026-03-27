@@ -128,7 +128,7 @@ const Index = () => {
     );
   }
 
-  if (authLoading || identityLoading || hasLivingCharacterLoading || (!gameData && user) || (user && dataLoading)) {
+  if (authLoading || identityLoading || hasLivingCharacterLoading || deadCharactersLoading || (!gameData && user) || (user && dataLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
