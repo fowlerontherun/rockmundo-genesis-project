@@ -65,7 +65,7 @@ const Index = () => {
   }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, deadCharactersLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
 
   // Show death screen if no living character and there are dead ones
-  if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length > 0) {
+  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length > 0) {
     const mostRecentDeath = deadCharacters[0];
     return (
       <CharacterDeathScreen
