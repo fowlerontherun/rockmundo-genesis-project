@@ -98,7 +98,7 @@ const Index = () => {
   }
 
   // No living character and no dead ones — shouldn't happen but handle gracefully
-  if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length === 0) {
+  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
         <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
