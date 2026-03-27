@@ -29,7 +29,10 @@ export function useCharacterDeath() {
       // Get dead profiles directly - these always exist even if hall_of_immortals entry is missing
       const { data: deadProfiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, avatar_url, died_at, fame, cash, level, generation_number, resurrection_lives")
+        .select("id, username, display_name, avatar_url, died_at, fame, cash, level, generation_number")
+        .eq("user_id", user.id)
+        .not("died_at", "is", null)
+        .order("died_at", { ascending: false }) as any;
         .eq("user_id", user.id)
         .not("died_at", "is", null)
         .order("died_at", { ascending: false });

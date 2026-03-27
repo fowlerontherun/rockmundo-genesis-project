@@ -10085,6 +10085,7 @@ export type Database = {
           final_skills: Json | null
           generation_number: number | null
           id: string
+          lives_remaining_at_death: number
           notable_achievements: Json | null
           peak_chart_position: number | null
           profile_id: string
@@ -10109,6 +10110,7 @@ export type Database = {
           final_skills?: Json | null
           generation_number?: number | null
           id?: string
+          lives_remaining_at_death?: number
           notable_achievements?: Json | null
           peak_chart_position?: number | null
           profile_id: string
@@ -10133,6 +10135,7 @@ export type Database = {
           final_skills?: Json | null
           generation_number?: number | null
           id?: string
+          lives_remaining_at_death?: number
           notable_achievements?: Json | null
           peak_chart_position?: number | null
           profile_id?: string
@@ -20966,6 +20969,7 @@ export type Database = {
           level: number
           parent_profile_id: string | null
           rest_required_until: string | null
+          resurrection_lives: number
           rpm_avatar_url: string | null
           slot_number: number | null
           terms_accepted_at: string | null
@@ -21020,6 +21024,7 @@ export type Database = {
           level?: number
           parent_profile_id?: string | null
           rest_required_until?: string | null
+          resurrection_lives?: number
           rpm_avatar_url?: string | null
           slot_number?: number | null
           terms_accepted_at?: string | null
@@ -21074,6 +21079,7 @@ export type Database = {
           level?: number
           parent_profile_id?: string | null
           rest_required_until?: string | null
+          resurrection_lives?: number
           rpm_avatar_url?: string | null
           slot_number?: number | null
           terms_accepted_at?: string | null
@@ -30162,6 +30168,10 @@ export type Database = {
         Returns: undefined
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
+      resurrect_character: {
+        Args: { p_profile_id: string }
+        Returns: undefined
+      }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       swap_gettit_comment_vote: {
         Args: { comment_id: string; new_field: string; old_field: string }
