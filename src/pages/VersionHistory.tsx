@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.122",
+    date: "2026-03-27",
+    changes: [
+      { type: 'fix', description: "Fixed dead players getting stuck on loading screen — 117 out of 121 players were dead from inactivity with no way to recover" },
+      { type: 'feature', description: "Added resurrection system — every player gets 3 lives to resurrect their character and continue where they left off" },
+      { type: 'feature', description: "Players can now choose to resurrect, start as a child (inherit 10% skills, 50% cash), or start completely fresh when their character dies" },
+      { type: 'fix', description: "Fixed character death detection to query profiles directly instead of relying on hall_of_immortals entries (which were missing for many deaths)" },
+      { type: 'fix', description: "Fixed navigation logic so dead players see the death/resurrection screen instead of an infinite spinner" },
+    ],
+  },
+  {
     version: "1.1.121",
     date: "2026-03-26",
     changes: [

@@ -44,23 +44,23 @@ const Index = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!gameData) {
-      return;
-    }
+    // Don't navigate until all loading is done
+    if (authLoading || identityLoading || hasLivingCharacterLoading) return;
+    if (!user) return;
 
-    if (!authLoading && !dataLoading && !identityLoading && !hasLivingCharacterLoading && user && profile) {
-      // If user has a living character, proceed normally
-      if (hasLivingCharacter) {
-        const hasCompletedOnboarding = characterIdentity?.onboarding_completed_at != null;
-        
-        if (!hasCompletedOnboarding) {
-          navigate("/onboarding");
-        } else {
-          navigate("/dashboard");
-        }
+    // If user has a living character, proceed normally
+    if (hasLivingCharacter) {
+      // Wait for game data to load before checking onboarding
+      if (!gameData || dataLoading) return;
+      
+      const hasCompletedOnboarding = characterIdentity?.onboarding_completed_at != null;
+      if (!hasCompletedOnboarding) {
+        navigate("/onboarding");
+      } else {
+        navigate("/dashboard");
       }
-      // If no living character but has dead ones, the death screen will render below
     }
+    // If no living character, the death screen or fresh start will render below
   }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
 
   // Show death screen if no living character and there are dead ones
@@ -71,17 +71,24 @@ const Index = () => {
         deadCharacter={mostRecentDeath}
         onResurrect={(profileId) => {
           resurrectCharacter.mutate(profileId, {
-            onSuccess: () => navigate("/dashboard"),
+            onSuccess: () => {
+              // Full reload to clear cached game data
+              window.location.href = "/dashboard";
+            },
           });
         }}
         onCreateChild={(parentId) => {
           createChildCharacter.mutate(parentId, {
-            onSuccess: () => navigate("/onboarding"),
+            onSuccess: () => {
+              window.location.href = "/onboarding";
+            },
           });
         }}
         onCreateFresh={() => {
           createFreshCharacter.mutate(undefined, {
-            onSuccess: () => navigate("/onboarding"),
+            onSuccess: () => {
+              window.location.href = "/onboarding";
+            },
           });
         }}
         isLoading={resurrectCharacter.isPending || createChildCharacter.isPending || createFreshCharacter.isPending}
@@ -89,7 +96,38 @@ const Index = () => {
     );
   }
 
-  if (!gameData || authLoading || dataLoading || identityLoading || hasLivingCharacterLoading) {
+  // No living character and no dead ones — shouldn't happen but handle gracefully
+  if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
+        <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
+          <h2 className="text-xl font-bold">Welcome Back</h2>
+          <p className="text-sm text-muted-foreground">No active character found. Let's create a new one!</p>
+          <Button
+            onClick={() => {
+              createFreshCharacter.mutate(undefined, {
+                onSuccess: () => {
+                  window.location.href = "/onboarding";
+                },
+              });
+            }}
+            disabled={createFreshCharacter.isPending}
+          >
+            {createFreshCharacter.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create New Character"
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (authLoading || identityLoading || hasLivingCharacterLoading || (!gameData && user) || (user && dataLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

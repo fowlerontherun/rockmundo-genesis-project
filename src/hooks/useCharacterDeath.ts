@@ -13,27 +13,56 @@ export interface DeadCharacter {
   total_cash_at_death: number;
   final_skills: Record<string, number>;
   generation_number: number;
-  lives_remaining_at_death: number;
+  resurrection_lives: number;
 }
 
 export function useCharacterDeath() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Check for recently dead characters the user hasn't handled yet
+  // Query dead profiles directly from profiles table (more reliable than hall_of_immortals)
   const deadCharactersQuery = useQuery({
     queryKey: ["dead-characters", user?.id],
     queryFn: async (): Promise<DeadCharacter[]> => {
       if (!user?.id) return [];
 
-      const { data, error } = await supabase
-        .from("hall_of_immortals")
-        .select("id, profile_id, character_name, avatar_url, cause_of_death, died_at, total_fame, total_cash_at_death, final_skills, generation_number, lives_remaining_at_death")
+      // Get dead profiles directly - these always exist even if hall_of_immortals entry is missing
+      const { data: deadProfiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url, died_at, fame, cash, level, generation_number, resurrection_lives")
         .eq("user_id", user.id)
+        .not("died_at", "is", null)
         .order("died_at", { ascending: false });
 
-      if (error) throw error;
-      return (data ?? []) as DeadCharacter[];
+      if (profileError) throw profileError;
+      if (!deadProfiles || deadProfiles.length === 0) return [];
+
+      // Try to get memorial data from hall_of_immortals for richer info
+      const { data: memorials } = await supabase
+        .from("hall_of_immortals")
+        .select("profile_id, character_name, cause_of_death, total_fame, total_cash_at_death, final_skills")
+        .eq("user_id", user.id);
+
+      const memorialMap = new Map(
+        (memorials ?? []).map((m) => [m.profile_id, m])
+      );
+
+      return deadProfiles.map((p) => {
+        const memorial = memorialMap.get(p.id);
+        return {
+          id: p.id,
+          profile_id: p.id,
+          character_name: memorial?.character_name ?? p.display_name ?? p.username ?? "Unknown",
+          avatar_url: p.avatar_url,
+          cause_of_death: memorial?.cause_of_death ?? "Inactivity",
+          died_at: p.died_at!,
+          total_fame: memorial?.total_fame ?? p.fame ?? 0,
+          total_cash_at_death: memorial?.total_cash_at_death ?? p.cash ?? 0,
+          final_skills: (memorial?.final_skills as Record<string, number>) ?? {},
+          generation_number: p.generation_number ?? 1,
+          resurrection_lives: (p as any).resurrection_lives ?? 0,
+        };
+      });
     },
     enabled: !!user?.id,
   });
@@ -59,10 +88,10 @@ export function useCharacterDeath() {
 
   // Create child character inheriting 10% skills, 50% cash
   const createChildCharacter = useMutation({
-    mutationFn: async (parentImmortalId: string) => {
+    mutationFn: async (parentProfileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      const parent = deadCharactersQuery.data?.find((d) => d.id === parentImmortalId);
+      const parent = deadCharactersQuery.data?.find((d) => d.profile_id === parentProfileId);
       if (!parent) throw new Error("Parent character not found");
 
       const inheritedCash = Math.floor(parent.total_cash_at_death * 0.5);

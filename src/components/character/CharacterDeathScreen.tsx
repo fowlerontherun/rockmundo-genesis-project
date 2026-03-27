@@ -26,7 +26,7 @@ export function CharacterDeathScreen({
   const skillCount = Object.keys(deadCharacter.final_skills || {}).length;
   const inheritedCash = Math.floor(deadCharacter.total_cash_at_death * 0.5);
 
-  const livesRemaining = deadCharacter.lives_remaining_at_death ?? 0;
+  const livesRemaining = deadCharacter.resurrection_lives ?? 0;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
