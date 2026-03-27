@@ -1,83 +1,59 @@
 
 
-## Fix Recording Session Completion & AI Song Generation Failures
+## Fix Dead Player Login Flow & Add Resurrection System (v1.1.122)
 
-### Problem 1: Recording Sessions Never Complete
+### Root Cause
 
-**Root Cause Found**: The `complete-recording-sessions` edge function checks `band_members.current_city_id` (lines 85-93) to verify members are in the studio's city. However, `band_members.current_city_id` is **always NULL** for every member in the database. The actual city data lives on `profiles.current_city_id`.
+117 out of 121 players are dead from inactivity. The resurrection system migration **was never applied** to the database — the `resurrection_lives` column doesn't exist on `profiles`, and `lives_remaining_at_death` doesn't exist on `hall_of_immortals`. This causes:
 
-This means the location check always finds a mismatch (`null !== "studio-city-uuid"`), marking every band recording session as "failed" due to "members not in the studio city" — even though they are.
-
-**7 recording sessions** are currently stuck as `in_progress` with past `scheduled_end` dates, affecting songs: "Going up and out", "Coração", "Carinho", "Kvina 2", "My Lovely Horse".
-
-**Fix**: Update the `complete-recording-sessions` edge function to look up each band member's city from `profiles.current_city_id` via `user_id` instead of using the always-null `band_members.current_city_id`.
-
----
-
-### Problem 2: AI Song Generation Failures
-
-Two separate issues:
-
-**A) Songs with audio but status="failed" (3 songs)**: "When I needed some one to talk to", "My Lovely Horse", "Rare Polluon" — these have valid `audio_url` but `audio_generation_status` is stuck at `failed`. The generate function already has auto-recovery logic for this (lines 49-63), but it only triggers on a regeneration attempt. These need a data fix to set status to `completed`.
-
-**B) Songs that genuinely failed (4 songs)**: "Ballad of the Rebel", "Nunca mais" (stuck generating since Feb 14), "Blue", "Red", "Violet" — these have no audio. They should have their status reset to allow retry.
-
-**Fix**: 
-- Data repair: Update the 3 songs with audio to `completed` status; reset the stuck/failed ones to allow retry
-- The `generate-song-audio` function itself is working correctly — these are stale state issues
-
----
+1. **Dead characters query crashes** — `useCharacterDeath` selects `lives_remaining_at_death` from `hall_of_immortals`, but that column doesn't exist. The query throws an error, so `deadCharacters` stays empty.
+2. **Death screen never shows** — Since `deadCharacters.length === 0`, the death screen in Index.tsx is skipped.
+3. **Navigation stalls** — The redirect logic on line 51 requires `profile` to be truthy, but dead players have no active profile. Players get stuck on a spinner or somehow reach CreateCharacter which fails due to slot limits.
 
 ### Plan
 
-#### 1. Fix `complete-recording-sessions` location check
-**File: `supabase/functions/complete-recording-sessions/index.ts`**
+#### 1. Database migration — add resurrection columns and backfill
+Create a new migration that:
+- Adds `resurrection_lives` (integer, default 3) to `profiles`
+- Adds `lives_remaining_at_death` (integer, default 0) to `hall_of_immortals`
+- **Backfills all 117 dead profiles** with `resurrection_lives = 3` so every dead player can resurrect
+- Creates the `resurrect_character()` RPC function (security definer) that: clears `died_at`, restores health/energy to 50, deducts 1 life, sets `is_active = true`
+- Grants execute to authenticated users
 
-Replace the band member location check (lines 83-94) to look up cities from `profiles` instead of `band_members`:
+#### 2. Fix `useCharacterDeath.ts` — handle missing column gracefully
+- Remove `lives_remaining_at_death` from the `hall_of_immortals` select query initially (use a safe fallback)
+- Instead, query `resurrection_lives` directly from the dead profile in `profiles` table (since the profile still exists with `died_at` set)
+- Update the `DeadCharacter` interface to source lives from the profile, not hall_of_immortals
+- Fix the TypeScript error by removing the non-existent column reference
 
-```
-// Instead of:
-const { data: members } = await supabase
-  .from('band_members')
-  .select('user_id, current_city_id')
-  ...
+#### 3. Fix `Index.tsx` — handle dead players with no living profile
+- Remove the `profile` requirement from the navigation effect condition
+- When `!hasLivingCharacter` and `deadCharacters.length > 0`, show death screen (already works once query is fixed)
+- When `!hasLivingCharacter` and `deadCharacters.length === 0`, check if user has any dead profiles directly and show a fallback "start fresh" screen
 
-// Do:
-const { data: members } = await supabase
-  .from('band_members')
-  .select('user_id')
-  .eq('band_id', session.band_id)
-  .in('member_status', ['active'])
-  .eq('is_touring_member', false)
+#### 4. Fix `CharacterDeathScreen.tsx` — source lives from profile
+- Update to use `resurrection_lives` from the profile record rather than `lives_remaining_at_death` from hall_of_immortals
 
-// Then for each member with a user_id, look up their city from profiles
-const memberCities = await Promise.all(
-  members.filter(m => m.user_id).map(async (m) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('current_city_id')
-      .eq('user_id', m.user_id)
-      .eq('is_active', true)
-      .is('died_at', null)
-      .maybeSingle()
-    return { user_id: m.user_id, current_city_id: profile?.current_city_id }
-  })
-)
-```
-
-Then check `memberCities` for mismatches instead of the old `members` array.
-
-#### 2. Data repair via SQL insert tool
-- Set `audio_generation_status = 'completed'` for 3 songs that have audio but show failed
-- Reset `audio_generation_status = NULL, audio_generation_started_at = NULL` for "Nunca mais" (stuck generating since Feb 14)
-- Complete the 7 stuck recording sessions manually or let the fixed function handle them on next cron run
-
-#### 3. Version bump
-Update to v1.1.120.
+#### 5. Version bump to 1.1.122
 
 ### Files to edit
-- `supabase/functions/complete-recording-sessions/index.ts` — fix location lookup
-- `src/components/VersionHeader.tsx` — version bump
-- `src/pages/VersionHistory.tsx` — changelog
-- Database data repairs via insert tool
+- New SQL migration (add columns, backfill, create RPC)
+- `src/hooks/useCharacterDeath.ts` — fix query and types
+- `src/pages/Index.tsx` — fix navigation for dead players
+- `src/components/character/CharacterDeathScreen.tsx` — minor prop update
+- `src/components/VersionHeader.tsx`
+- `src/pages/VersionHistory.tsx`
+
+### Technical detail
+The `resurrect_character` RPC will:
+```sql
+-- Check user owns the profile
+-- Check profile has died_at set
+-- Check resurrection_lives > 0
+-- Deactivate other active profiles
+-- Clear died_at, set health=50, energy=50, is_active=true
+-- Decrement resurrection_lives by 1
+```
+
+Dead profiles query will change from querying `hall_of_immortals` (which may not have entries for all deaths) to querying `profiles WHERE died_at IS NOT NULL` directly, joined with hall_of_immortals for optional memorial data.
 
