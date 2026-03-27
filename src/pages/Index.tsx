@@ -45,7 +45,7 @@ const Index = () => {
 
   useEffect(() => {
     // Don't navigate until all loading is done
-    if (authLoading || identityLoading || hasLivingCharacterLoading) return;
+    if (authLoading || identityLoading || hasLivingCharacterLoading || deadCharactersLoading) return;
     if (!user) return;
 
     // If user has a living character, proceed normally
@@ -61,7 +61,7 @@ const Index = () => {
       }
     }
     // If no living character, the death screen or fresh start will render below
-  }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
+  }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, deadCharactersLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
 
   // Show death screen if no living character and there are dead ones
   if (!authLoading && user && !hasLivingCharacterLoading && !hasLivingCharacter && deadCharacters.length > 0) {
