@@ -33,9 +33,6 @@ export function useCharacterDeath() {
         .eq("user_id", user.id)
         .not("died_at", "is", null)
         .order("died_at", { ascending: false }) as any;
-        .eq("user_id", user.id)
-        .not("died_at", "is", null)
-        .order("died_at", { ascending: false });
 
       if (profileError) throw profileError;
       if (!deadProfiles || deadProfiles.length === 0) return [];
