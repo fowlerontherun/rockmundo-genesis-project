@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AdminRoute } from "@/components/AdminRoute";
-import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard, ShieldCheck, Skull } from "lucide-react";
 import SkillDefinitionsManager from "@/components/admin/SkillDefinitionsManager";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -133,6 +133,15 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle>Release Pump</CardTitle>
               <CardDescription>Boost digital and physical sales for releases</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/death-system'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Skull className="h-5 w-5 text-destructive" />
+                Death System
+              </CardTitle>
+              <CardDescription>Configure permadeath, resurrection & inheritance</CardDescription>
             </CardHeader>
           </Card>
         </div>

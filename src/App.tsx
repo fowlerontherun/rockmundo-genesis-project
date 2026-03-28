@@ -163,6 +163,7 @@ const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
 const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
+const AdminDeathSystem = lazyWithRetry(() => import("./pages/admin/DeathSystemAdmin"));
 const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
@@ -514,6 +515,7 @@ function App() {
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
+                    <Route path="admin/death-system" element={<AdminDeathSystem />} />
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
