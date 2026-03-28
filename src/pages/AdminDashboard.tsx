@@ -135,6 +135,15 @@ const AdminDashboard = () => {
               <CardDescription>Boost digital and physical sales for releases</CardDescription>
             </CardHeader>
           </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/death-system'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Skull className="h-5 w-5 text-destructive" />
+                Death System
+              </CardTitle>
+              <CardDescription>Configure permadeath, resurrection & inheritance</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         <Card className="border-primary/20">
