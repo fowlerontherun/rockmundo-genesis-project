@@ -30034,6 +30034,70 @@ export type Database = {
         }
         Returns: Json
       }
+      create_character_profile: {
+        Args: never
+        Returns: {
+          age: number
+          avatar_generation_count: number | null
+          avatar_url: string | null
+          bio: string | null
+          cash: number
+          character_birth_date: string | null
+          created_at: string | null
+          current_activity: string | null
+          current_city_id: string | null
+          death_cause: string | null
+          debt_started_at: string | null
+          died_at: string | null
+          display_name: string | null
+          energy: number
+          experience: number | null
+          experience_at_last_weekly_bonus: number | null
+          fame: number
+          fans: number | null
+          gender: string | null
+          generation_number: number | null
+          has_active_lawyer: boolean | null
+          health: number
+          id: string
+          is_active: boolean | null
+          is_imprisoned: boolean
+          is_traveling: boolean | null
+          is_vip: boolean | null
+          is_wanted: boolean
+          last_health_update: string | null
+          last_login_at: string | null
+          last_retirement_prompt_age: number | null
+          last_weekly_bonus_at: string | null
+          lawyer_expires_at: string | null
+          lawyer_hired_at: string | null
+          level: number
+          parent_profile_id: string | null
+          rest_required_until: string | null
+          resurrection_lives: number
+          rpm_avatar_url: string | null
+          slot_number: number | null
+          terms_accepted_at: string | null
+          terms_version: string | null
+          total_hours_played: number | null
+          total_imprisonments: number
+          travel_arrives_at: string | null
+          travel_manager_enabled: boolean | null
+          travel_manager_expires_at: string | null
+          unlock_cost: number
+          updated_at: string | null
+          user_id: string
+          username: string
+          weekly_bonus_metadata: Json | null
+          weekly_bonus_streak: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
