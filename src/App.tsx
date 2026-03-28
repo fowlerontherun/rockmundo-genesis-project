@@ -515,6 +515,7 @@ function App() {
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
+                    <Route path="admin/death-system" element={<AdminDeathSystem />} />
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />

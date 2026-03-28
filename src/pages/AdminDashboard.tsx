@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AdminRoute } from "@/components/AdminRoute";
-import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, Settings2, LayoutDashboard, ShieldCheck, Skull } from "lucide-react";
 import SkillDefinitionsManager from "@/components/admin/SkillDefinitionsManager";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";

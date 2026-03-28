@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.125",
+    date: "2026-03-28",
+    changes: [
+      { type: 'feature', description: "Added Death System admin page — configure health decay rate, days until permadeath, resurrection lives, recovery health/energy, and family inheritance percentages" },
+      { type: 'fix', description: "Fixed new characters not receiving starter 500 SXP and 10 AP — the database RPC was missing the XP wallet seeding step" },
+    ],
+  },
+  {
     version: "1.1.124",
     date: "2026-03-28",
     changes: [
