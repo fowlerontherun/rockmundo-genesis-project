@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.124",
+    date: "2026-03-28",
+    changes: [
+      { type: 'fix', description: "Fixed login redirect for dead players — successful sign-in now routes to the homepage so the death/resurrection flow can load instead of bypassing it" },
+    ],
+  },
+  {
     version: "1.1.123",
     date: "2026-03-27",
     changes: [
