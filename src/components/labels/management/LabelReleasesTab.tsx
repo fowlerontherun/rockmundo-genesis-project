@@ -205,10 +205,10 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
                     <p className="text-xs font-bold tabular-nums">${(release.promotion_budget ?? 0).toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground">Hype</p>
+                    <p className="text-[10px] text-muted-foreground">Campaigns</p>
                     <p className="text-xs font-bold tabular-nums flex items-center justify-center gap-0.5">
-                      <Flame className="h-3 w-3 text-orange-400" />
-                      {releaseHype}
+                      <Megaphone className="h-3 w-3 text-purple-400" />
+                      {campaigns.length}
                     </p>
                   </div>
                 </div>
