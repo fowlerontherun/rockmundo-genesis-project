@@ -250,10 +250,10 @@ export function LabelRosterTab({ labelId, rosterCapacity, labelReputation = 0 }:
                           <p className="font-semibold text-emerald-500">${totalLabelRoyalties.toLocaleString()}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Total Hype Generated</span>
+                          <span className="text-muted-foreground">Campaign Spend</span>
                           <p className="font-semibold flex items-center gap-1">
-                            <Flame className="h-3 w-3 text-orange-400" />
-                            {totalHype}
+                            <Megaphone className="h-3 w-3 text-purple-400" />
+                            ${totalCampaignBudget.toLocaleString()}
                           </p>
                         </div>
                       </div>
