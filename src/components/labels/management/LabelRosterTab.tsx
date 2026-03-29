@@ -47,19 +47,23 @@ export function LabelRosterTab({ labelId, rosterCapacity, labelReputation = 0 }:
     },
   });
 
-  // Fetch hype scores per release for active releases
-  const contractIds = contracts.map(c => c.id);
+  // Fetch campaigns through releases
   const { data: campaigns = [] } = useQuery({
-    queryKey: ["label-roster-campaigns", labelId, contractIds],
+    queryKey: ["label-roster-campaigns", labelId],
     queryFn: async () => {
-      if (contractIds.length === 0) return [];
+      if (contracts.length === 0) return [];
+      // Get all release IDs from contracts
+      const releaseIds = contracts.flatMap(c =>
+        (c.label_releases || []).map((r: any) => r.id)
+      ).filter(Boolean);
+      if (releaseIds.length === 0) return [];
       const { data } = await supabase
         .from("label_promotion_campaigns")
-        .select("id, contract_id, release_id, campaign_type, budget, status, hype_generated")
-        .in("contract_id", contractIds);
+        .select("id, release_id, campaign_type, budget, effectiveness")
+        .in("release_id", releaseIds);
       return data || [];
     },
-    enabled: contractIds.length > 0,
+    enabled: contracts.length > 0,
   });
 
   const dropArtistMutation = useMutation({
