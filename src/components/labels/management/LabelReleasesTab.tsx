@@ -44,7 +44,7 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
             id, band_id, artist_profile_id,
             bands:band_id(name, genre, fame)
           ),
-          label_promotion_campaigns(id, campaign_type, budget, status, hype_generated)
+          label_promotion_campaigns(id, campaign_type, budget, effectiveness)
         `)
         .in("contract_id", contractIds)
         .order("created_at", { ascending: false });
