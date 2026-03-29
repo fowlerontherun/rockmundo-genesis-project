@@ -220,9 +220,7 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
                       <Badge
                         key={c.id}
                         variant="secondary"
-                        className={cn("text-[10px] px-1.5 h-4", {
-                          "bg-purple-500/15 text-purple-400": c.status === "active",
-                        })}
+                        className="text-[10px] px-1.5 h-4"
                       >
                         <Megaphone className="h-2.5 w-2.5 mr-0.5" />
                         {c.campaign_type} ${c.budget?.toLocaleString()}
