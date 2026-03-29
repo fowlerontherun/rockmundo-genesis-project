@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.127",
+    date: "2026-03-29",
+    changes: [
+      { type: 'improvement', description: "Redesigned record label management with overview stats dashboard showing balance, artists, releases, units, revenue, and staff" },
+      { type: 'improvement', description: "Enhanced artist roster with expandable per-artist detail panels showing release catalog, contract terms, campaign spend, and profitability status" },
+      { type: 'improvement', description: "Upgraded releases tab with pipeline/released filter, campaign tracking, and compact release cards with per-release stats" },
+      { type: 'improvement', description: "Added reputation tier badges (Indie → Legendary) and headquarters location to label header" },
+      { type: 'improvement', description: "Scrollable tab navigation for mobile-friendly label management" },
+    ],
+  },
+  {
     version: "1.1.126",
     date: "2026-03-29",
     changes: [
