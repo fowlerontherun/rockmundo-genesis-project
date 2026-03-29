@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinances } from "@/hooks/useFinances";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { IncomeBreakdownChart } from "@/components/finance/IncomeBreakdownChart";
+import { IncomeExpenseChart } from "@/components/finance/IncomeExpenseChart";
+import { SpendingCategoriesChart } from "@/components/finance/SpendingCategoriesChart";
 import { BandFinancesCard } from "@/components/finance/BandFinancesCard";
 import { InvestmentsTab } from "@/components/finance/InvestmentsTab";
 import { LoansTab } from "@/components/finance/LoansTab";
@@ -18,6 +20,7 @@ const Finances = () => {
     loans, 
     summary,
     earningsBySource,
+    monthlyLedger,
     loanOffers,
     investmentOptions,
     isLoading,
@@ -54,13 +57,19 @@ const Finances = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Income vs Expenses trend */}
+          <IncomeExpenseChart data={monthlyLedger} />
+
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Income Breakdown Chart */}
             <IncomeBreakdownChart earningsBySource={earningsBySource} />
             
-            {/* Band Overview */}
-            <BandFinancesCard bands={bands} />
+            {/* Spending Categories */}
+            <SpendingCategoriesChart transactions={transactions} />
           </div>
+
+          {/* Band Overview */}
+          <BandFinancesCard bands={bands} />
 
           {/* Recent Transactions */}
           <TransactionsList transactions={transactions.slice(0, 10)} />
