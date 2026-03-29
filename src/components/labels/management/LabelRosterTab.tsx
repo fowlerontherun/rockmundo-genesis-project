@@ -132,8 +132,9 @@ export function LabelRosterTab({ labelId, rosterCapacity, labelReputation = 0 }:
             ) ?? 0;
             const totalUnits = releases.reduce((s, r) => s + (r.units_sold ?? 0), 0);
             const totalRevenue = releases.reduce((s, r) => s + (r.revenue_generated ?? 0), 0);
-            const artistCampaigns = campaigns.filter(c => c.contract_id === contract.id);
-            const totalHype = artistCampaigns.reduce((s, c) => s + (c.hype_generated ?? 0), 0);
+            const releaseIds = releases.map((r: any) => r.id);
+            const artistCampaigns = campaigns.filter(c => releaseIds.includes(c.release_id));
+            const totalCampaignBudget = artistCampaigns.reduce((s, c) => s + (c.budget ?? 0), 0);
             const isExpanded = expandedArtist === contract.id;
 
             const singleQuota = contract.single_quota ?? contract.release_quota ?? 0;
