@@ -130,7 +130,7 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
         <Card className="bg-card/60">
           <CardContent className="p-2.5 text-center">
             <Megaphone className="h-3.5 w-3.5 mx-auto mb-0.5 text-purple-400" />
-            <p className="text-sm font-bold tabular-nums">${totalCampaignSpend.toLocaleString()}</p>
+            <p className="text-sm font-bold tabular-nums">${totalEffectiveness.toLocaleString()}</p>
             <p className="text-[10px] text-muted-foreground">Campaign Spend</p>
           </CardContent>
         </Card>
