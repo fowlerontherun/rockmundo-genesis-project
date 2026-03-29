@@ -162,8 +162,7 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
           const band = contract?.bands;
           const campaigns = release.label_promotion_campaigns || [];
           const statusConf = STATUS_CONFIG[release.status ?? "planning"] || STATUS_CONFIG.planning;
-          const activeCampaigns = campaigns.filter((c: any) => c.status === "active");
-          const releaseHype = campaigns.reduce((s: number, c: any) => s + (c.hype_generated ?? 0), 0);
+          const releaseCampaignBudget = campaigns.reduce((s: number, c: any) => s + (c.budget ?? 0), 0);
 
           return (
             <Card key={release.id} className="overflow-hidden">
