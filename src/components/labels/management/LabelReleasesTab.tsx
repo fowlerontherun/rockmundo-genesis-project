@@ -75,9 +75,9 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
   const totalPromoBudget = releases.reduce((sum, r) => sum + (r.promotion_budget ?? 0), 0);
   const releasedReleases = releases.filter(r => r.status === "released");
   const pipelineReleases = releases.filter(r => r.status !== "released");
-  const totalHype = releases.reduce((sum, r) => {
+  const totalEffectiveness = releases.reduce((sum, r) => {
     const cs = r.label_promotion_campaigns || [];
-    return sum + cs.reduce((s: number, c: any) => s + (c.hype_generated ?? 0), 0);
+    return sum + cs.reduce((s: number, c: any) => s + (c.effectiveness ?? 0), 0);
   }, 0);
 
   const filteredReleases = viewMode === "released"
