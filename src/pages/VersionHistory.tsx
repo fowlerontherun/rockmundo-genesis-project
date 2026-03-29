@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.126",
+    date: "2026-03-29",
+    changes: [
+      { type: 'improvement', description: "Enhanced Income Breakdown chart with interactive hover, percentage labels, and detailed source breakdown list" },
+      { type: 'improvement', description: "Enhanced Income vs Expenses chart with net profit dashed line, color-coded totals, and cleaner grid" },
+      { type: 'feature', description: "Added Spending Categories horizontal bar chart showing top expense categories" },
+      { type: 'improvement', description: "Finances overview now shows full income/expense trend chart above the breakdown panels" },
+      { type: 'fix', description: "Verified starter AP/SXP grants are working correctly for new characters" },
+    ],
+  },
+  {
     version: "1.1.125",
     date: "2026-03-28",
     changes: [
