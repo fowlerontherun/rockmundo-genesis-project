@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, UserMinus, Music, Disc3, Album, DollarSign, Search,
-  TrendingUp, Heart, Star, Flame, BarChart3, Eye, ChevronDown, ChevronUp,
+  TrendingUp, Heart, Star, Flame, BarChart3, Eye, ChevronDown, ChevronUp, Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScoutOfferDialog } from "./ScoutOfferDialog";
