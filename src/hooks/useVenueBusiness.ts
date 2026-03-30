@@ -275,8 +275,13 @@ export function useInstallVenueUpgrade() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
+      queryClient.invalidateQueries({ queryKey: ['venue'] });
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
-      toast.success("Upgrade installed!");
+      const msg = variables.upgrade_type === 'capacity'
+        ? `Capacity expanded! Upgrade installed.`
+        : "Upgrade installed!";
+      toast.success(msg);
     },
     onError: (error) => {
       toast.error(`Failed to install upgrade: ${error.message}`);
