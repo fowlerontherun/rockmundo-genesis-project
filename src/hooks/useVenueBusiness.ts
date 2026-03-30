@@ -254,21 +254,31 @@ export function useInstallVenueUpgrade() {
 
       // If this is a capacity upgrade, actually increase the venue's capacity
       if (upgrade.upgrade_type === 'capacity') {
-        const { data: venue } = await supabase
+        const { data: venue, error: venueError } = await supabase
           .from('venues')
           .select('capacity')
           .eq('id', upgrade.venue_id)
           .single();
         
-        const currentCapacity = venue?.capacity || 100;
-        // Each level adds 50 + (level * 25) extra capacity (scales with level)
-        const capacityIncrease = 50 + (upgrade.upgrade_level * 25);
-        const newCapacity = currentCapacity + capacityIncrease;
+        if (venueError) {
+          console.error('[VenueUpgrade] Failed to read venue capacity:', venueError);
+        } else {
+          const currentCapacity = venue?.capacity || 100;
+          // Each level adds 50 + (level * 25) extra capacity (scales with level)
+          const capacityIncrease = 50 + (upgrade.upgrade_level * 25);
+          const newCapacity = currentCapacity + capacityIncrease;
 
-        await supabase
-          .from('venues')
-          .update({ capacity: newCapacity })
-          .eq('id', upgrade.venue_id);
+          const { error: updateError } = await supabase
+            .from('venues')
+            .update({ capacity: newCapacity })
+            .eq('id', upgrade.venue_id);
+          
+          if (updateError) {
+            console.error('[VenueUpgrade] Failed to update venue capacity:', updateError);
+          } else {
+            console.log(`[VenueUpgrade] Capacity updated: ${currentCapacity} → ${newCapacity} (+${capacityIncrease})`);
+          }
+        }
       }
 
       return data;
@@ -277,6 +287,7 @@ export function useInstallVenueUpgrade() {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
       queryClient.invalidateQueries({ queryKey: ['venue'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
+      queryClient.invalidateQueries({ queryKey: ['company-venues'] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       const msg = variables.upgrade_type === 'capacity'
         ? `Capacity expanded! Upgrade installed.`
