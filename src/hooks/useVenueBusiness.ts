@@ -287,6 +287,7 @@ export function useInstallVenueUpgrade() {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
       queryClient.invalidateQueries({ queryKey: ['venue'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
+      queryClient.invalidateQueries({ queryKey: ['company-venues'] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       const msg = variables.upgrade_type === 'capacity'
         ? `Capacity expanded! Upgrade installed.`
