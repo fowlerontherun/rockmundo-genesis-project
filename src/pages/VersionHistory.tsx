@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.128",
+    date: "2026-03-30",
+    changes: [
+      { type: 'fix', description: "Venue capacity upgrades now actually increase the venue's capacity in the database (50 + level×25 per upgrade)" },
+      { type: 'improvement', description: "Capacity upgrade success toast now confirms the expansion" },
+      { type: 'fix', description: "Venue data queries are invalidated after upgrades so capacity changes reflect immediately" },
+    ],
+  },
+  {
     version: "1.1.127",
     date: "2026-03-29",
     changes: [

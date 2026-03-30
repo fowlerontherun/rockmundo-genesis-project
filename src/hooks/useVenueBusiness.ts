@@ -251,12 +251,37 @@ export function useInstallVenueUpgrade() {
         .single();
       
       if (error) throw error;
+
+      // If this is a capacity upgrade, actually increase the venue's capacity
+      if (upgrade.upgrade_type === 'capacity') {
+        const { data: venue } = await supabase
+          .from('venues')
+          .select('capacity')
+          .eq('id', upgrade.venue_id)
+          .single();
+        
+        const currentCapacity = venue?.capacity || 100;
+        // Each level adds 50 + (level * 25) extra capacity (scales with level)
+        const capacityIncrease = 50 + (upgrade.upgrade_level * 25);
+        const newCapacity = currentCapacity + capacityIncrease;
+
+        await supabase
+          .from('venues')
+          .update({ capacity: newCapacity })
+          .eq('id', upgrade.venue_id);
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
+      queryClient.invalidateQueries({ queryKey: ['venue'] });
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
-      toast.success("Upgrade installed!");
+      const msg = variables.upgrade_type === 'capacity'
+        ? `Capacity expanded! Upgrade installed.`
+        : "Upgrade installed!";
+      toast.success(msg);
     },
     onError: (error) => {
       toast.error(`Failed to install upgrade: ${error.message}`);
