@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.129",
+    date: "2026-03-30",
+    changes: [
+      { type: 'fix', description: "Fixed venue capacity not updating after purchasing capacity upgrades — added error handling and proper query invalidation for company-venues" },
+      { type: 'fix', description: "Backfilled Fratton Park capacity to correct value (1150) based on 7 installed capacity upgrades" },
+    ],
+  },
+  {
     version: "1.1.128",
     date: "2026-03-30",
     changes: [
