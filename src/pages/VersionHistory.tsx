@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.130",
+    date: "2026-03-30",
+    changes: [
+      { type: 'improvement', description: "Venue capacity upgrades now use multiplicative scaling (25% per level) with a max cap of 50,000 — higher levels yield much larger capacity gains" },
+    ],
+  },
+  {
     version: "1.1.129",
     date: "2026-03-30",
     changes: [

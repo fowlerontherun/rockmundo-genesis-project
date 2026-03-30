@@ -263,10 +263,10 @@ export function useInstallVenueUpgrade() {
         if (venueError) {
           console.error('[VenueUpgrade] Failed to read venue capacity:', venueError);
         } else {
-          const currentCapacity = venue?.capacity || 100;
-          // Each level adds 50 + (level * 25) extra capacity (scales with level)
-          const capacityIncrease = 50 + (upgrade.upgrade_level * 25);
-          const newCapacity = currentCapacity + capacityIncrease;
+          const baseCapacity = venue?.capacity || 100;
+          // Multiplicative scaling: each level adds 25% of base, capped at 50,000
+          const newCapacity = Math.min(50000, Math.round(baseCapacity * (1 + 0.25 * upgrade.upgrade_level)));
+          const capacityIncrease = newCapacity - baseCapacity;
 
           const { error: updateError } = await supabase
             .from('venues')
@@ -276,7 +276,7 @@ export function useInstallVenueUpgrade() {
           if (updateError) {
             console.error('[VenueUpgrade] Failed to update venue capacity:', updateError);
           } else {
-            console.log(`[VenueUpgrade] Capacity updated: ${currentCapacity} → ${newCapacity} (+${capacityIncrease})`);
+            console.log(`[VenueUpgrade] Capacity updated: ${baseCapacity} → ${newCapacity} (+${capacityIncrease})`);
           }
         }
       }
