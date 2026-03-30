@@ -276,7 +276,7 @@ export function useInstallVenueUpgrade() {
           if (updateError) {
             console.error('[VenueUpgrade] Failed to update venue capacity:', updateError);
           } else {
-            console.log(`[VenueUpgrade] Capacity updated: ${currentCapacity} → ${newCapacity} (+${capacityIncrease})`);
+            console.log(`[VenueUpgrade] Capacity updated: ${baseCapacity} → ${newCapacity} (+${capacityIncrease})`);
           }
         }
       }
