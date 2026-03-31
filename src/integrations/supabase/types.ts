@@ -29953,6 +29953,7 @@ export type Database = {
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       auto_verify_accounts: { Args: never; Returns: undefined }
+      auto_verify_twaater_accounts: { Args: never; Returns: undefined }
       calculate_bail_amount: {
         Args: { p_imprisonment_id: string }
         Returns: number

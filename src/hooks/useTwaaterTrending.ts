@@ -17,8 +17,9 @@ export const useTwaaterTrending = () => {
             id,
             handle,
             display_name,
-            is_verified,
-            owner_type
+            verified,
+            owner_type,
+            fame_score
           ),
           metrics:twaat_metrics(
             likes,
@@ -33,15 +34,27 @@ export const useTwaaterTrending = () => {
 
       if (error) throw error;
 
-      // Calculate engagement score and sort
+      // Calculate engagement score with time decay
+      const now = Date.now();
       const scored = (data || []).map((twaat) => {
         const metricsData = Array.isArray(twaat.metrics) ? twaat.metrics[0] : null;
         const metrics = metricsData || { likes: 0, retwaats: 0, replies: 0, views: 0 };
-        const engagementScore = 
+        
+        // Base engagement score
+        const baseScore = 
           (metrics.likes || 0) * 2 + 
           (metrics.retwaats || 0) * 3 + 
           (metrics.replies || 0) * 1.5 +
           (metrics.views || 0) * 0.1;
+
+        // Time decay: exponential decay over 24 hours
+        const hoursOld = (now - new Date(twaat.created_at).getTime()) / (1000 * 60 * 60);
+        const timeDecay = Math.exp(-hoursOld / 12); // Half-life of ~8.3 hours
+
+        // Verified account boost (1.5x)
+        const verifiedBoost = twaat.account?.verified ? 1.5 : 1;
+
+        const engagementScore = baseScore * timeDecay * verifiedBoost;
 
         return {
           ...twaat,
@@ -50,6 +63,7 @@ export const useTwaaterTrending = () => {
       });
 
       return scored
+        .filter(t => t.engagementScore > 0.5) // Minimum threshold
         .sort((a, b) => b.engagementScore - a.engagementScore)
         .slice(0, 20);
     },
