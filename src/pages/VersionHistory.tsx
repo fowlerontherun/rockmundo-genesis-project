@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.132",
+    date: "2026-03-31",
+    changes: [
+      { type: 'feature', description: "Added Festival History tab — view past performances, career stats, scores, earnings, fan growth, and best performance highlights" },
+      { type: 'improvement', description: "Wired existing festival history components (FestivalHistoryCard, FestivalHistoryStats) into the Festivals page as a dedicated tab" },
+      { type: 'improvement', description: "Confirmed Twaater Tier 1 features fully operational — mentions feed, hashtag rendering, trending sidebar, and explore tab all active" },
+    ],
+  },
+  {
     version: "1.1.131",
     date: "2026-03-31",
     changes: [
