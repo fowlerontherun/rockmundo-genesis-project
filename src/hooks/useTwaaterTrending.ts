@@ -17,8 +17,9 @@ export const useTwaaterTrending = () => {
             id,
             handle,
             display_name,
-            is_verified,
-            owner_type
+            verified,
+            owner_type,
+            fame_score
           ),
           metrics:twaat_metrics(
             likes,
