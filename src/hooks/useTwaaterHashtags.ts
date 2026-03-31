@@ -83,7 +83,7 @@ export const useTwaaterHashtags = () => {
       .select(`
         *,
         account:twaater_accounts!twaats_account_id_fkey(
-          id, handle, display_name, avatar_url, is_verified
+          id, handle, display_name, avatar_url, verified
         )
       `)
       .ilike("body", `%#${hashtag}%`)
