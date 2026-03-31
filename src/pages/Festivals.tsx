@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Music, Ticket, Radio } from "lucide-react";
+import { Music, Ticket, Radio, History } from "lucide-react";
 import { FestivalBrowser } from "@/components/festivals/FestivalBrowser";
 import { LiveFestivalView } from "@/components/festivals/LiveFestivalView";
+import { FestivalHistoryTab } from "@/components/festivals/FestivalHistoryTab";
 
 export default function Festivals() {
   const [activeTab, setActiveTab] = useState("browse");
@@ -43,6 +44,9 @@ export default function Festivals() {
               <Badge variant="default" className="ml-1 text-xs animate-pulse">LIVE</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" /> History
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="browse" className="mt-4">
@@ -58,6 +62,10 @@ export default function Festivals() {
               <p>Select a live festival from the browse tab to enter</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <FestivalHistoryTab />
         </TabsContent>
       </Tabs>
     </div>
