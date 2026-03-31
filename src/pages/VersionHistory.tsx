@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.131",
+    date: "2026-03-31",
+    changes: [
+      { type: 'feature', description: "Added auto-verification system for Twaater accounts — fame >= 10,000, award winners, and charting artists (top 100) automatically receive verified badges" },
+      { type: 'improvement', description: "Enhanced trending algorithm with exponential time decay (half-life ~8h), verified account boost (1.5x), and minimum engagement threshold" },
+      { type: 'fix', description: "Fixed is_verified → verified field name in trending and hashtag hooks to match actual database schema" },
+    ],
+  },
+  {
     version: "1.1.130",
     date: "2026-03-30",
     changes: [
