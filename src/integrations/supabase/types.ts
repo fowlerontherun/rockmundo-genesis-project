@@ -10428,6 +10428,48 @@ export type Database = {
           },
         ]
       }
+      jam_session_challenges: {
+        Row: {
+          created_at: string | null
+          description: string
+          difficulty: string | null
+          genre_requirement: string | null
+          id: string
+          is_active: boolean | null
+          min_participants: number | null
+          name: string
+          requirements: Json | null
+          rewards: Json | null
+          xp_bonus_pct: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          difficulty?: string | null
+          genre_requirement?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_participants?: number | null
+          name: string
+          requirements?: Json | null
+          rewards?: Json | null
+          xp_bonus_pct?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          difficulty?: string | null
+          genre_requirement?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_participants?: number | null
+          name?: string
+          requirements?: Json | null
+          rewards?: Json | null
+          xp_bonus_pct?: number | null
+        }
+        Relationships: []
+      }
       jam_session_chat: {
         Row: {
           created_at: string | null
@@ -10669,6 +10711,7 @@ export type Database = {
           co_play_count: number | null
           cost_paid: number | null
           id: string
+          instrument: string | null
           instrument_skill_slug: string | null
           is_ready: boolean | null
           jam_session_id: string
@@ -10677,6 +10720,7 @@ export type Database = {
           participation_percentage: number | null
           profile_id: string
           reward_multiplier: number | null
+          session_role: string | null
           skill_tier: string | null
           updated_at: string | null
         }
@@ -10684,6 +10728,7 @@ export type Database = {
           co_play_count?: number | null
           cost_paid?: number | null
           id?: string
+          instrument?: string | null
           instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id: string
@@ -10692,6 +10737,7 @@ export type Database = {
           participation_percentage?: number | null
           profile_id: string
           reward_multiplier?: number | null
+          session_role?: string | null
           skill_tier?: string | null
           updated_at?: string | null
         }
@@ -10699,6 +10745,7 @@ export type Database = {
           co_play_count?: number | null
           cost_paid?: number | null
           id?: string
+          instrument?: string | null
           instrument_skill_slug?: string | null
           is_ready?: boolean | null
           jam_session_id?: string
@@ -10707,6 +10754,7 @@ export type Database = {
           participation_percentage?: number | null
           profile_id?: string
           reward_multiplier?: number | null
+          session_role?: string | null
           skill_tier?: string | null
           updated_at?: string | null
         }
@@ -10737,6 +10785,8 @@ export type Database = {
       jam_sessions: {
         Row: {
           access_code: string | null
+          challenge_completed: boolean | null
+          challenge_id: string | null
           city_id: string | null
           completed_at: string | null
           cost_per_participant: number | null
@@ -10765,9 +10815,13 @@ export type Database = {
           total_cost: number | null
           total_xp_awarded: number | null
           updated_at: string | null
+          venue_trait: string | null
+          venue_trait_bonus: Json | null
         }
         Insert: {
           access_code?: string | null
+          challenge_completed?: boolean | null
+          challenge_id?: string | null
           city_id?: string | null
           completed_at?: string | null
           cost_per_participant?: number | null
@@ -10796,9 +10850,13 @@ export type Database = {
           total_cost?: number | null
           total_xp_awarded?: number | null
           updated_at?: string | null
+          venue_trait?: string | null
+          venue_trait_bonus?: Json | null
         }
         Update: {
           access_code?: string | null
+          challenge_completed?: boolean | null
+          challenge_id?: string | null
           city_id?: string | null
           completed_at?: string | null
           cost_per_participant?: number | null
@@ -10827,6 +10885,8 @@ export type Database = {
           total_cost?: number | null
           total_xp_awarded?: number | null
           updated_at?: string | null
+          venue_trait?: string | null
+          venue_trait_bonus?: Json | null
         }
         Relationships: [
           {
