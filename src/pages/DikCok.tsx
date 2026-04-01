@@ -2,15 +2,17 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign } from "lucide-react";
+import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign, Sparkles } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { useDikCokChallenges } from "@/hooks/useDikCokChallenges";
+import { useDikCokForYouFeed } from "@/hooks/useDikCokForYouFeed";
 import { DikCokVideoCard } from "@/components/dikcok/DikCokVideoCard";
 import { DikCokCreateDialog } from "@/components/dikcok/DikCokCreateDialog";
-import { DikCokBandAnalytics } from "@/components/dikcok/DikCokBandAnalytics";
+import { DikCokCreatorDashboard } from "@/components/dikcok/DikCokCreatorDashboard";
+import { DikCokChallengeCard } from "@/components/dikcok/DikCokChallengeCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +50,13 @@ export default function DikCok() {
   const { videos, trending, isLoading, incrementViews } = useDikCokVideos(effectiveBandId);
   const { challenges } = useDikCokChallenges();
 
+  // For You feed - personalized algorithm
+  const bandGenres = userBands?.map(b => (b.bands as any)?.genre).filter(Boolean) || [];
+  const { forYouVideos, isLoading: forYouLoading } = useDikCokForYouFeed(
+    bandGenres,
+    selectedBand?.fame || 0
+  );
+
   if (!profile || bandsLoading) return <div className="container mx-auto p-6 flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   // No bands - show call to action
@@ -79,7 +88,6 @@ export default function DikCok() {
     const fame = Number(v.band?.fame || selectedBand?.fame || 0);
     return sum + views * (0.0012 + fame / 500000);
   }, 0);
-
 
   return (
     <PageLayout>
@@ -150,13 +158,34 @@ export default function DikCok() {
         </Card>
       </div>
 
-      <Tabs defaultValue="trending" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="trending"><TrendingUp className="h-4 w-4 mr-2" />Trending</TabsTrigger>
-          <TabsTrigger value="my-videos"><Video className="h-4 w-4 mr-2" />My Videos</TabsTrigger>
-          <TabsTrigger value="challenges"><Music className="h-4 w-4 mr-2" />Challenges</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
+      <Tabs defaultValue="foryou" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="foryou"><Sparkles className="h-4 w-4 mr-1" />For You</TabsTrigger>
+          <TabsTrigger value="trending"><TrendingUp className="h-4 w-4 mr-1" />Trending</TabsTrigger>
+          <TabsTrigger value="my-videos"><Video className="h-4 w-4 mr-1" />My Videos</TabsTrigger>
+          <TabsTrigger value="challenges"><Music className="h-4 w-4 mr-1" />Challenges</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />Analytics</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="foryou">
+          {forYouLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+          ) : forYouVideos.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <h3 className="font-semibold mb-2">Your For You feed is empty</h3>
+                <p className="text-sm text-muted-foreground">Create some videos or check back when more content is posted!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {forYouVideos.map((v: any) => (
+                <DikCokVideoCard key={v.id} video={v} onView={incrementViews} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="trending">
           {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div> : 
@@ -165,17 +194,44 @@ export default function DikCok() {
 
         <TabsContent value="my-videos">
           {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div> : 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{myBandVideos.map(v => <DikCokVideoCard key={v.id} video={v} onView={incrementViews} />)}</div>}
+            myBandVideos.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                  <h3 className="font-semibold mb-2">No videos yet</h3>
+                  <p className="text-sm text-muted-foreground">Create your first DikCok video to get started!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{myBandVideos.map(v => <DikCokVideoCard key={v.id} video={v} onView={incrementViews} />)}</div>
+            )}
         </TabsContent>
 
         <TabsContent value="challenges">
-          <Card><CardHeader><CardTitle>Active Challenges</CardTitle></CardHeader><CardContent>
-            {challenges?.map(c => <Card key={c.id} className="mb-4"><CardHeader><CardTitle className="text-lg">{c.name}</CardTitle><CardDescription>{c.theme}</CardDescription></CardHeader></Card>)}
-          </CardContent></Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Challenges</CardTitle>
+              <CardDescription>Complete challenges to earn bonus hype, fans, and exclusive rewards.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {challenges && challenges.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {challenges.map((c: any) => (
+                    <DikCokChallengeCard key={c.id} challenge={c} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Music className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p>No active challenges right now. Check back soon!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="analytics">
-          {selectedBand && <DikCokBandAnalytics band={selectedBand as any} videos={myBandVideos} />}
+          {selectedBand && <DikCokCreatorDashboard band={selectedBand} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
     </PageLayout>

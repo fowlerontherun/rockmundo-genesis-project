@@ -14,6 +14,27 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.134",
+    date: "2026-04-01",
+    changes: [
+      { type: 'feature', description: "DikCok 2.0 — Added personalized 'For You' feed with genre affinity, fame proximity, and freshness-boosted algorithm" },
+      { type: 'feature', description: "New Creator Dashboard with tier progression (Newcomer → Diamond), engagement rate, growth trends, top videos, and fan conversion metrics" },
+      { type: 'improvement', description: "DikCok page now has 5 tabs: For You, Trending, My Videos, Challenges, and Analytics with improved empty states" },
+    ],
+  },
+  {
+    version: "1.1.133",
+    date: "2026-04-01",
+    changes: [
+      { type: 'feature', description: "Jam Sessions 2.0 — Added venue traits system (8 unique traits like Acoustic Haven, Electric Arena, Underground Den) that provide bonuses during sessions" },
+      { type: 'feature', description: "Added session challenges system with 9 challenges across 4 difficulty tiers (Easy → Legendary) offering 15-100% XP bonuses" },
+      { type: 'feature', description: "Integrated live mood meter and synergy indicator into active jam session panels with animated bars and fire/synergy effects" },
+      { type: 'feature', description: "Added Challenges tab to Jam Sessions page showing all available challenges with difficulty badges and XP bonus info" },
+      { type: 'improvement', description: "Session cards now display venue traits when assigned, showing active bonuses" },
+      { type: 'improvement', description: "Added participant session roles (lead/rhythm/support) and instrument tracking to jam session participants" },
+    ],
+  },
+  {
     version: "1.1.132",
     date: "2026-03-31",
     changes: [

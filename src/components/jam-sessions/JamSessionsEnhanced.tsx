@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useJamSessions } from "@/hooks/useJamSessions";
 import { useJamSessionBooking } from "@/hooks/useJamSessionBooking";
+import { useJamSessionChallenges } from "@/hooks/useJamSessionChallenges";
 import { JamSessionCard } from "./JamSessionCard";
 import { JamSessionHistory } from "./JamSessionHistory";
 import { JamSessionBookingDialog } from "./JamSessionBookingDialog";
@@ -13,8 +14,11 @@ import { JamSessionChat } from "./JamSessionChat";
 import { JamCommentaryFeed } from "./JamCommentaryFeed";
 import { JamVoiceChat } from "./JamVoiceChat";
 import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
+import { JamSessionMoodMeter } from "./JamSessionMoodMeter";
+import { JamSessionVenueTraits } from "./JamSessionVenueTraits";
+import { JamSessionChallengeCard } from "./JamSessionChallengeCard";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign } from "lucide-react";
+import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign, Target } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
   const { profileId } = useActiveProfile();
@@ -34,6 +38,7 @@ export const JamSessionsEnhanced = () => {
   } = useJamSessions();
   
   const { joinJamSession, profile } = useJamSessionBooking();
+  const { challenges } = useJamSessionChallenges();
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -164,6 +169,37 @@ export const JamSessionsEnhanced = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Mood Meter & Venue Traits */}
+            {(() => {
+              const activeSession = activeSessions.find(s => s.id === activeSessionId);
+              return activeSession ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <JamSessionMoodMeter 
+                    mood={(activeSession as any).mood_score || 50} 
+                    synergy={(activeSession as any).synergy_score || 50} 
+                  />
+                  <div className="space-y-3">
+                    <JamSessionVenueTraits venueTrait={(activeSession as any).venue_trait} />
+                    {(activeSession as any).challenge_id && (
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium flex items-center gap-1">
+                          <Target className="h-3 w-3" /> Active Challenge
+                        </span>
+                        {challenges.filter(c => c.id === (activeSession as any).challenge_id).map(c => (
+                          <JamSessionChallengeCard 
+                            key={c.id} 
+                            challenge={c} 
+                            isActive 
+                            isCompleted={(activeSession as any).challenge_completed} 
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             {/* Voice Chat */}
             <JamVoiceChat sessionId={activeSessionId} />
             
@@ -189,6 +225,9 @@ export const JamSessionsEnhanced = () => {
       <Tabs defaultValue="lobby" className="space-y-4">
         <TabsList>
           <TabsTrigger value="lobby">Session Lobby</TabsTrigger>
+          <TabsTrigger value="challenges" className="gap-1">
+            <Target className="h-3 w-3" /> Challenges
+          </TabsTrigger>
           <TabsTrigger value="history">My History</TabsTrigger>
         </TabsList>
 
@@ -249,11 +288,41 @@ export const JamSessionsEnhanced = () => {
                         )}
                       </div>
                     )}
+                    {/* Venue Trait */}
+                    {(session as any).venue_trait && (
+                      <div className="px-4 pb-3">
+                        <JamSessionVenueTraits venueTrait={(session as any).venue_trait} />
+                      </div>
+                    )}
                   </Card>
                 );
               })}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="challenges" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Target className="h-5 w-5" />
+                Session Challenges
+              </CardTitle>
+              <CardDescription>
+                Complete challenges during jam sessions to earn bonus XP. Challenges are checked when a session ends.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {challenges.map((challenge) => (
+                  <JamSessionChallengeCard key={challenge.id} challenge={challenge} />
+                ))}
+              </div>
+              {challenges.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No challenges available right now.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history">
