@@ -38,6 +38,7 @@ export const JamSessionsEnhanced = () => {
   } = useJamSessions();
   
   const { joinJamSession, profile } = useJamSessionBooking();
+  const { challenges } = useJamSessionChallenges();
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
