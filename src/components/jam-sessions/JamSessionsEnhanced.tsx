@@ -288,6 +288,12 @@ export const JamSessionsEnhanced = () => {
                         )}
                       </div>
                     )}
+                    {/* Venue Trait */}
+                    {(session as any).venue_trait && (
+                      <div className="px-4 pb-3">
+                        <JamSessionVenueTraits venueTrait={(session as any).venue_trait} />
+                      </div>
+                    )}
                   </Card>
                 );
               })}
