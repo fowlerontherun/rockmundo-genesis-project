@@ -66,7 +66,6 @@ export const useDikCokForYouFeed = (userBandGenres: string[] = [], userFame: num
       });
 
       return scored
-        .filter((v: any) => !v.isOwn)
         .sort((a: any, b: any) => b.forYouScore - a.forYouScore)
         .slice(0, 30);
     },
