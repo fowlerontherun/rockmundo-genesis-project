@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.134",
+    date: "2026-04-01",
+    changes: [
+      { type: 'feature', description: "DikCok 2.0 — Added personalized 'For You' feed with genre affinity, fame proximity, and freshness-boosted algorithm" },
+      { type: 'feature', description: "New Creator Dashboard with tier progression (Newcomer → Diamond), engagement rate, growth trends, top videos, and fan conversion metrics" },
+      { type: 'improvement', description: "DikCok page now has 5 tabs: For You, Trending, My Videos, Challenges, and Analytics with improved empty states" },
+    ],
+  },
+  {
     version: "1.1.133",
     date: "2026-04-01",
     changes: [
