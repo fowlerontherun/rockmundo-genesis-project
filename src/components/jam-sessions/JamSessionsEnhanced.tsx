@@ -168,6 +168,37 @@ export const JamSessionsEnhanced = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Mood Meter & Venue Traits */}
+            {(() => {
+              const activeSession = activeSessions.find(s => s.id === activeSessionId);
+              return activeSession ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <JamSessionMoodMeter 
+                    mood={(activeSession as any).mood_score || 50} 
+                    synergy={(activeSession as any).synergy_score || 50} 
+                  />
+                  <div className="space-y-3">
+                    <JamSessionVenueTraits venueTrait={(activeSession as any).venue_trait} />
+                    {(activeSession as any).challenge_id && (
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium flex items-center gap-1">
+                          <Target className="h-3 w-3" /> Active Challenge
+                        </span>
+                        {challenges.filter(c => c.id === (activeSession as any).challenge_id).map(c => (
+                          <JamSessionChallengeCard 
+                            key={c.id} 
+                            challenge={c} 
+                            isActive 
+                            isCompleted={(activeSession as any).challenge_completed} 
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             {/* Voice Chat */}
             <JamVoiceChat sessionId={activeSessionId} />
             
