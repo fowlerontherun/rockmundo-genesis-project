@@ -301,6 +301,30 @@ export const JamSessionsEnhanced = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="challenges" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Target className="h-5 w-5" />
+                Session Challenges
+              </CardTitle>
+              <CardDescription>
+                Complete challenges during jam sessions to earn bonus XP. Challenges are checked when a session ends.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {challenges.map((challenge) => (
+                  <JamSessionChallengeCard key={challenge.id} challenge={challenge} />
+                ))}
+              </div>
+              {challenges.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No challenges available right now.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="history">
           <JamSessionHistory outcomes={myOutcomes} />
         </TabsContent>
