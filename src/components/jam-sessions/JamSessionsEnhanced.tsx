@@ -225,6 +225,9 @@ export const JamSessionsEnhanced = () => {
       <Tabs defaultValue="lobby" className="space-y-4">
         <TabsList>
           <TabsTrigger value="lobby">Session Lobby</TabsTrigger>
+          <TabsTrigger value="challenges" className="gap-1">
+            <Target className="h-3 w-3" /> Challenges
+          </TabsTrigger>
           <TabsTrigger value="history">My History</TabsTrigger>
         </TabsList>
 
