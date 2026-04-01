@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useJamSessions } from "@/hooks/useJamSessions";
 import { useJamSessionBooking } from "@/hooks/useJamSessionBooking";
+import { useJamSessionChallenges } from "@/hooks/useJamSessionChallenges";
 import { JamSessionCard } from "./JamSessionCard";
 import { JamSessionHistory } from "./JamSessionHistory";
 import { JamSessionBookingDialog } from "./JamSessionBookingDialog";
@@ -13,8 +14,11 @@ import { JamSessionChat } from "./JamSessionChat";
 import { JamCommentaryFeed } from "./JamCommentaryFeed";
 import { JamVoiceChat } from "./JamVoiceChat";
 import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
+import { JamSessionMoodMeter } from "./JamSessionMoodMeter";
+import { JamSessionVenueTraits } from "./JamSessionVenueTraits";
+import { JamSessionChallengeCard } from "./JamSessionChallengeCard";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign } from "lucide-react";
+import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign, Target } from "lucide-react";
 
 export const JamSessionsEnhanced = () => {
   const { profileId } = useActiveProfile();
