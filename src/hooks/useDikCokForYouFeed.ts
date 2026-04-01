@@ -33,37 +33,36 @@ export const useDikCokForYouFeed = (userBandGenres: string[] = [], userFame: num
       const now = new Date();
 
       const scored = data.map((video: any) => {
+        const ageHours = differenceInHours(now, new Date(video.created_at));
         const factors: ViralityFactors = {
           views: video.views || 0,
           hypeGained: video.hype_gained || 0,
           fanGain: video.fan_gain || 0,
           bandFame: video.band?.fame || 0,
-          ageInHours: differenceInHours(now, new Date(video.created_at)),
-          videoCategory: video.video_type?.category || "",
+          challengeBonus: false,
+          videoAge: ageHours,
+          videoTypeCategory: video.video_type?.category || "",
         };
 
-        let score = calculateTrendingScore(factors);
+        const viralityResult = calculateTrendingScore(factors);
+        let score = viralityResult.trendingScore;
 
         // Genre affinity boost: +30% if matches user's band genres
-        const videoGenre = video.band?.genre?.toLowerCase() || "";
+        const videoGenre = (video.band?.genre as string)?.toLowerCase() || "";
         if (userBandGenres.some(g => videoGenre.includes(g.toLowerCase()))) {
           score *= 1.3;
         }
 
         // Fame proximity boost: videos from bands at similar fame level get +20%
-        const fameDiff = Math.abs((video.band?.fame || 0) - userFame);
+        const fameDiff = Math.abs(((video.band?.fame as number) || 0) - userFame);
         if (fameDiff < 500) score *= 1.2;
         else if (fameDiff < 2000) score *= 1.1;
 
         // Freshness boost: <6h old gets +50%
-        const ageHours = differenceInHours(now, new Date(video.created_at));
         if (ageHours < 6) score *= 1.5;
         else if (ageHours < 24) score *= 1.2;
 
-        // Exclude own band's videos
-        const isOwn = video.band_id === profileId;
-
-        return { ...video, forYouScore: score, isOwn };
+        return { ...video, forYouScore: score };
       });
 
       return scored
