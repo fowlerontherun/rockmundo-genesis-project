@@ -223,6 +223,9 @@ export const useSongwritingData = (profileId?: string | null) => {
           theme_id: projectData.theme_id || null,
           chord_progression_id: projectData.chord_progression_id || null,
           initial_lyrics: projectData.initial_lyrics || null,
+          // Keep canonical lyrics in sync from first save so convertToSong
+          // uses player-entered lyrics instead of falling back to AI generation.
+          lyrics: projectData.initial_lyrics || null,
           creative_brief: projectData.creative_brief || null,
           genres: projectData.genres || [],
           purpose: projectData.purpose || null,
