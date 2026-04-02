@@ -52,7 +52,7 @@ const NightClubDetail = () => {
   const [loading, setLoading] = useState(true);
   const [buyingDrinkId, setBuyingDrinkId] = useState<string | null>(null);
 
-  const { triggerNightlifeEvent, isProcessing } = useNightlifeEvents();
+  const { triggerNightlifeEvent, isProcessing, lastOutcomeDetail, lastAddictionWarning, dismissOutcome } = useNightlifeEvents();
   const { performDjSetAsync, isPerforming } = useDjPerformance();
   const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
   const [showOutcome, setShowOutcome] = useState(false);
