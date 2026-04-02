@@ -86,7 +86,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data as MusicVideoConfigWithRelations[]) ?? [];
+      return (data as any as MusicVideoConfigWithRelations[]) ?? [];
     },
   });
 
