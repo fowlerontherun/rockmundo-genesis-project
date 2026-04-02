@@ -223,18 +223,10 @@ const mapBadge = (record: any): LeaderboardBadge | null => {
   };
 };
 
-type SnapshotRow = Database["public"]["Tables"]["leaderboard_season_snapshots"]["Row"];
-
-type SnapshotFilterBuilder = PostgrestFilterBuilder<
-  Database["public"],
-  SnapshotRow,
-  SnapshotRow
->;
-
 const applyStandingFilters = (
-  query: SnapshotFilterBuilder,
+  query: any,
   filters: LeaderboardStandingFilters | undefined
-): SnapshotFilterBuilder => {
+): any => {
   let next = query;
 
   if (filters?.division && filters.division !== "all") {
