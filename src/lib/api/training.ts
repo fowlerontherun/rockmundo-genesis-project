@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+const db = supabase as any;
 import {
   calculateNextTrainingSession,
   type TrainingCadence,
