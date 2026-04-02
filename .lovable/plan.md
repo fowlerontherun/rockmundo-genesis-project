@@ -1,63 +1,98 @@
+# System Expansion Status — Updated v1.1.135
 
+## ✅ Fully Implemented (Historical Reference)
+- Marriage & Children, Night Clubs, XP Schema, Studio Booking, Education, Gig System, Music Video Release, UI/Themes/Languages, Fame/Popularity
 
-# Remaining Plans and Docs: Priority Review
+## ✅ Recently Implemented (v1.1.131–1.1.135)
+- **Twaater** — Mentions feed, trending algorithm (time decay + verified boost), hashtag system, notifications bell, quote twaats, polls, verification badges (auto-verify via fame/awards/charts), explore/search
+- **Jam Sessions 2.0** — Venue traits (8 types), session challenges (9 across 4 tiers), mood meter + synergy, participant roles/instruments
+- **DikCok 2.0** — "For You" personalized feed, creator dashboard (tier progression + analytics), 5-tab layout
+- **Festival** — History tab with past performance metrics, contract negotiation dialog, setlist editor
+- **Song Audio** — Fixed regeneration flow, improved lyrics generation with 550-char constraint
 
-## Summary of All Plan Documents
+## 🟡 Partially Implemented (Remaining Work)
 
-After reviewing all 20+ docs and cross-referencing with the codebase, here is the status of each planned system:
+### Twaater (Medium Priority — mostly done)
+| Feature | Status | Effort |
+|---------|--------|--------|
+| Media attachments (image uploads) | ❌ Not built | Medium |
+| DMs / Direct Messages | ❌ Not built | High |
+| Scheduled twaats | ❌ Not built | Low |
+| Lists/bookmarks | ❌ Not built | Low |
+| Promoted twaats (economy sink) | ❌ Not built | Medium |
+| Analytics dashboard for verified | ❌ Not built | Medium |
 
-### Already Implemented (docs are historical reference)
-- **Marriage & Children** — Fully shipped (Phase 1 + 2, family dashboard, child planning, inheritance)
-- **Night Clubs System** — Implemented (guest actions, DJ slots, quests, NPC dialogue)
-- **Nightlife Risk Layer** — Partially implemented (activity types exist, addiction system wired)
-- **XP Schema** — Fully implemented (wallet, ledger, conversions all live)
-- **Studio Booking** — Implemented (booking flow, session production, recording)
-- **DikCok Social Media** — Basic version live (video creation, feeds, thumbnails, engagement)
-- **Music Video Release** — Implemented (release workflow, promotion, views system)
-- **UI Improvements** — Done (themes, languages, version header, navigation)
-- **Education System** — Implemented
-- **Gig System** — Multiple rounds of fixes and improvements shipped
-- **Record Label System** — Recently expanded (v1.1.127)
-- **Fame/Popularity Design** — Integrated across systems
+### Festival Expansion (45 of 50 tasks remain)
+| Feature | Status | Effort |
+|---------|--------|--------|
+| Schedule conflict detection | ❌ | Medium |
+| Performance minigame loop | ❌ | High |
+| Post-show reviews & highlight reels | ❌ | Medium |
+| Ticket tier management + dynamic pricing | Partial (TicketTierManager exists but @ts-nocheck) | Medium |
+| Fan voting for open slots | ❌ | Medium |
+| Crew/engineer assignments | ❌ | Medium |
+| Merch/food stall revenue sharing | ❌ | Medium |
+| Admin lifecycle consolidation | ❌ | High |
 
-### Partially Implemented (have significant remaining work)
+### DikCok Expansion
+| Feature | Status | Effort |
+|---------|--------|--------|
+| Duet/collab mode | ❌ | High |
+| Fan tips/hype tokens | ❌ | Medium |
+| Weekly trend challenges | ❌ | Medium |
+| Beat challenges (rhythm minigame) | ❌ | High |
+| Fan missions | ❌ | Medium |
+| Creator guilds | ❌ | High |
 
-| System | What Exists | What's Missing |
-|--------|------------|----------------|
-| **Festival Expansion** (50 tasks) | Basic festival page, applications, admin | Contract negotiation, setlist editor, performance minigame, schedule conflicts, ticket tiers, fan voting, lineup posters — ~45 of 50 tasks remain |
-| **Twaater Improvements** | Core posting, reactions, replies, moderation | Mentions feed (stubbed), trending algorithm, hashtags, media attachments, verification badges, quote twaats, notifications, DM system |
-| **DikCok Expansion** | Basic video creation + feed | Multi-feed (Trending/Friends), engagement mechanics (tips, polls), challenges/events, creator analytics, duets/collabs, monetization |
-| **Band Jam Sessions 2.0** | Basic jam sessions exist | Live lobby, spectators, session roles, mood meter, venue traits, challenges, recording snippets, NPC cameos, session economy — 18 of 20 improvements |
-| **TV/Podcast/Radio Media** | Media facilities exist in DB | Full show creation, episode scheduling, guest booking, ratings system, ad revenue, cross-media synergies — essentially unbuilt |
-| **PR Workflow** | Basic PR exists | Analytics integration, AI-assisted pitch drafting, webhook listeners |
+### Jam Sessions 2.0 (Remaining)
+| Feature | Status | Effort |
+|---------|--------|--------|
+| Live lobby (async drop-in/out) | ❌ | High |
+| Spectator slots | ❌ | Medium |
+| Recording snippets | ❌ | Medium |
+| NPC cameos | ❌ | Medium |
+| Session economy (tickets, refreshments) | ❌ | Medium |
+| Jam contracts (venue residencies) | ❌ | Medium |
+| Band diary feed auto-posts | ❌ | Low |
+| Gifted song drops (0.75% chance) | ❌ | Medium |
+| Progressive unlocks | ❌ | Medium |
 
-### Not Started
-- **Nightlife Risk Layer (full version)** — Decision trees, stance system (Stay Sober/Party Hard/Network), probability tables, consequence engine
-- **TV/Podcast/Radio** — Entire media vertical system (147 lines of design doc, zero implementation)
+## ❌ Not Started
+
+### TV/Podcast/Radio Media (Very Large)
+- Full new vertical: show creation, episode scheduling, guest booking, ratings, ad revenue, media buzz
+- Some DB infrastructure exists (media_facilities, radio stations, radio content)
+- **Recommended approach**: Phase 1 only — basic show creation + booking flow + ratings
+
+### Nightlife Risk Layer (Full Version)
+- Decision trees, stance system (Sober/Party/Network/Leave Early), probability tables
+- Consequence engine (exhaustion, scandal, addiction arcs, eureka moments)
+- Currently zero implementation of the decision/stance flow
+
+## 🔧 Technical Debt
+- **27 files with `@ts-nocheck`** — up from 4 previously identified. Key files: BandRosterTab, TicketTierManager, MusicVideoReleaseTab, Housing, CompetitiveCharts, recording page, 8 API modules, VersionHistory
+- **PR Workflow TODOs** — Analytics integration, AI-assisted pitch drafting
 
 ---
 
 ## Recommended Next Steps (Priority Order)
 
 ### Tier 1: High-Impact, Moderate Effort
-1. **Twaater Improvements** — Activate mentions feed, implement trending algorithm, add hashtag support, verification badges. These are mostly UI + query work on existing tables.
-2. **Festival Expansion (Player-facing batch)** — Contract negotiation UI, setlist editor, schedule conflict detection, performance outcomes. Builds on existing festival infrastructure.
+1. **Nightlife Risk Layer** — Decision tree + stance system. Adds strategic depth to an existing nightlife feature. Core engine: stance selection → probability resolution → consequence application.
+2. **Festival Schedule Conflicts + Performance Outcomes** — Conflict detection across gigs/tours/rehearsals + post-performance breakdowns (fame/payment/merch).
 
 ### Tier 2: High-Impact, Larger Effort
-3. **Band Jam Sessions 2.0** — Mood meter, venue traits, session challenges, recording snippets. Deepens a core gameplay loop.
-4. **DikCok Expansion** — Multi-feed, challenges, creator analytics. Extends an existing but shallow system.
+3. **Jam Sessions 2.0 — Gifted Song Drops + NPC Cameos** — The two most game-feel-enhancing remaining features. Song drops add excitement; NPC cameos add world flavor.
+4. **DikCok Weekly Challenges + Fan Tips** — Adds recurring engagement loop and economy sink.
+5. **Twaater Media Attachments** — Image uploads to twaats would significantly increase engagement feel.
 
 ### Tier 3: New Systems
-5. **TV/Podcast/Radio Media** — Full new vertical. Very large scope (facilities, shows, episodes, ratings, ads). Could be phased.
-6. **Nightlife Risk Layer (full)** — Decision tree engine, stance system, consequence resolution. Adds strategic depth to an existing feature.
+6. **TV/Podcast/Radio Phase 1** — Basic show creation, booking, and ratings. Very large scope; recommend only core booking + ratings loop.
 
 ### Tier 4: Maintenance
-7. **Fix `@ts-nocheck` files** — 4 files need type-checking re-enabled after types regenerate
-8. **PR Workflow TODOs** — Analytics, AI pitch drafting (lower priority polish)
+7. **Fix `@ts-nocheck` files** — 27 files need type-checking re-enabled. This is accumulating technical debt.
+8. **PR Workflow TODOs** — Low priority polish.
 
 ---
 
-## What would you like to tackle?
-
-Pick a system (or multiple) and I will create a detailed implementation plan. The Twaater improvements and Festival expansion offer the best bang-for-effort ratio since the infrastructure already exists.
-
+## Pick what to build next!
