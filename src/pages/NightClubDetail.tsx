@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
 import { NPCDialoguePanel } from "@/components/nightclub/NPCDialoguePanel";
+import { NightlifeStanceSelector } from "@/components/nightclub/NightlifeStanceSelector";
+import type { NightlifeStance } from "@/utils/nightlifeRiskLayer";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
