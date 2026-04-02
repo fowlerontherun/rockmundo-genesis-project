@@ -18,8 +18,8 @@ export interface UpdateTourInput {
   endDate?: TourRecord["end_date"];
 }
 
-const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>) => {
-  const payload: Partial<TourRecord> = {};
+const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>): Record<string, any> => {
+  const payload: Record<string, any> = {};
 
   if (input.name !== undefined) {
     payload.name = input.name;
