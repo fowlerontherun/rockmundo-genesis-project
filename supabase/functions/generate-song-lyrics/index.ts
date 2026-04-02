@@ -572,6 +572,10 @@ FORMAT
 Use clear section labels: [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro], etc.
 Match line counts to the structure specified above.
 
+CRITICAL LENGTH CONSTRAINT: The final lyrics MUST be under 550 characters total (including section labels).
+This is a HARD LIMIT for the audio generation engine. Keep verses to 4 lines max and choruses to 4 lines max.
+Prioritize impact over length - every word must count.
+
 ${existingLyrics ? `\n═══════════════════════════════════════════════════════════════\nEXISTING LYRICS TO BUILD ON/COMPLEMENT:\n═══════════════════════════════════════════════════════════════\n${existingLyrics}\n\nBuild on these themes and style while completing the song.` : ''}
 
 NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
