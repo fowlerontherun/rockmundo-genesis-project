@@ -588,6 +588,7 @@ NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
+        max_tokens: 2048,
         messages: [
           { 
             role: 'system', 
@@ -603,7 +604,11 @@ Your lyrics are famous for:
 
 You NEVER use clichéd phrases. Every song you write is completely different from the last.
 You follow the requested structure precisely and format with clear section labels in brackets.
-You match the specified perspective, tone, and narrative style exactly.` 
+You match the specified perspective, tone, and narrative style exactly.
+
+CRITICAL: Your lyrics output MUST be under 550 characters total. This is a hard technical limit.
+Keep it concise - 2-3 sections maximum. Quality over quantity.
+Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.` 
           },
           { role: 'user', content: prompt }
         ],
