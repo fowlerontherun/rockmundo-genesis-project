@@ -168,7 +168,7 @@ export const fetchCommunityPost = async (
   postId: string,
   viewerId?: string | null,
 ): Promise<CommunityFeedPost | null> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("community_posts")
     .select(withAuthorAndReactionsSelect)
     .eq("id", postId)
@@ -200,7 +200,7 @@ export const createCommunityPost = async (
     throw new Error("Post content exceeds the 500 character limit.");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("community_posts")
     .insert({
       author_id: authorId,
@@ -223,7 +223,7 @@ export const toggleCommunityReaction = async (
 ): Promise<CommunityFeedPost | null> => {
   const { postId, profileId, reactionType } = input;
 
-  const { data: existingReaction, error: selectError } = await supabase
+  const { data: existingReaction, error: selectError } = await db
     .from("community_post_reactions")
     .select("*")
     .eq("post_id", postId)
@@ -236,7 +236,7 @@ export const toggleCommunityReaction = async (
 
   if (existingReaction) {
     if (existingReaction.reaction_type === reactionType) {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await db
         .from("community_post_reactions")
         .delete()
         .eq("id", existingReaction.id);
@@ -245,7 +245,7 @@ export const toggleCommunityReaction = async (
         throw deleteError;
       }
     } else {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("community_post_reactions")
         .update({ reaction_type: reactionType })
         .eq("id", existingReaction.id);
@@ -255,7 +255,7 @@ export const toggleCommunityReaction = async (
       }
     }
   } else {
-    const { error: insertError } = await supabase
+    const { error: insertError } = await db
       .from("community_post_reactions")
       .insert({
         post_id: postId,
