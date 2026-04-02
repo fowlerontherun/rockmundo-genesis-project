@@ -43,7 +43,7 @@ export const calculateProgressUpgrade = (
 export const fetchSideHustleProgress = async (
   profileId: string,
 ): Promise<SideHustleProgressRow[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("side_hustle_progress")
     .select("*")
     .eq("profile_id", profileId)
