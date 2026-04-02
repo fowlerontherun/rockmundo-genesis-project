@@ -63,7 +63,7 @@ export const TicketTierManager = ({ eventId, onTiersChange }: TicketTierManagerP
 
     setLoading(true);
     const { data, error } = await supabaseClient
-      .from<TicketTier>(TABLE_NAME)
+      .from(TABLE_NAME)
       .select("*")
       .eq("event_id", eventId)
       .order("price", { ascending: true });
