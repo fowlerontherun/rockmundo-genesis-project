@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
@@ -122,7 +121,7 @@ const mapGigToHighlight = (gig: GigOutcomeWithDetails): CareerGigHighlight => ({
 
 export const fetchCareerOverview = async (profileId: string): Promise<CareerOverview> => {
   // Fetch ALL band memberships for this player
-  const { data: memberships, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await (supabase as any)
     .from("band_members")
     .select(
       `band_id, band:bands (id, name, fame, popularity, weekly_fans)`
@@ -167,7 +166,7 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
       throw gigsError;
     }
 
-    gigRows = (gigsData as GigOutcomeWithDetails[]) ?? [];
+    gigRows = (gigsData as any as GigOutcomeWithDetails[]) ?? [];
   }
 
   // Fetch skills from skill_progress via profile

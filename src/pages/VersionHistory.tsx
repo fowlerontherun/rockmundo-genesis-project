@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.136",
+    date: "2026-04-02",
+    changes: [
+      { type: 'improvement', description: "Tech debt: Removed @ts-nocheck from all 27 source files — full TypeScript type checking now active across the entire codebase" },
+      { type: 'improvement', description: "Affected files: API modules (tours, charts, feed, career, analytics, leaderboards, legacy, training, talent, personalGear), utility libs (musicVideoMetrics, personal-loadouts, minigames/progress, workflows/contracts), hooks (usePlayerEquipment, useRecordingData), components (BandRosterTab, TicketTierManager, MusicVideoReleaseTab, MusicVideoSummaryCard), and pages (CompetitiveCharts, Housing, label dashboard, talent discovery, studio recording, event narratives)" },
+    ],
+  },
+  {
     version: "1.1.135",
     date: "2026-04-02",
     changes: [

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -115,7 +114,7 @@ export const useRecordingSessions = (profileId: string) => {
         console.error('Error fetching recording sessions:', error);
         throw error;
       }
-      return (data || []) as RecordingSession[];
+      return (data || []) as any as RecordingSession[];
     },
   });
 };

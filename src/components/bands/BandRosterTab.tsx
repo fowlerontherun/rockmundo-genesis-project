@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -201,7 +200,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         }));
 
         // Fetch status history
-        const { data: historyData, error: historyError } = await supabase
+        const { data: historyData, error: historyError } = await (supabase as any)
           .from("band_membership_status_history")
           .select("*")
           .eq("band_id", bandId)

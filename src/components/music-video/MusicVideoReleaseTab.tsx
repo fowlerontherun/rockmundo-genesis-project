@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +86,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data as MusicVideoConfigWithRelations[]) ?? [];
+      return (data as any as MusicVideoConfigWithRelations[]) ?? [];
     },
   });
 
@@ -132,7 +131,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         .single();
 
       if (error) throw error;
-      return data as MusicVideoConfigWithRelations;
+      return data as any as MusicVideoConfigWithRelations;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-video-configs", userId] });
@@ -170,7 +169,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         .single();
 
       if (error) throw error;
-      return data as MusicVideoConfigWithRelations;
+      return data as any as MusicVideoConfigWithRelations;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-video-configs", userId] });
@@ -190,8 +189,8 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
 
   const syncMetrics = useMutation({
     mutationFn: async (config: MusicVideoConfigWithRelations) => {
-      const { plan, chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config);
-      const { data, error } = await supabase
+      const { plan, chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config as any);
+      const { data, error } = await (supabase as any)
         .from("music_video_metrics")
         .upsert(
           {

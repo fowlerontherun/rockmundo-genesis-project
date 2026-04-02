@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCcw, Ticket, Trash2 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -64,7 +63,7 @@ export const TicketTierManager = ({ eventId, onTiersChange }: TicketTierManagerP
 
     setLoading(true);
     const { data, error } = await supabaseClient
-      .from<TicketTier>(TABLE_NAME)
+      .from(TABLE_NAME)
       .select("*")
       .eq("event_id", eventId)
       .order("price", { ascending: true });
@@ -128,13 +127,13 @@ export const TicketTierManager = ({ eventId, onTiersChange }: TicketTierManagerP
 
     const query = editingId
       ? supabaseClient
-          .from<TicketTier>(TABLE_NAME)
+          .from(TABLE_NAME)
           .update(payload)
           .eq("id", editingId)
           .select("*")
           .maybeSingle()
       : supabaseClient
-          .from<TicketTier>(TABLE_NAME)
+          .from(TABLE_NAME)
           .insert({ ...payload })
           .select("*")
           .maybeSingle();

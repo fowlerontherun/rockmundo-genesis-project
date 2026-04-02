@@ -1,5 +1,3 @@
-// @ts-nocheck
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -201,7 +199,7 @@ const mapBadge = (record: any): LeaderboardBadge | null => {
   }
 
   const awardsRaw = Array.isArray(record.awards) ? record.awards : Array.isArray(record.leaderboard_badge_awards) ? record.leaderboard_badge_awards : [];
-  const awards = awardsRaw.reduce<LeaderboardBadgeAward[]>((acc, item) => {
+  const awards = awardsRaw.reduce((acc, item) => {
     const mapped = mapBadgeAward(item);
     if (mapped) {
       acc.push(mapped);
@@ -225,18 +223,10 @@ const mapBadge = (record: any): LeaderboardBadge | null => {
   };
 };
 
-type SnapshotRow = Database["public"]["Tables"]["leaderboard_season_snapshots"]["Row"];
-
-type SnapshotFilterBuilder = PostgrestFilterBuilder<
-  Database["public"],
-  SnapshotRow,
-  SnapshotRow
->;
-
 const applyStandingFilters = (
-  query: SnapshotFilterBuilder,
+  query: any,
   filters: LeaderboardStandingFilters | undefined
-): SnapshotFilterBuilder => {
+): any => {
   let next = query;
 
   if (filters?.division && filters.division !== "all") {
@@ -354,7 +344,7 @@ export const fetchSeasonSummary = async (
     throw error;
   }
 
-  const summary = data ?? {};
+  const summary = (data ?? {}) as any;
 
   return {
     totalPlayers: toNumber(summary.total_players) ?? 0,
