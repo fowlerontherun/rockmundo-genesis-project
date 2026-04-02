@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Database } from "@/integrations/supabase/types";
 
 type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];

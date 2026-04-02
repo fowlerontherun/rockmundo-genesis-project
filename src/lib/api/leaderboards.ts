@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";

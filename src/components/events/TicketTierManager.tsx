@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCcw, Ticket, Trash2 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
