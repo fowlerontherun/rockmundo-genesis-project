@@ -59,7 +59,7 @@ export const fetchSideHustleProgress = async (
 export const upsertSideHustleProgress = async (
   payload: SideHustleProgressInsert | SideHustleProgressUpdate,
 ): Promise<SideHustleProgressRow> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("side_hustle_progress")
     .upsert(payload, { onConflict: "profile_id,activity_id" })
     .select()
