@@ -199,7 +199,7 @@ const mapBadge = (record: any): LeaderboardBadge | null => {
   }
 
   const awardsRaw = Array.isArray(record.awards) ? record.awards : Array.isArray(record.leaderboard_badge_awards) ? record.leaderboard_badge_awards : [];
-  const awards = awardsRaw.reduce<LeaderboardBadgeAward[]>((acc, item) => {
+  const awards = awardsRaw.reduce((acc, item) => {
     const mapped = mapBadgeAward(item);
     if (mapped) {
       acc.push(mapped);

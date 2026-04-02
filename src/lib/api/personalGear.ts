@@ -1,9 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
-export type GearItemRecord = Tables<"gear_items">;
-export type PersonalLoadoutRecord = Tables<"personal_loadouts">;
-export type PersonalLoadoutSlotRecord = Tables<"personal_loadout_slots">;
+const db = supabase as any;
+
+export type GearItemRecord = any;
+export type PersonalLoadoutRecord = any;
+export type PersonalLoadoutSlotRecord = any;
+
 
 export interface PersonalGearLoadout extends PersonalLoadoutRecord {
   slots: Array<PersonalLoadoutSlotRecord & { gear: GearItemRecord | null }>;
@@ -43,7 +46,7 @@ const mapLoadout = (row: PersonalGearQueryRow): PersonalGearLoadout => ({
 export const listPersonalGearLoadouts = async (
   characterId: string
 ): Promise<PersonalGearLoadout[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("personal_loadouts")
     .select(LOADOUT_WITH_SLOTS_SELECT)
     .eq("character_id", characterId)
@@ -60,7 +63,7 @@ export const getPersonalGearLoadout = async (
   characterId: string,
   loadoutId: string
 ): Promise<PersonalGearLoadout | null> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("personal_loadouts")
     .select(LOADOUT_WITH_SLOTS_SELECT)
     .eq("character_id", characterId)
@@ -156,7 +159,7 @@ export const upsertPersonalGearLoadout = async (
   let loadoutId = maybeExistingId;
 
   if (loadoutId) {
-    const { error } = await supabase
+    const { error } = await db
       .from("personal_loadouts")
       .update({
         name: basePayload.name,
@@ -173,7 +176,7 @@ export const upsertPersonalGearLoadout = async (
       throw error;
     }
   } else {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("personal_loadouts")
       .insert([
         {
@@ -197,7 +200,7 @@ export const upsertPersonalGearLoadout = async (
   }
 
   if (slots) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
       .from("personal_loadout_slots")
       .delete()
       .eq("loadout_id", loadoutId);
@@ -216,7 +219,7 @@ export const upsertPersonalGearLoadout = async (
         notes: slot.notes ?? null,
       }));
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await db
         .from("personal_loadout_slots")
         .insert(slotPayload);
 
