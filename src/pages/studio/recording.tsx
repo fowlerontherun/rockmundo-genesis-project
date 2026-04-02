@@ -121,7 +121,7 @@ export default function StudioRecordingDashboard() {
 
   const statusMutation = useMutation<void, Error, StatusMutationInput>({
     mutationFn: async ({ sessionId, nextStatus }: StatusMutationInput) => {
-      const { error } = await supabase.rpc("update_recording_session_status", {
+      const { error } = await (supabase as any).rpc("update_recording_session_status", {
         p_session_id: sessionId,
         p_status: nextStatus,
       });
