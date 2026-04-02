@@ -57,7 +57,7 @@ const SELECT_WITH_RELATIONS = `
 export const fetchChartEntries = async (
   filters: ChartFilters = {}
 ): Promise<ChartEntryWithRelations[]> => {
-  let query = supabase
+  let query = (supabase as any)
     .from("chart_entries")
     .select(SELECT_WITH_RELATIONS)
     .order("chart_date", { ascending: false, nullsFirst: false })

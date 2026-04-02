@@ -344,7 +344,7 @@ export const fetchSeasonSummary = async (
     throw error;
   }
 
-  const summary = data ?? {};
+  const summary = (data ?? {}) as any;
 
   return {
     totalPlayers: toNumber(summary.total_players) ?? 0,

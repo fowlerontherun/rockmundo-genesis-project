@@ -121,7 +121,7 @@ const mapGigToHighlight = (gig: GigOutcomeWithDetails): CareerGigHighlight => ({
 
 export const fetchCareerOverview = async (profileId: string): Promise<CareerOverview> => {
   // Fetch ALL band memberships for this player
-  const { data: memberships, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await (supabase as any)
     .from("band_members")
     .select(
       `band_id, band:bands (id, name, fame, popularity, weekly_fans)`
