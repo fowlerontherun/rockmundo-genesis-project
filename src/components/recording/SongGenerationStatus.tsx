@@ -138,10 +138,10 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
 
     setRetrying(true);
     try {
-      // First reset status to 'failed' to clear stuck state
+      // Reset status to 'failed' AND clear audio_url so edge function allows regeneration
       const { error: resetError } = await supabase
         .from('songs')
-        .update({ audio_generation_status: 'failed' })
+        .update({ audio_generation_status: 'failed', audio_url: null })
         .eq('id', songId);
 
       if (resetError) {
