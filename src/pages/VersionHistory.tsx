@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.137",
+    date: "2026-04-02",
+    changes: [
+      { type: 'feature', description: "Nightlife Risk Layer — Stance-based decision system: choose Stay Sober, Party Hard, Network, or Leave Early when visiting nightclubs" },
+      { type: 'feature', description: "Each stance carries unique risk/reward multipliers for fame, energy, cash, addiction risk, scandal chance, and inspiration" },
+      { type: 'feature', description: "Resolution engine with 8 outcome types: Great Night, Scandal, Eureka Moment, Exhaustion, Networking Win, Relationship Drama, Minor Arrest, Quick Appearance" },
+      { type: 'feature', description: "Stance confirmation dialog with risk preview (fame/energy/cost multipliers, scandal %, addiction risk)" },
+      { type: 'feature', description: "Rich outcome dialog showing fame/energy/cash changes, inspiration & contact badges, scandal warnings, and addiction triggers" },
+      { type: 'fix', description: "Fixed remaining TypeScript build errors in tours, training, minigames, personal-loadouts, musicVideoMetrics, contracts, CompetitiveCharts, recording, talent discovery, and narratives" },
+    ],
+  },
+  {
     version: "1.1.136",
     date: "2026-04-02",
     changes: [
