@@ -628,7 +628,7 @@ const TalentDiscoveryPage = () => {
                     <div className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Production company</span>
-                        <span className="text-muted-foreground">{selectedCall.production_company ?? "Not listed"}</span>
+                        <span className="text-muted-foreground">{(selectedCall as any).production_company ?? "Not listed"}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Location</span>
