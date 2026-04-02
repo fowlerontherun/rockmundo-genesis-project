@@ -150,7 +150,7 @@ const TalentDiscoveryPage = () => {
         .maybeSingle();
 
       if (error) throw error;
-      return data as ProfileRow | null;
+      return data as any as ProfileRow | null;
     },
   });
 
