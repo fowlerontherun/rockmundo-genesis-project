@@ -1,14 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/lib/supabase-types";
 
-export type SideHustleProgressRow =
-  Database["public"]["Tables"]["side_hustle_progress"]["Row"];
-export type SideHustleProgressInsert =
-  Database["public"]["Tables"]["side_hustle_progress"]["Insert"];
-export type SideHustleProgressUpdate =
-  Database["public"]["Tables"]["side_hustle_progress"]["Update"];
-export type SideHustleMinigameAttemptInsert =
-  Database["public"]["Tables"]["side_hustle_minigame_attempts"]["Insert"];
+const db = supabase as any;
+
+export type SideHustleProgressRow = Record<string, any>;
+export type SideHustleProgressInsert = Record<string, any>;
+export type SideHustleProgressUpdate = Record<string, any>;
+export type SideHustleMinigameAttemptInsert = Record<string, any>;
 
 const BASE_XP_THRESHOLD = 120;
 const XP_THRESHOLD_STEP = 45;
