@@ -637,9 +637,9 @@ const TalentDiscoveryPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Compensation</span>
                         <span className="text-muted-foreground">
-                          {selectedCall.compensation_min || selectedCall.compensation_max
-                            ? `${selectedCall.compensation_min ?? "?"} - ${selectedCall.compensation_max ?? "?"} ${
-                                selectedCall.currency ?? "USD"
+                          {(selectedCall as any).compensation_min || (selectedCall as any).compensation_max
+                            ? `${(selectedCall as any).compensation_min ?? "?"} - ${(selectedCall as any).compensation_max ?? "?"} ${
+                                (selectedCall as any).currency ?? "USD"
                               }`
                             : "Negotiable"}
                         </span>
