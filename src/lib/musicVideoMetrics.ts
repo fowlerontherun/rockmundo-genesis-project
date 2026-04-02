@@ -194,6 +194,6 @@ export function derivePlanMetadata(row: MusicVideoConfigRow) {
     plan,
     chartName: resolveChartName(row.theme as ThemeOption),
     mtvProgram: resolveMtvProgram(row.budget_tier as BudgetTier),
-    youtubeVideoId: extractYouTubeVideoId(row.youtube_video_url ?? undefined),
+    youtubeVideoId: extractYouTubeVideoId((row as any).youtube_video_url ?? undefined),
   };
 }

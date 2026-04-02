@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+const db = supabase as any;
 import {
   calculateNextTrainingSession,
   type TrainingCadence,
@@ -188,7 +189,7 @@ const mapEnrollmentRecord = (record: any): TrainingEnrollmentRecord => ({
 });
 
 export const listTrainingCourses = async (): Promise<TrainingCourseRecord[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_courses")
     .select("*")
     .order("title", { ascending: true });
@@ -212,7 +213,7 @@ export const listTrainingEnrollments = async (
     return [];
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_enrollments")
     .select("*")
     .eq("profile_id", profileId)
@@ -274,12 +275,9 @@ export const upsertTrainingEnrollment = async (
     next_session_at: nextSession?.toISOString() ?? null,
     preferred_weekdays: preferredWeekdays ?? course.default_weekdays ?? null,
     preferred_start_time: preferredStartTime ?? course.default_start_time ?? null,
-  } satisfies Partial<TrainingEnrollmentRecord> & {
-    profile_id: string;
-    course_id: string;
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_enrollments")
     .upsert(payload, { onConflict: "profile_id,course_id" })
     .select()

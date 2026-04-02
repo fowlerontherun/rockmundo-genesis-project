@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/lib/supabase-types";
 
-export type PersonalLoadoutRecord = Tables<"personal_loadouts">;
-export type PersonalLoadoutItemRecord = Tables<"personal_loadout_items">;
-export type PersonalLoadoutPedalSlotRecord = Tables<"personal_loadout_pedal_slots">;
-export type GearItemRecord = Tables<"gear_items">;
+const db = supabase as any;
+
+export type PersonalLoadoutRecord = Record<string, any>;
+export type PersonalLoadoutItemRecord = Record<string, any>;
+export type PersonalLoadoutPedalSlotRecord = Record<string, any>;
+export type GearItemRecord = Record<string, any>;
 
 export interface PersonalLoadoutWithGear extends PersonalLoadoutRecord {
   items: Array<PersonalLoadoutItemRecord & { gear: GearItemRecord | null }>;
@@ -13,39 +14,39 @@ export interface PersonalLoadoutWithGear extends PersonalLoadoutRecord {
 
 export interface LoadoutItemInput {
   gearItemId: string;
-  slotKind: PersonalLoadoutItemRecord["slot_kind"];
+  slotKind: string;
   notes?: string | null;
 }
 
 export interface PedalSlotInput {
-  slotNumber: PersonalLoadoutPedalSlotRecord["slot_number"];
-  slotType: PersonalLoadoutPedalSlotRecord["slot_type"];
+  slotNumber: number;
+  slotType: string;
   gearItemId?: string | null;
   notes?: string | null;
 }
 
 export interface CreatePersonalLoadoutInput {
   characterId: string;
-  name: PersonalLoadoutRecord["name"];
-  role?: PersonalLoadoutRecord["role"];
-  scenario?: PersonalLoadoutRecord["scenario"];
-  primaryInstrument?: PersonalLoadoutRecord["primary_instrument"];
-  notes?: PersonalLoadoutRecord["notes"];
-  isActive?: PersonalLoadoutRecord["is_active"];
+  name: string;
+  role?: string | null;
+  scenario?: string | null;
+  primaryInstrument?: string | null;
+  notes?: string | null;
+  isActive?: boolean;
   items?: LoadoutItemInput[];
   pedalSlots?: PedalSlotInput[];
 }
 
 export interface UpdatePersonalLoadoutInput {
   characterId: string;
-  loadoutId: PersonalLoadoutRecord["id"];
+  loadoutId: string;
   changes?: {
-    name?: PersonalLoadoutRecord["name"];
-    role?: PersonalLoadoutRecord["role"];
-    scenario?: PersonalLoadoutRecord["scenario"];
-    primaryInstrument?: PersonalLoadoutRecord["primary_instrument"];
-    notes?: PersonalLoadoutRecord["notes"];
-    isActive?: PersonalLoadoutRecord["is_active"];
+    name?: string;
+    role?: string | null;
+    scenario?: string | null;
+    primaryInstrument?: string | null;
+    notes?: string | null;
+    isActive?: boolean;
   };
   items?: LoadoutItemInput[];
   pedalSlots?: PedalSlotInput[];
@@ -65,7 +66,7 @@ const mapLoadout = (row: PersonalLoadoutQueryRow): PersonalLoadoutWithGear => ({
 export const listPersonalLoadoutsByCharacter = async (
   characterId: string
 ): Promise<PersonalLoadoutWithGear[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("personal_loadouts")
     .select(
       `*,
@@ -85,7 +86,7 @@ export const listPersonalLoadoutsByCharacter = async (
 const fetchPersonalLoadoutById = async (
   loadoutId: string
 ): Promise<PersonalLoadoutWithGear | null> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("personal_loadouts")
     .select(
       `*,
@@ -121,7 +122,7 @@ const insertLoadoutItems = async (
     notes: item.notes ?? null,
   }));
 
-  const { error } = await supabase
+  const { error } = await db
     .from("personal_loadout_items")
     .insert(payload);
 
@@ -146,7 +147,7 @@ const insertPedalSlots = async (
     notes: slot.notes ?? null,
   }));
 
-  const { error } = await supabase
+  const { error } = await db
     .from("personal_loadout_pedal_slots")
     .insert(payload);
 
@@ -170,7 +171,7 @@ export const createPersonalLoadout = async (
     pedalSlots,
   } = input;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("personal_loadouts")
     .insert([
       {
@@ -210,28 +211,16 @@ export const updatePersonalLoadout = async (
 
   const updatePayload: Record<string, unknown> = {};
   if (changes) {
-    if (changes.name !== undefined) {
-      updatePayload.name = changes.name;
-    }
-    if (changes.role !== undefined) {
-      updatePayload.role = changes.role ?? null;
-    }
-    if (changes.scenario !== undefined) {
-      updatePayload.scenario = changes.scenario ?? null;
-    }
-    if (changes.primaryInstrument !== undefined) {
-      updatePayload.primary_instrument = changes.primaryInstrument ?? null;
-    }
-    if (changes.notes !== undefined) {
-      updatePayload.notes = changes.notes ?? null;
-    }
-    if (changes.isActive !== undefined) {
-      updatePayload.is_active = changes.isActive;
-    }
+    if (changes.name !== undefined) updatePayload.name = changes.name;
+    if (changes.role !== undefined) updatePayload.role = changes.role ?? null;
+    if (changes.scenario !== undefined) updatePayload.scenario = changes.scenario ?? null;
+    if (changes.primaryInstrument !== undefined) updatePayload.primary_instrument = changes.primaryInstrument ?? null;
+    if (changes.notes !== undefined) updatePayload.notes = changes.notes ?? null;
+    if (changes.isActive !== undefined) updatePayload.is_active = changes.isActive;
   }
 
   if (Object.keys(updatePayload).length > 0) {
-    const { error } = await supabase
+    const { error } = await db
       .from("personal_loadouts")
       .update(updatePayload)
       .eq("id", loadoutId)
@@ -243,7 +232,7 @@ export const updatePersonalLoadout = async (
   }
 
   if (items) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
       .from("personal_loadout_items")
       .delete()
       .eq("loadout_id", loadoutId);
@@ -256,7 +245,7 @@ export const updatePersonalLoadout = async (
   }
 
   if (pedalSlots) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
       .from("personal_loadout_pedal_slots")
       .delete()
       .eq("loadout_id", loadoutId);

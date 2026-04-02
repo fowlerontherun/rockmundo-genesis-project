@@ -150,7 +150,7 @@ const TalentDiscoveryPage = () => {
         .maybeSingle();
 
       if (error) throw error;
-      return data as ProfileRow | null;
+      return data as any as ProfileRow | null;
     },
   });
 
@@ -401,18 +401,18 @@ const TalentDiscoveryPage = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">Your talent profile</CardTitle>
                 <CardDescription>
-                  {profile.stage_name ?? profile.full_name ?? "Complete your profile to stand out."}
+                  {(profile as any).stage_name ?? (profile as any).full_name ?? "Complete your profile to stand out."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4" />
-                    <span>{profile.primary_role ?? "Role not set"}</span>
+                    <span>{(profile as any).primary_role ?? "Role not set"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    <span>{profile.location ?? "Location unknown"}</span>
+                    <span>{(profile as any).location ?? "Location unknown"}</span>
                   </div>
                 </div>
               </CardContent>
@@ -628,7 +628,7 @@ const TalentDiscoveryPage = () => {
                     <div className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Production company</span>
-                        <span className="text-muted-foreground">{selectedCall.production_company ?? "Not listed"}</span>
+                        <span className="text-muted-foreground">{(selectedCall as any).production_company ?? "Not listed"}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Location</span>
@@ -637,9 +637,9 @@ const TalentDiscoveryPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">Compensation</span>
                         <span className="text-muted-foreground">
-                          {selectedCall.compensation_min || selectedCall.compensation_max
-                            ? `${selectedCall.compensation_min ?? "?"} - ${selectedCall.compensation_max ?? "?"} ${
-                                selectedCall.currency ?? "USD"
+                          {(selectedCall as any).compensation_min || (selectedCall as any).compensation_max
+                            ? `${(selectedCall as any).compensation_min ?? "?"} - ${(selectedCall as any).compensation_max ?? "?"} ${
+                                (selectedCall as any).currency ?? "USD"
                               }`
                             : "Negotiable"}
                         </span>
@@ -668,14 +668,14 @@ const TalentDiscoveryPage = () => {
                               </div>
                             </div>
                             {role.description && <p className="mt-2 text-muted-foreground">{role.description}</p>}
-                            {(role.required_skills?.length ?? 0) > 0 && (
+                            {((role as any).required_skills?.length ?? 0) > 0 && (
                               <p className="mt-2 text-xs text-muted-foreground">
-                                Required skills: {role.required_skills?.join(", ")}
+                                Required skills: {(role as any).required_skills?.join(", ")}
                               </p>
                             )}
-                            {role.availability_requirements && (
+                            {(role as any).availability_requirements && (
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Availability: {role.availability_requirements}
+                                Availability: {(role as any).availability_requirements}
                               </p>
                             )}
                           </div>

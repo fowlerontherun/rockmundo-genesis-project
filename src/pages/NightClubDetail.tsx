@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
 import { NPCDialoguePanel } from "@/components/nightclub/NPCDialoguePanel";
+import { NightlifeStanceSelector } from "@/components/nightclub/NightlifeStanceSelector";
+import type { NightlifeStance } from "@/utils/nightlifeRiskLayer";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -50,7 +52,7 @@ const NightClubDetail = () => {
   const [loading, setLoading] = useState(true);
   const [buyingDrinkId, setBuyingDrinkId] = useState<string | null>(null);
 
-  const { triggerNightlifeEvent, isProcessing } = useNightlifeEvents();
+  const { triggerNightlifeEvent, isProcessing, lastOutcomeDetail, lastAddictionWarning, dismissOutcome } = useNightlifeEvents();
   const { performDjSetAsync, isPerforming } = useDjPerformance();
   const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
   const [showOutcome, setShowOutcome] = useState(false);
@@ -211,6 +213,32 @@ const NightClubDetail = () => {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Nightlife Risk Layer - Stance Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" /> Nightlife Experience
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NightlifeStanceSelector
+            clubName={club.name}
+            isProcessing={isProcessing || isPerforming}
+            outcome={lastOutcomeDetail}
+            onDismissOutcome={dismissOutcome}
+            addictionWarning={lastAddictionWarning}
+            onSelectStance={(stance: NightlifeStance) =>
+              triggerNightlifeEvent({
+                activityType: "stance_night",
+                clubName: club.name,
+                stance,
+                venueQuality: club.qualityLevel,
+              })
+            }
+          />
         </CardContent>
       </Card>
 

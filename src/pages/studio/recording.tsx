@@ -113,6 +113,7 @@ function formatRelativeDate(value?: string | null) {
 
 export default function StudioRecordingDashboard() {
   const { session } = useAuth();
+  const userId = session?.user?.id;
   const { profileId } = useActiveProfile();
   const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
   const queryClient = useQueryClient();
@@ -120,7 +121,7 @@ export default function StudioRecordingDashboard() {
 
   const statusMutation = useMutation<void, Error, StatusMutationInput>({
     mutationFn: async ({ sessionId, nextStatus }: StatusMutationInput) => {
-      const { error } = await supabase.rpc("update_recording_session_status", {
+      const { error } = await (supabase as any).rpc("update_recording_session_status", {
         p_session_id: sessionId,
         p_status: nextStatus,
       });
@@ -146,7 +147,7 @@ export default function StudioRecordingDashboard() {
 
   const stageMutation = useMutation<void, Error, StageMutationInput>({
     mutationFn: async ({ sessionId }: StageMutationInput) => {
-      const { error } = await supabase.rpc("advance_recording_session_stage", {
+      const { error } = await (supabase as any).rpc("advance_recording_session_stage", {
         p_session_id: sessionId,
       });
 

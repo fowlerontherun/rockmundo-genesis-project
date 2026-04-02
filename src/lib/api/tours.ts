@@ -18,8 +18,8 @@ export interface UpdateTourInput {
   endDate?: TourRecord["end_date"];
 }
 
-const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>) => {
-  const payload: Partial<TourRecord> = {};
+const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>): Record<string, any> => {
+  const payload: Record<string, any> = {};
 
   if (input.name !== undefined) {
     payload.name = input.name;
@@ -77,12 +77,9 @@ export const getTour = async (id: string): Promise<TourRecord | null> => {
 export const createTour = async (input: CreateTourInput): Promise<TourRecord> => {
   const payload = toDbPayload(input);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("tours")
-    .insert({
-      ...payload,
-      created_at: new Date().toISOString(),
-    })
+    .insert([payload])
     .select()
     .single();
 

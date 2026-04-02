@@ -179,7 +179,7 @@ const NarrativeStoryPage = () => {
         throw updateError ?? new Error("Failed to update story state");
       }
 
-      const choiceRecord: StoryChoiceInsert = {
+      const choiceRecord = {
         story_state_id: storyState.id,
         user_id: user.id,
         story_id: story.id,
@@ -194,13 +194,13 @@ const NarrativeStoryPage = () => {
         },
       };
 
-      const { error: choiceInsertError } = await supabase.from("story_choices").insert(choiceRecord);
+      const { error: choiceInsertError } = await (supabase as any).from("story_choices").insert(choiceRecord);
       if (choiceInsertError) {
         throw choiceInsertError;
       }
 
       return {
-        state: mapRowToState(updated),
+        state: mapRowToState(updated as any),
         choice: selectedChoice,
       };
     },

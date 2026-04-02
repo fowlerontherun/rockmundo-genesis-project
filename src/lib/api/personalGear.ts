@@ -1,11 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/lib/supabase-types";
 
 const db = supabase as any;
 
-export type GearItemRecord = any;
-export type PersonalLoadoutRecord = any;
-export type PersonalLoadoutSlotRecord = any;
+export type GearItemRecord = Record<string, any>;
+export type PersonalLoadoutRecord = Record<string, any>;
+export type PersonalLoadoutSlotRecord = Record<string, any>;
 
 
 export interface PersonalGearLoadout extends PersonalLoadoutRecord {
@@ -154,7 +153,7 @@ export const upsertPersonalGearLoadout = async (
     primary_instrument: primaryInstrument ?? null,
     notes: notes ?? null,
     is_active: isActive,
-  } satisfies Partial<PersonalLoadoutRecord> & { character_id: string; name: string };
+  };
 
   let loadoutId = maybeExistingId;
 

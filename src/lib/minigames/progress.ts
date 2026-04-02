@@ -1,14 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/lib/supabase-types";
 
-export type SideHustleProgressRow =
-  Database["public"]["Tables"]["side_hustle_progress"]["Row"];
-export type SideHustleProgressInsert =
-  Database["public"]["Tables"]["side_hustle_progress"]["Insert"];
-export type SideHustleProgressUpdate =
-  Database["public"]["Tables"]["side_hustle_progress"]["Update"];
-export type SideHustleMinigameAttemptInsert =
-  Database["public"]["Tables"]["side_hustle_minigame_attempts"]["Insert"];
+const db = supabase as any;
+
+export type SideHustleProgressRow = Record<string, any>;
+export type SideHustleProgressInsert = Record<string, any>;
+export type SideHustleProgressUpdate = Record<string, any>;
+export type SideHustleMinigameAttemptInsert = Record<string, any>;
 
 const BASE_XP_THRESHOLD = 120;
 const XP_THRESHOLD_STEP = 45;
@@ -46,7 +43,7 @@ export const calculateProgressUpgrade = (
 export const fetchSideHustleProgress = async (
   profileId: string,
 ): Promise<SideHustleProgressRow[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("side_hustle_progress")
     .select("*")
     .eq("profile_id", profileId)
@@ -62,7 +59,7 @@ export const fetchSideHustleProgress = async (
 export const upsertSideHustleProgress = async (
   payload: SideHustleProgressInsert | SideHustleProgressUpdate,
 ): Promise<SideHustleProgressRow> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("side_hustle_progress")
     .upsert(payload, { onConflict: "profile_id,activity_id" })
     .select()
@@ -78,7 +75,7 @@ export const upsertSideHustleProgress = async (
 export const recordMinigameAttempt = async (
   payload: SideHustleMinigameAttemptInsert,
 ) => {
-  const { error } = await supabase
+  const { error } = await db
     .from("side_hustle_minigame_attempts")
     .insert(payload);
 
