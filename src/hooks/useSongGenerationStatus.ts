@@ -71,7 +71,8 @@ export function useSongGenerationStatus(songId: string | null) {
     isFailed: isFailed || isTimedOut,
     isTimedOut,
     hasAudio,
-    canRegenerate: (isFailed || isTimedOut) && !hasAudio,
+    // Allow regeneration when failed/timed out regardless of existing audio
+    canRegenerate: isFailed || isTimedOut,
     cannotRegenerate: hasAudio && isCompleted,
   };
 }

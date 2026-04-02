@@ -572,6 +572,10 @@ FORMAT
 Use clear section labels: [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro], etc.
 Match line counts to the structure specified above.
 
+CRITICAL LENGTH CONSTRAINT: The final lyrics MUST be under 550 characters total (including section labels).
+This is a HARD LIMIT for the audio generation engine. Keep verses to 4 lines max and choruses to 4 lines max.
+Prioritize impact over length - every word must count.
+
 ${existingLyrics ? `\n═══════════════════════════════════════════════════════════════\nEXISTING LYRICS TO BUILD ON/COMPLEMENT:\n═══════════════════════════════════════════════════════════════\n${existingLyrics}\n\nBuild on these themes and style while completing the song.` : ''}
 
 NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
@@ -584,6 +588,7 @@ NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
+        max_tokens: 2048,
         messages: [
           { 
             role: 'system', 
@@ -599,7 +604,11 @@ Your lyrics are famous for:
 
 You NEVER use clichéd phrases. Every song you write is completely different from the last.
 You follow the requested structure precisely and format with clear section labels in brackets.
-You match the specified perspective, tone, and narrative style exactly.` 
+You match the specified perspective, tone, and narrative style exactly.
+
+CRITICAL: Your lyrics output MUST be under 550 characters total. This is a hard technical limit.
+Keep it concise - 2-3 sections maximum. Quality over quantity.
+Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.` 
           },
           { role: 'user', content: prompt }
         ],

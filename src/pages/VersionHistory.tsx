@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.135",
+    date: "2026-04-02",
+    changes: [
+      { type: 'fix', description: "Fixed song regeneration — retry now properly clears old audio URL so the generation engine accepts the request" },
+      { type: 'fix', description: "Fixed regeneration button not appearing on failed songs that already had a previous audio file" },
+      { type: 'improvement', description: "AI lyrics generator now enforces 550-character limit to fit MiniMax Music's input constraints, preventing truncation" },
+      { type: 'improvement', description: "Added max_tokens to lyrics generation API call to prevent output truncation on long songs" },
+      { type: 'improvement', description: "Lyrics generation system prompt now instructs concise output with no preamble for cleaner audio generation" },
+    ],
+  },
+  {
     version: "1.1.134",
     date: "2026-04-01",
     changes: [
