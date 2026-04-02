@@ -103,7 +103,7 @@ const mapQueryRowToFeedPost = (
     author: row.author,
     reactionCounts,
     totalReactions: reactions.length,
-    viewerReaction,
+    viewerReaction: viewerReaction as ReactionType | null,
   };
 };
 

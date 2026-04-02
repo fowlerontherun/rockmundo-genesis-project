@@ -1,12 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+const db = supabase as any;
 
-export type LeaderboardSeasonRecord = Tables<"leaderboard_seasons">;
-export type LeaderboardSnapshotRecord = Tables<"leaderboard_season_snapshots">;
-export type LeaderboardBadgeRecord = Tables<"leaderboard_badges">;
-export type LeaderboardBadgeAwardRecord = Tables<"leaderboard_badge_awards">;
+export type LeaderboardSeasonRecord = Record<string, any>;
+export type LeaderboardSnapshotRecord = Record<string, any>;
+export type LeaderboardBadgeRecord = Record<string, any>;
+export type LeaderboardBadgeAwardRecord = Record<string, any>;
 
 export interface LeaderboardProfileSummary {
   id: string;

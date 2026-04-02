@@ -153,7 +153,7 @@ export const upsertPersonalGearLoadout = async (
     primary_instrument: primaryInstrument ?? null,
     notes: notes ?? null,
     is_active: isActive,
-  } satisfies Partial<PersonalLoadoutRecord> & { character_id: string; name: string };
+  };
 
   let loadoutId = maybeExistingId;
 
