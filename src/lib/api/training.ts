@@ -213,7 +213,7 @@ export const listTrainingEnrollments = async (
     return [];
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_enrollments")
     .select("*")
     .eq("profile_id", profileId)
