@@ -200,7 +200,7 @@ const NarrativeStoryPage = () => {
       }
 
       return {
-        state: mapRowToState(updated),
+        state: mapRowToState(updated as any),
         choice: selectedChoice,
       };
     },

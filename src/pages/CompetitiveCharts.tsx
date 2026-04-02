@@ -44,7 +44,7 @@ const CompetitiveCharts = () => {
   const { data: chartEntries, isLoading } = useQuery({
     queryKey: ["chart-entries", country, genre],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("chart_entries")
         .select(`
           *,

@@ -668,14 +668,14 @@ const TalentDiscoveryPage = () => {
                               </div>
                             </div>
                             {role.description && <p className="mt-2 text-muted-foreground">{role.description}</p>}
-                            {(role.required_skills?.length ?? 0) > 0 && (
+                            {((role as any).required_skills?.length ?? 0) > 0 && (
                               <p className="mt-2 text-xs text-muted-foreground">
-                                Required skills: {role.required_skills?.join(", ")}
+                                Required skills: {(role as any).required_skills?.join(", ")}
                               </p>
                             )}
-                            {role.availability_requirements && (
+                            {(role as any).availability_requirements && (
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Availability: {role.availability_requirements}
+                                Availability: {(role as any).availability_requirements}
                               </p>
                             )}
                           </div>

@@ -79,7 +79,7 @@ export const createTour = async (input: CreateTourInput): Promise<TourRecord> =>
 
   const { data, error } = await supabase
     .from("tours")
-    .insert(payload)
+    .insert([payload])
     .select()
     .single();
 

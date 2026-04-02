@@ -115,8 +115,8 @@ export const submitNegotiation = async (
     contract_id: contractId,
     clause_id: input.clauseId,
     status,
-    proposed_terms: input.proposedTerms ?? null,
-    counter_terms: input.counterTerms ?? null,
+    proposed_terms: (input.proposedTerms ?? null) as any,
+    counter_terms: (input.counterTerms ?? null) as any,
     last_action_by: input.lastActionBy ?? "artist",
     updated_at: new Date().toISOString(),
   };
