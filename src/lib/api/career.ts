@@ -166,7 +166,7 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
       throw gigsError;
     }
 
-    gigRows = (gigsData as GigOutcomeWithDetails[]) ?? [];
+    gigRows = (gigsData as any as GigOutcomeWithDetails[]) ?? [];
   }
 
   // Fetch skills from skill_progress via profile

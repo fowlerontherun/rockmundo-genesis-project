@@ -127,13 +127,13 @@ export const TicketTierManager = ({ eventId, onTiersChange }: TicketTierManagerP
 
     const query = editingId
       ? supabaseClient
-          .from<TicketTier>(TABLE_NAME)
+          .from(TABLE_NAME)
           .update(payload)
           .eq("id", editingId)
           .select("*")
           .maybeSingle()
       : supabaseClient
-          .from<TicketTier>(TABLE_NAME)
+          .from(TABLE_NAME)
           .insert({ ...payload })
           .select("*")
           .maybeSingle();

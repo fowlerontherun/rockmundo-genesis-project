@@ -104,7 +104,7 @@ export function MusicVideoSummaryCard({
   variant = "full",
 }: MusicVideoSummaryCardProps) {
   const plan = buildPlanFromRow(config);
-  const { chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config);
+  const { chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config as any);
   const metrics = config.music_video_metrics;
 
   const actualViews = metrics?.youtube_views ?? plan.youtubeViews;

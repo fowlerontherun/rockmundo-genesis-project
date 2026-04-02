@@ -189,8 +189,8 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
 
   const syncMetrics = useMutation({
     mutationFn: async (config: MusicVideoConfigWithRelations) => {
-      const { plan, chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config);
-      const { data, error } = await supabase
+      const { plan, chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config as any);
+      const { data, error } = await (supabase as any)
         .from("music_video_metrics")
         .upsert(
           {

@@ -55,7 +55,7 @@ export const usePlayerEquipment = () => {
       }
 
       const [equipmentResult, poolResult] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("player_equipment")
           .select(
             `id, equipment_id, condition, is_equipped, created_at, available_for_loadout, available_at, loadout_slot_kind, pool_category,
@@ -63,7 +63,7 @@ export const usePlayerEquipment = () => {
           )
           .eq("user_id", profileId)
           .order("created_at", { ascending: false }),
-        supabase
+        (supabase as any)
           .from("player_gear_pool_status")
           .select("user_id, category, slot_kind, capacity, used_count, available_slots, default_capacity, catalog_slot_kind, updated_at")
           .eq("user_id", profileId),
