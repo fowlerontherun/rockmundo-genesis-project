@@ -169,7 +169,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         .single();
 
       if (error) throw error;
-      return data as MusicVideoConfigWithRelations;
+      return data as any as MusicVideoConfigWithRelations;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-video-configs", userId] });
