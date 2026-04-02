@@ -75,7 +75,7 @@ export const upsertSideHustleProgress = async (
 export const recordMinigameAttempt = async (
   payload: SideHustleMinigameAttemptInsert,
 ) => {
-  const { error } = await supabase
+  const { error } = await db
     .from("side_hustle_minigame_attempts")
     .insert(payload);
 

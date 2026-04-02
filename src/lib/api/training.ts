@@ -275,12 +275,9 @@ export const upsertTrainingEnrollment = async (
     next_session_at: nextSession?.toISOString() ?? null,
     preferred_weekdays: preferredWeekdays ?? course.default_weekdays ?? null,
     preferred_start_time: preferredStartTime ?? course.default_start_time ?? null,
-  } satisfies Partial<TrainingEnrollmentRecord> & {
-    profile_id: string;
-    course_id: string;
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_enrollments")
     .upsert(payload, { onConflict: "profile_id,course_id" })
     .select()

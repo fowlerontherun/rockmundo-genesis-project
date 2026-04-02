@@ -79,10 +79,7 @@ export const createTour = async (input: CreateTourInput): Promise<TourRecord> =>
 
   const { data, error } = await supabase
     .from("tours")
-    .insert({
-      ...payload,
-      created_at: new Date().toISOString(),
-    })
+    .insert(payload)
     .select()
     .single();
 
