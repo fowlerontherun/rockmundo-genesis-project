@@ -189,7 +189,7 @@ const mapEnrollmentRecord = (record: any): TrainingEnrollmentRecord => ({
 });
 
 export const listTrainingCourses = async (): Promise<TrainingCourseRecord[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("training_courses")
     .select("*")
     .order("title", { ascending: true });
