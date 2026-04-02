@@ -216,6 +216,32 @@ const NightClubDetail = () => {
         </CardContent>
       </Card>
 
+      {/* Nightlife Risk Layer - Stance Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" /> Nightlife Experience
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NightlifeStanceSelector
+            clubName={club.name}
+            isProcessing={isProcessing || isPerforming}
+            outcome={lastOutcomeDetail}
+            onDismissOutcome={dismissOutcome}
+            addictionWarning={lastAddictionWarning}
+            onSelectStance={(stance: NightlifeStance) =>
+              triggerNightlifeEvent({
+                activityType: "stance_night",
+                clubName: club.name,
+                stance,
+                venueQuality: club.qualityLevel,
+              })
+            }
+          />
+        </CardContent>
+      </Card>
+
       {/* Guest Actions */}
       {club.guestActions.length > 0 && (
         <Card>
