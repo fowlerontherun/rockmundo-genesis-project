@@ -135,7 +135,7 @@ export const fetchCommunityFeed = async (
 ): Promise<CommunityFeedPage> => {
   const { limit = DEFAULT_PAGE_SIZE, cursor, viewerId } = params;
 
-  let query = supabase
+  let query = db
     .from("community_posts")
     .select(withAuthorAndReactionsSelect)
     .order("created_at", { ascending: false })
