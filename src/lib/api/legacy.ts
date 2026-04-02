@@ -94,7 +94,7 @@ export const fetchLegacyMilestones = async (
     return withSafeFallback();
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("legacy_milestones")
     .select(
       "id, profile_id, title, description, category, is_achieved, achieved_at, target_date, highlight, sort_order"

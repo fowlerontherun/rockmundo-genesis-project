@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/lib/supabase-types";
+
+// community_posts and community_post_reactions tables are not yet in generated types
+// Using untyped client alias for these table queries
+const db = supabase as any;
 
 export type ReactionType = "like" | "love" | "fire" | "wow" | "laugh";
 
@@ -9,8 +12,23 @@ const DEFAULT_PAGE_SIZE = 15;
 const isReactionType = (value: string | null | undefined): value is ReactionType =>
   value !== null && value !== undefined && REACTION_TYPES.includes(value as ReactionType);
 
-export type CommunityPostRecord = Tables<"community_posts">;
-export type CommunityPostReactionRecord = Tables<"community_post_reactions">;
+export type CommunityPostRecord = {
+  id: string;
+  author_id: string;
+  content: string;
+  media_url: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type CommunityPostReactionRecord = {
+  id: string;
+  post_id: string;
+  profile_id: string;
+  reaction_type: string;
+  created_at: string;
+  updated_at: string | null;
+};
 
 type CommunityPostAuthor = {
   id: string;
