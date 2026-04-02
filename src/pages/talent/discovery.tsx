@@ -401,18 +401,18 @@ const TalentDiscoveryPage = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">Your talent profile</CardTitle>
                 <CardDescription>
-                  {profile.stage_name ?? profile.full_name ?? "Complete your profile to stand out."}
+                  {(profile as any).stage_name ?? (profile as any).full_name ?? "Complete your profile to stand out."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4" />
-                    <span>{profile.primary_role ?? "Role not set"}</span>
+                    <span>{(profile as any).primary_role ?? "Role not set"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    <span>{profile.location ?? "Location unknown"}</span>
+                    <span>{(profile as any).location ?? "Location unknown"}</span>
                   </div>
                 </div>
               </CardContent>

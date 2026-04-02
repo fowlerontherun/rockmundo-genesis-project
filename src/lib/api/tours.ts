@@ -77,7 +77,7 @@ export const getTour = async (id: string): Promise<TourRecord | null> => {
 export const createTour = async (input: CreateTourInput): Promise<TourRecord> => {
   const payload = toDbPayload(input);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("tours")
     .insert([payload])
     .select()
