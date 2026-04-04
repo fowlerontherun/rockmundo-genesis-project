@@ -1116,7 +1116,13 @@ serve(async (req) => {
           dedupeMap.set(key, entry);
         }
       }
-      const dedupedEntries = Array.from(dedupeMap.values());
+      // Sanitize all numeric fields to integers (bigint columns)
+      const dedupedEntries = Array.from(dedupeMap.values()).map(entry => ({
+        ...entry,
+        plays_count: Math.round(entry.plays_count || 0),
+        weekly_plays: Math.round(entry.weekly_plays || 0),
+        combined_score: Math.round(entry.combined_score || 0),
+      }));
       console.log(`Deduped ${chartEntries.length} -> ${dedupedEntries.length} chart entries`);
 
       // Delete old entries for today first to avoid duplicates
