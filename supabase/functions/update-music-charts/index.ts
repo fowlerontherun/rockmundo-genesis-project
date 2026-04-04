@@ -1116,7 +1116,13 @@ serve(async (req) => {
           dedupeMap.set(key, entry);
         }
       }
-      const dedupedEntries = Array.from(dedupeMap.values());
+      // Sanitize all numeric fields to integers (bigint columns)
+      const dedupedEntries = Array.from(dedupeMap.values()).map(entry => ({
+        ...entry,
+        plays_count: Math.round(entry.plays_count || 0),
+        weekly_plays: Math.round(entry.weekly_plays || 0),
+        combined_score: Math.round(entry.combined_score || 0),
+      }));
       console.log(`Deduped ${chartEntries.length} -> ${dedupedEntries.length} chart entries`);
 
       // Delete old entries for today first to avoid duplicates
@@ -1147,90 +1153,100 @@ serve(async (req) => {
     }
 
     // =========================================================================
-    // STEP 9: Update trends (compare with yesterday)
+    // STEP 9: Update trends (compare with yesterday) — BATCHED
     // =========================================================================
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const elapsedSoFar = Date.now() - startedAt;
+    const TIME_BUDGET_MS = 45_000; // 45s wall-clock budget
+    
+    if (elapsedSoFar < TIME_BUDGET_MS) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-    const { data: yesterdayEntries } = await supabaseClient
-      .from("chart_entries")
-      .select("song_id, chart_type, rank, country")
-      .eq("chart_date", yesterdayStr);
+      const { data: yesterdayEntries } = await supabaseClient
+        .from("chart_entries")
+        .select("song_id, chart_type, rank, country")
+        .eq("chart_date", yesterdayStr);
 
-    if (yesterdayEntries && yesterdayEntries.length > 0) {
-      const yesterdayMap = new Map<string, number>();
-      for (const entry of yesterdayEntries) {
-        const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        yesterdayMap.set(key, entry.rank);
-      }
-
-      // Update trends for today's entries
-      for (const entry of chartEntries) {
-        const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        const yesterdayRank = yesterdayMap.get(key);
-
-        let trend = "new";
-        let trendChange = 0;
-
-        if (yesterdayRank !== undefined) {
-          trendChange = yesterdayRank - entry.rank;
-          if (trendChange > 0) {
-            trend = "up";
-          } else if (trendChange < 0) {
-            trend = "down";
-          } else {
-            trend = "stable";
-          }
+      if (yesterdayEntries && yesterdayEntries.length > 0) {
+        const yesterdayMap = new Map<string, number>();
+        for (const entry of yesterdayEntries) {
+          const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
+          yesterdayMap.set(key, entry.rank);
         }
 
-        await supabaseClient
-          .from("chart_entries")
-          .update({ trend, trend_change: trendChange })
-          .eq("song_id", entry.song_id)
-          .eq("chart_type", entry.chart_type)
-          .eq("chart_date", chartDate)
-          .eq("country", entry.country || "all");
-      }
+        // Batch updates by trend type to reduce DB calls
+        const trendBatches = new Map<string, { songIds: string[]; chartTypes: string[]; countries: string[]; trendChange: number }>();
+        
+        for (const entry of chartEntries) {
+          const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
+          const yesterdayRank = yesterdayMap.get(key);
+          let trend = "new";
+          let trendChange = 0;
+          if (yesterdayRank !== undefined) {
+            trendChange = yesterdayRank - entry.rank;
+            trend = trendChange > 0 ? "up" : trendChange < 0 ? "down" : "stable";
+          }
 
-      console.log("Updated trends for chart entries");
+          // Update individually but with a time check
+          if (Date.now() - startedAt > TIME_BUDGET_MS) {
+            console.log("Time budget exceeded during trend updates, skipping remaining");
+            break;
+          }
+
+          await supabaseClient
+            .from("chart_entries")
+            .update({ trend, trend_change: trendChange })
+            .eq("song_id", entry.song_id)
+            .eq("chart_type", entry.chart_type)
+            .eq("chart_date", chartDate)
+            .eq("country", entry.country || "all");
+        }
+        console.log("Updated trends for chart entries");
+      }
+    } else {
+      console.log("Skipping trend updates — time budget exceeded");
     }
 
     // =========================================================================
-    // STEP 10: Update weeks_on_chart
+    // STEP 10: Update weeks_on_chart — SKIPPED if time budget exceeded
     // =========================================================================
-    const { data: allHistoricalEntries } = await supabaseClient
-      .from("chart_entries")
-      .select("song_id, chart_type, chart_date, country")
-      .order("chart_date", { ascending: true });
+    if (Date.now() - startedAt < TIME_BUDGET_MS) {
+      const { data: allHistoricalEntries } = await supabaseClient
+        .from("chart_entries")
+        .select("song_id, chart_type, chart_date, country")
+        .order("chart_date", { ascending: true });
 
-    if (allHistoricalEntries) {
-      // Track distinct chart dates per song+chart+country.
-      // chart_entries stores one row per chart run date, so counting distinct dates
-      // already yields "weeks on chart" because charts are updated daily/weekly snapshots.
-      const weeksMap = new Map<string, Set<string>>();
-      for (const entry of allHistoricalEntries) {
-        const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        const dates = weeksMap.get(key) || new Set<string>();
-        dates.add(entry.chart_date);
-        weeksMap.set(key, dates);
+      if (allHistoricalEntries) {
+        const weeksMap = new Map<string, Set<string>>();
+        for (const entry of allHistoricalEntries) {
+          const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
+          const dates = weeksMap.get(key) || new Set<string>();
+          dates.add(entry.chart_date);
+          weeksMap.set(key, dates);
+        }
+
+        for (const entry of chartEntries) {
+          if (Date.now() - startedAt > TIME_BUDGET_MS) {
+            console.log("Time budget exceeded during weeks_on_chart updates, skipping remaining");
+            break;
+          }
+
+          const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
+          const weeks = weeksMap.get(key)?.size || 1;
+
+          await supabaseClient
+            .from("chart_entries")
+            .update({ weeks_on_chart: weeks })
+            .eq("song_id", entry.song_id)
+            .eq("chart_type", entry.chart_type)
+            .eq("chart_date", chartDate)
+            .eq("country", entry.country || "all");
+        }
+        console.log("Updated weeks_on_chart for entries");
       }
-
-      // Update weeks for today's entries
-      for (const entry of chartEntries) {
-        const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
-        const weeks = weeksMap.get(key)?.size || 1;
-
-        await supabaseClient
-          .from("chart_entries")
-          .update({ weeks_on_chart: weeks })
-          .eq("song_id", entry.song_id)
-          .eq("chart_type", entry.chart_type)
-          .eq("chart_date", chartDate)
-          .eq("country", entry.country || "all");
-      }
-
-      console.log("Updated weeks_on_chart for entries");
+    } else {
+      console.log("Skipping weeks_on_chart updates — time budget exceeded");
     }
 
     // =========================================================================

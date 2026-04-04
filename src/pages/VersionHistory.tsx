@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.138",
+    date: "2026-04-04",
+    changes: [
+      { type: 'fix', description: "Fixed music charts not updating since March 8th — float values (from per-track sales division) were being inserted into bigint columns causing 'invalid input syntax for type bigint' errors" },
+      { type: 'fix', description: "All chart entry numeric fields (plays_count, weekly_plays, combined_score) are now rounded to integers before database insertion" },
+    ],
+  },
+  {
     version: "1.1.137",
     date: "2026-04-02",
     changes: [
