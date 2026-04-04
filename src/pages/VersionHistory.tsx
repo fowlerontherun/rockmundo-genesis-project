@@ -22,6 +22,7 @@ const versionHistory: VersionEntry[] = [
     ],
   },
   {
+    version: "1.1.137",
     date: "2026-04-02",
     changes: [
       { type: 'feature', description: "Nightlife Risk Layer — Stance-based decision system: choose Stay Sober, Party Hard, Network, or Leave Early when visiting nightclubs" },
