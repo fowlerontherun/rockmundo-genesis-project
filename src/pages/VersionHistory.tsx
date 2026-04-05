@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.139",
+    date: "2026-04-05",
+    changes: [
+      { type: 'fix', description: "Fixed promotional campaigns failing with RLS error when created via band context — INSERT policy now allows band members" },
+      { type: 'fix', description: "Fixed promo tours failing to schedule — added 'release_promo', 'release_manufacturing', 'festival_attendance', 'festival_performance', and 'teaching' to the allowed activity_type check constraint" },
+    ],
+  },
+  {
     version: "1.1.138",
     date: "2026-04-04",
     changes: [
