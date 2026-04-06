@@ -1,7 +1,7 @@
 import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
-import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp } from "./handlers.ts";
+import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp, handleConvertApToSxp } from "./handlers.ts";
 import { handleAdminAwardSpecialXp } from "./handlers-admin.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -190,6 +190,16 @@ serve(async (req) => {
           params.amount,
           params.category,
           params.action_key,
+          params.metadata,
+        );
+        break;
+
+      case "convert_ap_to_sxp":
+        result = await handleConvertApToSxp(
+          client,
+          user.id,
+          profileState,
+          params.ap_amount,
           params.metadata,
         );
         break;

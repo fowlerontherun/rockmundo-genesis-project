@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.142",
+    date: "2026-04-06",
+    changes: [
+      { type: 'feature', description: "Added AP → SXP conversion: players can now exchange Attribute Points for Skill XP at a rate of 1 AP = 100 SXP" },
+    ],
+  },
+  {
     version: "1.1.141",
     date: "2026-04-06",
     changes: [
