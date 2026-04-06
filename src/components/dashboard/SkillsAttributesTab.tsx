@@ -4,6 +4,7 @@ import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
 import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
 import { SkillTree } from "@/components/SkillTree";
+import { ApToSxpConverter } from "@/components/attributes/ApToSxpConverter";
 import type { Database } from "@/lib/supabase-types";
 
 interface SkillsAttributesTabProps {
@@ -108,6 +109,11 @@ export const SkillsAttributesTab = ({ profile }: SkillsAttributesTabProps) => {
         streak={streak}
         lifetimeSxp={skillXpLifetime}
         onClaimed={handleRefresh} 
+      />
+
+      <ApToSxpConverter
+        apBalance={attributePointsBalance}
+        onConverted={handleRefresh}
       />
 
       <div className="space-y-4">
