@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.141",
+    date: "2026-04-06",
+    changes: [
+      { type: 'fix', description: "Fixed festival schedule conflict detection — player_scheduled_activities SELECT policy now supports profile_id lookups used by the conflict hook" },
+      { type: 'fix', description: "Fixed festival performance outcomes silently failing — added INSERT policy on band_fame_events for band members" },
+      { type: 'fix', description: "Fixed post-performance fame/fan/balance updates — bands UPDATE policy expanded from leader-only to all band members" },
+      { type: 'fix', description: "Fixed song stat bumps (popularity, play count) after festival performances — band members can now update band songs" },
+      { type: 'fix', description: "Fixed streaming/chart boost application — band members can now view and update their band's song_releases" },
+      { type: 'fix', description: "Fixed festival participant status not updating to 'performed' — band members can now update their own participation records" },
+    ],
+  },
+  {
     version: "1.1.139",
     date: "2026-04-05",
     changes: [
