@@ -365,6 +365,71 @@ export async function handleSpendSkillXp(
   return { state, skillProgress: updatedSkillProgress };
 }
 
+// AP to SXP conversion rate
+const AP_TO_SXP_RATE = 100;
+
+export async function handleConvertApToSxp(
+  client: SupabaseClient<Database>,
+  userId: string,
+  profileState: ProfileState,
+  apAmount: number,
+  metadata: Record<string, unknown> = {},
+): Promise<ProfileState> {
+  const profileId = profileState.profile.id;
+  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
+
+  if (apAmount <= 0) {
+    throw new Error("AP amount must be positive");
+  }
+
+  if (!Number.isInteger(apAmount)) {
+    throw new Error("AP amount must be a whole number");
+  }
+
+  if (currentApBalance < apAmount) {
+    throw new Error(`Insufficient AP. You have ${currentApBalance} AP but need ${apAmount} AP.`);
+  }
+
+  const sxpGained = apAmount * AP_TO_SXP_RATE;
+  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
+  const currentSxpLifetime = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
+
+  console.log(`[ConvertApToSxp] Profile: ${profileId}, AP: ${apAmount} → SXP: ${sxpGained}`);
+
+  // Update wallet: deduct AP, add SXP
+  const { error: walletError } = await client
+    .from("player_xp_wallet")
+    .update({
+      attribute_points_balance: currentApBalance - apAmount,
+      skill_xp_balance: currentSxpBalance + sxpGained,
+      skill_xp_lifetime: currentSxpLifetime + sxpGained,
+      // Legacy sync
+      xp_balance: currentSxpBalance + sxpGained,
+      lifetime_xp: currentSxpLifetime + sxpGained,
+      last_recalculated: new Date().toISOString(),
+    })
+    .eq("profile_id", profileId);
+
+  if (walletError) {
+    throw new Error(walletError.message || "Failed to convert AP to SXP");
+  }
+
+  // Log to XP ledger
+  await client
+    .from("xp_ledger")
+    .insert({
+      profile_id: profileId,
+      event_type: "ap_to_sxp_conversion",
+      xp_delta: sxpGained,
+      balance_after: currentSxpBalance + sxpGained,
+      attribute_points_delta: -apAmount,
+      skill_points_delta: 0,
+      metadata: { ap_spent: apAmount, sxp_gained: sxpGained, rate: AP_TO_SXP_RATE, ...metadata },
+    });
+
+  return await fetchProfileState(client, profileId);
+}
+
 export async function handleAwardActionXp(
   client: SupabaseClient<Database>,
   userId: string,
