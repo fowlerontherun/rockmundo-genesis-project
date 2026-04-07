@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.143",
+    date: "2026-04-07",
+    changes: [
+      { type: 'feature', description: "Added NPC Cameos to Jam Sessions — 12 unique mentor NPCs (common → legendary) can randomly appear during sessions, each with genre affinity and unique buffs (XP boost, mood boost, synergy boost, skill XP boost, or song drop luck)" },
+      { type: 'feature', description: "Completed Gifted Song Drops from Jam Sessions — NPC mentors with gift_chance_boost increase song drop rates; results dialog now shows gifted song details including quality and recipient" },
+      { type: 'improvement', description: "Enhanced Jam Session results dialog with animated NPC cameo card showing rarity, buff type, genre, and mentor description" },
+    ],
+  },
+  {
     version: "1.1.142",
     date: "2026-04-06",
     changes: [
