@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Music, Users, Zap, Lock, Play, CheckCircle } from "lucide-react";
+import { Clock, Music, Users, Zap, Lock, Play, CheckCircle, XCircle } from "lucide-react";
 import type { JamSession } from "@/hooks/useJamSessions";
 
 interface JamSessionCardProps {
@@ -12,9 +12,11 @@ interface JamSessionCardProps {
   onJoin: () => void;
   onStart: () => void;
   onComplete: () => void;
+  onCancel: () => void;
   isJoining: boolean;
   isStarting: boolean;
   isCompleting: boolean;
+  isCancelling: boolean;
 }
 
 export const JamSessionCard = ({
@@ -24,9 +26,11 @@ export const JamSessionCard = ({
   onJoin,
   onStart,
   onComplete,
+  onCancel,
   isJoining,
   isStarting,
   isCompleting,
+  isCancelling,
 }: JamSessionCardProps) => {
   const hostName = session.host?.display_name || session.host?.username || "Unknown";
   const participantCount = session.current_participants || 0;
@@ -132,6 +136,13 @@ export const JamSessionCard = ({
             <Badge variant="outline" className="flex-1 justify-center py-2">
               You're in!
             </Badge>
+          )}
+
+          {(session.status === "waiting" || session.status === "active") && isHost && (
+            <Button onClick={onCancel} disabled={isCancelling} variant="destructive" size="sm">
+              <XCircle className="h-4 w-4 mr-1" />
+              {isCancelling ? "Cancelling..." : "Cancel"}
+            </Button>
           )}
         </div>
       </CardContent>

@@ -31,8 +31,10 @@ export const JamSessionsEnhanced = () => {
     isLoading,
     startSession,
     completeSession,
+    cancelSession,
     isStarting,
     isCompleting,
+    isCancelling,
     lastResults,
     clearResults,
   } = useJamSessions();
@@ -265,9 +267,11 @@ export const JamSessionsEnhanced = () => {
                       onJoin={() => handleJoinSession(session.id)}
                       onStart={() => startSession(session.id)}
                       onComplete={() => completeSession({ sessionId: session.id, participants: session.participant_ids || [] })}
+                      onCancel={() => cancelSession(session.id)}
                       isJoining={joiningSessionId === session.id}
                       isStarting={isStarting}
                       isCompleting={isCompleting}
+                      isCancelling={isCancelling}
                     />
                     
                     {/* Show session details - scheduled time, cost, etc. */}
