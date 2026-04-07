@@ -142,6 +142,35 @@ export const useJamSessions = () => {
     },
   });
 
+  const cancelSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error } = await supabase
+        .from("jam_sessions")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          total_xp_awarded: 0,
+        })
+        .eq("id", sessionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
+      toast({
+        title: "Session cancelled",
+        description: "The jam session has been cancelled.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to cancel session",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const completeSessionMutation = useMutation({
     mutationFn: async ({ sessionId }: { sessionId: string; participants: string[] }) => {
       const { data, error } = await supabase.functions.invoke('complete-jam-session', {
@@ -182,8 +211,10 @@ export const useJamSessions = () => {
     isLoading,
     startSession: startSessionMutation.mutate,
     completeSession: completeSessionMutation.mutate,
+    cancelSession: cancelSessionMutation.mutate,
     isStarting: startSessionMutation.isPending,
     isCompleting: completeSessionMutation.isPending,
+    isCancelling: cancelSessionMutation.isPending,
     lastResults,
     clearResults: () => setLastResults(null),
   };

@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.144",
+    date: "2026-04-07",
+    changes: [
+      { type: 'feature', description: "Hosts can now cancel active or waiting jam sessions via a Cancel button on the session card" },
+    ],
+  },
+  {
     version: "1.1.143",
     date: "2026-04-07",
     changes: [
