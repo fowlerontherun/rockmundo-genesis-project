@@ -31,8 +31,10 @@ export const JamSessionsEnhanced = () => {
     isLoading,
     startSession,
     completeSession,
+    cancelSession,
     isStarting,
     isCompleting,
+    isCancelling,
     lastResults,
     clearResults,
   } = useJamSessions();
