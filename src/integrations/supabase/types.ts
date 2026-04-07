@@ -10428,6 +10428,45 @@ export type Database = {
           },
         ]
       }
+      jam_npc_mentors: {
+        Row: {
+          avatar_emoji: string | null
+          buff_type: string
+          buff_value: number
+          created_at: string
+          description: string | null
+          genre_affinity: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rarity: string
+        }
+        Insert: {
+          avatar_emoji?: string | null
+          buff_type?: string
+          buff_value?: number
+          created_at?: string
+          description?: string | null
+          genre_affinity?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rarity?: string
+        }
+        Update: {
+          avatar_emoji?: string | null
+          buff_type?: string
+          buff_value?: number
+          created_at?: string
+          description?: string | null
+          genre_affinity?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       jam_session_challenges: {
         Row: {
           created_at: string | null
@@ -10803,6 +10842,10 @@ export type Database = {
           max_participants: number
           mood_score: number | null
           name: string
+          npc_buff_type: string | null
+          npc_buff_value: number | null
+          npc_mentor_id: string | null
+          npc_mentor_name: string | null
           participant_ids: string[] | null
           rehearsal_room_id: string | null
           scheduled_end: string | null
@@ -10838,6 +10881,10 @@ export type Database = {
           max_participants?: number
           mood_score?: number | null
           name: string
+          npc_buff_type?: string | null
+          npc_buff_value?: number | null
+          npc_mentor_id?: string | null
+          npc_mentor_name?: string | null
           participant_ids?: string[] | null
           rehearsal_room_id?: string | null
           scheduled_end?: string | null
@@ -10873,6 +10920,10 @@ export type Database = {
           max_participants?: number
           mood_score?: number | null
           name?: string
+          npc_buff_type?: string | null
+          npc_buff_value?: number | null
+          npc_mentor_id?: string | null
+          npc_mentor_name?: string | null
           participant_ids?: string[] | null
           rehearsal_room_id?: string | null
           scheduled_end?: string | null
@@ -10950,6 +11001,13 @@ export type Database = {
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_sessions_npc_mentor_id_fkey"
+            columns: ["npc_mentor_id"]
+            isOneToOne: false
+            referencedRelation: "jam_npc_mentors"
             referencedColumns: ["id"]
           },
           {

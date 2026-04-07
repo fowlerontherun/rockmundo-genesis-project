@@ -46,6 +46,16 @@ export interface JamSessionOutcome {
   created_at: string;
 }
 
+export interface NpcCameo {
+  name: string;
+  description: string;
+  genre_affinity: string | null;
+  buff_type: string;
+  buff_value: number;
+  rarity: string;
+  avatar_emoji: string;
+}
+
 export interface JamSessionResults {
   session_id: string;
   total_xp_awarded: number;
@@ -53,6 +63,7 @@ export interface JamSessionResults {
   synergy_score: number;
   mood_score: number;
   gifted_song_id: string | null;
+  npc_cameo: NpcCameo | null;
   outcomes: {
     participant_id: string;
     xp_earned: number;

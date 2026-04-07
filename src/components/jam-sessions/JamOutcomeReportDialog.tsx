@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Zap, Music, Users, Clock, Star, Heart, TrendingUp, 
-  Gift, DollarSign, Trophy, Sparkles 
+  Gift, DollarSign, Trophy, Sparkles, UserCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { JamSessionResults } from "@/hooks/useJamSessions";
@@ -21,40 +21,49 @@ interface JamOutcomeReportDialogProps {
   results: JamSessionResults | null;
 }
 
+const RARITY_COLORS: Record<string, string> = {
+  common: "bg-muted text-muted-foreground",
+  uncommon: "bg-green-500/20 text-green-600",
+  rare: "bg-blue-500/20 text-blue-600",
+  legendary: "bg-purple-500/20 text-purple-600",
+};
+
+const BUFF_LABELS: Record<string, string> = {
+  xp_boost: "XP Boost",
+  mood_boost: "Mood Boost",
+  synergy_boost: "Synergy Boost",
+  skill_xp_boost: "Skill XP Boost",
+  gift_chance_boost: "Song Drop Luck",
+};
+
 export const JamOutcomeReportDialog = ({
   open,
   onOpenChange,
   results,
 }: JamOutcomeReportDialogProps) => {
-  // Fetch participant profiles for display names
   const { data: participants = [] } = useQuery({
     queryKey: ["jam-outcome-profiles", results?.session_id],
     queryFn: async () => {
       if (!results?.outcomes) return [];
       const profileIds = results.outcomes.map(o => o.participant_id);
-      
       const { data } = await supabase
         .from("profiles")
         .select("id, display_name, username, avatar_url")
         .in("id", profileIds);
-      
       return data || [];
     },
     enabled: !!results?.outcomes && open,
   });
 
-  // Fetch gifted song details if any
   const { data: giftedSong } = useQuery({
     queryKey: ["gifted-song", results?.gifted_song_id],
     queryFn: async () => {
       if (!results?.gifted_song_id) return null;
-      
       const { data } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score")
         .eq("id", results.gifted_song_id)
         .single();
-      
       return data;
     },
     enabled: !!results?.gifted_song_id && open,
@@ -72,7 +81,6 @@ export const JamOutcomeReportDialog = ({
 
   const formatSkillSlug = (slug: string) => {
     if (!slug) return "Unknown Skill";
-    // Extract instrument name from slug like "instruments_basic_acoustic_guitar"
     const parts = slug.split("_");
     const instrumentParts = parts.slice(2);
     return instrumentParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
@@ -94,6 +102,7 @@ export const JamOutcomeReportDialog = ({
   };
 
   const songRecipient = results.outcomes.find(o => o.received_song);
+  const npc = results.npc_cameo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,13 +150,55 @@ export const JamOutcomeReportDialog = ({
               <span className="text-sm">Session lasted {results.duration_minutes} minutes</span>
             </div>
 
+            {/* NPC Cameo */}
+            <AnimatePresence>
+              {npc && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+                >
+                  <Card className="border-2 border-purple-500/40 bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl">{npc.avatar_emoji}</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <UserCheck className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm font-semibold text-purple-600">NPC Cameo!</span>
+                            <Badge className={RARITY_COLORS[npc.rarity] || RARITY_COLORS.common}>
+                              {npc.rarity}
+                            </Badge>
+                          </div>
+                          <p className="text-lg font-bold">{npc.name}</p>
+                          <p className="text-sm text-muted-foreground">{npc.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="secondary" className="text-xs">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              {BUFF_LABELS[npc.buff_type] || npc.buff_type}
+                            </Badge>
+                            {npc.genre_affinity && (
+                              <Badge variant="outline" className="text-xs">
+                                <Music className="h-3 w-3 mr-1" />
+                                {npc.genre_affinity}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Gifted Song */}
             <AnimatePresence>
               {giftedSong && songRecipient && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
+                  transition={{ delay: 0.4, duration: 0.5 }}
                 >
                   <Card className="border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
                     <CardContent className="p-4">

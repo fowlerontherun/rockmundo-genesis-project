@@ -205,11 +205,50 @@ Deno.serve(async (req) => {
     const instrumentDiversity = Math.max(1, uniqueInstruments.size);
 
     // Calculate synergy and mood scores
-    const baseSynergy = 50 + (instrumentDiversity * 10);
-    const synergyScore = Math.min(100, baseSynergy + Math.floor(Math.random() * 15));
-    const moodScore = session.mood_score || Math.min(100, 50 + Math.floor(durationMinutes / 3) + Math.floor(Math.random() * 20));
+    let baseSynergy = 50 + (instrumentDiversity * 10);
+    let synergyScore = Math.min(100, baseSynergy + Math.floor(Math.random() * 15));
+    let moodScore = session.mood_score || Math.min(100, 50 + Math.floor(durationMinutes / 3) + Math.floor(Math.random() * 20));
 
-    console.log(`Synergy: ${synergyScore}, Mood: ${moodScore}`);
+    // === NPC CAMEO ROLL ===
+    // 15% base chance for an NPC to appear, genre match increases odds
+    let npcMentor: any = null;
+    const npcRoll = Math.random();
+    const npcBaseChance = 0.15;
+    
+    if (npcRoll < npcBaseChance) {
+      // Fetch active NPC mentors
+      const { data: mentors } = await supabase
+        .from('jam_npc_mentors')
+        .select('*')
+        .eq('is_active', true);
+
+      if (mentors && mentors.length > 0) {
+        // Weighted selection: genre-matching NPCs get 3x weight, rarity affects weight
+        const rarityWeights: Record<string, number> = { common: 4, uncommon: 3, rare: 2, legendary: 1 };
+        const weighted = mentors.map(m => ({
+          ...m,
+          weight: (rarityWeights[m.rarity] || 2) * (m.genre_affinity?.toLowerCase() === session.genre?.toLowerCase() ? 3 : 1),
+        }));
+        const totalWeight = weighted.reduce((s, m) => s + m.weight, 0);
+        let pick = Math.random() * totalWeight;
+        for (const m of weighted) {
+          pick -= m.weight;
+          if (pick <= 0) { npcMentor = m; break; }
+        }
+        if (!npcMentor) npcMentor = weighted[0];
+
+        console.log(`NPC Cameo: ${npcMentor.name} (${npcMentor.rarity}) — buff: ${npcMentor.buff_type} +${npcMentor.buff_value}`);
+
+        // Apply NPC buff to session scores
+        if (npcMentor.buff_type === 'mood_boost') {
+          moodScore = Math.min(100, moodScore + Number(npcMentor.buff_value));
+        } else if (npcMentor.buff_type === 'synergy_boost') {
+          synergyScore = Math.min(100, synergyScore + Number(npcMentor.buff_value));
+        }
+      }
+    }
+
+    console.log(`Synergy: ${synergyScore}, Mood: ${moodScore}, NPC: ${npcMentor?.name || 'none'}`);
 
     // Calculate XP rewards
     // Base: 25 XP per 10 minutes (max 2 hours = 300 XP base)
@@ -220,13 +259,17 @@ Deno.serve(async (req) => {
     const synergyBonus = Math.floor(baseXp * (instrumentDiversity * 0.10)); // +10% per unique instrument
     const moodBonus = moodScore >= 85 ? Math.floor(baseXp * 0.25) : moodScore >= 70 ? Math.floor(baseXp * 0.15) : 0;
     const participantBonus = Math.floor(baseXp * ((participantCount - 1) * 0.05)); // +5% per additional player
+    // NPC XP boost
+    const npcXpBonus = npcMentor?.buff_type === 'xp_boost' ? Math.floor(baseXp * Number(npcMentor.buff_value)) : 0;
 
-    const totalXpPerPlayer = baseXp + synergyBonus + moodBonus + participantBonus;
-    console.log(`XP calculation: base=${baseXp}, synergy=${synergyBonus}, mood=${moodBonus}, participants=${participantBonus}, total=${totalXpPerPlayer}`);
+    const totalXpPerPlayer = baseXp + synergyBonus + moodBonus + participantBonus + npcXpBonus;
+    console.log(`XP calculation: base=${baseXp}, synergy=${synergyBonus}, mood=${moodBonus}, participants=${participantBonus}, npc=${npcXpBonus}, total=${totalXpPerPlayer}`);
 
     // Calculate skill XP gain
     // 5 skill XP per 10 minutes, tier multipliers
     const baseSkillXp = Math.floor(durationMinutes / 10) * 5;
+    // NPC skill XP boost multiplier
+    const npcSkillXpMultiplier = npcMentor?.buff_type === 'skill_xp_boost' ? 1 + Number(npcMentor.buff_value) : 1;
 
     // Gifted song calculation
     // Base 0.75% + modifiers
@@ -234,7 +277,11 @@ Deno.serve(async (req) => {
     giftedSongChance += Math.max(0, (participantCount - 2)) * 0.0025; // +0.25% per player above 2
     if (synergyScore >= 80) giftedSongChance += 0.005; // +0.5% if high synergy
     if (moodScore >= 80) giftedSongChance += 0.0025; // +0.25% if good mood
-    const maxChance = 0.025; // Cap at 2.5%
+    // NPC gift chance boost
+    if (npcMentor?.buff_type === 'gift_chance_boost') {
+      giftedSongChance += Number(npcMentor.buff_value);
+    }
+    const maxChance = 0.035; // Cap at 3.5%
     giftedSongChance = Math.min(maxChance, giftedSongChance);
 
     console.log(`Gifted song chance: ${(giftedSongChance * 100).toFixed(2)}%`);
@@ -316,7 +363,7 @@ Deno.serve(async (req) => {
       
       // Tier multiplier for skill XP
       const tierMultiplier = tier === 'mastery' ? 1.4 : tier === 'professional' ? 1.2 : 1.0;
-      const skillXpGained = Math.floor(baseSkillXp * tierMultiplier);
+      const skillXpGained = Math.floor(baseSkillXp * tierMultiplier * npcSkillXpMultiplier);
 
       // Chemistry gain (for bands)
       const chemistryGained = Math.floor(durationMinutes / 15) * 2; // 2 chemistry per 15 mins
@@ -439,6 +486,10 @@ Deno.serve(async (req) => {
         mood_score: moodScore,
         synergy_score: synergyScore,
         gifted_song_id: giftedSongId,
+        npc_mentor_id: npcMentor?.id || null,
+        npc_mentor_name: npcMentor?.name || null,
+        npc_buff_type: npcMentor?.buff_type || null,
+        npc_buff_value: npcMentor ? Number(npcMentor.buff_value) : 0,
       })
       .eq('id', session_id);
 
@@ -452,6 +503,15 @@ Deno.serve(async (req) => {
       synergy_score: synergyScore,
       mood_score: moodScore,
       gifted_song_id: giftedSongId,
+      npc_cameo: npcMentor ? {
+        name: npcMentor.name,
+        description: npcMentor.description,
+        genre_affinity: npcMentor.genre_affinity,
+        buff_type: npcMentor.buff_type,
+        buff_value: Number(npcMentor.buff_value),
+        rarity: npcMentor.rarity,
+        avatar_emoji: npcMentor.avatar_emoji,
+      } : null,
       outcomes: outcomes.map(o => ({
         participant_id: o.participant_id,
         xp_earned: o.xp_earned,
