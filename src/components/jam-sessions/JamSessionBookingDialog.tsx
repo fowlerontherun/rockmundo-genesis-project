@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -35,6 +36,7 @@ export const JamSessionBookingDialog = ({
   onSuccess,
 }: JamSessionBookingDialogProps) => {
   const { profile, isBooking, bookJamSession } = useJamSessionBooking();
+  const { toast } = useToast();
 
   // Form state
   const [name, setName] = useState("");
@@ -171,6 +173,11 @@ export const JamSessionBookingDialog = ({
       onSuccess?.(sessionId);
     } catch (error: any) {
       console.error("Booking failed:", error);
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Something went wrong while booking the jam session.",
+        variant: "destructive",
+      });
     }
   };
 
