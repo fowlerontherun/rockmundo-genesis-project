@@ -171,6 +171,11 @@ export const JamSessionBookingDialog = ({
       onSuccess?.(sessionId);
     } catch (error: any) {
       console.error("Booking failed:", error);
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Something went wrong while booking the jam session.",
+        variant: "destructive",
+      });
     }
   };
 

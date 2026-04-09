@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.146",
+    date: "2026-04-09",
+    changes: [
+      { type: 'fix', description: "Jam session booking errors (e.g. scheduling conflicts) are now displayed to the user as toast notifications instead of silently failing" },
+    ],
+  },
+  {
     version: "1.1.145",
     date: "2026-04-09",
     changes: [
