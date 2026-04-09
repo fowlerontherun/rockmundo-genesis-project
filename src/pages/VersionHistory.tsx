@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.145",
+    date: "2026-04-09",
+    changes: [
+      { type: 'fix', description: "Fixed jam session join not updating participant count or participant list on the session" },
+      { type: 'fix', description: "Join button now correctly shows 'You're in!' after successfully joining a session" },
+      { type: 'fix', description: "Removed duplicate toast notifications when joining jam sessions" },
+      { type: 'improvement', description: "Added error handling for participant insert failures during jam session join" },
+    ],
+  },
+  {
     version: "1.1.144",
     date: "2026-04-07",
     changes: [

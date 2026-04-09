@@ -77,10 +77,6 @@ export const JamSessionsEnhanced = () => {
     setJoiningSessionId(sessionId);
     try {
       await joinJamSession(sessionId);
-      toast({
-        title: "Joined session!",
-        description: "You're now part of this jam session.",
-      });
     } catch (error: any) {
       toast({
         title: "Unable to join session",

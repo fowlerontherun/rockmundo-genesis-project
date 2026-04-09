@@ -298,7 +298,7 @@ export const useJamSessionBooking = () => {
     }
 
     // Add as participant
-    await supabase
+    const { error: insertError } = await supabase
       .from("jam_session_participants")
       .insert({
         jam_session_id: sessionId,
@@ -307,16 +307,26 @@ export const useJamSessionBooking = () => {
         joined_at: new Date().toISOString(),
       });
 
+    if (insertError) {
+      console.error("Error inserting participant:", insertError);
+      throw new Error(insertError.message || "Failed to join session");
+    }
+
     // Deduct cost
     await supabase
       .from("profiles")
       .update({ cash: (profile.cash || 0) - newCostPerPerson })
       .eq("id", profile.id);
 
-    // Update session cost per participant
+    // Update session participant count and ids
+    const updatedParticipantIds = [...(session.participant_ids || []), profile.id];
     await supabase
       .from("jam_sessions")
-      .update({ cost_per_participant: newCostPerPerson })
+      .update({
+        cost_per_participant: newCostPerPerson,
+        current_participants: newCount,
+        participant_ids: updatedParticipantIds,
+      })
       .eq("id", sessionId);
 
     // Create scheduled activity for the joiner
