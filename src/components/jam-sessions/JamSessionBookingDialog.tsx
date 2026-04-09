@@ -35,6 +35,7 @@ export const JamSessionBookingDialog = ({
   onSuccess,
 }: JamSessionBookingDialogProps) => {
   const { profile, isBooking, bookJamSession } = useJamSessionBooking();
+  const { toast } = useToast();
 
   // Form state
   const [name, setName] = useState("");
