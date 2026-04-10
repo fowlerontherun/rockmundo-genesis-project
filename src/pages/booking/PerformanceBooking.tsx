@@ -170,6 +170,10 @@ export default function PerformanceBooking() {
     const durationHours = parseInt(duration);
     const scheduledEnd = new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000);
 
+    // Check for conflicts
+    const conflict = await checkConflicts(scheduledStart, scheduledEnd);
+    if (conflict.hasConflict) return;
+
     try {
       // Create band_rehearsals record
       const { data: rehearsal, error: rehearsalError } = await supabase
@@ -261,17 +265,21 @@ export default function PerformanceBooking() {
     const scheduledStart = new Date(date);
     scheduledStart.setHours(hours, 0, 0, 0);
     const durationHours = parseInt(duration);
+    const scheduledEnd = new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000);
+
+    // Check for conflicts
+    const conflict = await checkConflicts(scheduledStart, scheduledEnd);
+    if (conflict.hasConflict) return;
 
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;
 
-    // Use profileId directly
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
       user_id: profileId,
       profile_id: profileId,
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
-      scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),
+      scheduled_end: scheduledEnd.toISOString(),
       status: "scheduled",
       title: `${activityType === "gig" ? "Gig" : activityType === "busking" ? "Busking" : "Songwriting"}`,
       metadata,
@@ -305,6 +313,18 @@ export default function PerformanceBooking() {
         <h1 className="text-3xl font-bold">Book Performance Activity</h1>
         <p className="text-muted-foreground">Schedule your music sessions in advance</p>
       </div>
+
+      {conflictResult?.hasConflict && (
+        <ScheduleConflictAlert
+          result={conflictResult}
+          onPickSlot={(slot) => {
+            setDate(slot.start);
+            setTimeSlot(`${slot.start.getHours().toString().padStart(2, "0")}:00`);
+            clearResult();
+          }}
+          onDismiss={clearResult}
+        />
+      )}
 
       <Tabs value={activityType} onValueChange={setActivityType}>
         <TabsList className="grid w-full grid-cols-4">
