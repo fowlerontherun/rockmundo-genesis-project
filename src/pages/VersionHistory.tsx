@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.147",
+    date: "2026-04-10",
+    changes: [
+      { type: 'feature', description: "Added universal schedule conflict detection with Smart Suggestions — all booking flows now check for overlapping activities and offer alternative time slots" },
+      { type: 'fix', description: "Fixed WorkBooking writing to wrong table (scheduled_activities → player_scheduled_activities) and bypassing conflict checks" },
+      { type: 'fix', description: "Fixed EducationBooking bypassing conflict detection and writing to wrong table" },
+      { type: 'improvement', description: "PerformanceBooking (rehearsal, gig, busking, songwriting) now checks for conflicts before booking" },
+      { type: 'improvement', description: "Rehab recovery now checks schedule conflicts before entering rehabilitation program" },
+      { type: 'feature', description: "New ScheduleConflictAlert component shows conflicting activities and suggests up to 3 available time slots with 'Pick this slot' buttons" },
+    ],
+  },
+  {
     version: "1.1.146",
     date: "2026-04-09",
     changes: [
