@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Briefcase, MapPin, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
+import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
+import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 
 const ACTIVITY_TYPES = [
   { value: "work", label: "Work Shift", icon: Briefcase },
@@ -20,50 +22,57 @@ export default function WorkBooking() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
+  const { checkConflicts, isChecking, result: conflictResult, clearResult } = useScheduleConflictCheck();
   const [date, setDate] = useState<Date>();
   const [activityType, setActivityType] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [duration, setDuration] = useState<string>("8");
+  const [isBooking, setIsBooking] = useState(false);
+
+  const getScheduledTimes = () => {
+    if (!date || !timeSlot) return null;
+    const [hours] = timeSlot.split(":").map(Number);
+    const start = new Date(date);
+    start.setHours(hours, 0, 0, 0);
+    const end = new Date(start.getTime() + parseInt(duration) * 60 * 60 * 1000);
+    return { start, end };
+  };
 
   const handleBookActivity = async () => {
     if (!date || !activityType || !timeSlot || !profileId) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a date, activity type, and time slot.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing Information", description: "Please select a date, activity type, and time slot.", variant: "destructive" });
       return;
     }
 
-    const [hours] = timeSlot.split(":").map(Number);
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(hours, 0, 0, 0);
-    const durationHours = parseInt(duration);
+    const times = getScheduledTimes();
+    if (!times) return;
 
-    const { error } = await (supabase as any).from("scheduled_activities").insert({
-      user_id: profileId,
-      activity_type: activityType,
-      scheduled_start: scheduledStart.toISOString(),
-      scheduled_end: new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000).toISOString(),
-      status: "scheduled",
-      title: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label}`,
-    });
+    // Check for conflicts first
+    const conflict = await checkConflicts(times.start, times.end);
+    if (conflict.hasConflict) return;
 
-    if (error) {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
+    setIsBooking(true);
+    try {
+      await createScheduledActivity({
+        activityType: activityType as any,
+        scheduledStart: times.start,
+        scheduledEnd: times.end,
+        title: ACTIVITY_TYPES.find(t => t.value === activityType)?.label || activityType,
       });
-      return;
+      navigate("/schedule");
+    } catch (error: any) {
+      toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsBooking(false);
     }
+  };
 
-    toast({
-      title: "Activity Booked!",
-      description: "Your activity has been scheduled.",
-    });
-
-    navigate("/schedule");
+  const handlePickSlot = (slot: { start: Date; end: Date }) => {
+    setDate(slot.start);
+    setTimeSlot(`${slot.start.getHours().toString().padStart(2, "0")}:00`);
+    const hrs = Math.round((slot.end.getTime() - slot.start.getTime()) / (60 * 60 * 1000));
+    setDuration(hrs.toString());
+    clearResult();
   };
 
   const timeSlots = Array.from({ length: 24 }, (_, i) => ({
@@ -78,6 +87,10 @@ export default function WorkBooking() {
         <p className="text-muted-foreground">Schedule work, travel, and personal time</p>
       </div>
 
+      {conflictResult?.hasConflict && (
+        <ScheduleConflictAlert result={conflictResult} onPickSlot={handlePickSlot} onDismiss={clearResult} />
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -85,40 +98,25 @@ export default function WorkBooking() {
             <CardDescription>Choose when you need to block time</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-            />
-            
+            <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
             <div className="space-y-2">
               <Label>Time Slot</Label>
               <Select value={timeSlot} onValueChange={setTimeSlot}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
                 <SelectContent>
                   {timeSlots.map(slot => (
-                    <SelectItem key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </SelectItem>
+                    <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Duration (hours)</Label>
               <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[1, 2, 4, 6, 8, 12].map(hrs => (
-                    <SelectItem key={hrs} value={hrs.toString()}>
-                      {hrs} hour{hrs > 1 ? 's' : ''}
-                    </SelectItem>
+                    <SelectItem key={hrs} value={hrs.toString()}>{hrs} hour{hrs > 1 ? 's' : ''}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -151,8 +149,8 @@ export default function WorkBooking() {
       </div>
 
       <div className="flex gap-4">
-        <Button onClick={handleBookActivity} size="lg" className="flex-1">
-          Book Activity
+        <Button onClick={handleBookActivity} size="lg" className="flex-1" disabled={isBooking || isChecking}>
+          {isChecking ? "Checking schedule..." : isBooking ? "Booking..." : "Book Activity"}
         </Button>
         <Button onClick={() => navigate("/schedule")} variant="outline" size="lg">
           View Schedule
