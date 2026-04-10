@@ -4,6 +4,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { AddictionRecord, RecoveryProgram } from "@/utils/addictionSystem";
 import { getRecoveryProgramDetails } from "@/utils/addictionSystem";
+import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 
 export function useAddictions() {
   const { profileId } = useActiveProfile();
@@ -59,6 +60,18 @@ export function useAddictions() {
         const rehabDays = rehabDetails.durationDays.min + Math.floor(Math.random() * (rehabDetails.durationDays.max - rehabDetails.durationDays.min));
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + rehabDays);
+
+        // Check for scheduling conflicts before booking rehab
+        const { available, conflictingActivity } = await checkTimeSlotAvailable(
+          profileId,
+          new Date(),
+          endDate
+        );
+        if (!available) {
+          throw new Error(
+            `Schedule conflict: You have "${conflictingActivity?.title}" during this period. Clear your schedule before entering rehab.`
+          );
+        }
 
         await (supabase as any).from("player_scheduled_activities").insert({
           user_id: profileId,
