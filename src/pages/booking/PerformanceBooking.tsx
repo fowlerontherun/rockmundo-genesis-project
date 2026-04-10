@@ -22,6 +22,7 @@ export default function PerformanceBooking() {
   const location = useLocation();
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
+  const { checkConflicts, isChecking, result: conflictResult, clearResult } = useScheduleConflictCheck();
   
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
