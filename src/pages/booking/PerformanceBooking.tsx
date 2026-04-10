@@ -14,6 +14,8 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels";
 import { Badge } from "@/components/ui/badge";
+import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
+import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 
 export default function PerformanceBooking() {
   const navigate = useNavigate();
