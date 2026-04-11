@@ -4505,6 +4505,45 @@ export type Database = {
           },
         ]
       }
+      club_presence: {
+        Row: {
+          club_id: string
+          entered_at: string
+          expires_at: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          club_id: string
+          entered_at?: string
+          expires_at?: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          club_id?: string
+          entered_at?: string
+          expires_at?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_presence_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_presence_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collaboration_payments: {
         Row: {
           amount: number
@@ -18529,6 +18568,71 @@ export type Database = {
             columns: ["mentor_id"]
             isOneToOne: false
             referencedRelation: "education_mentors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_mentorships: {
+        Row: {
+          created_at: string
+          focus_skill: string
+          id: string
+          mentee_profile_id: string
+          mentor_profile_id: string
+          sessions_completed: number
+          status: string
+          updated_at: string
+          xp_granted: number
+        }
+        Insert: {
+          created_at?: string
+          focus_skill?: string
+          id?: string
+          mentee_profile_id: string
+          mentor_profile_id: string
+          sessions_completed?: number
+          status?: string
+          updated_at?: string
+          xp_granted?: number
+        }
+        Update: {
+          created_at?: string
+          focus_skill?: string
+          id?: string
+          mentee_profile_id?: string
+          mentor_profile_id?: string
+          sessions_completed?: number
+          status?: string
+          updated_at?: string
+          xp_granted?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_mentorships_mentee_profile_id_fkey"
+            columns: ["mentee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_mentorships_mentee_profile_id_fkey"
+            columns: ["mentee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_mentorships_mentor_profile_id_fkey"
+            columns: ["mentor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_mentorships_mentor_profile_id_fkey"
+            columns: ["mentor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
