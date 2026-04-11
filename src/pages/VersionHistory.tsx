@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.151",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "Fixed DJ performance recording — RLS policy now correctly uses profile-based lookup instead of auth UID comparison, so DJ sets actually save and show in history" },
+      { type: 'feature', description: "Added Nightclubs tile to World Hub — nightclubs are now accessible from the World navigation section" },
+    ],
+  },
+  {
     version: "1.1.150",
     date: "2026-04-11",
     changes: [
