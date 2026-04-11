@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.152",
+    date: "2026-04-11",
+    changes: [
+      { type: 'feature', description: "Player-to-player mentorship system — offer, accept, and run mentoring sessions with friends for XP rewards" },
+      { type: 'feature', description: "Nightclub social — 'Who's Here' section shows other players at the same club, plus club-specific chat channel" },
+      { type: 'improvement', description: "Gear trading is now functional — select actual equipment from your inventory to send to friends instead of just logging a text event" },
+      { type: 'feature', description: "Club presence tracking — entering a nightclub registers your presence for other players to see (auto-expires after 1 hour)" },
+    ],
+  },
+  {
     version: "1.1.151",
     date: "2026-04-11",
     changes: [
