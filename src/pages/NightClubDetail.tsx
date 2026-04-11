@@ -82,6 +82,10 @@ const NightClubDetail = () => {
   const activeQuest = quests.find((q) => q.id === activeQuestId) ?? null;
   const activeProgress = activeQuestId ? getQuestProgress(activeQuestId) : null;
 
+  // Club presence + social
+  const { data: clubPresence = [] } = useClubPresence(clubId);
+  const enterClub = useEnterClub();
+  const clubChatChannel = clubId ? `club:${clubId}` : null;
   // DJ Performance History
   const { data: djHistory = [] } = useQuery({
     queryKey: ["dj-performances", profileId, clubId],
