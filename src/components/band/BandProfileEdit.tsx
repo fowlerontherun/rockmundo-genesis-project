@@ -80,7 +80,14 @@ export function BandProfileEdit({
         .eq("id", bandId)
         .single();
       if (bandFetchError) throw bandFetchError;
-      if (bandRow?.leader_id !== user.id) {
+      // leader_id stores a profile ID, not auth user ID
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (bandRow?.leader_id !== myProfile?.id) {
         throw new Error("Only the band leader can update the band logo.");
       }
 
