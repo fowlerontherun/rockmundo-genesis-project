@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.149",
+    date: "2026-04-11",
+    changes: [
+      { type: 'feature', description: "Added Nightclub Hub page (/nightclubs) — browse all 80+ clubs worldwide with filters by city, quality tier, and search" },
+      { type: 'feature', description: "Added Club Reputation system — track visits, DJ sets, and spending to earn tiers (Newcomer → Regular → VIP → Legend) with perks" },
+      { type: 'feature', description: "Added DJ Performance History on club detail pages — stats summary, recent sets with scores, earnings, and fame gained" },
+      { type: 'feature', description: "Seeded 25 new NPC quests across iconic clubs worldwide (Berghain, Amnesia, Marquee NY, XS Vegas, Sub Club, Motion, and more)" },
+      { type: 'improvement', description: "Club visits now automatically track reputation — stance selections, guest actions, DJ sets, and drink purchases all build your standing" },
+    ],
+  },
+  {
     version: "1.1.148",
     date: "2026-04-11",
     changes: [
