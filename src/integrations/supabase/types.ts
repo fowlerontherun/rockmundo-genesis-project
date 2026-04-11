@@ -6085,11 +6085,13 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          recurring: boolean | null
           requirements: string[] | null
           rewards: string[] | null
           sponsor: string | null
           starts_at: string
           theme: string
+          week_number: number | null
         }
         Insert: {
           created_at?: string | null
@@ -6098,11 +6100,13 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          recurring?: boolean | null
           requirements?: string[] | null
           rewards?: string[] | null
           sponsor?: string | null
           starts_at: string
           theme: string
+          week_number?: number | null
         }
         Update: {
           created_at?: string | null
@@ -6111,11 +6115,13 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          recurring?: boolean | null
           requirements?: string[] | null
           rewards?: string[] | null
           sponsor?: string | null
           starts_at?: string
           theme?: string
+          week_number?: number | null
         }
         Relationships: []
       }
@@ -6194,6 +6200,55 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dikcok_fan_tips: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          message: string | null
+          tipper_profile_id: string
+          video_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          message?: string | null
+          tipper_profile_id: string
+          video_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          message?: string | null
+          tipper_profile_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_fan_tips_tipper_profile_id_fkey"
+            columns: ["tipper_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_fan_tips_tipper_profile_id_fkey"
+            columns: ["tipper_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_fan_tips_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_videos"
             referencedColumns: ["id"]
           },
         ]
@@ -30526,6 +30581,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
+      rotate_weekly_challenges: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       swap_gettit_comment_vote: {
         Args: { comment_id: string; new_field: string; old_field: string }
