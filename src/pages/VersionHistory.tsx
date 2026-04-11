@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.157",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "Fixed band creation ON CONFLICT error — restored missing unique constraint on sponsorship_entities.band_id required by the auto-create trigger" },
+    ],
+  },
+  {
     version: "1.1.156",
     date: "2026-04-11",
     changes: [
