@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.156",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "Fixed band creation foreign key error — bands.leader_id now correctly references profiles table instead of auth.users, and all existing data migrated" },
+    ],
+  },
+  {
     version: "1.1.155",
     date: "2026-04-11",
     changes: [
