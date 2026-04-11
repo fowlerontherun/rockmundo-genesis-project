@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.150",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "Fixed band creation RLS policy — leader_id stores a profile ID, not auth.uid(), so the INSERT policy now correctly checks profile ownership" },
+      { type: 'fix', description: "Fixed band update RLS policy to use profile-based membership lookup instead of direct auth.uid() comparison" },
+    ],
+  },
+  {
     version: "1.1.149",
     date: "2026-04-11",
     changes: [
