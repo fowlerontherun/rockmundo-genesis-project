@@ -17160,6 +17160,73 @@ export type Database = {
           },
         ]
       }
+      player_club_reputation: {
+        Row: {
+          club_id: string
+          created_at: string
+          dj_sets_played: number
+          id: string
+          last_visit_at: string | null
+          perks_unlocked: Json
+          profile_id: string
+          reputation_points: number
+          reputation_tier: string
+          total_spend: number
+          updated_at: string
+          visit_count: number
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          dj_sets_played?: number
+          id?: string
+          last_visit_at?: string | null
+          perks_unlocked?: Json
+          profile_id: string
+          reputation_points?: number
+          reputation_tier?: string
+          total_spend?: number
+          updated_at?: string
+          visit_count?: number
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          dj_sets_played?: number
+          id?: string
+          last_visit_at?: string | null
+          perks_unlocked?: Json
+          profile_id?: string
+          reputation_points?: number
+          reputation_tier?: string
+          total_spend?: number
+          updated_at?: string
+          visit_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_club_reputation_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_club_reputation_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_club_reputation_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_criminal_record: {
         Row: {
           behavior_rating: string
