@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.153",
+    date: "2026-04-11",
+    changes: [
+      { type: 'feature', description: "DikCok Weekly Challenges — auto-rotating challenges generated each week with themed requirements, rewards, and optional sponsors" },
+      { type: 'feature', description: "Challenge Entry system — enter active challenges with your band, track entries, and compete on leaderboards" },
+      { type: 'feature', description: "Fan Tips economy sink — tip DikCok videos with in-game cash ($5/$10/$25/$50), cash deducted from tipper and credited to band balance" },
+      { type: 'improvement', description: "DikCok stats overview now shows Tips Received alongside Followers, Views, Hype, and Revenue" },
+      { type: 'improvement', description: "Past Challenges section shows recently ended challenges with themes and sponsors" },
+    ],
+  },
+  {
     version: "1.1.152",
     date: "2026-04-11",
     changes: [
