@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp } from "lucide-react";
+import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,9 @@ import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerfor
 import { useNightclubQuests } from "@/hooks/useNightclubQuests";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useClubReputation, useRecordClubVisit, getTierLabel, getTierColor, getTierPerks } from "@/hooks/useClubReputation";
+import { useClubPresence, useEnterClub } from "@/hooks/useClubPresence";
+import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
+import { useOptionalGameData } from "@/hooks/useGameData";
 import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
@@ -49,6 +52,8 @@ const NightClubDetail = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
+  const gameData = useOptionalGameData();
+  const profileUserId = gameData?.profile?.user_id ?? null;
   const [club, setClub] = useState<CityNightClub | null>(null);
   const [cityName, setCityName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -77,6 +82,10 @@ const NightClubDetail = () => {
   const activeQuest = quests.find((q) => q.id === activeQuestId) ?? null;
   const activeProgress = activeQuestId ? getQuestProgress(activeQuestId) : null;
 
+  // Club presence + social
+  const { data: clubPresence = [] } = useClubPresence(clubId);
+  const enterClub = useEnterClub();
+  const clubChatChannel = clubId ? `club:${clubId}` : null;
   // DJ Performance History
   const { data: djHistory = [] } = useQuery({
     queryKey: ["dj-performances", profileId, clubId],
@@ -178,6 +187,7 @@ const NightClubDetail = () => {
       venueQuality: club.qualityLevel,
     });
     recordVisit.mutate({ clubId, cashSpent: 0 });
+    enterClub.mutate(clubId);
   };
 
   const busy = isProcessing || isPerforming;
@@ -411,6 +421,68 @@ const NightClubDetail = () => {
                 )}
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Who's Here - Club Presence */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5 text-primary" /> Who's Here
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {clubPresence.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No other players here right now. Be the first to enter!</p>
+          ) : (
+            <div className="space-y-2">
+              {clubPresence.map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between rounded-lg border border-border/60 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                      {(entry.profile?.display_name || entry.profile?.username || "?").slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{entry.profile?.display_name || entry.profile?.username || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Level {entry.profile?.level ?? 1} • {(entry.profile?.fame ?? 0).toLocaleString()} fame
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {clubId && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => enterClub.mutate(clubId)}
+              disabled={enterClub.isPending}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              {enterClub.isPending ? "Entering..." : "Enter Club"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Club Chat */}
+      {clubChatChannel && profileUserId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MessageCircle className="h-5 w-5 text-primary" /> Club Chat
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DirectMessagePanel
+              channel={clubChatChannel}
+              currentUserId={profileUserId}
+              otherDisplayName="Club Chat"
+            />
           </CardContent>
         </Card>
       )}

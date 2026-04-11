@@ -38,6 +38,8 @@ import { formatDistanceToNow } from "date-fns";
 import { FamilyDashboard } from "@/components/family/FamilyDashboard";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePlayerMentorships, useOfferMentorship, useRespondMentorship, useRunMentorSession } from "@/hooks/usePlayerMentorship";
+import { GraduationCap } from "lucide-react";
 import {
   communicationChannels,
   collaborationOpportunities,
@@ -324,6 +326,12 @@ export default function RelationshipsPage() {
     sendRequest,
   } = useFriendships(profileId);
   const { inventory } = useEquipmentStore(profileId ?? undefined);
+
+  // Mentorship hooks
+  const { data: mentorships = [] } = usePlayerMentorships();
+  const offerMentorship = useOfferMentorship();
+  const respondMentorship = useRespondMentorship();
+  const runSession = useRunMentorSession();
 
   const giftableGear = useMemo(() => {
     return inventory.filter((item) => !item.is_equipped);
@@ -700,6 +708,88 @@ export default function RelationshipsPage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Mentorship */}
+                {(() => {
+                  const otherId = selectedFriendship.otherProfile?.id;
+                  if (!otherId || !profileId) return null;
+                  const existingMentorship = mentorships.find(
+                    (m) =>
+                      (m.mentor_profile_id === profileId && m.mentee_profile_id === otherId) ||
+                      (m.mentee_profile_id === profileId && m.mentor_profile_id === otherId)
+                  );
+                  const isMentor = existingMentorship?.mentor_profile_id === profileId;
+
+                  return (
+                    <Card className="border-social-loyalty/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" /> Mentorship
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {!existingMentorship ? (
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => offerMentorship.mutate({ menteeProfileId: otherId, focusSkill: "general" })}
+                              disabled={offerMentorship.isPending}
+                            >
+                              <GraduationCap className="mr-1 h-3 w-3" /> Offer to Mentor
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => offerMentorship.mutate({ menteeProfileId: profileId, focusSkill: "general" })}
+                              disabled={offerMentorship.isPending}
+                            >
+                              Request Mentorship
+                            </Button>
+                          </div>
+                        ) : existingMentorship.status === "pending" ? (
+                          <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              {isMentor ? "Mentorship offer pending acceptance..." : "You've been offered mentorship!"}
+                            </p>
+                            {!isMentor && (
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => respondMentorship.mutate({ mentorshipId: existingMentorship.id, accept: true })}>
+                                  Accept
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => respondMentorship.mutate({ mentorshipId: existingMentorship.id, accept: false })}>
+                                  Decline
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : existingMentorship.status === "active" ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Focus: <Badge variant="secondary">{existingMentorship.focus_skill}</Badge></span>
+                              <span className="text-muted-foreground">{existingMentorship.sessions_completed} sessions</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span>XP granted: <strong>{existingMentorship.xp_granted}</strong></span>
+                              <span className="text-xs text-muted-foreground">Role: {isMentor ? "Mentor" : "Mentee"}</span>
+                            </div>
+                            {isMentor && (
+                              <Button
+                                size="sm"
+                                onClick={() => runSession.mutate({ mentorshipId: existingMentorship.id })}
+                                disabled={runSession.isPending}
+                              >
+                                {runSession.isPending ? "Running..." : "Run Session (+XP)"}
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Mentorship {existingMentorship.status}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* DM Panel */}
                 <DirectMessagePanel

@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { recordRelationshipEvent } from "../api";
 import { Handshake, Gift, PartyPopper, Sparkles, ShieldCheck, UsersRound } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useAuth } from "@/hooks/use-auth-context";
 
 interface ActionButtonsProps {
   profileId: string;
@@ -33,9 +37,29 @@ export function QuickActionButtons({
   onEventRecorded,
 }: ActionButtonsProps) {
   const { toast } = useToast();
+  const { profileId: currentProfileId } = useActiveProfile();
+  const { user } = useAuth();
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [amount, setAmount] = useState("100");
   const [notes, setNotes] = useState("");
+  const [selectedTradeGearId, setSelectedTradeGearId] = useState("");
+  const [tradeGearOptions, setTradeGearOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [isTrading, setIsTrading] = useState(false);
+
+  useEffect(() => {
+    if (activeDialog?.type !== "trade" || !user?.id) return;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("player_equipment_inventory")
+        .select("id, equipment:equipment_items!equipment_id(name)")
+        .eq("user_id", user.id)
+        .eq("is_equipped", false)
+        .limit(50);
+      setTradeGearOptions(
+        (data ?? []).map((d: any) => ({ id: d.id, name: d.equipment?.name ?? "Unknown gear" }))
+      );
+    })();
+  }, [activeDialog?.type, user?.id]);
 
   const closeDialog = () => {
     setActiveDialog(null);
@@ -79,9 +103,29 @@ export function QuickActionButtons({
   };
 
   const handleTradeSubmit = async () => {
-    await recordEvent("relationship_trade", `Shared gear with ${otherDisplayName}`, {
-      trade_item: notes || "Stage gear",
-    });
+    if (!selectedTradeGearId || !otherUserId || !user?.id) {
+      toast({ title: "Select gear to trade", variant: "destructive" });
+      return;
+    }
+    setIsTrading(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("player_equipment_inventory")
+        .update({ user_id: otherUserId, is_equipped: false })
+        .eq("id", selectedTradeGearId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      const itemName = tradeGearOptions.find(g => g.id === selectedTradeGearId)?.name ?? "gear";
+      await recordEvent("relationship_trade", `Sent ${itemName} to ${otherDisplayName}`, {
+        trade_item: itemName,
+        trade_notes: notes,
+      });
+      setSelectedTradeGearId("");
+    } catch (err: any) {
+      toast({ title: "Trade failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsTrading(false);
+    }
   };
 
   const handleCollab = async (collabType: string) => {
@@ -149,15 +193,36 @@ export function QuickActionButtons({
       <Dialog open={activeDialog?.type === "trade"} onOpenChange={closeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Secure trade</DialogTitle>
+            <DialogTitle>Trade gear with {otherDisplayName}</DialogTitle>
           </DialogHeader>
-          <Textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Describe the item or service you're trading"
-          />
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium mb-1">Select gear to send</p>
+              <Select value={selectedTradeGearId} onValueChange={setSelectedTradeGearId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose unequipped gear" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tradeGearOptions.length === 0 ? (
+                    <SelectItem value="none" disabled>No unequipped gear available</SelectItem>
+                  ) : (
+                    tradeGearOptions.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Add a note (optional)"
+            />
+          </div>
           <DialogFooter>
-            <Button onClick={handleTradeSubmit}>Confirm trade</Button>
+            <Button onClick={handleTradeSubmit} disabled={isTrading || !selectedTradeGearId}>
+              {isTrading ? "Sending..." : "Confirm trade"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
