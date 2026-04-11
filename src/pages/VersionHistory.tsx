@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.148",
+    date: "2026-04-11",
+    changes: [
+      { type: 'improvement', description: "Simplified university course filtering — removed skill category filter chips, kept only text search for course names" },
+    ],
+  },
+  {
     version: "1.1.147",
     date: "2026-04-10",
     changes: [

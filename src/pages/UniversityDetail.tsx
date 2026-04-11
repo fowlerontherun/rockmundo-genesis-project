@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck, Search, Filter, X } from "lucide-react";
+import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
@@ -65,7 +65,6 @@ export default function UniversityDetail() {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState<string>("all");
 
   const { data: university } = useQuery({
     queryKey: ["university", id],
@@ -491,12 +490,6 @@ export default function UniversityDetail() {
   const formatSkillSlug = (slug: string) =>
     slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
-  const skillCategories = useMemo(() => {
-    if (!courses) return [];
-    const cats = new Set(courses.map(c => c.skill_slug));
-    return Array.from(cats).sort();
-  }, [courses]);
-
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     let result = courses;
@@ -504,58 +497,30 @@ export default function UniversityDetail() {
       const q = courseSearch.toLowerCase();
       result = result.filter(c =>
         c.name.toLowerCase().includes(q) ||
-        c.skill_slug.replace(/_/g, " ").toLowerCase().includes(q) ||
         (c.description || "").toLowerCase().includes(q)
       );
     }
-    if (selectedSkill !== "all") {
-      result = result.filter(c => c.skill_slug === selectedSkill);
-    }
     return result;
-  }, [courses, courseSearch, selectedSkill]);
-
-  const hasActiveFilters = courseSearch.trim() || selectedSkill !== "all";
+  }, [courses, courseSearch]);
 
   const courseFilterUI = (
     <div className="space-y-3 mb-4">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search courses by name or skill..."
+          placeholder="Search courses by name..."
           value={courseSearch}
           onChange={(e) => setCourseSearch(e.target.value)}
           className="pl-9"
         />
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={selectedSkill === "all" ? "default" : "outline"}
-          size="sm"
-          className="gap-1.5 text-xs"
-          onClick={() => setSelectedSkill("all")}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          All Skills ({courses?.length || 0})
-        </Button>
-        {skillCategories.map((skill) => (
-          <Button
-            key={skill}
-            variant={selectedSkill === skill ? "default" : "outline"}
-            size="sm"
-            className="text-xs"
-            onClick={() => setSelectedSkill(skill)}
-          >
-            {formatSkillSlug(skill)}
-          </Button>
-        ))}
-      </div>
-      {hasActiveFilters && (
+      {courseSearch.trim() && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
             {filteredCourses.length} course{filteredCourses.length !== 1 ? "s" : ""} found
           </span>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setCourseSearch(""); setSelectedSkill("all"); }}>
-            <X className="h-3 w-3 mr-1" /> Clear filters
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setCourseSearch("")}>
+            <X className="h-3 w-3 mr-1" /> Clear search
           </Button>
         </div>
       )}
