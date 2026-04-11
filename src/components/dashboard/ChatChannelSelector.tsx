@@ -71,9 +71,10 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col gap-2 sm:flex-row sm:gap-4 h-[calc(100vh-14rem)] min-h-[280px]">
-      {/* Channel list - horizontal scroll on mobile, vertical sidebar on desktop */}
-      <div className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card flex flex-col overflow-hidden max-h-[120px] sm:max-h-none">
-        <div className="p-2 border-b">
+      {/* Channel list — horizontal scrollable strip on mobile, vertical sidebar on desktop */}
+      <div className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card flex flex-col overflow-hidden sm:max-h-none">
+        {/* Search — desktop only */}
+        <div className="hidden sm:block p-2 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -84,58 +85,105 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
             />
           </div>
         </div>
-        <ScrollArea className="flex-1">
-        <div className="w-max min-w-full p-2 flex sm:flex-col sm:space-y-1 gap-1 sm:gap-0">
-          {filteredBase.length > 0 && <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
-            Main Channels
-          </div>}
-          {filteredBase.map(channel => {
-            const Icon = channel.icon;
-            return (
-              <Button
-                key={channel.key}
-                variant={selectedChannel === channel.key ? "secondary" : "ghost"}
-                className={cn(
-                  "justify-start gap-2 shrink-0 max-w-full",
-                  "sm:w-full",
-                  selectedChannel === channel.key && "bg-accent"
-                )}
-                size="sm"
-                onClick={() => setSelectedChannel(channel.key)}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="truncate">{channel.label}</span>
-              </Button>
-            );
-          })}
-          
-          {filteredCities.length > 0 && (
-            <>
-              <div className="hidden sm:block px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase mt-4">
-                Cities
-              </div>
-              {filteredCities.map(channel => {
-                const Icon = channel.icon;
-                return (
-                  <Button
-                    key={channel.key}
-                    variant={selectedChannel === channel.key ? "secondary" : "ghost"}
-                    className={cn(
-                      "justify-start gap-2 shrink-0 max-w-full",
-                      "sm:w-full",
-                      selectedChannel === channel.key && "bg-accent"
-                    )}
-                    size="sm"
-                    onClick={() => setSelectedChannel(channel.key)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="truncate">{channel.label}</span>
-                  </Button>
-                );
-              })}
-            </>
-          )}
+
+        {/* Mobile: horizontal scroll strip */}
+        <div className="sm:hidden overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1 p-1.5 w-max">
+            {baseChannels.map(channel => {
+              const Icon = channel.icon;
+              return (
+                <Button
+                  key={channel.key}
+                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  className={cn(
+                    "gap-1.5 shrink-0 h-8 px-2.5 text-xs",
+                    selectedChannel === channel.key && "bg-accent"
+                  )}
+                  size="sm"
+                  onClick={() => setSelectedChannel(channel.key)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{channel.label}</span>
+                </Button>
+              );
+            })}
+            {cityChannels.length > 0 && (
+              <div className="w-px bg-border mx-0.5 self-stretch" />
+            )}
+            {cityChannels.map(channel => {
+              const Icon = channel.icon;
+              return (
+                <Button
+                  key={channel.key}
+                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  className={cn(
+                    "gap-1.5 shrink-0 h-8 px-2.5 text-xs",
+                    selectedChannel === channel.key && "bg-accent"
+                  )}
+                  size="sm"
+                  onClick={() => setSelectedChannel(channel.key)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{channel.label}</span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Desktop: vertical scrollable sidebar */}
+        <ScrollArea className="flex-1 hidden sm:block">
+          <div className="p-2 flex flex-col space-y-1">
+            {filteredBase.length > 0 && (
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
+                Main Channels
+              </div>
+            )}
+            {filteredBase.map(channel => {
+              const Icon = channel.icon;
+              return (
+                <Button
+                  key={channel.key}
+                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  className={cn(
+                    "justify-start gap-2 w-full",
+                    selectedChannel === channel.key && "bg-accent"
+                  )}
+                  size="sm"
+                  onClick={() => setSelectedChannel(channel.key)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="truncate">{channel.label}</span>
+                </Button>
+              );
+            })}
+            
+            {filteredCities.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase mt-4">
+                  Cities
+                </div>
+                {filteredCities.map(channel => {
+                  const Icon = channel.icon;
+                  return (
+                    <Button
+                      key={channel.key}
+                      variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                      className={cn(
+                        "justify-start gap-2 w-full",
+                        selectedChannel === channel.key && "bg-accent"
+                      )}
+                      size="sm"
+                      onClick={() => setSelectedChannel(channel.key)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="truncate">{channel.label}</span>
+                    </Button>
+                  );
+                })}
+              </>
+            )}
+          </div>
         </ScrollArea>
       </div>
 
