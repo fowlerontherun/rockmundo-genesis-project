@@ -187,6 +187,7 @@ const NightClubDetail = () => {
       venueQuality: club.qualityLevel,
     });
     recordVisit.mutate({ clubId, cashSpent: 0 });
+    enterClub.mutate(clubId);
   };
 
   const busy = isProcessing || isPerforming;
