@@ -168,8 +168,9 @@ export function useDjPerformance() {
       }
 
       // 7. Record performance
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       await supabase.from("player_dj_performances").insert({
-        user_id: profileId,
+        user_id: currentUser?.id ?? profileId,
         profile_id: profileId,
         club_id: club.id,
         performance_score: djOutcome.performanceScore,
