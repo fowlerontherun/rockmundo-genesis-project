@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.154",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "Dashboard chat now fits properly on mobile screens — removed fixed max-height constraints and compacted header/padding" },
+      { type: 'improvement', description: "Channel selector uses less vertical space on mobile with a capped height" },
+    ],
+  },
+  {
     version: "1.1.153",
     date: "2026-04-11",
     changes: [
