@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp } from "lucide-react";
+import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,9 @@ import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerfor
 import { useNightclubQuests } from "@/hooks/useNightclubQuests";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useClubReputation, useRecordClubVisit, getTierLabel, getTierColor, getTierPerks } from "@/hooks/useClubReputation";
+import { useClubPresence, useEnterClub } from "@/hooks/useClubPresence";
+import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
+import { useOptionalGameData } from "@/hooks/useGameData";
 import { toast } from "sonner";
 import { NightClubGuestActionCard } from "@/components/nightclub/NightClubGuestActionCard";
 import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
