@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Eye, TrendingUp, Users, ImageOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { DikCokTipButton } from "./DikCokTipButton";
 
 interface DikCokVideoCardProps {
   video: {
@@ -49,7 +50,6 @@ export const DikCokVideoCard = ({ video, onView }: DikCokVideoCardProps) => {
             </div>
           )}
           
-          {/* Overlay badges */}
           {video.trending_tag && (
             <Badge className="absolute top-2 left-2 bg-accent">
               #{video.trending_tag}
@@ -61,7 +61,6 @@ export const DikCokVideoCard = ({ video, onView }: DikCokVideoCardProps) => {
             </Badge>
           )}
           
-          {/* Play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
             <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
               <div className="ml-1 w-0 h-0 border-l-[16px] border-l-primary border-y-[10px] border-y-transparent" />
@@ -86,6 +85,9 @@ export const DikCokVideoCard = ({ video, onView }: DikCokVideoCardProps) => {
             <div className="flex items-center gap-1">
               <Users className="h-3 w-3" />
               <span>+{video.fan_gain}</span>
+            </div>
+            <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
+              <DikCokTipButton videoId={video.id} />
             </div>
           </div>
 

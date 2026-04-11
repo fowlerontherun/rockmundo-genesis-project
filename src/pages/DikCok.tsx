@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign, Sparkles } from "lucide-react";
+import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign, Sparkles, Trophy } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
@@ -18,13 +18,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function DikCok() {
   const { profileId } = useActiveProfile();
   const { profile } = useGameData();
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
 
-  // Fetch user's bands
   const { data: userBands, isLoading: bandsLoading } = useQuery({
     queryKey: ["user-bands-dikcok", profileId],
     queryFn: async () => {
@@ -40,7 +40,6 @@ export default function DikCok() {
     enabled: !!profileId,
   });
 
-  // Set default selected band
   const selectedBand = selectedBandId 
     ? userBands?.find(b => b.band_id === selectedBandId)?.bands as any
     : userBands?.[0]?.bands as any;
@@ -48,18 +47,36 @@ export default function DikCok() {
   const effectiveBandId = selectedBand?.id || null;
 
   const { videos, trending, isLoading, incrementViews } = useDikCokVideos(effectiveBandId);
-  const { challenges } = useDikCokChallenges();
+  const { challenges, pastChallenges, enterChallenge, enteredChallengeIds } = useDikCokChallenges(effectiveBandId);
 
-  // For You feed - personalized algorithm
   const bandGenres = userBands?.map(b => (b.bands as any)?.genre).filter(Boolean) || [];
   const { forYouVideos, isLoading: forYouLoading } = useDikCokForYouFeed(
     bandGenres,
     selectedBand?.fame || 0
   );
 
+  // Tips received total
+  const { data: tipsReceived } = useQuery({
+    queryKey: ["dikcok-tips-received", effectiveBandId],
+    queryFn: async () => {
+      if (!effectiveBandId) return 0;
+      const { data: myVideos } = await supabase
+        .from("dikcok_videos")
+        .select("id")
+        .eq("band_id", effectiveBandId);
+      if (!myVideos?.length) return 0;
+      const videoIds = myVideos.map(v => v.id);
+      const { data: tips } = await supabase
+        .from("dikcok_fan_tips")
+        .select("amount")
+        .in("video_id", videoIds);
+      return tips?.reduce((sum, t) => sum + t.amount, 0) || 0;
+    },
+    enabled: !!effectiveBandId,
+  });
+
   if (!profile || bandsLoading) return <div className="container mx-auto p-6 flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
-  // No bands - show call to action
   if (!userBands?.length) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -119,13 +136,13 @@ export default function DikCok() {
       />
 
       {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <Users className="h-8 w-8 text-primary" />
             <div>
               <p className="text-2xl font-bold">{dikCokFollowers.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">DikCok Followers</p>
+              <p className="text-sm text-muted-foreground">Followers</p>
             </div>
           </CardContent>
         </Card>
@@ -143,7 +160,7 @@ export default function DikCok() {
             <Flame className="h-8 w-8 text-orange-500" />
             <div>
               <p className="text-2xl font-bold">{totalHype}</p>
-              <p className="text-sm text-muted-foreground">Hype Generated</p>
+              <p className="text-sm text-muted-foreground">Hype</p>
             </div>
           </CardContent>
         </Card>
@@ -152,7 +169,16 @@ export default function DikCok() {
             <DollarSign className="h-8 w-8 text-yellow-500" />
             <div>
               <p className="text-2xl font-bold">${estimatedRevenue.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">Estimated Revenue</p>
+              <p className="text-sm text-muted-foreground">Revenue</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <DollarSign className="h-8 w-8 text-pink-500" />
+            <div>
+              <p className="text-2xl font-bold">${tipsReceived || 0}</p>
+              <p className="text-sm text-muted-foreground">Tips Received</p>
             </div>
           </CardContent>
         </Card>
@@ -163,7 +189,7 @@ export default function DikCok() {
           <TabsTrigger value="foryou"><Sparkles className="h-4 w-4 mr-1" />For You</TabsTrigger>
           <TabsTrigger value="trending"><TrendingUp className="h-4 w-4 mr-1" />Trending</TabsTrigger>
           <TabsTrigger value="my-videos"><Video className="h-4 w-4 mr-1" />My Videos</TabsTrigger>
-          <TabsTrigger value="challenges"><Music className="h-4 w-4 mr-1" />Challenges</TabsTrigger>
+          <TabsTrigger value="challenges"><Trophy className="h-4 w-4 mr-1" />Challenges</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />Analytics</TabsTrigger>
         </TabsList>
 
@@ -207,17 +233,22 @@ export default function DikCok() {
             )}
         </TabsContent>
 
-        <TabsContent value="challenges">
+        <TabsContent value="challenges" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Active Challenges</CardTitle>
+              <CardTitle>🔥 Active Challenges</CardTitle>
               <CardDescription>Complete challenges to earn bonus hype, fans, and exclusive rewards.</CardDescription>
             </CardHeader>
             <CardContent>
               {challenges && challenges.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {challenges.map((c: any) => (
-                    <DikCokChallengeCard key={c.id} challenge={c} />
+                    <DikCokChallengeCard
+                      key={c.id}
+                      challenge={c}
+                      onEnter={(id) => enterChallenge.mutate({ challengeId: id })}
+                      hasEntered={enteredChallengeIds.has(c.id)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -228,6 +259,31 @@ export default function DikCok() {
               )}
             </CardContent>
           </Card>
+
+          {/* Past Challenges */}
+          {pastChallenges && pastChallenges.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📜 Past Challenges</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pastChallenges.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <div>
+                        <p className="font-medium text-sm">{c.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">{c.theme}</Badge>
+                          {c.sponsor && <Badge variant="secondary" className="text-xs">{c.sponsor}</Badge>}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs text-muted-foreground">Ended</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="analytics">

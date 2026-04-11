@@ -2,20 +2,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Clock, Users, Gift, Sparkles, ChevronRight } from "lucide-react";
+import { Trophy, Clock, Gift, Sparkles, ChevronRight, Users } from "lucide-react";
 import { formatDistanceToNow, isPast, parseISO } from "date-fns";
-import { DikCokChallenge } from "@/types/dikcok";
 
 interface DikCokChallengeCardProps {
-  challenge: DikCokChallenge;
-  onEnter?: () => void;
+  challenge: {
+    id: string;
+    name: string;
+    theme: string;
+    starts_at: string;
+    ends_at: string;
+    requirements: string[];
+    rewards: string[];
+    sponsor?: string | null;
+    cross_game_hook?: string | null;
+  };
+  onEnter?: (challengeId: string) => void;
   hasEntered?: boolean;
+  entryCount?: number;
 }
 
-export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered }: DikCokChallengeCardProps) => {
-  const isExpired = isPast(parseISO(challenge.endsAt));
-  const startsAt = parseISO(challenge.startsAt);
-  const endsAt = parseISO(challenge.endsAt);
+export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered, entryCount }: DikCokChallengeCardProps) => {
+  const isExpired = isPast(parseISO(challenge.ends_at));
+  const startsAt = parseISO(challenge.starts_at);
+  const endsAt = parseISO(challenge.ends_at);
   const now = new Date();
   
   const totalDuration = endsAt.getTime() - startsAt.getTime();
@@ -43,7 +53,6 @@ export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered }: DikCokCh
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Time Progress */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -55,7 +64,13 @@ export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered }: DikCokCh
           <Progress value={progress} className="h-1.5" />
         </div>
 
-        {/* Requirements */}
+        {entryCount !== undefined && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="h-3 w-3" />
+            <span>{entryCount} entries</span>
+          </div>
+        )}
+
         <div className="space-y-2">
           <span className="text-sm font-medium">Requirements</span>
           <ul className="space-y-1">
@@ -68,7 +83,6 @@ export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered }: DikCokCh
           </ul>
         </div>
 
-        {/* Rewards */}
         <div className="space-y-2">
           <span className="text-sm font-medium flex items-center gap-1">
             <Gift className="h-4 w-4 text-green-500" />
@@ -83,17 +97,15 @@ export const DikCokChallengeCard = ({ challenge, onEnter, hasEntered }: DikCokCh
           </div>
         </div>
 
-        {/* Cross-game hook */}
-        {challenge.crossGameHook && (
+        {challenge.cross_game_hook && (
           <p className="text-xs text-purple-400 italic">
-            ✨ {challenge.crossGameHook}
+            ✨ {challenge.cross_game_hook}
           </p>
         )}
 
-        {/* Action Button */}
         {!isExpired && (
           <Button
-            onClick={onEnter}
+            onClick={() => onEnter?.(challenge.id)}
             disabled={hasEntered}
             className="w-full"
             variant={hasEntered ? "secondary" : "default"}
