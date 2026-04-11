@@ -52,6 +52,8 @@ const NightClubDetail = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
+  const gameData = useOptionalGameData();
+  const profileUserId = gameData?.profile?.user_id ?? null;
   const [club, setClub] = useState<CityNightClub | null>(null);
   const [cityName, setCityName] = useState<string>("");
   const [loading, setLoading] = useState(true);
