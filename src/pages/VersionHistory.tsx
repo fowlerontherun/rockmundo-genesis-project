@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.155",
+    date: "2026-04-11",
+    changes: [
+      { type: 'fix', description: "City chat channels now visible on mobile — channel selector uses a compact horizontal scrollable strip showing all channels including cities" },
+      { type: 'improvement', description: "Search filter moved to desktop sidebar only to save vertical space on mobile" },
+    ],
+  },
+  {
     version: "1.1.154",
     date: "2026-04-11",
     changes: [
