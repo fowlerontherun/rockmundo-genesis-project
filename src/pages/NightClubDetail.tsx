@@ -485,7 +485,7 @@ const NightClubDetail = () => {
             />
           </CardContent>
         </Card>
-      )
+      )}
 
       {/* Quests */}
       {!questsLoading && quests.length > 0 && (
