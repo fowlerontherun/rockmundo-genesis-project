@@ -307,17 +307,16 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
   return (
     <Card className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}>
-      <CardHeader className="space-y-2">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <CardTitle className="text-lg font-semibold break-words">{title}</CardTitle>
+      <CardHeader className="space-y-1 p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-semibold break-words">{title}</CardTitle>
           {renderHeaderMeta()}
         </div>
-        <p className="text-xs text-muted-foreground break-words">Channel: {channelKey}</p>
       </CardHeader>
-      <CardContent className="flex min-w-0 flex-1 flex-col gap-4 p-4">
+      <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
         <ScrollArea
           ref={scrollAreaRef}
-          className="flex-1 max-h-64 rounded-md border border-border/50 bg-muted/20 p-3"
+          className="min-h-0 flex-1 rounded-md border border-border/50 bg-muted/20 p-2"
         >
           <div className="space-y-2">
             {messages.map((msg) => (

@@ -70,9 +70,9 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
   const filteredCities = useMemo(() => cityChannels.filter(c => c.label.toLowerCase().includes(lowerFilter)), [cityChannels, lowerFilter]);
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col sm:flex-row gap-4 h-[calc(100vh-20rem)] min-h-[300px] max-h-[600px]">
+    <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col gap-2 sm:flex-row sm:gap-4 h-[calc(100vh-14rem)] min-h-[280px]">
       {/* Channel list - horizontal scroll on mobile, vertical sidebar on desktop */}
-      <div className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card flex flex-col overflow-hidden">
+      <div className="w-full max-w-full sm:w-48 shrink-0 border rounded-lg bg-card flex flex-col overflow-hidden max-h-[120px] sm:max-h-none">
         <div className="p-2 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
