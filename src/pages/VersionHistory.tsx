@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.168",
+    date: "2026-04-12",
+    changes: [
+      { type: 'feature', description: "Added 45 new radio stations covering all missing genres: Soul, Funk, Gospel, Folk, Grunge, Progressive Rock, Celtic, House, Techno, Dubstep, Drum and Bass, Ambient, Industrial + boosted Trance, Bluegrass, Ska" },
+      { type: 'feature', description: "Created radio_hosts NPC table with 50 hosts — existing show hosts plus 17 new genre-specific characters (Grunge Gary, Celtic Claire, DJ Technika, etc.)" },
+      { type: 'feature', description: "Radio show schedule now displays host avatars, catchphrases, and personality info" },
+      { type: 'improvement', description: "Foundation laid for radio host NPC quests: charity work, appearances, and silly radio game segments" },
+    ],
+  },
+  {
     version: "1.1.167",
     date: "2026-04-12",
     changes: [
