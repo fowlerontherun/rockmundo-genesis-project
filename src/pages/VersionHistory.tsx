@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.158",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Fixed persistent band creation error — replaced partial unique index on sponsorship_entities.band_id with full unique constraint so ON CONFLICT inference works correctly, and fixed trigger OLD reference on INSERT" },
+    ],
+  },
+  {
     version: "1.1.157",
     date: "2026-04-11",
     changes: [
