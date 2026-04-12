@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.166",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Backfilled chemistry_contribution and skill_contribution for all band members — values were stuck at 0" },
+    ],
+  },
+  {
     version: "1.1.165",
     date: "2026-04-12",
     changes: [
