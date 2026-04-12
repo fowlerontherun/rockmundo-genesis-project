@@ -137,13 +137,13 @@ export function usePlayerRental() {
 }
 
 export function useBuyProperty() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ housingType, country, marketMultiplier = 1 }: { housingType: HousingType; country: string; marketMultiplier?: number }) => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!profileId || !userId) throw new Error("Not authenticated");
 
       const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
 
@@ -167,7 +167,8 @@ export function useBuyProperty() {
       const { error: insertError } = await supabase
         .from("player_properties")
         .insert({
-          user_id: profileId,
+          user_id: userId,
+          profile_id: profileId,
           housing_type_id: housingType.id,
           country,
           purchase_price: marketPrice,
@@ -187,7 +188,7 @@ export function useBuyProperty() {
 }
 
 export function useStartRental() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -201,7 +202,7 @@ export function useStartRental() {
       country: string;
       weeklyCost: number;
     }) => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!profileId || !userId) throw new Error("Not authenticated");
 
       const { data: existing } = await supabase
         .from("player_rentals")
@@ -226,7 +227,8 @@ export function useStartRental() {
         .eq("id", profileId);
 
       const { error } = await supabase.from("player_rentals").insert({
-        user_id: profileId,
+        user_id: userId,
+        profile_id: profileId,
         rental_type_id: rentalType.id,
         country,
         weekly_cost: weeklyCost,
