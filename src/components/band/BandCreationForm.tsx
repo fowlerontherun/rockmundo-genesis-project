@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
+import logger from '@/lib/logger';
 import { Users, User, MapPin } from 'lucide-react';
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from '@/utils/touringMembers';
 import { MUSIC_GENRES } from '@/data/genres';
@@ -19,8 +20,30 @@ interface BandCreationFormProps {
   onBandCreated?: () => void;
 }
 
+const getErrorContext = (error: unknown) => {
+  if (error && typeof error === 'object') {
+    const candidate = error as {
+      message?: string;
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
+
+    return {
+      message: candidate.message ?? 'Unknown error',
+      code: candidate.code,
+      details: candidate.details,
+      hint: candidate.hint,
+    };
+  }
+
+  return {
+    message: typeof error === 'string' ? error : 'Unknown error',
+  };
+};
+
 export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [creationMode, setCreationMode] = useState<'band' | 'solo'>('band');
@@ -60,10 +83,49 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileId) return;
 
     setLoading(true);
+    let createdBandId: string | null = null;
+
     try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw authError;
+      }
+
+      const authUserId = user?.id ?? userId;
+
+      if (!profileId || !authUserId) {
+        logger.warn('Band creation blocked: missing active profile or auth user', {
+          profileId,
+          userId,
+        });
+
+        toast({
+          title: 'Session issue',
+          description: 'We could not confirm your active character. Please refresh and try again.',
+          variant: 'destructive',
+        });
+
+        return;
+      }
+
+      const isSolo = creationMode === 'solo';
+      const bandName = isSolo ? (artistName || 'Solo Artist') : name;
+
+      logger.info('Starting band creation', {
+        profileId,
+        authUserId,
+        creationMode,
+        bandName,
+        genre,
+        homeCityId: homeCityId || null,
+      });
+
       // Check if this profile is already in an active band
       const { data: existingBands } = await supabase
         .from('band_members')
@@ -84,15 +146,23 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         return;
       }
 
-      // Clean up any orphaned band_member records for this profile
-      await supabase
+      // Clean up any stray non-touring memberships that may have been left behind by old bugs
+      const { error: cleanupError } = await supabase
         .from('band_members')
         .delete()
         .eq('profile_id', profileId)
         .eq('is_touring_member', false);
 
-      const isSolo = creationMode === 'solo';
-      const bandName = isSolo ? (artistName || 'Solo Artist') : name;
+      if (cleanupError) {
+        logger.warn('Band creation cleanup skipped', {
+          profileId,
+          authUserId,
+          code: cleanupError.code,
+          message: cleanupError.message,
+          details: cleanupError.details,
+          hint: cleanupError.hint,
+        });
+      }
 
       const { data: band, error: bandError } = await supabase
         .from('bands')
@@ -110,20 +180,54 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         .select()
         .single();
 
-      if (bandError) throw bandError;
+      if (bandError) {
+        logger.error('Band row creation failed', {
+          profileId,
+          authUserId,
+          bandName,
+          code: bandError.code,
+          message: bandError.message,
+          details: bandError.details,
+          hint: bandError.hint,
+        });
+
+        throw bandError;
+      }
+
+      createdBandId = band.id;
+
+      logger.info('Creating founder membership for band', {
+        createdBandId,
+        profileId,
+        authUserId,
+        instrumentRole,
+        hasVocalRole: vocalRole !== 'None',
+      });
 
       const { error: memberError } = await supabase
         .from('band_members')
         .insert({
           band_id: band.id,
-          user_id: profileId,
+          user_id: authUserId,
           profile_id: profileId,
           role: 'Founder',
           instrument_role: instrumentRole,
           vocal_role: vocalRole === 'None' ? null : vocalRole,
         });
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        logger.error('Founder membership creation failed', {
+          createdBandId,
+          profileId,
+          authUserId,
+          code: memberError.code,
+          message: memberError.message,
+          details: memberError.details,
+          hint: memberError.hint,
+        });
+
+        throw memberError;
+      }
 
       toast({
         title: isSolo ? 'Solo Artist Profile Created!' : 'Band Created!',
@@ -136,10 +240,19 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
         navigate('/band-manager');
       }
     } catch (error: any) {
-      console.error('Error creating band:', error);
+      const errorContext = getErrorContext(error);
+
+      logger.error('Band creation failed', {
+        profileId,
+        userId,
+        createdBandId,
+        creationMode,
+        ...errorContext,
+      });
+
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create band',
+        description: errorContext.message || 'Failed to create band',
         variant: 'destructive',
       });
     } finally {

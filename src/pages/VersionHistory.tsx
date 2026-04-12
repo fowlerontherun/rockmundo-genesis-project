@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.160",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Fixed Fleur's band creation RLS failure — founder membership now writes the authenticated user ID to band_members.user_id instead of the character profile ID" },
+      { type: 'improvement', description: "Added structured band creation diagnostics plus a fresh auth-user fallback so failed creates now log the exact Supabase error payload" },
+    ],
+  },
+  {
     version: "1.1.159",
     date: "2026-04-12",
     changes: [
