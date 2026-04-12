@@ -528,12 +528,12 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
       
     const existing = entryMap.get(key);
     
-    // Use combined_score for combined chart, otherwise use plays_count
+    // Use combined_score for combined chart, otherwise use weekly_plays for ranking
     const entryScore = chartType === "combined" 
       ? (entry.combined_score || 0) 
-      : (entry.plays_count || 0);
+      : (entry.weekly_plays || 0);
     const existingScore = existing 
-      ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.plays_count || 0))
+      ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.weekly_plays || 0))
       : 0;
       
     if (!existing || entryScore > existingScore) {
