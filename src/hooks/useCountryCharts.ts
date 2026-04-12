@@ -477,7 +477,8 @@ export const useCountryCharts = (
           artist: artistName,
           genre: entry.genre || entry.songs?.genre || "Unknown",
           country: entry.country || "Global",
-          plays_count: agg.entry.plays_count || agg.totalPlays,
+          // Ensure all-time (plays_count) is always >= weekly_plays
+          plays_count: Math.max(agg.entry.plays_count || 0, agg.totalWeeklyPlays, agg.totalPlays),
           weekly_plays: agg.totalWeeklyPlays,
           combined_score: agg.totalCombinedScore,
           total_sales: agg.totalPlays,
