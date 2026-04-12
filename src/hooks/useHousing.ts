@@ -313,13 +313,13 @@ export function calculateRentalIncome(purchasePrice: number): number {
 }
 
 export function useSellProperty() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ property, marketMultiplier = 1 }: { property: PlayerProperty; marketMultiplier?: number }) => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!profileId || !userId) throw new Error("Not authenticated");
       const sellPrice = calculateSellPrice(property.purchase_price, marketMultiplier);
 
       const { data: profile, error: profileError } = await supabase
@@ -339,8 +339,11 @@ export function useSellProperty() {
         .from("player_properties")
         .delete()
         .eq("id", property.id)
-        .eq("profile_id", profileId);
-      if (deleteError) throw deleteError;
+        .eq("user_id", userId);
+      if (deleteError) {
+        console.error("[Housing] Sell property failed:", { deleteError, propertyId: property.id, userId });
+        throw deleteError;
+      }
 
       return sellPrice;
     },
