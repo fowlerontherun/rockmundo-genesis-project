@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.164",
+    date: "2026-04-12",
+    changes: [
+      { type: 'feature', description: "Added accept-applications toggle and paid member advertisement system to band settings" },
+      { type: 'feature', description: "Band leaders can post paid ads specifying instrument/vocal roles needed, with in-game currency costs and visibility boosts" },
+    ],
+  },
+  {
     version: "1.1.163",
     date: "2026-04-12",
     changes: [
