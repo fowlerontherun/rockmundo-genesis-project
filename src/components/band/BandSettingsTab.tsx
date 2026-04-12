@@ -186,7 +186,7 @@ export function BandSettingsTab({
     try {
       setLoading(true);
       
-      const durationDays = hiatusDuration ? parseInt(hiatusDuration) : undefined;
+      const durationDays = hiatusDuration && hiatusDuration !== 'indefinite' ? parseInt(hiatusDuration) : undefined;
       
       await putBandOnHiatus({
         bandId,
