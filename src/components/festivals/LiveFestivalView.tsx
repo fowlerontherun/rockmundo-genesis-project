@@ -11,6 +11,7 @@ import { useFestivalTickets } from "@/hooks/useFestivalTickets";
 import { useClaimWatchReward } from "@/hooks/useFestivalWatchRewards";
 import { FestivalVoiceChat } from "./FestivalVoiceChat";
 import { FestivalStageCommentary } from "./FestivalStageCommentary";
+import { FestivalBackstageEvents } from "./FestivalBackstageEvents";
 
 import { toast } from "sonner";
 
@@ -220,10 +221,14 @@ export const LiveFestivalView = ({ festivalId, onBack }: LiveFestivalViewProps) 
           </Card>
         </div>
 
-        {/* Sidebar: voice chat */}
+        {/* Sidebar: voice chat & backstage */}
         <div className="space-y-4">
           {activeStageId && (
             <FestivalVoiceChat festivalId={festivalId} stageId={activeStageId} />
+          )}
+          {/* Backstage RP Events — show if user has a band performing */}
+          {currentSlot?.band_id && (
+            <FestivalBackstageEvents festivalId={festivalId} bandId={currentSlot.band_id} />
           )}
         </div>
       </div>
