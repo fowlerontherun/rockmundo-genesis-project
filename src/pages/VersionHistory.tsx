@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.167",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Charts now rank by weekly sales/plays instead of all-time cumulative — fixes songs with fewer weekly sales appearing above higher performers" },
+      { type: 'fix', description: "All-Time Sales column now guaranteed to be >= This Week value — prevents impossible display where weekly exceeds all-time" },
+    ],
+  },
+  {
     version: "1.1.166",
     date: "2026-04-12",
     changes: [

@@ -477,7 +477,8 @@ export const useCountryCharts = (
           artist: artistName,
           genre: entry.genre || entry.songs?.genre || "Unknown",
           country: entry.country || "Global",
-          plays_count: agg.entry.plays_count || agg.totalPlays,
+          // Ensure all-time (plays_count) is always >= weekly_plays
+          plays_count: Math.max(agg.entry.plays_count || 0, agg.totalWeeklyPlays, agg.totalPlays),
           weekly_plays: agg.totalWeeklyPlays,
           combined_score: agg.totalCombinedScore,
           total_sales: agg.totalPlays,
@@ -494,15 +495,15 @@ export const useCountryCharts = (
       });
 
       // Sort by appropriate metric and assign ranks
+      // All charts should sort by weekly_plays (current period performance)
+      // except combined which uses combined_score
       return aggregatedEntries
         .sort((a, b) => {
           if (chartType === "combined") {
             return b.combined_score - a.combined_score;
           }
-          if (chartType === "streaming") {
-            return b.weekly_plays - a.weekly_plays;
-          }
-          return b.plays_count - a.plays_count;
+          // All chart types (streaming, digital, physical, radio) sort by weekly plays
+          return b.weekly_plays - a.weekly_plays;
         })
         .slice(0, 50)
         .map((entry, index) => ({
@@ -527,12 +528,12 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
       
     const existing = entryMap.get(key);
     
-    // Use combined_score for combined chart, otherwise use plays_count
+    // Use combined_score for combined chart, otherwise use weekly_plays for ranking
     const entryScore = chartType === "combined" 
       ? (entry.combined_score || 0) 
-      : (entry.plays_count || 0);
+      : (entry.weekly_plays || 0);
     const existingScore = existing 
-      ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.plays_count || 0))
+      ? (chartType === "combined" ? (existing.combined_score || 0) : (existing.weekly_plays || 0))
       : 0;
       
     if (!existing || entryScore > existingScore) {
@@ -573,10 +574,10 @@ function transformAndDeduplicateEntries(data: any[], chartType: ChartType, relea
       artist: artistName,
       genre: entry.genre || entry.songs?.genre || "Unknown",
       country: entry.country || "Global",
-      plays_count: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
+      plays_count: Math.max(isDailyEstimate ? Math.round(playsCount / 7) : playsCount, displayWeeklyPlays),
       weekly_plays: displayWeeklyPlays,
       combined_score: displayCombinedScore,
-      total_sales: isDailyEstimate ? Math.round(playsCount / 7) : playsCount,
+      total_sales: Math.max(isDailyEstimate ? Math.round(playsCount / 7) : playsCount, displayWeeklyPlays),
       trend: (entry.trend as "up" | "down" | "stable" | "new") || "stable",
       trend_change: entry.trend_change || 0,
       weeks_on_chart: weeksOnChart,
