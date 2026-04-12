@@ -108,7 +108,7 @@ export function BandSettingsTab({
           band_id: bandId,
           posted_by_profile_id: profileId,
           instrument_role: adInstrument,
-          vocal_role: adVocalRole || null,
+          vocal_role: adVocalRole && adVocalRole !== 'none' ? adVocalRole : null,
           description: adDescription || null,
           budget_spent: adBudget,
           visibility_boost: visibilityBoost,
