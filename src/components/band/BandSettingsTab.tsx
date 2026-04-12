@@ -533,7 +533,7 @@ export function BandSettingsTab({
               <Select value={adVocalRole} onValueChange={setAdVocalRole}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   <SelectItem value="lead">Lead Vocals</SelectItem>
                   <SelectItem value="backing">Backing Vocals</SelectItem>
                 </SelectContent>
@@ -594,7 +594,7 @@ export function BandSettingsTab({
                   <SelectValue placeholder="Indefinite" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Indefinite</SelectItem>
+                  <SelectItem value="indefinite">Indefinite</SelectItem>
                   <SelectItem value="7">1 Week</SelectItem>
                   <SelectItem value="30">1 Month</SelectItem>
                   <SelectItem value="90">3 Months</SelectItem>
