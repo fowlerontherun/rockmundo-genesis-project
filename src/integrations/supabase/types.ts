@@ -26487,7 +26487,7 @@ export type Database = {
           {
             foreignKeyName: "sponsorship_entities_band_id_fkey"
             columns: ["band_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
