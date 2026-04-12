@@ -357,25 +357,29 @@ export function useSellProperty() {
 }
 
 export function useToggleRentOut() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (property: PlayerProperty) => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!profileId || !userId) throw new Error("Not authenticated");
       const newRentedOut = !property.is_rented_out;
       const rentalIncome = newRentedOut ? calculateRentalIncome(property.purchase_price) : 0;
 
-      const { error } = await supabase
+      // Use user_id filter for RLS compatibility, profile_id for character isolation
+      const { error, count } = await supabase
         .from("player_properties")
         .update({
           is_rented_out: newRentedOut,
           rental_income_daily: rentalIncome,
         })
         .eq("id", property.id)
-        .eq("profile_id", profileId);
-      if (error) throw error;
+        .eq("user_id", userId);
+      if (error) {
+        console.error("[Housing] Toggle rent out failed:", { error, propertyId: property.id, userId, profileId });
+        throw error;
+      }
 
       return newRentedOut;
     },
