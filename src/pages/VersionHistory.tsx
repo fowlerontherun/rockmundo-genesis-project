@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.159",
+    date: "2026-04-12",
+    changes: [
+      { type: 'feature', description: "Festival contract negotiation — players can now counter-offer on festival slot offers with payment, merch cut, and perks (backstage, hotel, transport, soundcheck)" },
+      { type: 'feature', description: "Backstage RP events — random encounters backstage (rival bands, media interviews, sponsor deals, equipment crises, celebrity meetings) with choices that affect fame, money, chemistry, and reputation" },
+      { type: 'improvement', description: "Festival slot offers now show negotiation history, premium slot indicators, and streamlined Accept/Negotiate/Decline actions" },
+    ],
+  },
+  {
     version: "1.1.158",
     date: "2026-04-12",
     changes: [

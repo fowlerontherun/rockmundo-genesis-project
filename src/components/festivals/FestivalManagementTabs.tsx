@@ -19,7 +19,9 @@ export const FestivalManagementTabs = ({ bandId }: FestivalManagementTabsProps) 
   return (
     <Tabs defaultValue="offers" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="offers">Slot Offers</TabsTrigger>
+        <TabsTrigger value="offers">
+          Slot Offers
+        </TabsTrigger>
         <TabsTrigger value="applications">
           My Applications
           {pendingApps.length > 0 && (
