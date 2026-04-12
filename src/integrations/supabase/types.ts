@@ -7377,6 +7377,68 @@ export type Database = {
           },
         ]
       }
+      festival_backstage_events: {
+        Row: {
+          band_id: string
+          chemistry_impact: number | null
+          choices: Json
+          chosen_option: number | null
+          created_at: string
+          description: string
+          event_type: string
+          fame_impact: number | null
+          festival_id: string
+          id: string
+          money_impact: number | null
+          outcome_text: string | null
+          reputation_impact: Json | null
+          title: string
+          triggered_by_user_id: string
+        }
+        Insert: {
+          band_id: string
+          chemistry_impact?: number | null
+          choices?: Json
+          chosen_option?: number | null
+          created_at?: string
+          description: string
+          event_type: string
+          fame_impact?: number | null
+          festival_id: string
+          id?: string
+          money_impact?: number | null
+          outcome_text?: string | null
+          reputation_impact?: Json | null
+          title: string
+          triggered_by_user_id: string
+        }
+        Update: {
+          band_id?: string
+          chemistry_impact?: number | null
+          choices?: Json
+          chosen_option?: number | null
+          created_at?: string
+          description?: string
+          event_type?: string
+          fame_impact?: number | null
+          festival_id?: string
+          id?: string
+          money_impact?: number | null
+          outcome_text?: string | null
+          reputation_impact?: Json | null
+          title?: string
+          triggered_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_backstage_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_finances: {
         Row: {
           band_payouts_total: number | null
@@ -7505,6 +7567,71 @@ export type Database = {
             columns: ["performance_id"]
             isOneToOne: false
             referencedRelation: "festival_performance_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_offer_negotiations: {
+        Row: {
+          acceptance_probability: number
+          admin_response_note: string | null
+          band_id: string
+          counter_payment: number
+          created_at: string
+          id: string
+          merch_cut_percent: number
+          negotiated_by_user_id: string
+          offer_id: string
+          request_backstage: boolean
+          request_hotel: boolean
+          request_soundcheck: boolean
+          request_transport: boolean
+          status: string
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          acceptance_probability?: number
+          admin_response_note?: string | null
+          band_id: string
+          counter_payment?: number
+          created_at?: string
+          id?: string
+          merch_cut_percent?: number
+          negotiated_by_user_id: string
+          offer_id: string
+          request_backstage?: boolean
+          request_hotel?: boolean
+          request_soundcheck?: boolean
+          request_transport?: boolean
+          status?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          acceptance_probability?: number
+          admin_response_note?: string | null
+          band_id?: string
+          counter_payment?: number
+          created_at?: string
+          id?: string
+          merch_cut_percent?: number
+          negotiated_by_user_id?: string
+          offer_id?: string
+          request_backstage?: boolean
+          request_hotel?: boolean
+          request_soundcheck?: boolean
+          request_transport?: boolean
+          status?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_offer_negotiations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
