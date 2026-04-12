@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.161",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Fixed housing buy/rent inserting profile_id as user_id — RLS blocked all property purchases and rental sign-ups for players" },
+      { type: 'fix', description: "Properties and rentals now correctly store both auth user_id and profile_id for proper RLS and character-level queries" },
+    ],
+  },
+  {
     version: "1.1.160",
     date: "2026-04-12",
     changes: [
