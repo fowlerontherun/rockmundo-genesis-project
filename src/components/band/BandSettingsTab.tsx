@@ -371,7 +371,32 @@ export function BandSettingsTab({
             </div>
           )}
 
-          {/* Leave Band (Non-leaders only) */}
+          {/* Accept Applications Toggle (Leaders only) */}
+          {isLeader && bandStatus === 'active' && !isSoloArtist && (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Accept Member Requests</p>
+                <p className="text-xs text-muted-foreground">Allow players to send join requests without an invitation</p>
+              </div>
+              <Switch
+                checked={allowApplications}
+                onCheckedChange={async (checked) => {
+                  setAllowApplications(checked);
+                  const { error } = await supabase
+                    .from('bands')
+                    .update({ allow_applications: checked })
+                    .eq('id', bandId);
+                  if (error) {
+                    setAllowApplications(!checked);
+                    toast({ title: 'Error', description: 'Failed to update application setting', variant: 'destructive' });
+                  } else {
+                    toast({ title: checked ? 'Applications Open' : 'Applications Closed', description: checked ? 'Players can now request to join.' : 'Join requests are now closed.' });
+                    onBandUpdate();
+                  }
+                }}
+              />
+            </div>
+          )}
           {!isLeader && bandStatus !== 'disbanded' && (
             <Button
               variant="destructive"
