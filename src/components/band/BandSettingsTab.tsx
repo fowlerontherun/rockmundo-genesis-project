@@ -37,6 +37,7 @@ export function BandSettingsTab({
   bandStatus,
   isSoloArtist,
   isRecruiting: initialRecruiting,
+  allowApplications: initialAllowApps,
   primaryGenre,
   secondaryGenres,
   genreLastChangedAt,
@@ -44,8 +45,10 @@ export function BandSettingsTab({
 }: BandSettingsTabProps) {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
+  const [allowApplications, setAllowApplications] = useState(initialAllowApps ?? true);
   
   // Hiatus dialog state
   const [hiatusDialogOpen, setHiatusDialogOpen] = useState(false);
@@ -60,6 +63,89 @@ export function BandSettingsTab({
   // Disband confirmation
   const [disbandDialogOpen, setDisbandDialogOpen] = useState(false);
   const [disbandConfirmation, setDisbandConfirmation] = useState('');
+
+  // Ad posting state
+  const [adDialogOpen, setAdDialogOpen] = useState(false);
+  const [adInstrument, setAdInstrument] = useState('guitar');
+  const [adVocalRole, setAdVocalRole] = useState('');
+  const [adDescription, setAdDescription] = useState('');
+  const [adBudget, setAdBudget] = useState(500);
+
+  // Fetch existing ads
+  const { data: activeAds = [] } = useQuery({
+    queryKey: ['band-member-ads', bandId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('band_member_ads')
+        .select('*')
+        .eq('band_id', bandId)
+        .eq('status', 'active');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const postAdMutation = useMutation({
+    mutationFn: async () => {
+      if (!profileId) throw new Error('No active profile');
+      
+      // Deduct cost from band balance
+      const { data: band, error: bandErr } = await supabase
+        .from('bands')
+        .select('band_balance')
+        .eq('id', bandId)
+        .single();
+      if (bandErr) throw bandErr;
+      
+      const balance = band?.band_balance ?? 0;
+      if (balance < adBudget) throw new Error(`Insufficient band funds. Need $${adBudget}, have $${balance.toLocaleString()}`);
+
+      const visibilityBoost = adBudget >= 2000 ? 3.0 : adBudget >= 1000 ? 2.0 : adBudget >= 500 ? 1.5 : 1.0;
+
+      const { error: adErr } = await supabase
+        .from('band_member_ads')
+        .insert({
+          band_id: bandId,
+          posted_by_profile_id: profileId,
+          instrument_role: adInstrument,
+          vocal_role: adVocalRole || null,
+          description: adDescription || null,
+          budget_spent: adBudget,
+          visibility_boost: visibilityBoost,
+        });
+      if (adErr) throw adErr;
+
+      const { error: balErr } = await supabase
+        .from('bands')
+        .update({ band_balance: balance - adBudget })
+        .eq('id', bandId);
+      if (balErr) throw balErr;
+    },
+    onSuccess: () => {
+      toast({ title: 'Ad Posted', description: `Spent $${adBudget} to advertise for a new member.` });
+      queryClient.invalidateQueries({ queryKey: ['band-member-ads', bandId] });
+      queryClient.invalidateQueries({ queryKey: ['band', bandId] });
+      setAdDialogOpen(false);
+      setAdDescription('');
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const cancelAdMutation = useMutation({
+    mutationFn: async (adId: string) => {
+      const { error } = await supabase
+        .from('band_member_ads')
+        .update({ status: 'cancelled' })
+        .eq('id', adId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Ad Cancelled' });
+      queryClient.invalidateQueries({ queryKey: ['band-member-ads', bandId] });
+    },
+  });
 
   const handleLeaveBand = async () => {
     if (!profileId) return;
