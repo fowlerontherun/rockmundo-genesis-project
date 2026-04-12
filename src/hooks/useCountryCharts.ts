@@ -494,15 +494,15 @@ export const useCountryCharts = (
       });
 
       // Sort by appropriate metric and assign ranks
+      // All charts should sort by weekly_plays (current period performance)
+      // except combined which uses combined_score
       return aggregatedEntries
         .sort((a, b) => {
           if (chartType === "combined") {
             return b.combined_score - a.combined_score;
           }
-          if (chartType === "streaming") {
-            return b.weekly_plays - a.weekly_plays;
-          }
-          return b.plays_count - a.plays_count;
+          // All chart types (streaming, digital, physical, radio) sort by weekly plays
+          return b.weekly_plays - a.weekly_plays;
         })
         .slice(0, 50)
         .map((entry, index) => ({
