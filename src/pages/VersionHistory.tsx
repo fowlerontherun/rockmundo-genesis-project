@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.165",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Fixed band leader detection — leader_id references profile ID, not auth user ID, so leader-only settings (recruiting, applications, ads) were hidden" },
+    ],
+  },
+  {
     version: "1.1.164",
     date: "2026-04-12",
     changes: [
