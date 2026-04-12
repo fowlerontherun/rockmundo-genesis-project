@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.163",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Removed duplicate bands (Souldrip, Dakine, Shade) caused by retry errors during band creation" },
+    ],
+  },
+  {
     version: "1.1.162",
     date: "2026-04-12",
     changes: [
