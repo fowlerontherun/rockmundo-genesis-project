@@ -108,7 +108,7 @@ export function BandSettingsTab({
           band_id: bandId,
           posted_by_profile_id: profileId,
           instrument_role: adInstrument,
-          vocal_role: adVocalRole || null,
+          vocal_role: adVocalRole && adVocalRole !== 'none' ? adVocalRole : null,
           description: adDescription || null,
           budget_spent: adBudget,
           visibility_boost: visibilityBoost,
@@ -186,7 +186,7 @@ export function BandSettingsTab({
     try {
       setLoading(true);
       
-      const durationDays = hiatusDuration ? parseInt(hiatusDuration) : undefined;
+      const durationDays = hiatusDuration && hiatusDuration !== 'indefinite' ? parseInt(hiatusDuration) : undefined;
       
       await putBandOnHiatus({
         bandId,
@@ -533,7 +533,7 @@ export function BandSettingsTab({
               <Select value={adVocalRole} onValueChange={setAdVocalRole}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   <SelectItem value="lead">Lead Vocals</SelectItem>
                   <SelectItem value="backing">Backing Vocals</SelectItem>
                 </SelectContent>
@@ -594,7 +594,7 @@ export function BandSettingsTab({
                   <SelectValue placeholder="Indefinite" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Indefinite</SelectItem>
+                  <SelectItem value="indefinite">Indefinite</SelectItem>
                   <SelectItem value="7">1 Week</SelectItem>
                   <SelectItem value="30">1 Month</SelectItem>
                   <SelectItem value="90">3 Months</SelectItem>
