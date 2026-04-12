@@ -404,6 +404,7 @@ export default function BandManager() {
             bandStatus={selectedBand.status}
             isSoloArtist={selectedBand.is_solo_artist}
             isRecruiting={selectedBand.is_recruiting}
+            allowApplications={selectedBand.allow_applications ?? true}
             primaryGenre={selectedBand.primary_genre}
             secondaryGenres={selectedBand.secondary_genres}
             genreLastChangedAt={selectedBand.genre_last_changed_at}
