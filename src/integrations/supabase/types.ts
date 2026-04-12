@@ -21821,6 +21821,53 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_hosts: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          catchphrase: string | null
+          city_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          personality_traits: Json | null
+          speciality_genres: string[] | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          catchphrase?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          personality_traits?: Json | null
+          speciality_genres?: string[] | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          catchphrase?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          personality_traits?: Json | null
+          speciality_genres?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_hosts_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radio_invitations: {
         Row: {
           band_id: string
@@ -22063,6 +22110,7 @@ export type Database = {
           created_at: string | null
           day_of_week: number | null
           description: string | null
+          host_id: string | null
           host_name: string
           id: string
           is_active: boolean | null
@@ -22077,6 +22125,7 @@ export type Database = {
           created_at?: string | null
           day_of_week?: number | null
           description?: string | null
+          host_id?: string | null
           host_name: string
           id?: string
           is_active?: boolean | null
@@ -22091,6 +22140,7 @@ export type Database = {
           created_at?: string | null
           day_of_week?: number | null
           description?: string | null
+          host_id?: string | null
           host_name?: string
           id?: string
           is_active?: boolean | null
@@ -22102,6 +22152,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "radio_shows_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "radio_hosts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "radio_shows_station_id_fkey"
             columns: ["station_id"]
