@@ -1920,6 +1920,70 @@ export type Database = {
           },
         ]
       }
+      band_member_ads: {
+        Row: {
+          band_id: string
+          budget_spent: number
+          created_at: string
+          description: string | null
+          expires_at: string
+          id: string
+          instrument_role: string
+          posted_by_profile_id: string
+          status: string
+          visibility_boost: number
+          vocal_role: string | null
+        }
+        Insert: {
+          band_id: string
+          budget_spent?: number
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          id?: string
+          instrument_role: string
+          posted_by_profile_id: string
+          status?: string
+          visibility_boost?: number
+          vocal_role?: string | null
+        }
+        Update: {
+          band_id?: string
+          budget_spent?: number
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          id?: string
+          instrument_role?: string
+          posted_by_profile_id?: string
+          status?: string
+          visibility_boost?: number
+          vocal_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_member_ads_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_member_ads_posted_by_profile_id_fkey"
+            columns: ["posted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_member_ads_posted_by_profile_id_fkey"
+            columns: ["posted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_members: {
         Row: {
           band_id: string

@@ -6,11 +6,13 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, LogOut, Users, Ban, AlertTriangle } from 'lucide-react';
+import { Settings, LogOut, Users, Ban, AlertTriangle, Megaphone, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveBand, transferLeadership, disbandBand, getEligibleLeaders } from '@/utils/bandMembers';
 import { putBandOnHiatus, reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
@@ -22,6 +24,7 @@ interface BandSettingsTabProps {
   bandStatus: string;
   isSoloArtist: boolean;
   isRecruiting?: boolean;
+  allowApplications?: boolean;
   primaryGenre?: string | null;
   secondaryGenres?: string[] | null;
   genreLastChangedAt?: string | null;
@@ -34,6 +37,7 @@ export function BandSettingsTab({
   bandStatus,
   isSoloArtist,
   isRecruiting: initialRecruiting,
+  allowApplications: initialAllowApps,
   primaryGenre,
   secondaryGenres,
   genreLastChangedAt,
@@ -41,8 +45,10 @@ export function BandSettingsTab({
 }: BandSettingsTabProps) {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
+  const [allowApplications, setAllowApplications] = useState(initialAllowApps ?? true);
   
   // Hiatus dialog state
   const [hiatusDialogOpen, setHiatusDialogOpen] = useState(false);
@@ -57,6 +63,89 @@ export function BandSettingsTab({
   // Disband confirmation
   const [disbandDialogOpen, setDisbandDialogOpen] = useState(false);
   const [disbandConfirmation, setDisbandConfirmation] = useState('');
+
+  // Ad posting state
+  const [adDialogOpen, setAdDialogOpen] = useState(false);
+  const [adInstrument, setAdInstrument] = useState('guitar');
+  const [adVocalRole, setAdVocalRole] = useState('');
+  const [adDescription, setAdDescription] = useState('');
+  const [adBudget, setAdBudget] = useState(500);
+
+  // Fetch existing ads
+  const { data: activeAds = [] } = useQuery({
+    queryKey: ['band-member-ads', bandId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('band_member_ads')
+        .select('*')
+        .eq('band_id', bandId)
+        .eq('status', 'active');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const postAdMutation = useMutation({
+    mutationFn: async () => {
+      if (!profileId) throw new Error('No active profile');
+      
+      // Deduct cost from band balance
+      const { data: band, error: bandErr } = await supabase
+        .from('bands')
+        .select('band_balance')
+        .eq('id', bandId)
+        .single();
+      if (bandErr) throw bandErr;
+      
+      const balance = band?.band_balance ?? 0;
+      if (balance < adBudget) throw new Error(`Insufficient band funds. Need $${adBudget}, have $${balance.toLocaleString()}`);
+
+      const visibilityBoost = adBudget >= 2000 ? 3.0 : adBudget >= 1000 ? 2.0 : adBudget >= 500 ? 1.5 : 1.0;
+
+      const { error: adErr } = await supabase
+        .from('band_member_ads')
+        .insert({
+          band_id: bandId,
+          posted_by_profile_id: profileId,
+          instrument_role: adInstrument,
+          vocal_role: adVocalRole || null,
+          description: adDescription || null,
+          budget_spent: adBudget,
+          visibility_boost: visibilityBoost,
+        });
+      if (adErr) throw adErr;
+
+      const { error: balErr } = await supabase
+        .from('bands')
+        .update({ band_balance: balance - adBudget })
+        .eq('id', bandId);
+      if (balErr) throw balErr;
+    },
+    onSuccess: () => {
+      toast({ title: 'Ad Posted', description: `Spent $${adBudget} to advertise for a new member.` });
+      queryClient.invalidateQueries({ queryKey: ['band-member-ads', bandId] });
+      queryClient.invalidateQueries({ queryKey: ['band', bandId] });
+      setAdDialogOpen(false);
+      setAdDescription('');
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const cancelAdMutation = useMutation({
+    mutationFn: async (adId: string) => {
+      const { error } = await supabase
+        .from('band_member_ads')
+        .update({ status: 'cancelled' })
+        .eq('id', adId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Ad Cancelled' });
+      queryClient.invalidateQueries({ queryKey: ['band-member-ads', bandId] });
+    },
+  });
 
   const handleLeaveBand = async () => {
     if (!profileId) return;
@@ -282,7 +371,32 @@ export function BandSettingsTab({
             </div>
           )}
 
-          {/* Leave Band (Non-leaders only) */}
+          {/* Accept Applications Toggle (Leaders only) */}
+          {isLeader && bandStatus === 'active' && !isSoloArtist && (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Accept Member Requests</p>
+                <p className="text-xs text-muted-foreground">Allow players to send join requests without an invitation</p>
+              </div>
+              <Switch
+                checked={allowApplications}
+                onCheckedChange={async (checked) => {
+                  setAllowApplications(checked);
+                  const { error } = await supabase
+                    .from('bands')
+                    .update({ allow_applications: checked })
+                    .eq('id', bandId);
+                  if (error) {
+                    setAllowApplications(!checked);
+                    toast({ title: 'Error', description: 'Failed to update application setting', variant: 'destructive' });
+                  } else {
+                    toast({ title: checked ? 'Applications Open' : 'Applications Closed', description: checked ? 'Players can now request to join.' : 'Join requests are now closed.' });
+                    onBandUpdate();
+                  }
+                }}
+              />
+            </div>
+          )}
           {!isLeader && bandStatus !== 'disbanded' && (
             <Button
               variant="destructive"
@@ -348,7 +462,112 @@ export function BandSettingsTab({
         </CardContent>
       </Card>
 
-      {/* Hiatus Dialog */}
+      {/* Member Recruitment Ads */}
+      {isLeader && bandStatus === 'active' && !isSoloArtist && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              <CardTitle>Member Advertisements</CardTitle>
+            </div>
+            <CardDescription>Pay in-game money to advertise for specific roles. Higher budgets get more visibility.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeAds.length > 0 && (
+              <div className="space-y-2">
+                {activeAds.map((ad: any) => (
+                  <div key={ad.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium capitalize">{ad.instrument_role}{ad.vocal_role ? ` · ${ad.vocal_role}` : ''}</p>
+                      <p className="text-xs text-muted-foreground">
+                        ${ad.budget_spent} spent · {ad.visibility_boost}x boost · expires {new Date(ad.expires_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => cancelAdMutation.mutate(ad.id)}
+                      disabled={cancelAdMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button className="w-full" onClick={() => setAdDialogOpen(true)}>
+              <DollarSign className="mr-2 h-4 w-4" />
+              Post Recruitment Ad
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Post Ad Dialog */}
+      <Dialog open={adDialogOpen} onOpenChange={setAdDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Post a Recruitment Ad</DialogTitle>
+            <DialogDescription>
+              Spend band funds to advertise for a new member. Higher budgets increase visibility in the Band Finder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Instrument Role</Label>
+              <Select value={adInstrument} onValueChange={setAdInstrument}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="guitar">Guitar</SelectItem>
+                  <SelectItem value="bass">Bass</SelectItem>
+                  <SelectItem value="drums">Drums</SelectItem>
+                  <SelectItem value="keyboards">Keyboards</SelectItem>
+                  <SelectItem value="vocals">Vocals</SelectItem>
+                  <SelectItem value="dj">DJ</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Vocal Role (optional)</Label>
+              <Select value={adVocalRole} onValueChange={setAdVocalRole}>
+                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="lead">Lead Vocals</SelectItem>
+                  <SelectItem value="backing">Backing Vocals</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Describe what you're looking for..."
+                value={adDescription}
+                onChange={(e) => setAdDescription(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Budget</Label>
+              <Select value={String(adBudget)} onValueChange={(v) => setAdBudget(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="250">$250 — Standard (1x visibility)</SelectItem>
+                  <SelectItem value="500">$500 — Boosted (1.5x visibility)</SelectItem>
+                  <SelectItem value="1000">$1,000 — Featured (2x visibility)</SelectItem>
+                  <SelectItem value="2000">$2,000 — Premium (3x visibility)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => postAdMutation.mutate()} disabled={postAdMutation.isPending}>
+              {postAdMutation.isPending ? 'Posting...' : `Post Ad — $${adBudget}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={hiatusDialogOpen} onOpenChange={setHiatusDialogOpen}>
         <DialogContent>
           <DialogHeader>
