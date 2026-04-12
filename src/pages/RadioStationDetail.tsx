@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Radio, MapPin, Music, Users, Clock, Star } from "lucide-react";
 import { useState } from "react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
@@ -36,7 +37,7 @@ const RadioStationDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("radio_shows")
-        .select("*")
+        .select("*, host:radio_hosts(id, name, avatar_url, catchphrase, speciality_genres)")
         .eq("station_id", stationId)
         .order("time_slot");
 
@@ -162,18 +163,29 @@ const RadioStationDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {shows.map((show) => (
+              {shows.map((show: any) => (
                 <div
                   key={show.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-accent/50"
+                  className="flex items-center gap-3 p-4 rounded-lg bg-accent/50"
                 >
-                  <div>
+                  <Avatar className="h-10 w-10 shrink-0">
+                    {show.host?.avatar_url ? (
+                      <AvatarImage src={show.host.avatar_url} alt={show.host_name} />
+                    ) : null}
+                    <AvatarFallback className="text-xs">
+                      {show.host_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium">{show.show_name}</p>
                     <p className="text-sm text-muted-foreground">
                       Host: {show.host_name}
+                      {show.host?.catchphrase && (
+                        <span className="italic ml-1">— "{show.host.catchphrase}"</span>
+                      )}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-sm font-medium">{show.time_slot}</p>
                     {show.show_genres && show.show_genres.length > 0 && (
                       <Badge variant="outline" className="mt-1">
