@@ -188,7 +188,7 @@ export function useBuyProperty() {
 }
 
 export function useStartRental() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -202,7 +202,7 @@ export function useStartRental() {
       country: string;
       weeklyCost: number;
     }) => {
-      if (!profileId) throw new Error("Not authenticated");
+      if (!profileId || !userId) throw new Error("Not authenticated");
 
       const { data: existing } = await supabase
         .from("player_rentals")
@@ -227,7 +227,8 @@ export function useStartRental() {
         .eq("id", profileId);
 
       const { error } = await supabase.from("player_rentals").insert({
-        user_id: profileId,
+        user_id: userId,
+        profile_id: profileId,
         rental_type_id: rentalType.id,
         country,
         weekly_cost: weeklyCost,
