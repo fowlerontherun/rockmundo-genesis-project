@@ -1,62 +1,77 @@
 
 
-## DikCok Weekly Challenges + Fan Tips (v1.1.153)
+# Plan: Full Genre Coverage for Radio + Host Avatars + NPC Foundation
 
-### Current State
-- `dikcok_challenges` table exists with name, theme, requirements, rewards, sponsor, dates -- but has **0 rows** (seed data expired or was never inserted)
-- `dikcok_challenge_entries` table exists (challenge_id, video_id, band_id, score) -- 0 entries
-- Challenge cards render with progress bars, requirements, rewards, and an "Enter Challenge" button -- but the button has no mutation wired up
-- No fan tipping system exists anywhere in the codebase
-- No recurring/weekly challenge rotation logic
+## Problem Summary
 
-### Plan
+**Genre gaps**: 13 genres have ZERO radio stations: Soul, Grunge, Gospel, Drum and Bass, House, Dubstep, Techno, Folk, Industrial, Ambient, Progressive Rock, Celtic, Funk. Several others (Bluegrass, Ska, Trance) have only 1 station each.
 
-#### 1. Weekly Challenge Rotation System
-- Add `week_number` (integer) and `recurring` (boolean) columns to `dikcok_challenges`
-- Create a DB function `rotate_weekly_challenges()` that:
-  - Deactivates expired challenges
-  - Generates a new weekly challenge from a template pool (theme + requirements + rewards randomly composed)
-- Seed **10+ challenge templates** covering themes like "Acoustic Unplugged", "Cover Battle", "Behind the Scenes", "Fan Duet", "Genre Mashup"
-- Call rotation on page load if no active challenges exist (client-side fallback)
+**No host avatars**: The `radio_shows` table has no `host_avatar_url` column. 34 unique hosts exist across 890 shows but none have images.
 
-#### 2. Challenge Entry Flow (Wire Up the Button)
-- Update `DikCokChallengeCard` to accept an `onEnter` mutation that inserts into `dikcok_challenge_entries`
-- Track which challenges the player has entered (query entries by band_id)
-- When entering, optionally link an existing video or prompt to create a new one tagged with the challenge
-- Show entry count and leaderboard (top scores) on each challenge card
+**No NPC link**: Hosts are just text names on shows with no NPC entity to support future quests.
 
-#### 3. Challenge Rewards Distribution
-- When a challenge ends, calculate winners by score (views + hype + fan gain weighted)
-- Award rewards: cash bonus to band balance, fame boost, and exclusive badge text stored on the entry
-- Show "Past Challenges" section with winners
+## Plan
 
-#### 4. Fan Tips System (Economy Sink)
-- Create `dikcok_fan_tips` table: `id`, `video_id`, `tipper_profile_id`, `amount` (integer, in-game cash), `message` (optional text), `created_at`
-- RLS: anyone authenticated can insert (spending their own cash); video creator can read tips on their videos
-- Add a "Tip" button on `DikCokVideoCard` with a quick-amount picker ($5, $10, $25, $50, custom)
-- Deduct from player's `cash` balance, credit to the video's band balance
-- Show tip total and recent tippers on each video card
-- Display "Top Tippers" leaderboard in the Analytics tab
+### 1. Add missing-genre radio stations via migration
 
-#### 5. UI Updates
-- Add a "Tips" stat card to the DikCok stats overview (next to Views, Hype, Revenue)
-- Challenge tab: show active + recently ended challenges with winner highlights
-- Version bump to 1.1.153
+Insert ~30-40 new radio stations ensuring every genre from the 52-genre list has at least 3-5 stations. Group them thematically:
+- **Soul/Funk/Gospel** stations (e.g., "Soul City FM", "Funk Nation Radio", "Gospel Hour")
+- **Electronic sub-genres** (House, Techno, Dubstep, Drum and Bass, Trance, Ambient, Industrial)
+- **Rock sub-genres** (Grunge, Progressive Rock)
+- **Folk/Celtic/Bluegrass/Ska** stations
+- Each station gets appropriate city, quality level, listener base, and frequency
 
-### Files to Create
-- `supabase/migrations/xxx_weekly_challenges_tips.sql` -- schema changes + seed templates
-- `src/hooks/useDikCokTips.ts` -- tip sending/receiving hooks
-- `src/components/dikcok/DikCokTipButton.tsx` -- tip UI component
+### 2. Create `radio_hosts` table
 
-### Files to Modify
-- `src/hooks/useDikCokChallenges.ts` -- add entry mutation, rotation check
-- `src/components/dikcok/DikCokChallengeCard.tsx` -- wire enter button, show leaderboard
-- `src/components/dikcok/DikCokVideoCard.tsx` -- add tip button + tip total display
-- `src/pages/DikCok.tsx` -- add tips stat card, past challenges section
-- `src/components/VersionHeader.tsx` -- bump to 1.1.153
-- `src/pages/VersionHistory.tsx` -- document changes
+New table to store host NPCs with:
+- `id`, `name`, `bio`, `avatar_url`, `personality_traits` (jsonb), `speciality_genres` (text[]), `city_id`, `is_active`, `created_at`
 
-### Economy Impact
-- Fan tips act as a **cash sink** (players spend cash to tip) and **redistribution mechanism** (cash flows to successful creators)
-- Challenge rewards inject controlled cash/fame bonuses weekly, incentivizing regular content creation
+Add `host_id` column to `radio_shows` referencing `radio_hosts`, keeping `host_name` as fallback.
+
+RLS: public read, admin write.
+
+### 3. Seed radio hosts from existing show data
+
+Deduplicate the 34 existing host names into `radio_hosts` records, then backfill `radio_shows.host_id`. Add ~15 new hosts for the new genre stations with distinct personalities (e.g., "Grunge Gary", "DJ Technika", "Celtic Claire").
+
+### 4. Generate AI avatars for all hosts
+
+Use the Lovable AI gateway (same style prompt as player avatars) to generate cartoon game-style portraits for each host. Script will:
+- Use `google/gemini-2.5-flash-image` with a text-only prompt (no source photo -- pure generation)
+- Same art style as player avatars: bold outlines, cel-shading, vibrant colors, game character look
+- Each host gets a genre-appropriate outfit from the existing `GENRE_OUTFIT_MAP`
+- Upload to Supabase storage bucket, update `radio_hosts.avatar_url`
+
+This will be a batch script run via `code--exec` generating ~50 images.
+
+### 5. Update UI to show host avatars
+
+- `RadioStationDetail.tsx`: Show host avatar next to host name in the show schedule
+- Join `radio_hosts` in the show query to get `avatar_url`
+
+### 6. Version bump
+
+Update to v1.1.168 with changelog entry.
+
+## Technical Details
+
+**New table schema:**
+```sql
+CREATE TABLE radio_hosts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR NOT NULL,
+  bio TEXT,
+  avatar_url TEXT,
+  personality_traits JSONB DEFAULT '{}',
+  speciality_genres TEXT[] DEFAULT '{}',
+  city_id UUID REFERENCES cities(id),
+  catchphrase TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**New stations** will cover all 13 zero-coverage genres plus boost the 3 near-zero genres, spread across diverse cities globally.
+
+**Avatar generation** will produce ~50 images using the same cartoon style prompt as player avatars but without a source photo (text-to-image generation).
 
