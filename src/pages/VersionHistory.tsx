@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.162",
+    date: "2026-04-12",
+    changes: [
+      { type: 'fix', description: "Fixed renting out owned properties and selling — update/delete queries now use auth user_id for RLS compatibility instead of profile_id" },
+      { type: 'improvement', description: "Added error logging to housing toggle and sell mutations for easier debugging" },
+    ],
+  },
+  {
     version: "1.1.161",
     date: "2026-04-12",
     changes: [
