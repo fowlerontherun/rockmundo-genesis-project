@@ -24,6 +24,7 @@ interface BandSettingsTabProps {
   bandStatus: string;
   isSoloArtist: boolean;
   isRecruiting?: boolean;
+  allowApplications?: boolean;
   primaryGenre?: string | null;
   secondaryGenres?: string[] | null;
   genreLastChangedAt?: string | null;
