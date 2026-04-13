@@ -14,6 +14,27 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.170",
+    date: "2026-04-13",
+    changes: [
+      { type: 'fix', description: "Labels: Fixed release revenue/units showing as 0 — Roster and Releases tabs now read from actual releases table instead of empty label_releases table" },
+      { type: 'feature', description: "Labels: Roster tab now shows gross revenue, label revenue from financial transactions, and real unit sales for each signed artist" },
+      { type: 'feature', description: "Labels: Release cards now show sales breakdown (Digital, CD, Vinyl, Cassette), hype score, label revenue share %, and best chart position" },
+      { type: 'feature', description: "Labels: Added chart performance tracking — peak chart positions displayed on artist cards and individual releases" },
+      { type: 'improvement', description: "Labels: Revenue now correctly displayed in dollars (converted from cents) across all label management views" },
+    ],
+  },
+  {
+    version: "1.1.169",
+    date: "2026-04-12",
+    changes: [
+      { type: 'feature', description: "Vehicles: Added 14 new cars and motorbikes including Ford Mustang GT, Tesla Model 3, Ferrari F8, BMW S1000RR, and more" },
+      { type: 'feature', description: "Vehicles: New Boats & Yachts category with 8 vessels from Jet Skis ($12K) to Megayachts ($18M), speed shown in knots" },
+      { type: 'feature', description: "All 50 radio host AI avatar portraits generated and uploaded" },
+      { type: 'fix', description: "Fixed band member acceptance RLS violation — auth UID now correctly used for user_id instead of profile ID" },
+    ],
+  },
+  {
     version: "1.1.168",
     date: "2026-04-12",
     changes: [
