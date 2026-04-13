@@ -22,6 +22,7 @@ const versionHistory: VersionEntry[] = [
     ],
   },
   {
+    version: "1.1.170",
     date: "2026-04-13",
     changes: [
       { type: 'fix', description: "Labels: Fixed release revenue/units showing as 0 — Roster and Releases tabs now read from actual releases table instead of empty label_releases table" },
