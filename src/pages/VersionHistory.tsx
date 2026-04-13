@@ -14,7 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.170",
+    version: "1.1.171",
+    date: "2026-04-13",
+    changes: [
+      { type: 'fix', description: "Labels: Fixed staff hiring error — skill_level now correctly uses 1-5 scale instead of 30-70 which violated database constraint" },
+      { type: 'fix', description: "Labels: Staff skill display now shows '/5' scale for clarity" },
+    ],
+  },
+  {
     date: "2026-04-13",
     changes: [
       { type: 'fix', description: "Labels: Fixed release revenue/units showing as 0 — Roster and Releases tabs now read from actual releases table instead of empty label_releases table" },
