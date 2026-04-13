@@ -92,7 +92,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
         .eq("id", labelId);
       if (updateError) throw new Error("Failed to deduct hiring cost");
 
-      const skillLevel = 30 + Math.floor(Math.random() * 40);
+      const skillLevel = 1 + Math.floor(Math.random() * 3); // 1-3 range (max 5), constraint requires 1-5
 
       const { error } = await supabase
         .from("label_staff")
@@ -253,7 +253,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
                     <div className="text-right text-sm">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-500" />
-                        <span>Skill: {member.skill_level}</span>
+                        <span>Skill: {member.skill_level}/5</span>
                       </div>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <DollarSign className="h-3 w-3" />
