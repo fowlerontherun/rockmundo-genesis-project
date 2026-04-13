@@ -2759,6 +2759,7 @@ export type Database = {
           total_fans: number | null
           updated_at: string | null
           weekly_fans: number | null
+          weekly_member_pay: number
         }
         Insert: {
           allow_applications?: boolean | null
@@ -2817,6 +2818,7 @@ export type Database = {
           total_fans?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
+          weekly_member_pay?: number
         }
         Update: {
           allow_applications?: boolean | null
@@ -2875,6 +2877,7 @@ export type Database = {
           total_fans?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
+          weekly_member_pay?: number
         }
         Relationships: [
           {
