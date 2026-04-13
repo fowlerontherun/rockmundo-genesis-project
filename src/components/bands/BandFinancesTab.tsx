@@ -8,7 +8,14 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DollarSign, TrendingUp, PiggyBank, Receipt } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DollarSign, TrendingUp, PiggyBank, Receipt, ArrowUpRight, ArrowDownRight,
+  Music, Mic, ShoppingBag, Radio, Settings, Users, Calendar,
+} from "lucide-react";
 
 interface BandFinancesTabProps {
   bandId: string;
@@ -16,13 +23,6 @@ interface BandFinancesTabProps {
 
 type BandRow = Database["public"]["Tables"]["bands"]["Row"];
 type BandEarningRow = Database["public"]["Tables"]["band_earnings"]["Row"];
-
-type AggregatedFinancials = {
-  balance: number;
-  monthlyRunway: number;
-  averageDeposit: number;
-  recentActivity: BandEarningRow[];
-};
 
 const sourceLabels: Record<string, string> = {
   gig: "Gig payout",
@@ -39,12 +39,23 @@ const sourceLabels: Record<string, string> = {
   leader_withdrawal: "Leader withdrawal",
   recording: "Recording session",
   major_event: "Major event performance",
+  weekly_pay: "Weekly member pay",
+};
+
+const sourceIcons: Record<string, React.ReactNode> = {
+  gig: <Mic className="h-3.5 w-3.5" />,
+  streaming: <Radio className="h-3.5 w-3.5" />,
+  release_sales: <Music className="h-3.5 w-3.5" />,
+  merch: <ShoppingBag className="h-3.5 w-3.5" />,
+  rehearsal: <Calendar className="h-3.5 w-3.5" />,
+  recording: <Music className="h-3.5 w-3.5" />,
+  weekly_pay: <Users className="h-3.5 w-3.5" />,
 };
 
 function getSourceLabel(source: string) {
   return sourceLabels[source] ?? source
     .split("_")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(" ");
 }
 
@@ -65,10 +76,15 @@ function formatDateTime(value: string) {
 }
 
 export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [band, setBand] = useState<BandRow | null>(null);
   const [earnings, setEarnings] = useState<BandEarningRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLeader, setIsLeader] = useState(false);
+  const [weeklyPay, setWeeklyPay] = useState(0);
+  const [savingPay, setSavingPay] = useState(false);
+  const [memberCount, setMemberCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,18 +93,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setLoading(true);
       setError(null);
       try {
-        const [{ data: bandData, error: bandError }, { data: earningData, error: earningError }] = await Promise.all([
-          supabase
-            .from("bands")
-            .select("*")
-            .eq("id", bandId)
-            .single(),
-          supabase
-            .from("band_earnings")
-            .select("*")
-            .eq("band_id", bandId)
-            .order("created_at", { ascending: false })
-            .limit(20),
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const [{ data: bandData, error: bandError }, { data: earningData, error: earningError }, { data: membersData }] = await Promise.all([
+          supabase.from("bands").select("*").eq("id", bandId).single(),
+          supabase.from("band_earnings").select("*").eq("band_id", bandId).order("created_at", { ascending: false }).limit(50),
+          supabase.from("band_members").select("id, is_touring_member, user_id").eq("band_id", bandId),
         ]);
 
         if (bandError) throw bandError;
@@ -96,8 +106,13 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
         if (!isMounted) return;
 
-        setBand((bandData as BandRow) ?? null);
+        const b = bandData as BandRow;
+        setBand(b);
         setEarnings((earningData as BandEarningRow[]) ?? []);
+        setWeeklyPay((b as any).weekly_member_pay ?? 0);
+        setIsLeader(user?.id === b.leader_id);
+        const realMembers = (membersData ?? []).filter(m => !m.is_touring_member);
+        setMemberCount(realMembers.length);
       } catch (caught) {
         console.error("Failed to load band finances", caught);
         if (isMounted) {
@@ -106,66 +121,68 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           setError("We were unable to load the financial data for this band.");
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     void fetchFinances();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [bandId]);
 
-  const aggregated = useMemo<AggregatedFinancials>(() => {
+  const aggregated = useMemo(() => {
     const balance = band?.band_balance ?? 0;
-
     if (earnings.length === 0) {
-      return {
-        balance,
-        monthlyRunway: 0,
-        averageDeposit: 0,
-        recentActivity: [],
-      };
+      return { balance, totalIncome: 0, totalExpenses: 0, averageDeposit: 0, monthlyRunway: 0, recentActivity: [], bySource: {} as Record<string, number> };
     }
 
-    const deposits = earnings.filter((earning) => earning.amount > 0);
-    const expenses = earnings.filter((earning) => earning.amount < 0);
+    const deposits = earnings.filter(e => e.amount > 0);
+    const expenses = earnings.filter(e => e.amount < 0);
 
-    const averageDeposit = deposits.length
-      ? Math.round(deposits.reduce((sum, earning) => sum + earning.amount, 0) / deposits.length)
-      : 0;
+    const totalIncome = deposits.reduce((s, e) => s + e.amount, 0);
+    const totalExpenses = Math.abs(expenses.reduce((s, e) => s + e.amount, 0));
 
-    const averageExpense = expenses.length
-      ? Math.abs(expenses.reduce((sum, earning) => sum + earning.amount, 0)) / expenses.length
-      : 0;
-
+    const averageDeposit = deposits.length ? Math.round(totalIncome / deposits.length) : 0;
+    const averageExpense = expenses.length ? totalExpenses / expenses.length : 0;
     const monthlyRunway = averageExpense > 0 ? Math.max(0, Math.round(balance / averageExpense)) : Math.max(0, balance);
 
-    return {
-      balance,
-      monthlyRunway,
-      averageDeposit,
-      recentActivity: earnings,
-    };
+    const bySource: Record<string, number> = {};
+    for (const e of earnings) {
+      const key = e.source;
+      bySource[key] = (bySource[key] ?? 0) + e.amount;
+    }
+
+    return { balance, totalIncome, totalExpenses, averageDeposit, monthlyRunway, recentActivity: earnings, bySource };
   }, [band, earnings]);
+
+  const topSources = useMemo(() => {
+    return Object.entries(aggregated.bySource)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+  }, [aggregated.bySource]);
+
+  const handleSaveWeeklyPay = async () => {
+    setSavingPay(true);
+    try {
+      const { error } = await supabase
+        .from("bands")
+        .update({ weekly_member_pay: weeklyPay } as any)
+        .eq("id", bandId);
+      if (error) throw error;
+      toast({ title: "Weekly Pay Updated", description: `Each member will receive ${formatCurrency(weeklyPay)} every Monday.` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingPay(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        {[...Array(2)].map((_, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <Skeleton className="h-6 w-1/3" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[...Array(4)].map((__, rowIndex) => (
-                <Skeleton key={rowIndex} className="h-4 w-full" />
-              ))}
-            </CardContent>
+      <div className="space-y-4">
+        {[...Array(2)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader><Skeleton className="h-6 w-1/3" /><Skeleton className="h-4 w-1/2" /></CardHeader>
+            <CardContent className="space-y-3">{[...Array(4)].map((__, j) => <Skeleton key={j} className="h-4 w-full" />)}</CardContent>
           </Card>
         ))}
       </div>
@@ -173,117 +190,191 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   }
 
   if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Unable to load band finances</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
+    return <Alert variant="destructive"><AlertTitle>Unable to load band finances</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
   }
 
-  if (!band) {
-    return <p className="text-sm text-muted-foreground">Band not found.</p>;
-  }
+  if (!band) return <p className="text-sm text-muted-foreground">Band not found.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* Key metrics */}
+      <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
         <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <PiggyBank className="h-4 w-4 text-muted-foreground" /> Current balance
-            </CardTitle>
-            <CardDescription>The cash reserves available for the band</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{formatCurrency(aggregated.balance)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" /> Average deposit
-            </CardTitle>
-            <CardDescription>Average positive transaction over the last entries</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{formatCurrency(aggregated.averageDeposit)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Receipt className="h-4 w-4 text-muted-foreground" /> Monthly runway
-            </CardTitle>
-            <CardDescription>Estimated months remaining with current spend</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between gap-4">
-              <p className="text-3xl font-semibold">{aggregated.monthlyRunway}</p>
-              <div className="flex-1">
-                <Progress value={Math.max(0, Math.min(100, aggregated.monthlyRunway * 10))} />
-              </div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <PiggyBank className="h-3.5 w-3.5" /> Balance
             </div>
+            <p className="text-2xl font-bold">{formatCurrency(aggregated.balance)}</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <DollarSign className="h-4 w-4 text-muted-foreground" /> Transactions tracked
-            </CardTitle>
-            <CardDescription>Recent financial activity captured in Supabase</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{earnings.length}</p>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Total Income
+            </div>
+            <p className="text-2xl font-bold text-emerald-500">{formatCurrency(aggregated.totalIncome)}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <ArrowDownRight className="h-3.5 w-3.5 text-destructive" /> Total Expenses
+            </div>
+            <p className="text-2xl font-bold text-destructive">{formatCurrency(aggregated.totalExpenses)}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <TrendingUp className="h-3.5 w-3.5" /> Runway
+            </div>
+            <p className="text-2xl font-bold">{aggregated.monthlyRunway} <span className="text-sm font-normal text-muted-foreground">months</span></p>
+            <Progress value={Math.min(100, aggregated.monthlyRunway * 10)} className="mt-1 h-1.5" />
           </CardContent>
         </Card>
       </div>
 
+      {/* Revenue breakdown + Weekly pay settings */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Revenue by source */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-4 w-4" /> Revenue Breakdown
+            </CardTitle>
+            <CardDescription>Earnings & expenses by source</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {topSources.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No data yet.</p>
+            ) : (
+              topSources.map(([source, amount]) => {
+                const maxAbs = Math.max(...topSources.map(([, v]) => Math.abs(v)), 1);
+                return (
+                  <div key={source} className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 w-32 shrink-0 text-xs">
+                      {sourceIcons[source] ?? <Receipt className="h-3.5 w-3.5" />}
+                      <span className="truncate">{getSourceLabel(source)}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${amount >= 0 ? "bg-emerald-500" : "bg-destructive"}`}
+                          style={{ width: `${Math.min(100, (Math.abs(amount) / maxAbs) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className={`text-xs font-semibold w-16 text-right ${amount >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Weekly Pay Settings */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="h-4 w-4" /> Weekly Member Pay
+            </CardTitle>
+            <CardDescription>
+              Automatic payroll — every Monday at 9:00 AM
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+              <div className="flex justify-between">
+                <span>Real members:</span>
+                <span className="font-semibold text-foreground">{memberCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Per member / week:</span>
+                <span className="font-semibold text-foreground">{formatCurrency(weeklyPay)}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1 mt-1">
+                <span>Total weekly cost:</span>
+                <span className="font-semibold text-foreground">{formatCurrency(weeklyPay * memberCount)}</span>
+              </div>
+            </div>
+
+            {isLeader ? (
+              <div className="space-y-2">
+                <Label htmlFor="weekly-pay" className="text-xs">Pay per member ($)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="weekly-pay"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={weeklyPay}
+                    onChange={(e) => setWeeklyPay(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="h-9"
+                  />
+                  <Button onClick={handleSaveWeeklyPay} disabled={savingPay} size="sm" className="h-9 px-4">
+                    {savingPay ? "Saving…" : "Save"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Only the band leader can change this setting.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent transactions */}
       <Card>
-        <CardHeader>
-          <CardTitle>Recent transactions</CardTitle>
-          <CardDescription>A snapshot of the latest financial entries for this band.</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Recent Transactions</CardTitle>
+          <CardDescription>Last {aggregated.recentActivity.length} financial entries</CardDescription>
         </CardHeader>
         <CardContent>
           {aggregated.recentActivity.length === 0 ? (
             <p className="text-sm text-muted-foreground">No transactions recorded yet.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {aggregated.recentActivity.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{getSourceLabel(entry.source)}</span>
-                        {entry.earned_by_user_id && (
-                          <span className="text-xs text-muted-foreground">Recorded by {entry.earned_by_user_id}</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      <Badge variant={entry.amount >= 0 ? "default" : "destructive"}>
-                        {formatCurrency(entry.amount)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {entry.description ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{formatDateTime(entry.created_at)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="hidden md:table-cell">Description</TableHead>
+                    <TableHead className="text-right">Date</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {aggregated.recentActivity.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="text-muted-foreground">
+                            {sourceIcons[entry.source] ?? <Receipt className="h-3.5 w-3.5" />}
+                          </div>
+                          <span className="text-xs font-medium">{getSourceLabel(entry.source)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={entry.amount >= 0 ? "default" : "destructive"} className="text-xs">
+                          {entry.amount >= 0 ? "+" : ""}{formatCurrency(entry.amount)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[200px] truncate">
+                        {entry.description ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDateTime(entry.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
