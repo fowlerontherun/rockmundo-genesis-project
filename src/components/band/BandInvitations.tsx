@@ -56,6 +56,10 @@ export const BandInvitations = () => {
       const invitation = invitations?.find((i) => i.id === invitationId);
       if (!invitation || !profileId) throw new Error("Invalid invitation");
 
+      // Get auth user ID for RLS compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       // Update invitation status
       const { error: inviteError } = await supabase
         .from("band_invitations")
@@ -64,13 +68,12 @@ export const BandInvitations = () => {
 
       if (inviteError) throw inviteError;
 
-
-      // Add member to band with profile_id
+      // Add member to band — user_id must be auth UID for RLS, profile_id is the character
       const { error: memberError } = await supabase
         .from("band_members")
         .insert({
           band_id: invitation.band_id,
-          user_id: profileId,
+          user_id: user.id,
           profile_id: profileId,
           role: "member",
           instrument_role: invitation.instrument_role,
