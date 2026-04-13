@@ -92,7 +92,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
         .eq("id", labelId);
       if (updateError) throw new Error("Failed to deduct hiring cost");
 
-      const skillLevel = 30 + Math.floor(Math.random() * 40);
+      const skillLevel = 1 + Math.floor(Math.random() * 3); // 1-3 range (max 5), constraint requires 1-5
 
       const { error } = await supabase
         .from("label_staff")
