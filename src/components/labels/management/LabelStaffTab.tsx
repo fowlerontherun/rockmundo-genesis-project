@@ -253,7 +253,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
                     <div className="text-right text-sm">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-500" />
-                        <span>Skill: {member.skill_level}</span>
+                        <span>Skill: {member.skill_level}/5</span>
                       </div>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <DollarSign className="h-3 w-3" />
