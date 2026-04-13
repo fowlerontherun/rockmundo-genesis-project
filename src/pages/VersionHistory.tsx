@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.172",
+    date: "2026-04-13",
+    changes: [
+      { type: 'improvement', description: "Band Finances: Redesigned layout with compact stat cards, revenue breakdown by source with visual bars, and better transaction table with source icons" },
+      { type: 'feature', description: "Band Finances: Added weekly member pay setting — band leaders can set a fixed amount each real member receives every Monday at 9am, automatically deducted from band balance" },
+      { type: 'feature', description: "Band Finances: Shows total weekly payroll cost, member count, and per-member breakdown" },
+    ],
+  },
+  {
     version: "1.1.171",
     date: "2026-04-13",
     changes: [
