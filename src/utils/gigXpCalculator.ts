@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { applyLearningMultiplier } from "./skillLearningMultiplier";
 
 export interface GigXpCalculationInput {
   gigId: string;
@@ -256,6 +257,16 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
         .maybeSingle();
 
       if (memberProfile?.id) {
+        // Fetch player attributes for learning multiplier
+        const { data: attrs } = await supabase
+          .from('player_attributes')
+          .select('*')
+          .eq('profile_id', memberProfile.id)
+          .maybeSingle();
+
+        const baseSkillXp = skillImprovementAmount * 10;
+        const { xp: boostedXp } = applyLearningMultiplier(baseSkillXp, skillTypeImproved, attrs);
+
         const { data: existingSkill } = await supabase
           .from('skill_progress')
           .select('id, current_level, current_xp, required_xp')
@@ -264,21 +275,18 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
           .maybeSingle();
 
         if (existingSkill) {
-          // Add XP to existing skill progress
-          const xpGain = skillImprovementAmount * 10; // Convert to XP
           await supabase
             .from('skill_progress')
-            .update({ current_xp: (existingSkill.current_xp || 0) + xpGain })
+            .update({ current_xp: (existingSkill.current_xp || 0) + boostedXp })
             .eq('id', existingSkill.id);
         } else {
-          // Create new skill progress entry
           await supabase
             .from('skill_progress')
             .insert({
               profile_id: memberProfile.id,
               skill_slug: skillTypeImproved,
               current_level: 0,
-              current_xp: skillImprovementAmount * 10,
+              current_xp: boostedXp,
               required_xp: 100,
             });
         }
