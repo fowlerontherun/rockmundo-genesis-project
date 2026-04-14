@@ -30551,6 +30551,7 @@ export type Database = {
         Args: { p_gig_id: string; p_reason?: string }
         Returns: Json
       }
+      auto_build_release_hype: { Args: never; Returns: undefined }
       auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_sessions: {
         Args: never
