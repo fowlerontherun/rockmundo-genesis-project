@@ -175,8 +175,8 @@ export function calculateXpReward(
   sessionsToday: number,
   xpEarnedToday: number,
 ): XpRewardResult {
-  const baseXp = 15;
-  const levelBonus = levelReached * 8;
+  const baseXp = 25;
+  const levelBonus = levelReached * 12;
   const accuracyBonus = Math.round(accuracyPct * 0.6);
   const comboBonus = Math.round(longestCombo * 0.5);
   let totalXp = baseXp + levelBonus + accuracyBonus + comboBonus;
