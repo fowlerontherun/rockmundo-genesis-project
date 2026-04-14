@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.173",
+    date: "2026-04-14",
+    changes: [
+      { type: 'feature', description: "Promotions: Unreleased songs/releases can now be promoted via Twaater, DikCok, and Media — no longer limited to released-only content" },
+      { type: 'feature', description: "Auto-Hype: Releases now passively build hype every 6 hours based on band fame and fan count — higher fame and more fans = faster hype growth" },
+      { type: 'improvement', description: "Physical Releases: All manufacturing costs (vinyl, CD, cassette) reduced by 10% across all quantity tiers" },
+      { type: 'improvement', description: "Release Selector: Now shows release status badges for unreleased content when promoting" },
+    ],
+  },
+  {
     version: "1.1.172",
     date: "2026-04-13",
     changes: [
