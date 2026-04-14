@@ -32,19 +32,19 @@ export interface StreakMilestone {
 
 // Default configuration values
 export const DEFAULT_DUAL_XP_CONFIG: DualXpConfig = {
-  daily_stipend_sxp: 100,
-  daily_stipend_ap: 10, // Max AP — actual base is scaled by lifetime SXP
-  daily_activity_xp_cap: 250,
-  streak_7_bonus_sxp: 50,
-  streak_7_bonus_ap: 10,
-  streak_14_bonus_sxp: 100,
-  streak_14_bonus_ap: 20,
-  streak_30_bonus_sxp: 200,
-  streak_30_bonus_ap: 40,
-  streak_100_bonus_sxp: 500,
-  streak_100_bonus_ap: 100,
-  streak_365_bonus_sxp: 1000,
-  streak_365_bonus_ap: 200,
+  daily_stipend_sxp: 150,
+  daily_stipend_ap: 15, // Max AP — actual base is scaled by lifetime SXP
+  daily_activity_xp_cap: 400,
+  streak_7_bonus_sxp: 75,
+  streak_7_bonus_ap: 15,
+  streak_14_bonus_sxp: 150,
+  streak_14_bonus_ap: 30,
+  streak_30_bonus_sxp: 300,
+  streak_30_bonus_ap: 60,
+  streak_100_bonus_sxp: 750,
+  streak_100_bonus_ap: 150,
+  streak_365_bonus_sxp: 1500,
+  streak_365_bonus_ap: 300,
 };
 
 // Activity type to AP rate mapping (40-60% of XP)
@@ -161,8 +161,8 @@ export const getNextMilestone = (streak: number): { days: number; label: string;
 /**
  * AP decay constants — AP decays from MAX to MIN as lifetime SXP grows
  */
-const MAX_STIPEND_AP = 10;
-const MIN_STIPEND_AP = 3;
+const MAX_STIPEND_AP = 15;
+const MIN_STIPEND_AP = 5;
 const AP_DECAY_START = 1000;
 const AP_DECAY_END = 10000;
 
