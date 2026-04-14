@@ -154,8 +154,8 @@ export const INITIAL_GAME_STATE: GameState = {
 };
 
 // ─── XP calculation ───────────────────────────────────────────────────
-export const DAILY_PRACTICE_XP_CAP = 500;
-export const MAX_SESSIONS_BEFORE_DIMINISH = 3;
+export const DAILY_PRACTICE_XP_CAP = 750;
+export const MAX_SESSIONS_BEFORE_DIMINISH = 4;
 
 export interface XpRewardResult {
   baseXp: number;
@@ -175,8 +175,8 @@ export function calculateXpReward(
   sessionsToday: number,
   xpEarnedToday: number,
 ): XpRewardResult {
-  const baseXp = 15;
-  const levelBonus = levelReached * 8;
+  const baseXp = 25;
+  const levelBonus = levelReached * 12;
   const accuracyBonus = Math.round(accuracyPct * 0.6);
   const comboBonus = Math.round(longestCombo * 0.5);
   let totalXp = baseXp + levelBonus + accuracyBonus + comboBonus;

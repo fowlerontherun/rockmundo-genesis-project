@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
+import { applyLearningMultiplier } from "@/utils/skillLearningMultiplier";
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -173,7 +174,16 @@ export function useMentorSessions() {
       const skill = skillProgress?.find((s) => s.skill_slug === mentor.focus_skill);
       const currentLevel = skill?.current_level || 0;
       const xpEarned = Math.floor(mentor.base_xp * (1 + currentLevel * 0.1));
-      const skillValueGained = Math.floor(xpEarned * mentor.skill_gain_ratio);
+      
+      // Fetch player attributes for learning multiplier
+      const { data: attrs } = await supabase
+        .from('player_attributes')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      
+      const baseSkillValue = Math.floor(xpEarned * mentor.skill_gain_ratio);
+      const { xp: skillValueGained } = applyLearningMultiplier(baseSkillValue, mentor.focus_skill, attrs);
 
       // Create session
       const { error: sessionError } = await supabase

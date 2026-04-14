@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.174",
+    date: "2026-04-14",
+    changes: [
+      { type: 'feature', description: "Attribute-Based Learning: Higher attributes now act as a skill learning multiplier (1.0x–1.5x). Related attributes like Musical Ability boost guitar XP, Rhythm Sense boosts drums, etc." },
+      { type: 'improvement', description: "Daily XP Boost: Base daily stipend increased from 100→150 SXP and 10→15 AP. Activity XP cap raised from 250→400" },
+      { type: 'improvement', description: "Streak Bonuses Boosted: All streak milestone rewards increased by 50% (e.g., 7-day: 50→75 SXP, 30-day: 200→300 SXP)" },
+      { type: 'improvement', description: "Gig XP Boost: Base XP per song increased from 15→20, attendance divisor improved from /20→/15 for more crowd bonus XP" },
+      { type: 'improvement', description: "Rehearsal XP Boost: Base XP multiplier increased from 50→75 per hour" },
+      { type: 'improvement', description: "Stage Practice: Daily XP cap raised from 500→750, sessions before diminishing returns increased from 3→4, base/level XP bonuses increased" },
+      { type: 'improvement', description: "Mentor Sessions: Skill XP gains now boosted by attribute learning multiplier" },
+    ],
+  },
+  {
     version: "1.1.173",
     date: "2026-04-14",
     changes: [

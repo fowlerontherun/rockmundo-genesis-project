@@ -103,7 +103,7 @@ export const RehearsalBookingDialog = ({ rooms, cities, currentCityId, band, son
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
   const totalCost = selectedRoom ? selectedRoom.hourly_rate * selectedDuration : 0;
   const chemistryGain = selectedRoom ? Math.floor((selectedRoom.quality_rating / 10) * selectedDuration) : 0;
-  const xpGain = selectedRoom ? Math.floor(50 * selectedDuration * (selectedRoom.equipment_quality / 100)) : 0;
+  const xpGain = selectedRoom ? Math.floor(75 * selectedDuration * (selectedRoom.equipment_quality / 100)) : 0;
   const familiarityGain = selectedDuration * 60;
 
   // Check if a slot has passed (for today only)
