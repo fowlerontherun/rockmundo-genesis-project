@@ -38,8 +38,8 @@ export interface GigXpSummary {
 }
 
 // XP calculation constants
-const BASE_XP_PER_SONG = 15;
-const ATTENDANCE_XP_DIVISOR = 20; // XP = attendance / 20
+const BASE_XP_PER_SONG = 20;
+const ATTENDANCE_XP_DIVISOR = 15; // XP = attendance / 15
 const PERFORMANCE_GRADE_MULTIPLIERS: Record<string, number> = {
   'S+': 2.5,
   'S': 2.0,
