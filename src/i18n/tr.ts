@@ -112,6 +112,7 @@ export const tr: TranslationKeys = {
     admin: "Yönetici",
     logout: "Çıkış",
     home: "Ana Sayfa",
+    news: "Haberler",
     music: "Müzik",
     performance: "Performans",
     world: "Dünya",

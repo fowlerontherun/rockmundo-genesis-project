@@ -109,6 +109,7 @@ export const zh: TranslationKeys = {
     admin: "管理",
     logout: "退出",
     home: "首页",
+    news: "新闻",
     music: "音乐",
     performance: "表演",
     live: "现场",

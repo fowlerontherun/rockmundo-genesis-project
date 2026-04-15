@@ -19,7 +19,7 @@ import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
-  Inbox, History,
+  Inbox, History, Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,6 +41,7 @@ const HorizontalNavigation = () => {
 
   const hubLinks: HubLink[] = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: Newspaper, labelKey: "nav.news", path: "/todays-news" },
     { icon: Music, labelKey: "nav.music", path: "/hub/music" },
     { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
     { icon: Globe, labelKey: "nav.worldSocial", path: "/hub/world-social" },

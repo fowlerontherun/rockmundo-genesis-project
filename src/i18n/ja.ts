@@ -109,6 +109,7 @@ export const ja: TranslationKeys = {
     admin: "管理",
     logout: "ログアウト",
     home: "ホーム",
+    news: "ニュース",
     music: "音楽",
     performance: "パフォーマンス",
     live: "ライブ",
