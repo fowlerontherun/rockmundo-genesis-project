@@ -108,6 +108,7 @@ export const en = {
     admin: "Admin",
     logout: "Logout",
     home: "Home",
+    news: "News",
     character: "Character",
     characters: "Characters",
     music: "Music",
