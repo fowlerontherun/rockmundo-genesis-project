@@ -14,6 +14,22 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.175",
+    date: "2026-04-15",
+    changes: [
+      { type: 'feature', description: "The Rockmundo Times: Complete newspaper-style redesign of Today's News page with masthead, breaking news ticker, and top story hero section" },
+      { type: 'feature', description: "Gossip & Drama Column: New section pulling band drama events and reputation scandals into juicy headlines" },
+      { type: 'feature', description: "Weather Report: Shows current weather conditions for your city from seasonal weather patterns" },
+      { type: 'feature', description: "Classifieds Section: Band member ads and invitations styled as newspaper classified ads" },
+      { type: 'feature', description: "Interview News: Today's interview results with performance ratings" },
+      { type: 'feature', description: "Breaking News Ticker: Scrolling banner of new bands, releases, and deal signings" },
+      { type: 'feature', description: "Top Story Hero: Auto-generated lead headline from the biggest chart mover, fame event, or release of the day" },
+      { type: 'improvement', description: "Newspaper Layout: Multi-column broadsheet design with serif headlines, section dividers, and sidebar widgets" },
+      { type: 'improvement', description: "Daily Freshness: Date-seeded rotating taglines and quotes of the day for a unique feel each day" },
+      { type: 'improvement', description: "Navigation: Added News link with newspaper icon to main navigation bar" },
+    ],
+  },
+  {
     version: "1.1.174",
     date: "2026-04-14",
     changes: [
