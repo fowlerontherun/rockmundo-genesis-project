@@ -112,6 +112,7 @@ export const pt: TranslationKeys = {
     admin: "Admin",
     logout: "Sair",
     home: "Início",
+    news: "Notícias",
     music: "Música",
     performance: "Performance",
     live: "Ao Vivo",

@@ -110,6 +110,7 @@ export const fr: TranslationKeys = {
     admin: "Admin",
     logout: "Déconnexion",
     home: "Accueil",
+    news: "Actualités",
     music: "Musique",
     performance: "Performance",
     live: "En direct",

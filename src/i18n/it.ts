@@ -112,6 +112,7 @@ export const it: TranslationKeys = {
     admin: "Admin",
     logout: "Esci",
     home: "Home",
+    news: "Notizie",
     music: "Musica",
     performance: "Performance",
     live: "Dal Vivo",

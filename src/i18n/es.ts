@@ -110,6 +110,7 @@ export const es: TranslationKeys = {
     admin: "Admin",
     logout: "Cerrar Sesión",
     home: "Inicio",
+    news: "Noticias",
     music: "Música",
     performance: "Actuación",
     world: "Mundo",
