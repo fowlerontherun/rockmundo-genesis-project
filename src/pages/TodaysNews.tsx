@@ -4,8 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Music, Calendar } from "lucide-react";
 import { format } from "date-fns";
+
+import { NewspaperMasthead } from "@/components/news/NewspaperMasthead";
+import { BreakingNewsTicker } from "@/components/news/BreakingNewsTicker";
+import { TopStoryHero } from "@/components/news/TopStoryHero";
+import { GossipColumn } from "@/components/news/GossipColumn";
+import { WeatherReport } from "@/components/news/WeatherReport";
+import { ClassifiedAds } from "@/components/news/ClassifiedAds";
+import { InterviewNews } from "@/components/news/InterviewNews";
+
 import { LastNightGigs } from "@/components/news/LastNightGigs";
-import { BandInvitations } from "@/components/band/BandInvitations";
 import { TrendingHashtags } from "@/components/news/TrendingHashtags";
 import { ChartMoversSection } from "@/components/news/ChartMoversSection";
 import { MilestoneNews } from "@/components/news/MilestoneNews";
@@ -18,19 +26,16 @@ import { OtherBandsGigOutcomes } from "@/components/news/OtherBandsGigOutcomes";
 import { MerchSalesNews } from "@/components/news/MerchSalesNews";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
 import { EarningsNews } from "@/components/news/EarningsNews";
-import { useTranslation } from "@/hooks/useTranslation";
-import { useGameCalendar } from "@/hooks/useGameCalendar";
+
 export default function TodaysNewsPage() {
-  const { t } = useTranslation();
-  const { data: calendar } = useGameCalendar();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
 
   const { data: newBands } = useQuery({
     queryKey: ["news-new-bands", today],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bands")
-        .select("id, name, genre, leader_id, created_at")
+        .select("id, name, genre, created_at")
         .gte("created_at", `${today}T00:00:00`)
         .lte("created_at", `${today}T23:59:59`)
         .order("created_at", { ascending: false });
@@ -44,7 +49,7 @@ export default function TodaysNewsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("releases")
-        .select("id, title, release_type, release_date, band_id, bands(name)")
+        .select("id, title, release_type, release_date, bands(name)")
         .eq("release_status", "released")
         .gte("release_date", `${today}T00:00:00`)
         .lte("release_date", `${today}T23:59:59`)
@@ -70,122 +75,141 @@ export default function TodaysNewsPage() {
   });
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl sm:text-3xl font-oswald">{t('todaysNews.title')}</h1>
-        <div className="flex items-center gap-3">
-          {calendar && (
-            <Badge variant="outline" className="gap-1.5 text-xs">
-              {calendar.seasonEmoji} <span className="capitalize">{calendar.season}</span> · Day {calendar.gameDay}, Yr {calendar.gameYear}
-            </Badge>
-          )}
-          <p className="text-xs sm:text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      {/* Masthead */}
+      <NewspaperMasthead />
 
-      {/* Random Events - urgent attention */}
+      {/* Breaking News Ticker */}
+      <BreakingNewsTicker />
+
+      {/* Top Story */}
+      <TopStoryHero />
+
+      {/* Urgent: Random Events */}
       <RandomEventsNews />
 
-      {/* Personal Updates - highlighted */}
+      {/* Personal Updates */}
       <PersonalUpdates />
 
-      {/* Player XP, Skills, and Earnings */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        <PlayerGainsNews />
-        <BandGainsNews />
-        <EarningsNews />
-      </div>
+      {/* === FRONT PAGE: Two-column layout === */}
+      <div className="grid gap-6 lg:grid-cols-3 mb-8">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Section Header */}
+          <SectionDivider title="Entertainment" />
 
-      {/* Merchandise Sales */}
-      <MerchSalesNews />
+          <TopTracksNews />
+          <LastNightGigs />
+          <OtherBandsGigOutcomes />
+          <InterviewNews />
 
-      {/* Top Tracks - playable songs */}
-      <TopTracksNews />
+          <SectionDivider title="Charts & Music" />
 
-      {/* Last Night's Gigs - full width */}
-      <LastNightGigs />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ChartMoversSection />
+            {/* New Releases */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <Music className="h-5 w-5" />
+                  New Releases
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {releasedSongs && releasedSongs.length > 0 ? (
+                  releasedSongs.slice(0, 5).map((release: any) => (
+                    <div key={release.id} className="py-1 border-b border-border/50 last:border-0">
+                      <p className="font-semibold text-sm font-serif">{release.title}</p>
+                      <p className="text-xs text-muted-foreground">{release.bands?.name} · {release.release_type}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic font-serif py-2">No releases today</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Other Bands' Gig Outcomes */}
-      <OtherBandsGigOutcomes />
+          <SectionDivider title="Your Column" />
 
-      {/* Band Invitations */}
-      <BandInvitations />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <PlayerGainsNews />
+            <BandGainsNews />
+            <EarningsNews />
+          </div>
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        <TrendingHashtags />
-        <ChartMoversSection />
-        <MilestoneNews />
-        <DealAnnouncements />
+          <MerchSalesNews />
 
-        {/* New Bands */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5" />
-              {t('todaysNews.newBandsFormed')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {newBands && newBands.length > 0 ? (
-              newBands.slice(0, 5).map((band) => (
-                <div key={band.id} className="flex items-center justify-between py-1">
-                  <div>
-                    <p className="font-medium">{band.name}</p>
-                    <p className="text-xs text-muted-foreground">{band.genre}</p>
+          <SectionDivider title="Business & Deals" />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DealAnnouncements />
+            {/* New Bands */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  New Bands Formed
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {newBands && newBands.length > 0 ? (
+                  newBands.slice(0, 5).map((band) => (
+                    <div key={band.id} className="flex items-center justify-between py-1 border-b border-border/50 last:border-0">
+                      <div>
+                        <p className="font-semibold text-sm font-serif">{band.name}</p>
+                        <p className="text-xs text-muted-foreground">{band.genre}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">{format(new Date(band.created_at!), "HH:mm")}</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic font-serif py-2">No new bands today</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Festivals */}
+          {festivals && festivals.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Festivals Starting Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {festivals.slice(0, 5).map((fest) => (
+                  <div key={fest.id} className="py-1 border-b border-border/50 last:border-0">
+                    <p className="font-semibold text-sm font-serif">{fest.title}</p>
+                    <p className="text-xs text-muted-foreground">{fest.event_type}</p>
                   </div>
-                  <Badge variant="secondary">{format(new Date(band.created_at!), 'HH:mm')}</Badge>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noNewBands')}</p>
-            )}
-          </CardContent>
-        </Card>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-        {/* Released Songs */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Music className="h-5 w-5" />
-              {t('todaysNews.songsReleased')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {releasedSongs && releasedSongs.length > 0 ? (
-              releasedSongs.slice(0, 5).map((release: any) => (
-                <div key={release.id} className="py-1">
-                  <p className="font-medium">{release.title}</p>
-                  <p className="text-xs text-muted-foreground">{release.bands?.name}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noSongsReleased')}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Festivals */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5" />
-              {t('todaysNews.festivalsStarting')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {festivals && festivals.length > 0 ? (
-              festivals.slice(0, 5).map((fest) => (
-                <div key={fest.id} className="py-1">
-                  <p className="font-medium">{fest.title}</p>
-                  <p className="text-xs text-muted-foreground">{fest.event_type}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground py-2">{t('todaysNews.noFestivals')}</p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <WeatherReport />
+          <GossipColumn />
+          <TrendingHashtags />
+          <MilestoneNews />
+          <ClassifiedAds />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function SectionDivider({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-4">
+      <div className="h-px flex-1 bg-border" />
+      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground font-serif">{title}</h3>
+      <div className="h-px flex-1 bg-border" />
     </div>
   );
 }
