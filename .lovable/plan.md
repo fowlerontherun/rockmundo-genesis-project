@@ -1,77 +1,86 @@
 
 
-# Plan: Full Genre Coverage for Radio + Host Avatars + NPC Foundation
+# Rockmundo Daily News - Newspaper Redesign
 
-## Problem Summary
+## Overview
+Revive and expand the `/todays-news` page into a proper daily newspaper called **"The Rockmundo Times"** with a newspaper-style layout, masthead, columns, and diverse content sections pulled from across the game world. Add a prominent link from the dashboard/navigation.
 
-**Genre gaps**: 13 genres have ZERO radio stations: Soul, Grunge, Gospel, Drum and Bass, House, Dubstep, Techno, Folk, Industrial, Ambient, Progressive Rock, Celtic, Funk. Several others (Bluegrass, Ska, Trance) have only 1 station each.
+## Design Concept
+- **Masthead**: "The Rockmundo Times" with the game date, season, edition number (based on game day), and a tagline
+- **Newspaper columns**: CSS multi-column layout for desktop, single column on mobile
+- **Serif fonts** for headlines (font-serif), monospace date line — classic broadsheet feel
+- **Sections** organized like a real paper: Front Page, Entertainment, Business, Sports/Charts, Classifieds, Weather
 
-**No host avatars**: The `radio_shows` table has no `host_avatar_url` column. 34 unique hosts exist across 890 shows but none have images.
+## Content Sections (New + Existing)
 
-**No NPC link**: Hosts are just text names on shows with no NPC entity to support future quests.
+### Front Page (Hero)
+- **Top Story**: Auto-generated headline from the biggest event of the day (highest fame band activity, biggest chart mover, or major deal). Rotates daily using a seeded random based on the date
+- **Breaking News Ticker**: Scrolling banner of recent events (new bands, releases, deals)
 
-## Plan
+### Entertainment Section
+- **Last Night's Gigs** (existing `LastNightGigs`)
+- **New Releases Today** (existing inline query, extract to component)
+- **Chart Movers** (existing `ChartMoversSection`)
+- **Top Tracks** (existing `TopTracksNews`)
+- **Festival News** (existing inline query)
+- **Interview Results**: Pull from `interview_results` table — "Band X sat down with Magazine Y"
+- **Music Reviews**: Pull from `festival_reviews` / `producer_session_reviews`
 
-### 1. Add missing-genre radio stations via migration
+### Gossip & Drama Column
+- **Band Drama**: Query `band_drama_events` and `social_drama_events` for juicy headlines
+- **Romantic Events**: Query `romantic_events` for celebrity relationship news
+- **Fashion Events**: Query `fashion_events` for style stories
+- **Scandals**: Query `reputation_events` for negative reputation changes framed as scandals
 
-Insert ~30-40 new radio stations ensuring every genre from the 52-genre list has at least 3-5 stations. Group them thematically:
-- **Soul/Funk/Gospel** stations (e.g., "Soul City FM", "Funk Nation Radio", "Gospel Hour")
-- **Electronic sub-genres** (House, Techno, Dubstep, Drum and Bass, Trance, Ambient, Industrial)
-- **Rock sub-genres** (Grunge, Progressive Rock)
-- **Folk/Celtic/Bluegrass/Ska** stations
-- Each station gets appropriate city, quality level, listener base, and frequency
+### Business Section
+- **Deal Announcements** (existing `DealAnnouncements`)
+- **New Bands Formed** (existing inline query)
+- **Label Signings**: From `artist_label_contracts`
 
-### 2. Create `radio_hosts` table
+### Your Column (Personal)
+- **Personal Updates** (existing `PersonalUpdates`)
+- **Player Gains** (existing `PlayerGainsNews`)
+- **Band Gains** (existing `BandGainsNews`)
+- **Earnings** (existing `EarningsNews`)
+- **Merch Sales** (existing `MerchSalesNews`)
+- **Random Events** (existing `RandomEventsNews`)
 
-New table to store host NPCs with:
-- `id`, `name`, `bio`, `avatar_url`, `personality_traits` (jsonb), `speciality_genres` (text[]), `city_id`, `is_active`, `created_at`
+### Milestones & Achievements
+- Existing `MilestoneNews`
 
-Add `host_id` column to `radio_shows` referencing `radio_hosts`, keeping `host_name` as fallback.
+### Weather & Classifieds (Flavor)
+- **Weather Report**: Pull from `seasonal_weather_patterns` for current city weather
+- **Classifieds**: Band invitations styled as classified ads, gig offers as "help wanted"
 
-RLS: public read, admin write.
+### Trending
+- Existing `TrendingHashtags` styled as a sidebar widget
 
-### 3. Seed radio hosts from existing show data
+## "Fresh Each Day" Mechanics
+- Use the current date as a seed for a deterministic random to pick headline styles, taglines, and column ordering
+- Rotate "Quote of the Day" from a curated list using date-based index
+- Show different "Editor's Pick" emphasis based on what data actually exists that day
+- Empty sections are hidden, so the paper always looks full
 
-Deduplicate the 34 existing host names into `radio_hosts` records, then backfill `radio_shows.host_id`. Add ~15 new hosts for the new genre stations with distinct personalities (e.g., "Grunge Gary", "DJ Technika", "Celtic Claire").
+## Navigation
+- Add a "News" link with a `Newspaper` icon to the hub navigation in `HorizontalNavigation.tsx`
 
-### 4. Generate AI avatars for all hosts
+## Technical Plan
 
-Use the Lovable AI gateway (same style prompt as player avatars) to generate cartoon game-style portraits for each host. Script will:
-- Use `google/gemini-2.5-flash-image` with a text-only prompt (no source photo -- pure generation)
-- Same art style as player avatars: bold outlines, cel-shading, vibrant colors, game character look
-- Each host gets a genre-appropriate outfit from the existing `GENRE_OUTFIT_MAP`
-- Upload to Supabase storage bucket, update `radio_hosts.avatar_url`
+### Files to Create
+1. **`src/components/news/NewspaperMasthead.tsx`** — Masthead with title, date, edition, weather
+2. **`src/components/news/GossipColumn.tsx`** — Queries `band_drama_events`, `romantic_events`, `fashion_events`, `reputation_events`
+3. **`src/components/news/WeatherReport.tsx`** — Queries `seasonal_weather_patterns` for current city
+4. **`src/components/news/ClassifiedAds.tsx`** — Restyled band invitations and gig offers as classifieds
+5. **`src/components/news/BreakingNewsTicker.tsx`** — Scrolling ticker component
+6. **`src/components/news/InterviewNews.tsx`** — Queries `interview_results` for recent interviews
+7. **`src/components/news/TopStoryHero.tsx`** — Picks the biggest story of the day
 
-This will be a batch script run via `code--exec` generating ~50 images.
+### Files to Modify
+1. **`src/pages/TodaysNews.tsx`** — Complete rewrite with newspaper layout
+2. **`src/components/ui/HorizontalNavigation.tsx`** — Add News link
+3. **`src/components/VersionHeader.tsx`** — Bump version
+4. **`src/pages/VersionHistory.tsx`** — Add changelog entry
 
-### 5. Update UI to show host avatars
-
-- `RadioStationDetail.tsx`: Show host avatar next to host name in the show schedule
-- Join `radio_hosts` in the show query to get `avatar_url`
-
-### 6. Version bump
-
-Update to v1.1.168 with changelog entry.
-
-## Technical Details
-
-**New table schema:**
-```sql
-CREATE TABLE radio_hosts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR NOT NULL,
-  bio TEXT,
-  avatar_url TEXT,
-  personality_traits JSONB DEFAULT '{}',
-  speciality_genres TEXT[] DEFAULT '{}',
-  city_id UUID REFERENCES cities(id),
-  catchphrase TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**New stations** will cover all 13 zero-coverage genres plus boost the 3 near-zero genres, spread across diverse cities globally.
-
-**Avatar generation** will produce ~50 images using the same cartoon style prompt as player avatars but without a source photo (text-to-image generation).
+### No Database Changes Required
+All data sources already exist in the database.
 
