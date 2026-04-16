@@ -544,7 +544,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           scope: state.scope,
           min_rest_days: state.minRestDays,
           travel_mode: state.travelMode,
-          tour_bus_daily_cost: state.travelMode === 'tour_bus' ? TOUR_BUS_DAILY_COST : 0,
+          tour_bus_daily_cost: getVehicleTier(state.vehicleTier).dailyCost,
           total_upfront_cost: costEstimate.netUpfrontCost,
           total_travel_cost: costEstimate.travelCosts + costEstimate.tourBusCosts,
           selected_countries: state.selectedCountries,
@@ -554,7 +554,6 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           target_show_count: venueMatches.length,
           setlist_id: state.setlistId,
           status: 'scheduled',
-          // New fields
           starting_city_id: state.startingCityId,
           custom_ticket_price: ticketPrice,
           stage_setup_tier: state.stageSetupTier,
@@ -565,7 +564,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           sponsor_cash_value: state.sponsorCashValue,
           sponsor_fame_penalty: state.sponsorFamePenalty,
           sponsor_ticket_penalty: state.sponsorTicketPenalty,
-          merch_boost_multiplier: TOUR_MERCH_BOOST * STAGE_SETUP_TIERS[state.stageSetupTier].merchBoost,
+          merch_boost_multiplier: TOUR_MERCH_BOOST * getStageMerchBoost(calculateProductionRating(state.stageComponents)),
+          // New vehicle + production fields
+          vehicle_tier: state.vehicleTier,
+          production_rating: calculateProductionRating(state.stageComponents),
+          equipment_hauling_cost: getEquipmentTruckCost(
+            getHaulRequirement(calculateTotalHaulWeight(state.stageComponents)),
+            getVehicleTier(state.vehicleTier).gearHaulCapacity
+          ) * (state.durationDays || 30),
+          stage_components: state.stageComponents,
         })
         .select()
         .single();
