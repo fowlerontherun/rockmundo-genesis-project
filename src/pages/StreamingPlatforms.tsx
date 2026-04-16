@@ -86,7 +86,45 @@ const StreamingPlatforms = () => {
     enabled: !!userId,
   });
 
-  // KPI strip totals
+  // Top 3 songs per platform (all in one query, then grouped client-side)
+  const { data: topSongsByPlatform = {} } = useQuery<
+    Record<string, Array<{ songId: string; title: string; streams: number }>>
+  >({
+    queryKey: ["top-songs-per-platform", userId, userBandIds],
+    queryFn: async () => {
+      if (!userId) return {};
+      let query = supabase
+        .from("song_releases")
+        .select("platform_id, total_streams, song:songs(id, title)")
+        .eq("release_type", "streaming")
+        .eq("is_active", true)
+        .gt("total_streams", 0)
+        .order("total_streams", { ascending: false });
+
+      if (userBandIds.length > 0) {
+        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(",")})`);
+      } else {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data } = await query;
+      if (!data?.length) return {};
+
+      const grouped: Record<string, Array<{ songId: string; title: string; streams: number }>> = {};
+      data.forEach((r: any) => {
+        if (!r.platform_id || !r.song?.id) return;
+        if (!grouped[r.platform_id]) grouped[r.platform_id] = [];
+        if (grouped[r.platform_id].length >= 3) return; // top 3 only
+        grouped[r.platform_id].push({
+          songId: r.song.id,
+          title: r.song.title || "Untitled",
+          streams: r.total_streams || 0,
+        });
+      });
+      return grouped;
+    },
+    enabled: !!userId,
+  });
   const kpis = useMemo(() => {
     const values = Object.values(userStatsByPlatform);
     const totalStreams = values.reduce((s, v) => s + v.totalStreams, 0);
@@ -207,6 +245,7 @@ const StreamingPlatforms = () => {
                     key={platform.id}
                     platform={platform}
                     userStats={userStatsByPlatform[platform.id]}
+                    topSongs={topSongsByPlatform[platform.id]}
                   />
                 ))}
               </div>

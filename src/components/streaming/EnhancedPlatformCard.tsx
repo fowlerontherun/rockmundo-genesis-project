@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Users, Music, ChevronRight } from "lucide-react";
+import { TrendingUp, Music, ChevronRight, Trophy } from "lucide-react";
 import { PlatformLogo } from "./PlatformLogo";
 
 interface EnhancedPlatformCardProps {
@@ -19,9 +19,14 @@ interface EnhancedPlatformCardProps {
     totalRevenue: number;
     releaseCount: number;
   };
+  topSongs?: Array<{
+    songId: string;
+    title: string;
+    streams: number;
+  }>;
 }
 
-export function EnhancedPlatformCard({ platform, userStats }: EnhancedPlatformCardProps) {
+export function EnhancedPlatformCard({ platform, userStats, topSongs }: EnhancedPlatformCardProps) {
   const navigate = useNavigate();
   const brandColor = platform.brand_color || "#6366f1";
 
@@ -80,6 +85,37 @@ export function EnhancedPlatformCard({ platform, userStats }: EnhancedPlatformCa
             <p className="text-xs text-muted-foreground mt-1">Revenue</p>
           </div>
         </div>
+
+        {/* Top 3 leaderboard */}
+        {topSongs && topSongs.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Trophy className="h-3 w-3" style={{ color: brandColor }} />
+              Your Top {topSongs.length} on {platform.platform_name}
+            </div>
+            <ol className="space-y-1">
+              {topSongs.map((song, idx) => (
+                <li
+                  key={song.songId}
+                  className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-muted/40"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="flex items-center justify-center h-5 w-5 shrink-0 rounded-full text-[10px] font-bold text-white"
+                      style={{ backgroundColor: brandColor }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <span className="truncate text-xs font-medium">{song.title}</span>
+                  </div>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {formatNumber(song.streams)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="text-xs">
