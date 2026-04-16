@@ -1351,25 +1351,85 @@ const Songwriting = () => {
               <MusicOwnershipReminder />
             )}
             <form onSubmit={handleSubmit} ref={createFormRef}>
-              <Tabs defaultValue="basics" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger value="basics" className="flex items-center gap-2">
-                    <Music2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Basics</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="creative" className="flex items-center gap-2">
-                    <Pen className="h-4 w-4" />
-                    <span className="hidden sm:inline">Creative Brief</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="collaborators" className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Collaborators</span>
-                  </TabsTrigger>
-                </TabsList>
+              {(() => {
+                const step1Complete = Boolean(formState.title.trim()) && Boolean(formState.genre);
+                const step2Unlocked = step1Complete;
+                const step2Complete = step2Unlocked; // creative brief has no required fields beyond step 1
+                const step3Unlocked = step2Complete;
+                const step3Complete = step3Unlocked && Boolean(formState.writingMode);
+                const completedSteps = [step1Complete, step2Complete, step3Complete].filter(Boolean).length;
 
-                <div className="max-h-[60vh] overflow-y-auto pr-2">
-                  {/* Tab 1: Basics */}
-                  <TabsContent value="basics" className="space-y-4 mt-0">
+                const StepHeader = ({
+                  number,
+                  title,
+                  subtitle,
+                  icon: Icon,
+                  done,
+                  locked,
+                }: {
+                  number: number;
+                  title: string;
+                  subtitle: string;
+                  icon: typeof Music2;
+                  done: boolean;
+                  locked: boolean;
+                }) => (
+                  <div className="flex items-start gap-3 mb-4">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                        locked
+                          ? "bg-muted text-muted-foreground"
+                          : done
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-primary/15 text-primary border border-primary/30"
+                      }`}
+                    >
+                      {locked ? <Lock className="h-4 w-4" /> : done ? <CheckCircle2 className="h-4 w-4" /> : number}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-base flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {title}
+                        </h3>
+                        {locked && (
+                          <Badge variant="outline" className="text-[10px]">
+                            Complete previous step
+                          </Badge>
+                        )}
+                        {!locked && done && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Done
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{subtitle}</p>
+                    </div>
+                  </div>
+                );
+
+                return (
+                <>
+                  {/* Workflow progress */}
+                  <div className="mb-4 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Workflow progress</span>
+                      <span>{completedSteps} of 3 complete</span>
+                    </div>
+                    <Progress value={(completedSteps / 3) * 100} className="h-1.5" />
+                  </div>
+
+                  <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
+                  {/* Step 1: Basics */}
+                  <section className="space-y-4">
+                    <StepHeader
+                      number={1}
+                      title="Basics"
+                      subtitle="Name your project and pick a genre to get started."
+                      icon={Music2}
+                      done={step1Complete}
+                      locked={false}
+                    />
                     <div className="space-y-2">
                       <Label htmlFor="project-title">Project Title *</Label>
                       <Input
