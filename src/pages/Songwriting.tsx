@@ -449,7 +449,13 @@ const Songwriting = () => {
     Record<string, { coWriters: string[]; producers: string[]; musicians: string[] }>
   >({});
   const [rehearsalUnlocks, setRehearsalUnlocks] = useState<Record<string, boolean>>({});
-  
+
+  // Quick Create dialog state
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateTitle, setQuickCreateTitle] = useState("");
+  const [quickCreateGenre, setQuickCreateGenre] = useState("");
+  const [quickCreateError, setQuickCreateError] = useState<string | null>(null);
+
   // Song completion dialog state
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
