@@ -262,17 +262,19 @@ export const useCompanyFinancialSummary = () => {
       const companyIds = (companies || []).map(c => c.id);
       const totalBalance = (companies || []).reduce((sum, c) => sum + Number(c.balance), 0);
 
-      // Get employee count
+      // Aggregate workforce across all subsidiary staff tables
+      // (factory workers, security guards, venue/rehearsal/recording/label/club staff, logistics drivers).
       let employeeCount = 0;
       if (companyIds.length > 0) {
-        const { count, error: employeesError } = await supabase
-          .from("company_employees")
-          .select("id", { count: "exact", head: true })
-          .in("company_id", companyIds)
-          .eq("status", "active");
+        const { data: workforce, error: workforceError } = await (supabase as any)
+          .rpc("get_company_workforce_counts", { _owner_id: userId });
 
-        if (!employeesError && count) {
-          employeeCount = count;
+        if (!workforceError && Array.isArray(workforce)) {
+          employeeCount = workforce.reduce(
+            (sum: number, row: { employee_count: number | string }) =>
+              sum + Number(row.employee_count ?? 0),
+            0,
+          );
         }
       }
 

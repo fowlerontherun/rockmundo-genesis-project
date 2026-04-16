@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.209",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "My Companies dashboard: the Workforce card was always showing 0 because it queried the unused `company_employees` table. It now aggregates real headcount across every per-subsidiary staff table — venue staff, factory workers, security guards, nightclub staff, recording/rehearsal studio staff, label staff, and logistics drivers — via a new server-side `get_company_workforce_counts(owner_id)` SECURITY DEFINER function so totals match the people you've actually hired." },
+      { type: 'fix', description: "My Companies dashboard: Pending Taxes was permanently $0 because nothing ever generated `company_tax_records`. Added a server-side `generate_pending_company_taxes()` function that takes each company's last 30 days of net taxable revenue, applies the progressive corporate rate (10/15/20/25%) with a small reputation discount, and inserts a pending bill due in 7 days. Backfilled bills for all current revenue-earning companies and scheduled the generator to run daily at 03:00 UTC so each new month is billed automatically." },
+    ],
+  },
+  {
     version: "1.1.208",
     date: "2026-04-16",
     changes: [
