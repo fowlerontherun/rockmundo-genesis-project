@@ -521,11 +521,20 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
           {release.release_formats?.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
               {release.release_formats.map((fmt: any) => {
-                const isSoldOut = !['digital', 'streaming'].includes(fmt.format_type) && fmt.quantity <= 0;
+                const isPhysical = ['cd', 'vinyl', 'cassette'].includes(fmt.format_type);
+                const isSoldOut = isPhysical && fmt.quantity <= 0;
+                const isLowStock = isPhysical && fmt.quantity > 0 && fmt.quantity < 50;
                 return (
-                  <Badge key={fmt.id} variant="outline" className={`text-[10px] px-1.5 py-0 h-4 capitalize ${isSoldOut ? 'border-destructive/50 text-destructive' : ''}`}>
-                    {fmt.format_type}{!['digital', 'streaming'].includes(fmt.format_type) && <span className="ml-1">{isSoldOut ? '∅' : fmt.quantity}</span>}
-                  </Badge>
+                  <span key={fmt.id} className="inline-flex items-center gap-0.5">
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 capitalize ${isSoldOut ? 'border-destructive/50 text-destructive' : ''}`}>
+                      {fmt.format_type}{isPhysical && <span className="ml-1">{isSoldOut ? '∅' : fmt.quantity}</span>}
+                    </Badge>
+                    {release.release_status === "released" && isPhysical && (isSoldOut || isLowStock) && (
+                      <Button variant="ghost" size="sm" className="text-[9px] px-1 h-4 text-primary" onClick={(e) => { e.stopPropagation(); onReorder?.(fmt); }}>
+                        <RefreshCw className="h-2.5 w-2.5" />
+                      </Button>
+                    )}
+                  </span>
                 );
               })}
             </div>
@@ -538,10 +547,12 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
           )}
           <div className="flex flex-wrap gap-1 pt-1">
             <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
+            {release.release_status !== "cancelled" && (
+              <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onPromo}><Megaphone className="h-2.5 w-2.5 mr-0.5" />Promo</Button>
+            )}
             {release.release_status === "released" && (
               <>
                 <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onAnalytics}><BarChart3 className="h-2.5 w-2.5 mr-0.5" />Analytics</Button>
-                <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onPromo}><Megaphone className="h-2.5 w-2.5 mr-0.5" />Promo</Button>
                 {(() => {
                   const ep = release.release_formats?.filter((f: any) => ["cd", "vinyl", "cassette"].includes(f.format_type)) || [];
                   return ep.length < 3 ? <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onAddPhysical}><Plus className="h-2.5 w-2.5 mr-0.5" />Physical</Button> : null;
