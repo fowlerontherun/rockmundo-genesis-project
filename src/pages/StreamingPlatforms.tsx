@@ -245,6 +245,7 @@ const StreamingPlatforms = () => {
                     key={platform.id}
                     platform={platform}
                     userStats={userStatsByPlatform[platform.id]}
+                    topSongs={topSongsByPlatform[platform.id]}
                   />
                 ))}
               </div>
