@@ -13,10 +13,12 @@ import { TOUR_SCOPE_REQUIREMENTS, VENUE_SIZE_REQUIREMENTS, CONTINENTS, TOUR_BUS_
 import { StartingCitySelector } from './StartingCitySelector';
 import { VenueFilters } from './VenueFilters';
 import { TicketPricingSlider } from './TicketPricingSlider';
-import { StageSetupPicker } from './StageSetupPicker';
+import { StageEquipmentBuilder } from './StageEquipmentBuilder';
+import { TourVehiclePicker } from './TourVehiclePicker';
 import { SupportArtistPicker } from './SupportArtistPicker';
 import { TourBudgetSummary } from './TourBudgetSummary';
 import { TicketOperatorSelector } from '@/components/gig/TicketOperatorSelector';
+import { calculateTotalHaulWeight, getHaulRequirement } from '@/lib/tourStageComponents';
 import { Calendar, MapPin, Music, Bus, Plane, Check, Lock, AlertCircle, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
