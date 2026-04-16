@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.203",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Equipment Store: 'new row violates row-level security policy' error when buying gear, plus existing inventory not displaying. Root cause: the store was using the character profile id for both reads and inserts on player_equipment_inventory, but RLS requires auth.uid() = user_id. Now uses the auth user id for inventory queries and inserts." },
+    ],
+  },
+  {
     version: "1.1.202",
     date: "2026-04-16",
     changes: [
