@@ -632,7 +632,8 @@ const TourManager = () => {
   });
 
   const activeTourCount = myTours.filter(t => t.status === 'active' || t.status === 'scheduled').length;
-  const totalRevenue = myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
+  const totalRevenue = bandTotals?.totalRevenue ?? myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
+  const totalFame = bandTotals?.totalFame ?? 0;
   const upcomingShows = myTours.filter(t => new Date(t.start_date) > new Date()).length;
 
   const getStatusBadge = (status: string) => {
