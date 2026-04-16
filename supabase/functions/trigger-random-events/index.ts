@@ -12,7 +12,7 @@ const corsHeaders = {
 };
 
 const JOB_NAME = "trigger-random-events";
-const TRIGGER_CHANCE = 15; // 1 in 15 chance (~6.7%)
+const TRIGGER_CHANCE = 12; // 1 in 12 chance (~8.3%) — bumped from 15 in v1.1.191
 const CRAVING_TRIGGER_CHANCE = 5; // 1 in 5 chance (20%) for addicted players
 
 Deno.serve(async (req) => {
