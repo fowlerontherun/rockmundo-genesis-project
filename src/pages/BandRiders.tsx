@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { 
   FileText, Plus, Star, Trash2, Edit, Copy, 
   DollarSign, TrendingUp, Users, CheckCircle
@@ -257,23 +257,21 @@ export default function BandRiders() {
 
       {/* Rider Builder Dialog */}
       <Dialog open={showBuilder} onOpenChange={setShowBuilder}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {editingRider ? 'Edit Rider' : 'Create New Rider'}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[calc(90vh-120px)]">
-            <div className="pr-4">
-              <RiderBuilder
-                bandId={band?.id || ''}
-                bandFame={band?.fame || 0}
-                riderId={editingRider || undefined}
-                onSave={() => setShowBuilder(false)}
-                onCancel={() => setShowBuilder(false)}
-              />
-            </div>
-          </ScrollArea>
+          <div className="flex-1 overflow-y-auto pr-2">
+            <RiderBuilder
+              bandId={band?.id || ''}
+              bandFame={band?.fame || 0}
+              riderId={editingRider || undefined}
+              onSave={() => setShowBuilder(false)}
+              onCancel={() => setShowBuilder(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

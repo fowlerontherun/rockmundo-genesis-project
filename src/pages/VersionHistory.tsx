@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.205",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Band Riders: catalog items couldn't be reliably selected. Both the Card's onClick and the inner Checkbox's onCheckedChange were calling toggleItem on the same click, racing each other and producing flicker/no-select behavior. The Checkbox is now a visual-only indicator (pointer-events disabled) and the Card alone owns the toggle, with proper Enter/Space keyboard support and stopPropagation on quantity buttons so adjusting +/- no longer deselects the item." },
+      { type: 'fix', description: "Band Riders: nested Radix ScrollArea (dialog wrapper + inner catalog scroll) caused the inner item list to not scroll, hiding most catalog options. Replaced the outer ScrollArea with a flex column + native overflow-y-auto so the catalog scrolls cleanly." },
+    ],
+  },
+  {
     version: "1.1.204",
     date: "2026-04-16",
     changes: [
