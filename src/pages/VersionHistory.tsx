@@ -14,17 +14,24 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.212",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Public Relations page incorrectly told band leaders 'You need to be the leader of an active band to access PR features.' The query filtered `bands.leader_id` against the auth user id, but `leader_id` actually stores the character profile id. Switched the lookup to use `profileId` so band leaders can access their PR dashboard again." },
+    ],
+  },
+  {
     version: "1.1.211",
     date: "2026-04-16",
     changes: [
-      { type: 'fix', description: "Corporate taxes: pending tax bills no longer count owner deposits, capital injections, intercompany transfers, loans, or dividends as taxable revenue. Only actual earned business income (gigs, sales, fees, royalties) is taxed. Existing inflated pending bills were voided and regenerated with realistic amounts." },
+      { type: 'fix', description: "Corporate tax: pending tax bills were inflated because the generator counted owner deposits, capital injections, intercompany transfers, and dividends as taxable revenue. Updated `generate_pending_company_taxes()` to exclude `investment`, `transfer_in`, `transfer_out`, `dividend`, `owner_deposit`, `capital_injection`, and `loan` transaction types (and the equivalent categories), then voided the inflated pending records and regenerated bills against earned revenue only." },
     ],
   },
   {
     version: "1.1.210",
     date: "2026-04-16",
     changes: [
-      { type: 'feature', description: "Localization: Chinese (中文) and Japanese (日本語) are now active in the language switcher. Chinese is fully translated across every screen; Japanese covers all core gameplay sections (navigation, dashboard, character, music hub, gigs, songwriting, recording, rehearsals, finances, social, festivals, employment, sponsorships, record labels, prison, world map, busking, fan management, gettit) with English fallback for niche admin pages." },
+      { type: 'improvement', description: "Localization: wired up Chinese (`zh`) and Japanese (`ja`) translation bundles in `src/i18n/index.ts` so the language switcher actually applies them. `zh` is fully translated; `ja` is cast as `TranslationKeys` to fall back to English for any keys it doesn't yet cover." },
     ],
   },
   {
