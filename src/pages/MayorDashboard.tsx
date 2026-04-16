@@ -232,25 +232,47 @@ export default function MayorDashboard() {
         </Alert>
       )}
 
-      {/* Laws Management */}
+      {/* Mayor workspace: main content + politics sidebar */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Landmark className="h-5 w-5" />
-            City Laws & Regulations
+            Mayor's Office — {city?.name}
           </CardTitle>
           <CardDescription>
-            Adjust laws to shape the music scene in {city?.name}
+            Manage budget, projects, public relations, and laws
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="taxes" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="budget" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+              <TabsTrigger value="budget"><Wallet className="h-3 w-3 mr-1" />Budget</TabsTrigger>
+              <TabsTrigger value="projects"><Hammer className="h-3 w-3 mr-1" />Projects</TabsTrigger>
+              <TabsTrigger value="pr"><Megaphone className="h-3 w-3 mr-1" />PR</TabsTrigger>
               <TabsTrigger value="taxes">Taxes</TabsTrigger>
               <TabsTrigger value="regulations">Regulations</TabsTrigger>
-              <TabsTrigger value="music">Music Policy</TabsTrigger>
+              <TabsTrigger value="music">Music</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="budget" className="mt-6">
+              {cityId && (
+                <MayorBudgetTab
+                  cityId={cityId}
+                  mayorSalary={(mayor as any)?.salary_per_week ?? 1000}
+                  corruptionScore={(mayor as any)?.corruption_score ?? 0}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="projects" className="mt-6">
+              {cityId && <MayorProjectsTab cityId={cityId} politics={politics} />}
+            </TabsContent>
+
+            <TabsContent value="pr" className="mt-6">
+              {cityId && <MayorPublicRelationsTab cityId={cityId} mayorId={mayor?.id ?? null} politics={politics} />}
+            </TabsContent>
 
             <TabsContent value="taxes" className="space-y-6 mt-6">
               {/* Income Tax */}
