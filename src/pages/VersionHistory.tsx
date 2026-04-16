@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.195",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Streaming My Music: each release card now shows a 7-day stream sparkline with trend % and weekly total, so trending songs are visible at a glance" },
+      { type: 'improvement', description: "Sparkline data fetched in a single batched query across all visible releases (no per-card overhead)" },
+    ],
+  },
+  {
     version: "1.1.194",
     date: "2026-04-16",
     changes: [
