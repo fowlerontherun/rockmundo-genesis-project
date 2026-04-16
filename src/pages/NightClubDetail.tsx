@@ -89,6 +89,8 @@ const NightClubDetail = () => {
   const { data: clubPresence = [] } = useClubPresence(clubId);
   const enterClub = useEnterClub();
   const clubChatChannel = clubId ? `club:${clubId}` : null;
+  const { data: ownedClubs = [] } = useOwnedNightclubs();
+  const isOwned = ownedClubs.some((c) => c.club_id === clubId);
   // DJ Performance History
   const { data: djHistory = [] } = useQuery({
     queryKey: ["dj-performances", profileId, clubId],
