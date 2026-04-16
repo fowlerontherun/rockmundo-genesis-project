@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.202",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Mayor Dashboard expanded from 4 → 7 tabs with new Budget, Projects, and Public Relations sections plus a Politics sidebar showing skill levels and unlocked actions" },
+      { type: 'feature', description: "City Projects system: mayors can propose 11 buildable initiatives across Infrastructure, Culture, Economy, and Quality of Life — each with cost, duration, stat effects, and skill gating. Funds are reserved on proposal and applied on completion" },
+      { type: 'feature', description: "City Treasury overhaul: tracks balance, pending commitments, weekly budget, mayor salary paid, and lifetime tax/spend totals with a corruption score that triggers warnings above 75" },
+      { type: 'feature', description: "Politics skill family: 6 new trainable skills (Public Speaking, Negotiation, Governance, Diplomacy, Campaign Strategy, Statecraft) that gate advanced mayor actions and grant project cost discounts and election vote boosts" },
+      { type: 'feature', description: "Public Relations actions: Press Conference, Trade Deal, Emergency Decree, and Campaign Speech — each with approval impact and skill prerequisites" },
+      { type: 'feature', description: "Mayor Actions Log: full audit trail of every spend, project, and PR action visible to all citizens for transparency" },
+      { type: 'improvement', description: "Project completion automatically applies effects to city stats (music_scene, local_bonus, venues, population, max_concert_capacity) and mayor approval/policies_enacted" },
+    ],
+  },
+  {
     version: "1.1.201",
     date: "2026-04-16",
     changes: [
