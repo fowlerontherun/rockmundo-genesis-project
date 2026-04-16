@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.191",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "100 new achievements across 12 categories: regional, band, career, lifestyle, underworld, legacy, and more" },
+      { type: 'feature', description: "50 new random events covering career opportunities, drama & misfortune, lifestyle & social, and travel/city-flavored scenarios" },
+      { type: 'improvement', description: "Random event trigger frequency bumped ~25% (1-in-15 → 1-in-12 per cron run)" },
+    ],
+  },
+  {
     version: "1.1.190",
     date: "2026-04-16",
     changes: [
