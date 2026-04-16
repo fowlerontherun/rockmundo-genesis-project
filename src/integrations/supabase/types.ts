@@ -6955,6 +6955,60 @@ export type Database = {
         }
         Relationships: []
       }
+      enchantment_catalog: {
+        Row: {
+          cash_cost: number
+          category: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          incompatible_with: string[] | null
+          material_cost: Json
+          max_stacks: number
+          min_skill_level: number
+          name: string
+          rarity: string
+          required_skill_slug: string | null
+          stat_modifier: Json
+          tier: number
+        }
+        Insert: {
+          cash_cost?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          incompatible_with?: string[] | null
+          material_cost?: Json
+          max_stacks?: number
+          min_skill_level?: number
+          name: string
+          rarity?: string
+          required_skill_slug?: string | null
+          stat_modifier?: Json
+          tier?: number
+        }
+        Update: {
+          cash_cost?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          incompatible_with?: string[] | null
+          material_cost?: Json
+          max_stacks?: number
+          min_skill_level?: number
+          name?: string
+          rarity?: string
+          required_skill_slug?: string | null
+          stat_modifier?: Json
+          tier?: number
+        }
+        Relationships: []
+      }
       equipment_3d_models: {
         Row: {
           color_accent: string | null
@@ -7067,6 +7121,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      equipment_enchantments: {
+        Row: {
+          applied_at: string
+          enchantment_id: string
+          id: string
+          player_equipment_id: string
+          profile_id: string
+          stack_count: number
+        }
+        Insert: {
+          applied_at?: string
+          enchantment_id: string
+          id?: string
+          player_equipment_id: string
+          profile_id: string
+          stack_count?: number
+        }
+        Update: {
+          applied_at?: string
+          enchantment_id?: string
+          id?: string
+          player_equipment_id?: string
+          profile_id?: string
+          stack_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_enchantments_enchantment_id_fkey"
+            columns: ["enchantment_id"]
+            isOneToOne: false
+            referencedRelation: "enchantment_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       equipment_items: {
         Row: {
