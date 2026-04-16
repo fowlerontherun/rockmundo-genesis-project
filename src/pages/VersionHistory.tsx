@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.185",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Personal Finance Breakdown: detailed asset/liability view with net worth progress bar" },
+      { type: 'feature', description: "Band Finance Detail: per-band P&L with income by source (gigs, merch, streaming, sponsorships)" },
+      { type: 'feature', description: "Charity Donations: 12 in-game charities across 5 categories with fame, reputation, and tax bonuses" },
+      { type: 'feature', description: "Donation system: browse charities, donate cash, earn fame and reputation with projected bonus preview" },
+      { type: 'feature', description: "6 Sponsorship Types: Gear, Energy Drink, Fashion, Tech, Streaming, Automotive — each with unique bonus profiles" },
+      { type: 'feature', description: "City Treasury: per-city balance, tax rate, and transaction ledger for future mayor spending" },
+      { type: 'improvement', description: "Finances page reorganized with new tabs: Charity, Sponsorships, City Treasury" },
+      { type: 'improvement', description: "Overview tab now shows personal and band finance breakdowns side by side" },
+    ],
+  },
+  {
     version: "1.1.184",
     date: "2026-04-16",
     changes: [

@@ -3517,6 +3517,97 @@ export type Database = {
           },
         ]
       }
+      charity_donations: {
+        Row: {
+          amount: number
+          charity_id: string
+          created_at: string
+          fame_gained: number
+          id: string
+          profile_id: string
+          reputation_gained: number
+        }
+        Insert: {
+          amount?: number
+          charity_id: string
+          created_at?: string
+          fame_gained?: number
+          id?: string
+          profile_id: string
+          reputation_gained?: number
+        }
+        Update: {
+          amount?: number
+          charity_id?: string
+          created_at?: string
+          fame_gained?: number
+          id?: string
+          profile_id?: string
+          reputation_gained?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charity_donations_charity_id_fkey"
+            columns: ["charity_id"]
+            isOneToOne: false
+            referencedRelation: "charity_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charity_donations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charity_donations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charity_organizations: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          fame_bonus_pct: number
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          reputation_boost: number
+          tax_deduction_pct: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          fame_bonus_pct?: number
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          reputation_boost?: number
+          tax_deduction_pct?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          fame_bonus_pct?: number
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          reputation_boost?: number
+          tax_deduction_pct?: number
+        }
+        Relationships: []
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
@@ -4667,6 +4758,88 @@ export type Database = {
           {
             foreignKeyName: "city_transport_routes_to_city_id_fkey"
             columns: ["to_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_treasury: {
+        Row: {
+          balance: number
+          city_id: string
+          created_at: string
+          id: string
+          last_collection_at: string | null
+          tax_rate_pct: number
+          total_spent: number
+          total_tax_collected: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          city_id: string
+          created_at?: string
+          id?: string
+          last_collection_at?: string | null
+          tax_rate_pct?: number
+          total_spent?: number
+          total_tax_collected?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          city_id?: string
+          created_at?: string
+          id?: string
+          last_collection_at?: string | null
+          tax_rate_pct?: number
+          total_spent?: number
+          total_tax_collected?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_treasury_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_treasury_ledger: {
+        Row: {
+          amount: number
+          city_id: string
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          type: string
+        }
+        Insert: {
+          amount?: number
+          city_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: string
+        }
+        Update: {
+          amount?: number
+          city_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_treasury_ledger_city_id_fkey"
+            columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]
@@ -27940,6 +28113,7 @@ export type Database = {
           id: string
           last_payment_at: string | null
           offer_id: string | null
+          sponsorship_type_id: string | null
           start_date: string
           status: string
           term_weeks: number
@@ -27960,6 +28134,7 @@ export type Database = {
           id?: string
           last_payment_at?: string | null
           offer_id?: string | null
+          sponsorship_type_id?: string | null
           start_date?: string
           status?: string
           term_weeks: number
@@ -27980,6 +28155,7 @@ export type Database = {
           id?: string
           last_payment_at?: string | null
           offer_id?: string | null
+          sponsorship_type_id?: string | null
           start_date?: string
           status?: string
           term_weeks?: number
@@ -28009,6 +28185,13 @@ export type Database = {
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "sponsorship_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_contracts_sponsorship_type_id_fkey"
+            columns: ["sponsorship_type_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_types"
             referencedColumns: ["id"]
           },
         ]
@@ -28142,6 +28325,7 @@ export type Database = {
           notes: string | null
           offer_type: string | null
           payout: number | null
+          sponsorship_type_id: string | null
           status: string
           term_weeks: number
           terms: Json | null
@@ -28160,6 +28344,7 @@ export type Database = {
           notes?: string | null
           offer_type?: string | null
           payout?: number | null
+          sponsorship_type_id?: string | null
           status?: string
           term_weeks?: number
           terms?: Json | null
@@ -28178,6 +28363,7 @@ export type Database = {
           notes?: string | null
           offer_type?: string | null
           payout?: number | null
+          sponsorship_type_id?: string | null
           status?: string
           term_weeks?: number
           terms?: Json | null
@@ -28203,6 +28389,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "sponsorship_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_offers_sponsorship_type_id_fkey"
+            columns: ["sponsorship_type_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_types"
             referencedColumns: ["id"]
           },
         ]
@@ -28257,6 +28450,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sponsorship_types: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          fame_multiplier: number
+          gig_pay_bonus_pct: number
+          icon_name: string
+          id: string
+          merch_discount_pct: number
+          name: string
+          streaming_bonus_pct: number
+          tour_cost_reduction_pct: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          fame_multiplier?: number
+          gig_pay_bonus_pct?: number
+          icon_name?: string
+          id?: string
+          merch_discount_pct?: number
+          name: string
+          streaming_bonus_pct?: number
+          tour_cost_reduction_pct?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          fame_multiplier?: number
+          gig_pay_bonus_pct?: number
+          icon_name?: string
+          id?: string
+          merch_discount_pct?: number
+          name?: string
+          streaming_bonus_pct?: number
+          tour_cost_reduction_pct?: number
+        }
+        Relationships: []
       }
       stage_equipment_catalog: {
         Row: {
