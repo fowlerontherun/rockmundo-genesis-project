@@ -1389,12 +1389,24 @@ const Songwriting = () => {
           </CardContent>
         </Card>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('songwriting.newProject')}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="md:size-default"
+              onClick={handleOpenQuickCreate}
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Quick Create
             </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('songwriting.newProject')}
+              </Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>
