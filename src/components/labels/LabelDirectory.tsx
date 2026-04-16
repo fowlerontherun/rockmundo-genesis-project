@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Building2, Globe2, MapPin, Rocket, Send, Star, Settings, Crown, ChevronDown, Users, Disc3, Music } from "lucide-react";
+import { LabelTierBadge } from "./LabelTierBadge";
 import { SubmitDemoDialog } from "./SubmitDemoDialog";
 import { LabelFinanceDialog } from "./LabelFinanceDialog";
 import { cn } from "@/lib/utils";
@@ -316,6 +317,7 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                                 Owner
                               </Badge>
                             )}
+                            <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
                           </div>
                           {label.headquarters_city ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -8,8 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown,
-  Megaphone, Star, TrendingUp, Globe2, Building2,
+  Megaphone, Star, TrendingUp, Globe2, Building2, Search, Workflow, BarChart3,
 } from "lucide-react";
+import { LabelTierBadge } from "@/components/labels/LabelTierBadge";
+import { ScoutReportsPanel } from "@/components/labels/management/ScoutReportsPanel";
+import { ArtistDevelopmentTracker } from "@/components/labels/management/ArtistDevelopmentTracker";
+import { LabelGenreExpertise } from "@/components/labels/management/LabelGenreExpertise";
 import { supabase } from "@/integrations/supabase/client";
 import { VipGate } from "@/components/company/VipGate";
 import { LabelRosterTab } from "@/components/labels/management/LabelRosterTab";
@@ -209,6 +213,7 @@ export default function LabelManagement() {
                 <Star className="h-3 w-3 mr-0.5" />
                 {repTier.label} ({label.reputation_score || 0})
               </Badge>
+              <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
               {label.genre_focus?.length > 0 && (
@@ -317,6 +322,18 @@ export default function LabelManagement() {
                 <DollarSign className="h-3.5 w-3.5" />
                 Finances
               </TabsTrigger>
+              <TabsTrigger value="scouts" className="flex items-center gap-1 text-xs">
+                <Search className="h-3.5 w-3.5" />
+                Scouts
+              </TabsTrigger>
+              <TabsTrigger value="development" className="flex items-center gap-1 text-xs">
+                <Workflow className="h-3.5 w-3.5" />
+                Development
+              </TabsTrigger>
+              <TabsTrigger value="genre" className="flex items-center gap-1 text-xs">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Genre
+              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -357,6 +374,18 @@ export default function LabelManagement() {
               isBankrupt={label.is_bankrupt}
               balanceWentNegativeAt={label.balance_went_negative_at}
             />
+          </TabsContent>
+
+          <TabsContent value="scouts">
+            <ScoutReportsPanel labelId={label.id} />
+          </TabsContent>
+
+          <TabsContent value="development">
+            <ArtistDevelopmentTracker labelId={label.id} />
+          </TabsContent>
+
+          <TabsContent value="genre">
+            <LabelGenreExpertise labelId={label.id} />
           </TabsContent>
         </Tabs>
       </div>

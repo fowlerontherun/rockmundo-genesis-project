@@ -28,6 +28,8 @@ interface ReleaseFactors {
   releaseType: 'single' | 'ep' | 'album';
   formatTypes: string[]; // 'digital', 'cd', 'vinyl', 'streaming'
   trackCount: number;
+  labelTier?: string;
+  labelMarketingSpend?: number;
 }
 
 export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction {
@@ -39,7 +41,20 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
     releaseType,
     formatTypes,
     trackCount = 1,
+    labelTier,
+    labelMarketingSpend = 0,
   } = factors;
+
+  // Label tier multipliers
+  const labelTierMultipliers: Record<string, number> = {
+    indie: 1.0,
+    independent: 1.15,
+    'mid-major': 1.35,
+    major: 1.6,
+    'mega-label': 2.0,
+  };
+  const labelMultiplier = labelTier ? (labelTierMultipliers[labelTier] || 1.0) : 1.0;
+  const marketingBoost = 1 + Math.min(labelMarketingSpend / 10000, 0.5); // up to +50% from marketing
 
   // Base multipliers (conservative)
   const fameMultiplier = Math.max(1, artistFame / 100);
@@ -67,6 +82,8 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
       qualityMultiplier *
       chemistryMultiplier *
       releaseTypeMultiplier *
+      labelMultiplier *
+      marketingBoost *
       trackCount
   );
 
