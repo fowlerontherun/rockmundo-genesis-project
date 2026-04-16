@@ -15,10 +15,12 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
+import { TourDetailPanel } from "@/components/tours/TourDetailPanel";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
 import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
+import { useBandTourTotals } from "@/hooks/useTourStats";
 
 interface Tour {
   id: string;
