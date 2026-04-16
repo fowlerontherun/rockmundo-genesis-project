@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Hammer, Package, ScrollText, Recycle, ShoppingCart } from "lucide-react";
+import { Hammer, Package, ScrollText, Recycle, ShoppingCart, Sparkles } from "lucide-react";
 import { useCraftingSystem } from "@/hooks/useCraftingSystem";
 import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
 import { CraftingRecipeCard } from "@/components/crafting/CraftingRecipeCard";
@@ -10,6 +10,7 @@ import { MaterialInventory } from "@/components/crafting/MaterialInventory";
 import { CraftingProgress } from "@/components/crafting/CraftingProgress";
 import { SalvagePanel } from "@/components/crafting/SalvagePanel";
 import { CraftedItemReveal } from "@/components/crafting/CraftedItemReveal";
+import { EnchantmentPanel } from "@/components/crafting/EnchantmentPanel";
 
 const CraftingWorkshop = () => {
   const {
@@ -109,6 +110,9 @@ const CraftingWorkshop = () => {
           <TabsTrigger value="salvage" className="text-xs">
             <Recycle className="w-3.5 h-3.5 mr-1" /> Salvage
           </TabsTrigger>
+          <TabsTrigger value="enchant" className="text-xs">
+            <Sparkles className="w-3.5 h-3.5 mr-1" /> Enchant
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="blueprints">
@@ -163,6 +167,10 @@ const CraftingWorkshop = () => {
 
         <TabsContent value="salvage">
           <SalvagePanel equipment={equipment} />
+        </TabsContent>
+
+        <TabsContent value="enchant">
+          <EnchantmentPanel />
         </TabsContent>
       </Tabs>
 
