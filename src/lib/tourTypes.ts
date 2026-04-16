@@ -172,6 +172,8 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   stageSetupTier: 'basic',
   travelMode: 'bus',
   tourBusDailyCost: TOUR_BUS_DAILY_COST,
+  vehicleTier: 'rusty_van',
+  stageComponents: DEFAULT_STAGE_SELECTIONS,
   supportBandId: null,
   supportBandName: null,
   supportRevenueShare: 0.1,
