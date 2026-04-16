@@ -1675,6 +1675,7 @@ const Songwriting = () => {
                           })}
                         </div>
                       </div>
+                    </div>
                   </section>
 
                   <Separator />
