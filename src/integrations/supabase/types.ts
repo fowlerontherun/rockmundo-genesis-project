@@ -6461,6 +6461,7 @@ export type Database = {
           headline: string
           hired_by_band_id: string | null
           id: string
+          image_url: string | null
           loyalty: number
           min_fame_required: number
           morale: string
@@ -6484,6 +6485,7 @@ export type Database = {
           headline: string
           hired_by_band_id?: string | null
           id: string
+          image_url?: string | null
           loyalty: number
           min_fame_required?: number
           morale: string
@@ -6507,6 +6509,7 @@ export type Database = {
           headline?: string
           hired_by_band_id?: string | null
           id?: string
+          image_url?: string | null
           loyalty?: number
           min_fame_required?: number
           morale?: string

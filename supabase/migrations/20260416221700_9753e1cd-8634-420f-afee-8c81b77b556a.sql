@@ -1,0 +1,1 @@
+ALTER TABLE public.crew_catalog ADD COLUMN IF NOT EXISTS image_url text;
