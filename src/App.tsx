@@ -129,6 +129,7 @@ const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
 const NightClubDetail = lazyWithRetry(() => import("./pages/NightClubDetail"));
 const NightclubHub = lazyWithRetry(() => import("./pages/NightclubHub"));
 const NightclubManagement = lazyWithRetry(() => import("./pages/NightclubManagement"));
+const CraftingWorkshop = lazyWithRetry(() => import("./pages/CraftingWorkshop"));
 const HallOfImmortals = lazyWithRetry(() => import("./pages/HallOfImmortals"));
 const BuyCharacterSlot = lazyWithRetry(() => import("./pages/BuyCharacterSlot"));
 const Characters = lazyWithRetry(() => import("./pages/Characters"));
@@ -569,6 +570,7 @@ function App() {
                     <Route path="nightclubs" element={<NightclubHub />} />
                     <Route path="nightclub/:clubId" element={<NightClubDetail />} />
                     <Route path="nightclub-management" element={<NightclubManagement />} />
+                    <Route path="crafting" element={<CraftingWorkshop />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="tattoo-parlour" element={<TattooParlour />} />
