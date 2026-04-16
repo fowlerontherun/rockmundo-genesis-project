@@ -85,33 +85,68 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch sales data - use release table totals as source of truth, aggregate format breakdown
+  // Fetch sales data - aggregate format breakdown from release_sales (source of truth)
   const { data: salesData, isLoading: loadingSales } = useQuery({
     queryKey: ["release-sales-analytics", release?.id],
     queryFn: async () => {
       if (!release?.id) return null;
-      
-      const formatIds = release.release_formats?.map((f: any) => f.id) || [];
-      if (formatIds.length === 0) return null;
 
-      // Use release table totals as the authoritative source (pump updates these directly)
+      const formatIds = release.release_formats?.map((f: any) => f.id) || [];
+
+      // Use release table totals as the authoritative top-line numbers
       const totalUnits = release.total_units_sold || 0;
       const totalRevenue = release.total_revenue || 0;
 
-      // Build format breakdown from the release's per-format sales columns
-      const formatStats: { format: string; units: number; revenue: number }[] = [];
+      // Aggregate per-format units & revenue from release_sales
+      // total_amount is stored in cents -> convert to dollars
+      const formatStatsMap: Record<string, { units: number; revenue: number }> = {};
+
+      if (formatIds.length > 0) {
+        const { data: allSales } = await supabase
+          .from("release_sales")
+          .select("quantity_sold, total_amount, release_formats!inner(format_type)")
+          .in("release_format_id", formatIds);
+
+        (allSales || []).forEach((s: any) => {
+          const ft = s.release_formats?.format_type || "unknown";
+          if (!formatStatsMap[ft]) formatStatsMap[ft] = { units: 0, revenue: 0 };
+          formatStatsMap[ft].units += s.quantity_sold || 0;
+          formatStatsMap[ft].revenue += (s.total_amount || 0) / 100;
+        });
+      }
+
+      // Fallback: if release_sales has no rows yet but the release has per-format unit columns,
+      // synthesize revenue from units * retail_price.
       const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
       for (const ft of formatTypes) {
-        const units = release[`${ft}_sales`] || 0;
-        if (units > 0) {
-          // Find retail price for this format to estimate revenue split
+        const colUnits = release[`${ft}_sales`] || 0;
+        if (!formatStatsMap[ft] && colUnits > 0) {
           const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
           const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
-          formatStats.push({ format: ft, units, revenue: Math.round(units * pricePerUnit * 100) / 100 });
+          formatStatsMap[ft] = {
+            units: colUnits,
+            revenue: Math.round(colUnits * pricePerUnit * 100) / 100,
+          };
         }
       }
 
-      // Fetch only recent sales for display (not for totals)
+      // If we still have $0 revenue across all formats but the release has totalRevenue,
+      // distribute totalRevenue proportionally by units so the breakdown reflects reality.
+      const aggUnits = Object.values(formatStatsMap).reduce((s, f) => s + f.units, 0);
+      const aggRevenue = Object.values(formatStatsMap).reduce((s, f) => s + f.revenue, 0);
+      if (aggRevenue === 0 && totalRevenue > 0 && aggUnits > 0) {
+        Object.keys(formatStatsMap).forEach((ft) => {
+          const share = formatStatsMap[ft].units / aggUnits;
+          formatStatsMap[ft].revenue = Math.round(totalRevenue * share * 100) / 100;
+        });
+      }
+
+      const formatStats = Object.entries(formatStatsMap)
+        .filter(([, v]) => v.units > 0)
+        .map(([format, v]) => ({ format, units: v.units, revenue: v.revenue }))
+        .sort((a, b) => b.revenue - a.revenue);
+
+      // Fetch only recent sales for display
       const { data: recentSales } = await supabase
         .from("release_sales")
         .select("*, release_formats!inner(format_type)")
@@ -120,7 +155,7 @@ export function ReleaseAnalyticsDialog({
         .limit(10);
 
       return {
-        formats: formatStats.sort((a, b) => b.revenue - a.revenue),
+        formats: formatStats,
         totalUnits,
         totalRevenue,
         recentSales: recentSales || [],
