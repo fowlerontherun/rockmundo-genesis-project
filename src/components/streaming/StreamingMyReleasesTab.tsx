@@ -20,27 +20,30 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface StreamingMyReleasesTabProps {
-  userId: string;
+  userId: string;     // account-level user_id (auth.uid)
+  profileId: string;  // active character profile id
 }
 
-export const StreamingMyReleasesTab = ({ userId }: StreamingMyReleasesTabProps) => {
+export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyReleasesTabProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [takeDownId, setTakeDownId] = useState<string | null>(null);
 
-  // First fetch user's band IDs
+  // First fetch user's band IDs (band_members keyed on profile_id)
   const { data: userBandIds } = useQuery({
-    queryKey: ["user-band-ids-streaming", userId],
+    queryKey: ["user-band-ids-streaming", profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("profile_id", userId);
+        .eq("profile_id", profileId);
       return data?.map(b => b.band_id) || [];
-    }
+    },
+    enabled: !!profileId,
   });
 
-  // Fetch streaming releases
+  // Fetch streaming releases — include solo (user_id) AND band releases
   const { data: releases, isLoading } = useQuery({
     queryKey: ["streaming-releases", userId, userBandIds],
     queryFn: async () => {
@@ -70,18 +73,18 @@ export const StreamingMyReleasesTab = ({ userId }: StreamingMyReleasesTabProps) 
         .eq("is_active", true)
         .order("release_date", { ascending: false });
 
-      // Filter by user or their bands
+      // Solo + band releases (don't early-return when no bands)
       if (userBandIds && userBandIds.length > 0) {
-        query = query.or(`band_id.in.(${userBandIds.join(',')})`);
+        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(',')})`);
       } else {
-        return [];
+        query = query.eq("user_id", userId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: userBandIds !== undefined
+    enabled: !!userId && userBandIds !== undefined,
   });
 
   // Take down mutation

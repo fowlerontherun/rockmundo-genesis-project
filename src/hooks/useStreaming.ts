@@ -53,7 +53,7 @@ export const useStreaming = (userId: string) => {
             song:songs(*)
           )
         `)
-        .order("date", { ascending: false })
+        .order("analytics_date", { ascending: false })
         .limit(100);
 
       if (error) throw error;

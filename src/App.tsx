@@ -79,7 +79,7 @@ const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 // TourManagerNew removed - using TourManager instead
-const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
+// StreamingNew removed in v1.1.194 — consolidated into StreamingPlatforms
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));

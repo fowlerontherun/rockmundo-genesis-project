@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.194",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Streaming hub overhauled: collapsed 5 tabs into 3 (My Music, Platforms, Analytics) with a KPI strip showing total streams, revenue, active releases, and platform coverage" },
+      { type: 'feature', description: "New 'Release to Stream' header CTA opens a single dialog to push a released song to multiple platforms at once (with already-live platforms hidden)" },
+      { type: 'fix', description: "Solo-artist streaming releases now visible everywhere — releases, playlists, and analytics filters previously returned empty for users without bands" },
+      { type: 'fix', description: "Streaming analytics queries fixed to use correct column names (analytics_date, daily_streams) — Music Stats total streams card now reports real numbers" },
+      { type: 'fix', description: "Streaming totals on platform cards now sourced from song_releases.total_streams (correct aggregate) instead of re-summing daily logs" },
+      { type: 'fix', description: "Stopped conflating account user_id with character profile_id across DetailedAnalytics, PlaylistsTab, PlatformComparisonChart, and StreamingMyReleasesTab" },
+      { type: 'improvement', description: "Removed dead StreamingNew page that was no longer routed but kept drifting" },
+    ],
+  },
+  {
     version: "1.1.193",
     date: "2026-04-16",
     changes: [

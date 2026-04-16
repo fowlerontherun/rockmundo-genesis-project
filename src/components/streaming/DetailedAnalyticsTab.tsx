@@ -7,28 +7,31 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { PlatformComparisonChart } from "./PlatformComparisonChart";
 
 interface DetailedAnalyticsTabProps {
-  userId: string;
+  userId: string;     // account user_id
+  profileId: string;  // active character profile id
 }
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
-export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
-  // First fetch band IDs
+export function DetailedAnalyticsTab({ userId, profileId }: DetailedAnalyticsTabProps) {
+  // First fetch band IDs (band_members keyed by profile_id)
   const { data: userBandIds } = useQuery({
-    queryKey: ['user-band-ids-detailed-analytics', userId],
+    queryKey: ['user-band-ids-detailed-analytics', profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('profile_id', userId);
+        .eq('profile_id', profileId);
       return data?.map(b => b.band_id) || [];
-    }
+    },
+    enabled: !!profileId,
   });
 
   const { data: analyticsData } = useQuery({
     queryKey: ['streaming-analytics-detailed', userId, userBandIds],
     queryFn: async () => {
-      // Get user's song releases with proper filtering
+      // Solo (user_id) + band releases (don't early-return without bands)
       let query = supabase
         .from('song_releases')
         .select('id')
@@ -138,7 +141,7 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
         projectedYearly
       };
     },
-    enabled: userBandIds !== undefined
+    enabled: !!userId && userBandIds !== undefined,
   });
 
   if (!analyticsData) {
@@ -382,7 +385,7 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
       </Card>
 
       {/* Platform Comparison */}
-      <PlatformComparisonChart userId={userId} /> {/* userId here is actually profileId passed from parent */}
+      <PlatformComparisonChart userId={userId} profileId={profileId} />
     </div>
   );
 }

@@ -11,24 +11,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface PlaylistsTabProps {
-  userId: string;
+  userId: string;     // account user_id
+  profileId: string;  // character profile id
 }
 
-export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
-  const { profileId } = useActiveProfile();
+export const PlaylistsTab = ({ userId, profileId }: PlaylistsTabProps) => {
   const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting, processPending, isProcessingPending } = usePlaylists(profileId ?? undefined);
   const [selectedRelease, setSelectedRelease] = useState<string>("");
 
-  // Fetch user's active streaming releases (song_releases) - these are what get submitted
+  // Fetch user's active streaming releases (solo + band)
   const { data: userReleases = [], isLoading: isLoadingReleases } = useQuery({
-    queryKey: ["user-streaming-releases", userId],
+    queryKey: ["user-streaming-releases", userId, profileId],
     queryFn: async () => {
-      // First get user's band IDs
       const { data: bandMembers } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("profile_id", userId);
-      
+        .eq("profile_id", profileId);
+
       const bandIds = bandMembers?.map(b => b.band_id) || [];
 
       let query = supabase
@@ -41,11 +40,10 @@ export const PlaylistsTab = ({ userId }: PlaylistsTabProps) => {
         .eq("release_type", "streaming")
         .eq("is_active", true);
 
-      // Filter to user's own releases or their band's releases
       if (bandIds.length > 0) {
-        query = query.or(`band_id.in.(${bandIds.join(",")})`);
+        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
       } else {
-        return [];
+        query = query.eq("user_id", userId);
       }
 
       const { data } = await query;

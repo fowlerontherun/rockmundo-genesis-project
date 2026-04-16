@@ -5,20 +5,23 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { BarChart3 } from "lucide-react";
 
 interface PlatformComparisonChartProps {
-  userId: string;
+  userId: string;     // account user_id
+  profileId: string;  // character profile id
 }
 
-export function PlatformComparisonChart({ userId }: PlatformComparisonChartProps) {
-  // First fetch band IDs
+export function PlatformComparisonChart({ userId, profileId }: PlatformComparisonChartProps) {
+  // First fetch band IDs (band_members keyed on profile_id)
   const { data: userBandIds } = useQuery({
-    queryKey: ['user-band-ids-platform-chart', userId],
+    queryKey: ['user-band-ids-platform-chart', profileId],
     queryFn: async () => {
+      if (!profileId) return [];
       const { data } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('profile_id', userId);
+        .eq('profile_id', profileId);
       return data?.map(b => b.band_id) || [];
-    }
+    },
+    enabled: !!profileId,
   });
 
   const { data: platformData } = useQuery({
@@ -58,7 +61,7 @@ export function PlatformComparisonChart({ userId }: PlatformComparisonChartProps
         revenue: data.revenue,
       }));
     },
-    enabled: userBandIds !== undefined
+    enabled: !!userId && userBandIds !== undefined,
   });
 
   if (!platformData || platformData.length === 0) {
