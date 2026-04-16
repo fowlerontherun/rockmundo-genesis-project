@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.186",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "In-Game Market tile added to Commerce hub for player-to-player trading" },
+      { type: 'feature', description: "Charity and City Treasury tiles added to Career & Business hub with dedicated images" },
+      { type: 'improvement', description: "Generated hub tile images for In-Game Market, Charity, and City Treasury" },
+    ],
+  },
+  {
     version: "1.1.185",
     date: "2026-04-16",
     changes: [
