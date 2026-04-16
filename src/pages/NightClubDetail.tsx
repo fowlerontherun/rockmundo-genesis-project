@@ -293,6 +293,29 @@ const NightClubDetail = () => {
         </CardContent>
       </Card>
 
+      {/* Club Events */}
+      {clubId && <ClubEventsSection clubId={clubId} />}
+
+      {/* VIP Lounge */}
+      {clubId && <VipLoungeSection clubId={clubId} />}
+
+      {/* Owned Club Link */}
+      {isOwned && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">You own this club</span>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => navigate("/nightclub-management")}>
+                Manage
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* DJ Performance History */}
       {djHistory.length > 0 && (
         <Card>
