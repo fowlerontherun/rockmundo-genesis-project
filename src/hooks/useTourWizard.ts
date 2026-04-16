@@ -394,6 +394,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     const ticketPrice = state.customTicketPrice || recommendedTicketPrice;
     const stageSetupTier = STAGE_SETUP_TIERS[state.stageSetupTier];
     
+    // New: Vehicle + stage component calculations
+    const vehicle = getVehicleTier(state.vehicleTier);
+    const prodRating = calculateProductionRating(state.stageComponents);
+    const stageCostPerShow = calculateTotalStageCostPerShow(state.stageComponents);
+    const haulWeight = calculateTotalHaulWeight(state.stageComponents);
+    const haulReq = getHaulRequirement(haulWeight);
+    const merchBoostFromStage = getStageMerchBoost(prodRating);
+    const fameBoostFromStage = getStageFameBoost(prodRating);
+    
     let venueCosts = 0;
     let bookingFees = 0;
     let estimatedTicketRevenue = 0;
@@ -410,22 +419,23 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       bookingFees += fee;
       estimatedTicketRevenue += venueRevenue;
       
-      // Merch with tour boost and stage setup boost
+      // Merch with tour boost and production rating boost
       const merchPerAttendee = estimateMerchSalesPerAttendee(band?.fame || 0);
-      const merchBoost = TOUR_MERCH_BOOST * stageSetupTier.merchBoost;
+      const merchBoost = TOUR_MERCH_BOOST * merchBoostFromStage;
       estimatedMerchRevenue += Math.round(ticketsSold * merchPerAttendee * merchBoost);
     }
     
     // Travel costs (simplified)
     const travelCosts = venueMatches.length * 100;
     
-    // Tour bus costs (static rate)
-    const tourBusCosts = state.travelMode === 'tour_bus'
-      ? calculateTourBusCost(state.durationDays || 30, TOUR_BUS_DAILY_COST)
-      : 0;
+    // Vehicle costs (replaces old tour bus logic)
+    const tourDays = state.durationDays || 30;
+    const vehicleCosts = vehicle.dailyCost * tourDays;
+    const equipTruckCostPerDay = getEquipmentTruckCost(haulReq, vehicle.gearHaulCapacity);
+    const tourBusCosts = vehicleCosts + (equipTruckCostPerDay * tourDays);
     
-    // Stage setup costs
-    const stageSetupCosts = stageSetupTier.costPerShow * venueMatches.length;
+    // Stage setup costs (from component selections)
+    const stageSetupCosts = stageCostPerShow * venueMatches.length;
     
     // Sponsor cash
     const sponsorCashIncome = state.sponsorCashValue;
