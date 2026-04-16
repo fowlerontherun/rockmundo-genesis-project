@@ -134,6 +134,31 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     }
   });
 
+  // Re-release mutation (no confirmation needed — bringing a song back is non-destructive)
+  const reReleaseMutation = useMutation({
+    mutationFn: async (releaseId: string) => {
+      const { error } = await supabase
+        .from("song_releases")
+        .update({ is_active: true, release_date: new Date().toISOString() })
+        .eq("id", releaseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Re-released",
+        description: "Your song is back live on the platform.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["streaming-releases"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Re-release Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Build a 7-day series per release_id (fill missing days with 0)
   const buildSeriesForReleases = (relIds: string[]) => {
     const days: string[] = [];
