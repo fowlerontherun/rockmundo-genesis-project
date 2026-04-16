@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   FileText, Calendar, DollarSign, Globe2, ShieldCheck,
   XCircle, Eye, EyeOff, CheckCircle2, Loader2, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
+const HIDDEN_BY_DEFAULT_STATUSES = new Set(["rejected", "terminated", "cancelled", "canceled", "withdrawn"]);
 
 interface LabelContractsTabProps {
   labelId: string;
@@ -29,6 +33,7 @@ const STATUS_COLORS: Record<string, string> = {
 export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["label-all-contracts", labelId],
@@ -202,18 +207,45 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
     statusCounts[s] = (statusCounts[s] || 0) + 1;
   });
 
+  const hiddenCount = contracts.filter((c) => HIDDEN_BY_DEFAULT_STATUSES.has((c.status ?? "").toLowerCase())).length;
+  const visibleContracts = showInactive
+    ? contracts
+    : contracts.filter((c) => !HIDDEN_BY_DEFAULT_STATUSES.has((c.status ?? "").toLowerCase()));
+
   return (
     <div className="space-y-4">
-      {/* Status summary */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(statusCounts).map(([status, count]) => (
-          <Badge key={status} variant="outline" className={STATUS_COLORS[status] || ""}>
-            {status}: {count}
-          </Badge>
-        ))}
+      {/* Status summary + visibility toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(statusCounts).map(([status, count]) => (
+            <Badge key={status} variant="outline" className={STATUS_COLORS[status] || ""}>
+              {status}: {count}
+            </Badge>
+          ))}
+        </div>
+        {hiddenCount > 0 && (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="label-show-inactive-contracts"
+              checked={showInactive}
+              onCheckedChange={setShowInactive}
+            />
+            <Label htmlFor="label-show-inactive-contracts" className="text-xs text-muted-foreground cursor-pointer">
+              Show rejected / cancelled ({hiddenCount})
+            </Label>
+          </div>
+        )}
       </div>
 
-      {contracts.map((contract) => {
+      {visibleContracts.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            No active contracts. {hiddenCount > 0 && "Toggle above to view rejected or cancelled deals."}
+          </CardContent>
+        </Card>
+      )}
+
+      {visibleContracts.map((contract) => {
         const band = contract.bands as any;
         const dealType = contract.label_deal_types as any;
         const advanceAmount = contract.advance_amount ?? 0;

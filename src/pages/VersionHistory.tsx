@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.207",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Record label contracts: rejected, terminated, cancelled, and withdrawn deals are now hidden by default on both the artist-side My Contracts tab and the label-side Contracts management tab. A 'Show rejected / cancelled' toggle (with a count of how many are hidden) appears whenever inactive contracts exist, letting players reveal the historical record on demand." },
+    ],
+  },
+  {
     version: "1.1.206",
     date: "2026-04-16",
     changes: [

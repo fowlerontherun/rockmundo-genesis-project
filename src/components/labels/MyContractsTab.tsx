@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Globe2, Layers, ShieldCheck, Disc3, Album, DollarSign, XCircle, Send, AlertTriangle, Clock, Calendar } from "lucide-react";
 import type { ArtistEntity, ContractWithRelations } from "./types";
 import { ContractNotificationsPanel } from "./ContractNotificationsPanel";
@@ -16,6 +18,8 @@ import { ContractOfferCard } from "./ContractOfferCard";
 import { TerminateContractDialog } from "./TerminateContractDialog";
 import { DealTypeInfoCard } from "./DealTypeEffects";
 import { differenceInMonths, differenceInDays, format } from "date-fns";
+
+const HIDDEN_BY_DEFAULT_STATUSES = new Set(["rejected", "terminated", "cancelled", "canceled", "withdrawn"]);
 
 interface MyContractsTabProps {
   artistEntities: ArtistEntity[];
@@ -55,6 +59,7 @@ const statusBadge = {
 export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) {
   const [showDemoDialog, setShowDemoDialog] = useState(false);
   const [terminateContract, setTerminateContract] = useState<any>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const soloEntity = artistEntities.find((entity) => entity.type === "solo");
   const bandEntities = artistEntities.filter((entity) => entity.type === "band");
@@ -217,6 +222,11 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
   );
 
   const activeContracts = contracts?.filter(c => c.status === "active") ?? [];
+  const inactiveContracts = useMemo(
+    () => (contracts ?? []).filter((c) => HIDDEN_BY_DEFAULT_STATUSES.has((c.status ?? "").toLowerCase())),
+    [contracts],
+  );
+  const visibleInactiveContracts = showInactive ? inactiveContracts : [];
 
   if (isLoading) {
     return (
@@ -293,6 +303,53 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
           </CardContent>
         </Card>
       )}
+
+      {/* Inactive contracts toggle */}
+      {inactiveContracts.length > 0 && (
+        <div className="flex items-center justify-end gap-2">
+          <Switch
+            id="my-show-inactive-contracts"
+            checked={showInactive}
+            onCheckedChange={setShowInactive}
+          />
+          <Label htmlFor="my-show-inactive-contracts" className="text-xs text-muted-foreground cursor-pointer">
+            Show rejected / cancelled ({inactiveContracts.length})
+          </Label>
+        </div>
+      )}
+
+      {/* Inactive contract history (rejected/terminated/cancelled) */}
+      {visibleInactiveContracts.map((contract) => {
+        const entity = contract.band_id
+          ? entityLookup.get(contract.band_id)
+          : entityLookup.get(contract.artist_profile_id ?? "");
+        const label = contract.labels;
+        return (
+          <Card key={contract.id} className="opacity-70">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base">
+                  {entity ? entity.name : "Unassigned entity"} · {label?.name ?? "Unknown label"}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant={STATUS_VARIANTS[contract.status ?? "rejected"] ?? "outline"}>
+                    {contract.status}
+                  </Badge>
+                  {contract.start_date && (
+                    <span>Started {format(new Date(contract.start_date), "MMM d, yyyy")}</span>
+                  )}
+                  {contract.terminated_at && (
+                    <span>· Ended {format(new Date(contract.terminated_at), "MMM d, yyyy")}</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Advance ${(contract.advance_amount ?? 0).toLocaleString()} · Royalty {contract.royalty_artist_pct}%
+              </div>
+            </CardHeader>
+          </Card>
+        );
+      })}
 
       {/* Active Contracts with Obligations Dashboard */}
       {activeContracts.map((contract) => {
