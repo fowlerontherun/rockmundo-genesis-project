@@ -17,6 +17,15 @@ import {
   TOUR_BUS_DAILY_COST,
   MEMBER_TRAVEL_COST_PER_LEG,
 } from '@/lib/tourTypes';
+import { getVehicleTier, getEquipmentTruckCost } from '@/lib/tourVehicles';
+import {
+  calculateProductionRating,
+  calculateTotalStageCostPerShow,
+  calculateTotalHaulWeight,
+  getHaulRequirement,
+  getStageFameBoost,
+  getStageMerchBoost,
+} from '@/lib/tourStageComponents';
 import {
   getMaxVenueCapacityForFans,
   canAccessScope,
