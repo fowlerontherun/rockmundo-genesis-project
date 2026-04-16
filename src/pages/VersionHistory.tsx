@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.184",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Tour Vehicle Progression: 8-tier vehicle system from Rusty Van to Private Jet + Fleet, unlocked by fame" },
+      { type: 'feature', description: "Each vehicle has comfort rating (affects morale), capacity, speed, breakdown chance, and gear hauling capacity" },
+      { type: 'feature', description: "Stage Equipment Builder: 6 component categories (Sound, Lighting, Video, Pyro, Stage Design, Effects) each with 4-5 tiers" },
+      { type: 'feature', description: "Production Rating system (0-100) calculated from stage components, directly affects merch sales and fame gains" },
+      { type: 'feature', description: "Equipment hauling: bigger stage setups require bigger vehicles or extra equipment truck rental" },
+      { type: 'feature', description: "Visual star ratings for each stage component and overall production gauge" },
+      { type: 'feature', description: "Item Marketplace: Players can trade gear, books, underworld items, and clothing with 5% marketplace fee" },
+    ],
+  },
+  {
     version: "1.1.182",
     date: "2026-04-16",
     changes: [
