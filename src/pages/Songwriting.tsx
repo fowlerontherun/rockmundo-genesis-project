@@ -1539,11 +1539,20 @@ const Songwriting = () => {
                       onChange={(instruments) =>
                         setFormState((previous) => ({ ...previous, instruments }))
                       }
-                    />
-                  </TabsContent>
+                  </section>
 
-                  {/* Tab 2: Creative Brief */}
-                  <TabsContent value="creative" className="space-y-4 mt-0">
+                  <Separator />
+
+                  {/* Step 2: Creative Brief */}
+                  <section className={`space-y-4 ${!step2Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`} aria-disabled={!step2Unlocked}>
+                    <StepHeader
+                      number={2}
+                      title="Creative Brief"
+                      subtitle="Sketch the lyrics, mood, and inspiration."
+                      icon={Pen}
+                      done={step2Complete && step2Unlocked}
+                      locked={!step2Unlocked}
+                    />
                     {/* Song Notes - Auto-populated */}
                     <SongNotesDisplay
                       genre={formState.genre}
@@ -1665,11 +1674,20 @@ const Songwriting = () => {
                           })}
                         </div>
                       </div>
-                    </div>
-                  </TabsContent>
+                  </section>
 
-                  {/* Tab 3: Collaborators */}
-                  <TabsContent value="collaborators" className="space-y-4 mt-0">
+                  <Separator />
+
+                  {/* Step 3: Collaborators */}
+                  <section className={`space-y-4 ${!step3Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`} aria-disabled={!step3Unlocked}>
+                    <StepHeader
+                      number={3}
+                      title="Collaborators"
+                      subtitle="Choose your writing mode and invite co-writers."
+                      icon={UserPlus}
+                      done={step3Complete}
+                      locked={!step3Unlocked}
+                    />
                     <div className="space-y-2">
                       <Label htmlFor="project-writing-mode">Writing Mode *</Label>
                       <Select
@@ -1787,9 +1805,11 @@ const Songwriting = () => {
                         </div>
                       </div>
                     </div>
-                  </TabsContent>
+                  </section>
                 </div>
-              </Tabs>
+                </>
+                );
+              })()}
 
               <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
