@@ -74,13 +74,13 @@ export function useItemMarket() {
       if (error) throw error;
 
       // Fetch seller names
-      const sellerIds = [...new Set((data || []).map((d: any) => d.seller_profile_id))];
+      const sellerIds = [...new Set((data || []).map((d: any) => d.seller_profile_id))] as string[];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, display_name, artist_name")
+        .select("id, display_name, username")
         .in("id", sellerIds);
       const nameMap = new Map(
-        (profiles || []).map((p) => [p.id, p.artist_name || p.display_name || "Unknown"])
+        (profiles || []).map((p: any) => [p.id, p.display_name || p.username || "Unknown"])
       );
 
       return (data || []).map((d: any) => ({
@@ -143,13 +143,13 @@ export function useItemMarket() {
       if (error) throw error;
 
       // Fetch buyer names
-      const buyerProfileIds = [...new Set((data || []).map((d: any) => d.buyer_profile_id))];
+      const buyerProfileIds = [...new Set((data || []).map((d: any) => d.buyer_profile_id))] as string[];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, display_name, artist_name")
+        .select("id, display_name, username")
         .in("id", buyerProfileIds);
       const nameMap = new Map(
-        (profiles || []).map((p) => [p.id, p.artist_name || p.display_name || "Unknown"])
+        (profiles || []).map((p: any) => [p.id, p.display_name || p.username || "Unknown"])
       );
 
       return (data || []).map((d: any) => ({
