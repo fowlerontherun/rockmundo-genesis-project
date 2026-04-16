@@ -46,12 +46,17 @@ export function MusicStats() {
         ? Math.min(...chartEntries.map(e => e.rank))
         : 0;
 
-      // Get total streams
-      const { data: streamData } = await supabase
-        .from("streaming_analytics_daily")
-        .select("stream_count");
+      // Get total streams from song_releases (parent aggregate, not daily logs)
+      const { data: releaseStreamData } = await supabase
+        .from("song_releases")
+        .select("total_streams, song:songs!inner(profile_id)")
+        .eq("songs.profile_id", profileId)
+        .eq("release_type", "streaming");
 
-      const totalStreams = streamData?.reduce((sum, s) => sum + ((s as any).stream_count || 0), 0) || 0;
+      const totalStreams = releaseStreamData?.reduce(
+        (sum, r) => sum + ((r as any).total_streams || 0),
+        0,
+      ) || 0;
 
       // Get radio plays
       const { data: radioData } = await supabase
