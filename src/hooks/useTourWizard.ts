@@ -828,10 +828,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         return state.venueTypes.length > 0 && venueMatches.length > 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
-      case 5: // Stage Setup
-        return (band?.fame || 0) >= STAGE_SETUP_TIERS[state.stageSetupTier].minFame;
-      case 6: // Travel
-        return true;
+      case 5: // Stage Production
+        return true; // Always valid, defaults are fine
+      case 6: // Transport (vehicle)
+        return (band?.fame || 0) >= getVehicleTier(state.vehicleTier).fameRequired;
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review
