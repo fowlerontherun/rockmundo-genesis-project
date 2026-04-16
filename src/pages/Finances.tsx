@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinances } from "@/hooks/useFinances";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
@@ -51,7 +52,7 @@ const Finances = () => {
       <FinanceSummaryCards summary={summary} />
 
       {/* Main Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue={searchParams.get("tab") || "overview"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="bands">Bands</TabsTrigger>
