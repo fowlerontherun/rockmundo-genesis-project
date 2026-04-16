@@ -11254,6 +11254,178 @@ export type Database = {
           },
         ]
       }
+      item_market_listings: {
+        Row: {
+          asking_price: number
+          buyer_profile_id: string | null
+          buyer_user_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_negotiable: boolean
+          item_category: string | null
+          item_description: string | null
+          item_id: string
+          item_image_url: string | null
+          item_metadata: Json | null
+          item_name: string
+          item_rarity: string | null
+          item_type: string
+          listed_at: string
+          seller_profile_id: string
+          seller_user_id: string
+          sold_at: string | null
+          sold_price: number | null
+          status: string
+          views: number
+        }
+        Insert: {
+          asking_price: number
+          buyer_profile_id?: string | null
+          buyer_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_negotiable?: boolean
+          item_category?: string | null
+          item_description?: string | null
+          item_id: string
+          item_image_url?: string | null
+          item_metadata?: Json | null
+          item_name: string
+          item_rarity?: string | null
+          item_type: string
+          listed_at?: string
+          seller_profile_id: string
+          seller_user_id: string
+          sold_at?: string | null
+          sold_price?: number | null
+          status?: string
+          views?: number
+        }
+        Update: {
+          asking_price?: number
+          buyer_profile_id?: string | null
+          buyer_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_negotiable?: boolean
+          item_category?: string | null
+          item_description?: string | null
+          item_id?: string
+          item_image_url?: string | null
+          item_metadata?: Json | null
+          item_name?: string
+          item_rarity?: string | null
+          item_type?: string
+          listed_at?: string
+          seller_profile_id?: string
+          seller_user_id?: string
+          sold_at?: string | null
+          sold_price?: number | null
+          status?: string
+          views?: number
+        }
+        Relationships: []
+      }
+      item_market_offers: {
+        Row: {
+          buyer_profile_id: string
+          buyer_user_id: string
+          created_at: string
+          id: string
+          listing_id: string
+          message: string | null
+          offer_amount: number
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          buyer_profile_id: string
+          buyer_user_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          message?: string | null
+          offer_amount: number
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          buyer_profile_id?: string
+          buyer_user_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          message?: string | null
+          offer_amount?: number
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_market_offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "item_market_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_market_transactions: {
+        Row: {
+          buyer_profile_id: string
+          buyer_user_id: string
+          completed_at: string
+          id: string
+          item_name: string
+          item_type: string
+          listing_id: string
+          marketplace_fee: number
+          sale_price: number
+          seller_proceeds: number
+          seller_profile_id: string
+          seller_user_id: string
+        }
+        Insert: {
+          buyer_profile_id: string
+          buyer_user_id: string
+          completed_at?: string
+          id?: string
+          item_name: string
+          item_type: string
+          listing_id: string
+          marketplace_fee?: number
+          sale_price: number
+          seller_proceeds: number
+          seller_profile_id: string
+          seller_user_id: string
+        }
+        Update: {
+          buyer_profile_id?: string
+          buyer_user_id?: string
+          completed_at?: string
+          id?: string
+          item_name?: string
+          item_type?: string
+          listing_id?: string
+          marketplace_fee?: number
+          sale_price?: number
+          seller_proceeds?: number
+          seller_profile_id?: string
+          seller_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_market_transactions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "item_market_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_gifted_song_log: {
         Row: {
           created_at: string
