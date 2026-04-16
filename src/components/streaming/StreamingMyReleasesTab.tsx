@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star } from "lucide-react";
+import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
