@@ -218,39 +218,69 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
   return (
     <>
       <div className="grid gap-4">
-        {songEntries.map(([songId, data]) => (
-          <Card key={songId}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{data.song?.title || "Unknown Song"}</CardTitle>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">{data.song?.genre}</span>
-                    {data.song?.quality_score && (
-                      <Badge variant="outline" className="text-xs">
-                        Quality: {data.song.quality_score}
-                      </Badge>
-                    )}
-                    {(data.song?.hype || 0) > 0 && (
-                      <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
-                        <Flame className="h-3 w-3 mr-1" />
-                        {data.song.hype} Hype
-                      </Badge>
-                    )}
-                    {(data.song?.fame || 0) > 0 && (
-                      <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/20">
-                        <Star className="h-3 w-3 mr-1" />
-                        {data.song.fame} Fame
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <Badge variant="secondary">
-                  {data.platforms.length} Platform{data.platforms.length !== 1 ? "s" : ""}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {songEntries.map(([songId, data]) => {
+          const isOpen = expandedSongs.has(songId);
+          return (
+            <Card key={songId}>
+              <Collapsible open={isOpen} onOpenChange={() => toggleSong(songId)}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full text-left hover:bg-muted/30 transition-colors rounded-t-lg"
+                    aria-expanded={isOpen}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                              isOpen ? "rotate-0" : "-rotate-90"
+                            }`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-base truncate">
+                              {data.song?.title || "Unknown Song"}
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                              <span className="text-xs text-muted-foreground">{data.song?.genre}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                {data.platforms.length} platform{data.platforms.length !== 1 ? "s" : ""}
+                              </Badge>
+                              {(data.song?.hype || 0) > 0 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-orange-500/10 text-orange-500 border-orange-500/20">
+                                  <Flame className="h-2.5 w-2.5 mr-0.5" />
+                                  {data.song.hype}
+                                </Badge>
+                              )}
+                              {(data.song?.fame || 0) > 0 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-purple-500/10 text-purple-500 border-purple-500/20">
+                                  <Star className="h-2.5 w-2.5 mr-0.5" />
+                                  {data.song.fame}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 text-right">
+                          <div>
+                            <div className="text-xs text-muted-foreground leading-none">Streams</div>
+                            <div className="text-sm font-bold text-primary tabular-nums leading-tight mt-0.5">
+                              {data.totalStreams.toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground leading-none">Revenue</div>
+                            <div className="text-sm font-bold text-green-500 tabular-nums leading-tight mt-0.5">
+                              ${data.totalRevenue.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
               {/* AI Audio Player */}
               {data.song?.audio_url && (
                 <SongPlayer
