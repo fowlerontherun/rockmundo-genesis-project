@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart, Heart, Landmark } from "lucide-react";
 
 export default function CareerBusinessHub() {
   return (
@@ -15,6 +15,8 @@ export default function CareerBusinessHub() {
             { icon: Building2, labelKey: "nav.myCompanies", path: "/my-companies", imagePrompt: "A modern office building with a record label logo, music business empire" },
             { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships", imagePrompt: "A handshake between a musician and a corporate sponsor with brand logos and contracts" },
             { icon: Disc, labelKey: "nav.recordLabels", path: "/labels", imagePrompt: "A record label office with gold records on walls, vinyl pressing machines, and contracts" },
+            { icon: Heart, labelKey: "Charity", path: "/finances?tab=charity", tileImageKey: "charity", imagePrompt: "A charity gala event with musicians performing on stage for a fundraiser" },
+            { icon: Landmark, labelKey: "City Treasury", path: "/finances?tab=city", tileImageKey: "city-treasury", imagePrompt: "A city hall treasury vault with gold coins, tax ledgers, and budget charts" },
           ],
         },
         {
