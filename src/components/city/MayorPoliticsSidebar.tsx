@@ -37,7 +37,7 @@ export function MayorPoliticsSidebar({ politics }: { politics: MayorPoliticsStat
       <CardContent className="space-y-3">
         <div className="space-y-2">
           {Object.entries(SKILL_LABELS).map(([slug, label]) => {
-            const v = (politics.levels as Record<string, number>)[slug] ?? 0;
+            const v = (politics.levels as unknown as Record<string, number>)[slug] ?? 0;
             return (
               <div key={slug}>
                 <div className="flex justify-between text-xs">

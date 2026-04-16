@@ -54,7 +54,7 @@ export function useMayorPolitics(profileId: string | undefined) {
         const slug = row.skill_slug as PoliticsSkillSlug;
         const value = (row.current_xp ?? row.current_level ?? 0) as number;
         if (slug in levels) {
-          (levels as Record<string, number>)[slug] = value;
+          (levels as unknown as Record<string, number>)[slug] = value;
           totalLevel += value;
         }
       }

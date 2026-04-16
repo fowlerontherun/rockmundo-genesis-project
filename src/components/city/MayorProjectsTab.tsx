@@ -68,7 +68,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
   const isUnlocked = (t: CityProjectType) => {
     if (!t.required_skill_slug || t.required_skill_level === 0) return true;
     if (!politics) return false;
-    const lvl = (politics.levels as Record<string, number>)[t.required_skill_slug] ?? 0;
+    const lvl = (politics.levels as unknown as Record<string, number>)[t.required_skill_slug] ?? 0;
     return lvl >= t.required_skill_level;
   };
 
