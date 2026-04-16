@@ -31,6 +31,21 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
+import vanImg from "@/assets/vehicles/van.jpg";
+import sprinterImg from "@/assets/vehicles/sprinter.jpg";
+import truckImg from "@/assets/vehicles/truck.jpg";
+import tourBusImg from "@/assets/vehicles/tour_bus.jpg";
+import sleeperBusImg from "@/assets/vehicles/sleeper_bus.jpg";
+
+const VEHICLE_IMAGES: Record<string, string> = {
+  van: vanImg,
+  sprinter: sprinterImg,
+  truck: truckImg,
+  tour_bus: tourBusImg,
+  sleeper_bus: sleeperBusImg,
+};
+
+const getVehicleImage = (type: string) => VEHICLE_IMAGES[type] || vanImg;
 
 interface VehicleCatalogItem {
   id: string;
