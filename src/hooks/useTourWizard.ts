@@ -17,6 +17,15 @@ import {
   TOUR_BUS_DAILY_COST,
   MEMBER_TRAVEL_COST_PER_LEG,
 } from '@/lib/tourTypes';
+import { getVehicleTier, getEquipmentTruckCost } from '@/lib/tourVehicles';
+import {
+  calculateProductionRating,
+  calculateTotalStageCostPerShow,
+  calculateTotalHaulWeight,
+  getHaulRequirement,
+  getStageFameBoost,
+  getStageMerchBoost,
+} from '@/lib/tourStageComponents';
 import {
   getMaxVenueCapacityForFans,
   canAccessScope,
@@ -40,8 +49,8 @@ const WIZARD_STEPS = [
   'Countries',
   'Venues',
   'Tickets',
-  'Stage Setup',
-  'Travel',
+  'Stage Production',
+  'Transport',
   'Support Artist',
   'Review'
 ];
@@ -385,6 +394,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     const ticketPrice = state.customTicketPrice || recommendedTicketPrice;
     const stageSetupTier = STAGE_SETUP_TIERS[state.stageSetupTier];
     
+    // New: Vehicle + stage component calculations
+    const vehicle = getVehicleTier(state.vehicleTier);
+    const prodRating = calculateProductionRating(state.stageComponents);
+    const stageCostPerShow = calculateTotalStageCostPerShow(state.stageComponents);
+    const haulWeight = calculateTotalHaulWeight(state.stageComponents);
+    const haulReq = getHaulRequirement(haulWeight);
+    const merchBoostFromStage = getStageMerchBoost(prodRating);
+    const fameBoostFromStage = getStageFameBoost(prodRating);
+    
     let venueCosts = 0;
     let bookingFees = 0;
     let estimatedTicketRevenue = 0;
@@ -401,22 +419,23 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       bookingFees += fee;
       estimatedTicketRevenue += venueRevenue;
       
-      // Merch with tour boost and stage setup boost
+      // Merch with tour boost and production rating boost
       const merchPerAttendee = estimateMerchSalesPerAttendee(band?.fame || 0);
-      const merchBoost = TOUR_MERCH_BOOST * stageSetupTier.merchBoost;
+      const merchBoost = TOUR_MERCH_BOOST * merchBoostFromStage;
       estimatedMerchRevenue += Math.round(ticketsSold * merchPerAttendee * merchBoost);
     }
     
     // Travel costs (simplified)
     const travelCosts = venueMatches.length * 100;
     
-    // Tour bus costs (static rate)
-    const tourBusCosts = state.travelMode === 'tour_bus'
-      ? calculateTourBusCost(state.durationDays || 30, TOUR_BUS_DAILY_COST)
-      : 0;
+    // Vehicle costs (replaces old tour bus logic)
+    const tourDays = state.durationDays || 30;
+    const vehicleCosts = vehicle.dailyCost * tourDays;
+    const equipTruckCostPerDay = getEquipmentTruckCost(haulReq, vehicle.gearHaulCapacity);
+    const tourBusCosts = vehicleCosts + (equipTruckCostPerDay * tourDays);
     
-    // Stage setup costs
-    const stageSetupCosts = stageSetupTier.costPerShow * venueMatches.length;
+    // Stage setup costs (from component selections)
+    const stageSetupCosts = stageCostPerShow * venueMatches.length;
     
     // Sponsor cash
     const sponsorCashIncome = state.sponsorCashValue;
@@ -525,7 +544,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           scope: state.scope,
           min_rest_days: state.minRestDays,
           travel_mode: state.travelMode,
-          tour_bus_daily_cost: state.travelMode === 'tour_bus' ? TOUR_BUS_DAILY_COST : 0,
+          tour_bus_daily_cost: getVehicleTier(state.vehicleTier).dailyCost,
           total_upfront_cost: costEstimate.netUpfrontCost,
           total_travel_cost: costEstimate.travelCosts + costEstimate.tourBusCosts,
           selected_countries: state.selectedCountries,
@@ -535,7 +554,6 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           target_show_count: venueMatches.length,
           setlist_id: state.setlistId,
           status: 'scheduled',
-          // New fields
           starting_city_id: state.startingCityId,
           custom_ticket_price: ticketPrice,
           stage_setup_tier: state.stageSetupTier,
@@ -546,7 +564,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           sponsor_cash_value: state.sponsorCashValue,
           sponsor_fame_penalty: state.sponsorFamePenalty,
           sponsor_ticket_penalty: state.sponsorTicketPenalty,
-          merch_boost_multiplier: TOUR_MERCH_BOOST * STAGE_SETUP_TIERS[state.stageSetupTier].merchBoost,
+          merch_boost_multiplier: TOUR_MERCH_BOOST * getStageMerchBoost(calculateProductionRating(state.stageComponents)),
+          // New vehicle + production fields
+          vehicle_tier: state.vehicleTier,
+          production_rating: calculateProductionRating(state.stageComponents),
+          equipment_hauling_cost: getEquipmentTruckCost(
+            getHaulRequirement(calculateTotalHaulWeight(state.stageComponents)),
+            getVehicleTier(state.vehicleTier).gearHaulCapacity
+          ) * (state.durationDays || 30),
+          stage_components: state.stageComponents,
         })
         .select()
         .single();
@@ -802,10 +828,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         return state.venueTypes.length > 0 && venueMatches.length > 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
-      case 5: // Stage Setup
-        return (band?.fame || 0) >= STAGE_SETUP_TIERS[state.stageSetupTier].minFame;
-      case 6: // Travel
-        return true;
+      case 5: // Stage Production
+        return true; // Always valid, defaults are fine
+      case 6: // Transport (vehicle)
+        return (band?.fame || 0) >= getVehicleTier(state.vehicleTier).fameRequired;
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review

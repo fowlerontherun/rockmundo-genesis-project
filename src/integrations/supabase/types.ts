@@ -29212,11 +29212,13 @@ export type Database = {
           custom_ticket_price: number | null
           description: string | null
           end_date: string
+          equipment_hauling_cost: number
           id: string
           max_venue_capacity: number | null
           merch_boost_multiplier: number | null
           min_rest_days: number | null
           name: string
+          production_rating: number
           scope: string | null
           selected_continents: string[] | null
           selected_countries: string[] | null
@@ -29225,6 +29227,7 @@ export type Database = {
           sponsor_fame_penalty: number | null
           sponsor_offer_id: string | null
           sponsor_ticket_penalty: number | null
+          stage_components: Json
           stage_setup_cost: number | null
           stage_setup_tier: string | null
           start_date: string
@@ -29243,6 +29246,7 @@ export type Database = {
           travel_mode: string | null
           user_id: string
           vehicle_id: string | null
+          vehicle_tier: string
           venue_type_filter: string[] | null
         }
         Insert: {
@@ -29255,11 +29259,13 @@ export type Database = {
           custom_ticket_price?: number | null
           description?: string | null
           end_date: string
+          equipment_hauling_cost?: number
           id?: string
           max_venue_capacity?: number | null
           merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name: string
+          production_rating?: number
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null
@@ -29268,6 +29274,7 @@ export type Database = {
           sponsor_fame_penalty?: number | null
           sponsor_offer_id?: string | null
           sponsor_ticket_penalty?: number | null
+          stage_components?: Json
           stage_setup_cost?: number | null
           stage_setup_tier?: string | null
           start_date: string
@@ -29286,6 +29293,7 @@ export type Database = {
           travel_mode?: string | null
           user_id: string
           vehicle_id?: string | null
+          vehicle_tier?: string
           venue_type_filter?: string[] | null
         }
         Update: {
@@ -29298,11 +29306,13 @@ export type Database = {
           custom_ticket_price?: number | null
           description?: string | null
           end_date?: string
+          equipment_hauling_cost?: number
           id?: string
           max_venue_capacity?: number | null
           merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name?: string
+          production_rating?: number
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null
@@ -29311,6 +29321,7 @@ export type Database = {
           sponsor_fame_penalty?: number | null
           sponsor_offer_id?: string | null
           sponsor_ticket_penalty?: number | null
+          stage_components?: Json
           stage_setup_cost?: number | null
           stage_setup_tier?: string | null
           start_date?: string
@@ -29329,6 +29340,7 @@ export type Database = {
           travel_mode?: string | null
           user_id?: string
           vehicle_id?: string | null
+          vehicle_tier?: string
           venue_type_filter?: string[] | null
         }
         Relationships: [

@@ -1,5 +1,8 @@
 // Tour system types and constants
 
+import { type VehicleTier } from '@/lib/tourVehicles';
+import { type StageComponentSelections, DEFAULT_STAGE_SELECTIONS } from '@/lib/tourStageComponents';
+
 export type TourScope = 'country' | 'continent' | 'world';
 export type TravelMode = 'auto' | 'manual' | 'bus' | 'train' | 'plane' | 'ship' | 'tour_bus';
 export type StageSetupTier = 'basic' | 'enhanced' | 'professional' | 'premium' | 'spectacular';
@@ -83,6 +86,12 @@ export interface TourWizardState {
   travelMode: TravelMode;
   tourBusDailyCost: number;
   
+  // Step 6b: Vehicle
+  vehicleTier: VehicleTier;
+  
+  // Step 6c: Stage Components (detailed)
+  stageComponents: StageComponentSelections;
+
   // Step 8: Support Artist
   supportBandId: string | null;
   supportBandName: string | null;
@@ -163,6 +172,8 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   stageSetupTier: 'basic',
   travelMode: 'bus',
   tourBusDailyCost: TOUR_BUS_DAILY_COST,
+  vehicleTier: 'rusty_van',
+  stageComponents: DEFAULT_STAGE_SELECTIONS,
   supportBandId: null,
   supportBandName: null,
   supportRevenueShare: 0.1,

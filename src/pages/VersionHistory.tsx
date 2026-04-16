@@ -14,15 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.183",
+    version: "1.1.184",
     date: "2026-04-16",
     changes: [
-      { type: 'feature', description: "Item Marketplace: Players can now trade gear, books, underworld items, and clothing with other players" },
-      { type: 'feature', description: "List items for sale with custom pricing, negotiable flag, and 7-day auto-expiration" },
-      { type: 'feature', description: "Browse marketplace with search, type filters (Gear/Books/Underworld/Clothing), and price sorting" },
-      { type: 'feature', description: "Make offers on negotiable listings with optional messages — sellers can accept or reject" },
-      { type: 'feature', description: "5% marketplace fee on all sales, transaction history for buyers and sellers" },
-      { type: 'feature', description: "Sell dialog auto-detects unequipped gear, owned books, unused underworld items, and purchased clothing" },
+      { type: 'feature', description: "Tour Vehicle Progression: 8-tier vehicle system from Rusty Van to Private Jet + Fleet, unlocked by fame" },
+      { type: 'feature', description: "Each vehicle has comfort rating (affects morale), capacity, speed, breakdown chance, and gear hauling capacity" },
+      { type: 'feature', description: "Stage Equipment Builder: 6 component categories (Sound, Lighting, Video, Pyro, Stage Design, Effects) each with 4-5 tiers" },
+      { type: 'feature', description: "Production Rating system (0-100) calculated from stage components, directly affects merch sales and fame gains" },
+      { type: 'feature', description: "Equipment hauling: bigger stage setups require bigger vehicles or extra equipment truck rental" },
+      { type: 'feature', description: "Visual star ratings for each stage component and overall production gauge" },
+      { type: 'feature', description: "Item Marketplace: Players can trade gear, books, underworld items, and clothing with 5% marketplace fee" },
     ],
   },
   {
