@@ -67,6 +67,40 @@ export const CRAFTING_MATERIALS: CraftingMaterialSeed[] = [
   { name: "Burst Sunburst Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 150, description: "Iconic gradient finish from amber to black." },
   { name: "Metallic Flake Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 180, description: "Eye-catching sparkle finish for stage presence." },
   { name: "Custom Artwork Finish", category: "finish", rarity: "epic", quality_tier: 4, base_cost: 500, description: "Hand-painted custom artwork by a master luthier." },
+
+  // Pedal Components
+  { name: "Basic Enclosure", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 15, description: "Standard aluminum pedal enclosure." },
+  { name: "Hammond Enclosure", category: "pedal_components", rarity: "uncommon", quality_tier: 2, base_cost: 35, description: "Premium die-cast aluminum enclosure with tight tolerances." },
+  { name: "Germanium Transistor", category: "pedal_components", rarity: "rare", quality_tier: 3, base_cost: 80, description: "Vintage NOS germanium transistor for warm fuzz tones." },
+  { name: "Silicon Transistor", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 8, description: "Standard silicon transistor for consistent gain." },
+  { name: "Op-Amp Chip", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 12, description: "JRC4558 style op-amp for overdrive circuits." },
+  { name: "BBD Delay Chip", category: "pedal_components", rarity: "rare", quality_tier: 3, base_cost: 120, description: "Bucket-brigade device chip for analog delay warmth." },
+  { name: "PT2399 Digital Delay", category: "pedal_components", rarity: "uncommon", quality_tier: 2, base_cost: 25, description: "Lo-fi digital delay chip with character." },
+  { name: "Potentiometer Set", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 10, description: "Alpha pots for volume, tone, and gain controls." },
+  { name: "Footswitch", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 8, description: "True-bypass 3PDT footswitch." },
+  { name: "Capacitor Kit", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 15, description: "Assorted film and electrolytic capacitors." },
+  { name: "Resistor Kit", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 10, description: "Metal film resistor assortment." },
+  { name: "LED Indicator Set", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 5, description: "Status LEDs and bezels." },
+  { name: "Boutique PCB Board", category: "pedal_components", rarity: "uncommon", quality_tier: 2, base_cost: 40, description: "High-quality printed circuit board for clean signal paths." },
+  { name: "NOS Mullard Tube", category: "pedal_components", rarity: "epic", quality_tier: 4, base_cost: 250, description: "New old stock Mullard tube for tube-driven pedal circuits." },
+  { name: "Custom Pedal Artwork", category: "pedal_components", rarity: "rare", quality_tier: 3, base_cost: 90, description: "Hand-screened enclosure artwork for unique aesthetics." },
+
+  // Amp Components
+  { name: "12AX7 Preamp Tube", category: "amp_components", rarity: "common", quality_tier: 1, base_cost: 20, description: "Standard preamp tube for clean gain stages." },
+  { name: "EL34 Power Tube Pair", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 60, description: "British-voiced power tubes with rich midrange." },
+  { name: "6L6 Power Tube Pair", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 55, description: "American-voiced power tubes with tight low end." },
+  { name: "EL84 Power Tube Pair", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 45, description: "Chimey, bright power tubes for lower-wattage amps." },
+  { name: "Vintage Output Transformer", category: "amp_components", rarity: "rare", quality_tier: 3, base_cost: 180, description: "Hand-wound output transformer for authentic vintage response." },
+  { name: "Power Transformer", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 90, description: "Reliable power supply transformer." },
+  { name: "Amp Chassis", category: "amp_components", rarity: "common", quality_tier: 1, base_cost: 70, description: "Steel chassis with pre-drilled holes for tube amp builds." },
+  { name: "Speaker Cabinet Shell", category: "amp_components", rarity: "common", quality_tier: 1, base_cost: 100, description: "Baltic birch cabinet shell, ready for tolex." },
+  { name: "Celestion Speaker 12\"", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 110, description: "Classic British 12-inch guitar speaker." },
+  { name: "Jensen Speaker 10\"", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 85, description: "Vintage American 10-inch speaker with breakup character." },
+  { name: "Tolex Covering", category: "amp_components", rarity: "common", quality_tier: 1, base_cost: 30, description: "Vinyl tolex wrap for cabinet covering." },
+  { name: "Turret Board", category: "amp_components", rarity: "common", quality_tier: 1, base_cost: 25, description: "Point-to-point wiring board for hand-wired amps." },
+  { name: "Amp Reverb Tank", category: "amp_components", rarity: "uncommon", quality_tier: 2, base_cost: 65, description: "Spring reverb unit for lush, dripping reverb tones." },
+  { name: "NOS Telefunken 12AX7", category: "amp_components", rarity: "epic", quality_tier: 4, base_cost: 350, description: "Holy grail preamp tube — incredibly rare and sought-after." },
+  { name: "Mercury Magnetics OT", category: "amp_components", rarity: "epic", quality_tier: 4, base_cost: 400, description: "Boutique hand-wound output transformer for ultimate tone." },
 ];
 
 export const CRAFTING_RECIPES: CraftingRecipeSeed[] = [
