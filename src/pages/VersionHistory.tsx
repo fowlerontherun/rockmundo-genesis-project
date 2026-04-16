@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.183",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Item Marketplace: Players can now trade gear, books, underworld items, and clothing with other players" },
+      { type: 'feature', description: "List items for sale with custom pricing, negotiable flag, and 7-day auto-expiration" },
+      { type: 'feature', description: "Browse marketplace with search, type filters (Gear/Books/Underworld/Clothing), and price sorting" },
+      { type: 'feature', description: "Make offers on negotiable listings with optional messages — sellers can accept or reject" },
+      { type: 'feature', description: "5% marketplace fee on all sales, transaction history for buyers and sellers" },
+      { type: 'feature', description: "Sell dialog auto-detects unequipped gear, owned books, unused underworld items, and purchased clothing" },
+    ],
+  },
+  {
     version: "1.1.182",
     date: "2026-04-16",
     changes: [
