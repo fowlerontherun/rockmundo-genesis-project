@@ -273,6 +273,14 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                 </div>
               </div>
 
+              {/* 7-Day Stream Sparkline */}
+              <div className="p-3 rounded-lg border bg-card">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Last 7 days</span>
+                </div>
+                <StreamSparkline data={buildSeriesForReleases(data.releaseIds)} />
+              </div>
+
               {/* Platform Breakdown */}
               <div className="space-y-2">
                 <p className="text-sm font-medium">Platform Breakdown</p>
