@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Globe2, Layers, ShieldCheck, Disc3, Album, DollarSign, XCircle, Send, AlertTriangle, Clock, Calendar } from "lucide-react";
 import type { ArtistEntity, ContractWithRelations } from "./types";
 import { ContractNotificationsPanel } from "./ContractNotificationsPanel";
@@ -16,6 +18,8 @@ import { ContractOfferCard } from "./ContractOfferCard";
 import { TerminateContractDialog } from "./TerminateContractDialog";
 import { DealTypeInfoCard } from "./DealTypeEffects";
 import { differenceInMonths, differenceInDays, format } from "date-fns";
+
+const HIDDEN_BY_DEFAULT_STATUSES = new Set(["rejected", "terminated", "cancelled", "canceled", "withdrawn"]);
 
 interface MyContractsTabProps {
   artistEntities: ArtistEntity[];
@@ -55,6 +59,7 @@ const statusBadge = {
 export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) {
   const [showDemoDialog, setShowDemoDialog] = useState(false);
   const [terminateContract, setTerminateContract] = useState<any>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const soloEntity = artistEntities.find((entity) => entity.type === "solo");
   const bandEntities = artistEntities.filter((entity) => entity.type === "band");
@@ -217,6 +222,11 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
   );
 
   const activeContracts = contracts?.filter(c => c.status === "active") ?? [];
+  const inactiveContracts = useMemo(
+    () => (contracts ?? []).filter((c) => HIDDEN_BY_DEFAULT_STATUSES.has((c.status ?? "").toLowerCase())),
+    [contracts],
+  );
+  const visibleInactiveContracts = showInactive ? inactiveContracts : [];
 
   if (isLoading) {
     return (
