@@ -625,6 +625,11 @@ export default function MayorDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <aside className="space-y-4">
+        <MayorPoliticsSidebar politics={politics} />
+      </aside>
+      </div>
     </div>
   );
 }
