@@ -144,7 +144,7 @@ export const it: TranslationKeys = {
     bandChemistry: "Chimica della band",
     bandFinder: "Trova Band",
     bandfinder: "Trova Band",
-    bandRankings: "Classifiche Band",
+    bandRankings: "Classifiche Band", bandFameMap: "Mappa della Fama",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Community",

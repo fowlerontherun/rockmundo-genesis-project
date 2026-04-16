@@ -143,6 +143,7 @@ export const en = {
     bandFinder: "Band Finder",
     bandfinder: "Band Finder",
     bandRankings: "Band Rankings",
+    bandFameMap: "Fame Map",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Community",
