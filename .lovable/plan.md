@@ -1,58 +1,76 @@
 
 
-# Band Popularity & Fame Map Page (v1.1.188)
+# Streaming Hub — Audit & Redesign Plan
 
-## Summary
-Create a dedicated standalone page at `/band-fame-map` accessible from the Band Hub that shows a band's popularity and fame across every country and city, with full demographic breakdowns. This extends the existing `FameFansOverview` and `RegionalFameBreakdown` components into a richer, full-page experience.
+## Problems found
 
-## What Already Exists
-- `FameFansOverview` component (countries, cities, demographics tabs) — embedded in BandManager "Fame" tab
-- `RegionalFameBreakdown` component — collapsible country/city drill-down
-- `BandFameDisplay` component — fame progress and recent events
-- `band_country_fans`, `band_city_fans`, `band_demographic_fans` tables already exist with all needed data
+### Real bugs (data won't show / wrong numbers)
 
-## No Database Changes Needed
-All required tables and data structures already exist.
+1. **Solo releases hidden everywhere.** `StreamingMyReleasesTab`, `PlaylistsTab`, and `useStreaming` early-return `[]` when the user has no bands — so any release made as a solo artist (no band) never appears, even though the data exists. Filter must be `user_id.eq.<id>` OR `band_id.in.(...)`, not band-only.
 
-## New Files
+2. **Wrong column names breaking analytics queries.**
+   - `useStreaming.ts` orders `streaming_analytics_daily` by `date` — actual column is `analytics_date`.
+   - `MusicStats.tsx` selects `stream_count` — actual column is `daily_streams`.
+   Both silently fail or return 0.
 
-### 1. `src/pages/BandFameMap.tsx` — Full-page fame analytics
-- **PageHeader** with back link to `/hub/band`
-- **Band selector** dropdown (reuses existing primary band pattern) for players with multiple bands
-- **Summary row**: Global fame score, total fans, countries reached, cities played, fame tier badge
-- **Tabbed sections** (horizontally scrollable on mobile):
-  - **World Overview**: Top 10 countries by fame as progress bars, top 10 by fans, performed vs spillover ratio
-  - **All Countries**: Full sortable list (by fame or fans) with flag, fame bar, fan tier breakdown (casual/dedicated/superfan icons), performed badge, expandable city drill-down per country
-  - **All Cities**: Flat list of all cities sorted by fans or fame, showing city name, country, gig count, fan breakdown
-  - **Demographics**: Age group distribution with percentage bars, per-country demographic breakdowns (select a country to see its demo split)
-  - **Fame History**: Recent fame events timeline from `band_fame_events` table
+3. **Double-counted "Total Streams / Revenue" on overview.** `StreamingNew` (and similar) sum `daily_streams` across all analytics rows for all time — but `total_streams` already lives on `song_releases` as the running total. Use the parent table per the existing `song-revenue-attribution-logic` memory.
 
-### 2. `src/pages/hubs/BandHub.tsx` — Add new tile
-- Add `{ icon: Globe, labelKey: "nav.bandFameMap", path: "/band-fame-map", imagePrompt: "A world map with glowing heat spots showing band popularity across different countries and cities" }`
+4. **Profile vs user ID mismatch.** `StreamingMyReleasesTab` is called with `profileId` but uses it as `userId` inside; `band_members` is keyed on `profile_id` (correct), but `song_releases.user_id` is the account `userId`. Solo-filter must use the real userId, not profileId.
 
-### 3. Hub tile image
-- Generate `public/hub-tiles/band-fame-map.png`
+### UX problems
 
-## Files to Modify
+5. **Two competing pages**: `StreamingNew.tsx` (unused but routed-around) and `StreamingPlatforms.tsx` (the live one). Confusing, drift risk.
+6. **5 tabs** with two near-duplicate analytics tabs ("Overview" + "Analytics"). Users don't know which to click.
+7. **No clear entry action.** The Platforms tab is the default but there's no obvious "Release a song to streaming" CTA — you have to go to Release Manager.
+8. **Take Down has no undo / re-release path.** Once down, the song silently disappears.
+9. **Stats cards in `EnhancedPlatformCard` always show $0 / 0** for users with releases on platforms that don't have a `platform_id` link (older data uses `platform_name` text only).
+10. **No per-release time-series view.** Users see aggregates only — can't tell which release is trending up.
 
-- **`src/App.tsx`** (or routes file) — Add route for `/band-fame-map` pointing to `BandFameMap`
-- **`src/pages/hubs/BandHub.tsx`** — Add tile
-- **`src/components/VersionHeader.tsx`** — Bump to 1.1.188
-- **`src/pages/VersionHistory.tsx`** — Add changelog entry
-- **Translation keys** — Add `nav.bandFameMap` label ("Fame Map" or "Popularity Map")
+## Proposed redesign
 
-## Technical Details
+### Single page: `/streaming-platforms` — 3 tabs (down from 5)
 
-- Reuses existing queries from `FameFansOverview` pattern (band_country_fans, band_city_fans, band_demographic_fans, band_fame_events)
-- Country sorting toggle: by fame vs by fans
-- City list shows all cities (not capped at 20 like current component)
-- Demographics tab adds a country filter dropdown so players can see per-country age breakdowns
-- Uses `useQuery` with `react-query` for all data fetching
-- Mobile-first: scrollable tabs, compact cards, horizontal scroll for tables
+```text
+┌───────────────────────────────────────────────────────────┐
+│ Streaming Platforms                  [+ Release to Stream]│
+│ ┌──────────┬──────────┬──────────┬──────────┐             │
+│ │ Streams  │ Revenue  │ Releases │ Listeners│  ← KPI strip│
+│ └──────────┴──────────┴──────────┴──────────┘             │
+│ [ My Music ] [ Platforms ] [ Analytics ]                  │
+└───────────────────────────────────────────────────────────┘
+```
 
-## Implementation Order
-1. Create `BandFameMap.tsx` page with all tabs
-2. Add route
-3. Add BandHub tile + generate image
-4. Version bump + changelog
+- **My Music** (default): list of releases grouped by song. Each card shows total streams/revenue, per-platform breakdown, 7-day sparkline, and actions (Take Down / View Detail / Submit to Playlist).
+- **Platforms**: existing `EnhancedPlatformCard` grid, fixed to read from corrected stats and including the playlist count.
+- **Analytics**: merged view = top KPIs + streams-over-time line + revenue bar + demographics + projections + platform comparison. (Drops the duplicate "Overview" tab.)
+
+### Header CTA: "Release to Stream"
+Opens a single dialog: pick a released song → pick platforms (multi-select) → confirm. Wraps `useStreaming.releaseToStreaming` in a loop. No more dead-end "go to Release Manager" message — only show that fallback if the user has zero released songs.
+
+### Bug fixes to ship with the redesign
+- Fix solo-release filter in `StreamingMyReleasesTab`, `PlaylistsTab`, `useStreaming`, `DetailedAnalyticsTab` → use `(user_id.eq.<userId>,band_id.in.(...))` and skip the bands clause when there are no bands instead of returning early.
+- Fix column names: `analytics_date` (not `date`), `daily_streams` (not `stream_count`).
+- Source aggregate stats from `song_releases.total_streams` / `total_revenue`, not by re-summing daily rows.
+- Pass `userId` (account) where userId is needed and `profileId` where bands lookup is needed — stop conflating them.
+- Delete `StreamingNew.tsx` to remove drift.
+
+### Version bump
+Bump banner + history to **v1.1.194** with summary: "Streaming hub overhaul — fixed solo-artist data filters, corrected analytics column names, merged duplicate analytics tab, added inline Release-to-Stream dialog, removed dead StreamingNew page."
+
+## Files I'll touch
+- `src/pages/StreamingPlatforms.tsx` — collapse to 3 tabs, add header CTA + KPI strip.
+- `src/components/streaming/StreamingMyReleasesTab.tsx` — fix filter, add sparkline, accept both `userId` and `profileId`.
+- `src/components/streaming/DetailedAnalyticsTab.tsx` — fix filter, rename props clearly.
+- `src/components/streaming/PlaylistsTab.tsx` — fix filter (move into Analytics or keep as small section under My Music — TBD per your call below).
+- `src/components/streaming/EnhancedPlatformCard.tsx` — stat fallbacks for legacy `platform_name` rows.
+- `src/hooks/useStreaming.ts` — fix `analytics_date`, fix solo filter.
+- `src/components/statistics/MusicStats.tsx` — fix `daily_streams` column.
+- `src/pages/StreamingNew.tsx` — delete.
+- New: `src/components/streaming/ReleaseToStreamDialog.tsx` — multi-platform release flow.
+- `VersionHeader.tsx` + `VersionHistory.tsx` — v1.1.194.
+
+## Two quick decisions before I build
+
+1. **Playlists tab** — keep as its own tab, fold into "My Music" as a section, or fold into "Analytics"?
+2. **Sparklines on each release card** — add now (extra query per render group, but fast) or skip for v1?
 
