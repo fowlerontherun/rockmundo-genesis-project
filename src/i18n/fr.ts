@@ -142,7 +142,7 @@ export const fr: TranslationKeys = {
     bandChemistry: "Alchimie du groupe",
     bandFinder: "Recherche de groupes",
     bandfinder: "Recherche de groupes",
-    bandRankings: "Classement des groupes",
+    bandRankings: "Classement des groupes", bandFameMap: "Carte de Renommée",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Communauté",

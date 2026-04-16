@@ -138,7 +138,7 @@ export const es: TranslationKeys = {
     bandChemistry: "Química de Banda",
     bandFinder: "Buscador de Bandas",
     bandfinder: "Buscador de Bandas",
-    bandRankings: "Rankings de Bandas",
+    bandRankings: "Rankings de Bandas", bandFameMap: "Mapa de Fama",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "Comunidad",

@@ -141,7 +141,7 @@ export const zh: TranslationKeys = {
     bandChemistry: "乐队默契",
     bandFinder: "寻找乐队",
     bandfinder: "寻找乐队",
-    bandRankings: "乐队排名",
+    bandRankings: "乐队排名", bandFameMap: "声望地图",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "社区",

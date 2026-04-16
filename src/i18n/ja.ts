@@ -141,7 +141,7 @@ export const ja: TranslationKeys = {
     bandChemistry: "バンドケミストリー",
     bandFinder: "バンド検索",
     bandfinder: "バンド検索",
-    bandRankings: "バンドランキング",
+    bandRankings: "バンドランキング", bandFameMap: "フェイムマップ",
     twaater: "Twaater",
     dikcok: "DikCok",
     community: "コミュニティ",
