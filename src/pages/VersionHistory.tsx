@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.200",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Streaming My Music: every song card is now collapsed by default — click the header to expand details. Added Expand all / Collapse all toggle. Collapsed header shows total streams + revenue at a glance." },
+      { type: 'feature', description: "Playlists tab: added comprehensive filtering — search by name, filter by platform, curator type, fee (free/paid), playlist size (small/medium/large), and sort by followers, fee, or name. Active filter count and one-click clear included." },
+    ],
+  },
+  {
     version: "1.1.199",
     date: "2026-04-16",
     changes: [
