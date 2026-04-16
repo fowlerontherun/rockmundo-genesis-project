@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus } from "lucide-react";
+import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,9 @@ import { NPCDialoguePanel } from "@/components/nightclub/NPCDialoguePanel";
 import { NightlifeStanceSelector } from "@/components/nightclub/NightlifeStanceSelector";
 import type { NightlifeStance } from "@/utils/nightlifeRiskLayer";
 import { useQuery } from "@tanstack/react-query";
+import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
+import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
+import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
