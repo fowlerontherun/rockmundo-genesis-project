@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.201",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Release Analytics → Sales tab: 'By Format' rows were always showing $0 because revenue was computed from release_formats.retail_price (often missing). Now aggregates units & revenue directly from release_sales (source of truth), with a proportional fallback when only top-line totals exist." },
+    ],
+  },
+  {
     version: "1.1.200",
     date: "2026-04-16",
     changes: [
