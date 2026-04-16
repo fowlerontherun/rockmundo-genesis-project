@@ -18,6 +18,8 @@ const CATEGORY_EMOJI: Record<string, string> = {
   hardware: "🔩",
   strings: "🎸",
   finish: "🎨",
+  pedal_components: "🎛️",
+  amp_components: "🔊",
 };
 
 interface MaterialInventoryProps {
@@ -35,7 +37,7 @@ export const MaterialInventory = ({
   isPurchasing,
   mode = "inventory",
 }: MaterialInventoryProps) => {
-  const categories = ["wood", "electronics", "hardware", "strings", "finish"];
+  const categories = ["wood", "electronics", "hardware", "strings", "finish", "pedal_components", "amp_components"];
 
   const displayMaterials = mode === "inventory"
     ? materialsCatalog.filter((m) => playerMaterials.some((pm) => pm.material_id === m.id && pm.quantity > 0))
