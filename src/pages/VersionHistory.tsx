@@ -14,6 +14,27 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.212",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Public Relations page incorrectly told band leaders 'You need to be the leader of an active band to access PR features.' The query filtered `bands.leader_id` against the auth user id, but `leader_id` actually stores the character profile id. Switched the lookup to use `profileId` so band leaders can access their PR dashboard again." },
+    ],
+  },
+  {
+    version: "1.1.211",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Corporate tax: pending tax bills were inflated because the generator counted owner deposits, capital injections, intercompany transfers, and dividends as taxable revenue. Updated `generate_pending_company_taxes()` to exclude `investment`, `transfer_in`, `transfer_out`, `dividend`, `owner_deposit`, `capital_injection`, and `loan` transaction types (and the equivalent categories), then voided the inflated pending records and regenerated bills against earned revenue only." },
+    ],
+  },
+  {
+    version: "1.1.210",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Localization: wired up Chinese (`zh`) and Japanese (`ja`) translation bundles in `src/i18n/index.ts` so the language switcher actually applies them. `zh` is fully translated; `ja` is cast as `TranslationKeys` to fall back to English for any keys it doesn't yet cover." },
+    ],
+  },
+  {
     version: "1.1.209",
     date: "2026-04-16",
     changes: [
