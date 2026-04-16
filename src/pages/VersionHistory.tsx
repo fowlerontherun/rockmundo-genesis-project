@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.208",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Band Riders: fixed editing existing riders. The rider builder was reloading saved rider items on every render because its item-fetch helper changed identity each time, so newly added items, deselections, and quantity edits were immediately reset back to the database state. The fetch is now memoized and the builder only reloads item data when the rider being edited actually changes." },
+      { type: 'improvement', description: "Band Riders: the builder now fully resets its local name, description, tier, and selected-item state when switching between create mode and edit mode, and the dialog forces a fresh RiderBuilder instance per rider to prevent stale form state from leaking between sessions." },
+    ],
+  },
+  {
     version: "1.1.207",
     date: "2026-04-16",
     changes: [

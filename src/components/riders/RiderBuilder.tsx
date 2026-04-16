@@ -63,13 +63,16 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
   const [riderDescription, setRiderDescription] = useState('');
   const [riderTier, setRiderTier] = useState('standard');
   const [selectedItems, setSelectedItems] = useState<Map<string, { quantity: number; priority: string; notes: string }>>(new Map());
-  const [existingItemIds, setExistingItemIds] = useState<Map<string, string>>(new Map()); // catalog_item_id -> rider_item_id
+  const [existingItemIds, setExistingItemIds] = useState<Map<string, string>>(new Map());
   const [activeCategory, setActiveCategory] = useState('technical');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load existing rider metadata if editing
+  // Load/reset rider metadata when the target rider changes
   useEffect(() => {
     if (!riderId) {
+      setRiderName('');
+      setRiderDescription('');
+      setRiderTier('standard');
       return;
     }
 
@@ -83,14 +86,26 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
     setRiderTier(rider.tier);
   }, [riderId, riders]);
 
-  // Load existing rider items if editing
+  // Load existing rider items once per rider switch instead of every render
   useEffect(() => {
-    if (riderId) {
-      fetchRiderItems(riderId).then(items => {
+    let cancelled = false;
+
+    if (!riderId) {
+      setSelectedItems(new Map());
+      setExistingItemIds(new Map());
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    fetchRiderItems(riderId)
+      .then((items) => {
+        if (cancelled) return;
+
         const itemMap = new Map<string, { quantity: number; priority: string; notes: string }>();
         const idMap = new Map<string, string>();
-        
-        items.forEach(item => {
+
+        items.forEach((item) => {
           itemMap.set(item.catalog_item_id, {
             quantity: item.quantity,
             priority: item.priority,
@@ -98,11 +113,19 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
           });
           idMap.set(item.catalog_item_id, item.id);
         });
-        
+
         setSelectedItems(itemMap);
         setExistingItemIds(idMap);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('Load rider items error:', error);
+        }
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [riderId, fetchRiderItems]);
 
   const tierConfig = RIDER_TIERS.find(t => t.id === riderTier) || RIDER_TIERS[1];
