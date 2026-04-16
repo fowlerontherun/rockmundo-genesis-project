@@ -30,6 +30,15 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [takeDownId, setTakeDownId] = useState<string | null>(null);
+  const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
+
+  const toggleSong = (songId: string) => {
+    setExpandedSongs((prev) => {
+      const next = new Set(prev);
+      next.has(songId) ? next.delete(songId) : next.add(songId);
+      return next;
+    });
+  };
 
   // First fetch user's band IDs (band_members keyed on profile_id)
   const { data: userBandIds } = useQuery({
