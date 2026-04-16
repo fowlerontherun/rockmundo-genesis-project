@@ -32536,9 +32536,25 @@ export type Database = {
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      generate_pending_company_taxes: {
+        Args: never
+        Returns: {
+          company_id: string
+          status: string
+          tax_amount: number
+          tax_period: string
+        }[]
+      }
       get_band_country_fame: {
         Args: { p_band_id: string; p_country: string }
         Returns: number
+      }
+      get_company_workforce_counts: {
+        Args: { _owner_id: string }
+        Returns: {
+          company_id: string
+          employee_count: number
+        }[]
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
