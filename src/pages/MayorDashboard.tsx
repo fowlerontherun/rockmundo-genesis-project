@@ -26,13 +26,21 @@ import {
   CheckCircle2,
   Loader2,
   TrendingUp,
-  Calendar
+  Calendar,
+  Wallet,
+  Hammer,
+  Megaphone
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCityMayor, useIsCurrentMayor, useUpdateCityLaws } from "@/hooks/useMayorDashboard";
 import { useCityLaws, useCityLawHistory } from "@/hooks/useCityLaws";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useMayorPolitics } from "@/hooks/useMayorPolitics";
+import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
+import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
+import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
+import { MayorPoliticsSidebar } from "@/components/city/MayorPoliticsSidebar";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";
