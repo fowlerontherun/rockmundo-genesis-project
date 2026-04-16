@@ -1,104 +1,120 @@
 
 
-# Instrument Crafting System — RPG Feature Plan
+# Expand Record Labels & Companies — Deeper Impact Plan
 
-## Overview
-Add a crafting system where players can build custom instruments and gear from gathered materials. This ties into the existing skill tree (luthiery/tech skills), the equipment system, and the game economy — giving players an alternative to buying gear from the store.
+## Current State
+Labels have: roster management, contracts, demos, releases, marketing budgets, staff, upgrades, P&L finance, and royalty tracking. Companies have: subsidiaries, synergies (display-only), tax records, employees, fund transfers, and empire dashboards. However, the systems are largely self-contained — labels and companies don't meaningfully affect the broader game (artist fame growth, release success, gig opportunities, etc.).
 
-## Core Concept
-Players collect **crafting materials** (wood types, pickups, strings, hardware, electronics) and combine them at a **workshop** to produce custom instruments with randomized stat bonuses influenced by their skill level and material quality. Higher crafting skill = better outcomes and rarer recipes.
+## What This Plan Adds
 
-## Database Schema (6 new tables)
+### 1. Label Tier & Prestige System
+Add a `label_tier` column to `labels` (indie → independent → mid-major → major → mega-label) calculated from reputation + roster + revenue. Tier determines:
+- **Contract appeal**: Higher-tier labels attract better artists (lower rejection rates)
+- **Distribution reach**: Automatic territory multipliers on release sales
+- **Marketing effectiveness**: Tier multiplier on hype generation (1x → 3x)
+- **Advance pool scaling**: Higher tiers can offer bigger advances
 
-### `crafting_materials`
-Catalog of all available materials (e.g., "Mahogany Body Blank", "Alnico V Pickup", "Bone Nut").
-- `id`, `name`, `category` (wood, electronics, hardware, strings, finish), `rarity`, `quality_tier` (1-5), `base_cost`, `description`, `image_url`
+New component: `LabelTierBadge.tsx` displayed on label pages and artist contract views.
 
-### `player_crafting_materials`
-Player inventory of gathered/purchased materials.
-- `id`, `profile_id` (FK profiles), `material_id` (FK crafting_materials), `quantity`, `acquired_at`
+### 2. Label Impact on Artist Careers
+New table: `label_artist_boosts` — tracks active bonuses a label provides to signed artists:
+- **Fame growth bonus**: +5-25% passive fame gain based on label tier + marketing spend
+- **Streaming multiplier**: Label distribution deals multiply streaming revenue
+- **Gig booking boost**: Signed artists get better gig offers (venue quality, pay)
+- **Festival priority**: Labels can lobby for festival slots for their artists
 
-### `crafting_recipes`
-Defines what materials are needed to craft specific equipment types.
-- `id`, `name`, `result_category` (guitar, bass, drums, mic, etc.), `result_subcategory`, `required_skill_slug`, `min_skill_level`, `materials_required` (JSONB array of {material_id, quantity}), `base_craft_time_minutes`, `difficulty_tier`, `rarity_output`
+Update the artist's release sales/streaming calculations to factor in label tier and active marketing campaigns. This makes signing with a good label genuinely impactful.
 
-### `crafting_sessions`
-Active crafting jobs in progress.
-- `id`, `profile_id`, `recipe_id`, `started_at`, `completes_at`, `status` (in_progress, completed, failed, collected), `quality_roll`, `bonus_stats` (JSONB)
+### 3. Company Revenue Generation
+Currently companies mostly spend money. Add actual revenue-generating mechanics:
 
-### `crafting_blueprints`
-Unlockable blueprints players discover or earn.
-- `id`, `profile_id`, `recipe_id`, `unlocked_at`, `source` (purchased, mentor, achievement, drop)
+New table: `company_service_contracts` — companies can bid on and win service contracts:
+- **Security firms**: Contracted for venue events, festival security, artist protection
+- **Factories**: Merch production orders from bands and labels
+- **Logistics**: Tour equipment transport, merch shipping
+- **Venues**: Booking revenue from external artists
+- **Studios**: Session bookings from non-owned artists
 
-### Extend `equipment_items`
-Add nullable column `crafted_by_profile_id` and `is_crafted` boolean to tag player-made gear, plus `custom_name` for personalization.
+New component: `CompanyContractBoard.tsx` — a marketplace of available service contracts companies can bid on.
 
-## Game Mechanics
+### 4. Company Reputation & Market Influence
+Add `market_influence` column to `companies`. High-influence companies:
+- Get priority on service contracts
+- Reduce operating costs (-5% per influence tier)
+- Unlock exclusive partnerships
+- Can poach staff from rival companies
 
-### Material Acquisition
-- **Purchase** from a Materials Shop (new tab in Equipment Store)
-- **Drops** from gig rewards, festival prizes, jam session loot
-- **Salvage** existing equipment for parts (destroys the item, returns 1-3 materials based on rarity)
+New table: `company_rivalries` — tracks competitive relationships between companies owned by different players, affecting pricing and contract availability.
 
-### Crafting Process
-1. Player selects a **blueprint** they've unlocked
-2. System checks materials and skill requirements
-3. Crafting takes real game-time (30min–4hrs scaled by difficulty)
-4. On completion, a **quality roll** determines the final item stats:
-   - Roll influenced by: crafting skill level, material quality, random factor
-   - Higher skill = narrower variance, higher floor
-   - Chance of **masterwork** (bonus stats) or **flawed** (reduced stats)
+### 5. Label A&R Intelligence
+Enhance the scouting system so A&R staff actively discover talent:
 
-### Skill Integration
-- New skill tier entries under "Technical" track: **Luthiery Basic → Professional → Mastery**
-- Luthiery skill unlocks better recipes and improves quality rolls
-- Crafting a successful item awards Luthiery XP
+New table: `label_scout_reports` — A&R staff automatically generate weekly reports on unsigned artists in the label's HQ city, rating their potential based on fame, song quality, and genre fit. Label owners can then fast-track contract offers.
 
-### Custom Naming
-- Players can name their crafted instruments (e.g., "The Midnight Strat")
-- Crafted items display a "Handcrafted by [Artist Name]" badge
+New component: `ScoutReportsPanel.tsx` in the label management page.
 
-## UI Components
+### 6. Company Events & Milestones
+New table: `company_events` — significant events that affect company operations:
+- Awards for "Label of the Year" based on combined artist success
+- Scandals (random events) that tank reputation temporarily
+- Acquisition offers from NPC mega-corporations
+- IPO milestones when company value exceeds thresholds
 
-### New Page: `CraftingWorkshop.tsx` (`/crafting`)
-- **Blueprints tab**: Grid of unlocked recipes with material requirements
-- **Materials tab**: Inventory of owned materials with rarity badges
-- **Active Crafts tab**: Progress bars for in-progress crafting sessions
-- **Salvage tab**: Select owned equipment to break down for materials
+New component: `CompanyEventsTimeline.tsx` shown on the company detail page.
 
-### New Components
-- `CraftingRecipeCard.tsx` — Shows recipe, required materials, skill check
-- `MaterialInventory.tsx` — Grid of owned materials with quantities
-- `CraftingProgress.tsx` — Timer/progress display for active sessions
-- `SalvagePanel.tsx` — Equipment selection for dismantling
-- `CraftedItemReveal.tsx` — Animated reveal of completed craft with quality rating
+### 7. Cross-Company Artist Development Pipeline
+Labels connected to recording studios and rehearsal spaces via the same holding company get an **Artist Development** pipeline:
+- New artists go through: Scouting → Demo Recording (studio) → Rehearsal (rehearsal space) → Release (label) → Tour (logistics + venues)
+- Each stage tracked in a new `artist_development_pipeline` table
+- Completing the full pipeline grants bonus fame and a "Label Developed" badge
 
-### Integration Points
-- Add "Crafting" tile to the hub navigation
-- Add "Salvage" button to player equipment inventory cards
-- Materials as possible gig/festival reward drops
+New component: `ArtistDevelopmentTracker.tsx` in label management.
 
-## Files to Create
-1. `supabase/migrations/xxx_crafting_system.sql` — All new tables + RLS policies
-2. `src/pages/CraftingWorkshop.tsx` — Main crafting page with tabs
-3. `src/hooks/useCraftingSystem.ts` — Data fetching and mutations
-4. `src/components/crafting/CraftingRecipeCard.tsx`
-5. `src/components/crafting/MaterialInventory.tsx`
-6. `src/components/crafting/CraftingProgress.tsx`
-7. `src/components/crafting/SalvagePanel.tsx`
-8. `src/components/crafting/CraftedItemReveal.tsx`
-9. `src/data/craftingMaterials.ts` — Seed data constants for materials and starter recipes
+## Database Changes (8 new tables, 2 altered)
+
+### New Tables
+1. `label_artist_boosts` — active bonuses per contract (fame_bonus_pct, streaming_multiplier, gig_boost_pct)
+2. `label_scout_reports` — weekly A&R discoveries (artist_id, potential_score, genre_match, recommended_at)
+3. `company_service_contracts` — revenue contracts (company_id, client_type, service_type, value, duration, status)
+4. `company_rivalries` — competitive tracking (company_a_id, company_b_id, intensity, started_at)
+5. `company_events` — milestones and random events (company_id, event_type, description, impact_value, occurred_at)
+6. `artist_development_pipeline` — development stages (label_id, artist_id, current_stage, started_at, completed_stages JSONB)
+7. `label_genre_expertise` — label specialization tracking (label_id, genre, expertise_level, releases_in_genre)
+8. `company_market_rankings` — weekly snapshot of company rankings by type
+
+### Altered Tables
+- `labels`: Add `label_tier` (text), `total_artists_developed` (int), `genre_specialization` (text[])
+- `companies`: Add `market_influence` (int), `total_contracts_won` (int)
+
+## New UI Components
+1. `src/components/labels/LabelTierBadge.tsx` — Visual tier indicator
+2. `src/components/labels/management/ScoutReportsPanel.tsx` — A&R discoveries
+3. `src/components/labels/management/ArtistDevelopmentTracker.tsx` — Pipeline view
+4. `src/components/labels/management/LabelGenreExpertise.tsx` — Genre specialization display
+5. `src/components/company/CompanyContractBoard.tsx` — Service contract marketplace
+6. `src/components/company/CompanyEventsTimeline.tsx` — Event history
+7. `src/components/company/CompanyRivalries.tsx` — Rival tracking
+8. `src/components/company/MarketRankings.tsx` — Leaderboard by company type
 
 ## Files to Modify
-1. `src/App.tsx` — Add `/crafting` route
-2. `src/components/ui/HorizontalNavigation.tsx` — Add Crafting nav link
-3. `src/pages/VersionHistory.tsx` — Changelog entry
-4. `src/components/VersionHeader.tsx` — Version bump
-5. `src/i18n/*.ts` — Translation keys
-6. `src/data/skillTree.ts` — Add Luthiery skill tiers
+- `src/pages/LabelManagement.tsx` — Add Scout Reports, Development Pipeline, Genre Expertise tabs
+- `src/pages/CompanyDetail.tsx` — Add Contract Board, Events, Rivalries, Rankings tabs
+- `src/pages/MyCompanies.tsx` — Show market influence and rankings
+- `src/components/labels/LabelDirectory.tsx` — Show tier badges
+- `src/components/labels/MyContractsTab.tsx` — Show active label boosts
+- `src/utils/releasePredictions.ts` — Factor in label tier multipliers
+- `src/components/company/CompanySynergies.tsx` — Connect to artist development pipeline
+- `src/pages/VersionHistory.tsx` — Changelog
+- `src/components/VersionHeader.tsx` — Version bump
 
-## Seed Data
-- ~30 crafting materials across 5 categories
-- ~15 starter recipes (acoustic guitar, electric guitar, bass, mic, cable set, etc.)
-- Blueprints unlocked via skill milestones and mentor rewards
+## Implementation Order
+1. Migration: new tables + column additions
+2. Label tier system + badge component
+3. Label artist boosts + integration with release predictions
+4. Scout reports panel
+5. Company service contracts marketplace
+6. Company events timeline
+7. Artist development pipeline
+8. Market rankings and rivalries
+9. Version bump and changelog
 
