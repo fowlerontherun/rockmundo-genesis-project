@@ -32539,10 +32539,9 @@ export type Database = {
       generate_pending_company_taxes: {
         Args: never
         Returns: {
-          company_id: string
-          status: string
-          tax_amount: number
-          tax_period: string
+          billed_amount: number
+          billed_company_id: string
+          billed_period: string
         }[]
       }
       get_band_country_fame: {
