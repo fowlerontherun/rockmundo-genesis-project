@@ -88,6 +88,27 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     enabled: !!userId && userBandIds !== undefined,
   });
 
+  // Fetch 7 days of stream analytics for all visible releases in one batched query
+  const releaseIds = releases?.map((r) => r.id) ?? [];
+  const { data: sparklineRows } = useQuery({
+    queryKey: ["streaming-sparkline-7d", releaseIds.sort().join(",")],
+    queryFn: async () => {
+      if (releaseIds.length === 0) return [];
+      const since = new Date();
+      since.setDate(since.getDate() - 6); // include today + 6 prior days = 7 buckets
+      const sinceStr = since.toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("streaming_analytics_daily")
+        .select("song_release_id, analytics_date, daily_streams")
+        .in("song_release_id", releaseIds)
+        .gte("analytics_date", sinceStr)
+        .order("analytics_date", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: releaseIds.length > 0,
+  });
+
   // Take down mutation
   const takeDownMutation = useMutation({
     mutationFn: async (releaseId: string) => {
@@ -114,6 +135,28 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     }
   });
 
+  // Build a 7-day series per release_id (fill missing days with 0)
+  const buildSeriesForReleases = (relIds: string[]) => {
+    const days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().split("T")[0]);
+    }
+    const totalsByDate = new Map<string, number>(days.map((d) => [d, 0]));
+    (sparklineRows || []).forEach((row: any) => {
+      if (!relIds.includes(row.song_release_id)) return;
+      const key = row.analytics_date;
+      if (totalsByDate.has(key)) {
+        totalsByDate.set(key, (totalsByDate.get(key) || 0) + (row.daily_streams || 0));
+      }
+    });
+    return days.map((d) => ({
+      date: new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      streams: totalsByDate.get(d) || 0,
+    }));
+  };
+
   // Group releases by song for cleaner display
   const groupedBySong = releases?.reduce((acc, release) => {
     const songId = release.song_id;
@@ -121,6 +164,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
       acc[songId] = {
         song: release.song,
         platforms: [],
+        releaseIds: [],
         totalStreams: 0,
         totalRevenue: 0
       };
@@ -133,6 +177,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
       revenue: release.total_revenue || 0,
       releaseDate: release.release_date
     });
+    acc[songId].releaseIds.push(release.id);
     acc[songId].totalStreams += release.total_streams || 0;
     acc[songId].totalRevenue += release.total_revenue || 0;
     return acc;
