@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -93,7 +94,7 @@ export function useBandRiders(bandId: string | null) {
       if (error) throw error;
       return data as RiderCatalogItem[];
     },
-    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
+    staleTime: 1000 * 60 * 30,
   });
 
   // Fetch band's riders
@@ -101,7 +102,7 @@ export function useBandRiders(bandId: string | null) {
     queryKey: ['band-riders', bandId],
     queryFn: async () => {
       if (!bandId) return [];
-      
+
       const { data, error } = await supabase
         .from('band_riders')
         .select('*')
@@ -115,7 +116,7 @@ export function useBandRiders(bandId: string | null) {
   });
 
   // Fetch items for a specific rider
-  const fetchRiderItems = async (riderId: string): Promise<BandRiderItem[]> => {
+  const fetchRiderItems = useCallback(async (riderId: string): Promise<BandRiderItem[]> => {
     const { data, error } = await supabase
       .from('band_rider_items')
       .select(`
@@ -126,7 +127,7 @@ export function useBandRiders(bandId: string | null) {
 
     if (error) throw error;
     return data as BandRiderItem[];
-  };
+  }, []);
 
   // Create a new rider
   const createRider = useMutation({

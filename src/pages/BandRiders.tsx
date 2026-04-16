@@ -265,6 +265,7 @@ export default function BandRiders() {
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2">
             <RiderBuilder
+              key={editingRider ?? 'new-rider'}
               bandId={band?.id || ''}
               bandFame={band?.fame || 0}
               riderId={editingRider || undefined}
