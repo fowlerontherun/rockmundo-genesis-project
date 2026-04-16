@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.189",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Fame Map tile now appears in the Band & Live hub (the active band hub) — was previously only in the legacy Band hub" },
+    ],
+  },
+  {
     version: "1.1.188",
     date: "2026-04-16",
     changes: [
