@@ -17,7 +17,7 @@ import {
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper, Megaphone
+  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper, Megaphone, RefreshCw
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { HypeMeter } from "./HypeMeter";
