@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Users, Music, ChevronRight } from "lucide-react";
+import { TrendingUp, Music, ChevronRight, Trophy } from "lucide-react";
 import { PlatformLogo } from "./PlatformLogo";
 
 interface EnhancedPlatformCardProps {
@@ -19,6 +19,11 @@ interface EnhancedPlatformCardProps {
     totalRevenue: number;
     releaseCount: number;
   };
+  topSongs?: Array<{
+    songId: string;
+    title: string;
+    streams: number;
+  }>;
 }
 
 export function EnhancedPlatformCard({ platform, userStats }: EnhancedPlatformCardProps) {
