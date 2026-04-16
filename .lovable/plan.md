@@ -1,120 +1,92 @@
 
 
-# Expand Record Labels & Companies — Deeper Impact Plan
+# Finances Overhaul — Charity, Sponsorship Types & City Treasury (v1.1.185)
 
-## Current State
-Labels have: roster management, contracts, demos, releases, marketing budgets, staff, upgrades, P&L finance, and royalty tracking. Companies have: subsidiaries, synergies (display-only), tax records, employees, fund transfers, and empire dashboards. However, the systems are largely self-contained — labels and companies don't meaningfully affect the broader game (artist fame growth, release success, gig opportunities, etc.).
+## Summary
+Enhance the Finances page with deeper personal/band breakdowns, add in-game charity donations, introduce typed sponsorships with distinct bonuses, and create a city treasury system for future mayor spending.
 
-## What This Plan Adds
-
-### 1. Label Tier & Prestige System
-Add a `label_tier` column to `labels` (indie → independent → mid-major → major → mega-label) calculated from reputation + roster + revenue. Tier determines:
-- **Contract appeal**: Higher-tier labels attract better artists (lower rejection rates)
-- **Distribution reach**: Automatic territory multipliers on release sales
-- **Marketing effectiveness**: Tier multiplier on hype generation (1x → 3x)
-- **Advance pool scaling**: Higher tiers can offer bigger advances
-
-New component: `LabelTierBadge.tsx` displayed on label pages and artist contract views.
-
-### 2. Label Impact on Artist Careers
-New table: `label_artist_boosts` — tracks active bonuses a label provides to signed artists:
-- **Fame growth bonus**: +5-25% passive fame gain based on label tier + marketing spend
-- **Streaming multiplier**: Label distribution deals multiply streaming revenue
-- **Gig booking boost**: Signed artists get better gig offers (venue quality, pay)
-- **Festival priority**: Labels can lobby for festival slots for their artists
-
-Update the artist's release sales/streaming calculations to factor in label tier and active marketing campaigns. This makes signing with a good label genuinely impactful.
-
-### 3. Company Revenue Generation
-Currently companies mostly spend money. Add actual revenue-generating mechanics:
-
-New table: `company_service_contracts` — companies can bid on and win service contracts:
-- **Security firms**: Contracted for venue events, festival security, artist protection
-- **Factories**: Merch production orders from bands and labels
-- **Logistics**: Tour equipment transport, merch shipping
-- **Venues**: Booking revenue from external artists
-- **Studios**: Session bookings from non-owned artists
-
-New component: `CompanyContractBoard.tsx` — a marketplace of available service contracts companies can bid on.
-
-### 4. Company Reputation & Market Influence
-Add `market_influence` column to `companies`. High-influence companies:
-- Get priority on service contracts
-- Reduce operating costs (-5% per influence tier)
-- Unlock exclusive partnerships
-- Can poach staff from rival companies
-
-New table: `company_rivalries` — tracks competitive relationships between companies owned by different players, affecting pricing and contract availability.
-
-### 5. Label A&R Intelligence
-Enhance the scouting system so A&R staff actively discover talent:
-
-New table: `label_scout_reports` — A&R staff automatically generate weekly reports on unsigned artists in the label's HQ city, rating their potential based on fame, song quality, and genre fit. Label owners can then fast-track contract offers.
-
-New component: `ScoutReportsPanel.tsx` in the label management page.
-
-### 6. Company Events & Milestones
-New table: `company_events` — significant events that affect company operations:
-- Awards for "Label of the Year" based on combined artist success
-- Scandals (random events) that tank reputation temporarily
-- Acquisition offers from NPC mega-corporations
-- IPO milestones when company value exceeds thresholds
-
-New component: `CompanyEventsTimeline.tsx` shown on the company detail page.
-
-### 7. Cross-Company Artist Development Pipeline
-Labels connected to recording studios and rehearsal spaces via the same holding company get an **Artist Development** pipeline:
-- New artists go through: Scouting → Demo Recording (studio) → Rehearsal (rehearsal space) → Release (label) → Tour (logistics + venues)
-- Each stage tracked in a new `artist_development_pipeline` table
-- Completing the full pipeline grants bonus fame and a "Label Developed" badge
-
-New component: `ArtistDevelopmentTracker.tsx` in label management.
-
-## Database Changes (8 new tables, 2 altered)
+## Database Changes (1 migration)
 
 ### New Tables
-1. `label_artist_boosts` — active bonuses per contract (fame_bonus_pct, streaming_multiplier, gig_boost_pct)
-2. `label_scout_reports` — weekly A&R discoveries (artist_id, potential_score, genre_match, recommended_at)
-3. `company_service_contracts` — revenue contracts (company_id, client_type, service_type, value, duration, status)
-4. `company_rivalries` — competitive tracking (company_a_id, company_b_id, intensity, started_at)
-5. `company_events` — milestones and random events (company_id, event_type, description, impact_value, occurred_at)
-6. `artist_development_pipeline` — development stages (label_id, artist_id, current_stage, started_at, completed_stages JSONB)
-7. `label_genre_expertise` — label specialization tracking (label_id, genre, expertise_level, releases_in_genre)
-8. `company_market_rankings` — weekly snapshot of company rankings by type
+
+1. **`charity_organizations`** — Catalog of in-game charities
+   - `id`, `name`, `category` (music_education, health, environment, humanitarian, arts), `description`, `fame_bonus_pct` (int), `reputation_boost` (int), `tax_deduction_pct` (int), `is_active`, `logo_url`, `created_at`
+   - Seeded with ~12 charities (e.g. "Music for Youth Foundation", "Green Planet Initiative", "Artists Against Hunger")
+
+2. **`charity_donations`** — Player donation history
+   - `id`, `profile_id` (FK profiles), `charity_id` (FK charity_organizations), `amount` (int), `fame_gained` (int), `reputation_gained` (int), `created_at`
+   - RLS: users can read/insert own rows
+
+3. **`sponsorship_types`** — Defines sponsorship categories with bonuses
+   - `id`, `name` (e.g. "Gear Endorsement", "Energy Drink", "Fashion Brand", "Tech Partner", "Streaming Platform", "Automotive"), `category`, `fame_multiplier` (numeric), `streaming_bonus_pct` (int), `merch_discount_pct` (int), `gig_pay_bonus_pct` (int), `tour_cost_reduction_pct` (int), `description`, `icon_name` (text), `created_at`
+   - Seeded with 6 distinct types, each with unique bonus profiles
+
+4. **`city_treasury`** — Per-city financial tracking
+   - `id`, `city_id` (FK cities, unique), `balance` (bigint default 0), `total_tax_collected` (bigint default 0), `total_spent` (bigint default 0), `tax_rate_pct` (int default 10), `last_collection_at`, `created_at`, `updated_at`
+   - RLS: public read, insert/update restricted
+   - Seeded for all 180 cities with starting balances based on city population
+
+5. **`city_treasury_ledger`** — Transaction log for city finances
+   - `id`, `city_id` (FK cities), `amount` (int), `type` (tax_collection, mayor_spending, grant, event_cost, infrastructure), `description`, `reference_id` (uuid nullable), `created_at`
 
 ### Altered Tables
-- `labels`: Add `label_tier` (text), `total_artists_developed` (int), `genre_specialization` (text[])
-- `companies`: Add `market_influence` (int), `total_contracts_won` (int)
+- **`sponsorship_offers`**: Add `sponsorship_type_id` (FK sponsorship_types, nullable) so offers carry a type
+- **`sponsorship_contracts`**: Add `sponsorship_type_id` (FK sponsorship_types, nullable) for active bonus tracking
 
 ## New UI Components
-1. `src/components/labels/LabelTierBadge.tsx` — Visual tier indicator
-2. `src/components/labels/management/ScoutReportsPanel.tsx` — A&R discoveries
-3. `src/components/labels/management/ArtistDevelopmentTracker.tsx` — Pipeline view
-4. `src/components/labels/management/LabelGenreExpertise.tsx` — Genre specialization display
-5. `src/components/company/CompanyContractBoard.tsx` — Service contract marketplace
-6. `src/components/company/CompanyEventsTimeline.tsx` — Event history
-7. `src/components/company/CompanyRivalries.tsx` — Rival tracking
-8. `src/components/company/MarketRankings.tsx` — Leaderboard by company type
+
+1. **`src/components/finance/PersonalFinanceBreakdown.tsx`**
+   - Detailed personal finance card: cash, property value, vehicle value, gear value, total assets
+   - Liabilities section: active loans, pending payments
+   - Net worth calculation with visual bar
+
+2. **`src/components/finance/BandFinanceDetail.tsx`**
+   - Expanded band view: income by source (gigs, merch, streaming, sponsorships), expense breakdown (payroll, equipment, travel)
+   - Per-band profit/loss indicator
+
+3. **`src/components/finance/CharityDonationsTab.tsx`**
+   - Browse charities with category filters
+   - Each charity card shows: name, description, bonuses (fame %, reputation boost, tax deduction %)
+   - "Donate" dialog with amount input, shows projected bonuses
+   - Donation history table
+
+4. **`src/components/finance/SponsorshipTypesPanel.tsx`**
+   - Display all 6 sponsorship types with their unique bonuses in a grid
+   - Each type shows: icon, name, and bonus breakdown (fame multiplier, streaming %, merch discount, gig pay %, tour cost reduction)
+   - Active sponsorship contracts grouped by type with total bonus summary
+
+5. **`src/components/finance/CityTreasuryCard.tsx`**
+   - Shows the player's current city treasury: balance, tax rate, recent collections
+   - Read-only for now (mayor spending comes later)
+   - Mini ledger of recent treasury transactions
 
 ## Files to Modify
-- `src/pages/LabelManagement.tsx` — Add Scout Reports, Development Pipeline, Genre Expertise tabs
-- `src/pages/CompanyDetail.tsx` — Add Contract Board, Events, Rivalries, Rankings tabs
-- `src/pages/MyCompanies.tsx` — Show market influence and rankings
-- `src/components/labels/LabelDirectory.tsx` — Show tier badges
-- `src/components/labels/MyContractsTab.tsx` — Show active label boosts
-- `src/utils/releasePredictions.ts` — Factor in label tier multipliers
-- `src/components/company/CompanySynergies.tsx` — Connect to artist development pipeline
-- `src/pages/VersionHistory.tsx` — Changelog
-- `src/components/VersionHeader.tsx` — Version bump
+
+- **`src/pages/Finances.tsx`** — Add new tabs: "Charity", "Sponsorships", "City Treasury". Enhance Overview with PersonalFinanceBreakdown
+- **`src/hooks/useFinances.ts`** — Add queries for charity organizations, player donations, sponsorship types, and city treasury data
+- **`src/components/finance/FinanceSummaryCards.tsx`** — Add "Total Donated" or "Active Sponsorships" as additional summary metrics
+- **`src/components/finance/BandFinancesCard.tsx`** — Replace with richer BandFinanceDetail showing income/expense split
+- **`src/lib/api/sponsorships.ts`** — Add sponsorship type fetching and type-aware contract queries
+- **`src/components/VersionHeader.tsx`** — Bump to 1.1.185
+- **`src/pages/VersionHistory.tsx`** — Add changelog entry
+
+## Sponsorship Types & Bonuses
+
+| Type | Fame × | Stream % | Merch Discount | Gig Pay % | Tour Cost % |
+|------|--------|----------|---------------|-----------|-------------|
+| Gear Endorsement | 1.05 | 0 | 15 | 0 | 0 |
+| Energy Drink | 1.10 | 5 | 0 | 10 | 0 |
+| Fashion Brand | 1.15 | 0 | 20 | 5 | 0 |
+| Tech Partner | 1.05 | 10 | 0 | 0 | 10 |
+| Streaming Platform | 1.0 | 25 | 0 | 0 | 0 |
+| Automotive | 1.10 | 0 | 0 | 0 | 25 |
 
 ## Implementation Order
-1. Migration: new tables + column additions
-2. Label tier system + badge component
-3. Label artist boosts + integration with release predictions
-4. Scout reports panel
-5. Company service contracts marketplace
-6. Company events timeline
-7. Artist development pipeline
-8. Market rankings and rivalries
-9. Version bump and changelog
+1. Migration: all new tables + seeds + column additions
+2. PersonalFinanceBreakdown + BandFinanceDetail components
+3. CharityDonationsTab with donation logic (deduct cash, record donation, apply fame/reputation)
+4. SponsorshipTypesPanel with type display and active bonus summary
+5. CityTreasuryCard (read-only display, seeded data)
+6. Update Finances page with new tabs
+7. Version bump + changelog
 
