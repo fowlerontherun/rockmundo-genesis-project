@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.193",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Songwriting: Quick Create shortcut next to 'New Project' — creates a minimal project with just Title + Genre, defaulting writing mode to Solo, skipping the creative brief and collaborators steps" },
+    ],
+  },
+  {
     version: "1.1.192",
     date: "2026-04-16",
     changes: [

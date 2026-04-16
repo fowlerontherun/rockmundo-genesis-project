@@ -72,6 +72,7 @@ import {
   Music2,
   Pen,
   UserPlus,
+  Zap,
 } from "lucide-react";
 import logger from "@/lib/logger";
 import { PageLayout } from "@/components/ui/PageLayout";
@@ -449,7 +450,13 @@ const Songwriting = () => {
     Record<string, { coWriters: string[]; producers: string[]; musicians: string[] }>
   >({});
   const [rehearsalUnlocks, setRehearsalUnlocks] = useState<Record<string, boolean>>({});
-  
+
+  // Quick Create dialog state
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateTitle, setQuickCreateTitle] = useState("");
+  const [quickCreateGenre, setQuickCreateGenre] = useState("");
+  const [quickCreateError, setQuickCreateError] = useState<string | null>(null);
+
   // Song completion dialog state
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
@@ -929,6 +936,58 @@ const Songwriting = () => {
     setIsDialogOpen(true);
   };
 
+  const handleOpenQuickCreate = () => {
+    setQuickCreateTitle("");
+    setQuickCreateGenre("");
+    setQuickCreateError(null);
+    setIsQuickCreateOpen(true);
+  };
+
+  const handleQuickCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = quickCreateTitle.trim();
+    if (!trimmed) {
+      setQuickCreateError("Give your project a working title.");
+      return;
+    }
+    if (!quickCreateGenre) {
+      setQuickCreateError("Select a genre to continue.");
+      return;
+    }
+    setQuickCreateError(null);
+
+    const creativeBrief = {
+      genre: quickCreateGenre,
+      writing_mode: "solo",
+      familiarity_tags: [quickCreateGenre],
+      co_writers: [],
+      producers: [],
+      session_musicians: [],
+      inspiration_modifiers: [],
+      mood_modifiers: [],
+      rating_revealed_at: null,
+      core_attributes: null,
+    } as const;
+
+    try {
+      await createProject.mutateAsync({
+        title: trimmed,
+        theme_id: null,
+        chord_progression_id: null,
+        initial_lyrics: undefined,
+        creative_brief: creativeBrief,
+        instruments: [],
+      });
+      toast.success(`Quick project "${trimmed}" created (Solo · ${quickCreateGenre})`);
+      setIsQuickCreateOpen(false);
+    } catch (error) {
+      logger.error("Failed to quick-create songwriting project", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      toast.error("Failed to create project");
+    }
+  };
+
   const handleEdit = (project: SongwritingProject) => {
     setSelectedProject(project);
     const creativeBrief = project.creative_brief ?? null;
@@ -1330,12 +1389,24 @@ const Songwriting = () => {
           </CardContent>
         </Card>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('songwriting.newProject')}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="md:size-default"
+              onClick={handleOpenQuickCreate}
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Quick Create
             </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('songwriting.newProject')}
+              </Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>
@@ -2032,8 +2103,74 @@ const Songwriting = () => {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+
+        {/* Quick Create Dialog */}
+        <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                Quick Create
+              </DialogTitle>
+              <DialogDescription>
+                Skip the creative brief — just title + genre. Defaults to Solo writing mode. You can edit details later.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleQuickCreateSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="quick-title">Project Title *</Label>
+                <Input
+                  id="quick-title"
+                  value={quickCreateTitle}
+                  onChange={(e) => setQuickCreateTitle(e.target.value)}
+                  placeholder="e.g., Late night demo"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quick-genre">Genre *</Label>
+                <Select
+                  value={quickCreateGenre || "none"}
+                  onValueChange={(v) => setQuickCreateGenre(v === "none" ? "" : v)}
+                >
+                  <SelectTrigger id="quick-genre">
+                    <SelectValue placeholder="Select a genre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select a genre</SelectItem>
+                    {MUSIC_GENRES.map((genre) => (
+                      <SelectItem key={genre} value={genre}>
+                        {genre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {quickCreateError && (
+                <p className="text-sm text-destructive">{quickCreateError}</p>
+              )}
+              <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Defaults applied:</strong> Solo writing mode · No co-writers · No theme/chord progression. Edit the project anytime to add a creative brief and collaborators.
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsQuickCreateOpen(false)}
+                  disabled={createProject.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createProject.isPending}>
+                  <Zap className="mr-2 h-4 w-4" />
+                  {createProject.isPending ? "Creating…" : "Create Project"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
       {inviteProjectId && (
         <CollaboratorInviteDialog
