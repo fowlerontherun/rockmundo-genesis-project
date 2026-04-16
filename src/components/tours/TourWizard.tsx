@@ -266,46 +266,25 @@ export function TourWizard({ bandId, onComplete, onCancel }: TourWizardProps) {
           </div>
         )}
 
-        {/* Step 5: Stage Setup */}
+        {/* Step 5: Stage Production */}
         {wizard.currentStep === 5 && (
-          <StageSetupPicker
-            value={wizard.state.stageSetupTier}
-            onChange={(tier) => wizard.updateState({ stageSetupTier: tier })}
+          <StageEquipmentBuilder
+            selections={wizard.state.stageComponents}
+            onChange={(selections) => wizard.updateState({ stageComponents: selections })}
             bandFame={wizard.band?.fame || 0}
             showCount={wizard.venueMatches.length}
           />
         )}
 
-        {/* Step 6: Travel */}
+        {/* Step 6: Tour Transport */}
         {wizard.currentStep === 6 && (
-          <div className="space-y-4">
-            <RadioGroup value={wizard.state.travelMode} onValueChange={(v: any) => wizard.updateState({ travelMode: v })}>
-              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                <RadioGroupItem value="auto" />
-                <Plane className="h-5 w-5" />
-                <div>
-                  <span className="font-medium">Auto-Book Travel</span>
-                  <p className="text-sm text-muted-foreground">System books optimal flights/trains</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                <RadioGroupItem value="tour_bus" />
-                <Bus className="h-5 w-5" />
-                <div>
-                  <span className="font-medium">Tour Bus</span>
-                  <p className="text-sm text-muted-foreground">${TOUR_BUS_DAILY_COST}/day (fixed rate)</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                <RadioGroupItem value="manual" />
-                <MapPin className="h-5 w-5" />
-                <div>
-                  <span className="font-medium">Manual Booking</span>
-                  <p className="text-sm text-muted-foreground">Book your own travel</p>
-                </div>
-              </div>
-            </RadioGroup>
-          </div>
+          <TourVehiclePicker
+            value={wizard.state.vehicleTier}
+            onChange={(tier) => wizard.updateState({ vehicleTier: tier })}
+            bandFame={wizard.band?.fame || 0}
+            tourDurationDays={wizard.state.durationDays || 30}
+            stageHaulRequirement={getHaulRequirement(calculateTotalHaulWeight(wizard.state.stageComponents))}
+          />
         )}
 
         {/* Step 7: Support Artist */}
