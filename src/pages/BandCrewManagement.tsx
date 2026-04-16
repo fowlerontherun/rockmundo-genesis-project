@@ -12,6 +12,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
 
+import tourManagerImg from "@/assets/crew/tour-manager.jpg";
+import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
+import lightingDirectorImg from "@/assets/crew/lighting-director.jpg";
+import roadChiefImg from "@/assets/crew/road-chief.jpg";
+import backlineTechImg from "@/assets/crew/backline-tech.jpg";
+import merchDirectorImg from "@/assets/crew/merch-director.jpg";
+import securityLeadImg from "@/assets/crew/security-lead.jpg";
+import wardrobeStylistImg from "@/assets/crew/wardrobe-stylist.jpg";
+
+// Map crew role / image_url slug to imported asset.
+const CREW_IMAGES: Record<string, string> = {
+  "tour-manager": tourManagerImg,
+  "foh-engineer": fohEngineerImg,
+  "lighting-director": lightingDirectorImg,
+  "road-chief": roadChiefImg,
+  "backline-tech": backlineTechImg,
+  "merch-director": merchDirectorImg,
+  "security-lead": securityLeadImg,
+  "wardrobe-stylist": wardrobeStylistImg,
+};
+const ROLE_TO_IMAGE: Record<string, string> = {
+  "Tour Manager": tourManagerImg,
+  "Front of House Engineer": fohEngineerImg,
+  "Lighting Director": lightingDirectorImg,
+  "Road Crew Chief": roadChiefImg,
+  "Backline Technician": backlineTechImg,
+  "Merch Director": merchDirectorImg,
+  "Security Lead": securityLeadImg,
+  "Wardrobe Stylist": wardrobeStylistImg,
+};
+const getCrewImage = (role: string, slug?: string | null) =>
+  (slug && CREW_IMAGES[slug]) || ROLE_TO_IMAGE[role] || tourManagerImg;
+
 // Star rating display component
 const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) => {
   const stars = [];
@@ -85,6 +118,7 @@ interface CrewCatalogRow {
   star_rating: number;
   min_fame_required: number;
   hired_by_band_id: string | null;
+  image_url: string | null;
 }
 
 interface BandCrewMemberRow {
@@ -385,7 +419,17 @@ const BandCrewManagement = () => {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {hiredCrew.map((crew) => (
-                      <Card key={crew.id} className="relative">
+                      <Card key={crew.id} className="relative overflow-hidden">
+                        <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                          <img
+                            src={getCrewImage(crew.crew_type)}
+                            alt={`${crew.crew_type} portrait`}
+                            loading="lazy"
+                            width={512}
+                            height={288}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                         <CardHeader className="pb-2">
                           <div className="flex items-start justify-between">
                             <div>
@@ -496,7 +540,7 @@ const BandCrewManagement = () => {
                       return (
                         <Card 
                           key={crew.id} 
-                          className={`relative ${locked ? "opacity-60" : ""}`}
+                          className={`relative overflow-hidden ${locked ? "opacity-60" : ""}`}
                         >
                           {locked && (
                             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
@@ -508,6 +552,16 @@ const BandCrewManagement = () => {
                               </div>
                             </div>
                           )}
+                          <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                            <img
+                              src={getCrewImage(crew.role, crew.image_url)}
+                              alt={`${crew.role} portrait`}
+                              loading="lazy"
+                              width={512}
+                              height={288}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between">
                               <div>
@@ -584,6 +638,16 @@ const BandCrewManagement = () => {
           </DialogHeader>
           {selectedCrewMember && (
             <div className="space-y-4">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-lg bg-muted">
+                <img
+                  src={getCrewImage(selectedCrewMember.role, selectedCrewMember.image_url)}
+                  alt={`${selectedCrewMember.role} portrait`}
+                  loading="lazy"
+                  width={512}
+                  height={288}
+                  className="h-full w-full object-cover"
+                />
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="text-lg font-semibold">{selectedCrewMember.name}</div>
