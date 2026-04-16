@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.180",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Enchantment System: Upgrade crafted instruments with magical modifiers that boost stats" },
+      { type: 'feature', description: "22 enchantments across 6 categories: Tone, Durability, Stage Presence, Fame, Luck, and Versatility" },
+      { type: 'feature', description: "5 rarity tiers (Common → Legendary) with stackable enchantments and incompatibility checks" },
+      { type: 'feature', description: "New Enchant tab in the Crafting Workshop — select equipment, browse enchantments, and apply upgrades" },
+      { type: 'improvement', description: "Enchantments cost cash and scale with tier; higher Luthiery skill unlocks better enchantments" },
+    ],
+  },
+  {
     version: "1.1.179",
     date: "2026-04-16",
     changes: [
