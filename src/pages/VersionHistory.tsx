@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.182",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Tour revenue and fame now display real data from gig outcomes instead of the stale tours.total_revenue field" },
+      { type: 'feature', description: "Tour detail panel shows ticket revenue, merch revenue, net profit, and fame gained with distinct bold tabular font" },
+      { type: 'feature', description: "Tour stats header now shows 4 cards including lifetime Fame Earned from all tours" },
+      { type: 'feature', description: "Tour detail panel shows progress bar for completed vs total shows, average occupancy, and best/worst show highlights" },
+      { type: 'feature', description: "Tour cards now display scope badge and stage setup tier" },
+      { type: 'improvement', description: "Tour detail panel shows upfront cost, sponsor subsidy, travel mode, and merch boost percentage" },
+      { type: 'improvement', description: "Tour venue list uses bolder revenue font and compact badges for mobile readability" },
+      { type: 'improvement', description: "Management actions grouped under a section header in tour detail dialog" },
+    ],
+  },
+  {
     version: "1.1.181",
     date: "2026-04-16",
     changes: [
