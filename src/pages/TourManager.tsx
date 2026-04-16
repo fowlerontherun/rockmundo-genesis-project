@@ -33,6 +33,13 @@ interface Tour {
   total_revenue: number;
   description: string | null;
   created_at: string;
+  total_upfront_cost?: number;
+  scope?: string | null;
+  travel_mode?: string | null;
+  stage_setup_tier?: string | null;
+  sponsor_cash_value?: number | null;
+  merch_boost_multiplier?: number | null;
+  support_revenue_share?: number | null;
   band: {
     id: string;
     name: string;
