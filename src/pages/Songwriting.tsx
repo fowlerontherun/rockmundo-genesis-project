@@ -72,6 +72,7 @@ import {
   Music2,
   Pen,
   UserPlus,
+  Zap,
 } from "lucide-react";
 import logger from "@/lib/logger";
 import { PageLayout } from "@/components/ui/PageLayout";
