@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.179",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Pedal Building: 6 new pedal recipes — Basic Fuzz, Classic Overdrive, Germanium Fuzz Face, Analog Delay, Lo-Fi Delay, and Boutique Tube Screamer" },
+      { type: 'feature', description: "Amp Modding: 5 new amp recipes — 5W Practice Amp, British 30W Combo, American Clean 40W Head, Masterwork Plexi 100W, and 4x12 Speaker Cabinet" },
+      { type: 'feature', description: "16 new Pedal Components materials including germanium transistors, BBD delay chips, NOS tubes, and boutique PCBs" },
+      { type: 'feature', description: "15 new Amp Components materials including preamp/power tubes, transformers, speakers, reverb tanks, and turret boards" },
+      { type: 'improvement', description: "Crafting materials shop now displays Pedal Components and Amp Components as separate browsable categories" },
+    ],
+  },
+  {
     version: "1.1.178",
     date: "2026-04-16",
     changes: [
