@@ -353,9 +353,12 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Take Down Confirmation Dialog */}
