@@ -61,7 +61,7 @@ export const MaterialInventory = ({
         return (
           <div key={cat}>
             <h3 className="text-sm font-semibold mb-2 capitalize flex items-center gap-1.5">
-              {CATEGORY_EMOJI[cat]} {cat}
+              {CATEGORY_EMOJI[cat]} {cat.replace(/_/g, " ")}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {catMaterials.map((mat) => {
