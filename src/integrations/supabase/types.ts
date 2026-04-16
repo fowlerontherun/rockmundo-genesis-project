@@ -15628,6 +15628,71 @@ export type Database = {
           },
         ]
       }
+      nightclub_events: {
+        Row: {
+          club_id: string
+          cover_charge_override: number | null
+          created_at: string
+          day_of_week: number | null
+          description: string | null
+          event_name: string
+          event_type: string
+          fame_multiplier: number
+          genre_focus: string | null
+          id: string
+          is_active: boolean
+          is_recurring: boolean
+          scheduled_date: string | null
+          special_guest_name: string | null
+          updated_at: string
+          xp_multiplier: number
+        }
+        Insert: {
+          club_id: string
+          cover_charge_override?: number | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          event_name: string
+          event_type?: string
+          fame_multiplier?: number
+          genre_focus?: string | null
+          id?: string
+          is_active?: boolean
+          is_recurring?: boolean
+          scheduled_date?: string | null
+          special_guest_name?: string | null
+          updated_at?: string
+          xp_multiplier?: number
+        }
+        Update: {
+          club_id?: string
+          cover_charge_override?: number | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          event_name?: string
+          event_type?: string
+          fame_multiplier?: number
+          genre_focus?: string | null
+          id?: string
+          is_active?: boolean
+          is_recurring?: boolean
+          scheduled_date?: string | null
+          special_guest_name?: string | null
+          updated_at?: string
+          xp_multiplier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nightclub_quests: {
         Row: {
           chain_id: string | null
@@ -15686,6 +15751,123 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "nightclub_quests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_revenue_log: {
+        Row: {
+          amount: number
+          id: string
+          owned_club_id: string
+          recorded_at: string
+          revenue_type: string
+        }
+        Insert: {
+          amount?: number
+          id?: string
+          owned_club_id: string
+          recorded_at?: string
+          revenue_type?: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          owned_club_id?: string
+          recorded_at?: string
+          revenue_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_revenue_log_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_staff: {
+        Row: {
+          created_at: string
+          hired_at: string
+          id: string
+          name: string
+          owned_club_id: string
+          salary_weekly: number
+          skill_level: number
+          staff_type: string
+        }
+        Insert: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          name: string
+          owned_club_id: string
+          salary_weekly?: number
+          skill_level?: number
+          staff_type?: string
+        }
+        Update: {
+          created_at?: string
+          hired_at?: string
+          id?: string
+          name?: string
+          owned_club_id?: string
+          salary_weekly?: number
+          skill_level?: number
+          staff_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_staff_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_vip_packages: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          max_guests: number
+          min_reputation_tier: string
+          package_name: string
+          perks: Json
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          max_guests?: number
+          min_reputation_tier?: string
+          package_name: string
+          perks?: Json
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          max_guests?: number
+          min_reputation_tier?: string
+          package_name?: string
+          perks?: Json
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_vip_packages_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "city_night_clubs"
@@ -19180,6 +19362,98 @@ export type Database = {
           },
         ]
       }
+      player_owned_nightclubs: {
+        Row: {
+          capacity: number
+          city_id: string | null
+          club_id: string | null
+          club_name: string
+          cover_charge: number
+          created_at: string
+          drink_markup_pct: number
+          id: string
+          is_open: boolean
+          profile_id: string
+          purchase_price: number
+          purchased_at: string
+          quality_level: number
+          reputation_score: number
+          staff_count: number
+          updated_at: string
+          weekly_expenses: number
+          weekly_revenue: number
+        }
+        Insert: {
+          capacity?: number
+          city_id?: string | null
+          club_id?: string | null
+          club_name: string
+          cover_charge?: number
+          created_at?: string
+          drink_markup_pct?: number
+          id?: string
+          is_open?: boolean
+          profile_id: string
+          purchase_price?: number
+          purchased_at?: string
+          quality_level?: number
+          reputation_score?: number
+          staff_count?: number
+          updated_at?: string
+          weekly_expenses?: number
+          weekly_revenue?: number
+        }
+        Update: {
+          capacity?: number
+          city_id?: string | null
+          club_id?: string | null
+          club_name?: string
+          cover_charge?: number
+          created_at?: string
+          drink_markup_pct?: number
+          id?: string
+          is_open?: boolean
+          profile_id?: string
+          purchase_price?: number
+          purchased_at?: string
+          quality_level?: number
+          reputation_score?: number
+          staff_count?: number
+          updated_at?: string
+          weekly_expenses?: number
+          weekly_revenue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_owned_nightclubs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_owned_nightclubs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_owned_nightclubs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_owned_nightclubs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_owned_skins: {
         Row: {
           id: string
@@ -20532,6 +20806,68 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_vip_bookings: {
+        Row: {
+          booked_at: string
+          club_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          package_id: string
+          profile_id: string
+          status: string
+        }
+        Insert: {
+          booked_at?: string
+          club_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          package_id: string
+          profile_id: string
+          status?: string
+        }
+        Update: {
+          booked_at?: string
+          club_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          package_id?: string
+          profile_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_vip_bookings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_vip_bookings_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_vip_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_vip_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_vip_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_wellness_conditions: {
         Row: {

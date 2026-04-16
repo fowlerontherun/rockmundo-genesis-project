@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Disc3, Search, MapPin, Star, Users, ArrowRight, Crown, Loader2 } from "lucide-react";
+import { Disc3, Search, MapPin, Star, Users, ArrowRight, Crown, Loader2, Building2, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub } from "@/utils/worldEnvironment";
 import { useAllClubReputations, getTierLabel, getTierColor, type ClubReputation } from "@/hooks/useClubReputation";
+import { useOwnedNightclubs, usePurchaseNightclub, getPurchasePrice } from "@/hooks/useNightclubOwnership";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useOptionalGameData } from "@/hooks/useGameData";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -39,6 +42,12 @@ const NightclubHub = () => {
   const [cityFilter, setCityFilter] = useState<string>("all");
 
   const { data: reputations = [] } = useAllClubReputations();
+  const { data: ownedClubs = [] } = useOwnedNightclubs();
+  const purchaseClub = usePurchaseNightclub();
+  const gameData = useOptionalGameData();
+  const playerCityId = gameData?.profile?.current_city_id ?? null;
+
+  const ownedClubIds = useMemo(() => new Set(ownedClubs.map((c) => c.club_id)), [ownedClubs]);
   const repMap = useMemo(() => {
     const m = new Map<string, ClubReputation>();
     reputations.forEach((r) => m.set(r.club_id, r));
@@ -88,6 +97,21 @@ const NightclubHub = () => {
         backTo="/hub/world-social"
         backLabel="Back to World"
       />
+
+      {/* My Clubs Banner */}
+      {ownedClubs.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5 cursor-pointer" onClick={() => navigate("/nightclub-management")}>
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">My Nightclubs ({ownedClubs.length})</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -144,6 +168,9 @@ const NightclubHub = () => {
           {filtered.map((club) => {
             const rep = repMap.get(club.id);
             const qualityLabel = QUALITY_LABELS[club.qualityLevel] ?? `Tier ${club.qualityLevel}`;
+            const owned = ownedClubIds.has(club.id);
+            const canBuy = !owned && club.cityId === playerCityId;
+            const price = getPurchasePrice(club.qualityLevel);
             return (
               <Card
                 key={club.id}
@@ -156,6 +183,11 @@ const NightclubHub = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{club.name}</span>
                         <Badge variant="secondary" className="text-[10px]">{qualityLabel}</Badge>
+                        {owned && (
+                          <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
+                            <Building2 className="h-2.5 w-2.5 mr-0.5" /> Owned
+                          </Badge>
+                        )}
                         {rep && (
                           <Badge variant="outline" className={`text-[10px] ${getTierColor(rep.reputation_tier)}`}>
                             <Crown className="h-2.5 w-2.5 mr-0.5" />
@@ -177,7 +209,31 @@ const NightclubHub = () => {
                         )}
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-center gap-2 shrink-0">
+                      {canBuy && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          disabled={purchaseClub.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            purchaseClub.mutate({
+                              clubId: club.id,
+                              clubName: club.name,
+                              cityId: club.cityId!,
+                              qualityLevel: club.qualityLevel,
+                              capacity: club.capacity ?? 100,
+                              coverCharge: club.coverCharge ?? 10,
+                            });
+                          }}
+                        >
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          Buy {currencyFormatter.format(price)}
+                        </Button>
+                      )}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

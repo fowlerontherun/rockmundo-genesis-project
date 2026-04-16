@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.177",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Club Events & Theme Nights: Clubs now show tonight's active event and a weekly schedule with genre-specific fame/XP multipliers and special guests" },
+      { type: 'feature', description: "VIP Lounges & Bottle Service: Reputation-gated VIP packages with perks like free drinks, fame boosts, skip cover, and exclusive NPC access" },
+      { type: 'feature', description: "Club Ownership: Players can purchase nightclubs in their current city and manage them as businesses" },
+      { type: 'feature', description: "Club Management Dashboard: Full owner dashboard with financial overview, staff hiring/firing, cover charge and drink markup controls" },
+      { type: 'feature', description: "Staff System: Hire bouncers, bartenders, DJs, promoters, and managers with skill levels affecting salary" },
+      { type: 'improvement', description: "Nightclub Hub: Added 'My Nightclubs' banner, 'Owned' badges, and Buy buttons for clubs in your city" },
+      { type: 'improvement', description: "Club Detail: Added Events section, VIP Lounge section, and ownership management link" },
+    ],
+  },
+  {
     version: "1.1.176",
     date: "2026-04-16",
     changes: [

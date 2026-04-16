@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus } from "lucide-react";
+import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,9 @@ import { NPCDialoguePanel } from "@/components/nightclub/NPCDialoguePanel";
 import { NightlifeStanceSelector } from "@/components/nightclub/NightlifeStanceSelector";
 import type { NightlifeStance } from "@/utils/nightlifeRiskLayer";
 import { useQuery } from "@tanstack/react-query";
+import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
+import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
+import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -86,6 +89,8 @@ const NightClubDetail = () => {
   const { data: clubPresence = [] } = useClubPresence(clubId);
   const enterClub = useEnterClub();
   const clubChatChannel = clubId ? `club:${clubId}` : null;
+  const { data: ownedClubs = [] } = useOwnedNightclubs();
+  const isOwned = ownedClubs.some((c) => c.club_id === clubId);
   // DJ Performance History
   const { data: djHistory = [] } = useQuery({
     queryKey: ["dj-performances", profileId, clubId],
@@ -287,6 +292,29 @@ const NightClubDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Club Events */}
+      {clubId && <ClubEventsSection clubId={clubId} />}
+
+      {/* VIP Lounge */}
+      {clubId && <VipLoungeSection clubId={clubId} />}
+
+      {/* Owned Club Link */}
+      {isOwned && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">You own this club</span>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => navigate("/nightclub-management")}>
+                Manage
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* DJ Performance History */}
       {djHistory.length > 0 && (
