@@ -4,10 +4,14 @@ import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { IncomeBreakdownChart } from "@/components/finance/IncomeBreakdownChart";
 import { IncomeExpenseChart } from "@/components/finance/IncomeExpenseChart";
 import { SpendingCategoriesChart } from "@/components/finance/SpendingCategoriesChart";
-import { BandFinancesCard } from "@/components/finance/BandFinancesCard";
+import { BandFinanceDetail } from "@/components/finance/BandFinanceDetail";
+import { PersonalFinanceBreakdown } from "@/components/finance/PersonalFinanceBreakdown";
 import { InvestmentsTab } from "@/components/finance/InvestmentsTab";
 import { LoansTab } from "@/components/finance/LoansTab";
 import { TransactionsList } from "@/components/finance/TransactionsList";
+import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
+import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPanel";
+import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
 import { Loader2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -53,30 +57,32 @@ const Finances = () => {
           <TabsTrigger value="bands">Bands</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="loans">Loans</TabsTrigger>
+          <TabsTrigger value="charity">Charity</TabsTrigger>
+          <TabsTrigger value="sponsorships">Sponsorships</TabsTrigger>
+          <TabsTrigger value="city">City Treasury</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PersonalFinanceBreakdown summary={summary} />
+            <BandFinanceDetail bands={bands} transactions={transactions} />
+          </div>
+
           {/* Income vs Expenses trend */}
           <IncomeExpenseChart data={monthlyLedger} />
 
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Income Breakdown Chart */}
             <IncomeBreakdownChart earningsBySource={earningsBySource} />
-            
-            {/* Spending Categories */}
             <SpendingCategoriesChart transactions={transactions} />
           </div>
-
-          {/* Band Overview */}
-          <BandFinancesCard bands={bands} />
 
           {/* Recent Transactions */}
           <TransactionsList transactions={transactions.slice(0, 10)} />
         </TabsContent>
 
         <TabsContent value="bands" className="space-y-6">
-          <BandFinancesCard bands={bands} />
+          <BandFinanceDetail bands={bands} transactions={transactions} />
         </TabsContent>
 
         <TabsContent value="investments" className="space-y-6">
@@ -93,6 +99,18 @@ const Finances = () => {
             loanOffers={loanOffers}
             cash={summary.cash}
           />
+        </TabsContent>
+
+        <TabsContent value="charity" className="space-y-6">
+          <CharityDonationsTab cash={summary.cash} />
+        </TabsContent>
+
+        <TabsContent value="sponsorships" className="space-y-6">
+          <SponsorshipTypesPanel />
+        </TabsContent>
+
+        <TabsContent value="city" className="space-y-6">
+          <CityTreasuryCard />
         </TabsContent>
 
         <TabsContent value="transactions" className="space-y-6">
