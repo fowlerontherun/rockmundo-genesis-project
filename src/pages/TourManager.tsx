@@ -86,6 +86,7 @@ const TourManager = () => {
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.bands?.id;
+  const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
