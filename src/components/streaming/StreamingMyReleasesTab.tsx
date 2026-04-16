@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw } from "lucide-react";
+import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
 import { StreamSparkline } from "./StreamSparkline";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,15 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [takeDownId, setTakeDownId] = useState<string | null>(null);
+  const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
+
+  const toggleSong = (songId: string) => {
+    setExpandedSongs((prev) => {
+      const next = new Set(prev);
+      next.has(songId) ? next.delete(songId) : next.add(songId);
+      return next;
+    });
+  };
 
   // First fetch user's band IDs (band_members keyed on profile_id)
   const { data: userBandIds } = useQuery({
@@ -71,6 +81,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
           )
         `)
         .eq("release_type", "streaming")
+        .eq("is_active", true)
         .order("release_date", { ascending: false });
 
       // Solo + band releases (don't early-return when no bands)
@@ -134,31 +145,6 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     }
   });
 
-  // Re-release mutation (no confirmation needed — bringing a song back is non-destructive)
-  const reReleaseMutation = useMutation({
-    mutationFn: async (releaseId: string) => {
-      const { error } = await supabase
-        .from("song_releases")
-        .update({ is_active: true, release_date: new Date().toISOString() })
-        .eq("id", releaseId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Re-released",
-        description: "Your song is back live on the platform.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["streaming-releases"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Re-release Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
   // Build a 7-day series per release_id (fill missing days with 0)
   const buildSeriesForReleases = (relIds: string[]) => {
     const days: string[] = [];
@@ -199,14 +185,11 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
       platformName: release.platform_name || release.platform?.platform_name,
       streams: release.total_streams || 0,
       revenue: release.total_revenue || 0,
-      releaseDate: release.release_date,
-      isActive: release.is_active !== false,
+      releaseDate: release.release_date
     });
     acc[songId].releaseIds.push(release.id);
-    if (release.is_active !== false) {
-      acc[songId].totalStreams += release.total_streams || 0;
-      acc[songId].totalRevenue += release.total_revenue || 0;
-    }
+    acc[songId].totalStreams += release.total_streams || 0;
+    acc[songId].totalRevenue += release.total_revenue || 0;
     return acc;
   }, {} as Record<string, any>) || {};
 
@@ -235,39 +218,69 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
   return (
     <>
       <div className="grid gap-4">
-        {songEntries.map(([songId, data]) => (
-          <Card key={songId}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{data.song?.title || "Unknown Song"}</CardTitle>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">{data.song?.genre}</span>
-                    {data.song?.quality_score && (
-                      <Badge variant="outline" className="text-xs">
-                        Quality: {data.song.quality_score}
-                      </Badge>
-                    )}
-                    {(data.song?.hype || 0) > 0 && (
-                      <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
-                        <Flame className="h-3 w-3 mr-1" />
-                        {data.song.hype} Hype
-                      </Badge>
-                    )}
-                    {(data.song?.fame || 0) > 0 && (
-                      <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/20">
-                        <Star className="h-3 w-3 mr-1" />
-                        {data.song.fame} Fame
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <Badge variant="secondary">
-                  {data.platforms.length} Platform{data.platforms.length !== 1 ? "s" : ""}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {songEntries.map(([songId, data]) => {
+          const isOpen = expandedSongs.has(songId);
+          return (
+            <Card key={songId}>
+              <Collapsible open={isOpen} onOpenChange={() => toggleSong(songId)}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full text-left hover:bg-muted/30 transition-colors rounded-t-lg"
+                    aria-expanded={isOpen}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                              isOpen ? "rotate-0" : "-rotate-90"
+                            }`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-base truncate">
+                              {data.song?.title || "Unknown Song"}
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                              <span className="text-xs text-muted-foreground">{data.song?.genre}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                {data.platforms.length} platform{data.platforms.length !== 1 ? "s" : ""}
+                              </Badge>
+                              {(data.song?.hype || 0) > 0 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-orange-500/10 text-orange-500 border-orange-500/20">
+                                  <Flame className="h-2.5 w-2.5 mr-0.5" />
+                                  {data.song.hype}
+                                </Badge>
+                              )}
+                              {(data.song?.fame || 0) > 0 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-purple-500/10 text-purple-500 border-purple-500/20">
+                                  <Star className="h-2.5 w-2.5 mr-0.5" />
+                                  {data.song.fame}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 text-right">
+                          <div>
+                            <div className="text-xs text-muted-foreground leading-none">Streams</div>
+                            <div className="text-sm font-bold text-primary tabular-nums leading-tight mt-0.5">
+                              {data.totalStreams.toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground leading-none">Revenue</div>
+                            <div className="text-sm font-bold text-green-500 tabular-nums leading-tight mt-0.5">
+                              ${data.totalRevenue.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
               {/* AI Audio Player */}
               {data.song?.audio_url && (
                 <SongPlayer
@@ -313,22 +326,12 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                 <p className="text-sm font-medium">Platform Breakdown</p>
                 <div className="grid gap-2">
                   {data.platforms.map((p: any) => (
-                    <div
-                      key={p.id}
-                      className={`flex items-center justify-between p-2 rounded-lg border ${
-                        p.isActive ? "bg-secondary/20" : "bg-muted/30 border-dashed opacity-70"
-                      }`}
-                    >
+                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/20">
                       <div className="flex items-center gap-2">
                         <PlatformIcon platformName={p.platformName || ""} />
                         <span className={`font-medium ${getPlatformColor(p.platformName || "")}`}>
                           {p.platformName || "Unknown Platform"}
                         </span>
-                        {!p.isActive && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                            Taken down
-                          </Badge>
-                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-sm">
@@ -337,36 +340,25 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                         <span className="text-sm text-green-500">
                           ${(p.revenue || 0).toLocaleString()}
                         </span>
-                        {p.isActive ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setTakeDownId(p.id)}
-                            title="Take down"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            disabled={reReleaseMutation.isPending}
-                            onClick={() => reReleaseMutation.mutate(p.id)}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                            Re-release
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setTakeDownId(p.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Take Down Confirmation Dialog */}
