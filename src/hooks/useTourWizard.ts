@@ -49,8 +49,8 @@ const WIZARD_STEPS = [
   'Countries',
   'Venues',
   'Tickets',
-  'Stage Setup',
-  'Travel',
+  'Stage Production',
+  'Transport',
   'Support Artist',
   'Review'
 ];
