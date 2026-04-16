@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.192",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Songwriting project creation reworked from tabs into a guided workflow: numbered Basics → Creative Brief → Collaborators sections in one scrollable form, with progress bar and step-locking until prerequisites are met" },
+      { type: 'improvement', description: "Step 2 (Creative Brief) and Step 3 (Collaborators) are visually locked and dimmed until Title + Genre are filled, making the writing flow easier to follow" },
+    ],
+  },
+  {
     version: "1.1.191",
     date: "2026-04-16",
     changes: [
