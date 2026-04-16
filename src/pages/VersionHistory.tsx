@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.197",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Streaming Platforms tab: each platform card now shows a top-3 leaderboard of your highest-streaming songs on that platform with rank badges in the platform's brand color" },
+      { type: 'improvement', description: "Top-songs data fetched in a single batched query across all platforms, then grouped client-side" },
+    ],
+  },
+  {
     version: "1.1.196",
     date: "2026-04-16",
     changes: [
