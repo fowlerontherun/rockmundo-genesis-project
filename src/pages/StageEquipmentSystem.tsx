@@ -335,8 +335,6 @@ const StageEquipmentSystem = () => {
         power_draw: null,
         purchase_cost: item.cost,
         purchase_date: new Date().toISOString(),
-        maintenance_due_at: null,
-        maintenance_status: "good",
         size_units: sizeToUnits(item.size),
         notes: JSON.stringify(buildMetadataPayload(metadata, condition)),
       });
