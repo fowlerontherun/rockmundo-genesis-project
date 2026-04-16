@@ -86,6 +86,12 @@ export interface TourWizardState {
   travelMode: TravelMode;
   tourBusDailyCost: number;
   
+  // Step 6b: Vehicle
+  vehicleTier: VehicleTier;
+  
+  // Step 6c: Stage Components (detailed)
+  stageComponents: StageComponentSelections;
+
   // Step 8: Support Artist
   supportBandId: string | null;
   supportBandName: string | null;
