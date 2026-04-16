@@ -419,7 +419,17 @@ const BandCrewManagement = () => {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {hiredCrew.map((crew) => (
-                      <Card key={crew.id} className="relative">
+                      <Card key={crew.id} className="relative overflow-hidden">
+                        <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                          <img
+                            src={getCrewImage(crew.crew_type)}
+                            alt={`${crew.crew_type} portrait`}
+                            loading="lazy"
+                            width={512}
+                            height={288}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                         <CardHeader className="pb-2">
                           <div className="flex items-start justify-between">
                             <div>
