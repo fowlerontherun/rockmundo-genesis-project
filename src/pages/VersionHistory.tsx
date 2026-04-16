@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.211",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Corporate taxes: pending tax bills no longer count owner deposits, capital injections, intercompany transfers, loans, or dividends as taxable revenue. Only actual earned business income (gigs, sales, fees, royalties) is taxed. Existing inflated pending bills were voided and regenerated with realistic amounts." },
+    ],
+  },
+  {
     version: "1.1.210",
     date: "2026-04-16",
     changes: [

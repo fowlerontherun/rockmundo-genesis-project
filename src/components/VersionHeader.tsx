@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
 import { VipBadge } from "@/components/VipBadge";
 
-export const version = "1.1.210";
+export const version = "1.1.211";
 
 export const VersionHeader = () => {
   const { t } = useTranslation();
