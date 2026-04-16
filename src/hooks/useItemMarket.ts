@@ -57,10 +57,10 @@ export interface MarketTransaction {
 const MARKETPLACE_FEE_PCT = 0.05;
 
 export function useItemMarket() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
-  const userId = session?.user?.id;
+  const userId = user?.id;
 
   // Browse active listings
   const listings = useQuery({
