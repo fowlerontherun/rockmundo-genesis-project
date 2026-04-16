@@ -271,18 +271,109 @@ export const PlaylistsTab = ({ userId, profileId }: PlaylistsTabProps) => {
       )}
 
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Available Playlists ({playlists.length})</h3>
+        <h3 className="text-lg font-semibold">
+          Available Playlists ({filteredPlaylists.length}
+          {filteredPlaylists.length !== playlists.length ? ` of ${playlists.length}` : ""})
+        </h3>
         <p className="text-sm text-muted-foreground">
           Submit your songs to these curated playlists. Higher follower counts mean more exposure!
         </p>
       </div>
 
-      {(() => {
-        // Group playlists by streaming platform
-        const groups = new Map<string, typeof playlists>();
-        playlists.forEach((pl) => {
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="relative lg:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search playlists by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="followers_desc">Most Followers</SelectItem>
+                <SelectItem value="followers_asc">Fewest Followers</SelectItem>
+                <SelectItem value="fee_asc">Lowest Fee</SelectItem>
+                <SelectItem value="fee_desc">Highest Fee</SelectItem>
+                <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                {platformOptions.map((p) => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={curatorFilter} onValueChange={setCuratorFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Curator" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Curators</SelectItem>
+                {curatorOptions.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={feeFilter} onValueChange={setFeeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Fee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Fee</SelectItem>
+                <SelectItem value="free">Free Only</SelectItem>
+                <SelectItem value="paid">Paid Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sizeFilter} onValueChange={setSizeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Size</SelectItem>
+                <SelectItem value="small">Small (&lt;10K)</SelectItem>
+                <SelectItem value="medium">Medium (10K–100K)</SelectItem>
+                <SelectItem value="large">Large (100K+)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-3.5 w-3.5 mr-1" />
+                Clear filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {filteredPlaylists.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No playlists match your filters.
+          </CardContent>
+        </Card>
+      ) : (() => {
+        // Group filtered playlists by streaming platform
+        const groups = new Map<string, typeof filteredPlaylists>();
+        filteredPlaylists.forEach((pl) => {
           const key = pl.platform?.platform_name || "Other";
-          if (!groups.has(key)) groups.set(key, [] as typeof playlists);
+          if (!groups.has(key)) groups.set(key, [] as typeof filteredPlaylists);
           groups.get(key)!.push(pl);
         });
         const groupEntries = Array.from(groups.entries()).sort((a, b) =>
