@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.206",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Band Crew: every catalog entry and hired crew member now displays a stylized portrait illustration alongside their card. Eight role-based avatars (Tour Manager, FOH Engineer, Lighting Director, Road Crew Chief, Backline Tech, Merch Director, Security Lead, Wardrobe Stylist) ship as static assets and are mapped automatically by role." },
+      { type: 'feature', description: "Crew catalog expanded by 40 new hireable crew (5 per role × 8 roles) spanning all five tiers from rookie (1-2★) to legend (9-10★). Each new crew member has a unique name, background, focus, specialties, traits, salary, fame requirement, and assignment so the talent pool feels deeper." },
+      { type: 'improvement', description: "Crew exclusivity reaffirmed: when a band hires a crew member they are removed from every other player's available list, and only become hireable again if their band releases them. Added a new `image_url` column on crew_catalog to support per-role artwork." },
+    ],
+  },
+  {
     version: "1.1.205",
     date: "2026-04-16",
     changes: [

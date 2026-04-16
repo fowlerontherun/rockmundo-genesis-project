@@ -118,6 +118,7 @@ interface CrewCatalogRow {
   star_rating: number;
   min_fame_required: number;
   hired_by_band_id: string | null;
+  image_url: string | null;
 }
 
 interface BandCrewMemberRow {
