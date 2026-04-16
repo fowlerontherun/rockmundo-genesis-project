@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Disc3, Search, MapPin, Star, Users, ArrowRight, Crown, Loader2 } from "lucide-react";
+import { Disc3, Search, MapPin, Star, Users, ArrowRight, Crown, Loader2, Building2, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub } from "@/utils/worldEnvironment";
 import { useAllClubReputations, getTierLabel, getTierColor, type ClubReputation } from "@/hooks/useClubReputation";
+import { useOwnedNightclubs, usePurchaseNightclub, getPurchasePrice } from "@/hooks/useNightclubOwnership";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useOptionalGameData } from "@/hooks/useGameData";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -39,6 +42,12 @@ const NightclubHub = () => {
   const [cityFilter, setCityFilter] = useState<string>("all");
 
   const { data: reputations = [] } = useAllClubReputations();
+  const { data: ownedClubs = [] } = useOwnedNightclubs();
+  const purchaseClub = usePurchaseNightclub();
+  const gameData = useOptionalGameData();
+  const playerCityId = gameData?.profile?.current_city_id ?? null;
+
+  const ownedClubIds = useMemo(() => new Set(ownedClubs.map((c) => c.club_id)), [ownedClubs]);
   const repMap = useMemo(() => {
     const m = new Map<string, ClubReputation>();
     reputations.forEach((r) => m.set(r.club_id, r));
