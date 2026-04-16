@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.210",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Localization: Chinese (中文) and Japanese (日本語) are now active in the language switcher. Chinese is fully translated across every screen; Japanese covers all core gameplay sections (navigation, dashboard, character, music hub, gigs, songwriting, recording, rehearsals, finances, social, festivals, employment, sponsorships, record labels, prison, world map, busking, fan management, gettit) with English fallback for niche admin pages." },
+    ],
+  },
+  {
     version: "1.1.209",
     date: "2026-04-16",
     changes: [
