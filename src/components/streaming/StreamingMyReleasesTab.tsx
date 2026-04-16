@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star } from "lucide-react";
+import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
@@ -71,7 +71,6 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
           )
         `)
         .eq("release_type", "streaming")
-        .eq("is_active", true)
         .order("release_date", { ascending: false });
 
       // Solo + band releases (don't early-return when no bands)
@@ -135,6 +134,31 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     }
   });
 
+  // Re-release mutation (no confirmation needed — bringing a song back is non-destructive)
+  const reReleaseMutation = useMutation({
+    mutationFn: async (releaseId: string) => {
+      const { error } = await supabase
+        .from("song_releases")
+        .update({ is_active: true, release_date: new Date().toISOString() })
+        .eq("id", releaseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Re-released",
+        description: "Your song is back live on the platform.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["streaming-releases"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Re-release Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Build a 7-day series per release_id (fill missing days with 0)
   const buildSeriesForReleases = (relIds: string[]) => {
     const days: string[] = [];
@@ -175,11 +199,14 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
       platformName: release.platform_name || release.platform?.platform_name,
       streams: release.total_streams || 0,
       revenue: release.total_revenue || 0,
-      releaseDate: release.release_date
+      releaseDate: release.release_date,
+      isActive: release.is_active !== false,
     });
     acc[songId].releaseIds.push(release.id);
-    acc[songId].totalStreams += release.total_streams || 0;
-    acc[songId].totalRevenue += release.total_revenue || 0;
+    if (release.is_active !== false) {
+      acc[songId].totalStreams += release.total_streams || 0;
+      acc[songId].totalRevenue += release.total_revenue || 0;
+    }
     return acc;
   }, {} as Record<string, any>) || {};
 
@@ -286,12 +313,22 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                 <p className="text-sm font-medium">Platform Breakdown</p>
                 <div className="grid gap-2">
                   {data.platforms.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/20">
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between p-2 rounded-lg border ${
+                        p.isActive ? "bg-secondary/20" : "bg-muted/30 border-dashed opacity-70"
+                      }`}
+                    >
                       <div className="flex items-center gap-2">
                         <PlatformIcon platformName={p.platformName || ""} />
                         <span className={`font-medium ${getPlatformColor(p.platformName || "")}`}>
                           {p.platformName || "Unknown Platform"}
                         </span>
+                        {!p.isActive && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                            Taken down
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-sm">
@@ -300,14 +337,28 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                         <span className="text-sm text-green-500">
                           ${(p.revenue || 0).toLocaleString()}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setTakeDownId(p.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {p.isActive ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setTakeDownId(p.id)}
+                            title="Take down"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            disabled={reReleaseMutation.isPending}
+                            onClick={() => reReleaseMutation.mutate(p.id)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                            Re-release
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

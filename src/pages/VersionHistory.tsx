@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.196",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Streaming My Music: taken-down platform releases now stay visible on the song card with a one-click 'Re-release' button (no confirmation dialog) so you can bring them back instantly" },
+      { type: 'improvement', description: "Inactive platform rows are visually distinct (dashed border, muted, 'Taken down' badge) and excluded from the song's total streams/revenue" },
+    ],
+  },
+  {
     version: "1.1.195",
     date: "2026-04-16",
     changes: [
