@@ -2,7 +2,7 @@
 
 export interface CraftingMaterialSeed {
   name: string;
-  category: "wood" | "electronics" | "hardware" | "strings" | "finish";
+  category: "wood" | "electronics" | "hardware" | "strings" | "finish" | "pedal_components" | "amp_components";
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
   quality_tier: number;
   base_cost: number;
