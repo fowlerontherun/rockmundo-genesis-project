@@ -14,11 +14,11 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.197",
+    version: "1.1.199",
     date: "2026-04-16",
     changes: [
-      { type: 'feature', description: "Streaming Platforms tab: each platform card now shows a top-3 leaderboard of your highest-streaming songs on that platform with rank badges in the platform's brand color" },
-      { type: 'improvement', description: "Top-songs data fetched in a single batched query across all platforms, then grouped client-side" },
+      { type: 'improvement', description: "Streaming hub: Playlists moved out of My Music into its own dedicated tab (now 4 tabs: My Music, Platforms, Playlists, Analytics)" },
+      { type: 'feature', description: "Available Playlists are now grouped by streaming service with a section header per platform showing the playlist count" },
     ],
   },
   {

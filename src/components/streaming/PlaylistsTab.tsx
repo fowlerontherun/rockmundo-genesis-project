@@ -199,65 +199,93 @@ export const PlaylistsTab = ({ userId, profileId }: PlaylistsTabProps) => {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {playlists.map((playlist) => {
-          const acceptanceRate = getAcceptanceRate(playlist.acceptance_criteria || {});
-          const submissionCost = playlist.submission_cost || 0;
-          
-          return (
-            <Card key={playlist.id}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{playlist.playlist_name}</CardTitle>
-                <CardDescription className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline">{playlist.curator_type}</Badge>
-                  {playlist.platform?.platform_name && (
-                    <Badge variant="secondary">{playlist.platform.platform_name}</Badge>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {playlist.follower_count >= 1000000 
-                        ? `${(playlist.follower_count / 1000000).toFixed(1)}M`
-                        : playlist.follower_count >= 1000 
-                        ? `${(playlist.follower_count / 1000).toFixed(0)}K`
-                        : playlist.follower_count} followers
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>~{acceptanceRate}% acceptance</span>
-                  </div>
+      {(() => {
+        // Group playlists by streaming platform
+        const groups = new Map<string, typeof playlists>();
+        playlists.forEach((pl) => {
+          const key = pl.platform?.platform_name || "Other";
+          if (!groups.has(key)) groups.set(key, [] as typeof playlists);
+          groups.get(key)!.push(pl);
+        });
+        const groupEntries = Array.from(groups.entries()).sort((a, b) =>
+          a[0].localeCompare(b[0])
+        );
+
+        return (
+          <div className="space-y-8">
+            {groupEntries.map(([platformName, platformPlaylists]) => (
+              <div key={platformName} className="space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h4 className="text-base font-semibold flex items-center gap-2">
+                    <Music className="h-4 w-4 text-primary" />
+                    {platformName}
+                  </h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {platformPlaylists.length} playlist{platformPlaylists.length !== 1 ? "s" : ""}
+                  </Badge>
                 </div>
-                
-                {playlist.boost_multiplier > 1 && (
-                  <div className="text-xs text-primary">
-                    ⚡ {playlist.boost_multiplier}x stream boost on acceptance
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div className="flex items-center gap-1 text-sm font-medium">
-                    <DollarSign className="h-4 w-4" />
-                    <span>${(submissionCost / 100).toFixed(2)} fee</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSubmit(playlist.id)}
-                    disabled={!selectedRelease || isSubmitting}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {isSubmitting ? "Submitting..." : "Submit"}
-                  </Button>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {platformPlaylists.map((playlist) => {
+                    const acceptanceRate = getAcceptanceRate(playlist.acceptance_criteria || {});
+                    const submissionCost = playlist.submission_cost || 0;
+
+                    return (
+                      <Card key={playlist.id}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">{playlist.playlist_name}</CardTitle>
+                          <CardDescription className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline">{playlist.curator_type}</Badge>
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              <span>
+                                {playlist.follower_count >= 1000000
+                                  ? `${(playlist.follower_count / 1000000).toFixed(1)}M`
+                                  : playlist.follower_count >= 1000
+                                  ? `${(playlist.follower_count / 1000).toFixed(0)}K`
+                                  : playlist.follower_count} followers
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>~{acceptanceRate}% acceptance</span>
+                            </div>
+                          </div>
+
+                          {playlist.boost_multiplier > 1 && (
+                            <div className="text-xs text-primary">
+                              ⚡ {playlist.boost_multiplier}x stream boost on acceptance
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center gap-1 text-sm font-medium">
+                              <DollarSign className="h-4 w-4" />
+                              <span>${(submissionCost / 100).toFixed(2)} fee</span>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSubmit(playlist.id)}
+                              disabled={!selectedRelease || isSubmitting}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              {isSubmitting ? "Submitting..." : "Submit"}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };

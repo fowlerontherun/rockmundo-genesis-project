@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Disc, Music, BarChart3, Globe, TrendingUp, DollarSign, Users, Plus } from "lucide-react";
+import { Disc, Music, BarChart3, Globe, TrendingUp, DollarSign, Users, Plus, ListMusic } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
@@ -86,45 +86,7 @@ const StreamingPlatforms = () => {
     enabled: !!userId,
   });
 
-  // Top 3 songs per platform (all in one query, then grouped client-side)
-  const { data: topSongsByPlatform = {} } = useQuery<
-    Record<string, Array<{ songId: string; title: string; streams: number }>>
-  >({
-    queryKey: ["top-songs-per-platform", userId, userBandIds],
-    queryFn: async () => {
-      if (!userId) return {};
-      let query = supabase
-        .from("song_releases")
-        .select("platform_id, total_streams, song:songs(id, title)")
-        .eq("release_type", "streaming")
-        .eq("is_active", true)
-        .gt("total_streams", 0)
-        .order("total_streams", { ascending: false });
-
-      if (userBandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${userBandIds.join(",")})`);
-      } else {
-        query = query.eq("user_id", userId);
-      }
-
-      const { data } = await query;
-      if (!data?.length) return {};
-
-      const grouped: Record<string, Array<{ songId: string; title: string; streams: number }>> = {};
-      data.forEach((r: any) => {
-        if (!r.platform_id || !r.song?.id) return;
-        if (!grouped[r.platform_id]) grouped[r.platform_id] = [];
-        if (grouped[r.platform_id].length >= 3) return; // top 3 only
-        grouped[r.platform_id].push({
-          songId: r.song.id,
-          title: r.song.title || "Untitled",
-          streams: r.total_streams || 0,
-        });
-      });
-      return grouped;
-    },
-    enabled: !!userId,
-  });
+  // KPI strip totals
   const kpis = useMemo(() => {
     const values = Object.values(userStatsByPlatform);
     const totalStreams = values.reduce((s, v) => s + v.totalStreams, 0);
@@ -203,7 +165,7 @@ const StreamingPlatforms = () => {
       </div>
 
       <Tabs defaultValue="my-music" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="my-music" className="flex items-center gap-1">
             <Music className="h-4 w-4" />
             <span>My Music</span>
@@ -211,6 +173,10 @@ const StreamingPlatforms = () => {
           <TabsTrigger value="platforms" className="flex items-center gap-1">
             <Globe className="h-4 w-4" />
             <span>Platforms</span>
+          </TabsTrigger>
+          <TabsTrigger value="playlists" className="flex items-center gap-1">
+            <ListMusic className="h-4 w-4" />
+            <span>Playlists</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-1">
             <BarChart3 className="h-4 w-4" />
@@ -220,7 +186,6 @@ const StreamingPlatforms = () => {
 
         <TabsContent value="my-music" className="space-y-6">
           <StreamingMyReleasesTab userId={userId} profileId={profileId || ""} />
-          <PlaylistsTab userId={userId} profileId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="platforms">
@@ -245,12 +210,15 @@ const StreamingPlatforms = () => {
                     key={platform.id}
                     platform={platform}
                     userStats={userStatsByPlatform[platform.id]}
-                    topSongs={topSongsByPlatform[platform.id]}
                   />
                 ))}
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="playlists" className="space-y-6">
+          <PlaylistsTab userId={userId} profileId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="analytics">
