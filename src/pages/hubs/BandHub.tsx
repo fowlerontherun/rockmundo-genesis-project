@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Users, Sparkles, Globe, Trophy, UserPlus, Bus, Target } from "lucide-react";
+import { Users, Sparkles, Globe, Trophy, UserPlus, Bus, Target, Map } from "lucide-react";
 
 export default function BandHub() {
   return (
@@ -14,6 +14,7 @@ export default function BandHub() {
         { icon: UserPlus, labelKey: "nav.bandCrew", path: "/band-crew", imagePrompt: "Stage crew members setting up equipment, roadies carrying gear backstage" },
         { icon: Bus, labelKey: "nav.bandVehicles", path: "/band-vehicles", imagePrompt: "A colorful tour bus with rock band artwork driving on a highway at sunset" },
         { icon: Target, labelKey: "nav.bandRiders", path: "/band-riders", imagePrompt: "A backstage rider checklist with food, drinks, and equipment demands on a clipboard" },
+        { icon: Map, labelKey: "nav.bandFameMap", path: "/band-fame-map", imagePrompt: "A glowing world map with neon heat spots showing band popularity across countries and cities" },
       ]}
     />
   );

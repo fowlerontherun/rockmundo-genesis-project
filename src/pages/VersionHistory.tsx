@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.188",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "New Fame Map page (/band-fame-map): full-page band popularity & fame analytics with country, city, and demographic breakdowns" },
+      { type: 'feature', description: "Fame Map tabs: World Overview (top 10s), All Countries (expandable cities), All Cities, Demographics (per-country), Fame History" },
+      { type: 'feature', description: "Band Hub now includes a 'Fame Map' tile" },
+      { type: 'improvement', description: "Country and city sorting toggles (by fame or fans) on Fame Map" },
+    ],
+  },
+  {
     version: "1.1.187",
     date: "2026-04-16",
     changes: [
