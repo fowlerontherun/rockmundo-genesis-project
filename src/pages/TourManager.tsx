@@ -732,7 +732,7 @@ const TourManager = () => {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -743,7 +743,7 @@ const TourManager = () => {
           <CardContent>
             <div className="text-2xl font-bold">{activeTourCount}</div>
             <p className="text-xs text-muted-foreground">
-              {activeTourCount === 0 ? 'No tours scheduled' : 'Tours in progress or planned'}
+              {activeTourCount === 0 ? 'No tours scheduled' : 'In progress or planned'}
             </p>
           </CardContent>
         </Card>
@@ -752,7 +752,7 @@ const TourManager = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Upcoming Shows
+              Upcoming
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -771,8 +771,21 @@ const TourManager = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-green-500">${totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Fame Earned
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-primary">+{totalFame.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From all tours</p>
           </CardContent>
         </Card>
       </div>
