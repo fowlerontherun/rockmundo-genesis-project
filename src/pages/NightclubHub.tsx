@@ -168,6 +168,9 @@ const NightclubHub = () => {
           {filtered.map((club) => {
             const rep = repMap.get(club.id);
             const qualityLabel = QUALITY_LABELS[club.qualityLevel] ?? `Tier ${club.qualityLevel}`;
+            const owned = ownedClubIds.has(club.id);
+            const canBuy = !owned && club.cityId === playerCityId;
+            const price = getPurchasePrice(club.qualityLevel);
             return (
               <Card
                 key={club.id}
@@ -180,6 +183,11 @@ const NightclubHub = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{club.name}</span>
                         <Badge variant="secondary" className="text-[10px]">{qualityLabel}</Badge>
+                        {owned && (
+                          <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
+                            <Building2 className="h-2.5 w-2.5 mr-0.5" /> Owned
+                          </Badge>
+                        )}
                         {rep && (
                           <Badge variant="outline" className={`text-[10px] ${getTierColor(rep.reputation_tier)}`}>
                             <Crown className="h-2.5 w-2.5 mr-0.5" />
@@ -201,7 +209,31 @@ const NightclubHub = () => {
                         )}
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-center gap-2 shrink-0">
+                      {canBuy && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          disabled={purchaseClub.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            purchaseClub.mutate({
+                              clubId: club.id,
+                              clubName: club.name,
+                              cityId: club.cityId!,
+                              qualityLevel: club.qualityLevel,
+                              capacity: club.capacity ?? 100,
+                              coverCharge: club.coverCharge ?? 10,
+                            });
+                          }}
+                        >
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          Buy {currencyFormatter.format(price)}
+                        </Button>
+                      )}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
