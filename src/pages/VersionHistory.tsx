@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.176",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Stage Equipment: Fixed DB error when purchasing — removed non-existent columns (maintenance_due_at, maintenance_status) from insert" },
+      { type: 'fix', description: "Gear: Fixed DB error when equipping/unequipping — corrected profile_id to user_id column reference on player_equipment_inventory" },
+      { type: 'fix', description: "Gear: Fixed inventory not loading — aligned query filter to use profileId consistently for user_id column" },
+    ],
+  },
+  {
     version: "1.1.175",
     date: "2026-04-15",
     changes: [
