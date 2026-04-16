@@ -71,7 +71,6 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
           )
         `)
         .eq("release_type", "streaming")
-        .eq("is_active", true)
         .order("release_date", { ascending: false });
 
       // Solo + band releases (don't early-return when no bands)
