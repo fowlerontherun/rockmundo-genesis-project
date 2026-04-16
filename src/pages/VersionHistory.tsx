@@ -14,6 +14,23 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.181",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Label Tier & Prestige System: Labels are now ranked from Indie to Mega-Label based on reputation, roster size, and revenue" },
+      { type: 'feature', description: "Label Artist Boosts: Signed artists receive fame, streaming, gig booking, and festival priority bonuses from their label" },
+      { type: 'feature', description: "A&R Scout Reports: Label staff automatically discover and report on unsigned talent for fast-track signing" },
+      { type: 'feature', description: "Artist Development Pipeline: Track artists through Scouting → Demo → Rehearsal → Release → Touring stages" },
+      { type: 'feature', description: "Label Genre Expertise: Labels build specialization in genres over time, unlocking better outcomes" },
+      { type: 'feature', description: "Company Service Contracts: Companies can now earn revenue by accepting security, merch, logistics, and studio contracts" },
+      { type: 'feature', description: "Company Events & Milestones: Awards, scandals, acquisition offers, and IPO milestones affect company operations" },
+      { type: 'feature', description: "Company Rivalries: Competitive relationships between companies affect pricing and contract availability" },
+      { type: 'feature', description: "Market Rankings: Weekly leaderboard rankings for companies by type" },
+      { type: 'improvement', description: "Release predictions now factor in label tier and marketing spend for more accurate forecasting" },
+      { type: 'improvement', description: "Label tier badge displayed on label pages and directory listings" },
+    ],
+  },
+  {
     version: "1.1.180",
     date: "2026-04-16",
     changes: [

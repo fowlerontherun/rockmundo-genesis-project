@@ -3,8 +3,12 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy
 } from "lucide-react";
+import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
+import { CompanyEventsTimeline } from "@/components/company/CompanyEventsTimeline";
+import { CompanyRivalries } from "@/components/company/CompanyRivalries";
+import { MarketRankings } from "@/components/company/MarketRankings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -196,6 +200,22 @@ const CompanyDetailContent = () => {
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
+          <TabsTrigger value="contracts">
+            <Briefcase className="h-3.5 w-3.5 mr-1" />
+            Contracts
+          </TabsTrigger>
+          <TabsTrigger value="events">
+            <Sparkles className="h-3.5 w-3.5 mr-1" />
+            Events
+          </TabsTrigger>
+          <TabsTrigger value="rivalries">
+            <Swords className="h-3.5 w-3.5 mr-1" />
+            Rivalries
+          </TabsTrigger>
+          <TabsTrigger value="rankings">
+            <Trophy className="h-3.5 w-3.5 mr-1" />
+            Rankings
+          </TabsTrigger>
         </TabsList>
 
         {isHolding && (
@@ -405,6 +425,22 @@ const CompanyDetailContent = () => {
             companyId={company.id}
             companyName={company.name}
           />
+        </TabsContent>
+
+        <TabsContent value="contracts" className="space-y-4">
+          <CompanyContractBoard companyId={company.id} />
+        </TabsContent>
+
+        <TabsContent value="events" className="space-y-4">
+          <CompanyEventsTimeline companyId={company.id} />
+        </TabsContent>
+
+        <TabsContent value="rivalries" className="space-y-4">
+          <CompanyRivalries companyId={company.id} />
+        </TabsContent>
+
+        <TabsContent value="rankings" className="space-y-4">
+          <MarketRankings companyId={company.id} companyType={company.company_type} />
         </TabsContent>
       </Tabs>
     </div>
