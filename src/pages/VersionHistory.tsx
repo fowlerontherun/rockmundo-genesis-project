@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.204",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Band Vehicles: added illustrative images to every vehicle in the catalog and to your owned/leased/rented vehicle cards. Five new visuals cover vans, sprinters, equipment trucks, tour buses, and sleeper buses, mapped automatically by vehicle_type." },
+    ],
+  },
+  {
     version: "1.1.203",
     date: "2026-04-16",
     changes: [
