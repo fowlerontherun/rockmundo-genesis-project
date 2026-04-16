@@ -273,21 +273,37 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
                 return (
                   <Card 
                     key={item.id} 
+                    role="button"
+                    tabIndex={isLocked ? -1 : 0}
+                    aria-pressed={isSelected}
+                    aria-disabled={isLocked}
                     className={cn(
-                      "transition-all cursor-pointer",
+                      "transition-all select-none",
+                      !isLocked && "cursor-pointer hover:border-primary/50",
                       isSelected && "border-primary bg-primary/5",
                       isLocked && "opacity-50 cursor-not-allowed"
                     )}
-                    onClick={() => !isLocked && toggleItem(item.id, item)}
+                    onClick={() => {
+                      if (isLocked) return;
+                      toggleItem(item.id, item);
+                    }}
+                    onKeyDown={(e) => {
+                      if (isLocked) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleItem(item.id, item);
+                      }
+                    }}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-start gap-3">
+                        {/* Visual-only checkbox — Card handles the toggle to avoid double-fire */}
                         <Checkbox 
                           checked={isSelected} 
                           disabled={isLocked}
-                          className="mt-1 shrink-0"
-                          onCheckedChange={() => !isLocked && toggleItem(item.id, item)}
-                          onClick={(e) => e.stopPropagation()}
+                          tabIndex={-1}
+                          aria-hidden
+                          className="mt-1 shrink-0 pointer-events-none"
                         />
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -323,13 +339,20 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
 
                           {/* Quantity controls inline below badges on mobile */}
                           {isSelected && selectionData && (
-                            <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                            <div
+                              className="flex items-center gap-2 pt-1"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
                               <span className="text-xs text-muted-foreground">Qty:</span>
                               <Button
                                 size="icon"
                                 variant="outline"
                                 className="h-6 w-6"
-                                onClick={() => updateItemQuantity(item.id, -1)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateItemQuantity(item.id, -1);
+                                }}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -340,7 +363,10 @@ export function RiderBuilder({ bandId, bandFame, riderId, onSave, onCancel }: Ri
                                 size="icon"
                                 variant="outline"
                                 className="h-6 w-6"
-                                onClick={() => updateItemQuantity(item.id, 1)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateItemQuantity(item.id, 1);
+                                }}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
