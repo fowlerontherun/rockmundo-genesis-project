@@ -12,6 +12,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
 
+import tourManagerImg from "@/assets/crew/tour-manager.jpg";
+import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
+import lightingDirectorImg from "@/assets/crew/lighting-director.jpg";
+import roadChiefImg from "@/assets/crew/road-chief.jpg";
+import backlineTechImg from "@/assets/crew/backline-tech.jpg";
+import merchDirectorImg from "@/assets/crew/merch-director.jpg";
+import securityLeadImg from "@/assets/crew/security-lead.jpg";
+import wardrobeStylistImg from "@/assets/crew/wardrobe-stylist.jpg";
+
+// Map crew role / image_url slug to imported asset.
+const CREW_IMAGES: Record<string, string> = {
+  "tour-manager": tourManagerImg,
+  "foh-engineer": fohEngineerImg,
+  "lighting-director": lightingDirectorImg,
+  "road-chief": roadChiefImg,
+  "backline-tech": backlineTechImg,
+  "merch-director": merchDirectorImg,
+  "security-lead": securityLeadImg,
+  "wardrobe-stylist": wardrobeStylistImg,
+};
+const ROLE_TO_IMAGE: Record<string, string> = {
+  "Tour Manager": tourManagerImg,
+  "Front of House Engineer": fohEngineerImg,
+  "Lighting Director": lightingDirectorImg,
+  "Road Crew Chief": roadChiefImg,
+  "Backline Technician": backlineTechImg,
+  "Merch Director": merchDirectorImg,
+  "Security Lead": securityLeadImg,
+  "Wardrobe Stylist": wardrobeStylistImg,
+};
+const getCrewImage = (role: string, slug?: string | null) =>
+  (slug && CREW_IMAGES[slug]) || ROLE_TO_IMAGE[role] || tourManagerImg;
+
 // Star rating display component
 const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) => {
   const stars = [];
