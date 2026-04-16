@@ -32057,15 +32057,26 @@ export type Database = {
       }
     }
     Functions: {
-      add_band_country_fame: {
-        Args: {
-          p_band_id: string
-          p_country: string
-          p_fame_amount?: number
-          p_fans_amount?: number
-        }
-        Returns: undefined
-      }
+      add_band_country_fame:
+        | {
+            Args: {
+              p_band_id: string
+              p_country: string
+              p_fame_amount?: number
+              p_fans_amount?: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_band_id: string
+              p_country: string
+              p_fame_amount?: number
+              p_fans_amount?: number
+              p_mark_performed?: boolean
+            }
+            Returns: undefined
+          }
       add_setlist_item: {
         Args: {
           p_item_type?: string
