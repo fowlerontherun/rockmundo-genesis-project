@@ -8,6 +8,7 @@ import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star } from 
 import { useToast } from "@/hooks/use-toast";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
+import { StreamSparkline } from "./StreamSparkline";
 import {
   AlertDialog,
   AlertDialogAction,
