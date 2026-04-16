@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ListMusic, TrendingUp, Users, DollarSign, Send, Music, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ListMusic, TrendingUp, Users, DollarSign, Send, Music, CheckCircle, Clock, XCircle, Search, X } from "lucide-react";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
