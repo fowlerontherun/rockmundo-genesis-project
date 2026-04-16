@@ -26,7 +26,7 @@ interface EnhancedPlatformCardProps {
   }>;
 }
 
-export function EnhancedPlatformCard({ platform, userStats }: EnhancedPlatformCardProps) {
+export function EnhancedPlatformCard({ platform, userStats, topSongs }: EnhancedPlatformCardProps) {
   const navigate = useNavigate();
   const brandColor = platform.brand_color || "#6366f1";
 
