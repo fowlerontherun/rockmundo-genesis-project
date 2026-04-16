@@ -318,6 +318,7 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
                               </Badge>
                             )}
                             <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
+                          </div>
                           {label.headquarters_city ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <MapPin className="h-3 w-3" />
