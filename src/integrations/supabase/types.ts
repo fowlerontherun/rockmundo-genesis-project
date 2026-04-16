@@ -4472,38 +4472,50 @@ export type Database = {
         Row: {
           approval_rating: number
           city_id: string
+          corruption_score: number
           created_at: string
           election_id: string | null
           id: string
           is_current: boolean
           policies_enacted: number
           profile_id: string
+          projects_completed: number
+          salary_per_week: number
           term_end: string | null
           term_start: string
+          vetoed_count: number
         }
         Insert: {
           approval_rating?: number
           city_id: string
+          corruption_score?: number
           created_at?: string
           election_id?: string | null
           id?: string
           is_current?: boolean
           policies_enacted?: number
           profile_id: string
+          projects_completed?: number
+          salary_per_week?: number
           term_end?: string | null
           term_start?: string
+          vetoed_count?: number
         }
         Update: {
           approval_rating?: number
           city_id?: string
+          corruption_score?: number
           created_at?: string
           election_id?: string | null
           id?: string
           is_current?: boolean
           policies_enacted?: number
           profile_id?: string
+          projects_completed?: number
+          salary_per_week?: number
           term_end?: string | null
           term_start?: string
+          vetoed_count?: number
         }
         Relationships: [
           {
@@ -4591,6 +4603,136 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_project_types: {
+        Row: {
+          approval_change: number
+          base_cost: number
+          category: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          effects: Json
+          icon: string | null
+          id: string
+          name: string
+          required_skill_level: number
+          required_skill_slug: string | null
+          slug: string
+        }
+        Insert: {
+          approval_change?: number
+          base_cost?: number
+          category: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          effects?: Json
+          icon?: string | null
+          id?: string
+          name: string
+          required_skill_level?: number
+          required_skill_slug?: string | null
+          slug: string
+        }
+        Update: {
+          approval_change?: number
+          base_cost?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          effects?: Json
+          icon?: string | null
+          id?: string
+          name?: string
+          required_skill_level?: number
+          required_skill_slug?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      city_projects: {
+        Row: {
+          approval_change: number
+          city_id: string
+          completed_at: string | null
+          completes_at: string
+          cost: number
+          created_at: string
+          description: string | null
+          duration_days: number
+          effects: Json
+          id: string
+          mayor_id: string | null
+          name: string
+          notes: string | null
+          project_type_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approval_change?: number
+          city_id: string
+          completed_at?: string | null
+          completes_at?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          effects?: Json
+          id?: string
+          mayor_id?: string | null
+          name: string
+          notes?: string | null
+          project_type_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_change?: number
+          city_id?: string
+          completed_at?: string | null
+          completes_at?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          effects?: Json
+          id?: string
+          mayor_id?: string | null
+          name?: string
+          notes?: string | null
+          project_type_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_projects_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_projects_mayor_id_fkey"
+            columns: ["mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_projects_project_type_id_fkey"
+            columns: ["project_type_id"]
+            isOneToOne: false
+            referencedRelation: "city_project_types"
             referencedColumns: ["id"]
           },
         ]
@@ -4771,10 +4913,13 @@ export type Database = {
           created_at: string
           id: string
           last_collection_at: string | null
+          pending_commitments: number
+          salary_paid: number
           tax_rate_pct: number
           total_spent: number
           total_tax_collected: number
           updated_at: string
+          weekly_budget: number
         }
         Insert: {
           balance?: number
@@ -4782,10 +4927,13 @@ export type Database = {
           created_at?: string
           id?: string
           last_collection_at?: string | null
+          pending_commitments?: number
+          salary_paid?: number
           tax_rate_pct?: number
           total_spent?: number
           total_tax_collected?: number
           updated_at?: string
+          weekly_budget?: number
         }
         Update: {
           balance?: number
@@ -4793,10 +4941,13 @@ export type Database = {
           created_at?: string
           id?: string
           last_collection_at?: string | null
+          pending_commitments?: number
+          salary_paid?: number
           tax_rate_pct?: number
           total_spent?: number
           total_tax_collected?: number
           updated_at?: string
+          weekly_budget?: number
         }
         Relationships: [
           {
@@ -15178,6 +15329,57 @@ export type Database = {
             columns: ["partner_b_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mayor_actions_log: {
+        Row: {
+          action_type: string
+          amount: number | null
+          city_id: string
+          created_at: string
+          id: string
+          mayor_id: string | null
+          metadata: Json | null
+          notes: string | null
+          target_id: string | null
+        }
+        Insert: {
+          action_type: string
+          amount?: number | null
+          city_id: string
+          created_at?: string
+          id?: string
+          mayor_id?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          target_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          amount?: number | null
+          city_id?: string
+          created_at?: string
+          id?: string
+          mayor_id?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mayor_actions_log_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mayor_actions_log_mayor_id_fkey"
+            columns: ["mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
             referencedColumns: ["id"]
           },
         ]

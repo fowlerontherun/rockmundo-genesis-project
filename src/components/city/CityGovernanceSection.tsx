@@ -8,6 +8,7 @@ import { useCityElection } from "@/hooks/useCityElections";
 import { useCityLaws } from "@/hooks/useCityLaws";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+import { CityProjectsPublicView } from "./CityProjectsPublicView";
 
 interface CityGovernanceSectionProps {
   cityId: string;
@@ -207,6 +208,9 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
             )}
           </div>
         )}
+
+        {/* Active & recent city projects (visible to everyone) */}
+        <CityProjectsPublicView cityId={cityId} />
       </CardContent>
     </Card>
   );

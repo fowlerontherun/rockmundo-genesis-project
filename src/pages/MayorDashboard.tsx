@@ -26,13 +26,21 @@ import {
   CheckCircle2,
   Loader2,
   TrendingUp,
-  Calendar
+  Calendar,
+  Wallet,
+  Hammer,
+  Megaphone
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCityMayor, useIsCurrentMayor, useUpdateCityLaws } from "@/hooks/useMayorDashboard";
 import { useCityLaws, useCityLawHistory } from "@/hooks/useCityLaws";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useMayorPolitics } from "@/hooks/useMayorPolitics";
+import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
+import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
+import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
+import { MayorPoliticsSidebar } from "@/components/city/MayorPoliticsSidebar";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";
@@ -63,6 +71,7 @@ export default function MayorDashboard() {
   const { data: mayor } = useCityMayor(cityId);
   const { data: currentLaws, isLoading: lawsLoading } = useCityLaws(cityId);
   const { data: lawHistory } = useCityLawHistory(cityId);
+  const { data: politics } = useMayorPolitics(profileId);
   const updateLaws = useUpdateCityLaws();
 
   // Form state
@@ -160,7 +169,7 @@ export default function MayorDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
+    <div className="container mx-auto p-6 max-w-6xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -223,25 +232,47 @@ export default function MayorDashboard() {
         </Alert>
       )}
 
-      {/* Laws Management */}
+      {/* Mayor workspace: main content + politics sidebar */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Landmark className="h-5 w-5" />
-            City Laws & Regulations
+            Mayor's Office — {city?.name}
           </CardTitle>
           <CardDescription>
-            Adjust laws to shape the music scene in {city?.name}
+            Manage budget, projects, public relations, and laws
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="taxes" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="budget" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+              <TabsTrigger value="budget"><Wallet className="h-3 w-3 mr-1" />Budget</TabsTrigger>
+              <TabsTrigger value="projects"><Hammer className="h-3 w-3 mr-1" />Projects</TabsTrigger>
+              <TabsTrigger value="pr"><Megaphone className="h-3 w-3 mr-1" />PR</TabsTrigger>
               <TabsTrigger value="taxes">Taxes</TabsTrigger>
               <TabsTrigger value="regulations">Regulations</TabsTrigger>
-              <TabsTrigger value="music">Music Policy</TabsTrigger>
+              <TabsTrigger value="music">Music</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="budget" className="mt-6">
+              {cityId && (
+                <MayorBudgetTab
+                  cityId={cityId}
+                  mayorSalary={(mayor as any)?.salary_per_week ?? 1000}
+                  corruptionScore={(mayor as any)?.corruption_score ?? 0}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="projects" className="mt-6">
+              {cityId && <MayorProjectsTab cityId={cityId} politics={politics} />}
+            </TabsContent>
+
+            <TabsContent value="pr" className="mt-6">
+              {cityId && <MayorPublicRelationsTab cityId={cityId} mayorId={mayor?.id ?? null} politics={politics} />}
+            </TabsContent>
 
             <TabsContent value="taxes" className="space-y-6 mt-6">
               {/* Income Tax */}
@@ -594,6 +625,11 @@ export default function MayorDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <aside className="space-y-4">
+        <MayorPoliticsSidebar politics={politics} />
+      </aside>
+      </div>
     </div>
   );
 }
