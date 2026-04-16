@@ -71,6 +71,7 @@ export default function MayorDashboard() {
   const { data: mayor } = useCityMayor(cityId);
   const { data: currentLaws, isLoading: lawsLoading } = useCityLaws(cityId);
   const { data: lawHistory } = useCityLawHistory(cityId);
+  const { data: politics } = useMayorPolitics(profileId);
   const updateLaws = useUpdateCityLaws();
 
   // Form state
