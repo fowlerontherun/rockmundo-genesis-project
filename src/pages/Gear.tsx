@@ -192,25 +192,25 @@ export default function Gear() {
 
       <Tabs defaultValue="shop" className="space-y-4">
         <TabsList className="flex w-full overflow-x-auto justify-start">
-          <TabsTrigger value="shop">
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Shop
+          <TabsTrigger value="shop" className="shrink-0">
+            <ShoppingCart className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Shop</span>
           </TabsTrigger>
-          <TabsTrigger value="marketplace">
-            <Store className="h-4 w-4 mr-2" />
-            Marketplace
+          <TabsTrigger value="marketplace" className="shrink-0">
+            <Store className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Marketplace</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory">
-            <Package className="h-4 w-4 mr-2" />
-            My Gear ({inventory.length})
+          <TabsTrigger value="inventory" className="shrink-0">
+            <Package className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">My Gear</span> ({inventory.length})
           </TabsTrigger>
-          <TabsTrigger value="equipped">
-            <Guitar className="h-4 w-4 mr-2" />
-            Equipped ({equippedItems.length})
+          <TabsTrigger value="equipped" className="shrink-0">
+            <Guitar className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Equipped</span> ({equippedItems.length})
           </TabsTrigger>
-          <TabsTrigger value="maintenance">
-            <Wrench className="h-4 w-4 mr-2" />
-            Maintenance ({needsMaintenance.length})
+          <TabsTrigger value="maintenance" className="shrink-0">
+            <Wrench className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Maintenance</span> ({needsMaintenance.length})
           </TabsTrigger>
         </TabsList>
 
