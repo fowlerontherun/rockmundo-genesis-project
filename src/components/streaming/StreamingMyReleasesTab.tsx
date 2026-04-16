@@ -199,11 +199,14 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
       platformName: release.platform_name || release.platform?.platform_name,
       streams: release.total_streams || 0,
       revenue: release.total_revenue || 0,
-      releaseDate: release.release_date
+      releaseDate: release.release_date,
+      isActive: release.is_active !== false,
     });
     acc[songId].releaseIds.push(release.id);
-    acc[songId].totalStreams += release.total_streams || 0;
-    acc[songId].totalRevenue += release.total_revenue || 0;
+    if (release.is_active !== false) {
+      acc[songId].totalStreams += release.total_streams || 0;
+      acc[songId].totalRevenue += release.total_revenue || 0;
+    }
     return acc;
   }, {} as Record<string, any>) || {};
 
