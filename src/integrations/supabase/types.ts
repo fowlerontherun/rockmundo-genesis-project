@@ -236,6 +236,93 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_development_pipeline: {
+        Row: {
+          artist_name: string
+          artist_profile_id: string | null
+          band_id: string | null
+          bonus_fame_awarded: number
+          completed_at: string | null
+          completed_stages: Json
+          contract_id: string | null
+          created_at: string
+          current_stage: string
+          id: string
+          label_id: string
+          notes: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          artist_name: string
+          artist_profile_id?: string | null
+          band_id?: string | null
+          bonus_fame_awarded?: number
+          completed_at?: string | null
+          completed_stages?: Json
+          contract_id?: string | null
+          created_at?: string
+          current_stage?: string
+          id?: string
+          label_id: string
+          notes?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          artist_name?: string
+          artist_profile_id?: string | null
+          band_id?: string | null
+          bonus_fame_awarded?: number
+          completed_at?: string | null
+          completed_stages?: Json
+          contract_id?: string | null
+          created_at?: string
+          current_stage?: string
+          id?: string
+          label_id?: string
+          notes?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_development_pipeline_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_development_pipeline_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_development_pipeline_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_development_pipeline_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_development_pipeline_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artist_label_contracts: {
         Row: {
           advance_amount: number | null
@@ -4920,12 +5007,14 @@ export type Database = {
           id: string
           is_bankrupt: boolean
           logo_url: string | null
+          market_influence: number
           name: string
           negative_balance_since: string | null
           owner_id: string
           parent_company_id: string | null
           reputation_score: number
           status: string
+          total_contracts_won: number
           updated_at: string
           weekly_operating_costs: number
         }
@@ -4940,12 +5029,14 @@ export type Database = {
           id?: string
           is_bankrupt?: boolean
           logo_url?: string | null
+          market_influence?: number
           name: string
           negative_balance_since?: string | null
           owner_id: string
           parent_company_id?: string | null
           reputation_score?: number
           status?: string
+          total_contracts_won?: number
           updated_at?: string
           weekly_operating_costs?: number
         }
@@ -4960,12 +5051,14 @@ export type Database = {
           id?: string
           is_bankrupt?: boolean
           logo_url?: string | null
+          market_influence?: number
           name?: string
           negative_balance_since?: string | null
           owner_id?: string
           parent_company_id?: string | null
           reputation_score?: number
           status?: string
+          total_contracts_won?: number
           updated_at?: string
           weekly_operating_costs?: number
         }
@@ -5043,6 +5136,56 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_events: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          impact_area: string | null
+          impact_value: number
+          is_resolved: boolean
+          occurred_at: string
+          resolved_at: string | null
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          impact_area?: string | null
+          impact_value?: number
+          is_resolved?: boolean
+          occurred_at?: string
+          resolved_at?: string | null
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          impact_area?: string | null
+          impact_value?: number
+          is_resolved?: boolean
+          occurred_at?: string
+          resolved_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -5283,6 +5426,50 @@ export type Database = {
           },
         ]
       }
+      company_market_rankings: {
+        Row: {
+          company_id: string
+          company_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          period_end: string
+          period_start: string
+          rank_position: number
+          score: number
+        }
+        Insert: {
+          company_id: string
+          company_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          period_end: string
+          period_start: string
+          rank_position: number
+          score?: number
+        }
+        Update: {
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          period_end?: string
+          period_start?: string
+          rank_position?: number
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_market_rankings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_notifications: {
         Row: {
           company_id: string
@@ -5329,6 +5516,116 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_rivalries: {
+        Row: {
+          company_a_id: string
+          company_b_id: string
+          created_at: string
+          effects: Json
+          id: string
+          intensity: number
+          last_event_at: string | null
+          rivalry_type: string
+          started_at: string
+        }
+        Insert: {
+          company_a_id: string
+          company_b_id: string
+          created_at?: string
+          effects?: Json
+          id?: string
+          intensity?: number
+          last_event_at?: string | null
+          rivalry_type?: string
+          started_at?: string
+        }
+        Update: {
+          company_a_id?: string
+          company_b_id?: string
+          created_at?: string
+          effects?: Json
+          id?: string
+          intensity?: number
+          last_event_at?: string | null
+          rivalry_type?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_rivalries_company_a_id_fkey"
+            columns: ["company_a_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_rivalries_company_b_id_fkey"
+            columns: ["company_b_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_service_contracts: {
+        Row: {
+          client_name: string
+          client_type: string
+          company_id: string
+          contract_value: number
+          created_at: string
+          duration_weeks: number
+          expires_at: string | null
+          id: string
+          performance_rating: number | null
+          revenue_earned: number
+          service_type: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          client_type?: string
+          company_id: string
+          contract_value?: number
+          created_at?: string
+          duration_weeks?: number
+          expires_at?: string | null
+          id?: string
+          performance_rating?: number | null
+          revenue_earned?: number
+          service_type: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          client_type?: string
+          company_id?: string
+          contract_value?: number
+          created_at?: string
+          duration_weeks?: number
+          expires_at?: string | null
+          id?: string
+          performance_rating?: number | null
+          revenue_earned?: number
+          service_type?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_service_contracts_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -11705,6 +12002,63 @@ export type Database = {
           },
         ]
       }
+      label_artist_boosts: {
+        Row: {
+          contract_id: string
+          created_at: string
+          fame_bonus_pct: number
+          festival_priority: number
+          gig_boost_pct: number
+          id: string
+          is_active: boolean
+          label_id: string
+          marketing_spend_weekly: number
+          streaming_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          fame_bonus_pct?: number
+          festival_priority?: number
+          gig_boost_pct?: number
+          id?: string
+          is_active?: boolean
+          label_id: string
+          marketing_spend_weekly?: number
+          streaming_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          fame_bonus_pct?: number
+          festival_priority?: number
+          gig_boost_pct?: number
+          id?: string
+          is_active?: boolean
+          label_id?: string
+          marketing_spend_weekly?: number
+          streaming_multiplier?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_artist_boosts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_artist_boosts_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_deal_types: {
         Row: {
           advance_max: number | null
@@ -11877,6 +12231,47 @@ export type Database = {
             columns: ["related_release_id"]
             isOneToOne: false
             referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_genre_expertise: {
+        Row: {
+          created_at: string
+          expertise_level: number
+          genre: string
+          id: string
+          label_id: string
+          releases_in_genre: number
+          total_revenue_in_genre: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expertise_level?: number
+          genre: string
+          id?: string
+          label_id: string
+          releases_in_genre?: number
+          total_revenue_in_genre?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expertise_level?: number
+          genre?: string
+          id?: string
+          label_id?: string
+          releases_in_genre?: number
+          total_revenue_in_genre?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_genre_expertise_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
             referencedColumns: ["id"]
           },
         ]
@@ -12114,6 +12509,83 @@ export type Database = {
           },
         ]
       }
+      label_scout_reports: {
+        Row: {
+          artist_name: string
+          artist_profile_id: string | null
+          band_id: string | null
+          created_at: string
+          fame_level: number
+          genre_match: number
+          id: string
+          label_id: string
+          potential_score: number
+          recommendation: string | null
+          scouted_by_staff_id: string | null
+          song_quality_avg: number
+          status: string
+        }
+        Insert: {
+          artist_name: string
+          artist_profile_id?: string | null
+          band_id?: string | null
+          created_at?: string
+          fame_level?: number
+          genre_match?: number
+          id?: string
+          label_id: string
+          potential_score?: number
+          recommendation?: string | null
+          scouted_by_staff_id?: string | null
+          song_quality_avg?: number
+          status?: string
+        }
+        Update: {
+          artist_name?: string
+          artist_profile_id?: string | null
+          band_id?: string | null
+          created_at?: string
+          fame_level?: number
+          genre_match?: number
+          id?: string
+          label_id?: string
+          potential_score?: number
+          recommendation?: string | null
+          scouted_by_staff_id?: string | null
+          song_quality_avg?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_scout_reports_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_scout_reports_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_scout_reports_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_scout_reports_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_staff: {
         Row: {
           created_at: string
@@ -12294,11 +12766,13 @@ export type Database = {
           distribution_cut_pct: number | null
           distribution_deal: string | null
           genre_focus: string[] | null
+          genre_specialization: string[] | null
           headquarters_city: string | null
           headquarters_city_id: string | null
           id: string
           is_bankrupt: boolean | null
           is_subsidiary: boolean | null
+          label_tier: string
           logo_url: string | null
           market_share: number | null
           marketing_budget: number | null
@@ -12309,6 +12783,7 @@ export type Database = {
           reputation_score: number | null
           roster_slot_capacity: number | null
           royalty_default_pct: number | null
+          total_artists_developed: number
           total_expenses_lifetime: number | null
           total_revenue_lifetime: number | null
           updated_at: string | null
@@ -12326,11 +12801,13 @@ export type Database = {
           distribution_cut_pct?: number | null
           distribution_deal?: string | null
           genre_focus?: string[] | null
+          genre_specialization?: string[] | null
           headquarters_city?: string | null
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean | null
           is_subsidiary?: boolean | null
+          label_tier?: string
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
@@ -12341,6 +12818,7 @@ export type Database = {
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           royalty_default_pct?: number | null
+          total_artists_developed?: number
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
@@ -12358,11 +12836,13 @@ export type Database = {
           distribution_cut_pct?: number | null
           distribution_deal?: string | null
           genre_focus?: string[] | null
+          genre_specialization?: string[] | null
           headquarters_city?: string | null
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean | null
           is_subsidiary?: boolean | null
+          label_tier?: string
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
@@ -12373,6 +12853,7 @@ export type Database = {
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           royalty_default_pct?: number | null
+          total_artists_developed?: number
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
