@@ -191,7 +191,7 @@ export default function Gear() {
       </div>
 
       <Tabs defaultValue="shop" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="flex w-full overflow-x-auto justify-start">
           <TabsTrigger value="shop">
             <ShoppingCart className="h-4 w-4 mr-2" />
             Shop
