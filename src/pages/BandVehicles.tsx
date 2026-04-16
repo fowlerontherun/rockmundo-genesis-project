@@ -335,7 +335,17 @@ export default function BandVehicles() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {bandVehicles.map((vehicle) => (
-                <Card key={vehicle.id}>
+                <Card key={vehicle.id} className="overflow-hidden">
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                    <img
+                      src={getVehicleImage(vehicle.vehicle_type)}
+                      alt={`${vehicle.name} band tour vehicle`}
+                      loading="lazy"
+                      width={896}
+                      height={512}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       {getVehicleIcon(vehicle.vehicle_type)}
