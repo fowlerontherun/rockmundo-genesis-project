@@ -5641,6 +5641,194 @@ export type Database = {
         }
         Relationships: []
       }
+      crafting_blueprints: {
+        Row: {
+          id: string
+          profile_id: string
+          recipe_id: string
+          source: string
+          unlocked_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          recipe_id: string
+          source?: string
+          unlocked_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          recipe_id?: string
+          source?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crafting_blueprints_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crafting_blueprints_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crafting_blueprints_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "crafting_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crafting_materials: {
+        Row: {
+          base_cost: number
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          quality_tier: number
+          rarity: string
+        }
+        Insert: {
+          base_cost?: number
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          quality_tier?: number
+          rarity?: string
+        }
+        Update: {
+          base_cost?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          quality_tier?: number
+          rarity?: string
+        }
+        Relationships: []
+      }
+      crafting_recipes: {
+        Row: {
+          base_craft_time_minutes: number
+          created_at: string
+          description: string | null
+          difficulty_tier: number
+          id: string
+          materials_required: Json
+          min_skill_level: number
+          name: string
+          rarity_output: string
+          required_skill_slug: string
+          result_category: string
+          result_subcategory: string | null
+        }
+        Insert: {
+          base_craft_time_minutes?: number
+          created_at?: string
+          description?: string | null
+          difficulty_tier?: number
+          id?: string
+          materials_required?: Json
+          min_skill_level?: number
+          name: string
+          rarity_output?: string
+          required_skill_slug?: string
+          result_category: string
+          result_subcategory?: string | null
+        }
+        Update: {
+          base_craft_time_minutes?: number
+          created_at?: string
+          description?: string | null
+          difficulty_tier?: number
+          id?: string
+          materials_required?: Json
+          min_skill_level?: number
+          name?: string
+          rarity_output?: string
+          required_skill_slug?: string
+          result_category?: string
+          result_subcategory?: string | null
+        }
+        Relationships: []
+      }
+      crafting_sessions: {
+        Row: {
+          bonus_stats: Json | null
+          completes_at: string
+          created_at: string
+          id: string
+          profile_id: string
+          quality_roll: number | null
+          recipe_id: string
+          result_equipment_id: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          bonus_stats?: Json | null
+          completes_at: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          quality_roll?: number | null
+          recipe_id: string
+          result_equipment_id?: string | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          bonus_stats?: Json | null
+          completes_at?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          quality_roll?: number | null
+          recipe_id?: string
+          result_equipment_id?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crafting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crafting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crafting_sessions_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "crafting_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_catalog: {
         Row: {
           assignment: string
@@ -6886,10 +7074,13 @@ export type Database = {
           brand_logo_url: string | null
           category: string
           color_options: Json | null
+          crafted_by_profile_id: string | null
           created_at: string | null
+          custom_name: string | null
           description: string | null
           id: string
           image_url: string | null
+          is_crafted: boolean | null
           name: string
           price: number
           price_cash: number | null
@@ -6905,10 +7096,13 @@ export type Database = {
           brand_logo_url?: string | null
           category: string
           color_options?: Json | null
+          crafted_by_profile_id?: string | null
           created_at?: string | null
+          custom_name?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          is_crafted?: boolean | null
           name: string
           price: number
           price_cash?: number | null
@@ -6924,10 +7118,13 @@ export type Database = {
           brand_logo_url?: string | null
           category?: string
           color_options?: Json | null
+          crafted_by_profile_id?: string | null
           created_at?: string | null
+          custom_name?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          is_crafted?: boolean | null
           name?: string
           price?: number
           price_cash?: number | null
@@ -6938,7 +7135,22 @@ export type Database = {
           stock?: number | null
           subcategory?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "equipment_items_crafted_by_profile_id_fkey"
+            columns: ["crafted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_items_crafted_by_profile_id_fkey"
+            columns: ["crafted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       eurovision_entries: {
         Row: {
@@ -17704,6 +17916,52 @@ export type Database = {
           },
           {
             foreignKeyName: "player_club_reputation_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_crafting_materials: {
+        Row: {
+          acquired_at: string
+          id: string
+          material_id: string
+          profile_id: string
+          quantity: number
+        }
+        Insert: {
+          acquired_at?: string
+          id?: string
+          material_id: string
+          profile_id: string
+          quantity?: number
+        }
+        Update: {
+          acquired_at?: string
+          id?: string
+          material_id?: string
+          profile_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_crafting_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "crafting_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_crafting_materials_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_crafting_materials_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
