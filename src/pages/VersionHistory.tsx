@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.190",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Country fame tracking now correctly marks countries as 'performed in' when a band plays a gig there (previously only spillover, capped at 100 fame)" },
+      { type: 'fix', description: "Backfilled 'has_performed' for all countries where bands have existing city gigs" },
+      { type: 'fix', description: "Secondary characters now receive their share of band fame and fans (previously skipped due to multi-character profile lookup failing)" },
+      { type: 'improvement', description: "Band fame distribution now uses character profile_id directly instead of account user_id, fixing fame for players with multiple characters" },
+    ],
+  },
+  {
     version: "1.1.189",
     date: "2026-04-16",
     changes: [
