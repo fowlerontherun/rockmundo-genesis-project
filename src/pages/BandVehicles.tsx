@@ -31,6 +31,21 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
+import vanImg from "@/assets/vehicles/van.jpg";
+import sprinterImg from "@/assets/vehicles/sprinter.jpg";
+import truckImg from "@/assets/vehicles/truck.jpg";
+import tourBusImg from "@/assets/vehicles/tour_bus.jpg";
+import sleeperBusImg from "@/assets/vehicles/sleeper_bus.jpg";
+
+const VEHICLE_IMAGES: Record<string, string> = {
+  van: vanImg,
+  sprinter: sprinterImg,
+  truck: truckImg,
+  tour_bus: tourBusImg,
+  sleeper_bus: sleeperBusImg,
+};
+
+const getVehicleImage = (type: string) => VEHICLE_IMAGES[type] || vanImg;
 
 interface VehicleCatalogItem {
   id: string;
@@ -320,7 +335,17 @@ export default function BandVehicles() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {bandVehicles.map((vehicle) => (
-                <Card key={vehicle.id}>
+                <Card key={vehicle.id} className="overflow-hidden">
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                    <img
+                      src={getVehicleImage(vehicle.vehicle_type)}
+                      alt={`${vehicle.name} band tour vehicle`}
+                      loading="lazy"
+                      width={896}
+                      height={512}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       {getVehicleIcon(vehicle.vehicle_type)}
@@ -392,7 +417,17 @@ export default function BandVehicles() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {catalog.map((vehicle) => (
-              <Card key={vehicle.id} className="flex flex-col">
+              <Card key={vehicle.id} className="flex flex-col overflow-hidden">
+                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                  <img
+                    src={getVehicleImage(vehicle.vehicle_type)}
+                    alt={`${vehicle.name} band vehicle`}
+                    loading="lazy"
+                    width={896}
+                    height={512}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     {getVehicleIcon(vehicle.vehicle_type)}
