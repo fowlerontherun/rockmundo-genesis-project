@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Disc, Music, BarChart3, Globe, TrendingUp, DollarSign, Users, Plus } from "lucide-react";
+import { Disc, Music, BarChart3, Globe, TrendingUp, DollarSign, Users, Plus, ListMusic } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useGameData } from "@/hooks/useGameData";
@@ -165,7 +165,7 @@ const StreamingPlatforms = () => {
       </div>
 
       <Tabs defaultValue="my-music" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="my-music" className="flex items-center gap-1">
             <Music className="h-4 w-4" />
             <span>My Music</span>
@@ -173,6 +173,10 @@ const StreamingPlatforms = () => {
           <TabsTrigger value="platforms" className="flex items-center gap-1">
             <Globe className="h-4 w-4" />
             <span>Platforms</span>
+          </TabsTrigger>
+          <TabsTrigger value="playlists" className="flex items-center gap-1">
+            <ListMusic className="h-4 w-4" />
+            <span>Playlists</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-1">
             <BarChart3 className="h-4 w-4" />
@@ -182,7 +186,6 @@ const StreamingPlatforms = () => {
 
         <TabsContent value="my-music" className="space-y-6">
           <StreamingMyReleasesTab userId={userId} profileId={profileId || ""} />
-          <PlaylistsTab userId={userId} profileId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="platforms">
@@ -212,6 +215,10 @@ const StreamingPlatforms = () => {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="playlists" className="space-y-6">
+          <PlaylistsTab userId={userId} profileId={profileId || ""} />
         </TabsContent>
 
         <TabsContent value="analytics">
