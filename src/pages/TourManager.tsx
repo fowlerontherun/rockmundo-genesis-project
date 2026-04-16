@@ -675,15 +675,25 @@ const TourManager = () => {
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            {format(new Date(tour.start_date), 'MMM d')} - {format(new Date(tour.end_date), 'MMM d, yyyy')}
+            {format(new Date(tour.start_date), 'MMM d')} – {format(new Date(tour.end_date), 'MMM d, yyyy')}
           </span>
         </div>
-        {showBandInfo && tour.band?.genre && (
-          <Badge variant="secondary">{tour.band.genre}</Badge>
-        )}
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1">
-            <DollarSign className="h-4 w-4 text-green-500" />
+        <div className="flex items-center gap-3 flex-wrap">
+          {showBandInfo && tour.band?.genre && (
+            <Badge variant="secondary">{tour.band.genre}</Badge>
+          )}
+          {tour.scope && (
+            <Badge variant="outline" className="capitalize text-xs">{tour.scope}</Badge>
+          )}
+          {tour.stage_setup_tier && tour.stage_setup_tier !== 'basic' && (
+            <Badge variant="outline" className="capitalize text-xs">
+              <Sparkles className="h-3 w-3 mr-0.5" />{tour.stage_setup_tier}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-sm">
+          <DollarSign className="h-4 w-4 text-green-500" />
+          <span className="font-bold tabular-nums text-green-500">
             ${(tour.total_revenue || 0).toLocaleString()}
           </span>
         </div>
@@ -696,7 +706,7 @@ const TourManager = () => {
           className="w-full"
           onClick={() => openTourDetails(tour)}
         >
-          More Details
+          View Details
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </CardContent>
