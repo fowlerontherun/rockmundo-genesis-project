@@ -935,6 +935,58 @@ const Songwriting = () => {
     setIsDialogOpen(true);
   };
 
+  const handleOpenQuickCreate = () => {
+    setQuickCreateTitle("");
+    setQuickCreateGenre("");
+    setQuickCreateError(null);
+    setIsQuickCreateOpen(true);
+  };
+
+  const handleQuickCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = quickCreateTitle.trim();
+    if (!trimmed) {
+      setQuickCreateError("Give your project a working title.");
+      return;
+    }
+    if (!quickCreateGenre) {
+      setQuickCreateError("Select a genre to continue.");
+      return;
+    }
+    setQuickCreateError(null);
+
+    const creativeBrief = {
+      genre: quickCreateGenre,
+      writing_mode: "solo",
+      familiarity_tags: [quickCreateGenre],
+      co_writers: [],
+      producers: [],
+      session_musicians: [],
+      inspiration_modifiers: [],
+      mood_modifiers: [],
+      rating_revealed_at: null,
+      core_attributes: null,
+    } as const;
+
+    try {
+      await createProject.mutateAsync({
+        title: trimmed,
+        theme_id: null,
+        chord_progression_id: null,
+        initial_lyrics: undefined,
+        creative_brief: creativeBrief,
+        instruments: [],
+      });
+      toast.success(`Quick project "${trimmed}" created (Solo · ${quickCreateGenre})`);
+      setIsQuickCreateOpen(false);
+    } catch (error) {
+      logger.error("Failed to quick-create songwriting project", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      toast.error("Failed to create project");
+    }
+  };
+
   const handleEdit = (project: SongwritingProject) => {
     setSelectedProject(project);
     const creativeBrief = project.creative_brief ?? null;
