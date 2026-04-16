@@ -1539,6 +1539,7 @@ const Songwriting = () => {
                       onChange={(instruments) =>
                         setFormState((previous) => ({ ...previous, instruments }))
                       }
+                    />
                   </section>
 
                   <Separator />
