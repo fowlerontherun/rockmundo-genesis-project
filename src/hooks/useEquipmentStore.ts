@@ -31,8 +31,16 @@ export interface PlayerEquipment {
   equipment: EquipmentItem;
 }
 
-export const useEquipmentStore = (profileId?: string) => {
-  const { userId } = useActiveProfile();
+/**
+ * Equipment store hook.
+ *
+ * NOTE: `player_equipment_inventory.user_id` stores the AUTH user id (auth.uid()),
+ * not the character profile id. RLS enforces `auth.uid() = user_id`. We still
+ * accept `profileId` as a positional arg for backwards compatibility, but the
+ * actual reads/writes use the auth user id from useActiveProfile().
+ */
+export const useEquipmentStore = (_profileId?: string) => {
+  const { userId, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Fetch equipment catalog
@@ -50,11 +58,11 @@ export const useEquipmentStore = (profileId?: string) => {
     },
   });
 
-  // Fetch player inventory
+  // Fetch player inventory (keyed by auth user id, not profile id)
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
-    queryKey: ["player-equipment", profileId],
+    queryKey: ["player-equipment", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from("player_equipment_inventory")
@@ -62,19 +70,20 @@ export const useEquipmentStore = (profileId?: string) => {
           *,
           equipment:equipment_catalog(*)
         `)
-        .eq("user_id", profileId)
+        .eq("user_id", userId)
         .order("purchased_at", { ascending: false });
 
       if (error) throw error;
       return data as any as PlayerEquipment[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   // Purchase equipment
   const purchaseEquipment = useMutation({
     mutationFn: async (equipmentId: string) => {
-      if (!profileId) throw new Error("User not authenticated");
+      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Active character not found");
 
       const equipment = catalog.find((e) => e.id === equipmentId);
       if (!equipment) throw new Error("Equipment not found");
@@ -111,11 +120,11 @@ export const useEquipmentStore = (profileId?: string) => {
           .eq("id", equipmentId);
       }
 
-      // Add to inventory
+      // Add to inventory — user_id MUST be the auth user id (RLS requires auth.uid() = user_id)
       const { data, error } = await supabase
         .from("player_equipment_inventory")
         .insert({
-          user_id: profileId,
+          user_id: userId,
           equipment_id: equipmentId,
         })
         .select()
@@ -125,7 +134,7 @@ export const useEquipmentStore = (profileId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
       queryClient.invalidateQueries({ queryKey: ["equipment-catalog"] });
       toast.success("Equipment purchased successfully");
     },
@@ -137,7 +146,8 @@ export const useEquipmentStore = (profileId?: string) => {
   // Maintain equipment
   const maintainEquipment = useMutation({
     mutationFn: async (inventoryId: string) => {
-      if (!profileId) throw new Error("User not authenticated");
+      if (!userId) throw new Error("User not authenticated");
+      if (!profileId) throw new Error("Active character not found");
 
       const item = inventory.find((i) => i.id === inventoryId);
       if (!item) throw new Error("Equipment not found");
@@ -176,7 +186,7 @@ export const useEquipmentStore = (profileId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
       toast.success("Equipment maintained successfully");
     },
     onError: (error: any) => {
