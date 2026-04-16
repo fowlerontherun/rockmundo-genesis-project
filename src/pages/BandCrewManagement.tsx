@@ -540,7 +540,7 @@ const BandCrewManagement = () => {
                       return (
                         <Card 
                           key={crew.id} 
-                          className={`relative ${locked ? "opacity-60" : ""}`}
+                          className={`relative overflow-hidden ${locked ? "opacity-60" : ""}`}
                         >
                           {locked && (
                             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
@@ -552,6 +552,16 @@ const BandCrewManagement = () => {
                               </div>
                             </div>
                           )}
+                          <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                            <img
+                              src={getCrewImage(crew.role, crew.image_url)}
+                              alt={`${crew.role} portrait`}
+                              loading="lazy"
+                              width={512}
+                              height={288}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between">
                               <div>
