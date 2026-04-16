@@ -3742,6 +3742,33 @@ const teachingConfigs: TieredSkillConfig[] = [
 ];
 
 // ============================================================================
+// LUTHIERY / CRAFTING
+// ============================================================================
+const luthieryConfigs: TieredSkillConfig[] = [
+  {
+    prefix: "luthiery",
+    category: "Technical",
+    track: "technical",
+    icon: "hammer",
+    chainPrerequisites: true,
+    tiers: {
+      Basic: {
+        name: "Luthiery Basics",
+        description: "Learn fundamental instrument construction. Craft simple guitars and accessories.",
+      },
+      Professional: {
+        name: "Professional Luthiery",
+        description: "Build quality instruments with advanced techniques. Unlocks rare recipes and better quality rolls.",
+      },
+      Mastery: {
+        name: "Master Luthier",
+        description: "Create legendary masterwork instruments. Maximum quality floor and access to all blueprints.",
+      },
+    },
+  },
+];
+
+// ============================================================================
 // BUILD AND EXPORT
 // ============================================================================
 const { definitions, relationships } = buildSkillTree([
@@ -3767,6 +3794,7 @@ const { definitions, relationships } = buildSkillTree([
   ...fashionDesignConfigs,
   ...clothingDesignConfigs,
   ...teachingConfigs,
+  ...luthieryConfigs,
 ]);
 
 export const SKILL_TREE_DEFINITIONS: SkillDefinitionRecord[] = definitions;

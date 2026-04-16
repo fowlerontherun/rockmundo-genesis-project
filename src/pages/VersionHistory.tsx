@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.178",
+    date: "2026-04-16",
+    changes: [
+      { type: 'feature', description: "Instrument Crafting System: Build custom instruments from raw materials at the Crafting Workshop (/crafting)" },
+      { type: 'feature', description: "Crafting Materials: 35+ materials across wood, electronics, hardware, strings, and finish categories with rarity tiers" },
+      { type: 'feature', description: "Crafting Recipes: 10 starter blueprints from basic electric guitars to masterwork custom builds" },
+      { type: 'feature', description: "Materials Shop: Purchase crafting materials directly with in-game cash" },
+      { type: 'feature', description: "Crafting Progress: Real-time timer tracking for active crafting sessions with quality roll on completion" },
+      { type: 'feature', description: "Salvage System: Break down existing equipment to recover crafting materials (UI ready)" },
+      { type: 'feature', description: "Quality Roll System: Crafted items receive quality ratings from Flawed to Masterwork based on skill and RNG" },
+      { type: 'improvement', description: "New Luthiery skill track (Basic → Professional → Mastery) added to the skill tree" },
+    ],
+  },
+  {
     version: "1.1.177",
     date: "2026-04-16",
     changes: [
