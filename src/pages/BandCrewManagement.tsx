@@ -638,6 +638,16 @@ const BandCrewManagement = () => {
           </DialogHeader>
           {selectedCrewMember && (
             <div className="space-y-4">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-lg bg-muted">
+                <img
+                  src={getCrewImage(selectedCrewMember.role, selectedCrewMember.image_url)}
+                  alt={`${selectedCrewMember.role} portrait`}
+                  loading="lazy"
+                  width={512}
+                  height={288}
+                  className="h-full w-full object-cover"
+                />
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="text-lg font-semibold">{selectedCrewMember.name}</div>
