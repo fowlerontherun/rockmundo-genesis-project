@@ -313,12 +313,22 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                 <p className="text-sm font-medium">Platform Breakdown</p>
                 <div className="grid gap-2">
                   {data.platforms.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/20">
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between p-2 rounded-lg border ${
+                        p.isActive ? "bg-secondary/20" : "bg-muted/30 border-dashed opacity-70"
+                      }`}
+                    >
                       <div className="flex items-center gap-2">
                         <PlatformIcon platformName={p.platformName || ""} />
                         <span className={`font-medium ${getPlatformColor(p.platformName || "")}`}>
                           {p.platformName || "Unknown Platform"}
                         </span>
+                        {!p.isActive && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                            Taken down
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-sm">
@@ -327,14 +337,28 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
                         <span className="text-sm text-green-500">
                           ${(p.revenue || 0).toLocaleString()}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setTakeDownId(p.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {p.isActive ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setTakeDownId(p.id)}
+                            title="Take down"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            disabled={reReleaseMutation.isPending}
+                            onClick={() => reReleaseMutation.mutate(p.id)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                            Re-release
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
