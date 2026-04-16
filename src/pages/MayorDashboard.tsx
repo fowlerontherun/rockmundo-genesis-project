@@ -169,7 +169,7 @@ export default function MayorDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
+    <div className="container mx-auto p-6 max-w-6xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
