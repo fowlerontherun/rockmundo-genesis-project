@@ -189,7 +189,7 @@ async function distributeFameToMembers(bandId: string, totalFameGained: number):
   try {
     const { data: members } = await supabase
       .from('band_members')
-      .select('user_id, vocal_role')
+      .select('user_id, profile_id, vocal_role')
       .eq('band_id', bandId)
       .eq('is_touring_member', false);
 
@@ -204,7 +204,21 @@ async function distributeFameToMembers(bandId: string, totalFameGained: number):
     if (!band) return;
 
     for (const member of members) {
-      if (!member.user_id) continue;
+      // Prefer profile_id (character-specific). Fall back to active profile by user_id.
+      let profileId: string | null = member.profile_id ?? null;
+
+      if (!profileId && member.user_id) {
+        const { data: activeProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', member.user_id)
+          .eq('is_active', true)
+          .is('died_at', null)
+          .maybeSingle();
+        profileId = activeProfile?.id ?? null;
+      }
+
+      if (!profileId) continue;
 
       let memberShare = Math.round(totalFameGained * 0.3);
 
@@ -212,21 +226,24 @@ async function distributeFameToMembers(bandId: string, totalFameGained: number):
         memberShare = Math.round(memberShare * 1.2);
       }
 
-      if (member.user_id === band.leader_id) {
+      if (member.user_id && member.user_id === band.leader_id) {
         memberShare = Math.round(memberShare * 1.15);
       }
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('fame')
-        .eq('user_id', member.user_id)
-        .single();
+        .select('fame, fans')
+        .eq('id', profileId)
+        .maybeSingle();
 
       if (profile) {
         await supabase
           .from('profiles')
-          .update({ fame: (profile.fame || 0) + memberShare })
-          .eq('user_id', member.user_id);
+          .update({
+            fame: (profile.fame || 0) + memberShare,
+            fans: (profile.fans || 0) + Math.round(memberShare * 0.5),
+          })
+          .eq('id', profileId);
       }
     }
   } catch (error) {
