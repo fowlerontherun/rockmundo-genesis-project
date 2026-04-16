@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.198",
+    date: "2026-04-16",
+    changes: [
+      { type: 'improvement', description: "Streaming My Music: each song card is now collapsed by default with a compact header showing title, platform count, total streams and total revenue — click to expand for sparkline, audio player, and platform breakdown" },
+    ],
+  },
+  {
     version: "1.1.195",
     date: "2026-04-16",
     changes: [
