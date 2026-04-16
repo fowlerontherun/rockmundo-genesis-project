@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.187",
+    date: "2026-04-16",
+    changes: [
+      { type: 'fix', description: "Mobile: restock button now visible on sold-out/low-stock physical formats in release cards" },
+      { type: 'fix', description: "Promo button now available for unreleased releases (draft, planned, manufacturing)" },
+    ],
+  },
+  {
     version: "1.1.186",
     date: "2026-04-16",
     changes: [
