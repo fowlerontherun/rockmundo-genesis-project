@@ -19,6 +19,83 @@ interface PlaylistsTabProps {
 export const PlaylistsTab = ({ userId, profileId }: PlaylistsTabProps) => {
   const { playlists, userSubmissions, isLoadingPlaylists, isLoadingSubmissions, submitToPlaylist, isSubmitting, processPending, isProcessingPending } = usePlaylists(profileId ?? undefined);
   const [selectedRelease, setSelectedRelease] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [curatorFilter, setCuratorFilter] = useState("all");
+  const [feeFilter, setFeeFilter] = useState("all"); // all | free | paid
+  const [sizeFilter, setSizeFilter] = useState("all"); // all | small | medium | large
+  const [sortBy, setSortBy] = useState("followers_desc");
+
+  const platformOptions = useMemo(() => {
+    const set = new Set<string>();
+    playlists.forEach((p: any) => p.platform?.platform_name && set.add(p.platform.platform_name));
+    return Array.from(set).sort();
+  }, [playlists]);
+
+  const curatorOptions = useMemo(() => {
+    const set = new Set<string>();
+    playlists.forEach((p: any) => p.curator_type && set.add(p.curator_type));
+    return Array.from(set).sort();
+  }, [playlists]);
+
+  const filteredPlaylists = useMemo(() => {
+    let list = [...playlists];
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p: any) => (p.playlist_name || "").toLowerCase().includes(q));
+    }
+    if (platformFilter !== "all") {
+      list = list.filter((p: any) => p.platform?.platform_name === platformFilter);
+    }
+    if (curatorFilter !== "all") {
+      list = list.filter((p: any) => p.curator_type === curatorFilter);
+    }
+    if (feeFilter === "free") {
+      list = list.filter((p: any) => (p.submission_cost || 0) === 0);
+    } else if (feeFilter === "paid") {
+      list = list.filter((p: any) => (p.submission_cost || 0) > 0);
+    }
+    if (sizeFilter === "small") {
+      list = list.filter((p: any) => (p.follower_count || 0) < 10000);
+    } else if (sizeFilter === "medium") {
+      list = list.filter((p: any) => (p.follower_count || 0) >= 10000 && (p.follower_count || 0) < 100000);
+    } else if (sizeFilter === "large") {
+      list = list.filter((p: any) => (p.follower_count || 0) >= 100000);
+    }
+    switch (sortBy) {
+      case "followers_desc":
+        list.sort((a: any, b: any) => (b.follower_count || 0) - (a.follower_count || 0));
+        break;
+      case "followers_asc":
+        list.sort((a: any, b: any) => (a.follower_count || 0) - (b.follower_count || 0));
+        break;
+      case "fee_asc":
+        list.sort((a: any, b: any) => (a.submission_cost || 0) - (b.submission_cost || 0));
+        break;
+      case "fee_desc":
+        list.sort((a: any, b: any) => (b.submission_cost || 0) - (a.submission_cost || 0));
+        break;
+      case "name_asc":
+        list.sort((a: any, b: any) => (a.playlist_name || "").localeCompare(b.playlist_name || ""));
+        break;
+    }
+    return list;
+  }, [playlists, searchQuery, platformFilter, curatorFilter, feeFilter, sizeFilter, sortBy]);
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    platformFilter !== "all" ||
+    curatorFilter !== "all" ||
+    feeFilter !== "all" ||
+    sizeFilter !== "all";
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setPlatformFilter("all");
+    setCuratorFilter("all");
+    setFeeFilter("all");
+    setSizeFilter("all");
+  };
 
   // Fetch user's active streaming releases (solo + band)
   const { data: userReleases = [], isLoading: isLoadingReleases } = useQuery({
