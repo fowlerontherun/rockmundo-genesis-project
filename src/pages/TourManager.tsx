@@ -15,10 +15,12 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { format } from "date-fns";
 import { TourWizard } from "@/components/tours/TourWizard";
+import { TourDetailPanel } from "@/components/tours/TourDetailPanel";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
 import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
+import { useBandTourTotals } from "@/hooks/useTourStats";
 
 interface Tour {
   id: string;
@@ -31,6 +33,13 @@ interface Tour {
   total_revenue: number;
   description: string | null;
   created_at: string;
+  total_upfront_cost?: number;
+  scope?: string | null;
+  travel_mode?: string | null;
+  stage_setup_tier?: string | null;
+  sponsor_cash_value?: number | null;
+  merch_boost_multiplier?: number | null;
+  support_revenue_share?: number | null;
   band: {
     id: string;
     name: string;
@@ -77,6 +86,7 @@ const TourManager = () => {
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.bands?.id;
+  const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -622,7 +632,8 @@ const TourManager = () => {
   });
 
   const activeTourCount = myTours.filter(t => t.status === 'active' || t.status === 'scheduled').length;
-  const totalRevenue = myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
+  const totalRevenue = bandTotals?.totalRevenue ?? myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
+  const totalFame = bandTotals?.totalFame ?? 0;
   const upcomingShows = myTours.filter(t => new Date(t.start_date) > new Date()).length;
 
   const getStatusBadge = (status: string) => {
@@ -664,15 +675,25 @@ const TourManager = () => {
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            {format(new Date(tour.start_date), 'MMM d')} - {format(new Date(tour.end_date), 'MMM d, yyyy')}
+            {format(new Date(tour.start_date), 'MMM d')} – {format(new Date(tour.end_date), 'MMM d, yyyy')}
           </span>
         </div>
-        {showBandInfo && tour.band?.genre && (
-          <Badge variant="secondary">{tour.band.genre}</Badge>
-        )}
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1">
-            <DollarSign className="h-4 w-4 text-green-500" />
+        <div className="flex items-center gap-3 flex-wrap">
+          {showBandInfo && tour.band?.genre && (
+            <Badge variant="secondary">{tour.band.genre}</Badge>
+          )}
+          {tour.scope && (
+            <Badge variant="outline" className="capitalize text-xs">{tour.scope}</Badge>
+          )}
+          {tour.stage_setup_tier && tour.stage_setup_tier !== 'basic' && (
+            <Badge variant="outline" className="capitalize text-xs">
+              <Sparkles className="h-3 w-3 mr-0.5" />{tour.stage_setup_tier}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-sm">
+          <DollarSign className="h-4 w-4 text-green-500" />
+          <span className="font-bold tabular-nums text-green-500">
             ${(tour.total_revenue || 0).toLocaleString()}
           </span>
         </div>
@@ -685,7 +706,7 @@ const TourManager = () => {
           className="w-full"
           onClick={() => openTourDetails(tour)}
         >
-          More Details
+          View Details
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </CardContent>
@@ -721,7 +742,7 @@ const TourManager = () => {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -732,7 +753,7 @@ const TourManager = () => {
           <CardContent>
             <div className="text-2xl font-bold">{activeTourCount}</div>
             <p className="text-xs text-muted-foreground">
-              {activeTourCount === 0 ? 'No tours scheduled' : 'Tours in progress or planned'}
+              {activeTourCount === 0 ? 'No tours scheduled' : 'In progress or planned'}
             </p>
           </CardContent>
         </Card>
@@ -741,7 +762,7 @@ const TourManager = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Upcoming Shows
+              Upcoming
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -760,8 +781,21 @@ const TourManager = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-green-500">${totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Fame Earned
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-primary">+{totalFame.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From all tours</p>
           </CardContent>
         </Card>
       </div>
@@ -999,33 +1033,15 @@ const TourManager = () => {
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               {selectedTour?.name}
+              {selectedTour && getStatusBadge(selectedTour.status)}
             </DialogTitle>
           </DialogHeader>
           
           {selectedTour && (
             <ScrollArea className="max-h-[60vh]">
               <div className="space-y-6 pr-4">
-                {/* Tour Overview */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Band</p>
-                    <p className="font-medium">{selectedTour.band?.name || 'Unknown'}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    {getStatusBadge(selectedTour.status)}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Dates</p>
-                    <p className="font-medium">
-                      {format(new Date(selectedTour.start_date), 'MMM d, yyyy')} - {format(new Date(selectedTour.end_date), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Total Revenue</p>
-                    <p className="font-medium text-green-500">${(selectedTour.total_revenue || 0).toLocaleString()}</p>
-                  </div>
-                </div>
+                {/* New Detail Panel with real stats */}
+                <TourDetailPanel tour={selectedTour} />
 
                 {selectedTour.description && (
                   <div className="space-y-1">
@@ -1065,7 +1081,7 @@ const TourManager = () => {
                 <div className="space-y-3">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    Tour Dates & Venues
+                    Tour Dates & Venues ({tourVenues.length} stops)
                   </h3>
                   
                   {loadingVenues ? (
@@ -1079,7 +1095,6 @@ const TourManager = () => {
                   ) : (
                     <div className="space-y-2">
                       {tourVenues.map((tv: TourVenue, index: number) => {
-                        // Use gig data if available, fall back to tour_venues data
                         const ticketsSold = tv.gig_tickets_sold ?? tv.tickets_sold ?? 0;
                         const revenue = tv.gig_revenue ?? tv.revenue ?? 0;
                         const isCompleted = tv.gig_status === 'completed';
@@ -1089,17 +1104,17 @@ const TourManager = () => {
                             key={tv.id} 
                             className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
                                 {index + 1}
                               </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium">{tv.venue?.name || 'Unknown Venue'}</p>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium text-sm truncate">{tv.venue?.name || 'Unknown Venue'}</p>
                                   {isCompleted && tv.overall_rating !== null && (
-                                    <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                                      {tv.overall_rating.toFixed(1)}/25
+                                    <Badge variant="outline" className="text-[10px] flex items-center gap-0.5 shrink-0">
+                                      <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+                                      {tv.overall_rating.toFixed(1)}
                                     </Badge>
                                   )}
                                   {tv.gig_status && (
@@ -1107,7 +1122,7 @@ const TourManager = () => {
                                       tv.gig_status === 'completed' ? 'default' :
                                       tv.gig_status === 'scheduled' ? 'secondary' :
                                       tv.gig_status === 'in_progress' ? 'default' : 'outline'
-                                    } className="text-xs">
+                                    } className="text-[10px] shrink-0">
                                       {tv.gig_status}
                                     </Badge>
                                   )}
@@ -1118,22 +1133,22 @@ const TourManager = () => {
                                 {tv.setlist_name && (
                                   <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
                                     <ListMusic className="h-3 w-3" />
-                                    {tv.setlist_name} ({tv.setlist_song_count || 0} songs)
+                                    {tv.setlist_name}
                                   </p>
                                 )}
                                 {isCompleted && tv.performance_grade && (
                                   <p className="text-xs text-muted-foreground mt-0.5">
-                                    Performance: {tv.performance_grade}
+                                    Grade: {tv.performance_grade}
                                   </p>
                                 )}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-1 text-sm">
+                            <div className="text-right shrink-0 ml-2">
+                              <div className="flex items-center gap-1 text-xs">
                                 <Ticket className="h-3 w-3" />
-                                <span>{ticketsSold.toLocaleString()} / {tv.venue?.capacity?.toLocaleString() || '?'}</span>
+                                <span>{ticketsSold.toLocaleString()}/{tv.venue?.capacity?.toLocaleString() || '?'}</span>
                               </div>
-                              <p className="text-xs text-accent-foreground">
+                              <p className="text-sm font-bold tabular-nums text-green-500">
                                 ${revenue.toLocaleString()}
                               </p>
                             </div>
@@ -1144,141 +1159,75 @@ const TourManager = () => {
                   )}
                 </div>
 
-                {/* Ticket Sales & Performance Summary */}
-                {tourVenues.length > 0 && (() => {
-                  // Calculate totals using gig data when available
-                  const totalTicketsSold = tourVenues.reduce((sum, tv) => 
-                    sum + (tv.gig_tickets_sold ?? tv.tickets_sold ?? 0), 0);
-                  const totalCapacity = tourVenues.reduce((sum, tv) => 
-                    sum + (tv.venue?.capacity || 0), 0);
-                  const totalRevenue = tourVenues.reduce((sum, tv) => 
-                    sum + (tv.gig_revenue ?? tv.revenue ?? 0), 0);
-                  
-                  // Calculate average rating from completed gigs
-                  const completedGigs = tourVenues.filter(tv => 
-                    tv.gig_status === 'completed' && tv.overall_rating !== null);
-                  const avgRating = completedGigs.length > 0 
-                    ? completedGigs.reduce((sum, tv) => sum + (tv.overall_rating || 0), 0) / completedGigs.length
-                    : null;
-                  
-                  return (
-                    <Card className="bg-muted/30">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Tour Performance Summary</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                          <div>
-                            <p className="text-2xl font-bold">
-                              {totalTicketsSold.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Tickets Sold</p>
-                          </div>
-                          <div>
-                            <p className="text-2xl font-bold">
-                              {totalCapacity.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Total Capacity</p>
-                          </div>
-                          <div>
-                            <p className="text-2xl font-bold text-accent-foreground">
-                              ${totalRevenue.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Revenue</p>
-                          </div>
-                          <div>
-                            {avgRating !== null ? (
-                              <>
-                                <p className="text-2xl font-bold flex items-center justify-center gap-1">
-                                  <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
-                                  {avgRating.toFixed(1)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Avg Rating ({completedGigs.length} shows)
-                                </p>
-                              </>
+                {/* Management actions */}
+                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tour Management</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => addNewMemberTravelMutation.mutate(selectedTour.id)}
+                      disabled={addNewMemberTravelMutation.isPending}
+                    >
+                      {addNewMemberTravelMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Users className="h-4 w-4 mr-2" />
+                      )}
+                      Add Travel for New Members
+                    </Button>
+
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full"
+                      onClick={() => regenerateTravelLegsMutation.mutate(selectedTour.id)}
+                      disabled={regenerateTravelLegsMutation.isPending}
+                    >
+                      {regenerateTravelLegsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Map className="h-4 w-4 mr-2" />
+                      )}
+                      Regenerate Travel Schedule
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full">
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancel Tour
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently cancel "{selectedTour.name}" and delete all associated gigs and travel legs.
+                            {new Date(selectedTour.created_at).toDateString() === new Date().toDateString() 
+                              ? " Since this tour was booked today, you'll receive a full refund."
+                              : " No refund is available after the booking day."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Tour</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => cancelTourMutation.mutate(selectedTour.id)}
+                            disabled={cancelTourMutation.isPending}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {cancelTourMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
-                              <>
-                                <p className="text-2xl font-bold text-muted-foreground">—</p>
-                                <p className="text-xs text-muted-foreground">No ratings yet</p>
-                              </>
+                              <XCircle className="h-4 w-4 mr-2" />
                             )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
-
-                {/* Regenerate Travel Legs Button - only if missing */}
-                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => addNewMemberTravelMutation.mutate(selectedTour.id)}
-                    disabled={addNewMemberTravelMutation.isPending}
-                  >
-                    {addNewMemberTravelMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Users className="h-4 w-4 mr-2" />
-                    )}
-                    Add Remaining Travel for New Members
-                  </Button>
-                )}
-
-                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => regenerateTravelLegsMutation.mutate(selectedTour.id)}
-                    disabled={regenerateTravelLegsMutation.isPending}
-                  >
-                    {regenerateTravelLegsMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Map className="h-4 w-4 mr-2" />
-                    )}
-                    Regenerate Travel Schedule
-                  </Button>
-                )}
-
-                {/* Cancel Tour Button - only for own tours */}
-                {selectedTour.band_id === currentBandId && selectedTour.status !== 'completed' && selectedTour.status !== 'cancelled' && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="w-full">
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Cancel Tour
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently cancel "{selectedTour.name}" and delete all associated gigs and travel legs.
-                          {new Date(selectedTour.created_at).toDateString() === new Date().toDateString() 
-                            ? " Since this tour was booked today, you'll receive a full refund."
-                            : " No refund is available after the booking day."}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Tour</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => cancelTourMutation.mutate(selectedTour.id)}
-                          disabled={cancelTourMutation.isPending}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {cancelTourMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <XCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Yes, Cancel Tour
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                            Yes, Cancel Tour
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 )}
               </div>
             </ScrollArea>
