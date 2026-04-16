@@ -1,5 +1,8 @@
 // Tour system types and constants
 
+import { type VehicleTier } from '@/lib/tourVehicles';
+import { type StageComponentSelections, DEFAULT_STAGE_SELECTIONS } from '@/lib/tourStageComponents';
+
 export type TourScope = 'country' | 'continent' | 'world';
 export type TravelMode = 'auto' | 'manual' | 'bus' | 'train' | 'plane' | 'ship' | 'tour_bus';
 export type StageSetupTier = 'basic' | 'enhanced' | 'professional' | 'premium' | 'spectacular';
