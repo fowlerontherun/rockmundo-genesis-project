@@ -98,6 +98,21 @@ const NightclubHub = () => {
         backLabel="Back to World"
       />
 
+      {/* My Clubs Banner */}
+      {ownedClubs.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5 cursor-pointer" onClick={() => navigate("/nightclub-management")}>
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">My Nightclubs ({ownedClubs.length})</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-4 space-y-3">
