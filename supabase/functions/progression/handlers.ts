@@ -25,6 +25,8 @@ const AP_DECAY_START = 1000;
 const AP_DECAY_END = 10000;
 // Hard cap on total AP from the daily stipend claim (base + streak bonuses)
 const DAILY_STIPEND_AP_CAP = 30;
+// Hard cap on total SXP from the daily stipend claim (base + streak bonuses)
+const DAILY_STIPEND_SXP_CAP = 2000;
 
 function getScaledBaseAp(lifetimeSxp: number): number {
   if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
