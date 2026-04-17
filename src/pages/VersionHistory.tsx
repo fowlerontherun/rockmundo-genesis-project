@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.213",
+    date: "2026-04-17",
+    changes: [
+      { type: 'improvement', description: "Daily Stipend: significantly boosted Skill XP rewards. Base claim went from 100 → 500 SXP, and streak milestones now grant 150 / 300 / 500 / 1,000 / 2,000 bonus SXP at 7 / 14 / 30 / 100 / 365 day streaks. Total daily SXP from the stipend is hard-capped at 2,000 SXP (server-enforced in `progression/handlers.ts` and mirrored in the client preview in `dualXpSystem.ts`). AP rewards and the AP cap are unchanged." },
+    ],
+  },
+  {
     version: "1.1.212",
     date: "2026-04-16",
     changes: [

@@ -5,17 +5,18 @@ import { fetchProfileState, type ProfileState } from "./index.ts";
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
 
-// Streak milestone constants (AP kept low — total daily AP hard-capped at 50)
+// Streak milestone constants (AP kept low — total daily AP hard-capped at 30)
+// SXP boosted; total daily SXP hard-capped at DAILY_STIPEND_SXP_CAP below
 const STREAK_MILESTONES = [
-  { days: 7, bonusSxp: 50, bonusAp: 2 },
-  { days: 14, bonusSxp: 100, bonusAp: 3 },
-  { days: 30, bonusSxp: 200, bonusAp: 5 },
-  { days: 100, bonusSxp: 500, bonusAp: 8 },
-  { days: 365, bonusSxp: 1000, bonusAp: 12 },
+  { days: 7, bonusSxp: 150, bonusAp: 2 },
+  { days: 14, bonusSxp: 300, bonusAp: 3 },
+  { days: 30, bonusSxp: 500, bonusAp: 5 },
+  { days: 100, bonusSxp: 1000, bonusAp: 8 },
+  { days: 365, bonusSxp: 2000, bonusAp: 12 },
 ];
 
 // Base stipend amounts
-const BASE_STIPEND_SXP = 100;
+const BASE_STIPEND_SXP = 500;
 const MAX_STIPEND_AP = 8;
 const MIN_STIPEND_AP = 2;
 // AP decays from MAX to MIN as lifetime SXP grows.
@@ -24,6 +25,8 @@ const AP_DECAY_START = 1000;
 const AP_DECAY_END = 10000;
 // Hard cap on total AP from the daily stipend claim (base + streak bonuses)
 const DAILY_STIPEND_AP_CAP = 30;
+// Hard cap on total SXP from the daily stipend claim (base + streak bonuses)
+const DAILY_STIPEND_SXP_CAP = 2000;
 
 function getScaledBaseAp(lifetimeSxp: number): number {
   if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
@@ -108,7 +111,7 @@ export async function handleClaimDailyXp(
   const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
   const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
-  const totalSxp = BASE_STIPEND_SXP + bonusSxp;
+  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, BASE_STIPEND_SXP + bonusSxp);
   const totalAp = Math.min(DAILY_STIPEND_AP_CAP, scaledBaseAp + bonusAp);
 
   // Get current balances (use new dual currency columns)

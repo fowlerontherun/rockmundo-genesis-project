@@ -32,20 +32,23 @@ export interface StreakMilestone {
 
 // Default configuration values
 export const DEFAULT_DUAL_XP_CONFIG: DualXpConfig = {
-  daily_stipend_sxp: 150,
+  daily_stipend_sxp: 500,
   daily_stipend_ap: 15, // Max AP — actual base is scaled by lifetime SXP
   daily_activity_xp_cap: 400,
-  streak_7_bonus_sxp: 75,
+  streak_7_bonus_sxp: 150,
   streak_7_bonus_ap: 15,
-  streak_14_bonus_sxp: 150,
+  streak_14_bonus_sxp: 300,
   streak_14_bonus_ap: 30,
-  streak_30_bonus_sxp: 300,
+  streak_30_bonus_sxp: 500,
   streak_30_bonus_ap: 60,
-  streak_100_bonus_sxp: 750,
+  streak_100_bonus_sxp: 1000,
   streak_100_bonus_ap: 150,
-  streak_365_bonus_sxp: 1500,
+  streak_365_bonus_sxp: 2000,
   streak_365_bonus_ap: 300,
 };
+
+// Hard cap on total daily SXP (base + streak bonuses combined)
+export const DAILY_STIPEND_SXP_CAP = 2000;
 
 // Activity type to AP rate mapping (40-60% of XP)
 export const ACTIVITY_AP_RATES: Record<string, number> = {
@@ -186,13 +189,15 @@ export const calculateTotalStipend = (
 ): { baseSxp: number; baseAp: number; bonusSxp: number; bonusAp: number; totalSxp: number; totalAp: number } => {
   const { sxp: bonusSxp, ap: bonusAp } = calculateStreakBonus(streak, config);
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
-  
+  const rawTotalSxp = config.daily_stipend_sxp + bonusSxp;
+  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, rawTotalSxp);
+
   return {
     baseSxp: config.daily_stipend_sxp,
     baseAp: scaledBaseAp,
     bonusSxp,
     bonusAp,
-    totalSxp: config.daily_stipend_sxp + bonusSxp,
+    totalSxp,
     totalAp: scaledBaseAp + bonusAp,
   };
 };
