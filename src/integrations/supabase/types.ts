@@ -4171,6 +4171,7 @@ export type Database = {
           campaign_spend_total: number
           created_at: string
           election_id: string
+          endorsement_bonus_votes: number
           endorsements: string[]
           id: string
           nominated_at: string | null
@@ -4191,6 +4192,7 @@ export type Database = {
           campaign_spend_total?: number
           created_at?: string
           election_id: string
+          endorsement_bonus_votes?: number
           endorsements?: string[]
           id?: string
           nominated_at?: string | null
@@ -4211,6 +4213,7 @@ export type Database = {
           campaign_spend_total?: number
           created_at?: string
           election_id?: string
+          endorsement_bonus_votes?: number
           endorsements?: string[]
           id?: string
           nominated_at?: string | null
@@ -33158,6 +33161,10 @@ export type Database = {
         Returns: Json
       }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
+      recompute_candidate_endorsement_bonus: {
+        Args: { p_candidate_id: string }
+        Returns: undefined
+      }
       reorder_setlist_items: {
         Args: { p_setlist_id: string; p_updates: Json }
         Returns: undefined
