@@ -19,6 +19,7 @@ import {
   Crown, Shield, Flame, Clock, TrendingUp, Users, UserPlus, UserMinus, Send
 } from "lucide-react";
 import { format } from "date-fns";
+import { NominateButton } from "@/components/elections/NominateButton";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
