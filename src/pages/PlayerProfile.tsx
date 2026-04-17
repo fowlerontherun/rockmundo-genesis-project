@@ -127,6 +127,25 @@ export default function PlayerProfile() {
     enabled: !!currentUser?.user_id,
   });
 
+  // Open election in this player's current city (for nominating them)
+  const { data: openElection } = useQuery({
+    queryKey: ["open-election-for-nominee", (profile as any)?.current_city_id],
+    queryFn: async () => {
+      const cityId = (profile as any)?.current_city_id;
+      if (!cityId) return null;
+      const { data } = await supabase
+        .from("city_elections")
+        .select("id, status")
+        .eq("city_id", cityId)
+        .in("status", ["nomination", "campaign"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!(profile as any)?.current_city_id,
+  });
+
   // Send friend request
   const sendRequest = useMutation({
     mutationFn: async () => {
