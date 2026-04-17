@@ -100,33 +100,29 @@ export function useLogCampaignSpend() {
       party_id?: string | null;
     }) => {
       if (!profileId) throw new Error("Sign in first");
-      const effect = Math.floor(input.amount / 1000); // $10 per "effect" point
-      const { error } = await supabase.from("campaign_expenditures").insert({
-        candidate_id: input.candidate_id,
-        spender_profile_id: profileId,
-        category: input.category,
-        amount: input.amount,
-        effect_value: effect,
-        funded_from: input.funded_from ?? "personal",
-        party_id: input.party_id ?? null,
+      const { data, error } = await supabase.rpc("spend_campaign_funds", {
+        p_candidate_id: input.candidate_id,
+        p_category: input.category,
+        p_amount: input.amount,
+        p_funded_from: input.funded_from ?? "personal",
+        p_party_id: input.party_id ?? null,
       });
       if (error) throw error;
-      // increment cached total on candidate
-      const { data: cur } = await supabase
-        .from("city_candidates")
-        .select("campaign_spend_total")
-        .eq("id", input.candidate_id)
-        .maybeSingle();
-      const newTotal = (cur?.campaign_spend_total ?? 0) + input.amount;
-      await supabase
-        .from("city_candidates")
-        .update({ campaign_spend_total: newTotal })
-        .eq("id", input.candidate_id);
+      return data as string;
     },
     onSuccess: (_, vars) => {
-      toast.success("Spend logged");
+      toast.success(
+        vars.funded_from === "party" ? "Spend logged from party treasury" : "Spend logged",
+      );
       queryClient.invalidateQueries({ queryKey: ["campaign-expenditures", vars.candidate_id] });
       queryClient.invalidateQueries({ queryKey: ["election-candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["activeProfile"] });
+      if (vars.party_id) {
+        queryClient.invalidateQueries({ queryKey: ["my-party"] });
+        queryClient.invalidateQueries({ queryKey: ["political-parties"] });
+        queryClient.invalidateQueries({ queryKey: ["political-party", vars.party_id] });
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
