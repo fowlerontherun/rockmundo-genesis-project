@@ -33095,6 +33095,16 @@ export type Database = {
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      spend_campaign_funds: {
+        Args: {
+          p_amount: number
+          p_candidate_id: string
+          p_category: string
+          p_funded_from: string
+          p_party_id?: string
+        }
+        Returns: string
+      }
       swap_gettit_comment_vote: {
         Args: { comment_id: string; new_field: string; old_field: string }
         Returns: undefined
