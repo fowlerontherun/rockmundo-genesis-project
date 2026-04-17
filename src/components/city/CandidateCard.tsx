@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { CityCandidate } from "@/types/city-governance";
 import { Vote, Trophy, Users, Award } from "lucide-react";
 import type { PartyEndorsement } from "@/hooks/usePartyEndorsements";
+import { CandidateManifestoDialog } from "@/components/elections/CandidateManifestoDialog";
 
 interface CandidateCardProps {
   candidate: CityCandidate;
@@ -31,6 +33,13 @@ export function CandidateCard({
   const fame = candidate.profile?.fame || 0;
 
   const myEndorsements = endorsements.filter((e) => e.candidate_id === candidate.id);
+  const [manifestoOpen, setManifestoOpen] = useState(false);
+
+  const partyNameMap: Record<string, { name: string; colour_hex: string }> = {};
+  for (const e of myEndorsements) {
+    if (e.party) partyNameMap[e.party_id] = { name: e.party.name, colour_hex: e.party.colour_hex };
+  }
+  const partyIds = myEndorsements.map((e) => e.party_id);
 
   return (
     <Card className={`transition-all ${userVotedFor ? "ring-2 ring-primary" : ""}`}>
@@ -58,7 +67,11 @@ export function CandidateCard({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-border bg-muted/40 text-[11px] cursor-help">
+                      <button
+                        type="button"
+                        onClick={() => setManifestoOpen(true)}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-border bg-muted/40 hover:bg-muted text-[11px] transition-colors cursor-pointer"
+                      >
                         <Award className="h-3 w-3 text-primary" />
                         {myEndorsements.length}
                         <span className="flex items-center gap-0.5 ml-0.5">
@@ -70,10 +83,10 @@ export function CandidateCard({
                             />
                           ))}
                         </span>
-                      </span>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p className="text-xs font-semibold mb-1">Endorsed by:</p>
+                      <p className="text-xs font-semibold mb-1">Click to view platforms · endorsed by:</p>
                       <ul className="text-xs space-y-0.5">
                         {myEndorsements.map((e) => (
                           <li key={e.id} className="flex items-center gap-1.5">
@@ -161,6 +174,14 @@ export function CandidateCard({
           </div>
         )}
       </CardContent>
+
+      <CandidateManifestoDialog
+        open={manifestoOpen}
+        onOpenChange={setManifestoOpen}
+        candidateName={stageName}
+        partyIds={partyIds}
+        partyNameMap={partyNameMap}
+      />
     </Card>
   );
 }
