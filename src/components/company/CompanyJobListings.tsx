@@ -109,7 +109,7 @@ export function CompanyJobListings({ companyId, companyName, headquartersCityId 
       if (workDays.length === 0) throw new Error("Pick at least one work day");
       if (endTime <= startTime) throw new Error("End time must be after start time");
 
-      const { error } = await supabase.from("jobs").insert({
+      const payload: any = {
         title: title.trim(),
         description: description.trim() || null,
         company_name: companyName,
@@ -128,7 +128,8 @@ export function CompanyJobListings({ companyId, companyName, headquartersCityId 
         health_impact_per_shift: -2,
         energy_cost_per_shift: 15,
         fame_impact_per_shift: 0,
-      });
+      };
+      const { error } = await (supabase.from("jobs") as any).insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
