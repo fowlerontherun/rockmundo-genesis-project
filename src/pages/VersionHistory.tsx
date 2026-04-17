@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.221",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Party Treasury Donations: members can now donate personal cash to their party's treasury via a new atomic `donate_to_party` Postgres function (verifies membership + funds, deducts cash, increments treasury, writes audit row in one transaction). New `party_donations` table is append-only and publicly viewable." },
+      { type: 'feature', description: "PartyTreasuryTab redesigned: balance card + member-only donation form (amount + optional note) + recent donations feed with donor avatars, timestamps, and notes." },
+      { type: 'improvement', description: "New `usePartyDonations` / `useDonateToParty` hooks invalidate party, treasury, and active-profile caches on success so balances update everywhere instantly." },
+    ],
+  },
+  {
     version: "1.1.220",
     date: "2026-04-17",
     changes: [
