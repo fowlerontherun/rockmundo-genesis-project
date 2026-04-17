@@ -25,6 +25,7 @@ import { CandidateCard } from "@/components/city/CandidateCard";
 import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistrationDialog";
 import { CampaignTrail } from "@/components/elections/CampaignTrail";
 import { CampaignSpendDialog } from "@/components/elections/CampaignSpendDialog";
+import { PartyEndorsementPanel } from "@/components/elections/PartyEndorsementPanel";
 import { useState } from "react";
 import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
@@ -319,6 +320,11 @@ export default function CityElection() {
           electionId={election.id}
           candidateId={candidates?.find((c) => c.profile_id === profileId)?.id}
         />
+      )}
+
+      {/* Party Endorsements — public list + party-leader controls */}
+      {election && candidates && candidates.length > 0 && (
+        <PartyEndorsementPanel electionId={election.id} candidates={candidates} />
       )}
 
       {/* Candidate-only: log new campaign spend */}
