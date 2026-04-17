@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.222",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Campaign spending can now be funded from a candidate's party treasury (not just personal cash). New atomic `spend_campaign_funds` Postgres function verifies candidate ownership, checks the chosen funding source for sufficient balance, deducts cash or treasury, logs the expenditure, and updates the candidate's running spend total — all in one transaction." },
+      { type: 'feature', description: "CampaignSpendDialog adds a 'Funding source' selector showing live personal wallet and party treasury balances. Party-treasury option is gated to founders and officers only; live shortfall warnings disable the submit button." },
+      { type: 'improvement', description: "Recent expenditure list now tags each line with its funding source (personal / party). All party, profile, and candidate caches invalidate on success so balances refresh instantly." },
+    ],
+  },
+  {
     version: "1.1.221",
     date: "2026-04-17",
     changes: [
