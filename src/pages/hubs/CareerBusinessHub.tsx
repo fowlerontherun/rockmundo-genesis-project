@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart, Heart, Landmark } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart, Heart, Landmark, Flag, Vote, Trophy } from "lucide-react";
 
 export default function CareerBusinessHub() {
   return (
@@ -35,6 +35,14 @@ export default function CareerBusinessHub() {
             { icon: Building, labelKey: "nav.venues", path: "/venues", imagePrompt: "A concert venue exterior with marquee sign showing tonight's performance" },
             { icon: Store, labelKey: "nav.inventory", path: "/inventory", imagePrompt: "A warehouse with music merchandise: t-shirts, posters, vinyl records on shelves" },
             { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise", imagePrompt: "A merch table at a concert with t-shirts, hats, posters, and fans browsing" },
+          ],
+        },
+        {
+          label: "Politics",
+          tiles: [
+            { icon: Flag, labelKey: "Political Parties", path: "/political-party", tileImageKey: "political-party", imagePrompt: "A grand political party headquarters with colorful flags, podium, and supporters waving banners" },
+            { icon: Trophy, labelKey: "Party Standings", path: "/political-party/standings", tileImageKey: "party-standings", imagePrompt: "A leaderboard showing political party rankings with medals, vote counts, and party logos" },
+            { icon: Vote, labelKey: "Politics Career", path: "/politics-career", tileImageKey: "politics-career", imagePrompt: "A politician at a podium giving a campaign speech with cameras and an enthusiastic crowd" },
           ],
         },
       ]}
