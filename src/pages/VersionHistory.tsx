@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.218",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "NPC Mayor Auto-Vote: new edge function `npc-mayor-auto-vote` casts deterministic yes/no/abstain votes for sitting mayors of cities without a human player on every motion closing within 6 hours, ensuring parliament quorum is always reachable. Voting heuristic varies by motion_type (mayor_pay favours small cities, infrastructure favours large cities, tax leans no) and is seeded by motion+mayor IDs for reproducibility." },
+      { type: 'improvement', description: "Scheduled via pg_cron to run hourly (`0 * * * *`); votes are inserted in `world_parliament_votes` and tally counters on the motion are updated in the same pass." },
+    ],
+  },
+  {
     version: "1.1.217",
     date: "2026-04-17",
     changes: [
