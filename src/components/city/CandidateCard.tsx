@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { CityCandidate } from "@/types/city-governance";
 import { Vote, Trophy, Users, Award } from "lucide-react";
 import type { PartyEndorsement } from "@/hooks/usePartyEndorsements";
+import { CandidateManifestoDialog } from "@/components/elections/CandidateManifestoDialog";
 
 interface CandidateCardProps {
   candidate: CityCandidate;
@@ -31,6 +33,13 @@ export function CandidateCard({
   const fame = candidate.profile?.fame || 0;
 
   const myEndorsements = endorsements.filter((e) => e.candidate_id === candidate.id);
+  const [manifestoOpen, setManifestoOpen] = useState(false);
+
+  const partyNameMap: Record<string, { name: string; colour_hex: string }> = {};
+  for (const e of myEndorsements) {
+    if (e.party) partyNameMap[e.party_id] = { name: e.party.name, colour_hex: e.party.colour_hex };
+  }
+  const partyIds = myEndorsements.map((e) => e.party_id);
 
   return (
     <Card className={`transition-all ${userVotedFor ? "ring-2 ring-primary" : ""}`}>
