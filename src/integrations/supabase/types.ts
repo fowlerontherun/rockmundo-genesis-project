@@ -2990,6 +2990,57 @@ export type Database = {
           },
         ]
       }
+      campaign_expenditures: {
+        Row: {
+          amount: number
+          candidate_id: string
+          category: string
+          created_at: string
+          effect_value: number
+          funded_from: string
+          id: string
+          party_id: string | null
+          spender_profile_id: string
+        }
+        Insert: {
+          amount: number
+          candidate_id: string
+          category: string
+          created_at?: string
+          effect_value?: number
+          funded_from?: string
+          id?: string
+          party_id?: string | null
+          spender_profile_id: string
+        }
+        Update: {
+          amount?: number
+          candidate_id?: string
+          category?: string
+          created_at?: string
+          effect_value?: number
+          funded_from?: string
+          id?: string
+          party_id?: string | null
+          spender_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_expenditures_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_expenditures_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       casino_transactions: {
         Row: {
           bet_amount: number
@@ -4114,41 +4165,62 @@ export type Database = {
       }
       city_candidates: {
         Row: {
+          campaign_article: string | null
           campaign_budget: number
           campaign_slogan: string | null
+          campaign_spend_total: number
           created_at: string
           election_id: string
           endorsements: string[]
           id: string
+          nominated_at: string | null
+          nominator_profile_id: string | null
+          party_id: string | null
           profile_id: string
           proposed_policies: Json
           registered_at: string
+          seconded_at: string | null
+          seconder_profile_id: string | null
           status: Database["public"]["Enums"]["candidate_status"]
           vote_count: number
         }
         Insert: {
+          campaign_article?: string | null
           campaign_budget?: number
           campaign_slogan?: string | null
+          campaign_spend_total?: number
           created_at?: string
           election_id: string
           endorsements?: string[]
           id?: string
+          nominated_at?: string | null
+          nominator_profile_id?: string | null
+          party_id?: string | null
           profile_id: string
           proposed_policies?: Json
           registered_at?: string
+          seconded_at?: string | null
+          seconder_profile_id?: string | null
           status?: Database["public"]["Enums"]["candidate_status"]
           vote_count?: number
         }
         Update: {
+          campaign_article?: string | null
           campaign_budget?: number
           campaign_slogan?: string | null
+          campaign_spend_total?: number
           created_at?: string
           election_id?: string
           endorsements?: string[]
           id?: string
+          nominated_at?: string | null
+          nominator_profile_id?: string | null
+          party_id?: string | null
           profile_id?: string
           proposed_policies?: Json
           registered_at?: string
+          seconded_at?: string | null
+          seconder_profile_id?: string | null
           status?: Database["public"]["Enums"]["candidate_status"]
           vote_count?: number
         }
@@ -4158,6 +4230,13 @@ export type Database = {
             columns: ["election_id"]
             isOneToOne: false
             referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_candidates_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
             referencedColumns: ["id"]
           },
           {
@@ -7527,6 +7606,51 @@ export type Database = {
           video_url?: string
         }
         Relationships: []
+      }
+      election_news_articles: {
+        Row: {
+          author_profile_id: string
+          body: string
+          candidate_id: string
+          election_id: string
+          headline: string
+          id: string
+          published_at: string
+        }
+        Insert: {
+          author_profile_id: string
+          body: string
+          candidate_id: string
+          election_id: string
+          headline: string
+          id?: string
+          published_at?: string
+        }
+        Update: {
+          author_profile_id?: string
+          body?: string
+          candidate_id?: string
+          election_id?: string
+          headline?: string
+          id?: string
+          published_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_news_articles_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "election_news_articles_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emotional_state_events: {
         Row: {
@@ -15387,6 +15511,63 @@ export type Database = {
           },
         ]
       }
+      mayor_pay_settings: {
+        Row: {
+          id: number
+          last_motion_id: string | null
+          max_salary: number
+          min_salary: number
+          updated_at: string
+          weekly_salary_per_mayor: number
+        }
+        Insert: {
+          id?: number
+          last_motion_id?: string | null
+          max_salary?: number
+          min_salary?: number
+          updated_at?: string
+          weekly_salary_per_mayor?: number
+        }
+        Update: {
+          id?: number
+          last_motion_id?: string | null
+          max_salary?: number
+          min_salary?: number
+          updated_at?: string
+          weekly_salary_per_mayor?: number
+        }
+        Relationships: []
+      }
+      mayor_salary_payments: {
+        Row: {
+          amount: number
+          city_id: string
+          id: string
+          mayor_id: string
+          paid_at: string
+          profile_id: string
+          week_of: string
+        }
+        Insert: {
+          amount: number
+          city_id: string
+          id?: string
+          mayor_id: string
+          paid_at?: string
+          profile_id: string
+          week_of?: string
+        }
+        Update: {
+          amount?: number
+          city_id?: string
+          id?: string
+          mayor_id?: string
+          paid_at?: string
+          profile_id?: string
+          week_of?: string
+        }
+        Relationships: []
+      }
       media_appearances: {
         Row: {
           air_date: string
@@ -17593,6 +17774,38 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      party_memberships: {
+        Row: {
+          id: string
+          joined_at: string
+          party_id: string
+          profile_id: string
+          role: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          party_id: string
+          profile_id: string
+          role?: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          party_id?: string
+          profile_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_memberships_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       performance_items: {
         Row: {
@@ -22628,6 +22841,83 @@ export type Database = {
           slots_per_episode?: number | null
         }
         Relationships: []
+      }
+      political_parties: {
+        Row: {
+          belief_1: string | null
+          belief_2: string | null
+          belief_3: string | null
+          belief_4: string | null
+          belief_5: string | null
+          colour_hex: string
+          company_id: string | null
+          created_at: string
+          description: string | null
+          dissolved_at: string | null
+          founded_at: string
+          founder_profile_id: string
+          id: string
+          logo_url: string | null
+          mayor_count: number
+          member_count: number
+          name: string
+          total_strength: number
+          treasury_balance: number
+          updated_at: string
+        }
+        Insert: {
+          belief_1?: string | null
+          belief_2?: string | null
+          belief_3?: string | null
+          belief_4?: string | null
+          belief_5?: string | null
+          colour_hex: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          dissolved_at?: string | null
+          founded_at?: string
+          founder_profile_id: string
+          id?: string
+          logo_url?: string | null
+          mayor_count?: number
+          member_count?: number
+          name: string
+          total_strength?: number
+          treasury_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          belief_1?: string | null
+          belief_2?: string | null
+          belief_3?: string | null
+          belief_4?: string | null
+          belief_5?: string | null
+          colour_hex?: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          dissolved_at?: string | null
+          founded_at?: string
+          founder_profile_id?: string
+          id?: string
+          logo_url?: string | null
+          mayor_count?: number
+          member_count?: number
+          name?: string
+          total_strength?: number
+          treasury_balance?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "political_parties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pov_clip_templates: {
         Row: {
@@ -31982,6 +32272,95 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      world_parliament_motions: {
+        Row: {
+          abstain_votes: number
+          body: string
+          created_at: string
+          id: string
+          motion_type: string
+          no_votes: number
+          payload: Json
+          proposer_mayor_id: string
+          proposer_profile_id: string
+          resolved_at: string | null
+          status: string
+          title: string
+          voting_closes_at: string
+          voting_opens_at: string
+          yes_votes: number
+        }
+        Insert: {
+          abstain_votes?: number
+          body: string
+          created_at?: string
+          id?: string
+          motion_type: string
+          no_votes?: number
+          payload?: Json
+          proposer_mayor_id: string
+          proposer_profile_id: string
+          resolved_at?: string | null
+          status?: string
+          title: string
+          voting_closes_at?: string
+          voting_opens_at?: string
+          yes_votes?: number
+        }
+        Update: {
+          abstain_votes?: number
+          body?: string
+          created_at?: string
+          id?: string
+          motion_type?: string
+          no_votes?: number
+          payload?: Json
+          proposer_mayor_id?: string
+          proposer_profile_id?: string
+          resolved_at?: string | null
+          status?: string
+          title?: string
+          voting_closes_at?: string
+          voting_opens_at?: string
+          yes_votes?: number
+        }
+        Relationships: []
+      }
+      world_parliament_votes: {
+        Row: {
+          id: string
+          mayor_id: string
+          motion_id: string
+          vote: string
+          voted_at: string
+          voter_profile_id: string
+        }
+        Insert: {
+          id?: string
+          mayor_id: string
+          motion_id: string
+          vote: string
+          voted_at?: string
+          voter_profile_id: string
+        }
+        Update: {
+          id?: string
+          mayor_id?: string
+          motion_id?: string
+          vote?: string
+          voted_at?: string
+          voter_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_parliament_votes_motion_id_fkey"
+            columns: ["motion_id"]
+            isOneToOne: false
+            referencedRelation: "world_parliament_motions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       youtube_channels: {
         Row: {
