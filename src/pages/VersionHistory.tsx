@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.226",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Party Campaigns dashboard: a new 'Campaigns' tab on the Political Party page aggregates every candidate the party has endorsed across all active and completed elections, showing live ranking, total votes (player + endorsement boost), city, year, voting deadline, and the party's official endorsement statement." },
+      { type: 'feature', description: "Summary cards on the Campaigns tab display active campaign count, how many endorsed candidates are currently leading their race, and the total endorsement-derived votes the party has contributed across all campaigns." },
+      { type: 'improvement', description: "Each campaign row links directly to its city election page and visually highlights leading candidates with a 'Leading' badge and primary ring, giving party leadership a single command-center view of their political reach." },
+    ],
+  },
+  {
     version: "1.1.225",
     date: "2026-04-17",
     changes: [
