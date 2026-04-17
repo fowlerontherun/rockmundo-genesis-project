@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.217",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Player Profile now shows a 'Nominate for Mayor' action whenever the viewed player's home city has an open nomination or campaign election — one click tables a nomination that another player can second." },
+    ],
+  },
+  {
     version: "1.1.216",
     date: "2026-04-17",
     changes: [

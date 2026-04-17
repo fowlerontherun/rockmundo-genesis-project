@@ -19,6 +19,7 @@ import {
   Crown, Shield, Flame, Clock, TrendingUp, Users, UserPlus, UserMinus, Send
 } from "lucide-react";
 import { format } from "date-fns";
+import { NominateButton } from "@/components/elections/NominateButton";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -124,6 +125,25 @@ export default function PlayerProfile() {
       return data?.map((m: any) => m.bands).filter(Boolean) || [];
     },
     enabled: !!currentUser?.user_id,
+  });
+
+  // Open election in this player's current city (for nominating them)
+  const { data: openElection } = useQuery({
+    queryKey: ["open-election-for-nominee", (profile as any)?.current_city_id],
+    queryFn: async () => {
+      const cityId = (profile as any)?.current_city_id;
+      if (!cityId) return null;
+      const { data } = await supabase
+        .from("city_elections")
+        .select("id, status")
+        .eq("city_id", cityId)
+        .in("status", ["nomination", "campaign"] as any)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!(profile as any)?.current_city_id,
   });
 
   // Send friend request
@@ -311,6 +331,15 @@ export default function PlayerProfile() {
                       <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}>
                         <UserMinus className="h-4 w-4 mr-1" /> Remove Friend
                       </Button>
+                    )}
+
+                    {/* Nominate for Mayor */}
+                    {openElection?.id && currentUser?.id !== playerId && (
+                      <NominateButton
+                        electionId={openElection.id}
+                        nomineeProfileId={playerId!}
+                        nomineeName={profile.display_name || profile.username}
+                      />
                     )}
 
                     {/* Invite to band */}
