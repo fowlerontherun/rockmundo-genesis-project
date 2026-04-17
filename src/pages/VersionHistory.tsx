@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.234",
+    date: "2026-04-17",
+    changes: [
+      { type: 'improvement', description: "Education → Books skill filter is now a compact dropdown instead of a long list of skill chips, keeping the library tidy as more skill categories (politics, instruments, etc.) are added." },
+    ],
+  },
+  {
     version: "1.1.233",
     date: "2026-04-17",
     changes: [

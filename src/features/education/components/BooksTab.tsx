@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Loader2, Search, X, Filter } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -151,28 +152,19 @@ export const BooksTab = () => {
             className="pl-9"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedSkill === "all" ? "default" : "outline"}
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => setSelectedSkill("all")}
-          >
-            <Filter className="h-3.5 w-3.5" />
-            All Skills
-          </Button>
-          {skillCategories.map((cat) => (
-            <Button
-              key={cat}
-              variant={selectedSkill === cat ? "default" : "outline"}
-              size="sm"
-              className="text-xs"
-              onClick={() => setSelectedSkill(cat)}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
+        <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+          <SelectTrigger className="w-full sm:w-[260px]">
+            <SelectValue placeholder="Filter by skill" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Skills</SelectItem>
+            {skillCategories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {hasActiveFilters && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Active filters:</span>
