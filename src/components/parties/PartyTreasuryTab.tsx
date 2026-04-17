@@ -12,7 +12,7 @@ import { useMyParty } from "@/hooks/useParties";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export function PartyTreasuryTab({ party }: { party: PoliticalParty }) {
-  const { activeProfile } = useActiveProfile();
+  const { profile } = useActiveProfile();
   const { data: myParty } = useMyParty();
   const donate = useDonateToParty();
   const { data: donations } = usePartyDonations(party.id);
@@ -21,7 +21,7 @@ export function PartyTreasuryTab({ party }: { party: PoliticalParty }) {
   const [note, setNote] = useState("");
 
   const isMember = myParty?.party_id === party.id;
-  const myCash = activeProfile?.cash ?? 0;
+  const myCash = profile?.cash ?? 0;
 
   return (
     <div className="space-y-4">
