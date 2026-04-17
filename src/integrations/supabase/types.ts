@@ -17893,6 +17893,64 @@ export type Database = {
           },
         ]
       }
+      party_manifestos: {
+        Row: {
+          created_at: string
+          created_by_profile_id: string
+          details: string | null
+          id: string
+          party_id: string
+          position: string
+          position_order: number
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile_id: string
+          details?: string | null
+          id?: string
+          party_id: string
+          position: string
+          position_order?: number
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_profile_id?: string
+          details?: string | null
+          id?: string
+          party_id?: string
+          position?: string
+          position_order?: number
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_manifestos_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_manifestos_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_manifestos_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_memberships: {
         Row: {
           id: string

@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.227",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Party Manifestos: political parties can now publish a structured policy platform of up to 12 'planks', each with a topic (Taxes, Nightlife, Drug Policy, Culture, Venues, Housing, Safety, Education, Tourism, Industry, Environment), a one-line position, and optional rationale. New `party_manifestos` table is world-readable; only founders and officers can create, edit, or delete planks via RLS policies." },
+      { type: 'feature', description: "New 'Manifesto' tab on the Political Party page lists every published plank with topic badges and details. Party leadership sees inline add/delete controls and a live plank counter; non-leaders see a clean read-only platform view." },
+      { type: 'improvement', description: "Manifestos give voters a concrete comparison tool when choosing between endorsed candidates — separate from the high-level 'Core Beliefs' set during party founding." },
+    ],
+  },
+  {
     version: "1.1.226",
     date: "2026-04-17",
     changes: [
