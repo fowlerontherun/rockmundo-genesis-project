@@ -189,13 +189,15 @@ export const calculateTotalStipend = (
 ): { baseSxp: number; baseAp: number; bonusSxp: number; bonusAp: number; totalSxp: number; totalAp: number } => {
   const { sxp: bonusSxp, ap: bonusAp } = calculateStreakBonus(streak, config);
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
-  
+  const rawTotalSxp = config.daily_stipend_sxp + bonusSxp;
+  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, rawTotalSxp);
+
   return {
     baseSxp: config.daily_stipend_sxp,
     baseAp: scaledBaseAp,
     bonusSxp,
     bonusAp,
-    totalSxp: config.daily_stipend_sxp + bonusSxp,
+    totalSxp,
     totalAp: scaledBaseAp + bonusAp,
   };
 };
