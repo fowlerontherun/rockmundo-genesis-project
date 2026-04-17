@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.230",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Politics tile group added to the Career & Business hub: new tiles for Political Parties, Party Standings, and Politics Career give players direct entry points into the political ecosystem from the main hub instead of having to navigate via deep links." },
+    ],
+  },
+  {
     version: "1.1.229",
     date: "2026-04-17",
     changes: [
