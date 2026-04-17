@@ -26,6 +26,9 @@ import { OtherBandsGigOutcomes } from "@/components/news/OtherBandsGigOutcomes";
 import { MerchSalesNews } from "@/components/news/MerchSalesNews";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
 import { EarningsNews } from "@/components/news/EarningsNews";
+import { ElectionCoverage } from "@/components/news/ElectionCoverage";
+import { ParliamentDigest } from "@/components/news/ParliamentDigest";
+import { PartyPowerRankings } from "@/components/news/PartyPowerRankings";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
@@ -197,6 +200,9 @@ export default function TodaysNewsPage() {
           <GossipColumn />
           <TrendingHashtags />
           <MilestoneNews />
+          <ElectionCoverage />
+          <ParliamentDigest />
+          <PartyPowerRankings />
           <ClassifiedAds />
         </div>
       </div>
