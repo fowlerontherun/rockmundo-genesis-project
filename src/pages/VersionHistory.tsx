@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.228",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Manifesto-aware candidate cards: the endorsement badge on every candidate card is now clickable and opens a 'Platforms backing this candidate' dialog showing the full published manifesto of every endorsing party — topic by topic, position by position." },
+      { type: 'improvement', description: "Voters can now make informed decisions by reading the actual policy planks behind every endorsement instead of relying on party names alone. Parties without a published manifesto are clearly flagged inside the dialog so leadership has a visible incentive to publish their platform." },
+      { type: 'improvement', description: "New `CandidateManifestoDialog` component fetches manifestos in a single batched query keyed by the candidate's endorsing party set, keeping the election page snappy even when a candidate has many endorsements." },
+    ],
+  },
+  {
     version: "1.1.227",
     date: "2026-04-17",
     changes: [

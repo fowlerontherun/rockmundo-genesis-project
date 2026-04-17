@@ -174,6 +174,14 @@ export function CandidateCard({
           </div>
         )}
       </CardContent>
+
+      <CandidateManifestoDialog
+        open={manifestoOpen}
+        onOpenChange={setManifestoOpen}
+        candidateName={stageName}
+        partyIds={partyIds}
+        partyNameMap={partyNameMap}
+      />
     </Card>
   );
 }
