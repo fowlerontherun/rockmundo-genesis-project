@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { Trophy, Vote, Megaphone, ExternalLink, TrendingUp, Award } from "lucide-react";
 import { format } from "date-fns";
 import { usePartyCampaigns } from "@/hooks/usePartyCampaigns";
@@ -65,7 +64,7 @@ export function PartyCampaignsTab({ partyId }: Props) {
           <CardContent className="py-4">
             <p className="text-xs text-muted-foreground">Currently leading</p>
             <p className="text-2xl font-bold flex items-center gap-1">
-              <Trophy className="h-5 w-5 text-yellow-500" />
+              <Trophy className="h-5 w-5 text-warning" />
               {leading}
             </p>
           </CardContent>
