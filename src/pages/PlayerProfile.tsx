@@ -333,6 +333,15 @@ export default function PlayerProfile() {
                       </Button>
                     )}
 
+                    {/* Nominate for Mayor */}
+                    {openElection?.id && currentUser?.id !== playerId && (
+                      <NominateButton
+                        electionId={openElection.id}
+                        nomineeProfileId={playerId!}
+                        nomineeName={profile.display_name || profile.username}
+                      />
+                    )}
+
                     {/* Invite to band */}
                     {myBands && myBands.length > 0 && (
                       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
