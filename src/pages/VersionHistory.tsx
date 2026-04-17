@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.219",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Party Standings page (/political-party/standings) — global leaderboards across four axes: Strength, Mayors Held, Members, and Treasury. Each card ranks every active party with colour-coded medal badges (gold/silver/bronze) and clicks through to the party hub." },
+      { type: 'improvement', description: "Political Party page now exposes a 'View Standings' / 'Standings' button in both the founder/member view and the join view, making cross-party comparisons one click away." },
+    ],
+  },
+  {
     version: "1.1.218",
     date: "2026-04-17",
     changes: [
