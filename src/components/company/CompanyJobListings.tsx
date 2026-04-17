@@ -92,13 +92,12 @@ export function CompanyJobListings({ companyId, companyName, headquartersCityId 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["company-jobs", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("jobs")
+      const { data, error } = await (supabase.from("jobs") as any)
         .select("*, cities:city_id(name, country)")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as any[];
     },
   });
 
