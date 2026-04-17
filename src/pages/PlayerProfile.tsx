@@ -137,7 +137,7 @@ export default function PlayerProfile() {
         .from("city_elections")
         .select("id, status")
         .eq("city_id", cityId)
-        .in("status", ["nomination", "campaign"])
+        .in("status", ["nomination", "campaign"] as any)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
