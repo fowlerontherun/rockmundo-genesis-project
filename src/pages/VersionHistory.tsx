@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.220",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Candidate-only Campaign Spending panel surfaced on the City Election page: registered candidates can log spend per category (ads / rallies / staff / media / merch) directly, with the entry immediately reflected in the public Campaign Trail spend log and the candidate's running total." },
+      { type: 'improvement', description: "CityElection page wires the existing CampaignSpendDialog component into the candidate workflow, completing the spend → effect → reach loop." },
+    ],
+  },
+  {
     version: "1.1.219",
     date: "2026-04-17",
     changes: [
