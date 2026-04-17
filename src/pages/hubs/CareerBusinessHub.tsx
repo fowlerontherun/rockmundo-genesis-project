@@ -37,6 +37,14 @@ export default function CareerBusinessHub() {
             { icon: ShoppingCart, labelKey: "nav.merchandise", path: "/merchandise", imagePrompt: "A merch table at a concert with t-shirts, hats, posters, and fans browsing" },
           ],
         },
+        {
+          label: "Politics",
+          tiles: [
+            { icon: Flag, labelKey: "Political Parties", path: "/political-party", tileImageKey: "political-party", imagePrompt: "A grand political party headquarters with colorful flags, podium, and supporters waving banners" },
+            { icon: Trophy, labelKey: "Party Standings", path: "/political-party/standings", tileImageKey: "party-standings", imagePrompt: "A leaderboard showing political party rankings with medals, vote counts, and party logos" },
+            { icon: Vote, labelKey: "Politics Career", path: "/politics-career", tileImageKey: "politics-career", imagePrompt: "A politician at a podium giving a campaign speech with cameras and an enthusiastic crowd" },
+          ],
+        },
       ]}
     />
   );
