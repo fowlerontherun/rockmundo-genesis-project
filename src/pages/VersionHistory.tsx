@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.231",
+    date: "2026-04-17",
+    changes: [
+      { type: 'fix', description: "Lifestyle tab on the Dashboard was stuck on a loading skeleton for accounts with multiple characters. The `player_behavior_settings` table had a UNIQUE constraint on `user_id` only, so the auto-insert of default settings for a second character failed with a duplicate-key error and the query never resolved. Replaced the constraint with UNIQUE on `profile_id` so each character now gets its own lifestyle settings." },
+    ],
+  },
+  {
     version: "1.1.230",
     date: "2026-04-17",
     changes: [
