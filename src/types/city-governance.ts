@@ -69,6 +69,7 @@ export interface CityCandidate {
   campaign_budget: number;
   endorsements: string[];
   vote_count: number;
+  endorsement_bonus_votes?: number;
   status: CandidateStatus;
   registered_at: string;
   created_at: string;

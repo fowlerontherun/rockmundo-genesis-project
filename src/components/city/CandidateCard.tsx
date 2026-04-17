@@ -97,11 +97,38 @@ export function CandidateCard({
               </p>
             )}
 
-            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {candidate.vote_count} votes
-              </span>
+            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="flex items-center gap-1 cursor-help">
+                      <Users className="h-3 w-3" />
+                      <span className="font-semibold text-foreground">
+                        {candidate.vote_count + (candidate.endorsement_bonus_votes ?? 0)}
+                      </span>{" "}
+                      votes
+                      {(candidate.endorsement_bonus_votes ?? 0) > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+                          +{candidate.endorsement_bonus_votes} boost
+                        </Badge>
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">
+                      <span className="font-semibold">{candidate.vote_count}</span> player votes
+                    </p>
+                    {(candidate.endorsement_bonus_votes ?? 0) > 0 && (
+                      <p className="text-xs">
+                        <span className="font-semibold text-primary">
+                          +{candidate.endorsement_bonus_votes}
+                        </span>{" "}
+                        from party endorsements
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span>Fame: {fame}</span>
             </div>
           </div>

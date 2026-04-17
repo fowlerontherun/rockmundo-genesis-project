@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.225",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Endorsement Vote Boost: candidates endorsed by political parties now receive a transparent vote bonus equal to roughly half of each backing party's membership (capped at +250 per party). A new `endorsement_bonus_votes` column on candidates is auto-recomputed by trigger on every endorsement insert/update/delete and backfilled for existing endorsements." },
+      { type: 'improvement', description: "Candidate cards now display the combined total (player votes + endorsement boost) with a `+N boost` badge whenever a candidate has party backing. Hovering reveals a breakdown of raw player votes vs. endorsement-derived votes so the source of every advantage is visible to all players." },
+    ],
+  },
+  {
     version: "1.1.224",
     date: "2026-04-17",
     changes: [
