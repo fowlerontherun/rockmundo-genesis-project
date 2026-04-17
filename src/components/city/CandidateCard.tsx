@@ -67,7 +67,11 @@ export function CandidateCard({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-border bg-muted/40 text-[11px] cursor-help">
+                      <button
+                        type="button"
+                        onClick={() => setManifestoOpen(true)}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-border bg-muted/40 hover:bg-muted text-[11px] transition-colors cursor-pointer"
+                      >
                         <Award className="h-3 w-3 text-primary" />
                         {myEndorsements.length}
                         <span className="flex items-center gap-0.5 ml-0.5">
@@ -79,10 +83,10 @@ export function CandidateCard({
                             />
                           ))}
                         </span>
-                      </span>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p className="text-xs font-semibold mb-1">Endorsed by:</p>
+                      <p className="text-xs font-semibold mb-1">Click to view platforms · endorsed by:</p>
                       <ul className="text-xs space-y-0.5">
                         {myEndorsements.map((e) => (
                           <li key={e.id} className="flex items-center gap-1.5">
