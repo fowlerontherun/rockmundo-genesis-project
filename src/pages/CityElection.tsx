@@ -211,6 +211,9 @@ export default function CityElection() {
         </CardContent>
       </Card>
 
+      {/* Public Promise Tracker — visible whenever there's a sitting mayor */}
+      {mayor && cityId && <MayorPromiseTracker cityId={cityId} compact />}
+
       {/* User Status Alerts */}
       {profileId && (
         <div className="space-y-3">
