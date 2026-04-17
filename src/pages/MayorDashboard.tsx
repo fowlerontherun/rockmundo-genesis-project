@@ -187,7 +187,7 @@ export default function MayorDashboard() {
         </div>
         
         {mayor && (
-          <div className="text-right">
+          <div className="text-right space-y-2">
             <Badge variant="outline" className="mb-1">
               <TrendingUp className="h-3 w-3 mr-1" />
               {mayor.approval_rating || 50}% Approval
@@ -195,6 +195,11 @@ export default function MayorDashboard() {
             <div className="text-xs text-muted-foreground">
               {mayor.policies_enacted || 0} policies enacted
             </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/world-parliament">
+                <Landmark className="h-3 w-3 mr-1" /> World Parliament
+              </Link>
+            </Button>
           </div>
         )}
       </div>

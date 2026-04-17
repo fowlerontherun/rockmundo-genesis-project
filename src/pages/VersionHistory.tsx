@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.215",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "World Parliament expansion: new edge functions `pay-mayor-salaries` (weekly cron-driven mayor payouts with audit trail) and `tally-parliament-motions` (auto-closes expired motions, applies passed mayor-pay changes within configured bounds)." },
+      { type: 'feature', description: "City Election page now surfaces a Campaign Trail section showing every candidate's published article and a per-candidate spend log (categories: ads / rallies / staff / media / merch)." },
+      { type: 'feature', description: "Mayor Pay tab in the World Parliament gains a 'Propose New Salary' quick action that tables a fully-formed `mayor_pay` motion clamped to the configured bounds." },
+      { type: 'improvement', description: "Navigation: added World Parliament tile to the World hub and a Politics Career tile to the Career hub. Mayor Dashboard header now links directly to the Parliament floor." },
+      { type: 'improvement', description: "New CampaignTrail and QuickPayProposal components keep election + parliament workflows discoverable without leaving the relevant page." },
+    ],
+  },
+  {
     version: "1.1.214",
     date: "2026-04-17",
     changes: [

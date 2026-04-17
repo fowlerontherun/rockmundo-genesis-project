@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Trophy } from "lucide-react";
 
 export default function CareerHub() {
   return (
@@ -18,7 +18,9 @@ export default function CareerHub() {
         { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard", imagePrompt: "A desk covered with contract offers, pen, and decision-making documents" },
         { icon: Building, labelKey: "nav.venues", path: "/venues", imagePrompt: "A concert venue exterior with marquee sign showing tonight's performance" },
         { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career", imagePrompt: "A music producer at a mixing console with headphones, creating beats in a studio" },
+        { icon: Trophy, labelKey: "Politics Career", path: "/politics-career", imagePrompt: "A politician at a podium with party banners, microphones, and supporters in the background" },
       ]}
     />
   );
 }
+
