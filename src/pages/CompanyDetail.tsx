@@ -23,6 +23,7 @@ import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog"
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
+import { CompanyJobListings } from "@/components/company/CompanyJobListings";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
@@ -198,6 +199,10 @@ const CompanyDetailContent = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
+          <TabsTrigger value="jobs">
+            <Briefcase className="h-3.5 w-3.5 mr-1" />
+            Jobs
+          </TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
           <TabsTrigger value="contracts">
@@ -375,6 +380,14 @@ const CompanyDetailContent = () => {
         </TabsContent>
 
 
+
+        <TabsContent value="jobs" className="space-y-4">
+          <CompanyJobListings
+            companyId={company.id}
+            companyName={company.name}
+            headquartersCityId={company.headquarters_city_id}
+          />
+        </TabsContent>
 
         <TabsContent value="shares" className="space-y-4">
           <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === userId} />

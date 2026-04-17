@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.235",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Players who own companies can now post their own job listings from the new 'Jobs' tab on the Company page. Listings include title, category, city, hourly wage, work days, shift hours, headcount cap and minimum player level. They appear in the global Employment marketplace alongside system jobs and players apply, clock in and earn from them exactly the same way." },
+      { type: 'feature', description: "Company owners can pause, reactivate or delete their job listings at any time from the same panel." },
+      { type: 'improvement', description: "Confirmed and surfaced existing 'Cancel' control on band recruitment ads in the Band Settings → Member Advertisements panel — leaders can pull a posted ad without waiting for it to expire." },
+    ],
+  },
+  {
     version: "1.1.234",
     date: "2026-04-17",
     changes: [
