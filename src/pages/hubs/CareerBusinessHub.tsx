@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart, Heart, Landmark } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Store, ShoppingCart, Heart, Landmark, Flag, Vote, Trophy } from "lucide-react";
 
 export default function CareerBusinessHub() {
   return (
