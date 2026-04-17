@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flag, Users, LogOut } from "lucide-react";
+import { Flag, Users, LogOut, Trophy } from "lucide-react";
 import { useMyParty, useParties, useLeaveParty } from "@/hooks/useParties";
 import { PartyCreateWizard } from "@/components/parties/PartyCreateWizard";
 import { PartyMembersTab } from "@/components/parties/PartyMembersTab";
@@ -29,9 +30,14 @@ export default function PoliticalPartyPage() {
               <p className="text-sm text-muted-foreground">{party.description}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => leave.mutate()} disabled={leave.isPending}>
-            <LogOut className="h-4 w-4 mr-1" /> Leave Party
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild size="sm">
+              <Link to="/political-party/standings"><Trophy className="h-4 w-4 mr-1" /> Standings</Link>
+            </Button>
+            <Button variant="outline" onClick={() => leave.mutate()} disabled={leave.isPending} size="sm">
+              <LogOut className="h-4 w-4 mr-1" /> Leave Party
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -65,12 +71,17 @@ export default function PoliticalPartyPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Flag className="h-8 w-8 text-primary" />
-          Political Parties
-        </h1>
-        <p className="text-sm text-muted-foreground">Found a new party or join an existing movement.</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Flag className="h-8 w-8 text-primary" />
+            Political Parties
+          </h1>
+          <p className="text-sm text-muted-foreground">Found a new party or join an existing movement.</p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link to="/political-party/standings"><Trophy className="h-4 w-4 mr-1" /> View Standings</Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
