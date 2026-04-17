@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.232",
+    date: "2026-04-17",
+    changes: [
+      { type: 'fix', description: "Donating to a political party treasury failed with a false 'Insufficient cash' error. The `donate_to_party` SQL function was comparing the donor's wallet (stored in dollars) directly against the donation amount (in cents), so a $1,000 donation looked like it required $100,000. The function now correctly converts cents to dollars before checking the balance and deducting from the wallet, while the treasury and donation history continue to be stored in cents." },
+    ],
+  },
+  {
     version: "1.1.231",
     date: "2026-04-17",
     changes: [
