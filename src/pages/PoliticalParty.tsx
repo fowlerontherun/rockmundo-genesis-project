@@ -9,6 +9,7 @@ import { useMyParty, useParties, useLeaveParty } from "@/hooks/useParties";
 import { PartyCreateWizard } from "@/components/parties/PartyCreateWizard";
 import { PartyMembersTab } from "@/components/parties/PartyMembersTab";
 import { PartyTreasuryTab } from "@/components/parties/PartyTreasuryTab";
+import { PartyCampaignsTab } from "@/components/parties/PartyCampaignsTab";
 import { JoinPartyDialog } from "@/components/parties/JoinPartyDialog";
 import type { PoliticalParty } from "@/types/political-party";
 
@@ -60,9 +61,11 @@ export default function PoliticalPartyPage() {
         <Tabs defaultValue="members">
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="treasury">Treasury</TabsTrigger>
           </TabsList>
           <TabsContent value="members"><PartyMembersTab partyId={party.id} /></TabsContent>
+          <TabsContent value="campaigns"><PartyCampaignsTab partyId={party.id} /></TabsContent>
           <TabsContent value="treasury"><PartyTreasuryTab party={party} /></TabsContent>
         </Tabs>
       </div>
