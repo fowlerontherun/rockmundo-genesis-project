@@ -83,11 +83,6 @@ export function PartyCampaignsTab({ partyId }: Props) {
       {/* Campaign list */}
       <div className="space-y-2">
         {rows.map((row) => {
-          const sharePct =
-            row.total_votes > 0
-              ? Math.min(100, Math.round((row.total_votes / Math.max(1, row.total_votes)) * 100))
-              : 0;
-          // Compute share against the leader to show momentum
           const isActive = row.election_status === "voting" || row.election_status === "nomination";
 
           return (
