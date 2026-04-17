@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Vote } from "lucide-react";
 import { useMayorPaySettings, useMyMayorSalaryHistory } from "@/hooks/useParliament";
 import { formatDistanceToNow } from "date-fns";
+import { QuickPayProposal } from "./QuickPayProposal";
 
 export function MayorPayPanel() {
   const { data: settings } = useMayorPaySettings();
@@ -11,10 +12,13 @@ export function MayorPayPanel() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <DollarSign className="h-5 w-5" />
-            Current Weekly Mayor Salary
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <DollarSign className="h-5 w-5" />
+              Current Weekly Mayor Salary
+            </CardTitle>
+            <QuickPayProposal />
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-bold">
