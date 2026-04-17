@@ -132,17 +132,18 @@ export function useProposeMotion() {
 
       const closesAt = new Date(Date.now() + (input.voting_days ?? 3) * 86_400_000).toISOString();
 
+      const insertData: any = {
+        proposer_mayor_id: seat.id,
+        proposer_profile_id: profileId,
+        title: input.title,
+        body: input.body,
+        motion_type: input.motion_type,
+        payload: input.payload ?? {},
+        voting_closes_at: closesAt,
+      };
       const { data, error } = await supabase
         .from("world_parliament_motions")
-        .insert({
-          proposer_mayor_id: seat.id,
-          proposer_profile_id: profileId,
-          title: input.title,
-          body: input.body,
-          motion_type: input.motion_type,
-          payload: input.payload ?? {},
-          voting_closes_at: closesAt,
-        })
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;

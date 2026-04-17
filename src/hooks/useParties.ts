@@ -54,10 +54,10 @@ export function usePartyMembers(partyId: string | undefined) {
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, stage_name, avatar_url, fame")
+        .select("id, display_name, username, avatar_url, fame")
         .in("id", profileIds);
 
-      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       return memberships.map((m) => ({ ...m, profile: profileMap.get(m.profile_id) ?? null }));
     },
     enabled: !!partyId,
