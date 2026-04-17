@@ -26,6 +26,7 @@ import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistra
 import { CampaignTrail } from "@/components/elections/CampaignTrail";
 import { CampaignSpendDialog } from "@/components/elections/CampaignSpendDialog";
 import { PartyEndorsementPanel } from "@/components/elections/PartyEndorsementPanel";
+import { useElectionEndorsements } from "@/hooks/usePartyEndorsements";
 import { useState } from "react";
 import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
@@ -55,6 +56,7 @@ export default function CityElection() {
   const { data: candidates, isLoading: candidatesLoading } = useElectionCandidates(election?.id);
   const { data: userVote } = useUserVote(election?.id);
   const { data: mayor } = useCityMayor(cityId);
+  const { data: endorsements } = useElectionEndorsements(election?.id);
   const castVote = useCastVote();
 
   // Check if user is already a candidate
@@ -299,6 +301,7 @@ export default function CityElection() {
                   hasVoted={hasVoted}
                   isVotingPhase={isVotingPhase}
                   userVotedFor={userVote?.candidate_id === candidate.id}
+                  endorsements={endorsements ?? []}
                 />
               ))}
             </div>

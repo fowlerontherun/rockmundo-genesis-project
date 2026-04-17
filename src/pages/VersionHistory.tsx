@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.224",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Candidate cards now display party endorsement badges inline: an Award icon, endorsement count, and a row of colour dots showing each backing party. Hovering reveals a tooltip listing every endorsing party by name and colour, so voters can see political alignments at a glance during the voting phase." },
+      { type: 'improvement', description: "CityElection page fetches endorsements once and threads them down to each CandidateCard, keeping the existing PartyEndorsementPanel as the management surface and the cards as the at-a-glance public read." },
+    ],
+  },
+  {
     version: "1.1.223",
     date: "2026-04-17",
     changes: [
