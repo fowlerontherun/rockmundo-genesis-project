@@ -17775,6 +17775,55 @@ export type Database = {
         }
         Relationships: []
       }
+      party_donations: {
+        Row: {
+          amount: number
+          created_at: string
+          donor_profile_id: string
+          id: string
+          note: string | null
+          party_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          donor_profile_id: string
+          id?: string
+          note?: string | null
+          party_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          donor_profile_id?: string
+          id?: string
+          note?: string | null
+          party_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_donations_donor_profile_id_fkey"
+            columns: ["donor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_donations_donor_profile_id_fkey"
+            columns: ["donor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_donations_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_memberships: {
         Row: {
           id: string
@@ -32912,6 +32961,10 @@ export type Database = {
           p_profile_id: string
         }
         Returns: boolean
+      }
+      donate_to_party: {
+        Args: { p_amount: number; p_note?: string; p_party_id: string }
+        Returns: string
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
