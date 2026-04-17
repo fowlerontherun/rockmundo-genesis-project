@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.229",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Mayor Promise Tracker: a transparent accountability dashboard that compares every campaign promise from a mayor's winning candidacy (`proposed_policies`) against the current `city_laws`, scoring each promise as Fulfilled, In Progress, Broken, or Untouched. Aggregate fulfillment % is shown alongside per-policy detail with current vs. promised values." },
+      { type: 'feature', description: "Promise Tracker is wired into two surfaces: a full editable view as a new 'Promises' tab on the Mayor Dashboard (so the mayor can see exactly which planks are dragging their score down), and a compact public summary on the City Election page beneath the current mayor info (so voters can audit a sitting mayor before the next election)." },
+      { type: 'improvement', description: "The tracker reconstructs the term-start baseline from `city_law_history` to detect 'broken' promises (laws moved opposite to the promised direction) and computes proportional progress for numeric fields like tax rates and curfew hours, so partial movement toward a target is properly credited." },
+    ],
+  },
+  {
     version: "1.1.228",
     date: "2026-04-17",
     changes: [

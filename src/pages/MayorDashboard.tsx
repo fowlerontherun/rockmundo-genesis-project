@@ -41,6 +41,7 @@ import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
 import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
 import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
 import { MayorPoliticsSidebar } from "@/components/city/MayorPoliticsSidebar";
+import { MayorPromiseTracker } from "@/components/city/MayorPromiseTracker";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { CityLaws, DrugPolicyStatus } from "@/types/city-governance";
@@ -251,15 +252,20 @@ export default function MayorDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="budget" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
               <TabsTrigger value="budget"><Wallet className="h-3 w-3 mr-1" />Budget</TabsTrigger>
               <TabsTrigger value="projects"><Hammer className="h-3 w-3 mr-1" />Projects</TabsTrigger>
               <TabsTrigger value="pr"><Megaphone className="h-3 w-3 mr-1" />PR</TabsTrigger>
+              <TabsTrigger value="promises"><CheckCircle2 className="h-3 w-3 mr-1" />Promises</TabsTrigger>
               <TabsTrigger value="taxes">Taxes</TabsTrigger>
               <TabsTrigger value="regulations">Regulations</TabsTrigger>
               <TabsTrigger value="music">Music</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="promises" className="mt-6">
+              {cityId && <MayorPromiseTracker cityId={cityId} />}
+            </TabsContent>
 
             <TabsContent value="budget" className="mt-6">
               {cityId && (

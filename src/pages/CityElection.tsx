@@ -27,6 +27,7 @@ import { CampaignTrail } from "@/components/elections/CampaignTrail";
 import { CampaignSpendDialog } from "@/components/elections/CampaignSpendDialog";
 import { PartyEndorsementPanel } from "@/components/elections/PartyEndorsementPanel";
 import { useElectionEndorsements } from "@/hooks/usePartyEndorsements";
+import { MayorPromiseTracker } from "@/components/city/MayorPromiseTracker";
 import { useState } from "react";
 import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
@@ -209,6 +210,9 @@ export default function CityElection() {
           )}
         </CardContent>
       </Card>
+
+      {/* Public Promise Tracker — visible whenever there's a sitting mayor */}
+      {mayor && cityId && <MayorPromiseTracker cityId={cityId} compact />}
 
       {/* User Status Alerts */}
       {profileId && (
