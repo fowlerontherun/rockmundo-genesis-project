@@ -26,6 +26,7 @@ import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistra
 import { CampaignTrail } from "@/components/elections/CampaignTrail";
 import { CampaignSpendDialog } from "@/components/elections/CampaignSpendDialog";
 import { PartyEndorsementPanel } from "@/components/elections/PartyEndorsementPanel";
+import { useElectionEndorsements } from "@/hooks/usePartyEndorsements";
 import { useState } from "react";
 import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
