@@ -1,0 +1,2 @@
+ALTER TABLE public.player_behavior_settings DROP CONSTRAINT IF EXISTS unique_user_behavior_settings;
+ALTER TABLE public.player_behavior_settings ADD CONSTRAINT unique_profile_behavior_settings UNIQUE (profile_id);
