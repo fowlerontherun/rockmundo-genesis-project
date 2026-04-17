@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.233",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Politics learning content seeded across the entire education system: 21 skill books (Talk Like TED, Getting to Yes, Diplomacy, The Federalist Papers, Never Split the Difference, The Prince, On China and more), 17 YouTube videos from beginner explainers to advanced master classes, 18 university courses at Cambridge University (full politics curriculum from Rhetoric & Oratory I to Grand Strategy & Statecraft), Manchester University, Chicago Conservatory of Arts and London Conservatory of Arts, and 14 politics mentors across the UK (London, Manchester, Edinburgh) and USA (Washington DC, New York, Chicago, Los Angeles) — including a Westminster speech coach to three Prime Ministers, a former Cabinet Secretary, a Beltway campaign architect, a former National Security Advisor, a five-term Chicago alderman, and a civil-rights oratory master. Players now have a real progression path through Public Speaking, Governance, Negotiation, Diplomacy, Campaign Strategy, Oratory and Statecraft." },
+    ],
+  },
+  {
     version: "1.1.232",
     date: "2026-04-17",
     changes: [
