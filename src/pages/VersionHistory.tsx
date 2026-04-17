@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.223",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "Party Endorsements: political parties can now formally endorse a candidate in any city election. New `party_endorsements` table + atomic `endorse_candidate` / `revoke_endorsement` RPCs enforce that only founders/officers may endorse, and that each party endorses at most one candidate per election (switching is allowed)." },
+      { type: 'feature', description: "PartyEndorsementPanel added to the City Election page: shows a public list of which party is backing whom (with colour dot, candidate badge, and optional public statement) and exposes inline endorse / switch / revoke controls to party leadership." },
+      { type: 'improvement', description: "Endorsements are world-readable; mutations route exclusively through SECURITY DEFINER RPCs so RLS stays locked-down." },
+    ],
+  },
+  {
     version: "1.1.222",
     date: "2026-04-17",
     changes: [
