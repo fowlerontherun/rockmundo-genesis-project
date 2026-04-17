@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.216",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "World Parliament automation live: pg_cron now invokes `tally-parliament-motions` every 15 minutes (auto-resolves expired motions and applies passed mayor-pay changes) and `pay-mayor-salaries` every Monday 03:00 UTC (weekly mayor payouts with audit trail)." },
+      { type: 'improvement', description: "Background scheduler keeps elections, parliament, and mayor pay self-running without any manual triggers." },
+    ],
+  },
+  {
     version: "1.1.215",
     date: "2026-04-17",
     changes: [
