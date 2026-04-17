@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.214",
+    date: "2026-04-17",
+    changes: [
+      { type: 'feature', description: "World Parliament & Political Parties: 8 new tables (political_parties, party_memberships, world_parliament_motions/votes, mayor_pay_settings, mayor_salary_payments, campaign_expenditures, election_news_articles) with RLS, vote-tally + party-strength triggers, plus 2 new Politics skills (professional_party_management, master_oratory)." },
+      { type: 'feature', description: "New routes: /world-parliament (Floor / Mayor Pay / Members / History tabs with mayor-only motion proposing & voting), /political-party (found or join with unique-colour validation, 5 beliefs, treasury, members), /politics-career (10-tier ladder + expansion roadmap)." },
+      { type: 'feature', description: "Elections overhaul: nomination + seconding columns added to city_candidates; candidate campaign-article publishing surfaced in TodaysNews; per-category campaign expenditure logging." },
+      { type: 'feature', description: "TodaysNews sidebar gains Election Coverage, Parliament Digest, and Party Power Rankings widgets." },
+      { type: 'improvement', description: "New hooks (useParties, useParliament, useElectionCampaign, useNominations) and types (parliament.ts, political-party.ts)." },
+    ],
+  },
+  {
     version: "1.1.213",
     date: "2026-04-17",
     changes: [

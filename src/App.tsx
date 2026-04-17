@@ -269,6 +269,9 @@ const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
+const WorldParliament = lazyWithRetry(() => import("./pages/WorldParliament"));
+const PoliticalParty = lazyWithRetry(() => import("./pages/PoliticalParty"));
+const PoliticsCareer = lazyWithRetry(() => import("./pages/PoliticsCareer"));
 const Lottery = lazyWithRetry(() => import("./pages/Lottery"));
 const Housing = lazyWithRetry(() => import("./pages/Housing"));
 const PersonalVehicles = lazyWithRetry(() => import("./pages/PersonalVehicles"));
@@ -379,6 +382,9 @@ function App() {
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="cities/:cityId/election" element={<CityElection />} />
                     <Route path="cities/:cityId/mayor-dashboard" element={<MayorDashboard />} />
+                    <Route path="world-parliament" element={<WorldParliament />} />
+                    <Route path="political-party" element={<PoliticalParty />} />
+                    <Route path="politics-career" element={<PoliticsCareer />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="band-vehicles" element={<BandVehicles />} />
