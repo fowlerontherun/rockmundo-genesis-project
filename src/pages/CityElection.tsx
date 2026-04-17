@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { CandidateCard } from "@/components/city/CandidateCard";
 import { CandidateRegistrationDialog } from "@/components/city/CandidateRegistrationDialog";
 import { CampaignTrail } from "@/components/elections/CampaignTrail";
+import { CampaignSpendDialog } from "@/components/elections/CampaignSpendDialog";
 import { useState } from "react";
 import { ELECTION_PHASE_DESCRIPTIONS } from "@/types/city-governance";
 
@@ -317,6 +318,13 @@ export default function CityElection() {
         <CampaignTrail
           electionId={election.id}
           candidateId={candidates?.find((c) => c.profile_id === profileId)?.id}
+        />
+      )}
+
+      {/* Candidate-only: log new campaign spend */}
+      {election && isCandidate && (
+        <CampaignSpendDialog
+          candidateId={candidates!.find((c) => c.profile_id === profileId)!.id}
         />
       )}
 
