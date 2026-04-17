@@ -17824,6 +17824,72 @@ export type Database = {
           },
         ]
       }
+      party_endorsements: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          election_id: string
+          endorsed_by_profile_id: string
+          id: string
+          party_id: string
+          statement: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          election_id: string
+          endorsed_by_profile_id: string
+          id?: string
+          party_id: string
+          statement?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          election_id?: string
+          endorsed_by_profile_id?: string
+          id?: string
+          party_id?: string
+          statement?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_endorsements_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_endorsements_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "city_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_endorsements_endorsed_by_profile_id_fkey"
+            columns: ["endorsed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_endorsements_endorsed_by_profile_id_fkey"
+            columns: ["endorsed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_endorsements_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_memberships: {
         Row: {
           id: string
@@ -32966,6 +33032,14 @@ export type Database = {
         Args: { p_amount: number; p_note?: string; p_party_id: string }
         Returns: string
       }
+      endorse_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_party_id: string
+          p_statement?: string
+        }
+        Returns: string
+      }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       generate_pending_company_taxes: {
@@ -33091,6 +33165,10 @@ export type Database = {
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       resurrect_character: {
         Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      revoke_endorsement: {
+        Args: { p_election_id: string; p_party_id: string }
         Returns: undefined
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
