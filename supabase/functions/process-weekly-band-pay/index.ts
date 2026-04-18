@@ -15,11 +15,11 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get all active bands with weekly_member_pay > 0
+    // Get all active bands with weekly_pay_percent > 0
     const { data: bands, error: bandsError } = await supabase
       .from("bands")
-      .select("id, name, band_balance, weekly_member_pay, leader_id, status")
-      .gt("weekly_member_pay", 0)
+      .select("id, name, band_balance, weekly_pay_percent, leader_id, status")
+      .gt("weekly_pay_percent", 0)
       .in("status", ["active", "hiatus"]);
 
     if (bandsError) throw bandsError;
@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     let bandsPaid = 0;
 
     for (const band of bands ?? []) {
-      const payPerMember = band.weekly_member_pay;
+      const pct = Number(band.weekly_pay_percent ?? 0);
+      const balance = Number(band.band_balance ?? 0);
+
+      if (pct <= 0 || balance <= 0) continue;
 
       // Get real (non-touring) members
       const { data: members, error: membersError } = await supabase
@@ -44,18 +47,19 @@ Deno.serve(async (req) => {
 
       if (!members || members.length === 0) continue;
 
-      const totalCost = payPerMember * members.length;
+      // Compute payroll: pct of balance, split equally
+      const totalPayout = Math.floor((balance * pct) / 100);
+      if (totalPayout <= 0) continue;
 
-      // Check if band can afford it
-      if (band.band_balance < totalCost) {
-        console.log(`Band ${band.name} cannot afford weekly pay: balance=${band.band_balance}, cost=${totalCost}`);
-        continue;
-      }
+      const payPerMember = Math.floor(totalPayout / members.length);
+      if (payPerMember <= 0) continue;
+
+      const actualTotal = payPerMember * members.length;
 
       // Deduct from band balance
       const { error: updateError } = await supabase
         .from("bands")
-        .update({ band_balance: band.band_balance - totalCost })
+        .update({ band_balance: balance - actualTotal })
         .eq("id", band.id);
 
       if (updateError) {
@@ -66,9 +70,9 @@ Deno.serve(async (req) => {
       // Record the band expense
       await supabase.from("band_earnings").insert({
         band_id: band.id,
-        amount: -totalCost,
+        amount: -actualTotal,
         source: "weekly_pay",
-        description: `Weekly payroll: ${formatCurrency(payPerMember)} × ${members.length} members`,
+        description: `Weekly payroll: ${pct}% of balance — ${formatCurrency(payPerMember)} × ${members.length} members`,
         earned_by_user_id: band.leader_id,
       });
 
@@ -76,7 +80,6 @@ Deno.serve(async (req) => {
       for (const member of members) {
         if (!member.profile_id) continue;
 
-        // Add to player's personal cash
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
@@ -90,7 +93,6 @@ Deno.serve(async (req) => {
             .eq("id", member.profile_id);
         }
 
-        // Log activity
         if (member.user_id) {
           await supabase.from("activity_feed").insert({
             user_id: member.user_id,
@@ -102,7 +104,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      totalPaid += totalCost;
+      totalPaid += actualTotal;
       bandsPaid++;
     }
 
@@ -113,7 +115,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Weekly pay error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

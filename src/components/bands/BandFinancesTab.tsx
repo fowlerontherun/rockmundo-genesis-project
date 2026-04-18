@@ -82,7 +82,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const [earnings, setEarnings] = useState<BandEarningRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
-  const [weeklyPay, setWeeklyPay] = useState(0);
+  const [weeklyPayPct, setWeeklyPayPct] = useState(0);
   const [savingPay, setSavingPay] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
 
@@ -109,7 +109,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         const b = bandData as BandRow;
         setBand(b);
         setEarnings((earningData as BandEarningRow[]) ?? []);
-        setWeeklyPay((b as any).weekly_member_pay ?? 0);
+        setWeeklyPayPct(Number((b as any).weekly_pay_percent ?? 0));
         setIsLeader(user?.id === b.leader_id);
         const realMembers = (membersData ?? []).filter(m => !m.is_touring_member);
         setMemberCount(realMembers.length);
@@ -161,20 +161,27 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   }, [aggregated.bySource]);
 
   const handleSaveWeeklyPay = async () => {
+    const clamped = Math.max(0, Math.min(100, weeklyPayPct));
     setSavingPay(true);
     try {
       const { error } = await supabase
         .from("bands")
-        .update({ weekly_member_pay: weeklyPay } as any)
+        .update({ weekly_pay_percent: clamped } as any)
         .eq("id", bandId);
       if (error) throw error;
-      toast({ title: "Weekly Pay Updated", description: `Each member will receive ${formatCurrency(weeklyPay)} every Monday.` });
+      toast({
+        title: "Weekly Pay Updated",
+        description: `${clamped}% of band balance will be paid out each Saturday at 10:00 AM.`,
+      });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setSavingPay(false);
     }
   };
+
+  const projectedTotal = Math.floor((aggregated.balance * Math.max(0, Math.min(100, weeklyPayPct))) / 100);
+  const projectedPerMember = memberCount > 0 ? Math.floor(projectedTotal / memberCount) : 0;
 
   if (loading) {
     return (
@@ -284,7 +291,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <Settings className="h-4 w-4" /> Weekly Member Pay
             </CardTitle>
             <CardDescription>
-              Automatic payroll — every Monday at 9:00 AM
+              Automatic payroll — every Saturday at 10:00 AM. A % of the band balance is split equally between real player members.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -294,32 +301,43 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                 <span className="font-semibold text-foreground">{memberCount}</span>
               </div>
               <div className="flex justify-between">
-                <span>Per member / week:</span>
-                <span className="font-semibold text-foreground">{formatCurrency(weeklyPay)}</span>
+                <span>Configured rate:</span>
+                <span className="font-semibold text-foreground">{weeklyPayPct}% of balance</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Projected total payout:</span>
+                <span className="font-semibold text-foreground">{formatCurrency(projectedTotal)}</span>
               </div>
               <div className="flex justify-between border-t border-border pt-1 mt-1">
-                <span>Total weekly cost:</span>
-                <span className="font-semibold text-foreground">{formatCurrency(weeklyPay * memberCount)}</span>
+                <span>Per member / week:</span>
+                <span className="font-semibold text-foreground">{formatCurrency(projectedPerMember)}</span>
               </div>
             </div>
 
             {isLeader ? (
               <div className="space-y-2">
-                <Label htmlFor="weekly-pay" className="text-xs">Pay per member ($)</Label>
+                <Label htmlFor="weekly-pay" className="text-xs">% of band balance per week (0–100)</Label>
                 <div className="flex gap-2">
                   <Input
                     id="weekly-pay"
                     type="number"
                     min={0}
-                    max={100000}
-                    value={weeklyPay}
-                    onChange={(e) => setWeeklyPay(Math.max(0, parseInt(e.target.value) || 0))}
+                    max={100}
+                    step={0.5}
+                    value={weeklyPayPct}
+                    onChange={(e) =>
+                      setWeeklyPayPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))
+                    }
                     className="h-9"
                   />
                   <Button onClick={handleSaveWeeklyPay} disabled={savingPay} size="sm" className="h-9 px-4">
                     {savingPay ? "Saving…" : "Save"}
                   </Button>
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Example: 10% of a {formatCurrency(aggregated.balance)} balance ={" "}
+                  {formatCurrency(Math.floor(aggregated.balance * 0.1))} split between members.
+                </p>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic">Only the band leader can change this setting.</p>
