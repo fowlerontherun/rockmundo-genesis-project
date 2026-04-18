@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.238",
+    date: "2026-04-18",
+    changes: [
+      { type: 'improvement', description: "Band weekly member pay is now configurable as a percentage (0–100%) of the band balance instead of a fixed dollar amount. Each week the configured % is taken from the band's balance and split equally between all real (non-touring) player members. The Finances tab shows live previews of the projected total payout and per-member share." },
+      { type: 'improvement', description: "Weekly band payroll cron rescheduled from Mondays at 9:00 AM to Saturdays at 10:00 AM UTC, matching the requested payday." },
+    ],
+  },
+  {
     version: "1.1.237",
     date: "2026-04-18",
     changes: [
