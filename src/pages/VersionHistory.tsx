@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.240",
+    date: "2026-04-18",
+    changes: [
+      { type: 'feature', description: "Added a Finances tab to the Band Manager (/band) page. Band leaders can now access the weekly member pay % configuration and the band finance overview directly from the main band page, instead of only from the standalone band management route." },
+    ],
+  },
+  {
     version: "1.1.239",
     date: "2026-04-18",
     changes: [

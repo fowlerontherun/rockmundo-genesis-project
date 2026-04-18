@@ -16,6 +16,7 @@ import { AddTouringMember } from '@/components/band/AddTouringMember';
 import { ChemistryDisplay } from '@/components/band/ChemistryDisplay';
 import { BandChat } from '@/components/band/BandChat';
 import { BandEarnings } from '@/components/band/BandEarnings';
+import { BandFinancesTab } from '@/components/bands/BandFinancesTab';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
@@ -309,6 +310,7 @@ export default function BandManager() {
             </TabsTrigger>
             <TabsTrigger value="chat" className="text-xs sm:text-sm">Chat</TabsTrigger>
             <TabsTrigger value="earnings" className="text-xs sm:text-sm">Earnings</TabsTrigger>
+            <TabsTrigger value="finances" className="text-xs sm:text-sm">Finances</TabsTrigger>
             <TabsTrigger value="chemistry" className="text-xs sm:text-sm">Chemistry</TabsTrigger>
             <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
           </TabsList>
@@ -393,6 +395,10 @@ export default function BandManager() {
 
         <TabsContent value="earnings" className="space-y-4">
           <BandEarnings bandId={selectedBand.id} isLeader={isLeader} />
+        </TabsContent>
+
+        <TabsContent value="finances" className="space-y-4">
+          <BandFinancesTab bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="chemistry" className="space-y-4">
