@@ -12550,6 +12550,7 @@ export type Database = {
           base_fame_impact: number | null
           category: string
           city_id: string | null
+          company_id: string | null
           company_name: string
           created_at: string | null
           current_employees: number | null
@@ -12563,6 +12564,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           max_employees: number | null
+          posted_by_user_id: string | null
           required_level: number | null
           required_skills: Json | null
           start_time: string
@@ -12574,6 +12576,7 @@ export type Database = {
           base_fame_impact?: number | null
           category: string
           city_id?: string | null
+          company_id?: string | null
           company_name: string
           created_at?: string | null
           current_employees?: number | null
@@ -12587,6 +12590,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_employees?: number | null
+          posted_by_user_id?: string | null
           required_level?: number | null
           required_skills?: Json | null
           start_time: string
@@ -12598,6 +12602,7 @@ export type Database = {
           base_fame_impact?: number | null
           category?: string
           city_id?: string | null
+          company_id?: string | null
           company_name?: string
           created_at?: string | null
           current_employees?: number | null
@@ -12611,6 +12616,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_employees?: number | null
+          posted_by_user_id?: string | null
           required_level?: number | null
           required_skills?: Json | null
           start_time?: string
@@ -12624,6 +12630,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
