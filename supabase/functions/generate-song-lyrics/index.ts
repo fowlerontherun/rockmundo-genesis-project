@@ -499,10 +499,19 @@ ${noteParts.join('\n')}`;
       }
     }
     
-    // Include additional notes from the user if provided
-    if (existingLyrics && !existingLyrics.includes('[') && existingLyrics.length < 500) {
-      // This looks like additional notes rather than lyrics
-      songNotesContext += `\n\nAdditional songwriter notes:\n${existingLyrics}`;
+    // Detect whether the user provided actual lyric content vs. brief notes.
+    // Treat as lyrics if: contains section brackets, has multiple lines, or is reasonably long.
+    const trimmedExisting = existingLyrics.trim();
+    const lineCount = trimmedExisting ? trimmedExisting.split(/\n/).filter(l => l.trim()).length : 0;
+    const looksLikeLyrics = trimmedExisting.length > 0 && (
+      trimmedExisting.includes('[') ||
+      lineCount >= 2 ||
+      trimmedExisting.length >= 80
+    );
+    const looksLikeNotes = trimmedExisting.length > 0 && !looksLikeLyrics;
+
+    if (looksLikeNotes) {
+      songNotesContext += `\n\nAdditional songwriter notes:\n${trimmedExisting}`;
     }
 
     const prompt = `You are an elite professional songwriter creating COMPLETELY UNIQUE, ORIGINAL lyrics. This song must be DISTINCTLY DIFFERENT from anything you've written before.
@@ -576,7 +585,23 @@ CRITICAL LENGTH CONSTRAINT: The final lyrics MUST be under 550 characters total 
 This is a HARD LIMIT for the audio generation engine. Keep verses to 4 lines max and choruses to 4 lines max.
 Prioritize impact over length - every word must count.
 
-${existingLyrics ? `\n═══════════════════════════════════════════════════════════════\nEXISTING LYRICS TO BUILD ON/COMPLEMENT:\n═══════════════════════════════════════════════════════════════\n${existingLyrics}\n\nBuild on these themes and style while completing the song.` : ''}
+${looksLikeLyrics ? `\n═══════════════════════════════════════════════════════════════
+🚨 PLAYER-WRITTEN LYRICS (MUST PRESERVE & EXTEND — TOP PRIORITY)
+═══════════════════════════════════════════════════════════════
+The songwriter has already written the following lyrics. You MUST:
+1. KEEP these exact lines verbatim wherever they appear (do NOT paraphrase or replace them).
+2. Place them in appropriate sections (Verse / Chorus / Bridge) using the structure above.
+3. Write ONLY the missing sections needed to complete the song.
+4. Match the player's tone, vocabulary, rhyme scheme, and imagery — your additions must feel like the SAME writer wrote them.
+5. If the player's lyrics already include section labels like [Verse 1], honor those labels exactly.
+6. Do NOT exceed the 550-character total limit — trim your NEW additions, never the player's lines.
+
+PLAYER'S LYRICS (verbatim — preserve every word):
+"""
+${trimmedExisting}
+"""
+
+This rule OVERRIDES the "uniqueness" and "banned clichés" rules for the player's own lines — never alter them.` : ''}
 
 NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
 
@@ -606,9 +631,11 @@ You NEVER use clichéd phrases. Every song you write is completely different fro
 You follow the requested structure precisely and format with clear section labels in brackets.
 You match the specified perspective, tone, and narrative style exactly.
 
-CRITICAL: Your lyrics output MUST be under 550 characters total. This is a hard technical limit.
-Keep it concise - 2-3 sections maximum. Quality over quantity.
-Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.` 
+CRITICAL RULES (in priority order):
+1. If the user has provided "PLAYER-WRITTEN LYRICS", you MUST include those lines verbatim in the final output. Never rewrite, paraphrase, or omit them. Build the rest of the song around them.
+2. Your lyrics output MUST be under 550 characters total. This is a hard technical limit. Trim YOUR additions, never the player's lines.
+3. Keep it concise - 2-3 sections maximum. Quality over quantity.
+4. Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.`
           },
           { role: 'user', content: prompt }
         ],

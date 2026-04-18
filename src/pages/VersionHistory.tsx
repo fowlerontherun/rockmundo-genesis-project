@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.236",
+    date: "2026-04-18",
+    changes: [
+      { type: 'fix', description: "AI songwriting now properly preserves and builds on lyrics the player has already written. Player-supplied verses/choruses are kept verbatim and the AI only fills in the missing sections, matching the player's tone and rhyme scheme. Previously the AI would treat existing lyrics as loose inspiration and rewrite the song from scratch." },
+    ],
+  },
+  {
     version: "1.1.235",
     date: "2026-04-17",
     changes: [
