@@ -499,10 +499,19 @@ ${noteParts.join('\n')}`;
       }
     }
     
-    // Include additional notes from the user if provided
-    if (existingLyrics && !existingLyrics.includes('[') && existingLyrics.length < 500) {
-      // This looks like additional notes rather than lyrics
-      songNotesContext += `\n\nAdditional songwriter notes:\n${existingLyrics}`;
+    // Detect whether the user provided actual lyric content vs. brief notes.
+    // Treat as lyrics if: contains section brackets, has multiple lines, or is reasonably long.
+    const trimmedExisting = existingLyrics.trim();
+    const lineCount = trimmedExisting ? trimmedExisting.split(/\n/).filter(l => l.trim()).length : 0;
+    const looksLikeLyrics = trimmedExisting.length > 0 && (
+      trimmedExisting.includes('[') ||
+      lineCount >= 2 ||
+      trimmedExisting.length >= 80
+    );
+    const looksLikeNotes = trimmedExisting.length > 0 && !looksLikeLyrics;
+
+    if (looksLikeNotes) {
+      songNotesContext += `\n\nAdditional songwriter notes:\n${trimmedExisting}`;
     }
 
     const prompt = `You are an elite professional songwriter creating COMPLETELY UNIQUE, ORIGINAL lyrics. This song must be DISTINCTLY DIFFERENT from anything you've written before.
