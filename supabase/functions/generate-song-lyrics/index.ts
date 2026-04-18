@@ -585,7 +585,23 @@ CRITICAL LENGTH CONSTRAINT: The final lyrics MUST be under 550 characters total 
 This is a HARD LIMIT for the audio generation engine. Keep verses to 4 lines max and choruses to 4 lines max.
 Prioritize impact over length - every word must count.
 
-${existingLyrics ? `\n═══════════════════════════════════════════════════════════════\nEXISTING LYRICS TO BUILD ON/COMPLEMENT:\n═══════════════════════════════════════════════════════════════\n${existingLyrics}\n\nBuild on these themes and style while completing the song.` : ''}
+${looksLikeLyrics ? `\n═══════════════════════════════════════════════════════════════
+🚨 PLAYER-WRITTEN LYRICS (MUST PRESERVE & EXTEND — TOP PRIORITY)
+═══════════════════════════════════════════════════════════════
+The songwriter has already written the following lyrics. You MUST:
+1. KEEP these exact lines verbatim wherever they appear (do NOT paraphrase or replace them).
+2. Place them in appropriate sections (Verse / Chorus / Bridge) using the structure above.
+3. Write ONLY the missing sections needed to complete the song.
+4. Match the player's tone, vocabulary, rhyme scheme, and imagery — your additions must feel like the SAME writer wrote them.
+5. If the player's lyrics already include section labels like [Verse 1], honor those labels exactly.
+6. Do NOT exceed the 550-character total limit — trim your NEW additions, never the player's lines.
+
+PLAYER'S LYRICS (verbatim — preserve every word):
+"""
+${trimmedExisting}
+"""
+
+This rule OVERRIDES the "uniqueness" and "banned clichés" rules for the player's own lines — never alter them.` : ''}
 
 NOW CREATE COMPLETELY UNIQUE, MEMORABLE LYRICS THAT COULD ONLY BE THIS SONG:`;
 
