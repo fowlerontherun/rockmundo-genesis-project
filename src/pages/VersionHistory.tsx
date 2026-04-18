@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.237",
+    date: "2026-04-18",
+    changes: [
+      { type: 'fix', description: "Fixed database error when booking a mentor session. The mentor session and experience ledger inserts were sending the character profile id into the user_id column, which violated the foreign key to auth.users and caused the booking to fail. Both inserts now correctly use the authenticated user id alongside the profile id." },
+    ],
+  },
+  {
     version: "1.1.236",
     date: "2026-04-18",
     changes: [

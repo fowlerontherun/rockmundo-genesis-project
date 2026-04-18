@@ -9,7 +9,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export function useMentorSessions() {
   const { toast } = useToast();
-  const { profile: activeProfile, profileId } = useActiveProfile();
+  const { profile: activeProfile, profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const profile = activeProfile ? {
@@ -185,11 +185,13 @@ export function useMentorSessions() {
       const baseSkillValue = Math.floor(xpEarned * mentor.skill_gain_ratio);
       const { xp: skillValueGained } = applyLearningMultiplier(baseSkillValue, mentor.focus_skill, attrs);
 
+      if (!userId) throw new Error("Not signed in");
+
       // Create session
       const { error: sessionError } = await supabase
         .from("player_mentor_sessions")
         .insert({
-          user_id: profileId!,
+          user_id: userId,
           profile_id: profile.id,
           mentor_id: mentorId,
           xp_earned: xpEarned,
@@ -270,7 +272,7 @@ export function useMentorSessions() {
 
       // Log to experience ledger
       const { error: ledgerError } = await supabase.from("experience_ledger").insert({
-        user_id: profileId!,
+        user_id: userId,
         profile_id: profile.id,
         activity_type: "mentor_session",
         xp_amount: xpEarned,
