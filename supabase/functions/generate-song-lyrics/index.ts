@@ -631,9 +631,11 @@ You NEVER use clichéd phrases. Every song you write is completely different fro
 You follow the requested structure precisely and format with clear section labels in brackets.
 You match the specified perspective, tone, and narrative style exactly.
 
-CRITICAL: Your lyrics output MUST be under 550 characters total. This is a hard technical limit.
-Keep it concise - 2-3 sections maximum. Quality over quantity.
-Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.` 
+CRITICAL RULES (in priority order):
+1. If the user has provided "PLAYER-WRITTEN LYRICS", you MUST include those lines verbatim in the final output. Never rewrite, paraphrase, or omit them. Build the rest of the song around them.
+2. Your lyrics output MUST be under 550 characters total. This is a hard technical limit. Trim YOUR additions, never the player's lines.
+3. Keep it concise - 2-3 sections maximum. Quality over quantity.
+4. Do NOT include any preamble, explanation, or commentary - ONLY the lyrics with section markers.`
           },
           { role: 'user', content: prompt }
         ],
