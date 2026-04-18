@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.239",
+    date: "2026-04-18",
+    changes: [
+      { type: 'fix', description: "Fixed Band Finances → Weekly Member Pay being read-only for band leaders. The leader check was comparing the auth user id against bands.leader_id, which actually stores the character profile id, so the input and Save button never appeared. The check now uses the active profile id, allowing leaders to set and save the weekly pay percentage." },
+    ],
+  },
+  {
     version: "1.1.238",
     date: "2026-04-18",
     changes: [

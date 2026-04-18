@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   DollarSign, TrendingUp, PiggyBank, Receipt, ArrowUpRight, ArrowDownRight,
   Music, Mic, ShoppingBag, Radio, Settings, Users, Calendar,
@@ -77,6 +78,7 @@ function formatDateTime(value: string) {
 
 export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const { toast } = useToast();
+  const { profileId } = useActiveProfile();
   const [loading, setLoading] = useState(true);
   const [band, setBand] = useState<BandRow | null>(null);
   const [earnings, setEarnings] = useState<BandEarningRow[]>([]);
@@ -93,8 +95,6 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setLoading(true);
       setError(null);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-
         const [{ data: bandData, error: bandError }, { data: earningData, error: earningError }, { data: membersData }] = await Promise.all([
           supabase.from("bands").select("*").eq("id", bandId).single(),
           supabase.from("band_earnings").select("*").eq("band_id", bandId).order("created_at", { ascending: false }).limit(50),
@@ -110,7 +110,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         setBand(b);
         setEarnings((earningData as BandEarningRow[]) ?? []);
         setWeeklyPayPct(Number((b as any).weekly_pay_percent ?? 0));
-        setIsLeader(user?.id === b.leader_id);
+        setIsLeader(!!profileId && profileId === b.leader_id);
         const realMembers = (membersData ?? []).filter(m => !m.is_touring_member);
         setMemberCount(realMembers.length);
       } catch (caught) {
@@ -127,7 +127,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
     void fetchFinances();
     return () => { isMounted = false; };
-  }, [bandId]);
+  }, [bandId, profileId]);
 
   const aggregated = useMemo(() => {
     const balance = band?.band_balance ?? 0;
