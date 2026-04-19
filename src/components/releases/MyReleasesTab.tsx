@@ -448,6 +448,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             key={release.id} 
             release={release} 
             financials={salesFinancials?.[release.id]}
+            labelCutPct={getEffectiveLabelCutPct(release)}
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
@@ -518,6 +519,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 interface ReleaseCardProps {
   release: any;
   financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number };
+  labelCutPct?: number;
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
@@ -528,7 +530,7 @@ interface ReleaseCardProps {
   onParty?: () => void;
 }
 
-function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -578,9 +580,17 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
           <div className="flex items-center gap-3 text-[11px] flex-wrap">
             <span className="text-muted-foreground">Cost: <strong>${(release.total_cost || 0).toLocaleString()}</strong></span>
             <span className="text-green-600">Rev: <strong>${(release.total_revenue || 0).toLocaleString()}</strong></span>
+            {labelCutPct > 0 && (
+              <span className="text-purple-500">
+                Label: <strong>${Math.round((financials?.netRevenue || 0) * labelCutPct).toLocaleString()}</strong>
+                <span className="text-muted-foreground"> ({Math.round(labelCutPct * 100)}%)</span>
+              </span>
+            )}
             {(() => {
-              const profit = (release.total_revenue || 0) - (release.total_cost || 0) - (financials?.taxPaid || 0) - (financials?.distributionFees || 0);
-              return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString()}</strong></span>;
+              const labelShare = (financials?.netRevenue || 0) * labelCutPct;
+              const bandNet = (financials?.netRevenue || 0) - labelShare;
+              const profit = bandNet - (release.total_cost || 0);
+              return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></span>;
             })()}
             {release.total_streams > 0 && <span className="text-muted-foreground"><Play className="h-3 w-3 inline mr-0.5" />{release.total_streams.toLocaleString()}</span>}
             {release.units_sold > 0 && <span className="text-muted-foreground">Sold: {release.units_sold.toLocaleString()}</span>}
