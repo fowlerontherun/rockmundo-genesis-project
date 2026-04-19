@@ -85,7 +85,7 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch sales data - aggregate format breakdown from release_sales (source of truth)
+  // Fetch sales data — full per-format breakdown with tax/distribution/label cut/band net
   const { data: salesData, isLoading: loadingSales } = useQuery({
     queryKey: ["release-sales-analytics", release?.id],
     queryFn: async () => {
@@ -93,60 +93,63 @@ export function ReleaseAnalyticsDialog({
 
       const formatIds = release.release_formats?.map((f: any) => f.id) || [];
 
-      // Use release table totals as the authoritative top-line numbers
       const totalUnits = release.total_units_sold || 0;
       const totalRevenue = release.total_revenue || 0;
 
-      // Aggregate per-format units & revenue from release_sales
-      // total_amount is stored in cents -> convert to dollars
-      const formatStatsMap: Record<string, { units: number; revenue: number }> = {};
+      type FormatRow = {
+        units: number;
+        gross: number;
+        tax: number;
+        dist: number;
+        net: number;
+      };
+      const formatStatsMap: Record<string, FormatRow> = {};
 
       if (formatIds.length > 0) {
         const { data: allSales } = await supabase
           .from("release_sales")
-          .select("quantity_sold, total_amount, release_formats!inner(format_type)")
+          .select("quantity_sold, total_amount, sales_tax_amount, distribution_fee, net_revenue, release_formats!inner(format_type)")
           .in("release_format_id", formatIds);
 
         (allSales || []).forEach((s: any) => {
           const ft = s.release_formats?.format_type || "unknown";
-          if (!formatStatsMap[ft]) formatStatsMap[ft] = { units: 0, revenue: 0 };
+          if (!formatStatsMap[ft]) formatStatsMap[ft] = { units: 0, gross: 0, tax: 0, dist: 0, net: 0 };
           formatStatsMap[ft].units += s.quantity_sold || 0;
-          formatStatsMap[ft].revenue += (s.total_amount || 0) / 100;
+          formatStatsMap[ft].gross += (s.total_amount || 0) / 100;
+          formatStatsMap[ft].tax += (s.sales_tax_amount || 0) / 100;
+          formatStatsMap[ft].dist += (s.distribution_fee || 0) / 100;
+          formatStatsMap[ft].net += (s.net_revenue || 0) / 100;
         });
       }
 
-      // Fallback: if release_sales has no rows yet but the release has per-format unit columns,
-      // synthesize revenue from units * retail_price.
+      // Synthesize from release-level columns if release_sales is empty
       const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
       for (const ft of formatTypes) {
         const colUnits = release[`${ft}_sales`] || 0;
         if (!formatStatsMap[ft] && colUnits > 0) {
           const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
           const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
+          const gross = Math.round(colUnits * pricePerUnit * 100) / 100;
+          // Estimate using the standard rates
+          const distRate = ft === "digital" ? 0.30 : ft === "cd" ? 0.20 : 0.15;
+          const tax = Math.round(gross * 0.10 * 100) / 100;
+          const dist = Math.round(gross * distRate * 100) / 100;
           formatStatsMap[ft] = {
             units: colUnits,
-            revenue: Math.round(colUnits * pricePerUnit * 100) / 100,
+            gross,
+            tax,
+            dist,
+            net: gross - tax - dist,
           };
         }
       }
 
-      // If we still have $0 revenue across all formats but the release has totalRevenue,
-      // distribute totalRevenue proportionally by units so the breakdown reflects reality.
-      const aggUnits = Object.values(formatStatsMap).reduce((s, f) => s + f.units, 0);
-      const aggRevenue = Object.values(formatStatsMap).reduce((s, f) => s + f.revenue, 0);
-      if (aggRevenue === 0 && totalRevenue > 0 && aggUnits > 0) {
-        Object.keys(formatStatsMap).forEach((ft) => {
-          const share = formatStatsMap[ft].units / aggUnits;
-          formatStatsMap[ft].revenue = Math.round(totalRevenue * share * 100) / 100;
-        });
-      }
-
       const formatStats = Object.entries(formatStatsMap)
         .filter(([, v]) => v.units > 0)
-        .map(([format, v]) => ({ format, units: v.units, revenue: v.revenue }))
-        .sort((a, b) => b.revenue - a.revenue);
+        .map(([fmt, v]) => ({ format: fmt, ...v }))
+        .sort((a, b) => b.gross - a.gross);
 
-      // Fetch only recent sales for display
+      // Recent sales for display
       const { data: recentSales } = await supabase
         .from("release_sales")
         .select("*, release_formats!inner(format_type)")
@@ -164,26 +167,51 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch financial summary - use release table total_revenue as source of truth
-  // and estimate tax/distribution from the standard rates
-  const { data: financialData, isLoading: loadingFinancials } = useQuery({
-    queryKey: ["release-financials", release?.id],
+  // Resolve label cut % for this release (matches edge function logic)
+  const { data: labelInfo } = useQuery({
+    queryKey: ["release-label-cut", release?.id],
     queryFn: async () => {
-      if (!release?.id) return null;
-      
-      // Use release.total_revenue as the authoritative gross revenue
-      const grossRevenue = release.total_revenue || 0;
-      // Standard rates from the pump function
-      const salesTaxRate = 0.10;
-      const distributionRate = 0.30;
-      const taxPaid = Math.round(grossRevenue * salesTaxRate * 100) / 100;
-      const distributionFees = Math.round(grossRevenue * distributionRate * 100) / 100;
-      const netRevenue = grossRevenue - taxPaid - distributionFees;
+      if (!release?.label_contract_id) return { labelCutPct: 0, dealTypeName: null as string | null };
+      const { data: contract } = await supabase
+        .from("artist_label_contracts")
+        .select("royalty_label_pct, royalty_artist_pct, deal_type_id, end_date")
+        .eq("id", release.label_contract_id)
+        .maybeSingle();
+      if (!contract) return { labelCutPct: 0, dealTypeName: null };
 
-      return { grossRevenue, taxPaid, distributionFees, netRevenue };
+      let dealTypeName: string | null = "Standard Deal";
+      if (contract.deal_type_id) {
+        const { data: dt } = await supabase
+          .from("label_deal_types")
+          .select("name")
+          .eq("id", contract.deal_type_id)
+          .maybeSingle();
+        if (dt?.name) dealTypeName = dt.name;
+      }
+
+      const overridePct = release.label_revenue_share_pct;
+      const basePct = overridePct ?? contract.royalty_label_pct ?? (100 - (contract.royalty_artist_pct ?? 15));
+      let cut = basePct / 100;
+      if (dealTypeName === "Distribution Deal") cut = Math.min(cut, 0.20);
+      if (dealTypeName === "Licensing Deal" && new Date(contract.end_date) < new Date()) cut = 0;
+      return { labelCutPct: cut, dealTypeName };
     },
     enabled: open && !!release?.id,
   });
+
+  // Financial summary computed from per-format breakdown (source of truth: release_sales)
+  const financialData = (() => {
+    if (!salesData) return null;
+    const grossRevenue = salesData.formats.reduce((s, f) => s + f.gross, 0);
+    const taxPaid = salesData.formats.reduce((s, f) => s + f.tax, 0);
+    const distributionFees = salesData.formats.reduce((s, f) => s + f.dist, 0);
+    const netRevenue = salesData.formats.reduce((s, f) => s + f.net, 0);
+    const labelCutPct = labelInfo?.labelCutPct || 0;
+    const labelShare = Math.round(netRevenue * labelCutPct * 100) / 100;
+    const bandNet = netRevenue - labelShare;
+    return { grossRevenue, taxPaid, distributionFees, netRevenue, labelShare, bandNet, labelCutPct };
+  })();
+  const loadingFinancials = loadingSales;
 
   // Fetch chart positions
   const { data: chartData, isLoading: loadingCharts } = useQuery({
