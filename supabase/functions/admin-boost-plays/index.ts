@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
         .from("releases")
         .select(`
           id, band_id, user_id, title,
+          label_contract_id, label_revenue_share_pct,
           release_formats(id, format_type, retail_price, quantity)
         `)
         .eq("id", releaseId)
@@ -211,17 +212,71 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── Deal-aware band/label revenue split (mirrors generate-daily-sales) ──
+      let bandShare = netRevenue;
+      let labelShare = 0;
+      let recoupmentApplied = 0;
+      let labelInfo: { contractId: string; labelId: string; dealTypeName: string } | null = null;
+
+      if (release.band_id && (release as any).label_contract_id) {
+        const { data: contract } = await supabaseAdmin
+          .from("artist_label_contracts")
+          .select("id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, deal_type_id, end_date, status")
+          .eq("id", (release as any).label_contract_id)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (contract) {
+          // Resolve deal type name
+          let dealTypeName = "Standard Deal";
+          if (contract.deal_type_id) {
+            const { data: dt } = await supabaseAdmin
+              .from("label_deal_types")
+              .select("name")
+              .eq("id", contract.deal_type_id)
+              .maybeSingle();
+            if (dt?.name) dealTypeName = dt.name;
+          }
+
+          const overridePct = (release as any).label_revenue_share_pct;
+          let labelCutPct = (overridePct ?? contract.royalty_label_pct ?? (100 - (contract.royalty_artist_pct ?? 15))) / 100;
+
+          // Distribution Deal: cap at 20%
+          if (dealTypeName === "Distribution Deal") {
+            labelCutPct = Math.min(labelCutPct, 0.20);
+          }
+          // Licensing Deal: skip cut after expiry
+          const isLicensingExpired = dealTypeName === "Licensing Deal" && new Date(contract.end_date) < new Date();
+
+          if (labelCutPct > 0 && !isLicensingExpired) {
+            labelShare = Math.round(netRevenue * labelCutPct * 100) / 100;
+            bandShare = Math.round((netRevenue - labelShare) * 100) / 100;
+
+            // Advance recoupment: label keeps share, but tag how much went to recoup
+            const advanceRemaining = Math.max(0, (contract.advance_amount ?? 0) - (contract.recouped_amount ?? 0));
+            if (advanceRemaining > 0) {
+              recoupmentApplied = Math.min(labelShare, advanceRemaining);
+            }
+
+            labelInfo = { contractId: contract.id, labelId: contract.label_id, dealTypeName };
+          }
+        }
+      }
+
       if (release.band_id) {
         const { error: earningsInsertError } = await supabaseAdmin.from("band_earnings").insert({
           band_id: release.band_id,
-          amount: netRevenue,
+          amount: bandShare,
           source: "release_sales",
-          description: `Admin pumped ${amount} ${saleType} sales`,
+          description: `Admin pumped ${amount} ${saleType} sales${labelInfo ? ` (after label cut)` : ''}`,
           metadata: {
             format: saleType,
             units: amount,
             gross_revenue: grossRevenue,
             net_revenue: netRevenue,
+            band_share: bandShare,
+            label_share: labelShare,
+            label_contract_id: labelInfo?.contractId ?? null,
             admin_pump: true,
             pumped_by: user.id,
           },
@@ -249,7 +304,7 @@ Deno.serve(async (req) => {
 
         const { error: bandUpdateError } = await supabaseAdmin
           .from("bands")
-          .update({ band_balance: (band.band_balance || 0) + netRevenue })
+          .update({ band_balance: (band.band_balance || 0) + bandShare })
           .eq("id", release.band_id);
 
         if (bandUpdateError) {
@@ -257,6 +312,43 @@ Deno.serve(async (req) => {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
+      }
+
+      // Credit label balance + log transaction + update recoupment
+      if (labelInfo && labelShare > 0) {
+        const { data: lbl } = await supabaseAdmin
+          .from("labels")
+          .select("balance")
+          .eq("id", labelInfo.labelId)
+          .single();
+        if (lbl) {
+          await supabaseAdmin
+            .from("labels")
+            .update({ balance: (lbl.balance || 0) + Math.round(labelShare) })
+            .eq("id", labelInfo.labelId);
+        }
+
+        await supabaseAdmin.from("label_financial_transactions").insert({
+          label_id: labelInfo.labelId,
+          transaction_type: "revenue",
+          amount: Math.round(labelShare),
+          description: `Admin pumped sales royalty (${saleType}, ${amount} units)${recoupmentApplied > 0 ? ` — includes $${Math.round(recoupmentApplied)} advance recoupment` : ''}`,
+          related_contract_id: labelInfo.contractId,
+        });
+
+        if (recoupmentApplied > 0) {
+          const { data: c } = await supabaseAdmin
+            .from("artist_label_contracts")
+            .select("recouped_amount")
+            .eq("id", labelInfo.contractId)
+            .single();
+          if (c) {
+            await supabaseAdmin
+              .from("artist_label_contracts")
+              .update({ recouped_amount: (c.recouped_amount || 0) + Math.round(recoupmentApplied) })
+              .eq("id", labelInfo.contractId);
+          }
         }
       }
 
@@ -283,6 +375,10 @@ Deno.serve(async (req) => {
         net_revenue: netRevenue,
         sales_tax: salesTaxAmount,
         distribution_fee: distributionFee,
+        band_share: bandShare,
+        label_share: labelShare,
+        recoupment_applied: recoupmentApplied,
+        label_contract_id: labelInfo?.contractId ?? null,
         updated_release: updatedRelease,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
