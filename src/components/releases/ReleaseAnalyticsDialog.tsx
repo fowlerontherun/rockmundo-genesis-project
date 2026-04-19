@@ -374,7 +374,10 @@ export function ReleaseAnalyticsDialog({
               const tax = financialData?.taxPaid || 0;
               const dist = financialData?.distributionFees || 0;
               const net = financialData?.netRevenue || 0;
-              const profit = net - mfgCost;
+              const labelShare = financialData?.labelShare || 0;
+              const bandNet = financialData?.bandNet || net;
+              const labelCutPct = financialData?.labelCutPct || 0;
+              const profit = bandNet - mfgCost;
               const totalTracks = release.release_songs?.length || 1;
 
               return (
@@ -400,14 +403,24 @@ export function ReleaseAnalyticsDialog({
                         <span className="text-muted-foreground">Net Revenue</span>
                         <span className="font-medium">${net.toLocaleString()}</span>
                       </div>
+                      {labelCutPct > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Label Share ({Math.round(labelCutPct * 100)}%)</span>
+                          <span className="font-medium text-purple-500">-${labelShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm border-t border-border pt-2">
+                        <span className="text-muted-foreground">Band Net Revenue</span>
+                        <span className="font-medium">${bandNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                      </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Manufacturing Cost</span>
                         <span className="font-medium text-orange-500">-${mfgCost.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm border-t border-border pt-2 font-bold">
-                        <span>{profit >= 0 ? 'Profit' : 'Loss'}</span>
+                        <span>{profit >= 0 ? 'Band Profit' : 'Band Loss'}</span>
                         <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>
-                          ${profit.toLocaleString()}
+                          ${profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
                       </div>
                     </CardContent>
@@ -513,19 +526,32 @@ export function ReleaseAnalyticsDialog({
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">By Format</CardTitle>
+                    <CardTitle className="text-sm">By Format (Gross → Band Net)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {salesData.formats.map((fmt, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                          <span className="font-medium capitalize">{fmt.format}</span>
-                          <div className="flex gap-4 text-sm">
-                            <span>{fmt.units.toLocaleString()} units</span>
-                            <span className="text-green-600">${fmt.revenue.toLocaleString()}</span>
+                      {salesData.formats.map((fmt, idx) => {
+                        const labelCutPct = labelInfo?.labelCutPct || 0;
+                        const labelShare = fmt.net * labelCutPct;
+                        const bandNet = fmt.net - labelShare;
+                        return (
+                          <div key={idx} className="p-2 bg-muted/30 rounded space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium capitalize text-sm">{fmt.format}</span>
+                              <span className="text-xs text-muted-foreground">{fmt.units.toLocaleString()} units</span>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-1 text-[11px]">
+                              <span className="text-green-600">Gross ${fmt.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              <span className="text-orange-500">Tax -${fmt.tax.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              <span className="text-orange-500">Dist -${fmt.dist.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              {labelCutPct > 0 && (
+                                <span className="text-purple-500">Label -${labelShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                              )}
+                              <span className="font-semibold">Band ${bandNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
