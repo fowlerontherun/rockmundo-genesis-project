@@ -328,7 +328,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -350,12 +350,45 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Clock className="h-4 w-4" />
-              <span>Upcoming</span>
+              <DollarSign className="h-4 w-4" />
+              <span>Gross Revenue</span>
             </div>
-            <p className="text-2xl font-bold">{stats.upcoming}</p>
+            <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <DollarSign className="h-4 w-4" />
+              <span>Tax + Dist Fees</span>
+            </div>
+            <p className="text-2xl font-bold text-orange-500">${(totalTaxPaid + totalDistFees).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Tax ${totalTaxPaid.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Dist ${totalDistFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Users className="h-4 w-4" />
+              <span>Label Share</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-500">${totalLabelShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Paid to record labels</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <TrendingUp className="h-4 w-4" />
+              <span>Band Net Profit</span>
+            </div>
+            <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+              ${totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">After tax, dist, label & mfg</p>
+          </CardContent>
+        </Card>
+      </div>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
