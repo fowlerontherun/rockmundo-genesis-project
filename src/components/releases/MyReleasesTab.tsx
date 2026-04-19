@@ -80,6 +80,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         .from("releases")
         .select(`
           *,
+          label_contract_id,
+          label_revenue_share_pct,
           release_songs!release_songs_release_id_fkey(
             song_id,
             is_b_side,
@@ -127,6 +129,59 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   // Fetch aggregated financial data from release_sales
   const releaseIds = releases?.map(r => r.id) || [];
   const formatIds = releases?.flatMap(r => r.release_formats?.map((f: any) => f.id) || []) || [];
+
+  // Fetch label contracts referenced by these releases (for label-cut math)
+  const contractIds = Array.from(
+    new Set((releases || []).map((r: any) => r.label_contract_id).filter(Boolean))
+  );
+
+  const { data: contractMap } = useQuery({
+    queryKey: ["release-label-contracts", contractIds.join(",")],
+    queryFn: async () => {
+      const map: Record<string, { labelCutPct: number; dealTypeName: string; endDate: string }> = {};
+      if (contractIds.length === 0) return map;
+
+      const { data: contracts } = await supabase
+        .from("artist_label_contracts")
+        .select("id, royalty_label_pct, royalty_artist_pct, deal_type_id, end_date")
+        .in("id", contractIds);
+
+      const dealTypeIds = Array.from(
+        new Set((contracts || []).map((c: any) => c.deal_type_id).filter(Boolean))
+      );
+      const dealNameMap: Record<string, string> = {};
+      if (dealTypeIds.length > 0) {
+        const { data: dts } = await supabase
+          .from("label_deal_types")
+          .select("id, name")
+          .in("id", dealTypeIds);
+        (dts || []).forEach((dt: any) => { dealNameMap[dt.id] = dt.name; });
+      }
+
+      (contracts || []).forEach((c: any) => {
+        const labelPct = c.royalty_label_pct ?? (100 - (c.royalty_artist_pct ?? 15));
+        map[c.id] = {
+          labelCutPct: labelPct / 100,
+          dealTypeName: dealNameMap[c.deal_type_id] || "Standard Deal",
+          endDate: c.end_date,
+        };
+      });
+      return map;
+    },
+    enabled: contractIds.length > 0,
+  });
+
+  // Helper: compute the effective label cut % for a release (matches edge function logic)
+  const getEffectiveLabelCutPct = (release: any): number => {
+    if (!release?.label_contract_id) return 0;
+    const contract = contractMap?.[release.label_contract_id];
+    if (!contract) return 0;
+    const overridePct = release.label_revenue_share_pct;
+    let cut = overridePct != null ? overridePct / 100 : contract.labelCutPct;
+    if (contract.dealTypeName === "Distribution Deal") cut = Math.min(cut, 0.20);
+    if (contract.dealTypeName === "Licensing Deal" && new Date(contract.endDate) < new Date()) cut = 0;
+    return cut;
+  };
 
   const { data: salesFinancials } = useQuery({
     queryKey: ["release-sales-financials", releaseIds.join(",")],
@@ -200,7 +255,16 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const totalDistFees = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.distributionFees || 0), 0);
   const totalMfgCost = releases?.reduce((sum, r) => sum + (r.total_cost || 0), 0) || 0;
   const totalGrossRevenue = releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0;
-  const totalProfit = totalGrossRevenue - totalMfgCost - totalTaxPaid - totalDistFees;
+  // Label share: per-release netRevenue × that release's effective label cut %
+  const totalLabelShare = (releases || []).reduce((sum: number, r: any) => {
+    const fin = salesFinancials?.[r.id];
+    if (!fin) return sum;
+    return sum + (fin.netRevenue || 0) * getEffectiveLabelCutPct(r);
+  }, 0);
+  // Net to band = net revenue (after tax & dist) minus label share, then minus mfg cost
+  const totalNetRevenue = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.netRevenue || 0), 0);
+  const totalBandNet = totalNetRevenue - totalLabelShare;
+  const totalProfit = totalBandNet - totalMfgCost;
 
   const stats = {
     total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
