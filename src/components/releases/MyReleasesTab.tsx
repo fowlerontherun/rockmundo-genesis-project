@@ -389,36 +389,6 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           </CardContent>
         </Card>
       </div>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <DollarSign className="h-4 w-4" />
-              <span>Total Revenue</span>
-            </div>
-            <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <DollarSign className="h-4 w-4" />
-              <span>Tax Paid</span>
-            </div>
-            <p className="text-2xl font-bold text-orange-500">${totalTaxPaid.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <TrendingUp className="h-4 w-4" />
-              <span>Net Profit</span>
-            </div>
-            <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-              ${totalProfit.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Search and Filters */}
       <div className="flex flex-wrap gap-3">
