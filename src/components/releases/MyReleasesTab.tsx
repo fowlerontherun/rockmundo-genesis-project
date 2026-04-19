@@ -80,6 +80,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         .from("releases")
         .select(`
           *,
+          label_contract_id,
+          label_revenue_share_pct,
           release_songs!release_songs_release_id_fkey(
             song_id,
             is_b_side,
@@ -127,6 +129,59 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   // Fetch aggregated financial data from release_sales
   const releaseIds = releases?.map(r => r.id) || [];
   const formatIds = releases?.flatMap(r => r.release_formats?.map((f: any) => f.id) || []) || [];
+
+  // Fetch label contracts referenced by these releases (for label-cut math)
+  const contractIds = Array.from(
+    new Set((releases || []).map((r: any) => r.label_contract_id).filter(Boolean))
+  );
+
+  const { data: contractMap } = useQuery({
+    queryKey: ["release-label-contracts", contractIds.join(",")],
+    queryFn: async () => {
+      const map: Record<string, { labelCutPct: number; dealTypeName: string; endDate: string }> = {};
+      if (contractIds.length === 0) return map;
+
+      const { data: contracts } = await supabase
+        .from("artist_label_contracts")
+        .select("id, royalty_label_pct, royalty_artist_pct, deal_type_id, end_date")
+        .in("id", contractIds);
+
+      const dealTypeIds = Array.from(
+        new Set((contracts || []).map((c: any) => c.deal_type_id).filter(Boolean))
+      );
+      const dealNameMap: Record<string, string> = {};
+      if (dealTypeIds.length > 0) {
+        const { data: dts } = await supabase
+          .from("label_deal_types")
+          .select("id, name")
+          .in("id", dealTypeIds);
+        (dts || []).forEach((dt: any) => { dealNameMap[dt.id] = dt.name; });
+      }
+
+      (contracts || []).forEach((c: any) => {
+        const labelPct = c.royalty_label_pct ?? (100 - (c.royalty_artist_pct ?? 15));
+        map[c.id] = {
+          labelCutPct: labelPct / 100,
+          dealTypeName: dealNameMap[c.deal_type_id] || "Standard Deal",
+          endDate: c.end_date,
+        };
+      });
+      return map;
+    },
+    enabled: contractIds.length > 0,
+  });
+
+  // Helper: compute the effective label cut % for a release (matches edge function logic)
+  const getEffectiveLabelCutPct = (release: any): number => {
+    if (!release?.label_contract_id) return 0;
+    const contract = contractMap?.[release.label_contract_id];
+    if (!contract) return 0;
+    const overridePct = release.label_revenue_share_pct;
+    let cut = overridePct != null ? overridePct / 100 : contract.labelCutPct;
+    if (contract.dealTypeName === "Distribution Deal") cut = Math.min(cut, 0.20);
+    if (contract.dealTypeName === "Licensing Deal" && new Date(contract.endDate) < new Date()) cut = 0;
+    return cut;
+  };
 
   const { data: salesFinancials } = useQuery({
     queryKey: ["release-sales-financials", releaseIds.join(",")],
@@ -200,7 +255,16 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const totalDistFees = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.distributionFees || 0), 0);
   const totalMfgCost = releases?.reduce((sum, r) => sum + (r.total_cost || 0), 0) || 0;
   const totalGrossRevenue = releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0;
-  const totalProfit = totalGrossRevenue - totalMfgCost - totalTaxPaid - totalDistFees;
+  // Label share: per-release netRevenue × that release's effective label cut %
+  const totalLabelShare = (releases || []).reduce((sum: number, r: any) => {
+    const fin = salesFinancials?.[r.id];
+    if (!fin) return sum;
+    return sum + (fin.netRevenue || 0) * getEffectiveLabelCutPct(r);
+  }, 0);
+  // Net to band = net revenue (after tax & dist) minus label share, then minus mfg cost
+  const totalNetRevenue = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.netRevenue || 0), 0);
+  const totalBandNet = totalNetRevenue - totalLabelShare;
+  const totalProfit = totalBandNet - totalMfgCost;
 
   const stats = {
     total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
@@ -264,7 +328,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -286,17 +350,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Clock className="h-4 w-4" />
-              <span>Upcoming</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.upcoming}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <DollarSign className="h-4 w-4" />
-              <span>Total Revenue</span>
+              <span>Gross Revenue</span>
             </div>
             <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
           </CardContent>
@@ -305,20 +360,32 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <DollarSign className="h-4 w-4" />
-              <span>Tax Paid</span>
+              <span>Tax + Dist Fees</span>
             </div>
-            <p className="text-2xl font-bold text-orange-500">${totalTaxPaid.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-orange-500">${(totalTaxPaid + totalDistFees).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Tax ${totalTaxPaid.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Dist ${totalDistFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Users className="h-4 w-4" />
+              <span>Label Share</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-500">${totalLabelShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Paid to record labels</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <TrendingUp className="h-4 w-4" />
-              <span>Net Profit</span>
+              <span>Band Net Profit</span>
             </div>
             <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-              ${totalProfit.toLocaleString()}
+              ${totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">After tax, dist, label & mfg</p>
           </CardContent>
         </Card>
       </div>
@@ -381,6 +448,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             key={release.id} 
             release={release} 
             financials={salesFinancials?.[release.id]}
+            labelCutPct={getEffectiveLabelCutPct(release)}
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
@@ -451,6 +519,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 interface ReleaseCardProps {
   release: any;
   financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number };
+  labelCutPct?: number;
   onEdit: () => void;
   onCancel: () => void;
   onViewDetails: () => void;
@@ -461,7 +530,7 @@ interface ReleaseCardProps {
   onParty?: () => void;
 }
 
-function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -511,9 +580,17 @@ function ReleaseCard({ release, financials, onEdit, onCancel, onViewDetails, onP
           <div className="flex items-center gap-3 text-[11px] flex-wrap">
             <span className="text-muted-foreground">Cost: <strong>${(release.total_cost || 0).toLocaleString()}</strong></span>
             <span className="text-green-600">Rev: <strong>${(release.total_revenue || 0).toLocaleString()}</strong></span>
+            {labelCutPct > 0 && (
+              <span className="text-purple-500">
+                Label: <strong>${Math.round((financials?.netRevenue || 0) * labelCutPct).toLocaleString()}</strong>
+                <span className="text-muted-foreground"> ({Math.round(labelCutPct * 100)}%)</span>
+              </span>
+            )}
             {(() => {
-              const profit = (release.total_revenue || 0) - (release.total_cost || 0) - (financials?.taxPaid || 0) - (financials?.distributionFees || 0);
-              return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString()}</strong></span>;
+              const labelShare = (financials?.netRevenue || 0) * labelCutPct;
+              const bandNet = (financials?.netRevenue || 0) - labelShare;
+              const profit = bandNet - (release.total_cost || 0);
+              return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></span>;
             })()}
             {release.total_streams > 0 && <span className="text-muted-foreground"><Play className="h-3 w-3 inline mr-0.5" />{release.total_streams.toLocaleString()}</span>}
             {release.units_sold > 0 && <span className="text-muted-foreground">Sold: {release.units_sold.toLocaleString()}</span>}

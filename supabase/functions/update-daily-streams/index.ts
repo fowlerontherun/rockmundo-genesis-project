@@ -504,60 +504,11 @@ Deno.serve(async (req) => {
       } catch (_e) { /* non-critical */ }
     }
 
-    const { data: physicalReleases, error: physicalError } = await supabase
-      .from('release_formats')
-      .select('id, release_id, format_type')
-      .in('format_type', ['digital', 'cd', 'vinyl'])
-      .gte('release_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
-
-    if (physicalError) {
-      throw physicalError;
-    }
-
-    for (const format of physicalReleases || []) {
-      if (isNearTimeout()) {
-        console.warn(`[update-daily-streams] Approaching timeout during physical sales. Finishing early.`);
-        break;
-      }
-      if (Math.random() > 0.5) {
-        try {
-          const baseQuantity = Math.floor(Math.random() * 10) + 1;
-          const quantity = Math.floor(baseQuantity * marketMultiplier);
-          let pricePerUnit = 10;
-
-          if (format.format_type === 'cd') pricePerUnit = 15;
-          if (format.format_type === 'vinyl') pricePerUnit = 25;
-
-          const totalAmount = quantity * pricePerUnit;
-
-          const { error: saleError } = await supabase
-            .from('release_sales')
-            .insert({
-              release_format_id: format.id,
-              quantity_sold: quantity,
-              total_amount: totalAmount,
-              sale_date: new Date().toISOString(),
-            });
-
-          if (saleError) {
-            throw saleError;
-          }
-
-          await supabase.rpc('increment_release_revenue', {
-            release_id: format.release_id,
-            amount: totalAmount,
-          });
-
-          salesUpdates++;
-        } catch (salesError) {
-          errorCount += 1;
-          if (errorSamples.length < 5) {
-            errorSamples.push(`Format ${format.id}: ${(salesError as Error)?.message || String(salesError)}`);
-          }
-          console.error(`Error processing physical sales for format ${format.id}:`, salesError);
-        }
-      }
-    }
+    // ── Legacy physical/digital sales block REMOVED (v1.1.241) ──
+    // Daily physical and digital sales are now exclusively handled by `generate-daily-sales`
+    // which applies the full revenue pipeline: tax, distribution fee, band/label split,
+    // advance recoupment, and per-format inventory deduction. The previous block here
+    // bypassed all of that and produced untracked, unsplit revenue rows.
 
     // ── Batch credit labels with accumulated streaming revenue ──
     let labelsCredited = 0;
