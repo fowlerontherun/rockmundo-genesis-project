@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.242",
+    date: "2026-04-21",
+    changes: [
+      { type: 'fix', description: "Fixed gig-result inbox messages not reaching most band members. Browser-side gig completion (used when a player performs a live gig in their own band) was never writing to player_inbox at all, and the auto-complete edge function was only notifying bands.leader_id — which holds a profile id, not the user id of the actual member to message. All active band members now receive the gig-result inbox notification regardless of role, from both browser-side and server-side gig completion paths." },
+      { type: 'improvement', description: "Gig Outcome Report now shows a clear amber warning when zero merch items were sold, explaining that the band's merchandise inventory is out of stock and pointing players to the Merchandise page to manufacture more before the next show. The same warning is appended to the gig-result inbox message so players see it without opening the report." },
+      { type: 'improvement', description: "Gig Outcome Report now shows a friendly placeholder when a gig has no per-song performance data instead of silently hiding the Setlist Performance card. This affects older or auto-completed gigs where song-by-song breakdowns were never recorded." },
+    ],
+  },
+  {
     version: "1.1.241",
     date: "2026-04-19",
     changes: [
