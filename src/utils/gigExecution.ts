@@ -488,6 +488,50 @@ export async function executeGigPerformance(data: GigExecutionData) {
     })
     .eq('id', bandId);
 
+  // === INBOX NOTIFICATION FOR ALL ACTIVE BAND MEMBERS ===
+  try {
+    const ratingStars = overallRating >= 20 ? '⭐⭐⭐⭐⭐'
+      : overallRating >= 16 ? '⭐⭐⭐⭐'
+      : overallRating >= 12 ? '⭐⭐⭐'
+      : overallRating >= 8 ? '⭐⭐'
+      : '⭐';
+    const venueName = venueData?.name || 'Unknown Venue';
+    const merchWarning = merchSales.itemsSold === 0
+      ? `\n⚠️ No merch sold — your band has no merchandise in stock.`
+      : '';
+
+    const recipientIds = new Set<string>(
+      members.map((m: any) => m.user_id).filter((id: string | null | undefined) => !!id)
+    );
+    if ((band as any).leader_id) recipientIds.add((band as any).leader_id);
+
+    if (recipientIds.size > 0) {
+      const inboxRows = Array.from(recipientIds).map((uid) => ({
+        user_id: uid,
+        category: 'gig_result' as const,
+        priority: (overallRating >= 20 ? 'high' : 'normal') as 'high' | 'normal',
+        title: overallRating >= 16 ? `🎸 Great Show at ${venueName}!` : `Gig Complete: ${venueName}`,
+        message: `${ratingStars} Performance Rating: ${overallRating.toFixed(1)}/25\n💰 Net Profit: $${Math.round(netProfit).toLocaleString()}\n🎤 Attendance: ${actualAttendance}\n🛍️ Merch Sold: ${merchSales.itemsSold}${merchWarning}`,
+        metadata: {
+          gig_id: gigId,
+          band_id: bandId,
+          rating: overallRating,
+          profit: Math.round(netProfit),
+          attendance: actualAttendance,
+          merch_sold: merchSales.itemsSold,
+        } as any,
+        action_type: 'navigate',
+        action_data: { route: '/gigs' } as any,
+        related_entity_type: 'gig',
+        related_entity_id: gigId,
+      }));
+      const { error: inboxErr } = await supabase.from('player_inbox').insert(inboxRows);
+      if (inboxErr) console.error('[gigExecution] Inbox insert failed:', inboxErr);
+    }
+  } catch (inboxError) {
+    console.error('[gigExecution] Inbox notification error (non-critical):', inboxError);
+  }
+
   // Distribute fame to band members
   const famePerMember = Math.floor(fameGained / Math.max(1, members.length));
   for (const member of members) {
