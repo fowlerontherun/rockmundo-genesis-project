@@ -451,6 +451,38 @@ export const GigOutcomeReport = ({
             />
           </div>
 
+          {/* Merch out-of-stock warning */}
+          {(merchItemsSold || breakdown.merch_items_sold) === 0 && merchSales === 0 && (
+            <Card className="border-warning/50 bg-warning/10">
+              <CardContent className="p-4 flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">No Merchandise Sold</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your band sold zero merch items at this gig. This usually means your merchandise inventory is out of stock.
+                    Visit the Merchandise page to design and manufacture more items before your next show.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Empty setlist data warning */}
+          {songPerformances.length === 0 && (
+            <Card className="border-muted bg-muted/30">
+              <CardContent className="p-4 flex items-start gap-3">
+                <Music className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">No Song Performance Data</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Detailed per-song performance data isn't available for this gig. This usually happens for older or auto-completed gigs.
+                    Future gigs you perform live or auto-complete will record full song-by-song breakdowns.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* XP Rewards */}
           <GigXpRewardCard xpSummary={xpSummary || null} performanceGrade={grade.grade} />
 
