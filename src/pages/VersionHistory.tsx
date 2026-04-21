@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.243",
+    date: "2026-04-21",
+    changes: [
+      { type: 'fix', description: "Fixed dashboard chat messages failing to send. The RealtimeChatPanel was inserting the active character's profile id into global_chat.user_id, but the table's RLS policy requires auth.uid() = user_id, so every send was silently rejected. Messages are now sent using the authenticated user id, restoring chat across all channels (general, city, band, etc.)." },
+    ],
+  },
+  {
     version: "1.1.242",
     date: "2026-04-21",
     changes: [
