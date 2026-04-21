@@ -853,30 +853,59 @@ serve(async (req) => {
 
     console.log(`Gig ${gigId} completed successfully. Rating: ${avgRating.toFixed(1)}, Profit: $${netProfit}, New Fans: ${newFansTotal}`);
 
-    // Create inbox message for band leader
-    if (gig.bands?.leader_id) {
+    // Create inbox messages for ALL active band members (not just the leader)
+    try {
       const venueName = gig.venues?.name || 'Unknown Venue';
       const ratingStars = avgRating >= 20 ? '⭐⭐⭐⭐⭐' : avgRating >= 16 ? '⭐⭐⭐⭐' : avgRating >= 12 ? '⭐⭐⭐' : avgRating >= 8 ? '⭐⭐' : '⭐';
-      
-      await supabaseClient.from("player_inbox").insert({
-        user_id: gig.bands.leader_id,
-        category: "gig_result",
-        priority: avgRating >= 20 ? "high" : "normal",
-        title: avgRating >= 16 ? `🎸 Great Show at ${venueName}!` : `Gig Complete: ${venueName}`,
-        message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Net Profit: $${netProfit.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}`,
-        metadata: { 
-          gig_id: gigId, 
-          rating: avgRating, 
-          profit: netProfit, 
-          fans: newFansTotal,
-          attendance: outcome.actual_attendance,
-          merch_sold: merchItemsSold
-        },
-        action_type: "navigate",
-        action_data: { route: "/gigs" },
-        related_entity_type: "gig",
-        related_entity_id: gigId,
-      });
+      const merchWarning = merchItemsSold === 0
+        ? `\n⚠️ No merch sold — check that your band has merchandise in stock.`
+        : '';
+
+      const { data: activeMembers } = await supabaseClient
+        .from('band_members')
+        .select('user_id')
+        .eq('band_id', gig.band_id)
+        .eq('member_status', 'active');
+
+      // Build a unique recipient set: every active member + the band's leader_id (defensive)
+      const recipientIds = new Set<string>(
+        (activeMembers || [])
+          .map((m: any) => m.user_id)
+          .filter((id: string | null | undefined) => !!id)
+      );
+      if (gig.bands?.leader_id) recipientIds.add(gig.bands.leader_id);
+
+      if (recipientIds.size > 0) {
+        const inboxRows = Array.from(recipientIds).map((uid) => ({
+          user_id: uid,
+          category: "gig_result",
+          priority: avgRating >= 20 ? "high" : "normal",
+          title: avgRating >= 16 ? `🎸 Great Show at ${venueName}!` : `Gig Complete: ${venueName}`,
+          message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Net Profit: $${netProfit.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}${merchWarning}`,
+          metadata: {
+            gig_id: gigId,
+            band_id: gig.band_id,
+            rating: avgRating,
+            profit: netProfit,
+            fans: newFansTotal,
+            attendance: outcome.actual_attendance,
+            merch_sold: merchItemsSold,
+          },
+          action_type: "navigate",
+          action_data: { route: "/gigs" },
+          related_entity_type: "gig",
+          related_entity_id: gigId,
+        }));
+
+        const { error: inboxError } = await supabaseClient.from("player_inbox").insert(inboxRows);
+        if (inboxError) {
+          console.error('[complete-gig] Failed to insert inbox messages:', inboxError);
+        } else {
+          console.log(`[complete-gig] Sent gig-result inbox to ${inboxRows.length} band member(s)`);
+        }
+      }
+    } catch (inboxErr) {
+      console.error('[complete-gig] Inbox notification error (non-critical):', inboxErr);
     }
 
     // Log first gig milestone if applicable
