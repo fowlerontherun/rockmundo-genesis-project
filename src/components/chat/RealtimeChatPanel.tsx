@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useAuth } from "@/hooks/use-auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -44,6 +45,8 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   onParticipantCountChange
 }) => {
   const { profileId } = useActiveProfile();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -141,13 +144,13 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   }, [profileId, channelKey]);
 
   const sendMessage = useCallback(async () => {
-    if (!profileId || !message.trim()) return;
+    if (!userId || !message.trim()) return;
 
     try {
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: profileId,
+          user_id: userId,
           channel: channelKey,
           message: message.trim()
         } as any);
@@ -160,7 +163,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  }, [channelKey, fetchMessages, message, profileId]);
+  }, [channelKey, fetchMessages, message, userId]);
 
   useEffect(() => {
     if (profileId) {
