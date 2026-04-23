@@ -13,7 +13,9 @@ import { useTwaaterBookmarks } from "@/hooks/useTwaaterBookmarks";
 import { TwaatPoll } from "./TwaatPoll";
 import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
-import { Heart, MessageCircle, Repeat2, MoreHorizontal, Flag, UserX, Bookmark, BookmarkCheck, Quote, CheckCircle2 } from "lucide-react";
+import { VerifiedBadge } from "./VerifiedBadge";
+import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
+import { Heart, MessageCircle, Repeat2, MoreHorizontal, Flag, UserX, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface TwaatCardProps {
@@ -72,6 +74,9 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
     });
   };
 
+  const isOwn = viewerAccountId && twaat.account?.id === viewerAccountId;
+  const isPromoted = twaat.is_promoted && twaat.promoted_until && new Date(twaat.promoted_until) > new Date();
+
   return (
     <Card 
       className="p-4 border-[hsl(var(--twaater-border))] hover:bg-[hsl(var(--twaater-hover))] transition-colors"
@@ -79,11 +84,16 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
+          {isPromoted && (
+            <div className="flex items-center gap-1 text-xs text-amber-500 mb-1">
+              <Rocket className="h-3 w-3" /> Promoted
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/twaater/${twaat.account.handle}`)}>
               {twaat.account.display_name}
             </span>
-            {twaat.account.verified && <CheckCircle2 className="h-4 w-4" style={{ color: "hsl(var(--twaater-purple))" }} />}
+            {twaat.account.verified && <VerifiedBadge accountId={twaat.account.id} />}
             <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
             <span className="text-muted-foreground text-sm">·</span>
             <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
@@ -131,6 +141,10 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
               {isBookmarked(twaat.id) ? <BookmarkCheck className="h-4 w-4 text-[hsl(var(--twaater-purple))]" /> : <Bookmark className="h-4 w-4" />}
             </Button>
+
+            {isOwn && !isPromoted && (
+              <PromoteTwaatDialog twaatId={twaat.id} />
+            )}
           </div>
 
           {showReplyBox && (

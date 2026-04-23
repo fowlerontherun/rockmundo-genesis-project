@@ -31372,6 +31372,38 @@ export type Database = {
           },
         ]
       }
+      twaater_verification_log: {
+        Row: {
+          account_id: string
+          granted_at: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          account_id: string
+          granted_at?: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          account_id?: string
+          granted_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_verification_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twaats: {
         Row: {
           account_id: string
@@ -31379,6 +31411,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           id: string
+          is_promoted: boolean
           is_system_review: boolean | null
           lang: string | null
           linked_id: string | null
@@ -31386,6 +31419,8 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           outcome_code: string | null
+          promoted_cost: number
+          promoted_until: string | null
           quoted_twaat_id: string | null
           scheduled_for: string | null
           sentiment: number | null
@@ -31398,6 +31433,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           id?: string
+          is_promoted?: boolean
           is_system_review?: boolean | null
           lang?: string | null
           linked_id?: string | null
@@ -31407,6 +31443,8 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           outcome_code?: string | null
+          promoted_cost?: number
+          promoted_until?: string | null
           quoted_twaat_id?: string | null
           scheduled_for?: string | null
           sentiment?: number | null
@@ -31419,6 +31457,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           id?: string
+          is_promoted?: boolean
           is_system_review?: boolean | null
           lang?: string | null
           linked_id?: string | null
@@ -31428,6 +31467,8 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           outcome_code?: string | null
+          promoted_cost?: number
+          promoted_until?: string | null
           quoted_twaat_id?: string | null
           scheduled_for?: string | null
           sentiment?: number | null
@@ -32934,6 +32975,13 @@ export type Database = {
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       auto_verify_accounts: { Args: never; Returns: undefined }
       auto_verify_twaater_accounts: { Args: never; Returns: undefined }
+      award_twaater_verification: {
+        Args: never
+        Returns: {
+          account_id: string
+          reason: string
+        }[]
+      }
       calculate_bail_amount: {
         Args: { p_imprisonment_id: string }
         Returns: number
@@ -33232,6 +33280,10 @@ export type Database = {
       }
       process_radio_submission: {
         Args: { p_submission_id: string }
+        Returns: Json
+      }
+      promote_twaat: {
+        Args: { p_hours: number; p_twaat_id: string }
         Returns: Json
       }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }

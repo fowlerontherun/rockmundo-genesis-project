@@ -433,17 +433,17 @@ serve(async (req) => {
 
     // Generate twaats for eligible bots
     for (const bot of bots || []) {
-      // IMPROVED: More aggressive posting frequency
-      // High = every 30 mins, Medium = every hour, Low = every 2 hours
-      const frequencyMinutes = bot.posting_frequency === "high" ? 30 : bot.posting_frequency === "medium" ? 60 : 120;
+      // IMPROVED v2: Even more aggressive posting frequency for a livelier feed
+      // High = every 15 mins, Medium = every 30 mins, Low = every 60 mins
+      const frequencyMinutes = bot.posting_frequency === "high" ? 15 : bot.posting_frequency === "medium" ? 30 : 60;
       const lastPosted = bot.last_posted_at ? new Date(bot.last_posted_at) : null;
       const minutesSinceLastPost = lastPosted 
         ? (now - lastPosted.getTime()) / (1000 * 60) 
         : frequencyMinutes + 1;
 
       // Force posting if feed is empty OR if enough time has passed
-      // Reduced randomness factor to ensure more consistent posting
-      const shouldPost = feedIsEmpty || (minutesSinceLastPost >= frequencyMinutes && Math.random() > 0.2);
+      // Removed random skip — if the cooldown has elapsed, the bot posts.
+      const shouldPost = feedIsEmpty || minutesSinceLastPost >= frequencyMinutes;
 
       if (!shouldPost) {
         continue;

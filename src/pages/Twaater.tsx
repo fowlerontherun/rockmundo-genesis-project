@@ -19,7 +19,7 @@ import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { TwaaterFeedSuggestions } from "@/components/twaater/TwaaterFeedSuggestions";
-import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass } from "lucide-react";
+import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -97,6 +97,15 @@ export default function Twaater() {
                   userId={profile.user_id}
                   onSwitch={(accountId) => setActiveAccountId(accountId)}
                 />
+              )}
+              {currentAccountId && (
+                <button
+                  onClick={() => navigate('/twaater/analytics')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
+                  title="Analytics"
+                >
+                  <BarChart3 className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
+                </button>
               )}
               {currentAccountId && <TwaaterNotificationsBell accountId={currentAccountId} />}
             </div>

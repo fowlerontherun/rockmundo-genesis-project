@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.244",
+    date: "2026-04-23",
+    changes: [
+      { type: 'feature', description: "Twaater — Promoted Twaats: account owners can now spend in-game cash to boost any of their own twaats for 1 / 6 / 24 hours ($250 / $1,200 / $4,000). Promoted posts get a 2× score boost in the Trending algorithm and display a 'Promoted' badge with a rocket icon. The new promote_twaat database function validates ownership (persona or band leader/member), debits the player's cash, and stamps promoted_until on the twaat." },
+      { type: 'feature', description: "Twaater — Verification badges with criteria: a new award_twaater_verification function automatically grants the verified checkmark to accounts whose linked profile or band crosses one of three thresholds — fame ≥ 10,000, owns at least one award win, or has a top-100 chart entry in the last 90 days. Each grant is recorded in the new twaater_verification_log table with the reason. The verified checkmark on twaat cards now shows a tooltip explaining why the account is verified." },
+      { type: 'feature', description: "Twaater — Account Analytics dashboard at /twaater/analytics: 30-day totals for twaats, views, likes, retwaats, replies and followers; computed engagement rate (likes + retwaats + replies / views); follower growth line chart; engagement-by-hour bar chart; 'best hour to post' recommendation; and a top-5 highest-scoring twaats list." },
+      { type: 'improvement', description: "Twaater — Trending v2 now boosts promoted twaats 2× in addition to the existing time-decay (~8.3h half-life) and 1.5× verified-account boost." },
+      { type: 'improvement', description: "Twaater — NPC bot accounts post much more frequently: high-frequency bots every 15 minutes, medium every 30, low every 60 (was 30/60/120). The 20% random skip-roll has been removed so that bots reliably post once their cooldown elapses, keeping the public feed lively." },
+      { type: 'fix', description: "Build — fixed two TypeScript errors that were blocking compilation: ReadyPlayerMeAvatar.tsx now narrows mesh material types correctly, and src/lib/api/overview.ts no longer imports the missing @supabase/postgrest-js type." },
+    ],
+  },
+  {
     version: "1.1.243",
     date: "2026-04-21",
     changes: [
