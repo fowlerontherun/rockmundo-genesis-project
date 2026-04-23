@@ -114,6 +114,7 @@ const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagVie
 const TwaaterMessagesPage = lazyWithRetry(() => import("./pages/TwaaterMessagesPage"));
 const TwaaterNotifications = lazyWithRetry(() => import("./pages/TwaaterNotifications"));
 const TwaaterTwaatView = lazyWithRetry(() => import("./pages/TwaaterTwaatView"));
+const TwaaterAnalytics = lazyWithRetry(() => import("./pages/TwaaterAnalytics"));
 const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));

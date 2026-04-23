@@ -54,7 +54,14 @@ export const useTwaaterTrending = () => {
         // Verified account boost (1.5x)
         const verifiedBoost = twaat.account?.verified ? 1.5 : 1;
 
-        const engagementScore = baseScore * timeDecay * verifiedBoost;
+        // Promoted twaat boost (2x while active)
+        const promotedActive =
+          twaat.is_promoted &&
+          twaat.promoted_until &&
+          new Date(twaat.promoted_until).getTime() > now;
+        const promotedBoost = promotedActive ? 2 : 1;
+
+        const engagementScore = baseScore * timeDecay * verifiedBoost * promotedBoost;
 
         return {
           ...twaat,
