@@ -427,6 +427,7 @@ function App() {
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
+                    <Route path="twaater/analytics" element={<TwaaterAnalytics />} />
                     <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
                     <Route path="twaater/twaat/:twaatId" element={<TwaaterTwaatView />} />
                     <Route path="twaater/messages" element={<TwaaterMessagesPage />} />
