@@ -31,13 +31,13 @@ const buildYearRange = (year?: number | "all") => {
   };
 };
 
-const applyDateRange = <T extends PostgrestFilterBuilder<any, any, any, any>>(
+const applyDateRange = <T extends { gte: (...args: any[]) => any; lte: (...args: any[]) => any }>(
   query: T,
   column: string,
   range?: { start: string; end: string },
-) => {
+): T => {
   if (!range) return query;
-  return query.gte(column, range.start).lte(column, range.end);
+  return query.gte(column, range.start).lte(column, range.end) as T;
 };
 
 export const fetchOverviewAggregates = async (
