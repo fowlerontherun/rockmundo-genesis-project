@@ -1,4 +1,3 @@
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export type OverviewAggregateFilters = {

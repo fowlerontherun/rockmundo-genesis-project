@@ -101,8 +101,14 @@ const AvatarModel = ({
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        if (child.material) {
-          child.material.needsUpdate = true;
+        const mesh = child as THREE.Mesh;
+        if (mesh.material) {
+          const mat = mesh.material as THREE.Material | THREE.Material[];
+          if (Array.isArray(mat)) {
+            mat.forEach((m) => (m.needsUpdate = true));
+          } else {
+            mat.needsUpdate = true;
+          }
         }
       }
     });
