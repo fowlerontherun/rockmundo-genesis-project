@@ -60,10 +60,19 @@ export function FriendDetailPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <AffinityMeter summary={summary} />
-          
+
+          <FriendRewardsSummary
+            otherProfileId={profile.id}
+            otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
+            onTeach={() => setTeachOpen(true)}
+          />
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Quick actions</CardTitle>
+              <CardDescription className="text-xs">
+                Each action grants XP and skill XP. Daily caps prevent farming.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <QuickActionButtons
@@ -78,6 +87,15 @@ export function FriendDetailPanel({
           </Card>
         </CardContent>
       </Card>
+
+      <TeachDialog
+        open={teachOpen}
+        onOpenChange={setTeachOpen}
+        mentorProfileId={currentProfileId}
+        studentProfileId={profile.id}
+        studentDisplayName={profile.display_name ?? profile.username ?? "Friend"}
+        onComplete={onRefreshEvents}
+      />
 
       <Tabs defaultValue="timeline" className="space-y-4">
         <TabsList>
