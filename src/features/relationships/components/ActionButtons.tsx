@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { recordRelationshipEvent } from "../api";
-import { Handshake, Gift, PartyPopper, Sparkles, ShieldCheck, UsersRound } from "lucide-react";
+import { Handshake, Gift, PartyPopper, Sparkles, ShieldCheck, UsersRound, Music2, Mic2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { executeRelationshipAction } from "@/hooks/useRelationshipRewards";
+import { RELATIONSHIP_ACTION_REWARDS, type ActionRewardConfig } from "../rewardsConfig";
+import { RewardChip } from "./RewardChip";
+import { recordRelationshipEvent } from "../api";
 
 interface ActionButtonsProps {
   profileId: string;
@@ -23,10 +26,20 @@ interface ActionButtonsProps {
 type ActiveDialog =
   | { type: "gift" }
   | { type: "trade" }
-  | { type: "collab"; collabType: string | null }
+  | { type: "collab" }
   | { type: "hangout" }
   | { type: "permissions" }
   | null;
+
+const QUICK_BUTTONS: Array<{ id: string; icon: typeof Gift; reward: ActionRewardConfig; dialogType?: ActiveDialog["type"] }> = [
+  { id: "chat",        icon: PartyPopper, reward: RELATIONSHIP_ACTION_REWARDS.chat },
+  { id: "gift",        icon: Gift,        reward: RELATIONSHIP_ACTION_REWARDS.gift,        dialogType: "gift" },
+  { id: "hangout",     icon: UsersRound,  reward: RELATIONSHIP_ACTION_REWARDS.hangout,     dialogType: "hangout" },
+  { id: "trade",       icon: Handshake,   reward: RELATIONSHIP_ACTION_REWARDS.trade,       dialogType: "trade" },
+  { id: "jam",         icon: Music2,      reward: RELATIONSHIP_ACTION_REWARDS.jam },
+  { id: "gig",         icon: Mic2,        reward: RELATIONSHIP_ACTION_REWARDS.gig },
+  { id: "songwriting", icon: Sparkles,    reward: RELATIONSHIP_ACTION_REWARDS.songwriting },
+];
 
 export function QuickActionButtons({
   profileId,
@@ -37,14 +50,14 @@ export function QuickActionButtons({
   onEventRecorded,
 }: ActionButtonsProps) {
   const { toast } = useToast();
-  const { profileId: currentProfileId } = useActiveProfile();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [amount, setAmount] = useState("100");
   const [notes, setNotes] = useState("");
   const [selectedTradeGearId, setSelectedTradeGearId] = useState("");
   const [tradeGearOptions, setTradeGearOptions] = useState<Array<{ id: string; name: string }>>([]);
-  const [isTrading, setIsTrading] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
     if (activeDialog?.type !== "trade" || !user?.id) return;
@@ -56,7 +69,7 @@ export function QuickActionButtons({
         .eq("is_equipped", false)
         .limit(50);
       setTradeGearOptions(
-        (data ?? []).map((d: any) => ({ id: d.id, name: d.equipment?.name ?? "Unknown gear" }))
+        (data ?? []).map((d: any) => ({ id: d.id, name: d.equipment?.name ?? "Unknown gear" })),
       );
     })();
   }, [activeDialog?.type, user?.id]);
@@ -67,36 +80,70 @@ export function QuickActionButtons({
     setAmount("100");
   };
 
-  const recordEvent = async (
-    activityType: string,
-    message: string,
+  const runAction = async (
+    actionId: string,
+    message?: string,
     metadata?: Record<string, unknown>,
   ) => {
+    if (isBusy) return;
+    setIsBusy(true);
     try {
-      await recordRelationshipEvent({
-        userId,
+      const result = await executeRelationshipAction({
+        action: actionId,
         profileId,
         otherProfileId,
-        otherUserId,
-        activityType,
-        message,
+        message: message ?? `${RELATIONSHIP_ACTION_REWARDS[actionId]?.label ?? actionId} with ${otherDisplayName}`,
         metadata,
       });
-      toast({ title: "Action completed", description: "Your friendship gained affinity." });
+
+      if (!result.success) {
+        toast({
+          title: "Couldn't complete action",
+          description: result.error ?? "Something went wrong.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const cfg = RELATIONSHIP_ACTION_REWARDS[actionId];
+      const skillPart = result.skill_xp_awarded
+        ? ` · +${result.skill_xp_awarded} ${cfg?.skillLabel ?? "Skill"} XP`
+        : "";
+      const streakPart = result.streak_bonus
+        ? ` · 🔥 ${result.streak_bonus.label} +${result.streak_bonus.xp} XP`
+        : result.streak_days
+        ? ` · 🔥 ${result.streak_days}-day streak`
+        : "";
+      const capPart = result.cap_remaining !== undefined
+        ? ` · ${result.cap_remaining} left today`
+        : "";
+
+      toast({
+        title: `+${result.xp_awarded ?? 0} XP${skillPart}`,
+        description: `${result.action_label ?? cfg?.label ?? "Action"}${streakPart}${capPart}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["social-streak"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-rewards"] });
+      queryClient.invalidateQueries({ queryKey: ["progression-snapshot"] });
+      queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
+
       onEventRecorded();
       closeDialog();
-    } catch (error: unknown) {
+    } catch (err) {
       toast({
-        title: "Unable to complete action",
-        description: error instanceof Error ? error.message : "Something went wrong while recording the action.",
+        title: "Action failed",
+        description: err instanceof Error ? err.message : "Unexpected error",
         variant: "destructive",
       });
+    } finally {
+      setIsBusy(false);
     }
   };
 
   const handleGiftSubmit = async () => {
     const giftAmount = Number(amount) || 0;
-    await recordEvent("relationship_gift", `Sent ${giftAmount} credits to ${otherDisplayName}`, {
+    await runAction("gift", `Sent ${giftAmount} credits to ${otherDisplayName}`, {
       gift_amount: giftAmount,
       gift_reason: notes || "Friendship boost",
     });
@@ -107,7 +154,7 @@ export function QuickActionButtons({
       toast({ title: "Select gear to trade", variant: "destructive" });
       return;
     }
-    setIsTrading(true);
+    setIsBusy(true);
     try {
       const { error } = await (supabase as any)
         .from("player_equipment_inventory")
@@ -115,61 +162,77 @@ export function QuickActionButtons({
         .eq("id", selectedTradeGearId)
         .eq("user_id", user.id);
       if (error) throw error;
-      const itemName = tradeGearOptions.find(g => g.id === selectedTradeGearId)?.name ?? "gear";
-      await recordEvent("relationship_trade", `Sent ${itemName} to ${otherDisplayName}`, {
+      const itemName = tradeGearOptions.find((g) => g.id === selectedTradeGearId)?.name ?? "gear";
+      setSelectedTradeGearId("");
+      await runAction("trade", `Sent ${itemName} to ${otherDisplayName}`, {
         trade_item: itemName,
         trade_notes: notes,
       });
-      setSelectedTradeGearId("");
     } catch (err: any) {
       toast({ title: "Trade failed", description: err.message, variant: "destructive" });
-    } finally {
-      setIsTrading(false);
+      setIsBusy(false);
     }
   };
 
-  const handleCollab = async (collabType: string) => {
-    await recordEvent(
-      collabType === "jam" ? "relationship_jam" : collabType === "gig" ? "relationship_gig" : "relationship_collab",
-      `Planned a ${collabType} with ${otherDisplayName}`,
-      { collaboration_type: collabType, collaboration_notes: notes },
-    );
-  };
-
   const handleHangout = async () => {
-    await recordEvent("relationship_group_chat", `Scheduled a hangout with ${otherDisplayName}`, {
-      hangout_notes: notes,
-    });
+    await runAction("hangout", `Scheduled a hangout with ${otherDisplayName}`, { hangout_notes: notes });
   };
 
   const handlePermissions = async () => {
-    await recordEvent("relationship_permission_update", `Adjusted trust settings for ${otherDisplayName}`);
+    try {
+      await recordRelationshipEvent({
+        userId,
+        profileId,
+        otherProfileId,
+        otherUserId,
+        activityType: "relationship_permission_update",
+        message: `Adjusted trust settings for ${otherDisplayName}`,
+      });
+      toast({ title: "Trust settings saved" });
+      onEventRecorded();
+      closeDialog();
+    } catch (err) {
+      toast({
+        title: "Couldn't save",
+        description: err instanceof Error ? err.message : "Error",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <Button variant="secondary" className="justify-start" onClick={() => setActiveDialog({ type: "gift" })}>
-        <Gift className="mr-2 h-4 w-4" /> Send gift
-      </Button>
-      <Button variant="secondary" className="justify-start" onClick={() => setActiveDialog({ type: "trade" })}>
-        <Handshake className="mr-2 h-4 w-4" /> Secure trade
-      </Button>
-      <Button variant="secondary" className="justify-start" onClick={() => setActiveDialog({ type: "collab", collabType: null })}>
-        <Sparkles className="mr-2 h-4 w-4" /> Launch collab
-      </Button>
-      <Button variant="secondary" className="justify-start" onClick={() => setActiveDialog({ type: "hangout" })}>
-        <UsersRound className="mr-2 h-4 w-4" /> Plan hangout
-      </Button>
-      <Button variant="secondary" className="justify-start" onClick={() => setActiveDialog({ type: "permissions" })}>
-        <ShieldCheck className="mr-2 h-4 w-4" /> Manage trust
-      </Button>
-      <Button
-        variant="secondary"
-        className="justify-start"
-        onClick={() => recordEvent("relationship_chat", `Checked in with ${otherDisplayName}`)}
-      >
-        <PartyPopper className="mr-2 h-4 w-4" /> Send quick ping
-      </Button>
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {QUICK_BUTTONS.map((btn) => {
+          const Icon = btn.icon;
+          return (
+            <Button
+              key={btn.id}
+              variant="secondary"
+              className="h-auto justify-start py-2 text-left"
+              disabled={isBusy}
+              onClick={() => {
+                if (btn.dialogType) setActiveDialog({ type: btn.dialogType } as ActiveDialog);
+                else void runAction(btn.id);
+              }}
+            >
+              <Icon className="mr-2 h-4 w-4 shrink-0" />
+              <div className="flex flex-1 flex-col items-start gap-1">
+                <span className="text-sm">{btn.reward.label}</span>
+                <RewardChip reward={btn.reward} />
+              </div>
+            </Button>
+          );
+        })}
+        <Button
+          variant="ghost"
+          className="h-auto justify-start py-2"
+          onClick={() => setActiveDialog({ type: "permissions" })}
+        >
+          <ShieldCheck className="mr-2 h-4 w-4" />
+          <span className="text-sm">Manage trust</span>
+        </Button>
+      </div>
 
       <Dialog open={activeDialog?.type === "gift"} onOpenChange={closeDialog}>
         <DialogContent>
@@ -177,15 +240,11 @@ export function QuickActionButtons({
             <DialogTitle>Send a gift</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Input type="number" value={amount} onChange={(event) => setAmount(event.target.value)} min={1} />
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Add a note"
-            />
+            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} min={1} />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a note" />
           </div>
           <DialogFooter>
-            <Button onClick={handleGiftSubmit}>Send gift</Button>
+            <Button onClick={handleGiftSubmit} disabled={isBusy}>Send gift (+5 XP, +3 Charisma)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -196,53 +255,27 @@ export function QuickActionButtons({
             <DialogTitle>Trade gear with {otherDisplayName}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <p className="text-xs font-medium mb-1">Select gear to send</p>
-              <Select value={selectedTradeGearId} onValueChange={setSelectedTradeGearId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose unequipped gear" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tradeGearOptions.length === 0 ? (
-                    <SelectItem value="none" disabled>No unequipped gear available</SelectItem>
-                  ) : (
-                    tradeGearOptions.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Add a note (optional)"
-            />
+            <Select value={selectedTradeGearId} onValueChange={setSelectedTradeGearId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose unequipped gear" />
+              </SelectTrigger>
+              <SelectContent>
+                {tradeGearOptions.length === 0 ? (
+                  <SelectItem value="none" disabled>No unequipped gear available</SelectItem>
+                ) : (
+                  tradeGearOptions.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a note (optional)" />
           </div>
           <DialogFooter>
-            <Button onClick={handleTradeSubmit} disabled={isTrading || !selectedTradeGearId}>
-              {isTrading ? "Sending..." : "Confirm trade"}
+            <Button onClick={handleTradeSubmit} disabled={isBusy || !selectedTradeGearId}>
+              {isBusy ? "Sending..." : "Confirm trade (+10 XP, +5 Business)"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={activeDialog?.type === "collab"} onOpenChange={closeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Launch a collaboration</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-2">
-            <Button variant="outline" onClick={() => handleCollab("jam")}>Jam Session</Button>
-            <Button variant="outline" onClick={() => handleCollab("gig")}>Gig Performance</Button>
-            <Button variant="outline" onClick={() => handleCollab("songwriting")}>Songwriting Sprint</Button>
-          </div>
-          <Textarea
-            className="mt-3"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Notes or goals"
-          />
         </DialogContent>
       </Dialog>
 
@@ -251,13 +284,9 @@ export function QuickActionButtons({
           <DialogHeader>
             <DialogTitle>Plan a hangout</DialogTitle>
           </DialogHeader>
-          <Textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Where are you meeting? Add any timing details."
-          />
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Where, when, etc." />
           <DialogFooter>
-            <Button onClick={handleHangout}>Schedule hangout</Button>
+            <Button onClick={handleHangout} disabled={isBusy}>Schedule hangout (+8 XP, +5 Charisma)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -278,4 +307,3 @@ export function QuickActionButtons({
     </div>
   );
 }
-
