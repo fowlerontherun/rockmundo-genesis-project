@@ -18,8 +18,8 @@ export function useSocialStreak() {
       if (!profileId) {
         return { current_streak: 0, total_days: 0, longest_streak: 0, last_interaction_date: null };
       }
-      const { data } = await supabase
-        .from("daily_social_streaks" as any)
+      const { data } = await (supabase as any)
+        .from("daily_social_streaks")
         .select("current_streak, total_days, longest_streak, last_interaction_date")
         .eq("profile_id", profileId)
         .maybeSingle();
@@ -47,8 +47,8 @@ export function useFriendRewardSummary(otherProfileId: string | null) {
         return { lifetime_xp: 0, tier: "acquaintance", recent_actions: 0 };
       }
       const pairKey = [profileId, otherProfileId].sort().join(":");
-      const { data } = await supabase
-        .from("relationship_xp_log" as any)
+      const { data } = await (supabase as any)
+        .from("relationship_xp_log")
         .select("xp_awarded, created_at")
         .eq("pair_key", pairKey);
       const rows = (data ?? []) as Array<{ xp_awarded: number; created_at: string }>;
