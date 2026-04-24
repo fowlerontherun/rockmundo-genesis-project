@@ -3,13 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DecoratedFriendship, RelationshipSummary, RelationshipEvent } from "../types";
-import { RELATIONSHIP_STATUSES, TRUST_PERMISSION_LEVELS } from "../config";
 import { AffinityMeter } from "./AffinityMeter";
 import { QuickActionButtons } from "./ActionButtons";
 import { RelationshipTimeline } from "./Timeline";
 import { DirectMessagePanel } from "./DirectMessagePanel";
+import { FriendRewardsSummary } from "./FriendRewardsSummary";
+import { TeachDialog } from "./TeachDialog";
 import { resolveRelationshipPairKey } from "../api";
-import { Shield } from "lucide-react";
 
 interface FriendDetailPanelProps {
   friendship: DecoratedFriendship | null;
@@ -28,7 +28,7 @@ export function FriendDetailPanel({
   currentUserId,
   onRefreshEvents,
 }: FriendDetailPanelProps) {
-  const [activeStatus, setActiveStatus] = useState<string | null>(null);
+  const [teachOpen, setTeachOpen] = useState(false);
   const profile = friendship?.otherProfile ?? null;
 
   const channelId = useMemo(() => {
