@@ -37,6 +37,8 @@ import type { DecoratedFriendship } from "@/features/relationships/types";
 import { formatDistanceToNow } from "date-fns";
 import { FamilyDashboard } from "@/components/family/FamilyDashboard";
 import { StreakBanner } from "@/features/relationships/components/StreakBanner";
+import { FriendActivityFeed } from "@/features/relationships/components/FriendActivityFeed";
+import { BestFriendsLeaderboard } from "@/features/relationships/components/BestFriendsLeaderboard";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePlayerMentorships, useOfferMentorship, useRespondMentorship, useRunMentorSession } from "@/hooks/usePlayerMentorship";
@@ -584,8 +586,12 @@ export default function RelationshipsPage() {
         }
       />
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-4">
         <StreakBanner />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <FriendActivityFeed />
+          <BestFriendsLeaderboard />
+        </div>
       </div>
 
       {/* Main Tabs */}
