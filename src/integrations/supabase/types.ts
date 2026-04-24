@@ -6894,6 +6894,33 @@ export type Database = {
           },
         ]
       }
+      daily_social_streaks: {
+        Row: {
+          current_streak: number
+          last_interaction_date: string
+          longest_streak: number
+          profile_id: string
+          total_days: number
+          updated_at: string
+        }
+        Insert: {
+          current_streak?: number
+          last_interaction_date: string
+          longest_streak?: number
+          profile_id: string
+          total_days?: number
+          updated_at?: string
+        }
+        Update: {
+          current_streak?: number
+          last_interaction_date?: string
+          longest_streak?: number
+          profile_id?: string
+          total_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       demo_submissions: {
         Row: {
           artist_profile_id: string | null
@@ -25460,6 +25487,42 @@ export type Database = {
           },
         ]
       }
+      relationship_xp_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          other_profile_id: string
+          pair_key: string
+          profile_id: string
+          skill_slug: string | null
+          skill_xp_awarded: number
+          xp_awarded: number
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          other_profile_id: string
+          pair_key: string
+          profile_id: string
+          skill_slug?: string | null
+          skill_xp_awarded?: number
+          xp_awarded?: number
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          other_profile_id?: string
+          pair_key?: string
+          profile_id?: string
+          skill_slug?: string | null
+          skill_xp_awarded?: number
+          xp_awarded?: number
+        }
+        Relationships: []
+      }
       release_formats: {
         Row: {
           created_at: string
@@ -33185,6 +33248,14 @@ export type Database = {
           company_id: string
           employee_count: number
         }[]
+      }
+      get_friendship_lifetime_xp: {
+        Args: { profile_a: string; profile_b: string }
+        Returns: number
+      }
+      get_friendship_tier: {
+        Args: { profile_a: string; profile_b: string }
+        Returns: string
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
