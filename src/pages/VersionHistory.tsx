@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.246",
+    date: "2026-04-24",
+    changes: [
+      { type: 'feature', description: "Relationships — New 'Recent friend rewards' feed on the Relationships page shows your last 15 XP-earning interactions across all friends, with the action label, the friend's name, time ago, and the XP / skill XP earned. Makes the new reward loop visible at a glance." },
+      { type: 'feature', description: "Relationships — New 'Best friends' leaderboard ranks your top 5 friendships by lifetime XP earned together, with crown / trophy / medal icons for the top 3, current friendship tier, total interaction count, and lifetime XP. Encourages investing in deeper friendships." },
+      { type: 'fix', description: "Mentorships — useRunMentorSession now actually awards XP to both parties via the relationship-action edge function. Mentors get +20 XP and +5 Mentoring (capped 4×/day per pair); students get +30 XP and +15 skill XP in their focus skill. Previously the button only bumped a counter without granting any XP." },
+    ],
+  },
+  {
     version: "1.1.245",
     date: "2026-04-24",
     changes: [
