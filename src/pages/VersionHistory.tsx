@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.245",
+    date: "2026-04-24",
+    changes: [
+      { type: 'feature', description: "Relationships — Every quick action now grants real XP and skill XP. Quick ping +2 XP, gift +5 XP & +3 Charisma, hangout +8 & +5 Charisma, trade +10 & +5 Business, jam +15 & +10 Performance, gig collab +20 & +15 Performance, songwriting collab +20 & +15 Songwriting. Per-friend daily caps prevent farming." },
+      { type: 'feature', description: "Relationships — New Friend Streak system: interacting with any friend at least once per day builds a streak. Day 1 = +10 XP, Day 3 = +25 XP & +10 Charisma, Day 7 = +50 XP & +25 Charisma, Day 14+ = +100 XP & +50 Charisma. A flame banner on the Relationships page shows your current streak, active bonus, and next milestone." },
+      { type: 'feature', description: "Relationships — Friendship tier progression now matters. Lifetime XP earned with each friend determines the tier (Acquaintance → Bandmate → Inner Circle → Legendary Duo). A new 'Rewards earned with this friend' card shows lifetime XP, current tier, progress to the next tier, and the active co-op bonus description." },
+      { type: 'feature', description: "Relationships — One-tap 'Teach a skill' action between accepted friends. The mentor picks a skill they've trained (Lv 1+); they earn +20 XP and +5 Mentoring, the student gets +15 XP in that skill. No need to set up a long mentorship contract." },
+      { type: 'feature', description: "New relationship-action edge function and relationship_xp_log + daily_social_streaks tables enforce caps server-side, log per-pair XP for tier rollups, and update the daily streak in a single call. Each quick-action button now shows its reward chip (e.g. '+15 XP · +10 Performance') before tapping." },
+    ],
+  },
+  {
     version: "1.1.244",
     date: "2026-04-23",
     changes: [
