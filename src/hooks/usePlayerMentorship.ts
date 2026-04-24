@@ -100,7 +100,25 @@ export const useRunMentorSession = () => {
         .single();
       if (fetchErr || !m) throw fetchErr ?? new Error("Mentorship not found");
 
-      const xpAward = 15 + Math.floor(Math.random() * 20);
+      const isMentor = m.mentor_profile_id === profileId;
+      const otherId = isMentor ? m.mentee_profile_id : m.mentor_profile_id;
+
+      // Award real XP via the relationship-action edge function (teach for mentor, learn for student)
+      const { data: rewardData, error: rewardErr } = await supabase.functions.invoke("relationship-action", {
+        body: {
+          action: isMentor ? "teach" : "learn",
+          profile_id: profileId,
+          other_profile_id: otherId,
+          message: `Mentor session — focus: ${m.focus_skill}`,
+          metadata: { mentorship_id: mentorshipId, focus_skill: m.focus_skill },
+        },
+      });
+      if (rewardErr) throw rewardErr;
+      if (rewardData && rewardData.success === false) throw new Error(rewardData.error ?? "Session blocked");
+
+      const xpAward = rewardData?.xp_awarded ?? 0;
+      const skillXp = rewardData?.skill_xp_awarded ?? 0;
+
       const { error } = await (supabase as any)
         .from("player_mentorships")
         .update({
@@ -110,11 +128,20 @@ export const useRunMentorSession = () => {
         })
         .eq("id", mentorshipId);
       if (error) throw error;
-      return { xpAwarded: xpAward, sessionsCompleted: (m.sessions_completed ?? 0) + 1 };
+      return {
+        xpAwarded: xpAward,
+        skillXp,
+        sessionsCompleted: (m.sessions_completed ?? 0) + 1,
+        role: isMentor ? "mentor" : "student",
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-mentorships", profileId] });
-      toast.success(`Session complete! +${result.xpAwarded} XP awarded (${result.sessionsCompleted} total sessions)`);
+      queryClient.invalidateQueries({ queryKey: ["progression-snapshot"] });
+      queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["relationship-feed"] });
+      const skillPart = result.skillXp ? ` +${result.skillXp} Skill XP` : "";
+      toast.success(`Session complete (${result.role})! +${result.xpAwarded} XP${skillPart}`);
     },
     onError: (err: Error) => toast.error(err.message),
   });
