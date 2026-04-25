@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Crown, Lock, CheckCircle2 } from "lucide-react";
 import { FRIENDSHIP_TIERS } from "@/features/relationships/config";
-import { useFriendLifetimeXp } from "@/hooks/useRelationshipRewards";
+import { useFriendRewardSummary } from "@/hooks/useRelationshipRewards";
 
 interface TierPerksPanelProps {
   otherProfileId: string;
@@ -13,7 +13,8 @@ function tierForXp(xp: number) {
 }
 
 export function TierPerksPanel({ otherProfileId }: TierPerksPanelProps) {
-  const { data: xp = 0, isLoading } = useFriendLifetimeXp(otherProfileId);
+  const { data: summary, isLoading } = useFriendRewardSummary(otherProfileId);
+  const xp = summary?.lifetime_xp ?? 0;
   const currentTier = tierForXp(xp);
 
   return (
