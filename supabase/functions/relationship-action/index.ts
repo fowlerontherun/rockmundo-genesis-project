@@ -307,7 +307,29 @@ Deno.serve(async (req) => {
             completed_at: completed ? new Date().toISOString() : null,
           })
           .eq("id", q.id);
+
+        // Activity log: progress
+        await admin.from("coop_quest_events").insert({
+          quest_id: q.id,
+          pair_key: pk,
+          actor_profile_id: profile_id,
+          event_type: "progress",
+          progress_a: newProgressA,
+          progress_b: newProgressB,
+          note: `${config.label}: progress ${isA ? newProgressA : newProgressB}/${q.target_count}`,
+        });
+
         if (completed) {
+          // Activity log: completed
+          await admin.from("coop_quest_events").insert({
+            quest_id: q.id,
+            pair_key: pk,
+            actor_profile_id: profile_id,
+            event_type: "completed",
+            progress_a: newProgressA,
+            progress_b: newProgressB,
+            note: `Quest "${q.title}" completed by both players`,
+          });
           completedQuests.push({
             id: q.id,
             title: q.title,

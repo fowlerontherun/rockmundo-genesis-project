@@ -9,6 +9,7 @@ import { RelationshipTimeline } from "./Timeline";
 import { DirectMessagePanel } from "./DirectMessagePanel";
 import { FriendRewardsSummary } from "./FriendRewardsSummary";
 import { CoopQuestsCard } from "./CoopQuestsCard";
+import { CoopQuestActivityLog } from "./CoopQuestActivityLog";
 import { TierPerksPanel } from "./TierPerksPanel";
 import { TeachDialog } from "./TeachDialog";
 import { resolveRelationshipPairKey } from "../api";
@@ -74,6 +75,13 @@ export function FriendDetailPanel({
           <CoopQuestsCard
             otherProfileId={profile.id}
             otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
+          />
+
+          <CoopQuestActivityLog
+            otherProfileId={profile.id}
+            title="Quest activity with this friend"
+            description="When each quest started, advanced and got claimed."
+            limit={20}
           />
 
           <Card>

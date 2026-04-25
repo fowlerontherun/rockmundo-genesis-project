@@ -6323,6 +6323,64 @@ export type Database = {
           },
         ]
       }
+      coop_quest_events: {
+        Row: {
+          actor_profile_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+          pair_key: string
+          progress_a: number | null
+          progress_b: number | null
+          quest_id: string
+        }
+        Insert: {
+          actor_profile_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+          pair_key: string
+          progress_a?: number | null
+          progress_b?: number | null
+          quest_id: string
+        }
+        Update: {
+          actor_profile_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          pair_key?: string
+          progress_a?: number | null
+          progress_b?: number | null
+          quest_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_quest_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quest_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quest_events_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "coop_quests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coop_quests: {
         Row: {
           action_type: string
