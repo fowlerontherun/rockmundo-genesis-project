@@ -185,6 +185,17 @@ Deno.serve(async (req) => {
         .single();
       if (insErr) throw insErr;
 
+      // Activity log: started
+      await admin.from("coop_quest_events").insert({
+        quest_id: created.id,
+        pair_key: pk,
+        actor_profile_id: profile_id,
+        event_type: "started",
+        progress_a: 0,
+        progress_b: 0,
+        note: `Started ${tpl.cadence} quest: ${tpl.title}`,
+      });
+
       return new Response(JSON.stringify({ success: true, quest: created }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
