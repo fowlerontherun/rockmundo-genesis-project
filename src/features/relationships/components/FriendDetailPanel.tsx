@@ -8,6 +8,7 @@ import { QuickActionButtons } from "./ActionButtons";
 import { RelationshipTimeline } from "./Timeline";
 import { DirectMessagePanel } from "./DirectMessagePanel";
 import { FriendRewardsSummary } from "./FriendRewardsSummary";
+import { CoopQuestsCard } from "./CoopQuestsCard";
 import { TierPerksPanel } from "./TierPerksPanel";
 import { TeachDialog } from "./TeachDialog";
 import { resolveRelationshipPairKey } from "../api";
@@ -69,6 +70,11 @@ export function FriendDetailPanel({
           />
 
           <TierPerksPanel otherProfileId={profile.id} />
+
+          <CoopQuestsCard
+            otherProfileId={profile.id}
+            otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
+          />
 
           <Card>
             <CardHeader className="pb-3">

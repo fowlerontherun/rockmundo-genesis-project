@@ -6323,6 +6323,107 @@ export type Database = {
           },
         ]
       }
+      coop_quests: {
+        Row: {
+          action_type: string
+          cadence: string
+          claimed_by_a: boolean
+          claimed_by_b: boolean
+          completed_at: string | null
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          pair_key: string
+          profile_a_id: string
+          profile_b_id: string
+          progress_a: number
+          progress_b: number
+          quest_key: string
+          reward_skill_slug: string | null
+          reward_skill_xp: number
+          reward_xp: number
+          target_count: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          cadence?: string
+          claimed_by_a?: boolean
+          claimed_by_b?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          expires_at: string
+          id?: string
+          pair_key: string
+          profile_a_id: string
+          profile_b_id: string
+          progress_a?: number
+          progress_b?: number
+          quest_key: string
+          reward_skill_slug?: string | null
+          reward_skill_xp?: number
+          reward_xp?: number
+          target_count?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          cadence?: string
+          claimed_by_a?: boolean
+          claimed_by_b?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          expires_at?: string
+          id?: string
+          pair_key?: string
+          profile_a_id?: string
+          profile_b_id?: string
+          progress_a?: number
+          progress_b?: number
+          quest_key?: string
+          reward_skill_slug?: string | null
+          reward_skill_xp?: number
+          reward_xp?: number
+          target_count?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_quests_profile_a_id_fkey"
+            columns: ["profile_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quests_profile_a_id_fkey"
+            columns: ["profile_a_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quests_profile_b_id_fkey"
+            columns: ["profile_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quests_profile_b_id_fkey"
+            columns: ["profile_b_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       country_adjacency: {
         Row: {
           country: string
@@ -33126,6 +33227,7 @@ export type Database = {
         }
         Returns: Json
       }
+      coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
       create_character_profile: {
         Args: never
         Returns: {

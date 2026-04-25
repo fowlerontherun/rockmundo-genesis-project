@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.248",
+    date: "2026-04-25",
+    changes: [
+      { type: 'feature', description: "Relationships — New Co-op Quests system: each accepted friend pair can start one Daily quest (resets every UTC midnight) and one Weekly quest (resets every UTC Sunday) for chunky bonus XP. Daily templates include 'Stay in touch' (+25 XP, +5 Charisma), 'Daily jam' (+40 XP, +15 Performance), 'Generous duo' (+30 XP, +10 Charisma), and 'Trading partners' (+35 XP, +10 Business). Weekly templates pay out 120-200 XP plus 40-75 skill XP." },
+      { type: 'feature', description: "Relationships — Co-op quests require both players to contribute. Each player has their own progress bar; the quest only unlocks 'Claim reward' once both bars hit the target. The relationship-action edge function automatically advances quest progress whenever a matching friend action is performed (chat, jam, gift, trade, hangout, gig collab, songwriting collab) — no extra clicks needed." },
+      { type: 'feature', description: "Relationships — New CoopQuestsCard inside each friend's detail panel shows all active quests with title, description, your progress vs theirs, the reward, the cadence badge (daily/weekly), and a 'expires in…' timer. Two buttons let you start a fresh Daily or Weekly quest at any time (one of each per pair max). Completed quests show a green badge and a 'Claim reward' button." },
+      { type: 'feature', description: "New coop_quests table + coop-quest edge function handle quest creation, per-pair active-quest enforcement, claim flow with proper auth checks, and dual-claim tracking so each player claims their own copy of the reward independently. New helper coop_quest_pair_key keeps pair lookups consistent with the existing relationship XP log." },
+    ],
+  },
+  {
     version: "1.1.247",
     date: "2026-04-25",
     changes: [
