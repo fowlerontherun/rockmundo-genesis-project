@@ -77,6 +77,13 @@ export function FriendDetailPanel({
             otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
           />
 
+          <CoopQuestActivityLog
+            otherProfileId={profile.id}
+            title="Quest activity with this friend"
+            description="When each quest started, advanced and got claimed."
+            limit={20}
+          />
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Quick actions</CardTitle>

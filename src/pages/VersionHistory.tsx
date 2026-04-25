@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.249",
+    date: "2026-04-25",
+    changes: [
+      { type: 'feature', description: "Relationships — New Co-op Quest Activity Log shows the full timeline of every quest with each friend: when it was started (and by whom), every progress tick (with the action label and the new X/Y count), the moment it was completed by both players, and each player's reward claim. Lives directly under the Co-op Quests card in the friend detail panel and is scoped to that specific friendship." },
+      { type: 'feature', description: "Activity entries are color-coded by event type: started (flag), progress (trending-up), completed (amber trophy), and claimed (emerald checkmark). Each row shows the actor (You / friend's name), the cadence badge (daily/weekly), the quest title, the human-readable note, and a relative timestamp like '2 minutes ago'." },
+      { type: 'feature', description: "New coop_quest_events table records every lifecycle event with quest_id, actor_profile_id, event_type, optional progress snapshot, and a free-form note. Both edge functions (relationship-action and coop-quest) now emit events automatically — no extra client work required. RLS restricts visibility to the two players in the parent quest pair." },
+    ],
+  },
+  {
     version: "1.1.248",
     date: "2026-04-25",
     changes: [
