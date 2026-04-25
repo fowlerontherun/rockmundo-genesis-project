@@ -283,6 +283,43 @@ Deno.serve(async (req) => {
       profile_b: other_profile_id,
     });
 
+    // Co-op quest progression: increment progress for any active quest matching this action
+    const completedQuests: Array<{ id: string; title: string; reward_xp: number; reward_skill_xp: number }> = [];
+    try {
+      const { data: activeQuests } = await admin
+        .from("coop_quests")
+        .select("*")
+        .eq("pair_key", pk)
+        .eq("action_type", action)
+        .is("completed_at", null)
+        .gt("expires_at", new Date().toISOString());
+
+      for (const q of activeQuests ?? []) {
+        const isA = q.profile_a_id === profile_id;
+        const newProgressA = isA ? (q.progress_a ?? 0) + 1 : (q.progress_a ?? 0);
+        const newProgressB = isA ? (q.progress_b ?? 0) : (q.progress_b ?? 0) + 1;
+        const completed = newProgressA >= q.target_count && newProgressB >= q.target_count;
+        await admin
+          .from("coop_quests")
+          .update({
+            progress_a: newProgressA,
+            progress_b: newProgressB,
+            completed_at: completed ? new Date().toISOString() : null,
+          })
+          .eq("id", q.id);
+        if (completed) {
+          completedQuests.push({
+            id: q.id,
+            title: q.title,
+            reward_xp: q.reward_xp ?? 0,
+            reward_skill_xp: q.reward_skill_xp ?? 0,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("coop-quest progression failed", e);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       xp_awarded: config.xp,
@@ -294,6 +331,7 @@ Deno.serve(async (req) => {
       tier: tierData ?? "acquaintance",
       lifetime_xp: lifetimeData ?? 0,
       action_label: config.label,
+      completed_quests: completedQuests,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
