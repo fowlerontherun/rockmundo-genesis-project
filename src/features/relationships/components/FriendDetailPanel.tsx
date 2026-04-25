@@ -9,6 +9,7 @@ import { RelationshipTimeline } from "./Timeline";
 import { DirectMessagePanel } from "./DirectMessagePanel";
 import { FriendRewardsSummary } from "./FriendRewardsSummary";
 import { CoopQuestsCard } from "./CoopQuestsCard";
+import { CoopQuestActivityLog } from "./CoopQuestActivityLog";
 import { TierPerksPanel } from "./TierPerksPanel";
 import { TeachDialog } from "./TeachDialog";
 import { resolveRelationshipPairKey } from "../api";
