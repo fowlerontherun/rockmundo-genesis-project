@@ -261,6 +261,17 @@ Deno.serve(async (req) => {
       const updates: any = isA ? { claimed_by_a: true } : { claimed_by_b: true };
       await admin.from("coop_quests").update(updates).eq("id", q.id);
 
+      // Activity log: claimed
+      await admin.from("coop_quest_events").insert({
+        quest_id: q.id,
+        pair_key: q.pair_key,
+        actor_profile_id: profile_id,
+        event_type: "claimed",
+        progress_a: q.progress_a,
+        progress_b: q.progress_b,
+        note: `Claimed reward: +${q.reward_xp} XP${q.reward_skill_xp > 0 && q.reward_skill_slug ? ` · +${q.reward_skill_xp} ${q.reward_skill_slug} XP` : ""}`,
+      });
+
       return new Response(JSON.stringify({
         success: true,
         reward_xp: q.reward_xp,
