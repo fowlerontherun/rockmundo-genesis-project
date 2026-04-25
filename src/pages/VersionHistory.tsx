@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.247",
+    date: "2026-04-25",
+    changes: [
+      { type: 'feature', description: "Relationships — New 'Weekly Social Recap' card summarizes the last 7 days of relationship activity: total XP earned, total skill XP, interaction count, unique friends interacted with, top friend by XP, and most-used action. Gives players a clear weekly view of their social progression." },
+      { type: 'feature', description: "Relationships — New 'Suggested Co-ops' widget surfaces the top 3 friends with available daily XP capacity, ranked by total potential XP they can still grant today. Each suggestion lists the specific available actions (with remaining uses) and clicking jumps straight to that friend's detail panel — making it trivial to find the highest-value interaction." },
+      { type: 'feature', description: "Relationships — New 'Friendship Perks' panel inside each friend's detail view shows all four affinity tiers (Acquaintance → Bandmate → Inner Circle → Legendary Duo), highlights the current tier, and reveals which perks are already unlocked vs locked behind more lifetime XP. Makes long-term investment in specific friendships visible and rewarding." },
+    ],
+  },
+  {
     version: "1.1.246",
     date: "2026-04-24",
     changes: [

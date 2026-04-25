@@ -8,6 +8,7 @@ import { QuickActionButtons } from "./ActionButtons";
 import { RelationshipTimeline } from "./Timeline";
 import { DirectMessagePanel } from "./DirectMessagePanel";
 import { FriendRewardsSummary } from "./FriendRewardsSummary";
+import { TierPerksPanel } from "./TierPerksPanel";
 import { TeachDialog } from "./TeachDialog";
 import { resolveRelationshipPairKey } from "../api";
 
@@ -66,6 +67,8 @@ export function FriendDetailPanel({
             otherDisplayName={profile.display_name ?? profile.username ?? "Friend"}
             onTeach={() => setTeachOpen(true)}
           />
+
+          <TierPerksPanel otherProfileId={profile.id} />
 
           <Card>
             <CardHeader className="pb-3">

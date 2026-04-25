@@ -39,6 +39,8 @@ import { FamilyDashboard } from "@/components/family/FamilyDashboard";
 import { StreakBanner } from "@/features/relationships/components/StreakBanner";
 import { FriendActivityFeed } from "@/features/relationships/components/FriendActivityFeed";
 import { BestFriendsLeaderboard } from "@/features/relationships/components/BestFriendsLeaderboard";
+import { WeeklyRecapCard } from "@/features/relationships/components/WeeklyRecapCard";
+import { CoopSuggestionsCard } from "@/features/relationships/components/CoopSuggestionsCard";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePlayerMentorships, useOfferMentorship, useRespondMentorship, useRunMentorSession } from "@/hooks/usePlayerMentorship";
@@ -588,6 +590,18 @@ export default function RelationshipsPage() {
 
       <div className="mb-4 space-y-4">
         <StreakBanner />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <WeeklyRecapCard />
+          <CoopSuggestionsCard
+            friendProfileIds={friendships
+              .filter((f) => f.friendship.status === "accepted" && f.otherProfile?.id)
+              .map((f) => f.otherProfile!.id)}
+            onSelectFriend={(otherId) => {
+              const match = friendships.find((f) => f.otherProfile?.id === otherId);
+              if (match) setSelectedFriendship(match);
+            }}
+          />
+        </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <FriendActivityFeed />
           <BestFriendsLeaderboard />
