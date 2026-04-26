@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -65,16 +66,34 @@ export function CoopQuestActivityLog({
 
   const [cadence, setCadence] = useState<CadenceFilter>("all");
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
+  const [search, setSearch] = useState("");
   const [openQuestId, setOpenQuestId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return events
       .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
+      .filter((e) => {
+        if (!q) return true;
+        const youActed = e.actor_profile_id === profileId;
+        const haystack = [
+          youActed ? "you" : null,
+          e.actor_display_name,
+          e.friend_display_name,
+          e.friend_profile_id,
+          e.quest_title,
+          e.note,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
       .slice(0, limit);
-  }, [events, cadence, eventType, limit]);
+  }, [events, cadence, eventType, search, limit, profileId]);
 
-  const hasActiveFilter = cadence !== "all" || eventType !== "all";
+  const hasActiveFilter = cadence !== "all" || eventType !== "all" || search.trim().length > 0;
 
   return (
     <Card>
@@ -86,6 +105,26 @@ export function CoopQuestActivityLog({
         <CardDescription className="text-xs">{description}</CardDescription>
 
         <div className="mt-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by friend, quest, or note… (try 'you' for your own actions)"
+              className="h-7 pl-7 pr-7 text-xs"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
@@ -125,6 +164,7 @@ export function CoopQuestActivityLog({
                 onClick={() => {
                   setCadence("all");
                   setEventType("all");
+                  setSearch("");
                 }}
               >
                 Reset
