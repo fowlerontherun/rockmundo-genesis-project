@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
+import { CoopQuestDetailsDrawer } from "./CoopQuestDetailsDrawer";
 
 interface CoopQuestActivityLogProps {
   /** If provided, scopes the log to a specific friend pair. Otherwise shows all pairs. */
