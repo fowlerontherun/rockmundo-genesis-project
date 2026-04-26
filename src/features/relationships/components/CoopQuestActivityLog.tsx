@@ -4,13 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useCoopQuestRealtime } from "@/hooks/useCoopQuestRealtime";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
 import { CoopQuestDetailsDrawer } from "./CoopQuestDetailsDrawer";
+
+const FRIEND_FILTER_ALL = "__all__";
 
 interface CoopQuestActivityLogProps {
   /** If provided, scopes the log to a specific friend pair. Otherwise shows all pairs. */
@@ -70,13 +73,38 @@ export function CoopQuestActivityLog({
   const [cadence, setCadence] = useState<CadenceFilter>("all");
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
   const [search, setSearch] = useState("");
+  const [friendId, setFriendId] = useState<string>(FRIEND_FILTER_ALL);
   const [openQuestId, setOpenQuestId] = useState<string | null>(null);
+
+  // Friend dropdown is only meaningful in the global feed (no otherProfileId scoping).
+  const showFriendFilter = !otherProfileId;
+
+  // Build a unique friend list from the loaded events so the dropdown reflects
+  // exactly the friendships the player has any quest history with.
+  const friendOptions = useMemo(() => {
+    if (!showFriendFilter) return [] as { id: string; name: string }[];
+    const map = new Map<string, string>();
+    for (const e of events) {
+      if (e.friend_profile_id) {
+        const existing = map.get(e.friend_profile_id);
+        if (!existing && e.friend_display_name) {
+          map.set(e.friend_profile_id, e.friend_display_name);
+        } else if (!existing) {
+          map.set(e.friend_profile_id, "Unknown friend");
+        }
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [events, showFriendFilter]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return events
       .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
+      .filter((e) => (friendId === FRIEND_FILTER_ALL ? true : e.friend_profile_id === friendId))
       .filter((e) => {
         if (!q) return true;
         const youActed = e.actor_profile_id === profileId;
@@ -94,9 +122,13 @@ export function CoopQuestActivityLog({
         return haystack.includes(q);
       })
       .slice(0, limit);
-  }, [events, cadence, eventType, search, limit, profileId]);
+  }, [events, cadence, eventType, friendId, search, limit, profileId]);
 
-  const hasActiveFilter = cadence !== "all" || eventType !== "all" || search.trim().length > 0;
+  const hasActiveFilter =
+    cadence !== "all" ||
+    eventType !== "all" ||
+    search.trim().length > 0 ||
+    friendId !== FRIEND_FILTER_ALL;
 
   return (
     <Card>
