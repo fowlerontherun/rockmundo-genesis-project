@@ -41,6 +41,7 @@ import { FriendActivityFeed } from "@/features/relationships/components/FriendAc
 import { BestFriendsLeaderboard } from "@/features/relationships/components/BestFriendsLeaderboard";
 import { WeeklyRecapCard } from "@/features/relationships/components/WeeklyRecapCard";
 import { CoopSuggestionsCard } from "@/features/relationships/components/CoopSuggestionsCard";
+import { CoopQuestActivityLog } from "@/features/relationships/components/CoopQuestActivityLog";
 import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePlayerMentorships, useOfferMentorship, useRespondMentorship, useRunMentorSession } from "@/hooks/usePlayerMentorship";
@@ -606,6 +607,11 @@ export default function RelationshipsPage() {
           <FriendActivityFeed />
           <BestFriendsLeaderboard />
         </div>
+        <CoopQuestActivityLog
+          title="Co-op quest activity (all friends)"
+          description="Every quest start, progress tick, completion and reward claim across all your friendships."
+          limit={30}
+        />
       </div>
 
       {/* Main Tabs */}

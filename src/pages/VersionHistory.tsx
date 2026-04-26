@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.250",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Added a global Co-op Quest Activity feed to the main Relationships page that aggregates every quest start, progress tick, completion and reward claim across all of your friendships in one timeline. Sits below the Friend Activity / Best Friends row and shows up to 30 recent events with cadence badges, quest titles, actor names ('You' vs friend), human-readable notes and relative timestamps. The per-friend activity log inside each friend's detail panel is unchanged — this is a top-level overview." },
+    ],
+  },
+  {
     version: "1.1.249",
     date: "2026-04-25",
     changes: [
