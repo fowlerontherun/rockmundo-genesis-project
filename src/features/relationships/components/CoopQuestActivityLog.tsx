@@ -160,6 +160,34 @@ export function CoopQuestActivityLog({
             )}
           </div>
 
+          {showFriendFilter && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                <Users className="h-3 w-3" /> Friend
+              </span>
+              <Select value={friendId} onValueChange={setFriendId}>
+                <SelectTrigger className="h-7 w-[200px] text-xs">
+                  <SelectValue placeholder="All friends" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FRIEND_FILTER_ALL} className="text-xs">
+                    All friends ({friendOptions.length})
+                  </SelectItem>
+                  {friendOptions.map((f) => (
+                    <SelectItem key={f.id} value={f.id} className="text-xs">
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {friendOptions.length === 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  No friend quests in current window
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
@@ -200,6 +228,7 @@ export function CoopQuestActivityLog({
                   setCadence("all");
                   setEventType("all");
                   setSearch("");
+                  setFriendId(FRIEND_FILTER_ALL);
                 }}
               >
                 Reset
