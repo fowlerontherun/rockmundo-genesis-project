@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -65,16 +66,34 @@ export function CoopQuestActivityLog({
 
   const [cadence, setCadence] = useState<CadenceFilter>("all");
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
+  const [search, setSearch] = useState("");
   const [openQuestId, setOpenQuestId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return events
       .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
+      .filter((e) => {
+        if (!q) return true;
+        const youActed = e.actor_profile_id === profileId;
+        const haystack = [
+          youActed ? "you" : null,
+          e.actor_display_name,
+          e.friend_display_name,
+          e.friend_profile_id,
+          e.quest_title,
+          e.note,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
       .slice(0, limit);
-  }, [events, cadence, eventType, limit]);
+  }, [events, cadence, eventType, search, limit, profileId]);
 
-  const hasActiveFilter = cadence !== "all" || eventType !== "all";
+  const hasActiveFilter = cadence !== "all" || eventType !== "all" || search.trim().length > 0;
 
   return (
     <Card>
