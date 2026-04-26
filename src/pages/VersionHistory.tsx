@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.251",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity log now has filters for Cadence (All / Daily / Weekly) and Event type (All / Started / Progress / Completed / Claimed). Filters apply to both the global feed on the Relationships page and the per-friend log inside each friend's detail panel. A 'Reset' button clears active filters in one tap. The log now fetches a wider window of recent events so filtered views still show meaningful history." },
+    ],
+  },
+  {
     version: "1.1.250",
     date: "2026-04-26",
     changes: [
