@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.254",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity feed is now real-time. New quest events (started, progress, completed, claimed) and quest updates appear automatically without refreshing the page. Powered by a Supabase realtime channel on the coop_quest_events and coop_quests tables that invalidates the activity, quests and details React Query caches whenever anything changes." },
+      { type: 'feature', description: "The click-through quest details drawer is also live: per-player progress bars and claim status update in real time as either player triggers actions." },
+      { type: 'improvement', description: "New useCoopQuestRealtime hook centralizes the subscription and is mounted once by the activity log, so a single channel is reused for the global feed and per-friend log. RLS still ensures players only receive events for quests they are part of." },
+    ],
+  },
+  {
     version: "1.1.253",
     date: "2026-04-26",
     changes: [

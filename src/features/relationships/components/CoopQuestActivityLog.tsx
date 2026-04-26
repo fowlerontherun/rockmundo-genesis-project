@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
+import { useCoopQuestRealtime } from "@/hooks/useCoopQuestRealtime";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
 import { CoopQuestDetailsDrawer } from "./CoopQuestDetailsDrawer";
@@ -61,6 +62,8 @@ export function CoopQuestActivityLog({
   limit = 25,
 }: CoopQuestActivityLogProps) {
   const { profileId } = useActiveProfile();
+  // Subscribe to realtime quest + event changes so the feed updates live.
+  useCoopQuestRealtime();
   // Fetch a wider window so client-side filters still have plenty to show.
   const { data: events = [], isLoading } = useCoopQuestEvents(otherProfileId, Math.max(limit * 3, 60));
 
