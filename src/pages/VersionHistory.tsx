@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.253",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity log now has a search box that filters by friend display name, quest title, or event note. Type a friend's name to instantly see only quests involving them, or type 'you' to surface only your own actions. Search works alongside the existing Cadence and Event filters and is cleared by the Reset button." },
+      { type: 'improvement', description: "useCoopQuestEvents hook now also resolves the friend (other player) display name and id for each event by name-mapping both pair members in a single batched profiles lookup. This powers the new search filter and avoids per-row queries." },
+    ],
+  },
+  {
     version: "1.1.252",
     date: "2026-04-26",
     changes: [

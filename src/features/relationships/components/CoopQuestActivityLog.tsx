@@ -105,6 +105,26 @@ export function CoopQuestActivityLog({
         <CardDescription className="text-xs">{description}</CardDescription>
 
         <div className="mt-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by friend, quest, or note… (try 'you' for your own actions)"
+              className="h-7 pl-7 pr-7 text-xs"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
@@ -144,6 +164,7 @@ export function CoopQuestActivityLog({
                 onClick={() => {
                   setCadence("all");
                   setEventType("all");
+                  setSearch("");
                 }}
               >
                 Reset
