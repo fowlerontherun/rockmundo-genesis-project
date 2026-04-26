@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
+import { CoopQuestDetailsDrawer } from "./CoopQuestDetailsDrawer";
 
 interface CoopQuestActivityLogProps {
   /** If provided, scopes the log to a specific friend pair. Otherwise shows all pairs. */
@@ -64,6 +65,7 @@ export function CoopQuestActivityLog({
 
   const [cadence, setCadence] = useState<CadenceFilter>("all");
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
+  const [openQuestId, setOpenQuestId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return events
@@ -149,39 +151,44 @@ export function CoopQuestActivityLog({
               {filtered.map((e) => {
                 const youActed = e.actor_profile_id === profileId;
                 return (
-                  <li
-                    key={e.id}
-                    className={cn(
-                      "flex items-start gap-2 rounded-md border p-2 text-xs",
-                      e.event_type === "claimed" && "border-emerald-500/30 bg-emerald-500/5",
-                      e.event_type === "completed" && "border-amber-500/30 bg-amber-500/5",
-                    )}
-                  >
-                    <div className="mt-0.5">{eventIcon(e.event_type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {eventLabel(e.event_type)}
-                        </Badge>
-                        {e.quest_cadence && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {e.quest_cadence}
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenQuestId(e.quest_id)}
+                      className={cn(
+                        "w-full text-left flex items-start gap-2 rounded-md border p-2 text-xs",
+                        "hover:bg-accent/40 hover:border-accent transition-colors cursor-pointer",
+                        e.event_type === "claimed" && "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10",
+                        e.event_type === "completed" && "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
+                      )}
+                    >
+                      <div className="mt-0.5">{eventIcon(e.event_type)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {eventLabel(e.event_type)}
                           </Badge>
-                        )}
-                        {e.quest_title && (
-                          <span className="font-medium truncate">{e.quest_title}</span>
-                        )}
+                          {e.quest_cadence && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {e.quest_cadence}
+                            </Badge>
+                          )}
+                          {e.quest_title && (
+                            <span className="font-medium truncate">{e.quest_title}</span>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground mt-0.5 break-words">
+                          <span className="font-medium text-foreground">
+                            {youActed ? "You" : e.actor_display_name ?? "Friend"}
+                          </span>
+                          {e.note ? ` — ${e.note}` : ""}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                        </p>
                       </div>
-                      <p className="text-muted-foreground mt-0.5 break-words">
-                        <span className="font-medium text-foreground">
-                          {youActed ? "You" : e.actor_display_name ?? "Friend"}
-                        </span>
-                        {e.note ? ` — ${e.note}` : ""}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                    </button>
                   </li>
                 );
               })}
@@ -189,6 +196,14 @@ export function CoopQuestActivityLog({
           </ScrollArea>
         )}
       </CardContent>
+
+      <CoopQuestDetailsDrawer
+        questId={openQuestId}
+        open={!!openQuestId}
+        onOpenChange={(open) => {
+          if (!open) setOpenQuestId(null);
+        }}
+      />
     </Card>
   );
 }

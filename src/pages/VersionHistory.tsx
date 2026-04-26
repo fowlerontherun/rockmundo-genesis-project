@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.252",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity items are now click-through. Tapping any row opens a side drawer with the full quest details: both players (with 'You' label and per-player progress bars + claim status), the quest target (action type × required count), the per-player reward summary (XP and any skill XP), and live timing (started, completed, expires/expired). Works in both the global activity feed and the per-friend log inside each friend's detail panel." },
+      { type: 'feature', description: "New useCoopQuestDetails hook fetches a single quest by id and joins both players' display names. The drawer reuses the existing coop_quests RLS so only the two players involved can read each quest's details." },
+    ],
+  },
+  {
     version: "1.1.251",
     date: "2026-04-26",
     changes: [
