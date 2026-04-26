@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.255",
+    date: "2026-04-26",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity feed now has a Friend dropdown that lets you filter the global feed to a single friendship. The dropdown is auto-populated from the friends you actually have quest history with (sorted alphabetically) and shows the count next to 'All friends'. The dropdown is hidden in the per-friend log inside each friend's detail panel since it's already scoped to that pair." },
+      { type: 'improvement', description: "Reset button now also clears the friend filter alongside cadence, event type, and search." },
+    ],
+  },
+  {
     version: "1.1.254",
     date: "2026-04-26",
     changes: [
