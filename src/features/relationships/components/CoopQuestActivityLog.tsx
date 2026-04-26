@@ -1,7 +1,9 @@
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2 } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -14,6 +16,23 @@ interface CoopQuestActivityLogProps {
   description?: string;
   limit?: number;
 }
+
+type CadenceFilter = "all" | "daily" | "weekly";
+type EventTypeFilter = "all" | CoopQuestEvent["event_type"];
+
+const CADENCE_OPTIONS: { value: CadenceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+];
+
+const EVENT_OPTIONS: { value: EventTypeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "started", label: "Started" },
+  { value: "progress", label: "Progress" },
+  { value: "completed", label: "Completed" },
+  { value: "claimed", label: "Claimed" },
+];
 
 function eventIcon(type: CoopQuestEvent["event_type"]) {
   switch (type) {
@@ -40,7 +59,20 @@ export function CoopQuestActivityLog({
   limit = 25,
 }: CoopQuestActivityLogProps) {
   const { profileId } = useActiveProfile();
-  const { data: events = [], isLoading } = useCoopQuestEvents(otherProfileId, limit);
+  // Fetch a wider window so client-side filters still have plenty to show.
+  const { data: events = [], isLoading } = useCoopQuestEvents(otherProfileId, Math.max(limit * 3, 60));
+
+  const [cadence, setCadence] = useState<CadenceFilter>("all");
+  const [eventType, setEventType] = useState<EventTypeFilter>("all");
+
+  const filtered = useMemo(() => {
+    return events
+      .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
+      .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
+      .slice(0, limit);
+  }, [events, cadence, eventType, limit]);
+
+  const hasActiveFilter = cadence !== "all" || eventType !== "all";
 
   return (
     <Card>
@@ -50,6 +82,54 @@ export function CoopQuestActivityLog({
           {title}
         </CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
+
+        <div className="mt-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <Filter className="h-3 w-3" /> Cadence
+            </span>
+            {CADENCE_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={cadence === opt.value ? "default" : "outline"}
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setCadence(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <Filter className="h-3 w-3" /> Event
+            </span>
+            {EVENT_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={eventType === opt.value ? "default" : "outline"}
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setEventType(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+            {hasActiveFilter && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => {
+                  setCadence("all");
+                  setEventType("all");
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading && <p className="text-xs text-muted-foreground">Loading activity…</p>}
@@ -58,10 +138,15 @@ export function CoopQuestActivityLog({
             No co-op quest activity yet. Start a quest to see entries appear here.
           </p>
         )}
-        {events.length > 0 && (
+        {!isLoading && events.length > 0 && filtered.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No events match the current filters.
+          </p>
+        )}
+        {filtered.length > 0 && (
           <ScrollArea className="max-h-72 pr-2">
             <ul className="space-y-2">
-              {events.map((e) => {
+              {filtered.map((e) => {
                 const youActed = e.actor_profile_id === profileId;
                 return (
                   <li
