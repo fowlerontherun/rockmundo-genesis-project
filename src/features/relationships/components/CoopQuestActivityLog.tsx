@@ -95,6 +95,7 @@ export function CoopQuestActivityLog({
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
   const [search, setSearch] = useState("");
   const [friendId, setFriendId] = useState<string>(FRIEND_FILTER_ALL);
+  const [range, setRange] = useState<RangeFilter>("all");
   const [openQuestId, setOpenQuestId] = useState<string | null>(null);
 
   // Friend dropdown is only meaningful in the global feed (no otherProfileId scoping).
