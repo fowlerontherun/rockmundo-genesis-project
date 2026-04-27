@@ -14,6 +14,9 @@ export interface ChildRequest {
   surname_policy: string;
   custom_surname: string | null;
   upbringing_focus: string;
+  pathway: string;
+  agency: string | null;
+  application_fee_cents: number | null;
   status: string;
   expires_at: string | null;
   gestation_ends_at: string | null;
