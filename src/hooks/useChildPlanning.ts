@@ -135,8 +135,17 @@ export function useRespondToChildRequest() {
   return useMutation({
     mutationFn: async ({ requestId, accept }: { requestId: string; accept: boolean }) => {
       if (accept) {
+        // Look up the request to determine pathway-specific wait
+        const { data: req } = await supabase
+          .from(asAny("child_requests"))
+          .select("pathway")
+          .eq("id", requestId)
+          .single();
+        const pathway = (req as any)?.pathway ?? "biological";
+        const waitDays = pathway === "adoption" ? 14 : 7;
+
         const gestationEnds = new Date();
-        gestationEnds.setDate(gestationEnds.getDate() + 7);
+        gestationEnds.setDate(gestationEnds.getDate() + waitDays);
 
         const { error } = await supabase
           .from(asAny("child_requests"))
@@ -146,16 +155,27 @@ export function useRespondToChildRequest() {
           }))
           .eq("id", requestId);
         if (error) throw error;
+        return { pathway, waitDays };
       } else {
         const { error } = await supabase
           .from(asAny("child_requests"))
           .update(asAny({ status: "rejected" }))
           .eq("id", requestId);
         if (error) throw error;
+        return { pathway: null, waitDays: 0 };
       }
     },
-    onSuccess: (_, vars) => {
-      toast.success(vars.accept ? "Child request accepted! Expecting in 7 days 🍼" : "Child request declined");
+    onSuccess: (result, vars) => {
+      if (vars.accept) {
+        const isAdoption = result?.pathway === "adoption";
+        toast.success(
+          isAdoption
+            ? `Adoption request accepted! Match in ~${result.waitDays} days 🤝`
+            : `Child request accepted! Expecting in ${result.waitDays} days 🍼`
+        );
+      } else {
+        toast.success("Child request declined");
+      }
       queryClient.invalidateQueries({ queryKey: ["child-requests"] });
     },
     onError: (err: Error) => {
