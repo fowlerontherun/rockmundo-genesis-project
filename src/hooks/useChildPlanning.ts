@@ -89,6 +89,9 @@ export function useRequestChild() {
       surnamePolicy: string;
       customSurname?: string;
       upbringingFocus: string;
+      pathway?: "biological" | "adoption";
+      agency?: string;
+      applicationFeeCents?: number;
     }) => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
@@ -103,6 +106,9 @@ export function useRequestChild() {
           surname_policy: params.surnamePolicy,
           custom_surname: params.customSurname ?? null,
           upbringing_focus: params.upbringingFocus,
+          pathway: params.pathway ?? "biological",
+          agency: params.agency ?? null,
+          application_fee_cents: params.applicationFeeCents ?? null,
           status: "pending",
           expires_at: expiresAt.toISOString(),
         }))
