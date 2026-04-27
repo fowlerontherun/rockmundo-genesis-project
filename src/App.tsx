@@ -332,6 +332,7 @@ function App() {
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
+                    <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
                     <Route path="characters" element={<Characters />} />
                     <Route path="characters/new" element={<CreateCharacter />} />
