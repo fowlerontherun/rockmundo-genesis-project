@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X, Users } from "lucide-react";
+import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X, Users, CalendarRange } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
 import { useCoopQuestRealtime } from "@/hooks/useCoopQuestRealtime";
@@ -25,6 +25,7 @@ interface CoopQuestActivityLogProps {
 
 type CadenceFilter = "all" | "daily" | "weekly";
 type EventTypeFilter = "all" | CoopQuestEvent["event_type"];
+type RangeFilter = "all" | "today" | "7d" | "30d";
 
 const CADENCE_OPTIONS: { value: CadenceFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -39,6 +40,26 @@ const EVENT_OPTIONS: { value: EventTypeFilter; label: string }[] = [
   { value: "completed", label: "Completed" },
   { value: "claimed", label: "Claimed" },
 ];
+
+const RANGE_OPTIONS: { value: RangeFilter; label: string }[] = [
+  { value: "all", label: "All time" },
+  { value: "today", label: "Today" },
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+];
+
+function rangeCutoffMs(range: RangeFilter): number | null {
+  if (range === "all") return null;
+  const now = Date.now();
+  if (range === "today") {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  if (range === "7d") return now - 7 * 24 * 60 * 60 * 1000;
+  if (range === "30d") return now - 30 * 24 * 60 * 60 * 1000;
+  return null;
+}
 
 function eventIcon(type: CoopQuestEvent["event_type"]) {
   switch (type) {
@@ -74,6 +95,7 @@ export function CoopQuestActivityLog({
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
   const [search, setSearch] = useState("");
   const [friendId, setFriendId] = useState<string>(FRIEND_FILTER_ALL);
+  const [range, setRange] = useState<RangeFilter>("all");
   const [openQuestId, setOpenQuestId] = useState<string | null>(null);
 
   // Friend dropdown is only meaningful in the global feed (no otherProfileId scoping).
@@ -101,10 +123,12 @@ export function CoopQuestActivityLog({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const cutoff = rangeCutoffMs(range);
     return events
       .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
       .filter((e) => (friendId === FRIEND_FILTER_ALL ? true : e.friend_profile_id === friendId))
+      .filter((e) => (cutoff === null ? true : new Date(e.created_at).getTime() >= cutoff))
       .filter((e) => {
         if (!q) return true;
         const youActed = e.actor_profile_id === profileId;
@@ -122,13 +146,14 @@ export function CoopQuestActivityLog({
         return haystack.includes(q);
       })
       .slice(0, limit);
-  }, [events, cadence, eventType, friendId, search, limit, profileId]);
+  }, [events, cadence, eventType, friendId, range, search, limit, profileId]);
 
   const hasActiveFilter =
     cadence !== "all" ||
     eventType !== "all" ||
     search.trim().length > 0 ||
-    friendId !== FRIEND_FILTER_ALL;
+    friendId !== FRIEND_FILTER_ALL ||
+    range !== "all";
 
   return (
     <Card>
@@ -190,6 +215,23 @@ export function CoopQuestActivityLog({
 
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <CalendarRange className="h-3 w-3" /> Range
+            </span>
+            {RANGE_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={range === opt.value ? "default" : "outline"}
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setRange(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
             </span>
             {CADENCE_OPTIONS.map((opt) => (
@@ -229,6 +271,7 @@ export function CoopQuestActivityLog({
                   setEventType("all");
                   setSearch("");
                   setFriendId(FRIEND_FILTER_ALL);
+                  setRange("all");
                 }}
               >
                 Reset
