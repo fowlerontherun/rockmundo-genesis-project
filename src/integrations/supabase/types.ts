@@ -3978,6 +3978,44 @@ export type Database = {
         }
         Relationships: []
       }
+      child_interactions: {
+        Row: {
+          child_id: string
+          created_at: string
+          effects: Json
+          id: string
+          interaction_type: string
+          notes: string | null
+          parent_profile_id: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          effects?: Json
+          id?: string
+          interaction_type: string
+          notes?: string | null
+          parent_profile_id: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          effects?: Json
+          id?: string
+          interaction_type?: string
+          notes?: string | null
+          parent_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_interactions_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "player_children"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       child_requests: {
         Row: {
           agency: string | null
@@ -33264,6 +33302,28 @@ export type Database = {
         }
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
+      apply_child_interaction: {
+        Args: {
+          p_child_id: string
+          p_interaction_type: string
+          p_notes?: string
+        }
+        Returns: {
+          child_id: string
+          created_at: string
+          effects: Json
+          id: string
+          interaction_type: string
+          notes: string | null
+          parent_profile_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "child_interactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_missed_gig_consequences: {
         Args: { p_gig_id: string; p_reason?: string }
         Returns: Json

@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Baby, Sparkles, Shield } from "lucide-react";
+import { Baby, Sparkles, ChevronRight } from "lucide-react";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import type { PlayerChild } from "@/hooks/useChildPlanning";
 
 interface ChildCardProps {
@@ -17,13 +18,17 @@ const PLAYABILITY_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export function ChildCard({ child, className }: ChildCardProps) {
+  const navigate = useNavigate();
   const playability = PLAYABILITY_CONFIG[child.playability_state] ?? PLAYABILITY_CONFIG.npc;
   const topPotentials = Object.entries(child.inherited_potentials)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
 
   return (
-    <Card className={cn("border-border/50 hover:border-social-loyalty/30 transition-all", className)}>
+    <Card
+      onClick={() => navigate(`/family/child/${child.id}`)}
+      className={cn("border-border/50 hover:border-social-loyalty/40 transition-all cursor-pointer group", className)}
+    >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -33,9 +38,12 @@ export function ChildCard({ child, className }: ChildCardProps) {
               <p className="text-xs text-muted-foreground">Age {child.current_age}</p>
             </div>
           </div>
-          <Badge variant="outline" className={cn("text-[10px]", playability.color)}>
-            {playability.label}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className={cn("text-[10px]", playability.color)}>
+              {playability.label}
+            </Badge>
+            <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
 
         {topPotentials.length > 0 && (

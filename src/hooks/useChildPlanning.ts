@@ -14,6 +14,9 @@ export interface ChildRequest {
   surname_policy: string;
   custom_surname: string | null;
   upbringing_focus: string;
+  pathway: string;
+  agency: string | null;
+  application_fee_cents: number | null;
   status: string;
   expires_at: string | null;
   gestation_ends_at: string | null;
@@ -89,6 +92,9 @@ export function useRequestChild() {
       surnamePolicy: string;
       customSurname?: string;
       upbringingFocus: string;
+      pathway?: "biological" | "adoption";
+      agency?: string;
+      applicationFeeCents?: number;
     }) => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
@@ -103,6 +109,9 @@ export function useRequestChild() {
           surname_policy: params.surnamePolicy,
           custom_surname: params.customSurname ?? null,
           upbringing_focus: params.upbringingFocus,
+          pathway: params.pathway ?? "biological",
+          agency: params.agency ?? null,
+          application_fee_cents: params.applicationFeeCents ?? null,
           status: "pending",
           expires_at: expiresAt.toISOString(),
         }))
@@ -126,8 +135,17 @@ export function useRespondToChildRequest() {
   return useMutation({
     mutationFn: async ({ requestId, accept }: { requestId: string; accept: boolean }) => {
       if (accept) {
+        // Look up the request to determine pathway-specific wait
+        const { data: req } = await supabase
+          .from(asAny("child_requests"))
+          .select("pathway")
+          .eq("id", requestId)
+          .single();
+        const pathway = (req as any)?.pathway ?? "biological";
+        const waitDays = pathway === "adoption" ? 14 : 7;
+
         const gestationEnds = new Date();
-        gestationEnds.setDate(gestationEnds.getDate() + 7);
+        gestationEnds.setDate(gestationEnds.getDate() + waitDays);
 
         const { error } = await supabase
           .from(asAny("child_requests"))
@@ -137,16 +155,27 @@ export function useRespondToChildRequest() {
           }))
           .eq("id", requestId);
         if (error) throw error;
+        return { pathway, waitDays };
       } else {
         const { error } = await supabase
           .from(asAny("child_requests"))
           .update(asAny({ status: "rejected" }))
           .eq("id", requestId);
         if (error) throw error;
+        return { pathway: null, waitDays: 0 };
       }
     },
-    onSuccess: (_, vars) => {
-      toast.success(vars.accept ? "Child request accepted! Expecting in 7 days 🍼" : "Child request declined");
+    onSuccess: (result, vars) => {
+      if (vars.accept) {
+        const isAdoption = result?.pathway === "adoption";
+        toast.success(
+          isAdoption
+            ? `Adoption request accepted! Match in ~${result.waitDays} days 🤝`
+            : `Child request accepted! Expecting in ${result.waitDays} days 🍼`
+        );
+      } else {
+        toast.success("Child request declined");
+      }
       queryClient.invalidateQueries({ queryKey: ["child-requests"] });
     },
     onError: (err: Error) => {
