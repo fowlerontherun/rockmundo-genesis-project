@@ -3980,45 +3980,69 @@ export type Database = {
       }
       child_requests: {
         Row: {
+          agency: string | null
+          application_fee_cents: number | null
           controller_parent_id: string | null
           created_at: string
           custom_surname: string | null
           expires_at: string | null
           gestation_ends_at: string | null
+          home_study_complete_at: string | null
           id: string
           marriage_id: string
+          match_age_max: number | null
+          match_age_min: number | null
+          match_ready_at: string | null
           parent_a_id: string
           parent_b_id: string
+          pathway: string
+          single_parent_allowed: boolean
           status: string
           surname_policy: string | null
           upbringing_focus: string | null
           updated_at: string
         }
         Insert: {
+          agency?: string | null
+          application_fee_cents?: number | null
           controller_parent_id?: string | null
           created_at?: string
           custom_surname?: string | null
           expires_at?: string | null
           gestation_ends_at?: string | null
+          home_study_complete_at?: string | null
           id?: string
           marriage_id: string
+          match_age_max?: number | null
+          match_age_min?: number | null
+          match_ready_at?: string | null
           parent_a_id: string
           parent_b_id: string
+          pathway?: string
+          single_parent_allowed?: boolean
           status?: string
           surname_policy?: string | null
           upbringing_focus?: string | null
           updated_at?: string
         }
         Update: {
+          agency?: string | null
+          application_fee_cents?: number | null
           controller_parent_id?: string | null
           created_at?: string
           custom_surname?: string | null
           expires_at?: string | null
           gestation_ends_at?: string | null
+          home_study_complete_at?: string | null
           id?: string
           marriage_id?: string
+          match_age_max?: number | null
+          match_age_min?: number | null
+          match_ready_at?: string | null
           parent_a_id?: string
           parent_b_id?: string
+          pathway?: string
+          single_parent_allowed?: boolean
           status?: string
           surname_policy?: string | null
           upbringing_focus?: string | null
@@ -17593,6 +17617,48 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_path: string | null
+          category: string
+          created_at: string
+          id: string
+          message: string
+          metadata: Json
+          profile_id: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_path?: string | null
+          category: string
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          profile_id?: string | null
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_path?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          profile_id?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       npc_relationships: {
         Row: {
           affinity_score: number
@@ -19289,17 +19355,23 @@ export type Database = {
           controller_user_id: string | null
           created_at: string
           current_age: number | null
+          discipline_style: string | null
           emotional_stability: number | null
           id: string
           inherited_potentials: Json | null
+          last_interaction_at: string | null
           marriage_id: string | null
+          mood: number
           name: string
+          needs: Json
           parent_a_id: string
           parent_b_id: string
           playability_state: string | null
+          school_stage: string | null
           surname: string
           traits: Json | null
           updated_at: string
+          weekly_allowance_cents: number
         }
         Insert: {
           birth_game_date?: Json | null
@@ -19310,17 +19382,23 @@ export type Database = {
           controller_user_id?: string | null
           created_at?: string
           current_age?: number | null
+          discipline_style?: string | null
           emotional_stability?: number | null
           id?: string
           inherited_potentials?: Json | null
+          last_interaction_at?: string | null
           marriage_id?: string | null
+          mood?: number
           name: string
+          needs?: Json
           parent_a_id: string
           parent_b_id: string
           playability_state?: string | null
+          school_stage?: string | null
           surname: string
           traits?: Json | null
           updated_at?: string
+          weekly_allowance_cents?: number
         }
         Update: {
           birth_game_date?: Json | null
@@ -19331,17 +19409,23 @@ export type Database = {
           controller_user_id?: string | null
           created_at?: string
           current_age?: number | null
+          discipline_style?: string | null
           emotional_stability?: number | null
           id?: string
           inherited_potentials?: Json | null
+          last_interaction_at?: string | null
           marriage_id?: string | null
+          mood?: number
           name?: string
+          needs?: Json
           parent_a_id?: string
           parent_b_id?: string
           playability_state?: string | null
+          school_stage?: string | null
           surname?: string
           traits?: Json | null
           updated_at?: string
+          weekly_allowance_cents?: number
         }
         Relationships: [
           {
@@ -33353,6 +33437,19 @@ export type Database = {
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      create_notification: {
+        Args: {
+          p_action_path: string
+          p_category: string
+          p_message: string
+          p_metadata: Json
+          p_profile_id: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
       }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decrement_gettit_comment_vote: {

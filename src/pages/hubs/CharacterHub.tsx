@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, UserPlus, Users } from "lucide-react";
+import { User, ShoppingCart, Guitar, HeartPulse, History, BookOpen, Palette, Skull, UserPlus, Users, Crown } from "lucide-react";
 
 export default function CharacterHub() {
   return (
@@ -8,6 +8,7 @@ export default function CharacterHub() {
       description="Manage your avatar, gear, wellness, and personal stats."
       tiles={[
         { icon: Users, labelKey: "nav.characters", path: "/characters", tileImageKey: "buy-character-slot", imagePrompt: "A character roster screen with multiple punk avatars, stats cards, and a switch active character button" },
+        { icon: Crown, labelKey: "In-Game Store", path: "/premium-store", tileImageKey: "premium-store", imagePrompt: "An elegant premium in-game store with a glowing gold VIP crown, character roster slots, and shimmering cosmetic items on display" },
         { icon: User, labelKey: "nav.avatar", path: "/avatar-designer", imagePrompt: "A character customization screen with a rock star avatar and clothing/hair options" },
         { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store", imagePrompt: "A colorful shop displaying character skins, outfits, and accessories for purchase" },
         { icon: Guitar, labelKey: "nav.gear", path: "/gear", imagePrompt: "A collection of instruments: electric guitar, bass, drums, keyboard, all gleaming" },

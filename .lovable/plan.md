@@ -1,160 +1,118 @@
-## Problem
+## Goals
 
-Today, relationships look social-rich but **deliver no progression value**:
+Three connected pieces:
 
-- All 6 quick actions in `ActionButtons.tsx` (gift, trade, collab, hangout, permissions, ping) only insert a row into `activity_feed`. They grant **0 XP and 0 skill XP**.
-- The `player_mentorships` table is empty (0 rows) — the mentorship UI exists but is buried, and even when used, `useRunMentorSession` only updates a counter; it never invokes the `progression` edge function.
-- The friendship tier system (`Acquaintance → Bandmate → Inner Circle → Legendary Duo`) lists "perks" like "+5% shared XP from jams" in `config.ts`, but these multipliers are **never applied** anywhere in the codebase.
-- 16 accepted friendships exist with ~70 logged events, so players ARE engaging — they just get nothing back.
-
-## Goal
-
-Make every friendly interaction a **simple, visible reward loop**: tap a button → see XP/skill XP land → watch your friendship tier climb → unlock bigger rewards.
+1. **Fix notifications** — players never see in‑game notifications because the bell reads from an empty in‑memory context that nothing writes to.
+2. **Premium Store tile/hub** — a single discoverable entry point for buying premium things (VIP, extra character slots, skin store).
+3. **Adoption + Parenting loop** — extend the existing biological children system with adoption, and design a recurring parenting game loop.
 
 ---
 
-## Plan
+## 1. Fix notifications
 
-### 1. Add XP rewards to every quick action (`src/features/relationships/components/ActionButtons.tsx`)
+**What's broken today**
+- `NotificationProvider` (in‑memory) is mounted in `App.tsx` and the `NotificationBell` reads from it, but **nothing in the app calls `addNotification`**.
+- `useGameNotifications` / `useGigNotifications` exist but are never imported (already flagged as dead code in version history).
+- Real notification data already lives in DB tables: `band_gift_notifications`, `company_notifications`, `sponsorship_notifications`, `twaater_notifications`, plus inferable signals from `gigs`, `releases`, `child_requests`, `vip_subscriptions`, etc.
 
-Wire each action through the existing `progression` edge function (`award_action_xp`). Server-side enforcement via a new `relationship_xp_log` table prevents farming.
+**Plan**
+- Create one unified `notifications` table (id, user_id, profile_id, category, type, title, message, action_path, metadata jsonb, read_at, created_at) with RLS scoped to the owning user/profile, and add it to the `supabase_realtime` publication.
+- Add a `useNotifications` hook backed by React Query + a realtime channel that:
+  - Loads the latest 50 notifications for the active profile.
+  - Subscribes to inserts/updates and invalidates the query.
+  - Exposes `markRead`, `markAllRead`, `dismiss`, `clearAll`.
+- Rewrite `NotificationBell` to use the new hook. Keep the existing in-memory `NotificationContext` only as an ephemeral toast surface (or remove it entirely — TBD during implementation; safer to keep and have it fall through to the new hook).
+- Backfill **producers** so bells actually populate:
+  - DB triggers / edge cron writing to `notifications` for: upcoming gigs (24h), release manufacturing complete, release day, band gift received, sponsorship offer, label contract offer, co‑op quest claimed, marriage proposal, child request response, VIP expiring, character death, etc.
+  - Where a dedicated table already exists (twaater, company, sponsorship, band gift) add an AFTER INSERT trigger that mirrors a row into `notifications` with the right `action_path`.
+- Wire the existing dead `useGameNotifications` hook to write into the new table instead of `toast`, and mount it once at the layout level.
+- Add a `NotificationsPage` at `/inbox/notifications` (or extend the existing Inbox) for a full history view with filters (All / Unread / by category).
 
-| Action | Action XP | Skill XP target | Daily cap per friend |
-|---|---|---|---|
-| Quick ping (chat) | +2 | — | 5 pings/day |
-| Send gift | +5 | charisma +3 | 3 gifts/day |
-| Plan hangout | +8 | charisma +5 | 2/day |
-| Secure trade | +10 | business +5 | 3/day |
-| Launch jam collab | +15 | performance +10 | 2/day |
-| Launch gig collab | +20 | performance +15 | 1/day |
-| Launch songwriting collab | +20 | songwriting +15 | 1/day |
-
-Toast now reads: *"+15 XP, +10 Performance Skill XP — Inner Circle 340/600"*.
-
-### 2. New "Co-op Bonuses" — friendship tier multipliers actually fire
-
-When a player completes any of these activities **with a friend** (jam, gig, songwriting session, rehearsal):
-
-- **Bandmate** (250+ affinity): +5% bonus XP applied at the source edge function
-- **Inner Circle** (600+): +10% bonus XP + 5% bonus cash
-- **Legendary Duo** (1000+): +15% bonus XP + 10% cash + 5% fame
-
-Implementation: small helper `applyFriendshipBonus(profileIds, baseXp)` called inside `complete-rehearsals`, `complete-gig`, `cleanup-songwriting`, and `complete-recording-sessions` (which already exist and award XP). Looks up tier from a new server-side `get_friendship_tier(a, b)` SQL function reading the affinity score from the `relationship_xp_log` rollup.
-
-### 3. Daily "Friend Streak" bonus
-
-A new lightweight system: interacting with **any** friend at least once per day grants a daily streak bonus that grows:
-
-- Day 1: +10 XP
-- Day 3: +25 XP + 10 skill XP (charisma)
-- Day 7: +50 XP + 25 skill XP + small cash
-- Day 14+: +100 XP + 50 skill XP + +1 attribute XP
-
-Tracked via a new `daily_social_streaks` table (one row per profile per day). Surfaced as a top banner on `/relationships` with a flame icon and current streak count.
-
-### 4. Activate the dormant Mentorship system
-
-Since `player_mentorships` has 0 rows, fold it into the friend detail panel as a **one-tap "Teach a skill"** action between accepted friends:
-
-- New button in `FriendDetailPanel.tsx` → "Teach [skill]" picker
-- Mentor gets +20 XP + +5 skill XP in their teaching skill
-- Mentee gets +30 XP + +15 skill XP in the focus skill
-- Cooldown: 1 session per pair per 6h (server-enforced)
-- Fix `useRunMentorSession` to actually call the `progression` edge function for both parties (currently just bumps a column).
-
-### 5. Visible rewards UI
-
-Update `FriendDetailPanel.tsx` and `ActionButtons.tsx` to show what each button gives **before** tapping it (small XP/skill chip on each button: `+15 XP · +10 Perf`). Add a "Rewards earned with this friend" stat block in the detail panel showing lifetime XP gained from this friendship.
-
-### 6. Database migration
-
-```sql
--- Track XP awards per friend pair to enforce caps and roll up affinity
-CREATE TABLE relationship_xp_log (
-  id uuid primary key default gen_random_uuid(),
-  profile_id uuid not null,
-  other_profile_id uuid not null,
-  pair_key text not null,           -- sorted "a:b"
-  action_type text not null,
-  xp_awarded int not null default 0,
-  skill_xp_awarded int not null default 0,
-  skill_slug text,
-  created_at timestamptz not null default now()
-);
-CREATE INDEX ON relationship_xp_log (profile_id, other_profile_id, created_at);
-CREATE INDEX ON relationship_xp_log (pair_key);
--- RLS: only owners can read/insert their own rows
-ALTER TABLE relationship_xp_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "owners read" ON relationship_xp_log FOR SELECT TO authenticated
-  USING (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-CREATE POLICY "owners insert" ON relationship_xp_log FOR INSERT TO authenticated
-  WITH CHECK (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-
-CREATE TABLE daily_social_streaks (
-  profile_id uuid primary key,
-  current_streak int not null default 0,
-  last_interaction_date date not null,
-  total_days int not null default 0,
-  updated_at timestamptz not null default now()
-);
-ALTER TABLE daily_social_streaks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "owner all" ON daily_social_streaks FOR ALL TO authenticated
-  USING (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-
--- Helper for tier lookups (used by other edge functions)
-CREATE OR REPLACE FUNCTION get_friendship_tier(profile_a uuid, profile_b uuid)
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT CASE
-    WHEN COALESCE(SUM(xp_awarded), 0) >= 1000 THEN 'legendary-duo'
-    WHEN COALESCE(SUM(xp_awarded), 0) >= 600  THEN 'inner-circle'
-    WHEN COALESCE(SUM(xp_awarded), 0) >= 250  THEN 'bandmate'
-    ELSE 'acquaintance'
-  END
-  FROM relationship_xp_log
-  WHERE pair_key = LEAST(profile_a::text, profile_b::text) || ':' || GREATEST(profile_a::text, profile_b::text);
-$$;
-```
-
-### 7. New edge function: `relationship-action`
-
-Single endpoint that:
-1. Validates the action + friend pair
-2. Checks the per-action daily cap from `relationship_xp_log`
-3. Calls `progression.award_action_xp` for the player (and the friend if they're online/eligible)
-4. Updates `daily_social_streaks` (advances streak if first interaction today, resets if >1 day gap)
-5. Inserts the affinity row in `activity_feed` (current behaviour)
-6. Returns: `{ xp_awarded, skill_xp_awarded, new_tier, streak_days, cap_remaining }`
-
-Frontend `ActionButtons.tsx` calls this single function for all 7 actions instead of using `recordRelationshipEvent` directly.
+**Acceptance**: triggering a band gift, a co-op quest claim, or a 24h-out gig produces a bell badge + a row in the dropdown, persists across reloads, and updates live without refresh.
 
 ---
 
-## Files affected
+## 2. Premium Store tile + hub
 
-**Created**
-- `supabase/migrations/<timestamp>_relationship_xp_system.sql`
-- `supabase/functions/relationship-action/index.ts`
-- `src/hooks/useRelationshipRewards.ts` (fetches caps + streak)
-- `src/features/relationships/components/StreakBanner.tsx`
-- `src/features/relationships/components/RewardChip.tsx` (small +XP badge on buttons)
+**Today**
+- Routes `/vip-subscribe`, `/buy-character-slot`, `/skin-store` exist but are only reachable from scattered cards (e.g. `VipStatusCard`, `CharacterHub` for skins). There is no single "buy real‑money / premium things" surface.
 
-**Modified**
-- `src/features/relationships/components/ActionButtons.tsx` — call new edge function, show reward chips, surface returned XP in toast
-- `src/features/relationships/components/FriendDetailPanel.tsx` — add "Teach a skill" action + lifetime rewards block
-- `src/features/relationships/api.ts` — add `executeRelationshipAction()` wrapper
-- `src/features/relationships/config.ts` — central `ACTION_REWARDS` config (single source of truth for caps/XP)
-- `src/hooks/usePlayerMentorship.ts` — `useRunMentorSession` invokes `progression` for both parties
-- `src/pages/Relationships.tsx` — render `<StreakBanner />` above the tabs
-- `supabase/functions/complete-gig/index.ts`, `complete-rehearsals/index.ts`, `cleanup-songwriting/index.ts`, `complete-recording-sessions/index.ts` — apply `get_friendship_tier()` bonus when participants are friends
-- `src/components/VersionHeader.tsx`, `src/pages/VersionHistory.tsx` — bump to v1.1.245
+**Plan**
+- Add a new `PremiumStoreHub` page at `/premium-store` using the existing `CategoryHub` component, with tiles:
+  - **VIP Membership** → `/vip-subscribe` (Crown icon).
+  - **Character Slots** → `/buy-character-slot` (UserPlus icon) — shows current `character_slots.max_slots` vs used.
+  - **Skin Store** → `/skin-store` (Shirt icon) — already exists, just surfaced here.
+  - **Cosmetics & Boosts** (placeholder for future SKUs) → disabled tile with "Coming soon".
+- Add a top-level "Premium" tile to a discoverable hub. Two options to confirm with the user during implementation:
+  - (a) Add it to `CharacterHub` (most natural — it's about *your* account).
+  - (b) Promote it to the main bottom/horizontal navigation with a small Crown badge.
+  - Default unless told otherwise: do **(a)** plus a persistent small "Premium" link in `HorizontalNavigation` next to the notification bell, gated to non‑VIP users primarily but always visible.
+- Reuse `VipBadge` styling and the existing translation keys (`nav.skinStore`, etc.); add `nav.premiumStore` and `nav.characterSlots` translations.
+- The hub is purely navigational — no new payment code; checkout already lives on the destination pages.
 
-## Out of scope (kept simple)
+**Acceptance**: from any screen, a player can reach VIP, slots, and skins in ≤2 taps via a clearly branded "Premium" entry.
 
-- No new minigames or new screens
-- Existing 6-tab Relationships layout stays the same
-- Romance, Drama, Family tabs unchanged
-- No changes to the deeper `character_relationships` scoring engine — we layer on top of the existing `friendships` + `activity_feed` system
+---
 
-## Result for the player
+## 3. Adoption + parenting game loop
 
-Tapping "Send gift" now shows: **+5 XP · +3 Charisma · Streak day 4 · 2 gifts left today · Bandmate 320/600**. Doing a gig with a friend silently grants +5–15% bonus XP. Mentoring a friend each day actively grows your skill tree.
+**Existing foundation (already in DB)**
+- `marriages`, `child_requests` (with `gestation_ends_at`, `upbringing_focus`, `surname_policy`), `player_children` (with `bond_parent_a/b`, `emotional_stability`, `current_age`, `playability_state`, `inherited_potentials`, `traits`).
+- Hook `useChildPlanning.ts` already manages biological child requests.
+
+**Design — Adoption**
+- Add adoption as a second pathway into `child_requests`:
+  - New column `pathway text not null default 'biological'` with values `biological | adoption`.
+  - Adoption-specific columns: `agency text` (e.g. local/international), `application_fee_cents int`, `home_study_status text`, `match_age_min int`, `match_age_max int`.
+  - Adoption skips `gestation_ends_at`; instead uses `home_study_complete_at` + `match_ready_at` timestamps.
+- Eligibility: requires either an active `marriage` **or** single-parent flag (`single_parent_allowed boolean default true` on the request) — confirm during build whether single-parent adoption should be allowed (default: yes).
+- Flow:
+  1. Player opens "Family" tab on Relationships hub → "Adopt a child".
+  2. Pays application fee (cash gated), picks agency tier (cheap/local → expensive/international, affecting wait time and trait pool).
+  3. Edge function/trigger schedules `home_study_complete_at` (e.g. 3 in-game days) → notification.
+  4. After home study, `match_ready_at` (1-2 in-game days) → child appears in `player_children` with randomized traits/age in the chosen range and starting bond values lower than biological (e.g. 20 vs 50) representing a slower attachment curve.
+- All progression milestones write to the new `notifications` table.
+
+**Design — Parenting loop**
+- Extend `player_children` with parenting-state columns:
+  - `last_interaction_at timestamptz`, `mood int`, `needs jsonb` (food/sleep/affection/learning), `school_stage text`, `weekly_allowance_cents int`, `discipline_style text`.
+- Add `child_interactions` table (id, child_id, actor_user_id, interaction_type, outcome jsonb, created_at, energy_cost) — types: `play`, `teach_skill`, `talk`, `discipline`, `outing`, `gift`, `attend_event`, `delegate_to_partner`.
+- Daily/weekly tick (extend an existing scheduler):
+  - Ages child in game-time using the established 1y = 120 days scale.
+  - Decays `mood` and increases unmet `needs` if no interaction in N hours.
+  - Applies `upbringing_focus` and recent `child_interactions` to slowly grow `inherited_potentials` and `traits` until `playability_state` becomes `playable` at the configured age (e.g. 16 in-game years).
+- Outcomes feed the existing legacy/heir system: when the child becomes playable they appear as a selectable character slot using the existing multi‑slot/permadeath system, with stats inherited from `inherited_potentials` and parenting outcomes.
+- Random events (using the existing random‑events framework): "Child got sick", "Parent‑teacher meeting", "First gig invite as a band kid" — each shows up in the new notifications feed with action buttons that open the parenting screen.
+- New page `/family/children/:id` with: status header (age, mood, bond bars), needs meters, action buttons (Play / Teach / Talk / Outing / Gift), interaction history, growth chart of potentials.
+- Co-parent integration: `controller_user_id` on `player_children` decides whose action queue it appears in; either parent can act, with bond effects favouring the actor.
+
+**Phasing**
+- **Phase 1 (this round)**: schema + adoption request flow + read-only child detail page + notifications integration.
+- **Phase 2**: full parenting loop (interactions table, daily tick, random events, page actions).
+- **Phase 3**: child becomes playable character & inherits stats into a character slot.
+
+This plan only commits to Phase 1 implementation in code; Phases 2–3 are designed here so we don't paint ourselves into a corner with the schema.
+
+---
+
+## Technical Section
+
+**Migrations (Phase 1)**
+- `notifications` table + RLS + realtime publication + indexes on `(profile_id, created_at desc)` and `(profile_id, read_at)`.
+- AFTER INSERT triggers mirroring rows from `band_gift_notifications`, `company_notifications`, `sponsorship_notifications`, `twaater_notifications`, `child_requests` (status changes), `vip_subscriptions` (expiring soon), `coop_quest_events` (claimed) into `notifications`.
+- `child_requests`: add `pathway`, `agency`, `application_fee_cents`, `home_study_complete_at`, `match_ready_at`, `single_parent_allowed`.
+- `player_children`: add `last_interaction_at`, `mood`, `needs`, `school_stage`, `weekly_allowance_cents`, `discipline_style` (Phase 1 nullable; used in Phase 2).
+
+**Frontend (Phase 1)**
+- New: `src/hooks/useNotificationsFeed.ts`, `src/pages/PremiumStoreHub.tsx`, `src/pages/family/AdoptChild.tsx`, `src/pages/family/ChildDetail.tsx`.
+- Modified: `NotificationBell`, `HorizontalNavigation` (Premium link), `CharacterHub` (Premium tile), `useChildPlanning.ts` (split into `useBiologicalChildRequest` + `useAdoptionRequest`), `App.tsx` (new routes), `i18n` keys.
+
+**Edge functions**
+- `process-adoption-tick` (cron-style, runs hourly): advances `home_study_complete_at` / `match_ready_at`, creates `player_children` rows on match, writes notifications.
+- (Phase 2) `process-parenting-tick`: daily decay + aging.
+
+**Out of scope**
+- Real-money payments for parenting — parenting actions cost in-game cash/energy only. VIP/slots continue using the existing Stripe flow on their own pages.
+
+**Versioning**
+- Bump version, update Version History with: "Notifications wired to live DB feed", "Premium Store hub added", "Adoption pathway + parenting schema scaffolded".
