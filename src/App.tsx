@@ -286,6 +286,7 @@ const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
+const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const queryClient = new QueryClient();
 
 function App() {
