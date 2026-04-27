@@ -25,6 +25,7 @@ interface CoopQuestActivityLogProps {
 
 type CadenceFilter = "all" | "daily" | "weekly";
 type EventTypeFilter = "all" | CoopQuestEvent["event_type"];
+type RangeFilter = "all" | "today" | "7d" | "30d";
 
 const CADENCE_OPTIONS: { value: CadenceFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -39,6 +40,26 @@ const EVENT_OPTIONS: { value: EventTypeFilter; label: string }[] = [
   { value: "completed", label: "Completed" },
   { value: "claimed", label: "Claimed" },
 ];
+
+const RANGE_OPTIONS: { value: RangeFilter; label: string }[] = [
+  { value: "all", label: "All time" },
+  { value: "today", label: "Today" },
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+];
+
+function rangeCutoffMs(range: RangeFilter): number | null {
+  if (range === "all") return null;
+  const now = Date.now();
+  if (range === "today") {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  if (range === "7d") return now - 7 * 24 * 60 * 60 * 1000;
+  if (range === "30d") return now - 30 * 24 * 60 * 60 * 1000;
+  return null;
+}
 
 function eventIcon(type: CoopQuestEvent["event_type"]) {
   switch (type) {
