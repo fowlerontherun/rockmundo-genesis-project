@@ -215,6 +215,23 @@ export function CoopQuestActivityLog({
 
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <CalendarRange className="h-3 w-3" /> Range
+            </span>
+            {RANGE_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={range === opt.value ? "default" : "outline"}
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setRange(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
             </span>
             {CADENCE_OPTIONS.map((opt) => (
