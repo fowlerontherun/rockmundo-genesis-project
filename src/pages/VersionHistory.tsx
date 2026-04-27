@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.257",
+    date: "2026-04-27",
+    changes: [
+      { type: 'fix', description: "Notifications — fixed broken notification pipeline. The bell was reading from an empty in-memory store that nothing wrote to, so players never saw any notifications. Replaced it with a new persisted notifications table backed by Supabase Realtime so events appear live across reloads." },
+      { type: 'feature', description: "Notifications — added unified notifications table with category/type/title/message/action_path. Players can mark-read, dismiss, and clear all. Clicking a notification routes to its action target." },
+      { type: 'feature', description: "Notifications — added AFTER INSERT mirror triggers from band_gift_notifications, twaater_notifications, sponsorship_notifications, company_notifications, and child_requests so existing producers automatically populate the new feed." },
+      { type: 'feature', description: "In-Game Store — added a dedicated Premium Store hub at /premium-store with tiles for VIP Membership, Character Slots, Skin Store, and a Cosmetics & Boosts placeholder. Surfaced as a Crown tile on the Character hub." },
+      { type: 'feature', description: "Family — scaffolded the Adoption pathway. child_requests now supports pathway='adoption' alongside biological, with agency, application_fee_cents, home_study_complete_at, match_ready_at, single_parent_allowed, and match_age_min/max columns." },
+      { type: 'feature', description: "Parenting — scaffolded parenting loop columns on player_children: last_interaction_at, mood, needs (food/sleep/affection/learning), school_stage, weekly_allowance_cents, discipline_style. Phase 2 will add the daily tick, child_interactions table, and parenting actions UI." },
+    ],
+  },
+  {
     version: "1.1.256",
     date: "2026-04-27",
     changes: [
