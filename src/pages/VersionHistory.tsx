@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.258",
+    date: "2026-04-27",
+    changes: [
+      { type: 'feature', description: "Family — Adoption pathway is now selectable in the Plan a Child dialog. Pick Biological (7-day gestation) or Adoption (14-day match wait) at the top of the dialog with icon-driven cards. Adoption mode reveals an Agency selector (Local / National / International) with corresponding application fees, all routed through child_requests with pathway, agency, and application_fee_cents." },
+      { type: 'feature', description: "Parenting — added a child_interactions table and an apply_child_interaction RPC. Parents can now log Feed, Nap, Play, Teach, Outing, and Comfort interactions on their child. Each action atomically updates the relevant need (food / sleep / affection / learning), mood, emotional stability, and the bond with the acting parent, then writes a log entry." },
+      { type: 'feature', description: "Family — new Child Detail page at /family/child/:childId with mood, needs (food/sleep/affection/learning) gauges, bond bars, top inherited potentials, recent interactions list, and 6 parenting action buttons. Tapping any child card on the Family dashboard now navigates to this detail page." },
+      { type: 'improvement', description: "Adoption acceptance now waits 14 in-game days instead of 7 to better reflect the match process; success toast adapts ('Adoption request accepted! Match in ~14 days' vs 'Expecting in 7 days')." },
+      { type: 'improvement', description: "RLS on child_interactions: only parents (parent A, parent B, or controlling user) of a child can read or insert interactions for that child; the RPC additionally hard-validates parent identity server-side." },
+    ],
+  },
+  {
     version: "1.1.257",
     date: "2026-04-27",
     changes: [
