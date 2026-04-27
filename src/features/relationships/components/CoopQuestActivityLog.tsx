@@ -123,10 +123,12 @@ export function CoopQuestActivityLog({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const cutoff = rangeCutoffMs(range);
     return events
       .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
       .filter((e) => (friendId === FRIEND_FILTER_ALL ? true : e.friend_profile_id === friendId))
+      .filter((e) => (cutoff === null ? true : new Date(e.created_at).getTime() >= cutoff))
       .filter((e) => {
         if (!q) return true;
         const youActed = e.actor_profile_id === profileId;
@@ -144,13 +146,14 @@ export function CoopQuestActivityLog({
         return haystack.includes(q);
       })
       .slice(0, limit);
-  }, [events, cadence, eventType, friendId, search, limit, profileId]);
+  }, [events, cadence, eventType, friendId, range, search, limit, profileId]);
 
   const hasActiveFilter =
     cadence !== "all" ||
     eventType !== "all" ||
     search.trim().length > 0 ||
-    friendId !== FRIEND_FILTER_ALL;
+    friendId !== FRIEND_FILTER_ALL ||
+    range !== "all";
 
   return (
     <Card>
