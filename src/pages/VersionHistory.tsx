@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.256",
+    date: "2026-04-27",
+    changes: [
+      { type: 'feature', description: "Relationships — Co-op Quest Activity feed now has a date Range filter (Today, 7 days, 30 days, All time) so you can quickly scope activity to a specific time window. Combines with all existing filters (cadence, event type, friend, search)." },
+      { type: 'improvement', description: "Reset button now also clears the date range alongside the other filters." },
+    ],
+  },
+  {
     version: "1.1.255",
     date: "2026-04-26",
     changes: [
