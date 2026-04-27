@@ -271,6 +271,7 @@ export function CoopQuestActivityLog({
                   setEventType("all");
                   setSearch("");
                   setFriendId(FRIEND_FILTER_ALL);
+                  setRange("all");
                 }}
               >
                 Reset
