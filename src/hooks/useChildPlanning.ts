@@ -315,6 +315,17 @@ export function useCompleteChildBirth() {
         .update(asAny({ status: "completed" }))
         .eq("id", params.requestId);
 
+      // Log history event for completion
+      await supabase
+        .from(asAny("child_request_events"))
+        .insert(asAny({
+          request_id: params.requestId,
+          actor_profile_id: params.parentAId,
+          event_type: "child_arrived",
+          resulting_status: "completed",
+          note: `${params.name} ${params.surname} joined the family`,
+        }));
+
       // Post activity feed entry
       if (profileId) {
         await supabase.from("activity_feed").insert({
