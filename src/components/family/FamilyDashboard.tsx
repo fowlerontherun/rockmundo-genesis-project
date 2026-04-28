@@ -182,15 +182,20 @@ export function FamilyDashboard() {
       ))}
 
       {/* Incoming Child Requests */}
-      {incomingChildRequests.map(req => (
+      {incomingChildRequests.map(req => {
+        const isAdoption = (req as any).pathway === "adoption";
+        return (
         <Card key={req.id} className="border-social-loyalty/30 bg-social-loyalty/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Baby className="h-4 w-4 text-social-loyalty" />
               <p className="text-sm font-semibold">Child Planning Request</p>
+              <Badge variant="outline" className="text-[10px] ml-auto">
+                {isAdoption ? `Adoption${(req as any).agency ? ` · ${(req as any).agency}` : ""}` : "Biological"}
+              </Badge>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              {partnerName} wants to plan a child with {req.upbringing_focus} upbringing focus.
+              {partnerName} wants to {isAdoption ? "adopt" : "plan"} a child with {req.upbringing_focus} upbringing focus.
               {req.expires_at && ` Expires ${formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}.`}
             </p>
             <div className="flex gap-2">
@@ -204,24 +209,31 @@ export function FamilyDashboard() {
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {/* Gestating Children (not yet ready) */}
-      {acceptedChildRequests.filter(r => !r.gestation_ends_at || new Date(r.gestation_ends_at) > new Date()).map(req => (
+      {acceptedChildRequests.filter(r => !r.gestation_ends_at || new Date(r.gestation_ends_at) > new Date()).map(req => {
+        const isAdoption = (req as any).pathway === "adoption";
+        return (
         <Card key={req.id} className="border-social-chemistry/30">
           <CardContent className="p-4 flex items-center gap-3">
             <Clock className="h-5 w-5 text-social-chemistry animate-pulse" />
-            <div>
-              <p className="text-sm font-semibold">Expecting a Child!</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">{isAdoption ? "Adoption In Progress" : "Expecting a Child!"}</p>
+                <Badge variant="outline" className="text-[10px]">{isAdoption ? "Adoption" : "Biological"}</Badge>
+              </div>
               <p className="text-xs text-muted-foreground">
                 {req.gestation_ends_at
                   ? `Arrives ${formatDistanceToNow(new Date(req.gestation_ends_at), { addSuffix: true })}`
-                  : "Gestation in progress..."}
+                  : (isAdoption ? "Adoption process underway..." : "Gestation in progress...")}
               </p>
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {/* Children */}
       <Card>

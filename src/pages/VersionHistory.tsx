@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.259",
+    date: "2026-04-28",
+    changes: [
+      { type: 'improvement', description: "Family — incoming child requests and in-progress gestation cards now show a Biological vs Adoption badge (with the agency name when applicable), so players can tell at a glance which pathway a request belongs to." },
+      { type: 'improvement', description: "Family — adoption requests show 'Adoption In Progress' / 'Adoption process underway...' wording (instead of 'Expecting'/'Gestation') while waiting for the match." },
+    ],
+  },
+  {
     version: "1.1.258",
     date: "2026-04-27",
     changes: [
