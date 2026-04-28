@@ -5,6 +5,7 @@ import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import type { PlayerChild } from "@/hooks/useChildPlanning";
+import { useChildAgeProgression } from "@/hooks/useChildAgeProgression";
 
 interface ChildCardProps {
   child: PlayerChild;
