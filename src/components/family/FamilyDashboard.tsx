@@ -189,30 +189,55 @@ export function FamilyDashboard() {
         </Card>
       ))}
 
-      {/* Incoming Child Requests */}
+      {/* Incoming Child / Adoption Requests */}
       {incomingChildRequests.map(req => {
         const isAdoption = (req as any).pathway === "adoption";
+        const agency = (req as any).agency as string | null;
+        const feeCents = (req as any).application_fee_cents as number | null;
+        const feeLabel = feeCents != null ? `$${(feeCents / 100).toLocaleString()}` : null;
         return (
-        <Card key={req.id} className="border-social-loyalty/30 bg-social-loyalty/5">
+        <Card key={req.id} className={isAdoption ? "border-amber-500/40 bg-amber-500/5" : "border-social-loyalty/30 bg-social-loyalty/5"}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Baby className="h-4 w-4 text-social-loyalty" />
-              <p className="text-sm font-semibold">Child Planning Request</p>
+              <Baby className={`h-4 w-4 ${isAdoption ? "text-amber-500" : "text-social-loyalty"}`} />
+              <p className="text-sm font-semibold">
+                {isAdoption ? "Adoption Request Pending" : "Child Planning Request"}
+              </p>
               <Badge variant="outline" className="text-[10px] ml-auto">
-                {isAdoption ? `Adoption${(req as any).agency ? ` · ${(req as any).agency}` : ""}` : "Biological"}
+                {isAdoption ? `Adoption${agency ? ` · ${agency}` : ""}` : "Biological"}
               </Badge>
+              <RequestHistoryButton requestId={req.id} />
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-muted-foreground mb-1">
               {partnerName} wants to {isAdoption ? "adopt" : "plan"} a child with {req.upbringing_focus} upbringing focus.
-              {req.expires_at && ` Expires ${formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}.`}
             </p>
+            {isAdoption && feeLabel && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+                Application fee: {feeLabel} {agency ? `(${agency})` : ""}
+              </p>
+            )}
+            {req.expires_at && (
+              <p className="text-[10px] text-muted-foreground mb-3">
+                Expires {formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}
+              </p>
+            )}
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => respondChildRequest.mutate({ requestId: req.id, accept: true })}
-                className="bg-social-loyalty hover:bg-social-loyalty/90 text-white flex-1">
-                Accept 👶
+              <Button
+                size="sm"
+                disabled={respondChildRequest.isPending}
+                onClick={() => setConfirmAction({ requestId: req.id, accept: true, isAdoption, agency, feeCents })}
+                className={`flex-1 text-white ${isAdoption ? "bg-amber-500 hover:bg-amber-500/90" : "bg-social-loyalty hover:bg-social-loyalty/90"}`}
+              >
+                {isAdoption ? "Accept Adoption 🤝" : "Accept 👶"}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => respondChildRequest.mutate({ requestId: req.id, accept: false })} className="flex-1">
-                Decline
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={respondChildRequest.isPending}
+                onClick={() => setConfirmAction({ requestId: req.id, accept: false, isAdoption, agency, feeCents })}
+                className="flex-1"
+              >
+                {isAdoption ? "Deny" : "Decline"}
               </Button>
             </div>
           </CardContent>
