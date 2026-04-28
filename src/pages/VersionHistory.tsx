@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.261",
+    date: "2026-04-28",
+    changes: [
+      { type: 'feature', description: "Family — pending adoption requests now have explicit Accept Adoption / Deny actions on the FamilyDashboard, distinct from biological child requests, with amber styling, agency name, and application fee shown inline." },
+      { type: 'feature', description: "Family — every accept/deny tap now opens a confirmation dialog summarising the consequence (14-day adoption process + fee, 7-day gestation, or partner notification) before committing." },
+      { type: 'feature', description: "Family — accept, deny, and arrival events are now persisted to a new child_request_events history table (RLS-locked to the two parents). A History popover on each pending request surfaces the full audit trail with timestamps and notes." },
+      { type: 'improvement', description: "useRespondToChildRequest now accepts an actorProfileId and auto-logs adoption_accepted / adoption_denied / request_accepted / request_denied events; useCompleteChildBirth logs a child_arrived event." },
+    ],
+  },
+  {
     version: "1.1.260",
     date: "2026-04-28",
     changes: [
