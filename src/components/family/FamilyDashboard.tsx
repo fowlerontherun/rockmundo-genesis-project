@@ -213,21 +213,27 @@ export function FamilyDashboard() {
       })}
 
       {/* Gestating Children (not yet ready) */}
-      {acceptedChildRequests.filter(r => !r.gestation_ends_at || new Date(r.gestation_ends_at) > new Date()).map(req => (
+      {acceptedChildRequests.filter(r => !r.gestation_ends_at || new Date(r.gestation_ends_at) > new Date()).map(req => {
+        const isAdoption = (req as any).pathway === "adoption";
+        return (
         <Card key={req.id} className="border-social-chemistry/30">
           <CardContent className="p-4 flex items-center gap-3">
             <Clock className="h-5 w-5 text-social-chemistry animate-pulse" />
-            <div>
-              <p className="text-sm font-semibold">Expecting a Child!</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">{isAdoption ? "Adoption In Progress" : "Expecting a Child!"}</p>
+                <Badge variant="outline" className="text-[10px]">{isAdoption ? "Adoption" : "Biological"}</Badge>
+              </div>
               <p className="text-xs text-muted-foreground">
                 {req.gestation_ends_at
                   ? `Arrives ${formatDistanceToNow(new Date(req.gestation_ends_at), { addSuffix: true })}`
-                  : "Gestation in progress..."}
+                  : (isAdoption ? "Adoption process underway..." : "Gestation in progress...")}
               </p>
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {/* Children */}
       <Card>
