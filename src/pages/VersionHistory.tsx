@@ -14,11 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.259",
+    version: "1.1.260",
     date: "2026-04-28",
     changes: [
-      { type: 'improvement', description: "Family — incoming child requests and in-progress gestation cards now show a Biological vs Adoption badge (with the agency name when applicable), so players can tell at a glance which pathway a request belongs to." },
-      { type: 'improvement', description: "Family — adoption requests show 'Adoption In Progress' / 'Adoption process underway...' wording (instead of 'Expecting'/'Gestation') while waiting for the match." },
+      { type: 'feature', description: "Parenting — children now age automatically from their birth_game_date against the shared game epoch. A new useChildAgeProgression hook computes live age + life stage on every render and writes drift back to player_children (current_age, school_stage, and forward-only playability_state) so badges across the app stay in sync." },
+      { type: 'feature', description: "Parenting — added 7 life stages (Infant, Toddler, Preschool, Primary, Middle, High, Adult) with age ranges, descriptions, and suggested playability. The Child Detail page now shows a Life Stage card with a progress bar through the current stage and stage-aware iconography." },
+      { type: 'feature', description: "Parenting — care actions are now stage-gated: Nap is hidden after primary school, Play is hidden after middle school, while Outing and Teach unlock from preschool onward. Adults (18+) hide the Needs and Care panels entirely and show a 'come of age' card instead." },
+      { type: 'improvement', description: "Family dashboard — ChildCard now shows the live age and a compact life-stage badge (Infant / Toddler / Preschool / Primary / Middle / High / Adult) next to the name." },
     ],
   },
   {
