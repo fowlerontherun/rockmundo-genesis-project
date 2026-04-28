@@ -9,6 +9,7 @@ import { useMarriageStatus, usePartnerProfile, useRespondToProposal, useInitiate
 import {
   useChildRequests, usePlayerChildren, useRequestChild,
   useRespondToChildRequest, useCompleteChildBirth, calculateInheritedPotentials,
+  useChildRequestEvents,
 } from "@/hooks/useChildPlanning";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { MarriageStatusCard } from "./MarriageStatusCard";
@@ -17,6 +18,12 @@ import { BirthCompletionDialog } from "./BirthCompletionDialog";
 import { ChildCard } from "./ChildCard";
 import { FamilyLegacyPanel } from "@/components/social/FamilyLegacyPanel";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { History } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function FamilyDashboard() {
