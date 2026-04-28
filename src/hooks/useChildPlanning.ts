@@ -130,20 +130,61 @@ export function useRequestChild() {
   });
 }
 
+export interface ChildRequestEvent {
+  id: string;
+  request_id: string;
+  actor_profile_id: string;
+  event_type: string;
+  resulting_status: string;
+  note: string | null;
+  created_at: string;
+}
+
+export function useChildRequestEvents(requestId: string | undefined) {
+  return useQuery({
+    queryKey: ["child-request-events", requestId],
+    queryFn: async (): Promise<ChildRequestEvent[]> => {
+      if (!requestId) return [];
+      const { data, error } = await supabase
+        .from(asAny("child_request_events"))
+        .select("*")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as ChildRequestEvent[];
+    },
+    enabled: !!requestId,
+  });
+}
+
 export function useRespondToChildRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ requestId, accept }: { requestId: string; accept: boolean }) => {
-      if (accept) {
-        // Look up the request to determine pathway-specific wait
-        const { data: req } = await supabase
-          .from(asAny("child_requests"))
-          .select("pathway")
-          .eq("id", requestId)
-          .single();
-        const pathway = (req as any)?.pathway ?? "biological";
-        const waitDays = pathway === "adoption" ? 14 : 7;
+    mutationFn: async ({
+      requestId,
+      accept,
+      actorProfileId,
+      note,
+    }: {
+      requestId: string;
+      accept: boolean;
+      actorProfileId?: string;
+      note?: string;
+    }) => {
+      // Look up the request first so we can branch and log accurate history
+      const { data: req } = await supabase
+        .from(asAny("child_requests"))
+        .select("pathway, parent_a_id, parent_b_id")
+        .eq("id", requestId)
+        .single();
+      const pathway = (req as any)?.pathway ?? "biological";
+      const isAdoption = pathway === "adoption";
 
+      let resultingStatus: string;
+      let waitDays = 0;
+
+      if (accept) {
+        waitDays = isAdoption ? 14 : 7;
         const gestationEnds = new Date();
         gestationEnds.setDate(gestationEnds.getDate() + waitDays);
 
@@ -155,28 +196,48 @@ export function useRespondToChildRequest() {
           }))
           .eq("id", requestId);
         if (error) throw error;
-        return { pathway, waitDays };
+        resultingStatus = "accepted";
       } else {
         const { error } = await supabase
           .from(asAny("child_requests"))
           .update(asAny({ status: "rejected" }))
           .eq("id", requestId);
         if (error) throw error;
-        return { pathway: null, waitDays: 0 };
+        resultingStatus = "rejected";
       }
+
+      // Log a history event (best-effort — don't block UI on history failures)
+      if (actorProfileId) {
+        const eventType = accept
+          ? (isAdoption ? "adoption_accepted" : "request_accepted")
+          : (isAdoption ? "adoption_denied" : "request_denied");
+        await supabase
+          .from(asAny("child_request_events"))
+          .insert(asAny({
+            request_id: requestId,
+            actor_profile_id: actorProfileId,
+            event_type: eventType,
+            resulting_status: resultingStatus,
+            note: note ?? null,
+          }));
+      }
+
+      return { pathway, waitDays, isAdoption };
     },
     onSuccess: (result, vars) => {
       if (vars.accept) {
-        const isAdoption = result?.pathway === "adoption";
         toast.success(
-          isAdoption
+          result.isAdoption
             ? `Adoption request accepted! Match in ~${result.waitDays} days 🤝`
             : `Child request accepted! Expecting in ${result.waitDays} days 🍼`
         );
       } else {
-        toast.success("Child request declined");
+        toast.success(
+          result.isAdoption ? "Adoption request denied" : "Child request declined"
+        );
       }
       queryClient.invalidateQueries({ queryKey: ["child-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["child-request-events", vars.requestId] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to respond");
