@@ -50,6 +50,7 @@ export function FamilyDashboard() {
 
   const [childDialogOpen, setChildDialogOpen] = useState(false);
   const [birthDialogRequest, setBirthDialogRequest] = useState<typeof childRequests[0] | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ requestId: string; accept: boolean; isAdoption: boolean; agency: string | null; feeCents: number | null } | null>(null);
 
   const pendingChildRequests = childRequests.filter(r => r.status === "pending");
   const acceptedChildRequests = childRequests.filter(r => r.status === "accepted");
