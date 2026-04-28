@@ -288,6 +288,7 @@ const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub")
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
+const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
 const queryClient = new QueryClient();
 
 function App() {
