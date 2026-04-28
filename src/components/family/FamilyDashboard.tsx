@@ -182,15 +182,20 @@ export function FamilyDashboard() {
       ))}
 
       {/* Incoming Child Requests */}
-      {incomingChildRequests.map(req => (
+      {incomingChildRequests.map(req => {
+        const isAdoption = (req as any).pathway === "adoption";
+        return (
         <Card key={req.id} className="border-social-loyalty/30 bg-social-loyalty/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Baby className="h-4 w-4 text-social-loyalty" />
               <p className="text-sm font-semibold">Child Planning Request</p>
+              <Badge variant="outline" className="text-[10px] ml-auto">
+                {isAdoption ? `Adoption${(req as any).agency ? ` · ${(req as any).agency}` : ""}` : "Biological"}
+              </Badge>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              {partnerName} wants to plan a child with {req.upbringing_focus} upbringing focus.
+              {partnerName} wants to {isAdoption ? "adopt" : "plan"} a child with {req.upbringing_focus} upbringing focus.
               {req.expires_at && ` Expires ${formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}.`}
             </p>
             <div className="flex gap-2">
