@@ -20,6 +20,9 @@ const PLAYABILITY_CONFIG: Record<string, { label: string; color: string }> = {
 
 export function ChildCard({ child, className }: ChildCardProps) {
   const navigate = useNavigate();
+  const progression = useChildAgeProgression(child as any);
+  const liveAge = progression?.liveAge ?? child.current_age;
+  const stageMeta = progression?.stageMeta;
   const playability = PLAYABILITY_CONFIG[child.playability_state] ?? PLAYABILITY_CONFIG.npc;
   const topPotentials = Object.entries(child.inherited_potentials)
     .sort(([, a], [, b]) => b - a)
@@ -36,7 +39,14 @@ export function ChildCard({ child, className }: ChildCardProps) {
             <Baby className="h-4 w-4 text-social-loyalty" />
             <div>
               <p className="text-sm font-semibold">{child.name} {child.surname}</p>
-              <p className="text-xs text-muted-foreground">Age {child.current_age}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                Age {liveAge}
+                {stageMeta && (
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                    {stageMeta.label}
+                  </Badge>
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
