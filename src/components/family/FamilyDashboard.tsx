@@ -209,7 +209,8 @@ export function FamilyDashboard() {
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {/* Gestating Children (not yet ready) */}
       {acceptedChildRequests.filter(r => !r.gestation_ends_at || new Date(r.gestation_ends_at) > new Date()).map(req => (
