@@ -336,6 +336,7 @@ function App() {
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="family/child/:childId" element={<ChildDetail />} />
+                    <Route path="family/timeline" element={<FamilyTimeline />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
                     <Route path="characters" element={<Characters />} />
                     <Route path="characters/new" element={<CreateCharacter />} />
