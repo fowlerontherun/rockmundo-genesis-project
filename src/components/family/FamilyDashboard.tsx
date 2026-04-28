@@ -279,12 +279,17 @@ export function FamilyDashboard() {
                 <Badge variant="secondary" className="text-[10px]">{children.length}</Badge>
               )}
             </CardTitle>
-            {canPlanChild && (
-              <Button size="sm" variant="outline" onClick={() => setChildDialogOpen(true)}
-                className="text-xs border-social-loyalty/30 text-social-loyalty hover:bg-social-loyalty/10">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Plan Child
+            <div className="flex items-center gap-1.5">
+              <Button asChild size="sm" variant="ghost" className="text-xs h-7">
+                <a href="/family/timeline"><Clock className="h-3.5 w-3.5 mr-1" /> Timeline</a>
               </Button>
-            )}
+              {canPlanChild && (
+                <Button size="sm" variant="outline" onClick={() => setChildDialogOpen(true)}
+                  className="text-xs border-social-loyalty/30 text-social-loyalty hover:bg-social-loyalty/10">
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Plan Child
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>

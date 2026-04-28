@@ -288,6 +288,7 @@ const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub")
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
+const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
 const queryClient = new QueryClient();
 
 function App() {
@@ -335,6 +336,7 @@ function App() {
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="family/child/:childId" element={<ChildDetail />} />
+                    <Route path="family/timeline" element={<FamilyTimeline />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
                     <Route path="characters" element={<Characters />} />
                     <Route path="characters/new" element={<CreateCharacter />} />

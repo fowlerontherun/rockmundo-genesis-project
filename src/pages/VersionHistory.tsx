@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.262",
+    date: "2026-04-28",
+    changes: [
+      { type: 'feature', description: "Family Timeline — new /family/timeline page renders a chronological feed merging adoption milestones (child_request_events) and parenting interactions (child_interactions) across every child you've ever had." },
+      { type: 'feature', description: "Family Timeline — events are grouped by day with sticky date headers, a vertical track with bullet markers, color-coded icons (Baby/feed/play/teach/affection/nap), pathway and child name badges, and quick 'View' jumps into Child Detail." },
+      { type: 'feature', description: "Family Timeline — filter chips (All / Milestones / Adoption / Interactions) let you focus on adoption-only events or just the day-to-day care log." },
+      { type: 'improvement', description: "FamilyDashboard Children card now exposes a Timeline button next to Plan Child for one-tap access." },
+    ],
+  },
+  {
     version: "1.1.261",
     date: "2026-04-28",
     changes: [
