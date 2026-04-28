@@ -341,31 +341,94 @@ export function FamilyDashboard() {
         />
       )}
 
-      {/* Birth Completion Dialog */}
-      {birthDialogRequest && profileId && (
-        <BirthCompletionDialog
-          open={!!birthDialogRequest}
-          onOpenChange={(open) => { if (!open) setBirthDialogRequest(null); }}
-          request={birthDialogRequest}
-          surname={deriveSurname(birthDialogRequest)}
-          inheritedPotentials={birthPotentials}
-          isPending={completeChildBirth.isPending}
-          onComplete={(name) => {
-            completeChildBirth.mutate({
-              requestId: birthDialogRequest.id,
-              name,
-              parentAId: birthDialogRequest.parent_a_id,
-              parentBId: birthDialogRequest.parent_b_id,
-              marriageId: birthDialogRequest.marriage_id,
-              controllerUserId: profileId ?? "",
-              surname: deriveSurname(birthDialogRequest),
-              inheritedPotentials: birthPotentials,
-            }, {
-              onSuccess: () => setBirthDialogRequest(null),
-            });
-          }}
-        />
-      )}
+      {/* Accept / Deny Confirmation */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.accept
+                ? (confirmAction.isAdoption ? "Accept adoption request?" : "Accept child request?")
+                : (confirmAction?.isAdoption ? "Deny adoption request?" : "Decline child request?")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.accept && confirmAction.isAdoption && (
+                <>
+                  Accepting starts a 14-day adoption process
+                  {confirmAction.agency ? ` with ${confirmAction.agency}` : ""}
+                  {confirmAction.feeCents != null
+                    ? ` and commits an application fee of $${(confirmAction.feeCents / 100).toLocaleString()}.`
+                    : "."}
+                </>
+              )}
+              {confirmAction?.accept && !confirmAction.isAdoption && (
+                <>Accepting starts a 7-day gestation period before your child is born.</>
+              )}
+              {!confirmAction?.accept && confirmAction?.isAdoption && (
+                <>The adoption agency will be notified and the request will be archived in your history.</>
+              )}
+              {!confirmAction?.accept && confirmAction && !confirmAction.isAdoption && (
+                <>Your partner will be notified that you declined this child request.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!confirmAction || !profileId) return;
+                respondChildRequest.mutate(
+                  {
+                    requestId: confirmAction.requestId,
+                    accept: confirmAction.accept,
+                    actorProfileId: profileId,
+                  },
+                  { onSuccess: () => setConfirmAction(null) }
+                );
+              }}
+              className={confirmAction?.accept
+                ? (confirmAction.isAdoption ? "bg-amber-500 hover:bg-amber-500/90" : "")
+                : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}
+            >
+              {confirmAction?.accept ? "Confirm" : "Confirm deny"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  );
+}
+
+function RequestHistoryButton({ requestId }: { requestId: string }) {
+  const { data: events = [], isLoading } = useChildRequestEvents(requestId);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="View history">
+          <History className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-3">
+        <p className="text-xs font-semibold mb-2">Request history</p>
+        {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
+        {!isLoading && events.length === 0 && (
+          <p className="text-xs text-muted-foreground">No events yet — actions will be logged here.</p>
+        )}
+        <div className="space-y-2 max-h-56 overflow-y-auto">
+          {events.map(ev => (
+            <div key={ev.id} className="text-[11px] border-l-2 border-muted pl-2">
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[9px] h-4 px-1">{ev.event_type.replace(/_/g, " ")}</Badge>
+                <span className="text-muted-foreground">→ {ev.resulting_status}</span>
+              </div>
+              {ev.note && <p className="text-muted-foreground italic mt-0.5">{ev.note}</p>}
+              <p className="text-muted-foreground/70 text-[10px] mt-0.5">
+                {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
