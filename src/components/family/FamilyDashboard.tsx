@@ -9,6 +9,7 @@ import { useMarriageStatus, usePartnerProfile, useRespondToProposal, useInitiate
 import {
   useChildRequests, usePlayerChildren, useRequestChild,
   useRespondToChildRequest, useCompleteChildBirth, calculateInheritedPotentials,
+  useChildRequestEvents,
 } from "@/hooks/useChildPlanning";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { MarriageStatusCard } from "./MarriageStatusCard";
@@ -17,6 +18,12 @@ import { BirthCompletionDialog } from "./BirthCompletionDialog";
 import { ChildCard } from "./ChildCard";
 import { FamilyLegacyPanel } from "@/components/social/FamilyLegacyPanel";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { History } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function FamilyDashboard() {
@@ -43,6 +50,7 @@ export function FamilyDashboard() {
 
   const [childDialogOpen, setChildDialogOpen] = useState(false);
   const [birthDialogRequest, setBirthDialogRequest] = useState<typeof childRequests[0] | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ requestId: string; accept: boolean; isAdoption: boolean; agency: string | null; feeCents: number | null } | null>(null);
 
   const pendingChildRequests = childRequests.filter(r => r.status === "pending");
   const acceptedChildRequests = childRequests.filter(r => r.status === "accepted");
@@ -181,30 +189,55 @@ export function FamilyDashboard() {
         </Card>
       ))}
 
-      {/* Incoming Child Requests */}
+      {/* Incoming Child / Adoption Requests */}
       {incomingChildRequests.map(req => {
         const isAdoption = (req as any).pathway === "adoption";
+        const agency = (req as any).agency as string | null;
+        const feeCents = (req as any).application_fee_cents as number | null;
+        const feeLabel = feeCents != null ? `$${(feeCents / 100).toLocaleString()}` : null;
         return (
-        <Card key={req.id} className="border-social-loyalty/30 bg-social-loyalty/5">
+        <Card key={req.id} className={isAdoption ? "border-amber-500/40 bg-amber-500/5" : "border-social-loyalty/30 bg-social-loyalty/5"}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Baby className="h-4 w-4 text-social-loyalty" />
-              <p className="text-sm font-semibold">Child Planning Request</p>
+              <Baby className={`h-4 w-4 ${isAdoption ? "text-amber-500" : "text-social-loyalty"}`} />
+              <p className="text-sm font-semibold">
+                {isAdoption ? "Adoption Request Pending" : "Child Planning Request"}
+              </p>
               <Badge variant="outline" className="text-[10px] ml-auto">
-                {isAdoption ? `Adoption${(req as any).agency ? ` · ${(req as any).agency}` : ""}` : "Biological"}
+                {isAdoption ? `Adoption${agency ? ` · ${agency}` : ""}` : "Biological"}
               </Badge>
+              <RequestHistoryButton requestId={req.id} />
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-muted-foreground mb-1">
               {partnerName} wants to {isAdoption ? "adopt" : "plan"} a child with {req.upbringing_focus} upbringing focus.
-              {req.expires_at && ` Expires ${formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}.`}
             </p>
+            {isAdoption && feeLabel && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+                Application fee: {feeLabel} {agency ? `(${agency})` : ""}
+              </p>
+            )}
+            {req.expires_at && (
+              <p className="text-[10px] text-muted-foreground mb-3">
+                Expires {formatDistanceToNow(new Date(req.expires_at), { addSuffix: true })}
+              </p>
+            )}
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => respondChildRequest.mutate({ requestId: req.id, accept: true })}
-                className="bg-social-loyalty hover:bg-social-loyalty/90 text-white flex-1">
-                Accept 👶
+              <Button
+                size="sm"
+                disabled={respondChildRequest.isPending}
+                onClick={() => setConfirmAction({ requestId: req.id, accept: true, isAdoption, agency, feeCents })}
+                className={`flex-1 text-white ${isAdoption ? "bg-amber-500 hover:bg-amber-500/90" : "bg-social-loyalty hover:bg-social-loyalty/90"}`}
+              >
+                {isAdoption ? "Accept Adoption 🤝" : "Accept 👶"}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => respondChildRequest.mutate({ requestId: req.id, accept: false })} className="flex-1">
-                Decline
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={respondChildRequest.isPending}
+                onClick={() => setConfirmAction({ requestId: req.id, accept: false, isAdoption, agency, feeCents })}
+                className="flex-1"
+              >
+                {isAdoption ? "Deny" : "Decline"}
               </Button>
             </div>
           </CardContent>
@@ -308,31 +341,94 @@ export function FamilyDashboard() {
         />
       )}
 
-      {/* Birth Completion Dialog */}
-      {birthDialogRequest && profileId && (
-        <BirthCompletionDialog
-          open={!!birthDialogRequest}
-          onOpenChange={(open) => { if (!open) setBirthDialogRequest(null); }}
-          request={birthDialogRequest}
-          surname={deriveSurname(birthDialogRequest)}
-          inheritedPotentials={birthPotentials}
-          isPending={completeChildBirth.isPending}
-          onComplete={(name) => {
-            completeChildBirth.mutate({
-              requestId: birthDialogRequest.id,
-              name,
-              parentAId: birthDialogRequest.parent_a_id,
-              parentBId: birthDialogRequest.parent_b_id,
-              marriageId: birthDialogRequest.marriage_id,
-              controllerUserId: profileId ?? "",
-              surname: deriveSurname(birthDialogRequest),
-              inheritedPotentials: birthPotentials,
-            }, {
-              onSuccess: () => setBirthDialogRequest(null),
-            });
-          }}
-        />
-      )}
+      {/* Accept / Deny Confirmation */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.accept
+                ? (confirmAction.isAdoption ? "Accept adoption request?" : "Accept child request?")
+                : (confirmAction?.isAdoption ? "Deny adoption request?" : "Decline child request?")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.accept && confirmAction.isAdoption && (
+                <>
+                  Accepting starts a 14-day adoption process
+                  {confirmAction.agency ? ` with ${confirmAction.agency}` : ""}
+                  {confirmAction.feeCents != null
+                    ? ` and commits an application fee of $${(confirmAction.feeCents / 100).toLocaleString()}.`
+                    : "."}
+                </>
+              )}
+              {confirmAction?.accept && !confirmAction.isAdoption && (
+                <>Accepting starts a 7-day gestation period before your child is born.</>
+              )}
+              {!confirmAction?.accept && confirmAction?.isAdoption && (
+                <>The adoption agency will be notified and the request will be archived in your history.</>
+              )}
+              {!confirmAction?.accept && confirmAction && !confirmAction.isAdoption && (
+                <>Your partner will be notified that you declined this child request.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!confirmAction || !profileId) return;
+                respondChildRequest.mutate(
+                  {
+                    requestId: confirmAction.requestId,
+                    accept: confirmAction.accept,
+                    actorProfileId: profileId,
+                  },
+                  { onSuccess: () => setConfirmAction(null) }
+                );
+              }}
+              className={confirmAction?.accept
+                ? (confirmAction.isAdoption ? "bg-amber-500 hover:bg-amber-500/90" : "")
+                : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}
+            >
+              {confirmAction?.accept ? "Confirm" : "Confirm deny"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  );
+}
+
+function RequestHistoryButton({ requestId }: { requestId: string }) {
+  const { data: events = [], isLoading } = useChildRequestEvents(requestId);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="View history">
+          <History className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-3">
+        <p className="text-xs font-semibold mb-2">Request history</p>
+        {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
+        {!isLoading && events.length === 0 && (
+          <p className="text-xs text-muted-foreground">No events yet — actions will be logged here.</p>
+        )}
+        <div className="space-y-2 max-h-56 overflow-y-auto">
+          {events.map(ev => (
+            <div key={ev.id} className="text-[11px] border-l-2 border-muted pl-2">
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[9px] h-4 px-1">{ev.event_type.replace(/_/g, " ")}</Badge>
+                <span className="text-muted-foreground">→ {ev.resulting_status}</span>
+              </div>
+              {ev.note && <p className="text-muted-foreground italic mt-0.5">{ev.note}</p>}
+              <p className="text-muted-foreground/70 text-[10px] mt-0.5">
+                {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

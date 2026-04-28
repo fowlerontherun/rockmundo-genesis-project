@@ -4016,6 +4016,44 @@ export type Database = {
           },
         ]
       }
+      child_request_events: {
+        Row: {
+          actor_profile_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+          request_id: string
+          resulting_status: string
+        }
+        Insert: {
+          actor_profile_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+          request_id: string
+          resulting_status: string
+        }
+        Update: {
+          actor_profile_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          request_id?: string
+          resulting_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "child_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       child_requests: {
         Row: {
           agency: string | null
