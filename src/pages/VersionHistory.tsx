@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.263",
+    date: "2026-04-29",
+    changes: [
+      { type: 'feature', description: "Family Timeline — new Scope selector lets you focus the feed on a specific child, an in-progress adoption/pregnancy request, or all family activity. Quick-pick chips sit under the dropdown for one-tap switching." },
+      { type: 'improvement', description: "Family Timeline — defaults intelligently to the most relevant scope on load: an adoption-in-progress first, then any pending biological request, then your most recent child, falling back to All. A Reset button reapplies the smart default after manual changes." },
+      { type: 'improvement', description: "Family Timeline — child scope now also includes the linked adoption/pregnancy milestones for that child, so switching to a kid shows their full history end-to-end." },
+    ],
+  },
+  {
     version: "1.1.262",
     date: "2026-04-28",
     changes: [
