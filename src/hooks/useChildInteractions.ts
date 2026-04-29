@@ -9,7 +9,12 @@ export type ChildInteractionType =
   | "play"
   | "teach_skill"
   | "outing"
-  | "comfort";
+  | "comfort"
+  | "homework"
+  | "talk"
+  | "allowance"
+  | "hobby"
+  | "discipline";
 
 export interface ChildInteraction {
   id: string;

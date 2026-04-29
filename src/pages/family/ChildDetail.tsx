@@ -6,6 +6,7 @@ import { ScoreGauge } from "@/components/social/ScoreGauge";
 import {
   Baby, ArrowLeft, UtensilsCrossed, Moon, Gamepad2, GraduationCap,
   TreePine, Heart, Sparkles, Clock, BookOpen, Briefcase,
+  PencilLine, MessagesSquare, Coins, Palette, AlertTriangle, Lock,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
@@ -20,21 +21,35 @@ interface ActionDef {
   color: string;
   /** Stages where this action is available. */
   stages: SchoolStage[];
+  /** Optional UI grouping. */
+  group?: "care" | "education" | "social";
+  /** Hint shown for locked actions. */
+  unlockHint?: string;
 }
 
 const ACTIONS: ActionDef[] = [
-  { type: "feed", label: "Feed", icon: UtensilsCrossed, description: "+25 food, +5 mood", color: "text-amber-500",
+  { type: "feed", label: "Feed", icon: UtensilsCrossed, description: "+25 food, +5 mood", color: "text-amber-500", group: "care",
     stages: ["infant", "toddler", "preschool", "primary", "middle", "high"] },
-  { type: "sleep", label: "Nap", icon: Moon, description: "+30 sleep, +3 mood", color: "text-indigo-400",
+  { type: "sleep", label: "Nap", icon: Moon, description: "+30 sleep, +3 mood", color: "text-indigo-400", group: "care",
     stages: ["infant", "toddler", "preschool", "primary"] },
-  { type: "comfort", label: "Comfort", icon: Heart, description: "+8 mood, +5 stability", color: "text-social-love",
+  { type: "comfort", label: "Comfort", icon: Heart, description: "+8 mood, +5 stability", color: "text-social-love", group: "care",
     stages: ["infant", "toddler", "preschool", "primary", "middle", "high"] },
-  { type: "play", label: "Play", icon: Gamepad2, description: "+20 affection, +5 bond", color: "text-social-loyalty",
+  { type: "play", label: "Play", icon: Gamepad2, description: "+20 affection, +5 bond", color: "text-social-loyalty", group: "social",
     stages: ["toddler", "preschool", "primary", "middle"] },
-  { type: "outing", label: "Outing", icon: TreePine, description: "+15 mood, +8 bond", color: "text-emerald-500",
+  { type: "outing", label: "Outing", icon: TreePine, description: "+15 mood, +8 bond", color: "text-emerald-500", group: "social",
     stages: ["preschool", "primary", "middle", "high"] },
-  { type: "teach_skill", label: "Teach", icon: GraduationCap, description: "+15 learning, +2 stability", color: "text-social-chemistry",
+  { type: "teach_skill", label: "Teach", icon: GraduationCap, description: "+15 learning, +2 stability", color: "text-social-chemistry", group: "education",
     stages: ["preschool", "primary", "middle", "high"] },
+  { type: "discipline", label: "Discipline", icon: AlertTriangle, description: "+6 stability, −8 mood, −4 bond", color: "text-amber-600", group: "social",
+    stages: ["preschool", "primary", "middle", "high"], unlockHint: "Unlocks at age 4" },
+  { type: "hobby", label: "Hobby Session", icon: Palette, description: "+12 affection, +12 learning, +8 mood", color: "text-fuchsia-500", group: "education",
+    stages: ["primary", "middle", "high"], unlockHint: "Unlocks in Primary School" },
+  { type: "homework", label: "Help with Homework", icon: PencilLine, description: "+25 learning, +2 stability, +4 bond, −3 mood", color: "text-sky-500", group: "education",
+    stages: ["primary", "middle", "high"], unlockHint: "Unlocks in Primary School" },
+  { type: "talk", label: "Have a Talk", icon: MessagesSquare, description: "+10 stability, +6 mood, +10 bond", color: "text-social-trust", group: "social",
+    stages: ["middle", "high"], unlockHint: "Unlocks in Middle School" },
+  { type: "allowance", label: "Give Allowance", icon: Coins, description: "+12 mood, +6 bond", color: "text-yellow-500", group: "social",
+    stages: ["middle", "high"], unlockHint: "Unlocks in Middle School" },
 ];
 
 const STAGE_ICON: Record<SchoolStage, typeof Baby> = {
