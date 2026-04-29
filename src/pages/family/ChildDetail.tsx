@@ -6,6 +6,7 @@ import { ScoreGauge } from "@/components/social/ScoreGauge";
 import {
   Baby, ArrowLeft, UtensilsCrossed, Moon, Gamepad2, GraduationCap,
   TreePine, Heart, Sparkles, Clock, BookOpen, Briefcase,
+  PencilLine, MessagesSquare, Coins, Palette, AlertTriangle, Lock,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
@@ -20,21 +21,35 @@ interface ActionDef {
   color: string;
   /** Stages where this action is available. */
   stages: SchoolStage[];
+  /** Optional UI grouping. */
+  group?: "care" | "education" | "social";
+  /** Hint shown for locked actions. */
+  unlockHint?: string;
 }
 
 const ACTIONS: ActionDef[] = [
-  { type: "feed", label: "Feed", icon: UtensilsCrossed, description: "+25 food, +5 mood", color: "text-amber-500",
+  { type: "feed", label: "Feed", icon: UtensilsCrossed, description: "+25 food, +5 mood", color: "text-amber-500", group: "care",
     stages: ["infant", "toddler", "preschool", "primary", "middle", "high"] },
-  { type: "sleep", label: "Nap", icon: Moon, description: "+30 sleep, +3 mood", color: "text-indigo-400",
+  { type: "sleep", label: "Nap", icon: Moon, description: "+30 sleep, +3 mood", color: "text-indigo-400", group: "care",
     stages: ["infant", "toddler", "preschool", "primary"] },
-  { type: "comfort", label: "Comfort", icon: Heart, description: "+8 mood, +5 stability", color: "text-social-love",
+  { type: "comfort", label: "Comfort", icon: Heart, description: "+8 mood, +5 stability", color: "text-social-love", group: "care",
     stages: ["infant", "toddler", "preschool", "primary", "middle", "high"] },
-  { type: "play", label: "Play", icon: Gamepad2, description: "+20 affection, +5 bond", color: "text-social-loyalty",
+  { type: "play", label: "Play", icon: Gamepad2, description: "+20 affection, +5 bond", color: "text-social-loyalty", group: "social",
     stages: ["toddler", "preschool", "primary", "middle"] },
-  { type: "outing", label: "Outing", icon: TreePine, description: "+15 mood, +8 bond", color: "text-emerald-500",
+  { type: "outing", label: "Outing", icon: TreePine, description: "+15 mood, +8 bond", color: "text-emerald-500", group: "social",
     stages: ["preschool", "primary", "middle", "high"] },
-  { type: "teach_skill", label: "Teach", icon: GraduationCap, description: "+15 learning, +2 stability", color: "text-social-chemistry",
+  { type: "teach_skill", label: "Teach", icon: GraduationCap, description: "+15 learning, +2 stability", color: "text-social-chemistry", group: "education",
     stages: ["preschool", "primary", "middle", "high"] },
+  { type: "discipline", label: "Discipline", icon: AlertTriangle, description: "+6 stability, −8 mood, −4 bond", color: "text-amber-600", group: "social",
+    stages: ["preschool", "primary", "middle", "high"], unlockHint: "Unlocks at age 4" },
+  { type: "hobby", label: "Hobby Session", icon: Palette, description: "+12 affection, +12 learning, +8 mood", color: "text-fuchsia-500", group: "education",
+    stages: ["primary", "middle", "high"], unlockHint: "Unlocks in Primary School" },
+  { type: "homework", label: "Help with Homework", icon: PencilLine, description: "+25 learning, +2 stability, +4 bond, −3 mood", color: "text-sky-500", group: "education",
+    stages: ["primary", "middle", "high"], unlockHint: "Unlocks in Primary School" },
+  { type: "talk", label: "Have a Talk", icon: MessagesSquare, description: "+10 stability, +6 mood, +10 bond", color: "text-social-trust", group: "social",
+    stages: ["middle", "high"], unlockHint: "Unlocks in Middle School" },
+  { type: "allowance", label: "Give Allowance", icon: Coins, description: "+12 mood, +6 bond", color: "text-yellow-500", group: "social",
+    stages: ["middle", "high"], unlockHint: "Unlocks in Middle School" },
 ];
 
 const STAGE_ICON: Record<SchoolStage, typeof Baby> = {
@@ -95,6 +110,18 @@ export default function ChildDetail() {
 
   const isAdult = stageMeta.stage === "graduated";
   const visibleActions = ACTIONS.filter((a) => a.stages.includes(stageMeta.stage));
+  // Locked actions: not available now, but unlock at a later stage the child will reach.
+  const stageOrder: SchoolStage[] = ["infant", "toddler", "preschool", "primary", "middle", "high", "graduated"];
+  const currentStageIdx = stageOrder.indexOf(stageMeta.stage);
+  const lockedUpcoming = ACTIONS.filter((a) =>
+    !a.stages.includes(stageMeta.stage) &&
+    a.stages.some((s) => stageOrder.indexOf(s) > currentStageIdx),
+  );
+  const groupedVisible = {
+    care: visibleActions.filter((a) => a.group === "care"),
+    education: visibleActions.filter((a) => a.group === "education"),
+    social: visibleActions.filter((a) => a.group === "social"),
+  };
 
   // Stage progress bar: percent through current stage's age range.
   const [minAge, maxAge] = stageMeta.ageRange;
@@ -207,26 +234,66 @@ export default function ChildDetail() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Care &amp; Activities</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {visibleActions.map(({ type, label, icon: Icon, description, color }) => (
-              <Button
-                key={type}
-                variant="outline"
-                className="h-auto flex-col items-start gap-1 p-3 text-left"
-                disabled={apply.isPending}
-                onClick={() => apply.mutate({ type })}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Icon className={`h-4 w-4 ${color}`} />
-                  <span className="text-sm font-semibold">{label}</span>
+          <CardContent className="space-y-3">
+            {(["care", "education", "social"] as const).map((group) => {
+              const items = groupedVisible[group];
+              if (items.length === 0) return null;
+              const groupLabel = group === "care" ? "Daily Care" : group === "education" ? "Education" : "Social & Bonding";
+              return (
+                <div key={group} className="space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{groupLabel}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {items.map(({ type, label, icon: Icon, description, color }) => (
+                      <Button
+                        key={type}
+                        variant="outline"
+                        className="h-auto flex-col items-start gap-1 p-3 text-left"
+                        disabled={apply.isPending}
+                        onClick={() => apply.mutate({ type })}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Icon className={`h-4 w-4 ${color}`} />
+                          <span className="text-sm font-semibold">{label}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-normal">{description}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <span className="text-[10px] text-muted-foreground font-normal">{description}</span>
-              </Button>
-            ))}
+              );
+            })}
+
             {visibleActions.length === 0 && (
-              <p className="col-span-full text-xs text-muted-foreground text-center py-4">
+              <p className="text-xs text-muted-foreground text-center py-4">
                 No care actions available at this stage.
               </p>
+            )}
+
+            {lockedUpcoming.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Coming Up
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {lockedUpcoming.map(({ type, label, icon: Icon, description, color, unlockHint }) => (
+                    <div
+                      key={type}
+                      className="rounded-md border border-dashed border-border/60 p-3 opacity-60 cursor-not-allowed"
+                      title={unlockHint ?? "Locked"}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Icon className={`h-4 w-4 ${color}`} />
+                        <span className="text-sm font-semibold">{label}</span>
+                        <Lock className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{description}</p>
+                      {unlockHint && (
+                        <p className="text-[10px] text-social-chemistry mt-0.5">{unlockHint}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

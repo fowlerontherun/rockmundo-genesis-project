@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.265",
+    date: "2026-04-29",
+    changes: [
+      { type: 'feature', description: "Parenting — added 5 stage-gated child interactions: Help with Homework (Primary+, +25 learning, +bond, −mood), Hobby Session (Primary+, +affection +learning +mood), Have a Talk (Middle+, +10 stability +bond), Give Allowance (Middle+, +mood +bond), and Discipline (Preschool+, +stability with mood/bond cost)." },
+      { type: 'feature', description: "Parenting — Care & Activities now groups available actions by Daily Care / Education / Social & Bonding, and shows a 'Coming Up' row with locked previews and 'Unlocks at age X' hints so you can see what's around the corner." },
+      { type: 'improvement', description: "Server-side enforcement — apply_child_interaction now checks min_age before applying effects, so stage gates can't be bypassed even if the UI is tampered with." },
+    ],
+  },
+  {
     version: "1.1.264",
     date: "2026-04-29",
     changes: [
