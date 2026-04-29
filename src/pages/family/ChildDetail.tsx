@@ -12,6 +12,8 @@ import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useResolvedChildTraits, type ChildTrait } from "@/hooks/useChildTraits";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ActionDef {
   type: ChildInteractionType;
