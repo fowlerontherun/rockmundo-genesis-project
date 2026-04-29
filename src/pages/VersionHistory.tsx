@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.266",
+    date: "2026-04-29",
+    changes: [
+      { type: 'feature', description: "Parenting — children are now born with 2 random personality traits from a 12-trait catalog (Bookish, Shy, Energetic, Stubborn, Empath, Prodigy, Creative, Anxious, Mischievous, Resilient, Sociable, Sensitive). Conflicting traits are excluded and some traits also tweak baseline emotional stability at birth." },
+      { type: 'feature', description: "Parenting — apply_child_interaction now applies trait-specific multipliers and flat adders per stat per interaction type (e.g. Bookish boosts Homework learning ×1.6 but cuts mood, Resilient softens Discipline penalties, Empath amplifies Comfort and Talk). Resolved deltas + which traits triggered are persisted into the interaction's effects JSON for the timeline." },
+      { type: 'feature', description: "Child Detail — new Personality card lists the child's traits with hover tooltips showing each trait's description and per-interaction modifiers." },
+      { type: 'improvement', description: "Backfill — existing children without traits were retroactively assigned 2 random non-conflicting traits so the new system works retroactively." },
+    ],
+  },
+  {
     version: "1.1.265",
     date: "2026-04-29",
     changes: [
