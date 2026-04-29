@@ -109,6 +109,8 @@ export default function ChildDetail() {
   const topPotentials = Object.entries((child.inherited_potentials ?? {}) as Record<string, number>)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 4);
+  const traitKeys: string[] = Array.isArray(child.traits) ? (child.traits as string[]) : [];
+  const traits = useResolvedChildTraits(traitKeys);
 
   const isAdult = stageMeta.stage === "graduated";
   const visibleActions = ACTIONS.filter((a) => a.stages.includes(stageMeta.stage));
