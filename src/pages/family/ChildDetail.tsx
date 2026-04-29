@@ -280,7 +280,7 @@ export default function ChildDetail() {
                   </Tooltip>
                 ))}
               </div>
-            </TooltipContent_OR_DESCRIPTION_REPLACED />
+            </TooltipProvider>
           </CardContent>
         </Card>
       )}
