@@ -15,6 +15,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits, type ChildTrait } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+/** Format a single trait modifier value for display. */
+function formatModifier(key: string, value: number): string {
+  if (key.endsWith("_mult")) {
+    const stat = key.replace(/_mult$/, "");
+    const pct = Math.round((value - 1) * 100);
+    if (pct === 0) return "";
+    return `${pct > 0 ? "+" : ""}${pct}% ${stat}`;
+  }
+  if (key.endsWith("_add")) {
+    const stat = key.replace(/_add$/, "");
+    return `${value > 0 ? "+" : ""}${value} ${stat}`;
+  }
+  return `${value} ${key}`;
+}
+
 interface ActionDef {
   type: ChildInteractionType;
   label: string;
