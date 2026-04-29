@@ -12,6 +12,23 @@ import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useResolvedChildTraits } from "@/hooks/useChildTraits";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+/** Format a single trait modifier value for display. */
+function formatModifier(key: string, value: number): string {
+  if (key.endsWith("_mult")) {
+    const stat = key.replace(/_mult$/, "");
+    const pct = Math.round((value - 1) * 100);
+    if (pct === 0) return "";
+    return `${pct > 0 ? "+" : ""}${pct}% ${stat}`;
+  }
+  if (key.endsWith("_add")) {
+    const stat = key.replace(/_add$/, "");
+    return `${value > 0 ? "+" : ""}${value} ${stat}`;
+  }
+  return `${value} ${key}`;
+}
 
 interface ActionDef {
   type: ChildInteractionType;
@@ -107,6 +124,8 @@ export default function ChildDetail() {
   const topPotentials = Object.entries((child.inherited_potentials ?? {}) as Record<string, number>)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 4);
+  const traitKeys: string[] = Array.isArray(child.traits) ? (child.traits as string[]) : [];
+  const traits = useResolvedChildTraits(traitKeys);
 
   const isAdult = stageMeta.stage === "graduated";
   const visibleActions = ACTIONS.filter((a) => a.stages.includes(stageMeta.stage));
@@ -227,6 +246,59 @@ export default function ChildDetail() {
           <ScoreGauge label="Bond B" value={child.bond_parent_b ?? 50} max={100} color="social-loyalty" variant="bar" size="sm" />
         </CardContent>
       </Card>
+
+      {/* Personality traits — born with these, modulate every interaction */}
+      {traits.length > 0 && (
+        <Card className="border-social-chemistry/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-social-chemistry" /> Personality
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Affects how interactions land
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <TooltipProvider delayDuration={150}>
+              <div className="flex flex-wrap gap-1.5">
+                {traits.map((t) => (
+                  <Tooltip key={t.key}>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] gap-1 border-social-chemistry/40 bg-social-chemistry/5 cursor-help"
+                      >
+                        <Sparkles className="h-3 w-3 text-social-chemistry" />
+                        {t.name}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                      <p className="text-xs font-semibold">{t.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t.description}</p>
+                      {Object.keys(t.modifiers ?? {}).length > 0 && (
+                        <div className="mt-1.5 space-y-0.5">
+                          {Object.entries(t.modifiers).map(([interaction, mods]) => (
+                            <p key={interaction} className="text-[10px]">
+                              <span className="capitalize text-foreground/80">
+                                {interaction.replace(/_/g, " ")}:
+                              </span>{" "}
+                              <span className="text-muted-foreground">
+                                {Object.entries(mods)
+                                  .map(([k, v]) => formatModifier(k, v))
+                                  .join(", ")}
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Interaction Actions — gated by stage */}
       {!isAdult ? (
