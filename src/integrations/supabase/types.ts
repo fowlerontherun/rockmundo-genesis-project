@@ -4176,6 +4176,42 @@ export type Database = {
           },
         ]
       }
+      child_trait_catalog: {
+        Row: {
+          baseline_adjustments: Json
+          conflicts_with: string[]
+          created_at: string
+          description: string
+          icon: string | null
+          id: string
+          key: string
+          modifiers: Json
+          name: string
+        }
+        Insert: {
+          baseline_adjustments?: Json
+          conflicts_with?: string[]
+          created_at?: string
+          description: string
+          icon?: string | null
+          id?: string
+          key: string
+          modifiers?: Json
+          name: string
+        }
+        Update: {
+          baseline_adjustments?: Json
+          conflicts_with?: string[]
+          created_at?: string
+          description?: string
+          icon?: string | null
+          id?: string
+          key?: string
+          modifiers?: Json
+          name?: string
+        }
+        Relationships: []
+      }
       chord_progressions: {
         Row: {
           created_at: string
