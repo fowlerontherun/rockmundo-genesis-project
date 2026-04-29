@@ -110,6 +110,18 @@ export default function ChildDetail() {
 
   const isAdult = stageMeta.stage === "graduated";
   const visibleActions = ACTIONS.filter((a) => a.stages.includes(stageMeta.stage));
+  // Locked actions: not available now, but unlock at a later stage the child will reach.
+  const stageOrder: SchoolStage[] = ["infant", "toddler", "preschool", "primary", "middle", "high", "graduated"];
+  const currentStageIdx = stageOrder.indexOf(stageMeta.stage);
+  const lockedUpcoming = ACTIONS.filter((a) =>
+    !a.stages.includes(stageMeta.stage) &&
+    a.stages.some((s) => stageOrder.indexOf(s) > currentStageIdx),
+  );
+  const groupedVisible = {
+    care: visibleActions.filter((a) => a.group === "care"),
+    education: visibleActions.filter((a) => a.group === "education"),
+    social: visibleActions.filter((a) => a.group === "social"),
+  };
 
   // Stage progress bar: percent through current stage's age range.
   const [minAge, maxAge] = stageMeta.ageRange;
@@ -222,26 +234,66 @@ export default function ChildDetail() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Care &amp; Activities</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {visibleActions.map(({ type, label, icon: Icon, description, color }) => (
-              <Button
-                key={type}
-                variant="outline"
-                className="h-auto flex-col items-start gap-1 p-3 text-left"
-                disabled={apply.isPending}
-                onClick={() => apply.mutate({ type })}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Icon className={`h-4 w-4 ${color}`} />
-                  <span className="text-sm font-semibold">{label}</span>
+          <CardContent className="space-y-3">
+            {(["care", "education", "social"] as const).map((group) => {
+              const items = groupedVisible[group];
+              if (items.length === 0) return null;
+              const groupLabel = group === "care" ? "Daily Care" : group === "education" ? "Education" : "Social & Bonding";
+              return (
+                <div key={group} className="space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{groupLabel}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {items.map(({ type, label, icon: Icon, description, color }) => (
+                      <Button
+                        key={type}
+                        variant="outline"
+                        className="h-auto flex-col items-start gap-1 p-3 text-left"
+                        disabled={apply.isPending}
+                        onClick={() => apply.mutate({ type })}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Icon className={`h-4 w-4 ${color}`} />
+                          <span className="text-sm font-semibold">{label}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-normal">{description}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <span className="text-[10px] text-muted-foreground font-normal">{description}</span>
-              </Button>
-            ))}
+              );
+            })}
+
             {visibleActions.length === 0 && (
-              <p className="col-span-full text-xs text-muted-foreground text-center py-4">
+              <p className="text-xs text-muted-foreground text-center py-4">
                 No care actions available at this stage.
               </p>
+            )}
+
+            {lockedUpcoming.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Coming Up
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {lockedUpcoming.map(({ type, label, icon: Icon, description, color, unlockHint }) => (
+                    <div
+                      key={type}
+                      className="rounded-md border border-dashed border-border/60 p-3 opacity-60 cursor-not-allowed"
+                      title={unlockHint ?? "Locked"}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Icon className={`h-4 w-4 ${color}`} />
+                        <span className="text-sm font-semibold">{label}</span>
+                        <Lock className="h-3 w-3 ml-auto text-muted-foreground" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{description}</p>
+                      {unlockHint && (
+                        <p className="text-[10px] text-social-chemistry mt-0.5">{unlockHint}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
