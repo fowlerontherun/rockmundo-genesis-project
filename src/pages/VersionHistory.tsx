@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.264",
+    date: "2026-04-29",
+    changes: [
+      { type: 'improvement', description: "Hub tiles — added the 7 missing tile background images so every user-facing hub card now renders with proper artwork instead of falling back to the icon placeholder: nightclubs, world-parliament, premium-store, premium-vip, premium-slots, premium-skins, premium-cosmetics." },
+    ],
+  },
+  {
     version: "1.1.263",
     date: "2026-04-29",
     changes: [
