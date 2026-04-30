@@ -360,9 +360,15 @@ export default function FamilyTimeline() {
           </div>
           <div className="relative space-y-2 border-l-2 border-border/50 ml-2 pl-4">
             {dayItems.map(item => {
-              const Icon = item.kind === "interaction" ? interactionIcon(item.eventType) : Baby;
+              const Icon = item.kind === "interaction"
+                ? interactionIcon(item.eventType)
+                : item.kind === "school"
+                ? GraduationCap
+                : Baby;
               const colorClass = item.kind === "request"
                 ? requestColor(item.eventType)
+                : item.kind === "school"
+                ? "text-social-chemistry"
                 : "text-social-chemistry";
               return (
                 <div key={item.id} className="relative">
@@ -374,24 +380,40 @@ export default function FamilyTimeline() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-semibold capitalize">
-                              {item.eventType.replace(/_/g, " ")}
+                              {item.kind === "school" ? (item.eventType === "parent_teacher_day" ? "Parent-Teacher Day" : item.eventType.replace(/_/g, " ")) : item.eventType.replace(/_/g, " ")}
                             </p>
                             {item.kind === "request" && item.pathway && (
                               <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
                                 {item.pathway}
                               </Badge>
                             )}
-                            {item.kind === "interaction" && item.childName && (
+                            {(item.kind === "interaction" || item.kind === "school") && item.childName && (
                               <Badge variant="secondary" className="text-[9px] h-4 px-1">
                                 {item.childName}
                               </Badge>
+                            )}
+                            {item.kind === "school" && item.subject && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1">{item.subject}</Badge>
+                            )}
+                            {item.kind === "school" && typeof item.rating === "number" && (
+                              <span className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <Star
+                                    key={n}
+                                    className={`h-2.5 w-2.5 ${n <= (item.rating ?? 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                                  />
+                                ))}
+                              </span>
                             )}
                             {item.resultingStatus && (
                               <span className="text-[10px] text-muted-foreground">→ {item.resultingStatus}</span>
                             )}
                           </div>
+                          {item.kind === "school" && item.teacherName && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Teacher: {item.teacherName}</p>
+                          )}
                           {item.note && (
-                            <p className="text-[11px] text-muted-foreground italic mt-1">{item.note}</p>
+                            <p className="text-[11px] text-muted-foreground italic mt-1">{item.kind === "school" ? `"${item.note}"` : item.note}</p>
                           )}
                           <p className="text-[10px] text-muted-foreground/70 mt-1">
                             {format(new Date(item.at), "h:mm a")} · {formatDistanceToNow(new Date(item.at), { addSuffix: true })}
