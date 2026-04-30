@@ -16,7 +16,7 @@ import { useChildrenSchoolEvents } from "@/hooks/useChildSchoolEvents";
 type TimelineItem = {
   id: string;
   at: string;
-  kind: "request" | "interaction";
+  kind: "request" | "interaction" | "school";
   childId?: string;
   childName?: string;
   requestId?: string;
@@ -24,6 +24,9 @@ type TimelineItem = {
   resultingStatus?: string | null;
   note?: string | null;
   pathway?: string;
+  rating?: number;
+  subject?: string | null;
+  teacherName?: string | null;
 };
 
 const interactionIcon = (type: string) => {
