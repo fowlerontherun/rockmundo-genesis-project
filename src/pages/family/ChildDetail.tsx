@@ -14,6 +14,9 @@ import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useChildSchoolEvents } from "@/hooks/useChildSchoolEvents";
+import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
+import { Star } from "lucide-react";
 
 /** Format a single trait modifier value for display. */
 function formatModifier(key: string, value: number): string {
@@ -86,6 +89,7 @@ export default function ChildDetail() {
   const navigate = useNavigate();
   const { data: child, isLoading } = usePlayerChild(childId);
   const { data: interactions = [] } = useChildInteractions(childId);
+  const { data: schoolEvents = [] } = useChildSchoolEvents(childId);
   const apply = useApplyChildInteraction(childId);
   const progression = useChildAgeProgression(child);
 
@@ -377,6 +381,58 @@ export default function ChildDetail() {
             <p className="text-xs text-muted-foreground">
               They are now an independent adult and playable as their own character.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+
+      {/* School events / Parent-teacher days */}
+      {!isAdult && liveAge >= 4 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-social-chemistry" /> School Events
+            </CardTitle>
+            <ParentTeacherDayDialog childId={child.id} childName={`${child.name} ${child.surname}`} />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {schoolEvents.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-3">
+                No parent-teacher days logged yet.
+              </p>
+            ) : (
+              schoolEvents.slice(0, 6).map((ev) => (
+                <div key={ev.id} className="rounded-md border border-border/50 p-2 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs font-semibold capitalize">
+                        {ev.event_type.replace(/_/g, " ")}
+                      </span>
+                      {ev.subject && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1">{ev.subject}</Badge>
+                      )}
+                      {ev.teacher_name && (
+                        <span className="text-[10px] text-muted-foreground truncate">· {ev.teacher_name}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star
+                          key={n}
+                          className={`h-3 w-3 ${n <= ev.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {ev.notes && (
+                    <p className="text-[11px] text-muted-foreground italic">"{ev.notes}"</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground/70">
+                    {formatDistanceToNow(new Date(ev.occurred_at), { addSuffix: true })}
+                  </p>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       )}

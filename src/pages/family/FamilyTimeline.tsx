@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users } from "lucide-react";
+import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users, GraduationCap, Star } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import { useChildrenSchoolEvents } from "@/hooks/useChildSchoolEvents";
 
 type TimelineItem = {
   id: string;
   at: string;
-  kind: "request" | "interaction";
+  kind: "request" | "interaction" | "school";
   childId?: string;
   childName?: string;
   requestId?: string;
@@ -23,6 +24,9 @@ type TimelineItem = {
   resultingStatus?: string | null;
   note?: string | null;
   pathway?: string;
+  rating?: number;
+  subject?: string | null;
+  teacherName?: string | null;
 };
 
 const interactionIcon = (type: string) => {
@@ -95,6 +99,8 @@ export default function FamilyTimeline() {
     },
   });
 
+  const { data: schoolEvents = [] } = useChildrenSchoolEvents(childIds);
+
   const childById = useMemo(() => {
     const m = new Map<string, { name: string; surname: string }>();
     for (const c of children) m.set(c.id, { name: c.name, surname: c.surname });
@@ -125,7 +131,7 @@ export default function FamilyTimeline() {
     if (!scopeTouched) setScope(defaultScope);
   }, [defaultScope, scopeTouched]);
 
-  const [filter, setFilter] = useState<"all" | "adoption" | "interactions" | "milestones">("all");
+  const [filter, setFilter] = useState<"all" | "adoption" | "interactions" | "milestones" | "school">("all");
 
   const items: TimelineItem[] = useMemo(() => {
     const reqItems: TimelineItem[] = requestEvents.map((ev: any) => ({
@@ -150,7 +156,22 @@ export default function FamilyTimeline() {
         note: ev.note ?? ev.summary ?? null,
       };
     });
-    let merged = [...reqItems, ...intItems].sort((a, b) => b.at.localeCompare(a.at));
+    const schoolItems: TimelineItem[] = schoolEvents.map((ev) => {
+      const child = childById.get(ev.child_id);
+      return {
+        id: `sch-${ev.id}`,
+        at: ev.occurred_at ?? ev.created_at,
+        kind: "school",
+        childId: ev.child_id,
+        childName: child ? `${child.name} ${child.surname}` : "Child",
+        eventType: ev.event_type ?? "parent_teacher_day",
+        note: ev.notes,
+        rating: ev.rating,
+        subject: ev.subject,
+        teacherName: ev.teacher_name,
+      };
+    });
+    let merged = [...reqItems, ...intItems, ...schoolItems].sort((a, b) => b.at.localeCompare(a.at));
 
     // Apply scope filter
     if (scope.startsWith("child:")) {
@@ -158,7 +179,7 @@ export default function FamilyTimeline() {
       const child = children.find(c => c.id === cid);
       const linkedReq = child?.child_request_id ?? null;
       merged = merged.filter(i =>
-        (i.kind === "interaction" && i.childId === cid) ||
+        ((i.kind === "interaction" || i.kind === "school") && i.childId === cid) ||
         (i.kind === "request" && linkedReq && i.requestId === linkedReq),
       );
     } else if (scope.startsWith("request:")) {
@@ -169,8 +190,9 @@ export default function FamilyTimeline() {
     if (filter === "adoption") merged = merged.filter(i => i.kind === "request" && i.pathway === "adoption");
     if (filter === "milestones") merged = merged.filter(i => i.kind === "request");
     if (filter === "interactions") merged = merged.filter(i => i.kind === "interaction");
+    if (filter === "school") merged = merged.filter(i => i.kind === "school");
     return merged;
-  }, [requestEvents, interactions, childById, filter, scope, children]);
+  }, [requestEvents, interactions, schoolEvents, childById, filter, scope, children]);
 
   // Group items by day for nicer headings
   const grouped = useMemo(() => {
@@ -305,7 +327,7 @@ export default function FamilyTimeline() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-1.5">
-          {(["all", "milestones", "adoption", "interactions"] as const).map(f => (
+          {(["all", "milestones", "adoption", "interactions", "school"] as const).map(f => (
             <Button
               key={f}
               size="sm"
@@ -338,9 +360,15 @@ export default function FamilyTimeline() {
           </div>
           <div className="relative space-y-2 border-l-2 border-border/50 ml-2 pl-4">
             {dayItems.map(item => {
-              const Icon = item.kind === "interaction" ? interactionIcon(item.eventType) : Baby;
+              const Icon = item.kind === "interaction"
+                ? interactionIcon(item.eventType)
+                : item.kind === "school"
+                ? GraduationCap
+                : Baby;
               const colorClass = item.kind === "request"
                 ? requestColor(item.eventType)
+                : item.kind === "school"
+                ? "text-social-chemistry"
                 : "text-social-chemistry";
               return (
                 <div key={item.id} className="relative">
@@ -352,24 +380,40 @@ export default function FamilyTimeline() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-semibold capitalize">
-                              {item.eventType.replace(/_/g, " ")}
+                              {item.kind === "school" ? (item.eventType === "parent_teacher_day" ? "Parent-Teacher Day" : item.eventType.replace(/_/g, " ")) : item.eventType.replace(/_/g, " ")}
                             </p>
                             {item.kind === "request" && item.pathway && (
                               <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
                                 {item.pathway}
                               </Badge>
                             )}
-                            {item.kind === "interaction" && item.childName && (
+                            {(item.kind === "interaction" || item.kind === "school") && item.childName && (
                               <Badge variant="secondary" className="text-[9px] h-4 px-1">
                                 {item.childName}
                               </Badge>
+                            )}
+                            {item.kind === "school" && item.subject && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1">{item.subject}</Badge>
+                            )}
+                            {item.kind === "school" && typeof item.rating === "number" && (
+                              <span className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <Star
+                                    key={n}
+                                    className={`h-2.5 w-2.5 ${n <= (item.rating ?? 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                                  />
+                                ))}
+                              </span>
                             )}
                             {item.resultingStatus && (
                               <span className="text-[10px] text-muted-foreground">→ {item.resultingStatus}</span>
                             )}
                           </div>
+                          {item.kind === "school" && item.teacherName && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Teacher: {item.teacherName}</p>
+                          )}
                           {item.note && (
-                            <p className="text-[11px] text-muted-foreground italic mt-1">{item.note}</p>
+                            <p className="text-[11px] text-muted-foreground italic mt-1">{item.kind === "school" ? `"${item.note}"` : item.note}</p>
                           )}
                           <p className="text-[10px] text-muted-foreground/70 mt-1">
                             {format(new Date(item.at), "h:mm a")} · {formatDistanceToNow(new Date(item.at), { addSuffix: true })}

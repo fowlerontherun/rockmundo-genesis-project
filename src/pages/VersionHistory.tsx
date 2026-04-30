@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.267",
+    date: "2026-04-30",
+    changes: [
+      { type: 'feature', description: "Parenting — added Parent-Teacher Day events: log teacher name, subject, overall/behavior/academic star ratings (1–5) and free-form notes for any school-aged child (4+)." },
+      { type: 'feature', description: "Stat effects — ratings drive mood, emotional stability, parent bond and learning (positive at 4–5★, negative at 1–2★). Server RPC log_child_school_event enforces age gate, parentage and atomic stat updates." },
+      { type: 'feature', description: "Family Timeline — parent-teacher days now appear in the chronological feed alongside adoption milestones and interactions, with star ratings, subject and teacher inline. New 'school' filter chip isolates them." },
+      { type: 'feature', description: "Child Detail — new School Events card with quick-log dialog and history of recent parent-teacher days, including star ratings and teacher notes." },
+    ],
+  },
+  {
     version: "1.1.266",
     date: "2026-04-29",
     changes: [

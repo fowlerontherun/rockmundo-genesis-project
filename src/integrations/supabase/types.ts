@@ -4176,6 +4176,62 @@ export type Database = {
           },
         ]
       }
+      child_school_events: {
+        Row: {
+          academic_rating: number | null
+          behavior_rating: number | null
+          child_id: string
+          created_at: string
+          effects: Json
+          event_type: string
+          id: string
+          notes: string | null
+          occurred_at: string
+          parent_profile_id: string
+          rating: number
+          subject: string | null
+          teacher_name: string | null
+        }
+        Insert: {
+          academic_rating?: number | null
+          behavior_rating?: number | null
+          child_id: string
+          created_at?: string
+          effects?: Json
+          event_type?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          parent_profile_id: string
+          rating: number
+          subject?: string | null
+          teacher_name?: string | null
+        }
+        Update: {
+          academic_rating?: number | null
+          behavior_rating?: number | null
+          child_id?: string
+          created_at?: string
+          effects?: Json
+          event_type?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          parent_profile_id?: string
+          rating?: number
+          subject?: string | null
+          teacher_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_school_events_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "player_children"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       child_trait_catalog: {
         Row: {
           baseline_adjustments: Json
@@ -33723,6 +33779,39 @@ export type Database = {
       }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      log_child_school_event: {
+        Args: {
+          p_academic_rating?: number
+          p_behavior_rating?: number
+          p_child_id: string
+          p_event_type?: string
+          p_notes?: string
+          p_rating?: number
+          p_subject?: string
+          p_teacher_name?: string
+        }
+        Returns: {
+          academic_rating: number | null
+          behavior_rating: number | null
+          child_id: string
+          created_at: string
+          effects: Json
+          event_type: string
+          id: string
+          notes: string | null
+          occurred_at: string
+          parent_profile_id: string
+          rating: number
+          subject: string | null
+          teacher_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "child_school_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       owns_rehearsal_room: { Args: { _room_id: string }; Returns: boolean }
       place_song_bid: {
         Args: {
