@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users } from "lucide-react";
+import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users, GraduationCap, Star } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import { useChildrenSchoolEvents } from "@/hooks/useChildSchoolEvents";
 
 type TimelineItem = {
   id: string;
