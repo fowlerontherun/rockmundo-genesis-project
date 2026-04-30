@@ -131,7 +131,7 @@ export default function FamilyTimeline() {
     if (!scopeTouched) setScope(defaultScope);
   }, [defaultScope, scopeTouched]);
 
-  const [filter, setFilter] = useState<"all" | "adoption" | "interactions" | "milestones">("all");
+  const [filter, setFilter] = useState<"all" | "adoption" | "interactions" | "milestones" | "school">("all");
 
   const items: TimelineItem[] = useMemo(() => {
     const reqItems: TimelineItem[] = requestEvents.map((ev: any) => ({
@@ -156,7 +156,22 @@ export default function FamilyTimeline() {
         note: ev.note ?? ev.summary ?? null,
       };
     });
-    let merged = [...reqItems, ...intItems].sort((a, b) => b.at.localeCompare(a.at));
+    const schoolItems: TimelineItem[] = schoolEvents.map((ev) => {
+      const child = childById.get(ev.child_id);
+      return {
+        id: `sch-${ev.id}`,
+        at: ev.occurred_at ?? ev.created_at,
+        kind: "school",
+        childId: ev.child_id,
+        childName: child ? `${child.name} ${child.surname}` : "Child",
+        eventType: ev.event_type ?? "parent_teacher_day",
+        note: ev.notes,
+        rating: ev.rating,
+        subject: ev.subject,
+        teacherName: ev.teacher_name,
+      };
+    });
+    let merged = [...reqItems, ...intItems, ...schoolItems].sort((a, b) => b.at.localeCompare(a.at));
 
     // Apply scope filter
     if (scope.startsWith("child:")) {
@@ -164,7 +179,7 @@ export default function FamilyTimeline() {
       const child = children.find(c => c.id === cid);
       const linkedReq = child?.child_request_id ?? null;
       merged = merged.filter(i =>
-        (i.kind === "interaction" && i.childId === cid) ||
+        ((i.kind === "interaction" || i.kind === "school") && i.childId === cid) ||
         (i.kind === "request" && linkedReq && i.requestId === linkedReq),
       );
     } else if (scope.startsWith("request:")) {
@@ -175,8 +190,9 @@ export default function FamilyTimeline() {
     if (filter === "adoption") merged = merged.filter(i => i.kind === "request" && i.pathway === "adoption");
     if (filter === "milestones") merged = merged.filter(i => i.kind === "request");
     if (filter === "interactions") merged = merged.filter(i => i.kind === "interaction");
+    if (filter === "school") merged = merged.filter(i => i.kind === "school");
     return merged;
-  }, [requestEvents, interactions, childById, filter, scope, children]);
+  }, [requestEvents, interactions, schoolEvents, childById, filter, scope, children]);
 
   // Group items by day for nicer headings
   const grouped = useMemo(() => {
