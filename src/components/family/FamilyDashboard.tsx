@@ -189,6 +189,24 @@ export function FamilyDashboard() {
         </Card>
       ))}
 
+      {/* Coming of Age — children 18+ not yet converted to playable */}
+      {children
+        .filter(c => (c.current_age ?? 0) >= 18 && !c.child_profile_id)
+        .map(c => (
+          <Card key={`coa-${c.id}`} className="border-social-chemistry/40 bg-gradient-to-br from-social-chemistry/10 to-transparent">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-social-chemistry" />
+                <p className="text-sm font-bold">{c.name} {c.surname} has come of age!</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Convert them into a playable character with inherited bonuses from their upbringing.
+              </p>
+              <ComingOfAgeDialog child={c} autoPrompt />
+            </CardContent>
+          </Card>
+        ))}
+
       {/* Incoming Child / Adoption Requests */}
       {incomingChildRequests.map(req => {
         const isAdoption = (req as any).pathway === "adoption";
