@@ -99,6 +99,8 @@ export default function FamilyTimeline() {
     },
   });
 
+  const { data: schoolEvents = [] } = useChildrenSchoolEvents(childIds);
+
   const childById = useMemo(() => {
     const m = new Map<string, { name: string; surname: string }>();
     for (const c of children) m.set(c.id, { name: c.name, surname: c.surname });
