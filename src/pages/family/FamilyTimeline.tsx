@@ -327,7 +327,7 @@ export default function FamilyTimeline() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-1.5">
-          {(["all", "milestones", "adoption", "interactions"] as const).map(f => (
+          {(["all", "milestones", "adoption", "interactions", "school"] as const).map(f => (
             <Button
               key={f}
               size="sm"
