@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.268",
+    date: "2026-04-30",
+    changes: [
+      { type: 'feature', description: "Coming of Age — when a child reaches 18 the app now offers to convert them into a playable character. New SECURITY DEFINER RPC `convert_child_to_playable` validates parentage, age, slot availability (base 2 + extras, max 5), creates a new profile, links it to player_children.child_profile_id and sets playability_state to 'playable'." },
+      { type: 'feature', description: "Legacy bonuses — heir starts with 18 years old, generation_number incremented from parent, $10k cash, and an XP wallet seeded with starter SXP/AP plus bonuses derived from the child's inherited potentials and parent bonds." },
+      { type: 'feature', description: "Family Dashboard — new gold-accented 'has come of age' card appears for any child 18+ that hasn't been converted, with one-click access to the conversion dialog (auto-prompted once per session)." },
+      { type: 'feature', description: "Child Detail — adult card now embeds the Coming of Age dialog, shows current slot usage, prevents duplicate conversion, and after success switches to the new heir and routes to the dashboard." },
+    ],
+  },
+  {
     version: "1.1.267",
     date: "2026-04-30",
     changes: [

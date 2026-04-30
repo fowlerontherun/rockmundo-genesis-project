@@ -16,6 +16,7 @@ import { useResolvedChildTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChildSchoolEvents } from "@/hooks/useChildSchoolEvents";
 import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
+import { ComingOfAgeDialog } from "@/components/family/ComingOfAgeDialog";
 import { Star } from "lucide-react";
 
 /** Format a single trait modifier value for display. */
@@ -374,13 +375,24 @@ export default function ChildDetail() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-social-love/30">
-          <CardContent className="p-5 text-center space-y-2">
-            <Briefcase className="h-8 w-8 mx-auto text-social-love" />
-            <p className="text-sm font-semibold">{child.name} has come of age.</p>
-            <p className="text-xs text-muted-foreground">
-              They are now an independent adult and playable as their own character.
-            </p>
+        <Card className="border-social-chemistry/40 bg-gradient-to-br from-social-chemistry/10 via-social-loyalty/5 to-transparent">
+          <CardContent className="p-5 text-center space-y-3">
+            <Briefcase className="h-8 w-8 mx-auto text-social-chemistry" />
+            <div>
+              <p className="text-sm font-semibold">{child.name} has come of age.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {child.child_profile_id
+                  ? "They are now an independent, playable character — switch from your character menu."
+                  : "They are ready to be converted into a playable character with inherited bonuses."}
+              </p>
+            </div>
+            {!child.child_profile_id ? (
+              <ComingOfAgeDialog child={child} autoPrompt />
+            ) : (
+              <Badge variant="outline" className="text-[10px] gap-1 border-social-chemistry/40">
+                <Briefcase className="h-3 w-3" /> Linked playable profile
+              </Badge>
+            )}
           </CardContent>
         </Card>
       )}
