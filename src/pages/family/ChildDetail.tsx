@@ -14,6 +14,9 @@ import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useChildSchoolEvents } from "@/hooks/useChildSchoolEvents";
+import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
+import { Star } from "lucide-react";
 
 /** Format a single trait modifier value for display. */
 function formatModifier(key: string, value: number): string {
