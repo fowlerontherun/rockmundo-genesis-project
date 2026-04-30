@@ -89,6 +89,7 @@ export default function ChildDetail() {
   const navigate = useNavigate();
   const { data: child, isLoading } = usePlayerChild(childId);
   const { data: interactions = [] } = useChildInteractions(childId);
+  const { data: schoolEvents = [] } = useChildSchoolEvents(childId);
   const apply = useApplyChildInteraction(childId);
   const progression = useChildAgeProgression(child);
 
