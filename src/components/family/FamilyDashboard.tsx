@@ -16,6 +16,7 @@ import { MarriageStatusCard } from "./MarriageStatusCard";
 import { ChildPlanningDialog } from "./ChildPlanningDialog";
 import { BirthCompletionDialog } from "./BirthCompletionDialog";
 import { ChildCard } from "./ChildCard";
+import { ComingOfAgeDialog } from "./ComingOfAgeDialog";
 import { FamilyLegacyPanel } from "@/components/social/FamilyLegacyPanel";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import {
