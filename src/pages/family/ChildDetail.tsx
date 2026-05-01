@@ -407,52 +407,68 @@ export default function ChildDetail() {
       )}
 
 
-      {/* School events / Parent-teacher days */}
+      {/* School events / Parent-teacher days + auto-milestones */}
       {!isAdult && liveAge >= 4 && (
         <Card>
           <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-social-chemistry" /> School Events
+              <GraduationCap className="h-4 w-4 text-social-chemistry" /> School Events &amp; Milestones
             </CardTitle>
             <ParentTeacherDayDialog childId={child.id} childName={`${child.name} ${child.surname}`} />
           </CardHeader>
           <CardContent className="space-y-2">
             {schoolEvents.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-3">
-                No parent-teacher days logged yet.
+                No school events yet.
               </p>
             ) : (
-              schoolEvents.slice(0, 6).map((ev) => (
-                <div key={ev.id} className="rounded-md border border-border/50 p-2 space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs font-semibold capitalize">
-                        {ev.event_type.replace(/_/g, " ")}
-                      </span>
-                      {ev.subject && (
-                        <Badge variant="outline" className="text-[9px] h-4 px-1">{ev.subject}</Badge>
-                      )}
-                      {ev.teacher_name && (
-                        <span className="text-[10px] text-muted-foreground truncate">· {ev.teacher_name}</span>
+              schoolEvents.slice(0, 8).map((ev) => {
+                const isAuto = (ev.effects as any)?.auto === true;
+                const isMilestone = ev.event_type === "stage_started" || ev.event_type === "graduation";
+                const label =
+                  ev.event_type === "stage_started" ? "Stage Started" :
+                  ev.event_type === "report_card" ? "Report Card" :
+                  ev.event_type === "graduation" ? "Graduation 🎓" :
+                  ev.event_type === "parent_teacher_day" ? "Parent-Teacher Day" :
+                  ev.event_type.replace(/_/g, " ");
+                return (
+                  <div key={ev.id} className={`rounded-md border p-2 space-y-1 ${isMilestone ? "border-social-chemistry/40 bg-social-chemistry/5" : "border-border/50"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {isMilestone ? (
+                          <Sparkles className="h-3.5 w-3.5 text-social-chemistry shrink-0" />
+                        ) : (
+                          <GraduationCap className="h-3.5 w-3.5 text-social-chemistry shrink-0" />
+                        )}
+                        <span className="text-xs font-semibold capitalize">{label}</span>
+                        {ev.subject && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{ev.subject}</Badge>
+                        )}
+                        {ev.teacher_name && (
+                          <span className="text-[10px] text-muted-foreground truncate">· {ev.teacher_name}</span>
+                        )}
+                      </div>
+                      {!isMilestone && ev.rating > 0 && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`h-3 w-3 ${n <= ev.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <Star
-                          key={n}
-                          className={`h-3 w-3 ${n <= ev.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
-                        />
-                      ))}
-                    </div>
+                    {ev.notes && (
+                      <p className="text-[11px] text-muted-foreground italic">"{ev.notes}"</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground/70">
+                      {isAuto && <span className="mr-1">Auto ·</span>}
+                      {formatDistanceToNow(new Date(ev.occurred_at), { addSuffix: true })}
+                    </p>
                   </div>
-                  {ev.notes && (
-                    <p className="text-[11px] text-muted-foreground italic">"{ev.notes}"</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground/70">
-                    {formatDistanceToNow(new Date(ev.occurred_at), { addSuffix: true })}
-                  </p>
-                </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>
