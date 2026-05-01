@@ -57,8 +57,15 @@ export function useApplyChildInteraction(childId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      toast.success("Interaction logged");
+    onSuccess: (data: any) => {
+      const synergies = (data?.effects?.synergies ?? []) as Array<{ label: string; flavor?: string }>;
+      if (synergies.length > 0) {
+        for (const s of synergies) {
+          toast.success(`✨ Synergy: ${s.label}`, { description: s.flavor ?? undefined });
+        }
+      } else {
+        toast.success("Interaction logged");
+      }
       qc.invalidateQueries({ queryKey: ["child-interactions", childId] });
       qc.invalidateQueries({ queryKey: ["player-children"] });
       qc.invalidateQueries({ queryKey: ["player-child", childId] });
