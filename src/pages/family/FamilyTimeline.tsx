@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users, GraduationCap, Star } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-import { useChildrenSchoolEvents } from "@/hooks/useChildSchoolEvents";
+import { useChildrenSchoolEvents, useAutoGenerateMilestones } from "@/hooks/useChildSchoolEvents";
 
 type TimelineItem = {
   id: string;
