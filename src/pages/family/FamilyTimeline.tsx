@@ -100,6 +100,7 @@ export default function FamilyTimeline() {
   });
 
   const { data: schoolEvents = [] } = useChildrenSchoolEvents(childIds);
+  useAutoGenerateMilestones(childIds);
 
   const childById = useMemo(() => {
     const m = new Map<string, { name: string; surname: string }>();
