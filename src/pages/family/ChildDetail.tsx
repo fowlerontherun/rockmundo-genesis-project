@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useResolvedChildTraits } from "@/hooks/useChildTraits";
+import { useResolvedChildTraits, useChildSynergiesForTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChildSchoolEvents, useGenerateSchoolMilestones } from "@/hooks/useChildSchoolEvents";
 import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
