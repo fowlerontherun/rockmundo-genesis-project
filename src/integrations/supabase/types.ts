@@ -4185,6 +4185,7 @@ export type Database = {
           effects: Json
           event_type: string
           id: string
+          milestone_key: string | null
           notes: string | null
           occurred_at: string
           parent_profile_id: string
@@ -4200,6 +4201,7 @@ export type Database = {
           effects?: Json
           event_type?: string
           id?: string
+          milestone_key?: string | null
           notes?: string | null
           occurred_at?: string
           parent_profile_id: string
@@ -4215,6 +4217,7 @@ export type Database = {
           effects?: Json
           event_type?: string
           id?: string
+          milestone_key?: string | null
           notes?: string | null
           occurred_at?: string
           parent_profile_id?: string
@@ -33549,6 +33552,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      child_stage_for_age: { Args: { p_age: number }; Returns: string }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
       complete_song_sale: {
@@ -33681,6 +33685,10 @@ export type Database = {
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      generate_child_school_milestones: {
+        Args: { p_child_id: string }
+        Returns: number
+      }
       generate_pending_company_taxes: {
         Args: never
         Returns: {
@@ -33802,6 +33810,7 @@ export type Database = {
           effects: Json
           event_type: string
           id: string
+          milestone_key: string | null
           notes: string | null
           occurred_at: string
           parent_profile_id: string

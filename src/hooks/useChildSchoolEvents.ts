@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { asAny } from "@/lib/type-helpers";
@@ -63,6 +64,38 @@ export interface LogSchoolEventParams {
   behaviorRating?: number | null;
   academicRating?: number | null;
   notes?: string | null;
+}
+
+export function useGenerateSchoolMilestones() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      const { data, error } = await (supabase as any).rpc("generate_child_school_milestones", {
+        p_child_id: childId,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (_n, childId) => {
+      qc.invalidateQueries({ queryKey: ["child-school-events", childId] });
+      qc.invalidateQueries({ queryKey: ["children-school-events"] });
+    },
+  });
+}
+
+// Tiny in-module memo so we only fire once per unique key per page lifetime.
+const _ranKeys = new Set<string>();
+
+/** Run milestone generation once per child set per page lifetime (idempotent on the server). */
+export function useAutoGenerateMilestones(childIds: string[]) {
+  const gen = useGenerateSchoolMilestones();
+  const key = childIds.slice().sort().join(",");
+  useEffect(() => {
+    if (!key || _ranKeys.has(key)) return;
+    _ranKeys.add(key);
+    childIds.forEach((id) => gen.mutate(id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 }
 
 export function useLogChildSchoolEvent() {

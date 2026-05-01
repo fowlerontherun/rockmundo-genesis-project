@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.269",
+    date: "2026-05-01",
+    changes: [
+      { type: 'feature', description: "Family Timeline — periodic school milestones now generate automatically as a child grows: 'Stage Started' entries when they enter preschool / primary / middle / high, an annual 'Report Card' for every school year (4–17), and a 'Graduation 🎓' event at 18." },
+      { type: 'feature', description: "Idempotent backfill — new RPC `generate_child_school_milestones` walks the child's age history and inserts only missing milestones (UNIQUE on milestone_key), so revisiting the timeline never creates duplicates." },
+      { type: 'feature', description: "Child Detail — School Events card renamed to 'School Events & Milestones', highlights stage/graduation entries with a chemistry accent, hides star ratings on auto entries, and tags them with an 'Auto ·' prefix." },
+      { type: 'improvement', description: "Family Timeline rendering — new event types render with friendly labels and a 'Milestone' badge; rating stars are suppressed for non-rated milestone entries." },
+      { type: 'improvement', description: "Schema — added milestone_key column + partial unique index to child_school_events; relaxed rating CHECK to allow 0 (auto entries)." },
+    ],
+  },
+  {
     version: "1.1.268",
     date: "2026-04-30",
     changes: [

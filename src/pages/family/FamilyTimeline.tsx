@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users, GraduationCap, Star } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-import { useChildrenSchoolEvents } from "@/hooks/useChildSchoolEvents";
+import { useChildrenSchoolEvents, useAutoGenerateMilestones } from "@/hooks/useChildSchoolEvents";
 
 type TimelineItem = {
   id: string;
@@ -100,6 +100,7 @@ export default function FamilyTimeline() {
   });
 
   const { data: schoolEvents = [] } = useChildrenSchoolEvents(childIds);
+  useAutoGenerateMilestones(childIds);
 
   const childById = useMemo(() => {
     const m = new Map<string, { name: string; surname: string }>();
@@ -380,8 +381,19 @@ export default function FamilyTimeline() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-semibold capitalize">
-                              {item.kind === "school" ? (item.eventType === "parent_teacher_day" ? "Parent-Teacher Day" : item.eventType.replace(/_/g, " ")) : item.eventType.replace(/_/g, " ")}
+                              {item.kind === "school"
+                                ? (item.eventType === "parent_teacher_day" ? "Parent-Teacher Day"
+                                    : item.eventType === "stage_started" ? "Stage Started"
+                                    : item.eventType === "report_card" ? "Report Card"
+                                    : item.eventType === "graduation" ? "Graduation 🎓"
+                                    : item.eventType.replace(/_/g, " "))
+                                : item.eventType.replace(/_/g, " ")}
                             </p>
+                            {item.kind === "school" && (item.eventType === "stage_started" || item.eventType === "graduation") && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 border-social-chemistry/40 text-social-chemistry">
+                                Milestone
+                              </Badge>
+                            )}
                             {item.kind === "request" && item.pathway && (
                               <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
                                 {item.pathway}
@@ -395,7 +407,7 @@ export default function FamilyTimeline() {
                             {item.kind === "school" && item.subject && (
                               <Badge variant="outline" className="text-[9px] h-4 px-1">{item.subject}</Badge>
                             )}
-                            {item.kind === "school" && typeof item.rating === "number" && (
+                            {item.kind === "school" && typeof item.rating === "number" && item.rating > 0 && item.eventType !== "stage_started" && item.eventType !== "graduation" && (
                               <span className="flex items-center gap-0.5">
                                 {[1, 2, 3, 4, 5].map((n) => (
                                   <Star
