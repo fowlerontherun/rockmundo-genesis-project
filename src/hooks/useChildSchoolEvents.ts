@@ -65,6 +65,49 @@ export interface LogSchoolEventParams {
   notes?: string | null;
 }
 
+export function useGenerateSchoolMilestones() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      const { data, error } = await (supabase as any).rpc("generate_child_school_milestones", {
+        p_child_id: childId,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (_n, childId) => {
+      qc.invalidateQueries({ queryKey: ["child-school-events", childId] });
+      qc.invalidateQueries({ queryKey: ["children-school-events"] });
+    },
+  });
+}
+
+/** Run milestone generation once per child per session (idempotent on the server). */
+export function useAutoGenerateMilestones(childIds: string[]) {
+  const gen = useGenerateSchoolMilestones();
+  const key = childIds.slice().sort().join(",");
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffectOnce(key, () => {
+      childIds.forEach((id) => gen.mutate(id));
+    });
+  }
+}
+
+// Tiny in-module memo so we only fire once per unique key per page lifetime.
+const _ranKeys = new Set<string>();
+function useEffectOnce(key: string, fn: () => void) {
+  // Imported lazily to avoid extra top-level import churn.
+  const React = require("react") as typeof import("react");
+  React.useEffect(() => {
+    if (!key || _ranKeys.has(key)) return;
+    _ranKeys.add(key);
+    fn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+}
+
 export function useLogChildSchoolEvent() {
   const qc = useQueryClient();
   return useMutation({
