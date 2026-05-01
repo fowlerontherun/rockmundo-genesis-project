@@ -83,28 +83,17 @@ export function useGenerateSchoolMilestones() {
   });
 }
 
-/** Run milestone generation once per child per session (idempotent on the server). */
+// Tiny in-module memo so we only fire once per unique key per page lifetime.
+const _ranKeys = new Set<string>();
+
+/** Run milestone generation once per child set per page lifetime (idempotent on the server). */
 export function useAutoGenerateMilestones(childIds: string[]) {
   const gen = useGenerateSchoolMilestones();
   const key = childIds.slice().sort().join(",");
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  if (typeof window !== "undefined") {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffectOnce(key, () => {
-      childIds.forEach((id) => gen.mutate(id));
-    });
-  }
-}
-
-// Tiny in-module memo so we only fire once per unique key per page lifetime.
-const _ranKeys = new Set<string>();
-function useEffectOnce(key: string, fn: () => void) {
-  // Imported lazily to avoid extra top-level import churn.
-  const React = require("react") as typeof import("react");
-  React.useEffect(() => {
+  useEffect(() => {
     if (!key || _ranKeys.has(key)) return;
     _ranKeys.add(key);
-    fn();
+    childIds.forEach((id) => gen.mutate(id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 }
