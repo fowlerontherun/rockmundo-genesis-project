@@ -4271,6 +4271,54 @@ export type Database = {
         }
         Relationships: []
       }
+      child_trait_synergies: {
+        Row: {
+          bonus_effects: Json
+          created_at: string
+          description: string
+          flavor: string | null
+          icon: string | null
+          id: string
+          interaction_type: string | null
+          is_active: boolean
+          key: string
+          label: string
+          trait_a: string
+          trait_b: string
+          trigger_chance: number
+        }
+        Insert: {
+          bonus_effects?: Json
+          created_at?: string
+          description: string
+          flavor?: string | null
+          icon?: string | null
+          id?: string
+          interaction_type?: string | null
+          is_active?: boolean
+          key: string
+          label: string
+          trait_a: string
+          trait_b: string
+          trigger_chance?: number
+        }
+        Update: {
+          bonus_effects?: Json
+          created_at?: string
+          description?: string
+          flavor?: string | null
+          icon?: string | null
+          id?: string
+          interaction_type?: string | null
+          is_active?: boolean
+          key?: string
+          label?: string
+          trait_a?: string
+          trait_b?: string
+          trigger_chance?: number
+        }
+        Relationships: []
+      }
       chord_progressions: {
         Row: {
           created_at: string
