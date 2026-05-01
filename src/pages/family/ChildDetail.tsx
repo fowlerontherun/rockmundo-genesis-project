@@ -95,12 +95,12 @@ export default function ChildDetail() {
   const progression = useChildAgeProgression(child);
   const generateMilestones = useGenerateSchoolMilestones();
   const liveAgeForGen = progression?.liveAge ?? child?.current_age ?? 0;
-  // Auto-generate any missing milestones whenever the child's live age changes.
-  // The RPC is idempotent (UNIQUE on milestone_key).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  (function useGen() {
-    const React = require("react") as never;
-  })();
+  useEffect(() => {
+    if (childId && liveAgeForGen >= 0) {
+      generateMilestones.mutate(childId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childId, liveAgeForGen]);
 
   if (isLoading) {
     return (
