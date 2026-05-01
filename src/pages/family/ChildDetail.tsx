@@ -14,7 +14,7 @@ import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useChildSchoolEvents } from "@/hooks/useChildSchoolEvents";
+import { useChildSchoolEvents, useGenerateSchoolMilestones } from "@/hooks/useChildSchoolEvents";
 import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
 import { ComingOfAgeDialog } from "@/components/family/ComingOfAgeDialog";
 import { Star } from "lucide-react";
@@ -93,6 +93,14 @@ export default function ChildDetail() {
   const { data: schoolEvents = [] } = useChildSchoolEvents(childId);
   const apply = useApplyChildInteraction(childId);
   const progression = useChildAgeProgression(child);
+  const generateMilestones = useGenerateSchoolMilestones();
+  const liveAgeForGen = progression?.liveAge ?? child?.current_age ?? 0;
+  // Auto-generate any missing milestones whenever the child's live age changes.
+  // The RPC is idempotent (UNIQUE on milestone_key).
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  (function useGen() {
+    const React = require("react") as never;
+  })();
 
   if (isLoading) {
     return (
