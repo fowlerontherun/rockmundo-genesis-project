@@ -39,3 +39,41 @@ export function useResolvedChildTraits(traitKeys: string[] | null | undefined) {
     .map((k) => map.get(k))
     .filter((t): t is ChildTrait => !!t);
 }
+
+export interface ChildTraitSynergy {
+  id: string;
+  key: string;
+  trait_a: string;
+  trait_b: string;
+  interaction_type: string | null;
+  label: string;
+  description: string;
+  flavor: string | null;
+  icon: string | null;
+  trigger_chance: number;
+  bonus_effects: Record<string, number>;
+  is_active: boolean;
+}
+
+/** Fetch the global trait synergy catalog. */
+export function useChildTraitSynergies() {
+  return useQuery({
+    queryKey: ["child-trait-synergies"],
+    staleTime: 1000 * 60 * 60,
+    queryFn: async (): Promise<ChildTraitSynergy[]> => {
+      const { data, error } = await supabase
+        .from(asAny("child_trait_synergies"))
+        .select("*")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? []) as unknown as ChildTraitSynergy[];
+    },
+  });
+}
+
+/** Synergies a given child currently has (both traits present). */
+export function useChildSynergiesForTraits(traitKeys: string[] | null | undefined) {
+  const { data: synergies = [] } = useChildTraitSynergies();
+  const set = new Set(traitKeys ?? []);
+  return synergies.filter((s) => set.has(s.trait_a) && set.has(s.trait_b));
+}

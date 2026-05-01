@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.270",
+    date: "2026-05-01",
+    changes: [
+      { type: 'feature', description: "Trait Synergies — children with certain personality trait pairs (e.g. Bookish + Prodigy, Empath + Sensitive, Sociable + Energetic) now occasionally trigger bonus effects when you do the matching interaction. 12 starter synergies seeded covering homework, talks, comfort, play, outings and discipline." },
+      { type: 'feature', description: "New `child_trait_synergies` catalog table with normalized pair uniqueness (LEAST/GREATEST), trigger_chance and bonus_effects JSON; readable to all signed-in users, admin-only writes." },
+      { type: 'feature', description: "`apply_child_interaction` now rolls every matching active synergy independently, stacks bonus mood/stability/bond/learning/affection on top of normal deltas, and records triggered synergies (key, label, flavor, bonus) in the interaction's effects payload." },
+      { type: 'feature', description: "Child Detail — new gold-accented 'Trait Synergies' card lists every synergy currently unlocked by the child's traits with trigger %, bonus breakdown, and flavor text on hover." },
+      { type: 'improvement', description: "Interaction toast now shows '✨ Synergy: <label>' with flavor text whenever a synergy fires, so the bonus is visible in the moment." },
+    ],
+  },
+  {
     version: "1.1.269",
     date: "2026-05-01",
     changes: [

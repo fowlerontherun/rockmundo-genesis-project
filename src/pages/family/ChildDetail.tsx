@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useResolvedChildTraits } from "@/hooks/useChildTraits";
+import { useResolvedChildTraits, useChildSynergiesForTraits } from "@/hooks/useChildTraits";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChildSchoolEvents, useGenerateSchoolMilestones } from "@/hooks/useChildSchoolEvents";
 import { ParentTeacherDayDialog } from "@/components/family/ParentTeacherDayDialog";
@@ -140,6 +140,7 @@ export default function ChildDetail() {
     .slice(0, 4);
   const traitKeys: string[] = Array.isArray(child.traits) ? (child.traits as string[]) : [];
   const traits = useResolvedChildTraits(traitKeys);
+  const synergies = useChildSynergiesForTraits(traitKeys);
 
   const isAdult = stageMeta.stage === "graduated";
   const visibleActions = ACTIONS.filter((a) => a.stages.includes(stageMeta.stage));
@@ -308,6 +309,66 @@ export default function ChildDetail() {
                     </TooltipContent>
                   </Tooltip>
                 ))}
+              </div>
+            </TooltipProvider>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trait Synergies — bonus effects unlocked by trait pairs */}
+      {synergies.length > 0 && (
+        <Card className="border-amber-400/30 bg-gradient-to-br from-amber-400/5 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-400" /> Trait Synergies
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Occasional bonus effects when both traits are present
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <TooltipProvider delayDuration={150}>
+              <div className="space-y-1.5">
+                {synergies.map((s) => {
+                  const bonusEntries = Object.entries(s.bonus_effects ?? {})
+                    .filter(([, v]) => Number(v) !== 0);
+                  return (
+                    <Tooltip key={s.key}>
+                      <TooltipTrigger asChild>
+                        <div className="rounded-md border border-amber-400/30 bg-amber-400/5 p-2 cursor-help">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Sparkles className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                              <span className="text-xs font-semibold">{s.label}</span>
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
+                                {s.trait_a} + {s.trait_b}
+                              </Badge>
+                              {s.interaction_type && (
+                                <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
+                                  on {s.interaction_type.replace(/_/g, " ")}
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-amber-500 font-semibold">
+                              {Math.round(s.trigger_chance * 100)}% chance
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{s.description}</p>
+                          {bonusEntries.length > 0 && (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                              Bonus: {bonusEntries.map(([k, v]) => `${Number(v) > 0 ? "+" : ""}${v} ${k}`).join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      {s.flavor && (
+                        <TooltipContent side="top" className="max-w-[280px]">
+                          <p className="text-xs italic">"{s.flavor}"</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  );
+                })}
               </div>
             </TooltipProvider>
           </CardContent>
