@@ -574,13 +574,13 @@ export function ReleaseAnalyticsDialog({
           </TabsContent>
 
           <TabsContent value="sales" className="space-y-4">
-            {/* Daily filter */}
+            {/* Filters */}
             <Card>
               <CardContent className="p-3 flex items-center gap-2 flex-wrap">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Filter by day:</span>
+                <span className="text-xs text-muted-foreground">Day:</span>
                 <Select value={salesDayFilter} onValueChange={setSalesDayFilter}>
-                  <SelectTrigger className="h-8 w-[200px] text-xs">
+                  <SelectTrigger className="h-8 w-[170px] text-xs">
                     <SelectValue placeholder="All time" />
                   </SelectTrigger>
                   <SelectContent>
@@ -592,11 +592,87 @@ export function ReleaseAnalyticsDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {salesDayFilter !== "all" && (
-                  <Badge variant="outline" className="text-[10px]">Daily view</Badge>
+                <span className="text-xs text-muted-foreground ml-2">Type:</span>
+                <Select value={salesFormatFilter} onValueChange={setSalesFormatFilter}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                    <SelectValue placeholder="All formats" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All formats</SelectItem>
+                    <SelectItem value="vinyl">Vinyl</SelectItem>
+                    <SelectItem value="cd">CD</SelectItem>
+                    <SelectItem value="digital">Digital</SelectItem>
+                    <SelectItem value="cassette">Cassette</SelectItem>
+                    <SelectItem value="streaming">Streaming</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(salesDayFilter !== "all" || salesFormatFilter !== "all") && (
+                  <Badge variant="outline" className="text-[10px]">Filtered</Badge>
                 )}
               </CardContent>
             </Card>
+
+            {/* Top Releases by gross/units (band-wide, respects day + type filters) */}
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm">Top Releases — what's driving the numbers</CardTitle>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setTopMetric("gross")}
+                    className={`text-[10px] px-2 py-1 rounded border ${topMetric === "gross" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}
+                  >
+                    Gross
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTopMetric("units")}
+                    className={`text-[10px] px-2 py-1 rounded border ${topMetric === "units" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}
+                  >
+                    Units
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!topReleases || topReleases.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">
+                    No sales for this band on the selected filters.
+                  </div>
+                ) : (
+                  (() => {
+                    const max = Math.max(...topReleases.map((r) => (topMetric === "gross" ? r.gross : r.units)), 1);
+                    return (
+                      <div className="space-y-2">
+                        {topReleases.map((r, idx) => {
+                          const value = topMetric === "gross" ? r.gross : r.units;
+                          const pct = (value / max) * 100;
+                          const display = topMetric === "gross"
+                            ? `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                            : `${value.toLocaleString()} units`;
+                          return (
+                            <div key={r.release_id} className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px]">
+                                <span className={`truncate flex-1 ${r.is_current ? "font-semibold text-primary" : ""}`}>
+                                  #{idx + 1} {r.title}{r.is_current && " (this release)"}
+                                </span>
+                                <span className="text-muted-foreground tabular-nums">{display}</span>
+                              </div>
+                              <div className="h-2 w-full bg-muted rounded overflow-hidden">
+                                <div
+                                  className={`h-full rounded ${r.is_current ? "bg-primary" : "bg-primary/50"}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
+              </CardContent>
+            </Card>
+
 
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading sales data...</div>
