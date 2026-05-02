@@ -209,6 +209,33 @@ export function ReleaseAnalyticsDialog({
   });
 
 
+  // Top releases for the same band (drives the "what's selling" chart)
+  const { data: topReleases } = useQuery({
+    queryKey: ["top-releases-by-sales", release?.band_id, salesDayFilter, salesFormatFilter],
+    queryFn: async () => {
+      if (!release?.band_id) return [] as Array<{ release_id: string; title: string; units: number; gross: number; net: number; is_current: boolean }>;
+      const { data, error } = await (supabase as any).rpc("get_top_releases_by_sales", {
+        p_band_id: release.band_id,
+        p_sale_date: salesDayFilter === "all" ? null : salesDayFilter,
+        p_format_type: salesFormatFilter === "all" ? null : salesFormatFilter,
+        p_limit: 10,
+      });
+      if (error) {
+        console.error("get_top_releases_by_sales error", error);
+        return [];
+      }
+      return (data || []).map((row: any) => ({
+        release_id: row.release_id as string,
+        title: row.title as string,
+        units: Number(row.units) || 0,
+        gross: (Number(row.gross_cents) || 0) / 100,
+        net: (Number(row.net_cents) || 0) / 100,
+        is_current: row.release_id === release.id,
+      }));
+    },
+    enabled: open && !!release?.band_id,
+  });
+
   // Resolve label cut % for this release (matches edge function logic)
   const { data: labelInfo } = useQuery({
     queryKey: ["release-label-cut", release?.id],
