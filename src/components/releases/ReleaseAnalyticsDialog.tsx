@@ -33,6 +33,8 @@ export function ReleaseAnalyticsDialog({
   const [activeTab, setActiveTab] = useState("overview");
 
   const [salesDayFilter, setSalesDayFilter] = useState<string>("all");
+  const [salesFormatFilter, setSalesFormatFilter] = useState<string>("all");
+  const [topMetric, setTopMetric] = useState<"gross" | "units">("gross");
 
   // Fetch streaming data for this release's songs
   const { data: streamingData, isLoading: loadingStreaming } = useQuery({
