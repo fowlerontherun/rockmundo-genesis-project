@@ -90,77 +90,111 @@ export function ReleaseAnalyticsDialog({
     enabled: open && !!release?.id,
   });
 
-  // Fetch sales data — full per-format breakdown with tax/distribution/label cut/band net
+  // Available sale dates (for daily filter)
+  const { data: saleDates } = useQuery({
+    queryKey: ["release-sale-dates", release?.id],
+    queryFn: async () => {
+      if (!release?.id) return [] as { sale_day: string; row_count: number }[];
+      const { data, error } = await (supabase as any).rpc("get_release_sale_dates", {
+        p_release_id: release.id,
+      });
+      if (error) {
+        console.error("get_release_sale_dates error", error);
+        return [];
+      }
+      return (data || []) as { sale_day: string; row_count: number }[];
+    },
+    enabled: open && !!release?.id,
+  });
+
+  // Fetch sales data via server-side aggregation (bypasses 1000-row PostgREST cap)
   const { data: salesData, isLoading: loadingSales } = useQuery({
-    queryKey: ["release-sales-analytics", release?.id],
+    queryKey: ["release-sales-analytics", release?.id, salesDayFilter],
     queryFn: async () => {
       if (!release?.id) return null;
 
       const formatIds = release.release_formats?.map((f: any) => f.id) || [];
 
-      const totalUnits = release.total_units_sold || 0;
-      const totalRevenue = release.total_revenue || 0;
-
       type FormatRow = {
+        format: string;
         units: number;
         gross: number;
         tax: number;
         dist: number;
         net: number;
       };
-      const formatStatsMap: Record<string, FormatRow> = {};
 
-      if (formatIds.length > 0) {
-        const { data: allSales } = await supabase
-          .from("release_sales")
-          .select("quantity_sold, total_amount, sales_tax_amount, distribution_fee, net_revenue, release_formats!inner(format_type)")
-          .in("release_format_id", formatIds);
+      const { data: rpcData, error: rpcError } = await (supabase as any).rpc(
+        "get_release_sales_breakdown",
+        {
+          p_release_id: release.id,
+          p_sale_date: salesDayFilter === "all" ? null : salesDayFilter,
+        },
+      );
 
-        (allSales || []).forEach((s: any) => {
-          const ft = s.release_formats?.format_type || "unknown";
-          if (!formatStatsMap[ft]) formatStatsMap[ft] = { units: 0, gross: 0, tax: 0, dist: 0, net: 0 };
-          formatStatsMap[ft].units += s.quantity_sold || 0;
-          formatStatsMap[ft].gross += (s.total_amount || 0) / 100;
-          formatStatsMap[ft].tax += (s.sales_tax_amount || 0) / 100;
-          formatStatsMap[ft].dist += (s.distribution_fee || 0) / 100;
-          formatStatsMap[ft].net += (s.net_revenue || 0) / 100;
-        });
+      if (rpcError) {
+        console.error("get_release_sales_breakdown error", rpcError);
       }
 
-      // Synthesize from release-level columns if release_sales is empty
-      const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
-      for (const ft of formatTypes) {
-        const colUnits = release[`${ft}_sales`] || 0;
-        if (!formatStatsMap[ft] && colUnits > 0) {
-          const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
-          const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
-          const gross = Math.round(colUnits * pricePerUnit * 100) / 100;
-          // Estimate using the standard rates
-          const distRate = ft === "digital" ? 0.30 : ft === "cd" ? 0.20 : 0.15;
-          const tax = Math.round(gross * 0.10 * 100) / 100;
-          const dist = Math.round(gross * distRate * 100) / 100;
-          formatStatsMap[ft] = {
-            units: colUnits,
-            gross,
-            tax,
-            dist,
-            net: gross - tax - dist,
-          };
+      const formatStatsMap: Record<string, FormatRow> = {};
+      (rpcData || []).forEach((row: any) => {
+        const ft = row.format_type || "unknown";
+        formatStatsMap[ft] = {
+          format: ft,
+          units: Number(row.units) || 0,
+          gross: (Number(row.gross_cents) || 0) / 100,
+          tax: (Number(row.tax_cents) || 0) / 100,
+          dist: (Number(row.dist_cents) || 0) / 100,
+          net: (Number(row.net_cents) || 0) / 100,
+        };
+      });
+
+      // Fallback: synthesize from release-level columns if RPC empty AND no day filter
+      if (salesDayFilter === "all") {
+        const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
+        for (const ft of formatTypes) {
+          const colUnits = release[`${ft}_sales`] || 0;
+          if (!formatStatsMap[ft] && colUnits > 0) {
+            const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
+            const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
+            const gross = Math.round(colUnits * pricePerUnit * 100) / 100;
+            const distRate = ft === "digital" ? 0.30 : ft === "cd" ? 0.20 : 0.15;
+            const tax = Math.round(gross * 0.10 * 100) / 100;
+            const dist = Math.round(gross * distRate * 100) / 100;
+            formatStatsMap[ft] = {
+              format: ft,
+              units: colUnits,
+              gross,
+              tax,
+              dist,
+              net: gross - tax - dist,
+            };
+          }
         }
       }
 
-      const formatStats = Object.entries(formatStatsMap)
-        .filter(([, v]) => v.units > 0)
-        .map(([fmt, v]) => ({ format: fmt, ...v }))
+      const formatStats = Object.values(formatStatsMap)
+        .filter((v) => v.units > 0)
         .sort((a, b) => b.gross - a.gross);
 
-      // Recent sales for display
-      const { data: recentSales } = await supabase
+      const totalUnits = formatStats.reduce((s, f) => s + f.units, 0);
+      const totalRevenue = formatStats.reduce((s, f) => s + f.gross, 0);
+
+      // Recent sales — apply day filter when chosen
+      let recentQuery = supabase
         .from("release_sales")
         .select("*, release_formats!inner(format_type)")
         .in("release_format_id", formatIds)
         .order("sale_date", { ascending: false })
         .limit(10);
+
+      if (salesDayFilter !== "all") {
+        const dayStart = `${salesDayFilter}T00:00:00.000Z`;
+        const dayEnd = `${salesDayFilter}T23:59:59.999Z`;
+        recentQuery = recentQuery.gte("sale_date", dayStart).lte("sale_date", dayEnd);
+      }
+
+      const { data: recentSales } = await recentQuery;
 
       return {
         formats: formatStats,
@@ -171,6 +205,7 @@ export function ReleaseAnalyticsDialog({
     },
     enabled: open && !!release?.id,
   });
+
 
   // Resolve label cut % for this release (matches edge function logic)
   const { data: labelInfo } = useQuery({
