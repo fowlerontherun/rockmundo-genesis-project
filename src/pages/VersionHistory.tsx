@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.271",
+    date: "2026-05-02",
+    changes: [
+      { type: 'fix', description: "Release Analytics — Sales tab was severely under-counting CD/Digital revenue and showing $0 for most formats because the client query hit PostgREST's 1000-row cap on `release_sales`. Aggregation now runs server-side via the new `get_release_sales_breakdown` RPC, so totals reflect every sale row regardless of volume." },
+      { type: 'fix', description: "Label revenue split now updates correctly per format — share is recomputed from the full server-side net revenue instead of the partial client sum, so 'Band Net' and 'Label -$X' lines match reality." },
+      { type: 'feature', description: "New 'Filter by day' selector on the Sales tab — pick any recent sale day to see units, gross/tax/dist/label/band-net per format and the matching Recent Sales rows for that date. Powered by the new `get_release_sale_dates` RPC." },
+      { type: 'improvement', description: "Sales totals (Units Sold + Sales Revenue) now derive from the per-format breakdown rather than the cached release columns, so they stay consistent with the by-format table and the daily filter." },
+    ],
+  },
+  {
     version: "1.1.270",
     date: "2026-05-01",
     changes: [

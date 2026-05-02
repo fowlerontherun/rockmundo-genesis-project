@@ -33766,6 +33766,25 @@ export type Database = {
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
+      get_release_sale_dates: {
+        Args: { p_release_id: string }
+        Returns: {
+          row_count: number
+          sale_day: string
+        }[]
+      }
+      get_release_sales_breakdown: {
+        Args: { p_release_id: string; p_sale_date?: string }
+        Returns: {
+          dist_cents: number
+          format_type: string
+          gross_cents: number
+          net_cents: number
+          sale_rows: number
+          tax_cents: number
+          units: number
+        }[]
+      }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
