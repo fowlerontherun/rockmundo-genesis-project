@@ -33821,6 +33821,22 @@ export type Database = {
           unique_plays: number
         }[]
       }
+      get_top_releases_by_sales: {
+        Args: {
+          p_band_id: string
+          p_format_type?: string
+          p_limit?: number
+          p_sale_date?: string
+        }
+        Returns: {
+          gross_cents: number
+          is_current: boolean
+          net_cents: number
+          release_id: string
+          title: string
+          units: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
