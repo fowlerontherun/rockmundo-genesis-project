@@ -32,6 +32,8 @@ export function ReleaseAnalyticsDialog({
 }: ReleaseAnalyticsDialogProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
+  const [salesDayFilter, setSalesDayFilter] = useState<string>("all");
+
   // Fetch streaming data for this release's songs
   const { data: streamingData, isLoading: loadingStreaming } = useQuery({
     queryKey: ["release-streaming-analytics", release?.id],
