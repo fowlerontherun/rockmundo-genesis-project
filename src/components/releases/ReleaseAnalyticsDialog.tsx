@@ -545,6 +545,30 @@ export function ReleaseAnalyticsDialog({
           </TabsContent>
 
           <TabsContent value="sales" className="space-y-4">
+            {/* Daily filter */}
+            <Card>
+              <CardContent className="p-3 flex items-center gap-2 flex-wrap">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Filter by day:</span>
+                <Select value={salesDayFilter} onValueChange={setSalesDayFilter}>
+                  <SelectTrigger className="h-8 w-[200px] text-xs">
+                    <SelectValue placeholder="All time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All time</SelectItem>
+                    {(saleDates || []).map((d) => (
+                      <SelectItem key={d.sale_day} value={d.sale_day}>
+                        {format(new Date(`${d.sale_day}T00:00:00Z`), "MMM d, yyyy")} ({d.row_count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {salesDayFilter !== "all" && (
+                  <Badge variant="outline" className="text-[10px]">Daily view</Badge>
+                )}
+              </CardContent>
+            </Card>
+
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading sales data...</div>
             ) : salesData?.formats && salesData.formats.length > 0 ? (
