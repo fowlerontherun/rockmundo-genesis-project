@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.272",
+    date: "2026-05-02",
+    changes: [
+      { type: 'feature', description: "Release Analytics → Sales tab — new 'Top Releases' chart shows the band's top 10 releases driving the numbers, with a Gross/Units toggle and the currently-open release highlighted in primary colour." },
+      { type: 'feature', description: "Added a 'Type' filter (Vinyl / CD / Digital / Cassette / Streaming) alongside the existing day filter — both filters apply to the Top Releases chart and the per-format breakdown so you can isolate, e.g., 'CD sales on May 1st'." },
+      { type: 'feature', description: "New `get_top_releases_by_sales` RPC aggregates release_sales server-side per band with optional day + format-type filters, bypassing the 1000-row cap and returning gross/net/units per release." },
+    ],
+  },
+  {
     version: "1.1.271",
     date: "2026-05-02",
     changes: [
