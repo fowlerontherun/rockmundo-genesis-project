@@ -87,11 +87,12 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
 
       let tourTravel: TravelPlan[] = [];
       if (bandIds.length > 0) {
-        // Get tour IDs for bands user is in
+        // Get only non-cancelled / non-completed tours for this user's bands
         const { data: tours } = await supabase
           .from("tours")
-          .select("id, name")
-          .in("band_id", bandIds);
+          .select("id, name, status")
+          .in("band_id", bandIds)
+          .not("status", "in", "(cancelled,completed)");
 
         const tourIds = tours?.map(t => t.id) || [];
         
