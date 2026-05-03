@@ -520,6 +520,8 @@ const TourManager = () => {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
     queryKey: ['other-tours', currentBandId, fameFilter, genreFilter, otherToursPage],
     queryFn: async () => {
       let query = supabase
