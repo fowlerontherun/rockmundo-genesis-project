@@ -89,26 +89,29 @@ export function TravelProgressOverlay({
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-4 relative">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-              <Plane className="h-10 w-10 text-primary" />
+              <TransportIcon className="h-10 w-10 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">Currently Traveling</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1 italic">{meta.tip}</p>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5">
           {/* Route Info */}
           <div className="flex items-center justify-center gap-3 text-center">
             <div className="text-right">
               <p className="text-sm text-muted-foreground">From</p>
               <p className="font-semibold">{departureCity || "Unknown"}</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{format(departureTime, "MMM d, HH:mm")}</p>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="w-8 h-px bg-muted-foreground/30" />
-              <Plane className="h-4 w-4 rotate-90" />
+              <TransportIcon className="h-4 w-4" />
               <div className="w-8 h-px bg-muted-foreground/30" />
             </div>
             <div className="text-left">
               <p className="text-sm text-muted-foreground">To</p>
               <p className="font-semibold">{destinationCity}</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{format(arrivalTime, "MMM d, HH:mm")}</p>
             </div>
           </div>
 
@@ -119,26 +122,43 @@ export function TravelProgressOverlay({
               <span className="font-mono">{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-3" />
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span>Elapsed {elapsedLabel}</span>
+              <span>Total {totalDurationHours.toFixed(1)}h</span>
+            </div>
           </div>
 
-          {/* Time Info */}
-          <div className="grid grid-cols-2 gap-4 text-center">
+          {/* Detailed metrics */}
+          <div className="grid grid-cols-2 gap-3 text-center">
             <div className="p-3 rounded-lg bg-muted/50">
               <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Time Remaining</p>
-              <p className="text-lg font-bold font-mono">{timeRemaining}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Time Left</p>
+              <p className="text-base font-bold font-mono">{timeRemaining}</p>
             </div>
             <div className="p-3 rounded-lg bg-muted/50">
               <MapPin className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Arrival</p>
-              <p className="text-lg font-bold">{format(arrivalTime, "HH:mm")}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Arrival</p>
+              <p className="text-base font-bold">{format(arrivalTime, "HH:mm")}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50">
+              <Gauge className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cruise Speed</p>
+              <p className="text-base font-bold font-mono">{meta.speedKmh} km/h</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50">
+              <Compass className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">~ Distance</p>
+              <p className="text-base font-bold font-mono">{estDistanceKm.toLocaleString()} km</p>
             </div>
           </div>
 
           {/* Transport Badge */}
-          <div className="text-center">
-            <Badge variant="secondary" className="capitalize">
-              {transportType}
+          <div className="flex items-center justify-center gap-2">
+            <Badge variant="secondary" className="capitalize gap-1">
+              <TransportIcon className="h-3 w-3" /> {meta.label}
+            </Badge>
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              <Coffee className="h-3 w-3" /> Onboard
             </Badge>
           </div>
 
