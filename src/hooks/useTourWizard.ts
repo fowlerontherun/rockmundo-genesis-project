@@ -696,8 +696,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           return 'bus';
         };
 
-        const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
-        const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
+        // Tightened: faster effective speeds + smaller buffers (game pacing)
+        const speeds: Record<string, number> = { bus: 80, train: 260, plane: 1100, ship: 55, tour_bus: 95 };
+        const buffers: Record<string, number> = { bus: 0.15, train: 0.25, plane: 1.5, ship: 0.5, tour_bus: 0.15 };
 
         const travelLegs = [];
         for (let i = 0; i < venueMatches.length - 1; i++) {
@@ -750,10 +751,80 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         }
 
         if (travelLegs.length > 0) {
-          const { error: travelError } = await supabase
+          const { data: insertedLegs, error: travelError } = await supabase
             .from('tour_travel_legs')
-            .insert(travelLegs);
+            .insert(travelLegs)
+            .select('id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours');
           if (travelError) throw travelError;
+
+          // Auto-create per-member travel records so members travel WITH the tour transport
+          try {
+            const { data: tourMembers } = await supabase
+              .from('band_members')
+              .select('user_id, profile_id')
+              .eq('band_id', state.bandId)
+              .eq('member_status', 'active')
+              .eq('travels_with_band', true)
+              .not('user_id', 'is', null)
+              .not('profile_id', 'is', null);
+
+            const cityNameLookup = new Map<string, string>();
+            const { data: cityRows } = await supabase
+              .from('cities')
+              .select('id, name, country')
+              .in('id', cityIds);
+            (cityRows || []).forEach((c: any) => cityNameLookup.set(c.id, `${c.name}, ${c.country}`));
+
+            const memberRows: any[] = [];
+            const activityRows: any[] = [];
+            for (const leg of insertedLegs || []) {
+              const fromName = cityNameLookup.get(leg.from_city_id) || 'Unknown';
+              const toName = cityNameLookup.get(leg.to_city_id) || 'Unknown';
+              for (const m of tourMembers || []) {
+                if (!m.user_id || !m.profile_id) continue;
+                memberRows.push({
+                  user_id: m.user_id,
+                  profile_id: m.profile_id,
+                  from_city_id: leg.from_city_id,
+                  to_city_id: leg.to_city_id,
+                  transport_type: leg.travel_mode || 'bus',
+                  cost_paid: 0,
+                  departure_time: leg.departure_date,
+                  scheduled_departure_time: leg.departure_date,
+                  arrival_time: leg.arrival_date,
+                  travel_duration_hours: Math.max(1, Math.ceil(Number(leg.travel_duration_hours) || 1)),
+                  status: 'scheduled',
+                  tour_leg_id: leg.id,
+                });
+                activityRows.push({
+                  user_id: m.user_id,
+                  profile_id: m.profile_id,
+                  activity_type: 'travel',
+                  status: 'scheduled',
+                  scheduled_start: leg.departure_date,
+                  scheduled_end: leg.arrival_date,
+                  title: `Tour Travel: ${fromName} → ${toName}`,
+                  description: `${leg.travel_mode || 'bus'} • ${Math.max(1, Math.ceil(Number(leg.travel_duration_hours) || 1))}h with the tour`,
+                  location: toName,
+                  metadata: {
+                    tour_leg_id: leg.id,
+                    tour_id: tour.id,
+                    from_city_id: leg.from_city_id,
+                    to_city_id: leg.to_city_id,
+                    transport_type: leg.travel_mode,
+                  },
+                });
+              }
+            }
+            if (memberRows.length > 0) {
+              await (supabase as any).from('player_travel_history').insert(memberRows);
+            }
+            if (activityRows.length > 0) {
+              await (supabase as any).from('player_scheduled_activities').insert(activityRows);
+            }
+          } catch (memberTravelErr) {
+            console.warn('Auto member travel creation failed:', memberTravelErr);
+          }
         }
       }
 

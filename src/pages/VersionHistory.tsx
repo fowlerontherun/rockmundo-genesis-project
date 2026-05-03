@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.273",
+    date: "2026-05-03",
+    changes: [
+      { type: 'fix', description: "Cancelled tours no longer leave behind ghost travel legs — added ON DELETE CASCADE on tour_travel_legs → player_travel_history plus a trigger that cleans up matching player_scheduled_activities. Existing orphaned scheduled travel rows were purged." },
+      { type: 'fix', description: "Upcoming Travel list now filters out legs from cancelled/completed tours so they stop appearing as scheduled trips." },
+      { type: 'feature', description: "Tour creation now auto-books per-member travel rows + scheduled activities for every band member that travels with the band, so characters actually move with the tour transport instead of being left behind." },
+      { type: 'feature', description: "New 'Catch Up to Tour' action in Tour Manager — charters a $1,500 2-hour flight to the next tour stop city for players who fell behind the convoy." },
+      { type: 'improvement', description: "Reduced tour travel times across the board: bus 56→80 km/h, train 200→260, plane 944→1100, ship 39→55, tour bus 70→95, with smaller buffers — trips are noticeably shorter." },
+      { type: 'improvement', description: "Travel Progress overlay now shows mode-specific icon, cruise speed, estimated distance, total/elapsed time, mode tip, departure/arrival timestamps and an 'Onboard' chip for richer immersion." },
+    ],
+  },
+  {
     version: "1.1.272",
     date: "2026-05-02",
     changes: [

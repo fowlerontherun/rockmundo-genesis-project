@@ -250,8 +250,8 @@ const TourManager = () => {
           const dLon = (to.lon - from.lon) * Math.PI / 180;
           const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
           const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
-          const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
+          const speeds: Record<string, number> = { bus: 80, train: 260, plane: 1100, ship: 55, tour_bus: 95 };
+          const buffers: Record<string, number> = { bus: 0.15, train: 0.25, plane: 1.5, ship: 0.5, tour_bus: 0.15 };
           durationHours = Math.max(1, Math.round((distanceKm / (speeds[travelMode] || 56) + (buffers[travelMode] || 0.3)) * 10) / 10);
         }
         const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
@@ -432,6 +432,93 @@ const TourManager = () => {
     onError: (error: Error) => {
       toast.error(`Failed to add travel for new members: ${error.message}`);
     },
+  });
+
+  // Catch-up: jet the player to the next venue city if they fell behind the tour transport
+  const catchUpToTourMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      if (!profileId) throw new Error('No active profile');
+      const nowIso = new Date().toISOString();
+
+      // Find next upcoming leg for this tour
+      const { data: nextLeg, error: legErr } = await supabase
+        .from('tour_travel_legs')
+        .select('id, from_city_id, to_city_id, departure_date, arrival_date, travel_mode')
+        .eq('tour_id', tourId)
+        .gte('departure_date', nowIso)
+        .order('departure_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (legErr) throw legErr;
+
+      // Get current profile location
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('current_city_id, cash, user_id')
+        .eq('id', profileId)
+        .single();
+
+      // Determine target city: next leg's from_city (catch the bus) or to_city if already departed
+      let targetCityId: string | null = null;
+      if (nextLeg) {
+        targetCityId = nextLeg.from_city_id;
+      } else {
+        // No upcoming leg — catch up to the next gig venue city
+        const { data: nextGig } = await supabase
+          .from('gigs')
+          .select('venue_id, scheduled_date, venues(city_id)')
+          .eq('tour_id', tourId)
+          .gte('scheduled_date', nowIso)
+          .order('scheduled_date', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        targetCityId = (nextGig as any)?.venues?.city_id || null;
+      }
+      if (!targetCityId) throw new Error('No upcoming tour stops to catch up to');
+      if (profile?.current_city_id === targetCityId) {
+        return { skipped: true, message: 'You are already in the right city' };
+      }
+
+      // Charge a catch-up jet fee ($1500)
+      const fee = 1500;
+      if ((profile?.cash || 0) < fee) throw new Error(`Need $${fee.toLocaleString()} to charter a catch-up flight`);
+
+      const departure = new Date();
+      const durationHours = 2;
+      const arrival = new Date(departure.getTime() + durationHours * 3600_000);
+
+      await (supabase as any).from('player_travel_history').insert({
+        user_id: profile?.user_id,
+        profile_id: profileId,
+        from_city_id: profile?.current_city_id,
+        to_city_id: targetCityId,
+        transport_type: 'plane',
+        cost_paid: fee,
+        departure_time: departure.toISOString(),
+        scheduled_departure_time: departure.toISOString(),
+        arrival_time: arrival.toISOString(),
+        travel_duration_hours: durationHours,
+        status: 'in_progress',
+      });
+
+      await supabase
+        .from('profiles')
+        .update({
+          cash: (profile?.cash || 0) - fee,
+          is_traveling: true,
+          travel_arrives_at: arrival.toISOString(),
+        })
+        .eq('id', profileId);
+
+      return { skipped: false, message: `Chartered catch-up flight ($${fee.toLocaleString()}). Arrives in ${durationHours}h.` };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['travel-status'] });
+      queryClient.invalidateQueries({ queryKey: ['upcoming-travel'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast.success(res.message);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
@@ -1191,6 +1278,21 @@ const TourManager = () => {
                         <Map className="h-4 w-4 mr-2" />
                       )}
                       Regenerate Travel Schedule
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => catchUpToTourMutation.mutate(selectedTour.id)}
+                      disabled={catchUpToTourMutation.isPending}
+                    >
+                      {catchUpToTourMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Catch Up to Tour ($1,500 charter)
                     </Button>
 
                     <AlertDialog>
