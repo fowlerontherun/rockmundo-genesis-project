@@ -1280,6 +1280,21 @@ const TourManager = () => {
                       Regenerate Travel Schedule
                     </Button>
 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => catchUpToTourMutation.mutate(selectedTour.id)}
+                      disabled={catchUpToTourMutation.isPending}
+                    >
+                      {catchUpToTourMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Catch Up to Tour ($1,500 charter)
+                    </Button>
+
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" className="w-full">
