@@ -1,11 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Plane, MapPin, Clock, BookOpen, PenTool, MessageSquare, X } from "lucide-react";
-import { differenceInSeconds, differenceInMinutes, format } from "date-fns";
+import { Plane, MapPin, Clock, BookOpen, PenTool, MessageSquare, X, Train, Bus, Ship, Gauge, Compass, Coffee } from "lucide-react";
+import { differenceInSeconds, format } from "date-fns";
+
+const TRANSPORT_META: Record<string, { icon: any; label: string; speedKmh: number; tip: string }> = {
+  plane:    { icon: Plane, label: "Plane",     speedKmh: 1100, tip: "Cruising at altitude — enjoy the view." },
+  train:    { icon: Train, label: "Train",     speedKmh: 260,  tip: "Smooth ride. Perfect for songwriting." },
+  bus:      { icon: Bus,   label: "Bus",       speedKmh: 80,   tip: "Long haul — stretch your legs at stops." },
+  tour_bus: { icon: Bus,   label: "Tour Bus",  speedKmh: 95,   tip: "Rolling with the band. Bunk up or jam." },
+  ship:     { icon: Ship,  label: "Ship",      speedKmh: 55,   tip: "Sea legs — slow and steady wins." },
+};
 
 interface TravelProgressOverlayProps {
   destinationCity: string;
