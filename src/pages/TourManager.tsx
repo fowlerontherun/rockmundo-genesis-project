@@ -250,8 +250,8 @@ const TourManager = () => {
           const dLon = (to.lon - from.lon) * Math.PI / 180;
           const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
           const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          const speeds: Record<string, number> = { bus: 56, train: 200, plane: 944, ship: 39, tour_bus: 70 };
-          const buffers: Record<string, number> = { bus: 0.27, train: 0.45, plane: 2.7, ship: 0.9, tour_bus: 0.27 };
+          const speeds: Record<string, number> = { bus: 80, train: 260, plane: 1100, ship: 55, tour_bus: 95 };
+          const buffers: Record<string, number> = { bus: 0.15, train: 0.25, plane: 1.5, ship: 0.5, tour_bus: 0.15 };
           durationHours = Math.max(1, Math.round((distanceKm / (speeds[travelMode] || 56) + (buffers[travelMode] || 0.3)) * 10) / 10);
         }
         const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
