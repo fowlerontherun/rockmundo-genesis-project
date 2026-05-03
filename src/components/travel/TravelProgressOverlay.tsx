@@ -37,6 +37,19 @@ export function TravelProgressOverlay({
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState("");
+  const [elapsedLabel, setElapsedLabel] = useState("");
+
+  const meta = TRANSPORT_META[transportType?.toLowerCase() || "plane"] || TRANSPORT_META.plane;
+  const TransportIcon = meta.icon;
+
+  const totalDurationHours = useMemo(
+    () => Math.max(0, differenceInSeconds(arrivalTime, departureTime) / 3600),
+    [arrivalTime, departureTime]
+  );
+  const estDistanceKm = useMemo(
+    () => Math.round(totalDurationHours * meta.speedKmh),
+    [totalDurationHours, meta.speedKmh]
+  );
 
   useEffect(() => {
     const updateProgress = () => {
@@ -47,19 +60,16 @@ export function TravelProgressOverlay({
       setProgress(newProgress);
 
       const remaining = differenceInSeconds(arrivalTime, now);
-      if (remaining <= 0) {
-        setTimeRemaining("Arriving...");
-      } else if (remaining < 60) {
-        setTimeRemaining(`${remaining}s`);
-      } else if (remaining < 3600) {
-        const mins = Math.floor(remaining / 60);
-        const secs = remaining % 60;
-        setTimeRemaining(`${mins}m ${secs}s`);
-      } else {
-        const hours = Math.floor(remaining / 3600);
-        const mins = Math.floor((remaining % 3600) / 60);
-        setTimeRemaining(`${hours}h ${mins}m`);
-      }
+      const fmt = (s: number) => {
+        if (s <= 0) return "0s";
+        if (s < 60) return `${s}s`;
+        if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        return `${h}h ${m}m`;
+      };
+      setTimeRemaining(remaining <= 0 ? "Arriving..." : fmt(remaining));
+      setElapsedLabel(fmt(Math.max(0, elapsed)));
     };
 
     updateProgress();
