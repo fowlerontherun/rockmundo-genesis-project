@@ -46,6 +46,7 @@ serve(async (req) => {
       .select(`
         id,
         user_id,
+        profile_id,
         to_city_id,
         from_city_id,
         arrival_time,
@@ -87,7 +88,7 @@ serve(async (req) => {
             is_traveling: false,
             travel_arrives_at: null,
           })
-          .eq("user_id", travel.user_id);
+          .eq("id", travel.profile_id);
 
         if (profileError) {
           console.error(`[complete-travel] Error updating profile for user ${travel.user_id}:`, profileError);
@@ -184,7 +185,7 @@ serve(async (req) => {
     // Also check for scheduled travels that should start
     const { data: scheduledTravels, error: scheduledError } = await supabase
       .from("player_travel_history")
-      .select("id, user_id, departure_time, arrival_time, scheduled_departure_time")
+      .select("id, user_id, profile_id, departure_time, arrival_time, scheduled_departure_time")
       .eq("status", "scheduled")
       .lte("scheduled_departure_time", new Date().toISOString());
 
@@ -206,7 +207,7 @@ serve(async (req) => {
               is_traveling: true,
               travel_arrives_at: travel.arrival_time,
             })
-            .eq("user_id", travel.user_id);
+            .eq("id", travel.profile_id);
 
           console.log(`[complete-travel] Started scheduled travel ${travel.id}`);
         }
