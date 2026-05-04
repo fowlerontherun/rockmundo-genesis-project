@@ -596,11 +596,11 @@ serve(async (req) => {
             await supabaseClient
               .from('band_city_fans')
               .update({
-                total_fans: (existingCityFans.total_fans || 0) + newFansTotal,
-                casual_fans: (existingCityFans.casual_fans || 0) + casualFans,
-                dedicated_fans: (existingCityFans.dedicated_fans || 0) + dedicatedFans,
-                superfans: (existingCityFans.superfans || 0) + superfans,
-                city_fame: (existingCityFans.city_fame || 0) + fameGained,
+                total_fans: clampInt4((existingCityFans.total_fans || 0) + newFansTotal),
+                casual_fans: clampInt4((existingCityFans.casual_fans || 0) + casualFans),
+                dedicated_fans: clampInt4((existingCityFans.dedicated_fans || 0) + dedicatedFans),
+                superfans: clampInt4((existingCityFans.superfans || 0) + superfans),
+                city_fame: clampInt4((existingCityFans.city_fame || 0) + fameGained),
                 gigs_in_city: (existingCityFans.gigs_in_city || 0) + 1,
                 last_gig_date: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -639,7 +639,7 @@ serve(async (req) => {
             country: venueCountry,
             scope: 'city',
             event_type: 'gig',
-            fame_value: (gig.bands.fame || 0) + fameGained,
+            fame_value: clampInt4((gig.bands.fame || 0) + fameGained),
             fame_change: fameGained,
           });
         console.log(`Recorded fame history: +${fameGained} fame in ${venueCityName}`);
@@ -675,7 +675,7 @@ serve(async (req) => {
                 await supabaseClient
                   .from('band_demographic_fans')
                   .update({
-                    fan_count: (existingDemo.fan_count || 0) + demoFans,
+                    fan_count: clampInt4((existingDemo.fan_count || 0) + demoFans),
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', existingDemo.id);
