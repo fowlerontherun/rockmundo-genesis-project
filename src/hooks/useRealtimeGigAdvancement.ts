@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { differenceInSeconds } from "date-fns";
@@ -14,6 +14,7 @@ interface Song {
 
 export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean = true) => {
   const { toast } = useToast();
+  const completingGigsRef = useRef(new Set<string>());
 
   const processNextSong = useCallback(async (
     gig: any,
@@ -25,6 +26,8 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
     console.log(`[Gig Advancement] Processing position ${currentPosition} of ${setlistSongs.length} songs`);
     
     if (currentPosition >= setlistSongs.length) {
+      if (completingGigsRef.current.has(gig.id)) return;
+      completingGigsRef.current.add(gig.id);
       // All songs completed - finalize the gig
       console.log('[Gig Advancement] All songs completed, finalizing gig');
       
@@ -33,6 +36,7 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
       });
 
       if (completeError) {
+        completingGigsRef.current.delete(gig.id);
         console.error('[Gig Advancement] Error completing gig:', completeError);
         toast({
           title: "Error completing gig",
@@ -41,10 +45,12 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
         });
       } else {
         console.log('[Gig Advancement] Gig completed successfully:', data);
-        toast({
-          title: "Gig Completed!",
-          description: "Check your gig history for the results"
-        });
+        if (!(data as any)?.alreadyCompleted) {
+          toast({
+            title: "Gig Completed!",
+            description: "Check your gig history for the results"
+          });
+        }
       }
       return;
     }

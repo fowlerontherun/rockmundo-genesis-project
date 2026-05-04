@@ -46,6 +46,7 @@ serve(async (req) => {
       .select(`
         id,
         user_id,
+        profile_id,
         to_city_id,
         from_city_id,
         arrival_time,
@@ -79,15 +80,20 @@ serve(async (req) => {
           continue;
         }
 
-        // Update player's current city and travel status
-        const { error: profileError } = await supabase
+        // Update player's current character when profile_id exists; fall back for legacy rows.
+        let profileUpdate = supabase
           .from("profiles")
           .update({
             current_city_id: travel.to_city_id,
             is_traveling: false,
             travel_arrives_at: null,
-          })
-          .eq("user_id", travel.user_id);
+          });
+
+        profileUpdate = travel.profile_id
+          ? profileUpdate.eq("id", travel.profile_id)
+          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+
+        const { error: profileError } = await profileUpdate;
 
         if (profileError) {
           console.error(`[complete-travel] Error updating profile for user ${travel.user_id}:`, profileError);
@@ -184,7 +190,7 @@ serve(async (req) => {
     // Also check for scheduled travels that should start
     const { data: scheduledTravels, error: scheduledError } = await supabase
       .from("player_travel_history")
-      .select("id, user_id, departure_time, arrival_time, scheduled_departure_time")
+      .select("id, user_id, profile_id, departure_time, arrival_time, scheduled_departure_time")
       .eq("status", "scheduled")
       .lte("scheduled_departure_time", new Date().toISOString());
 
@@ -199,14 +205,19 @@ serve(async (req) => {
           .eq("id", travel.id);
 
         if (!error) {
-          // Update profile to traveling
-          await supabase
+          // Update profile to traveling; profile_id is preferred, user_id is legacy fallback.
+          let profileUpdate = supabase
             .from("profiles")
             .update({
               is_traveling: true,
               travel_arrives_at: travel.arrival_time,
-            })
-            .eq("user_id", travel.user_id);
+            });
+
+          profileUpdate = travel.profile_id
+            ? profileUpdate.eq("id", travel.profile_id)
+            : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+
+          await profileUpdate;
 
           console.log(`[complete-travel] Started scheduled travel ${travel.id}`);
         }

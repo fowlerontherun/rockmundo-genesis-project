@@ -696,9 +696,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           return 'bus';
         };
 
-        // Tightened: faster effective speeds + smaller buffers (game pacing)
-        const speeds: Record<string, number> = { bus: 80, train: 260, plane: 1100, ship: 55, tour_bus: 95 };
-        const buffers: Record<string, number> = { bus: 0.15, train: 0.25, plane: 1.5, ship: 0.5, tour_bus: 0.15 };
+        // Tightened further: faster effective speeds + smaller buffers (game pacing)
+        const speeds: Record<string, number> = { bus: 95, train: 320, plane: 1250, ship: 65, tour_bus: 115 };
+        const buffers: Record<string, number> = { bus: 0.1, train: 0.15, plane: 0.75, ship: 0.3, tour_bus: 0.1 };
 
         const travelLegs = [];
         for (let i = 0; i < venueMatches.length - 1; i++) {

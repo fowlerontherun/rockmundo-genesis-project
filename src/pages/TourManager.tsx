@@ -250,8 +250,8 @@ const TourManager = () => {
           const dLon = (to.lon - from.lon) * Math.PI / 180;
           const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
           const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          const speeds: Record<string, number> = { bus: 80, train: 260, plane: 1100, ship: 55, tour_bus: 95 };
-          const buffers: Record<string, number> = { bus: 0.15, train: 0.25, plane: 1.5, ship: 0.5, tour_bus: 0.15 };
+          const speeds: Record<string, number> = { bus: 95, train: 320, plane: 1250, ship: 65, tour_bus: 115 };
+          const buffers: Record<string, number> = { bus: 0.1, train: 0.15, plane: 0.75, ship: 0.3, tour_bus: 0.1 };
           durationHours = Math.max(1, Math.round((distanceKm / (speeds[travelMode] || 56) + (buffers[travelMode] || 0.3)) * 10) / 10);
         }
         const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
@@ -322,21 +322,21 @@ const TourManager = () => {
         return { created: 0, skippedExisting: 0, tourName: tour.name };
       }
 
-      const memberUserIds = (members || []).map((member) => member.user_id).filter(Boolean) as string[];
+      const memberProfileIds = (members || []).map((member) => member.profile_id).filter(Boolean) as string[];
 
-      if (memberUserIds.length === 0) {
+      if (memberProfileIds.length === 0) {
         return { created: 0, skippedExisting: 0, tourName: tour.name };
       }
 
       const legIds = remainingLegs.map((leg) => leg.id);
       const { data: existingTravel, error: existingError } = await supabase
         .from('player_travel_history')
-        .select('tour_leg_id, user_id')
+        .select('tour_leg_id, profile_id')
         .in('tour_leg_id', legIds)
-        .in('user_id', memberUserIds);
+        .in('profile_id', memberProfileIds);
       if (existingError) throw existingError;
 
-      const existingKeys = new Set((existingTravel || []).map((row) => `${row.tour_leg_id}:${row.user_id}`));
+      const existingKeys = new Set((existingTravel || []).map((row) => `${row.tour_leg_id}:${row.profile_id}`));
 
       const cityIds = [...new Set(remainingLegs.flatMap((leg) => [leg.from_city_id, leg.to_city_id]).filter(Boolean))] as string[];
       const { data: citiesData, error: cityError } = await supabase
@@ -354,7 +354,7 @@ const TourManager = () => {
         for (const member of members || []) {
           if (!member.user_id || !member.profile_id) continue;
 
-          const existingKey = `${leg.id}:${member.user_id}`;
+          const existingKey = `${leg.id}:${member.profile_id}`;
           if (existingKeys.has(existingKey)) {
             skippedExisting += 1;
             continue;

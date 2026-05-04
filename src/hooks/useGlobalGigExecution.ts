@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 export const useGlobalGigExecution = (userId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const completingGigsRef = useRef(new Set<string>());
 
   const processGigs = useCallback(async () => {
     if (!userId) return;
@@ -164,16 +165,26 @@ export const useGlobalGigExecution = (userId: string | null) => {
           );
 
           if (elapsedSeconds >= totalDuration && performedPositions.size + songsToPerform.length >= setlistSongs.length) {
+            if (completingGigsRef.current.has(gig.id)) continue;
+            completingGigsRef.current.add(gig.id);
             console.log(`[GlobalGigExecution] Completing gig ${gig.id}`);
             
-            await supabase.functions.invoke('complete-gig', {
+            const { data: completionData, error: completionError } = await supabase.functions.invoke('complete-gig', {
               body: { gigId: gig.id }
             });
 
-            toast({
-              title: "Gig Completed!",
-              description: `${gig.bands?.name}'s performance has finished!`
-            });
+            if (completionError) {
+              completingGigsRef.current.delete(gig.id);
+              console.error(`[GlobalGigExecution] complete-gig failed:`, completionError);
+              continue;
+            }
+
+            if (!(completionData as any)?.alreadyCompleted) {
+              toast({
+                title: "Gig Completed!",
+                description: `${gig.bands?.name}'s performance has finished!`
+              });
+            }
 
             queryClient.invalidateQueries({ queryKey: ['gigs'] });
             queryClient.invalidateQueries({ queryKey: ['gig-outcomes'] });

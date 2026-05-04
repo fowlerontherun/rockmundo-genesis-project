@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const INT4_MAX_SAFE = 2_000_000_000;
+const INT4_MIN_SAFE = -2_000_000_000;
+const clampInt4 = (value: number) => Math.max(INT4_MIN_SAFE, Math.min(INT4_MAX_SAFE, Math.round(Number.isFinite(value) ? value : 0)));
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,12 +38,34 @@ serve(async (req) => {
 
     const { data: outcome, error: outcomeError } = await supabaseClient
       .from('gig_outcomes')
-      .select('id, actual_attendance, ticket_revenue')
+      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at')
       .eq('gig_id', gigId)
       .single();
 
     if (outcomeError || !outcome) {
       throw new Error('Gig outcome not found');
+    }
+
+    if (gig.status === 'completed' || outcome.completed_at) {
+      if (gig.status !== 'completed') {
+        await supabaseClient
+          .from('gigs')
+          .update({ status: 'completed', completed_at: outcome.completed_at || new Date().toISOString() })
+          .eq('id', gigId);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          alreadyCompleted: true,
+          outcome: {
+            overall_rating: outcome.overall_rating,
+            net_profit: outcome.net_profit,
+            fame_gained: outcome.fame_gained,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     // Get all song performances already recorded
@@ -280,10 +306,10 @@ serve(async (req) => {
     }
 
     // Calculate total revenue and profit (with city economy applied)
-    const adjustedTicketRevenue = Math.round(outcome.ticket_revenue * economyMultiplier);
-    const adjustedMerchRevenue = Math.round(merchRevenue * economyMultiplier);
-    const totalRevenue = adjustedTicketRevenue + adjustedMerchRevenue;
-    const netProfit = totalRevenue - totalCosts;
+    const adjustedTicketRevenue = clampInt4((outcome.ticket_revenue || 0) * economyMultiplier);
+    const adjustedMerchRevenue = clampInt4(merchRevenue * economyMultiplier);
+    const totalRevenue = clampInt4(adjustedTicketRevenue + adjustedMerchRevenue);
+    const netProfit = clampInt4(totalRevenue - totalCosts);
 
     // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===
     // Band morale affects fame gain and fan conversion: 0.7x at 0 morale, 1.0x at 50, 1.2x at 100
@@ -296,7 +322,7 @@ serve(async (req) => {
     const baseFame = (avgRating / 25) * 200;
     // Add ±25% random variance to fame for more unpredictable outcomes
     const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
-    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod);
+    const fameGained = clampInt4(Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod));
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
@@ -372,7 +398,7 @@ serve(async (req) => {
     
     // Calculate fans with tout penalty applied
     const baseFansFromAttendance = Math.floor(actualAttendanceForFans * conversionRate);
-    const newFansTotal = Math.floor(baseFansFromAttendance * fanGainPenalty);
+    const newFansTotal = Math.max(0, Math.min(1_000_000, Math.floor(baseFansFromAttendance * fanGainPenalty)));
     
     // Distribute into tiers based on performance
     let casualFans = 0, dedicatedFans = 0, superfans = 0;
@@ -427,12 +453,12 @@ serve(async (req) => {
 
     // Update band stats including total fans
     const newChemistry = Math.max(0, Math.min(100, (gig.bands.chemistry_level || 50) + chemistryChange));
-    const newFame = Math.max(0, (gig.bands.fame || 0) + fameGained);
-    const newBalance = (gig.bands.band_balance || 0) + netProfit;
-    const newTotalFans = (gig.bands.total_fans || 0) + newFansTotal;
-    const newCasualFans = (gig.bands.casual_fans || 0) + casualFans;
-    const newDedicatedFans = (gig.bands.dedicated_fans || 0) + dedicatedFans;
-    const newSuperfans = (gig.bands.superfans || 0) + superfans;
+    const newFame = clampInt4(Math.max(0, (gig.bands.fame || 0) + fameGained));
+    const newBalance = clampInt4((gig.bands.band_balance || 0) + netProfit);
+    const newTotalFans = clampInt4(Math.max(0, (gig.bands.total_fans || 0) + newFansTotal));
+    const newCasualFans = clampInt4(Math.max(0, (gig.bands.casual_fans || 0) + casualFans));
+    const newDedicatedFans = clampInt4(Math.max(0, (gig.bands.dedicated_fans || 0) + dedicatedFans));
+    const newSuperfans = clampInt4(Math.max(0, (gig.bands.superfans || 0) + superfans));
 
     // === MORALE POST-GIG UPDATE (v1.0.958) ===
     let moraleChange = 0;
@@ -570,11 +596,11 @@ serve(async (req) => {
             await supabaseClient
               .from('band_city_fans')
               .update({
-                total_fans: (existingCityFans.total_fans || 0) + newFansTotal,
-                casual_fans: (existingCityFans.casual_fans || 0) + casualFans,
-                dedicated_fans: (existingCityFans.dedicated_fans || 0) + dedicatedFans,
-                superfans: (existingCityFans.superfans || 0) + superfans,
-                city_fame: (existingCityFans.city_fame || 0) + fameGained,
+                total_fans: clampInt4((existingCityFans.total_fans || 0) + newFansTotal),
+                casual_fans: clampInt4((existingCityFans.casual_fans || 0) + casualFans),
+                dedicated_fans: clampInt4((existingCityFans.dedicated_fans || 0) + dedicatedFans),
+                superfans: clampInt4((existingCityFans.superfans || 0) + superfans),
+                city_fame: clampInt4((existingCityFans.city_fame || 0) + fameGained),
                 gigs_in_city: (existingCityFans.gigs_in_city || 0) + 1,
                 last_gig_date: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -613,7 +639,7 @@ serve(async (req) => {
             country: venueCountry,
             scope: 'city',
             event_type: 'gig',
-            fame_value: (gig.bands.fame || 0) + fameGained,
+            fame_value: clampInt4((gig.bands.fame || 0) + fameGained),
             fame_change: fameGained,
           });
         console.log(`Recorded fame history: +${fameGained} fame in ${venueCityName}`);
@@ -649,7 +675,7 @@ serve(async (req) => {
                 await supabaseClient
                   .from('band_demographic_fans')
                   .update({
-                    fan_count: (existingDemo.fan_count || 0) + demoFans,
+                    fan_count: clampInt4((existingDemo.fan_count || 0) + demoFans),
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', existingDemo.id);

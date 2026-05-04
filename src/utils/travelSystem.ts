@@ -1,6 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 export interface TravelRoute {
   id: string;
   from_city_id: string;
@@ -55,14 +53,21 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const departureDate = new Date(departureTime);
   const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
 
-  // Check for scheduling conflicts before booking
-  const { available, conflictingActivity } = await checkTimeSlotAvailable(
-    profileId,
-    departureDate,
-    arrivalTimeCalc
-  );
+  const { data: authResult } = await supabase.auth.getUser();
+  const authUserId = authResult.user?.id;
+  if (!authUserId) throw new Error("Not authenticated");
 
-  if (!available) {
+  // Check this character's schedule before booking; profile_id is the character boundary.
+  const { data: conflictingActivity } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .select('title')
+    .eq('profile_id', profileId)
+    .in('status', ['scheduled', 'in_progress'])
+    .or(`and(scheduled_start.lte.${departureDate.toISOString()},scheduled_end.gt.${departureDate.toISOString()}),and(scheduled_start.lt.${arrivalTimeCalc.toISOString()},scheduled_end.gte.${arrivalTimeCalc.toISOString()}),and(scheduled_start.gte.${departureDate.toISOString()},scheduled_end.lte.${arrivalTimeCalc.toISOString()})`)
+    .limit(1)
+    .maybeSingle();
+
+  if (conflictingActivity) {
     throw new Error(
       `Time slot conflict: You have "${conflictingActivity?.title}" scheduled during this travel time.`
     );
@@ -71,7 +76,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   // Start transaction-like operations
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, cash, display_name")
+    .select("id, user_id, cash, display_name")
     .eq("id", profileId)
     .maybeSingle();
 
@@ -82,6 +87,10 @@ export async function bookTravel(bookingData: TravelBookingData) {
   
   if (!profile) {
     throw new Error("Profile not found");
+  }
+
+  if (profile.user_id !== authUserId) {
+    throw new Error("You can only book travel for your active character.");
   }
 
   // Determine if travel starts immediately or is scheduled for later
@@ -123,6 +132,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { data: travelHistory, error: historyError } = await (supabase as any)
     .from("player_travel_history")
     .insert({
+      user_id: authUserId,
       profile_id: profileId,
       from_city_id: fromCityId,
       to_city_id: toCityId,
@@ -143,6 +153,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { error: activityError } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
+      user_id: authUserId,
       profile_id: profileId,
       activity_type: 'travel',
       status: startsImmediately ? 'in_progress' : 'scheduled',
