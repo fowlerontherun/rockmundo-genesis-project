@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.274",
+    date: "2026-05-04",
+    changes: [
+      { type: 'fix', description: "Travel repair — manual travel now writes both user_id and profile_id correctly, checks conflicts by character, and no longer fails from the account/profile ID mismatch." },
+      { type: 'fix', description: "Tour transport repair — missing per-character tour travel rows and calendar blocks are backfilled for active tours, overdue trips are started/completed, and profiles are synced to the right destination." },
+      { type: 'fix', description: "Gig completion loop fixed — complete-gig is now idempotent, duplicate completion callers are guarded, and existing completed outcomes were backfilled into the inbox." },
+      { type: 'fix', description: "Gig outcome overflow fixed — final revenue/fame/fan numbers are clamped before writing INT columns so oversized gigs stop failing before inbox messages are sent." },
+      { type: 'improvement', description: "Tour travel times reduced further across wizard, manager regeneration, and the process-tour-travel worker." },
+    ],
+  },
+  {
     version: "1.1.273",
     date: "2026-05-03",
     changes: [
