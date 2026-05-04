@@ -55,6 +55,10 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const departureDate = new Date(departureTime);
   const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
 
+  const { data: authResult } = await supabase.auth.getUser();
+  const authUserId = authResult.user?.id;
+  if (!authUserId) throw new Error("Not authenticated");
+
   // Check for scheduling conflicts before booking
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
     profileId,
@@ -71,7 +75,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   // Start transaction-like operations
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, cash, display_name")
+    .select("id, user_id, cash, display_name")
     .eq("id", profileId)
     .maybeSingle();
 
@@ -82,6 +86,10 @@ export async function bookTravel(bookingData: TravelBookingData) {
   
   if (!profile) {
     throw new Error("Profile not found");
+  }
+
+  if (profile.user_id !== authUserId) {
+    throw new Error("You can only book travel for your active character.");
   }
 
   // Determine if travel starts immediately or is scheduled for later
@@ -123,6 +131,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { data: travelHistory, error: historyError } = await (supabase as any)
     .from("player_travel_history")
     .insert({
+      user_id: authUserId,
       profile_id: profileId,
       from_city_id: fromCityId,
       to_city_id: toCityId,
@@ -143,6 +152,7 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const { error: activityError } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
+      user_id: authUserId,
       profile_id: profileId,
       activity_type: 'travel',
       status: startsImmediately ? 'in_progress' : 'scheduled',
