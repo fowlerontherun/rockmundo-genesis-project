@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 export interface TravelRoute {
   id: string;
   from_city_id: string;
