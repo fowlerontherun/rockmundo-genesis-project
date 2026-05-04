@@ -306,10 +306,10 @@ serve(async (req) => {
     }
 
     // Calculate total revenue and profit (with city economy applied)
-    const adjustedTicketRevenue = Math.round(outcome.ticket_revenue * economyMultiplier);
-    const adjustedMerchRevenue = Math.round(merchRevenue * economyMultiplier);
-    const totalRevenue = adjustedTicketRevenue + adjustedMerchRevenue;
-    const netProfit = totalRevenue - totalCosts;
+    const adjustedTicketRevenue = clampInt4((outcome.ticket_revenue || 0) * economyMultiplier);
+    const adjustedMerchRevenue = clampInt4(merchRevenue * economyMultiplier);
+    const totalRevenue = clampInt4(adjustedTicketRevenue + adjustedMerchRevenue);
+    const netProfit = clampInt4(totalRevenue - totalCosts);
 
     // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===
     // Band morale affects fame gain and fan conversion: 0.7x at 0 morale, 1.0x at 50, 1.2x at 100
@@ -322,7 +322,7 @@ serve(async (req) => {
     const baseFame = (avgRating / 25) * 200;
     // Add ±25% random variance to fame for more unpredictable outcomes
     const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
-    const fameGained = Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod);
+    const fameGained = clampInt4(Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod));
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
@@ -398,7 +398,7 @@ serve(async (req) => {
     
     // Calculate fans with tout penalty applied
     const baseFansFromAttendance = Math.floor(actualAttendanceForFans * conversionRate);
-    const newFansTotal = Math.floor(baseFansFromAttendance * fanGainPenalty);
+    const newFansTotal = Math.max(0, Math.min(1_000_000, Math.floor(baseFansFromAttendance * fanGainPenalty)));
     
     // Distribute into tiers based on performance
     let casualFans = 0, dedicatedFans = 0, superfans = 0;
@@ -453,12 +453,12 @@ serve(async (req) => {
 
     // Update band stats including total fans
     const newChemistry = Math.max(0, Math.min(100, (gig.bands.chemistry_level || 50) + chemistryChange));
-    const newFame = Math.max(0, (gig.bands.fame || 0) + fameGained);
-    const newBalance = (gig.bands.band_balance || 0) + netProfit;
-    const newTotalFans = (gig.bands.total_fans || 0) + newFansTotal;
-    const newCasualFans = (gig.bands.casual_fans || 0) + casualFans;
-    const newDedicatedFans = (gig.bands.dedicated_fans || 0) + dedicatedFans;
-    const newSuperfans = (gig.bands.superfans || 0) + superfans;
+    const newFame = clampInt4(Math.max(0, (gig.bands.fame || 0) + fameGained));
+    const newBalance = clampInt4((gig.bands.band_balance || 0) + netProfit);
+    const newTotalFans = clampInt4(Math.max(0, (gig.bands.total_fans || 0) + newFansTotal));
+    const newCasualFans = clampInt4(Math.max(0, (gig.bands.casual_fans || 0) + casualFans));
+    const newDedicatedFans = clampInt4(Math.max(0, (gig.bands.dedicated_fans || 0) + dedicatedFans));
+    const newSuperfans = clampInt4(Math.max(0, (gig.bands.superfans || 0) + superfans));
 
     // === MORALE POST-GIG UPDATE (v1.0.958) ===
     let moraleChange = 0;
