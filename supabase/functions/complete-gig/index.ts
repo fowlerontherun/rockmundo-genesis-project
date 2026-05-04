@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const INT4_MAX_SAFE = 2_000_000_000;
+const INT4_MIN_SAFE = -2_000_000_000;
+const clampInt4 = (value: number) => Math.max(INT4_MIN_SAFE, Math.min(INT4_MAX_SAFE, Math.round(Number.isFinite(value) ? value : 0)));
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,12 +38,34 @@ serve(async (req) => {
 
     const { data: outcome, error: outcomeError } = await supabaseClient
       .from('gig_outcomes')
-      .select('id, actual_attendance, ticket_revenue')
+      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at')
       .eq('gig_id', gigId)
       .single();
 
     if (outcomeError || !outcome) {
       throw new Error('Gig outcome not found');
+    }
+
+    if (gig.status === 'completed' || outcome.completed_at) {
+      if (gig.status !== 'completed') {
+        await supabaseClient
+          .from('gigs')
+          .update({ status: 'completed', completed_at: outcome.completed_at || new Date().toISOString() })
+          .eq('id', gigId);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          alreadyCompleted: true,
+          outcome: {
+            overall_rating: outcome.overall_rating,
+            net_profit: outcome.net_profit,
+            fame_gained: outcome.fame_gained,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     // Get all song performances already recorded
