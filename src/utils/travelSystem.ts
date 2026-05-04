@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 export interface TravelRoute {
   id: string;
   from_city_id: string;
@@ -59,14 +58,17 @@ export async function bookTravel(bookingData: TravelBookingData) {
   const authUserId = authResult.user?.id;
   if (!authUserId) throw new Error("Not authenticated");
 
-  // Check for scheduling conflicts before booking
-  const { available, conflictingActivity } = await checkTimeSlotAvailable(
-    profileId,
-    departureDate,
-    arrivalTimeCalc
-  );
+  // Check this character's schedule before booking; profile_id is the character boundary.
+  const { data: conflictingActivity } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .select('title')
+    .eq('profile_id', profileId)
+    .in('status', ['scheduled', 'in_progress'])
+    .or(`and(scheduled_start.lte.${departureDate.toISOString()},scheduled_end.gt.${departureDate.toISOString()}),and(scheduled_start.lt.${arrivalTimeCalc.toISOString()},scheduled_end.gte.${arrivalTimeCalc.toISOString()}),and(scheduled_start.gte.${departureDate.toISOString()},scheduled_end.lte.${arrivalTimeCalc.toISOString()})`)
+    .limit(1)
+    .maybeSingle();
 
-  if (!available) {
+  if (conflictingActivity) {
     throw new Error(
       `Time slot conflict: You have "${conflictingActivity?.title}" scheduled during this travel time.`
     );
