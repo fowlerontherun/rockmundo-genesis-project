@@ -230,14 +230,14 @@ Deno.serve(async (req) => {
         const toCityName = toCityRes.data ? `${toCityRes.data.name}, ${toCityRes.data.country}` : 'Unknown'
 
         for (const member of members || []) {
-          if (!member.user_id) continue
+          if (!member.user_id || !member.profile_id) continue
 
           // Check if travel already exists for this user and leg
           const { data: existingTravel } = await supabase
             .from('player_travel_history')
             .select('id, status')
             .eq('tour_leg_id', leg.id)
-            .eq('user_id', member.user_id)
+            .eq('profile_id', member.profile_id)
             .maybeSingle()
 
           if (existingTravel) {
@@ -249,18 +249,12 @@ Deno.serve(async (req) => {
           const arrivalTime = new Date(actualArrivalDate)
           const status = arrivalTime <= now ? 'completed' : 'in_progress'
 
-          // Get player's profile id for scheduled activities
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('user_id', member.user_id)
-            .single()
-
           // Create player travel history entry
           const { data: travelRecord, error: travelError } = await supabase
             .from('player_travel_history')
             .insert({
               user_id: member.user_id,
+              profile_id: member.profile_id,
               from_city_id: leg.from_city_id,
               to_city_id: leg.to_city_id,
               transport_type: leg.travel_mode || 'bus',
@@ -279,33 +273,30 @@ Deno.serve(async (req) => {
             continue
           }
 
-          // Create player_scheduled_activities for activity blocking
-          if (profileData?.id) {
-            const { error: activityError } = await supabase
-              .from('player_scheduled_activities')
-              .insert({
-                user_id: member.user_id,
-                profile_id: profileData.id,
-                activity_type: 'travel',
-                status: status === 'completed' ? 'completed' : 'in_progress',
-                scheduled_start: leg.departure_date,
-                scheduled_end: actualArrivalDate,
-                title: `Tour Travel: ${fromCityName} → ${toCityName}`,
-                description: `${leg.travel_mode || 'bus'} journey (${Math.round(durationHours)}h) — Tour`,
-                location: toCityName,
-                metadata: {
-                  travel_history_id: travelRecord?.id,
-                  tour_leg_id: leg.id,
-                  tour_id: leg.tour_id,
-                  from_city_id: leg.from_city_id,
-                  to_city_id: leg.to_city_id,
-                  transport_type: leg.travel_mode,
-                },
-              })
+          const { error: activityError } = await supabase
+            .from('player_scheduled_activities')
+            .insert({
+              user_id: member.user_id,
+              profile_id: member.profile_id,
+              activity_type: 'travel',
+              status: status === 'completed' ? 'completed' : 'in_progress',
+              scheduled_start: leg.departure_date,
+              scheduled_end: actualArrivalDate,
+              title: `Tour Travel: ${fromCityName} → ${toCityName}`,
+              description: `${leg.travel_mode || 'bus'} journey (${Math.round(durationHours)}h) — Tour`,
+              location: toCityName,
+              metadata: {
+                travel_history_id: travelRecord?.id,
+                tour_leg_id: leg.id,
+                tour_id: leg.tour_id,
+                from_city_id: leg.from_city_id,
+                to_city_id: leg.to_city_id,
+                transport_type: leg.travel_mode,
+              },
+            })
 
-            if (activityError) {
-              console.warn(`[process-tour-travel] Failed to create scheduled activity for user ${member.user_id}:`, activityError)
-            }
+          if (activityError) {
+            console.warn(`[process-tour-travel] Failed to create scheduled activity for user ${member.user_id}:`, activityError)
           }
 
           // Update player profile based on status
@@ -317,7 +308,7 @@ Deno.serve(async (req) => {
                 is_traveling: false,
                 travel_arrives_at: null,
               })
-              .eq('user_id', member.user_id)
+              .eq('id', member.profile_id)
           } else {
             await supabase
               .from('profiles')
@@ -325,7 +316,7 @@ Deno.serve(async (req) => {
                 is_traveling: true,
                 travel_arrives_at: actualArrivalDate,
               })
-              .eq('user_id', member.user_id)
+              .eq('id', member.profile_id)
           }
 
           travelCreated++
