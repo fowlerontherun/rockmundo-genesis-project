@@ -180,6 +180,17 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
   switch (activity.activity_type) {
     case 'gig':
       if (activity.linked_gig_id) {
+        const { data: gig } = await supabase
+          .from('gigs')
+          .select('status, completed_at')
+          .eq('id', activity.linked_gig_id)
+          .maybeSingle();
+
+        if (gig?.status === 'completed' || gig?.completed_at) {
+          console.log(`Gig ${activity.linked_gig_id} already completed; skipping duplicate completion`);
+          break;
+        }
+
         // Trigger gig completion
         await supabase.functions.invoke('complete-gig', {
           body: { gigId: activity.linked_gig_id }
