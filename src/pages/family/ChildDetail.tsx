@@ -10,7 +10,7 @@ import {
   PencilLine, MessagesSquare, Coins, Palette, AlertTriangle, Lock,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
+import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType, type ChildInteraction } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits, useChildSynergiesForTraits } from "@/hooks/useChildTraits";
