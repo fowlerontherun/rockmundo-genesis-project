@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.275",
+    date: "2026-05-05",
+    changes: [
+      { type: 'feature', description: "Parenting interactions now record a base/trait/synergy/final breakdown — hover any row in Recent Interactions to see exactly how your child's traits and synergies modulated each stat." },
+    ],
+  },
+  {
     version: "1.1.274",
     date: "2026-05-04",
     changes: [

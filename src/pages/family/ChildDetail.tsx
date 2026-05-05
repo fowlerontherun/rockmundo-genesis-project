@@ -10,7 +10,7 @@ import {
   PencilLine, MessagesSquare, Coins, Palette, AlertTriangle, Lock,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType } from "@/hooks/useChildInteractions";
+import { usePlayerChild, useChildInteractions, useApplyChildInteraction, type ChildInteractionType, type ChildInteraction } from "@/hooks/useChildInteractions";
 import { useChildAgeProgression, SCHOOL_STAGES, type SchoolStage } from "@/hooks/useChildAgeProgression";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useResolvedChildTraits, useChildSynergiesForTraits } from "@/hooks/useChildTraits";
@@ -563,20 +563,180 @@ export default function ChildDetail() {
       {interactions.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Recent Interactions</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              Recent Interactions
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Hover any row to see how traits changed the base stats
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            {interactions.slice(0, 8).map((i) => (
-              <div key={i.id} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0">
-                <span className="font-medium capitalize">{i.interaction_type.replace("_", " ")}</span>
-                <span className="text-muted-foreground">
-                  {formatDistanceToNow(new Date(i.created_at), { addSuffix: true })}
-                </span>
-              </div>
-            ))}
+            <TooltipProvider delayDuration={150}>
+              {interactions.slice(0, 8).map((i) => (
+                <InteractionRow key={i.id} interaction={i} />
+              ))}
+            </TooltipProvider>
           </CardContent>
         </Card>
       )}
     </div>
+  );
+}
+
+const STAT_LABELS: Record<string, string> = {
+  food: "Food", sleep: "Sleep", affection: "Affection", learning: "Learning",
+  mood: "Mood", stability: "Stability", bond: "Bond",
+};
+
+function fmtSigned(n: number): string {
+  if (!n) return "0";
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+function InteractionRow({ interaction }: { interaction: ChildInteraction }) {
+  const eff = (interaction.effects ?? {}) as Record<string, any>;
+  const base: Record<string, number> = eff.base ?? {};
+  const traitDelta: Record<string, number> = eff.trait_delta ?? {};
+  const synergyDelta: Record<string, number> = eff.synergy_delta ?? {};
+  const final: Record<string, number> = eff.final ?? {};
+  const triggeredTraits: string[] = Array.isArray(eff.traits) ? eff.traits : [];
+  const synergies: Array<{ key: string; label: string; flavor?: string; bonus?: Record<string, number> }> =
+    Array.isArray(eff.synergies) ? eff.synergies : [];
+
+  // Fallback: legacy rows lacking breakdown — derive a single final summary
+  const hasBreakdown = Object.keys(base).length > 0 || Object.keys(traitDelta).length > 0 || Object.keys(synergyDelta).length > 0;
+  const finalKeys = Object.keys(final).length > 0
+    ? Object.keys(final)
+    : Object.keys(eff).filter((k) => typeof eff[k] === "number");
+  const finalView: Record<string, number> = Object.keys(final).length > 0
+    ? final
+    : Object.fromEntries(finalKeys.map((k) => [k, eff[k] as number]));
+
+  const allStats = Array.from(new Set([
+    ...Object.keys(base), ...Object.keys(traitDelta), ...Object.keys(synergyDelta), ...Object.keys(finalView),
+  ])).filter((s) => STAT_LABELS[s]);
+
+  const finalSummary = Object.entries(finalView)
+    .filter(([, v]) => v !== 0)
+    .slice(0, 4)
+    .map(([k, v]) => `${fmtSigned(v)} ${STAT_LABELS[k] ?? k}`)
+    .join(", ");
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border/40 last:border-0 cursor-help">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-medium capitalize">{interaction.interaction_type.replace(/_/g, " ")}</span>
+            {triggeredTraits.length > 0 && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 gap-0.5 border-social-chemistry/40">
+                <Sparkles className="h-2.5 w-2.5 text-social-chemistry" />
+                {triggeredTraits.length}
+              </Badge>
+            )}
+            {synergies.length > 0 && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 border-amber-400/40 text-amber-500">
+                ✨ {synergies.length}
+              </Badge>
+            )}
+            {finalSummary && (
+              <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">
+                · {finalSummary}
+              </span>
+            )}
+          </div>
+          <span className="text-muted-foreground shrink-0">
+            {formatDistanceToNow(new Date(interaction.created_at), { addSuffix: true })}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="left" className="max-w-[320px] p-0">
+        <div className="p-2 space-y-1.5">
+          <p className="text-xs font-semibold capitalize">
+            {interaction.interaction_type.replace(/_/g, " ")} — Outcome Breakdown
+          </p>
+          {hasBreakdown && allStats.length > 0 ? (
+            <div className="space-y-0.5">
+              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-2 text-[10px] text-muted-foreground border-b border-border/50 pb-0.5">
+                <span>Stat</span>
+                <span className="text-right">Base</span>
+                <span className="text-right">Traits</span>
+                <span className="text-right">Synergy</span>
+                <span className="text-right">Final</span>
+              </div>
+              {allStats.map((stat) => {
+                const b = base[stat] ?? 0;
+                const td = traitDelta[stat] ?? 0;
+                const sd = synergyDelta[stat] ?? 0;
+                const f = finalView[stat] ?? (b + td + sd);
+                if (b === 0 && td === 0 && sd === 0 && f === 0) return null;
+                return (
+                  <div key={stat} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-2 text-[11px]">
+                    <span className="text-foreground/90">{STAT_LABELS[stat]}</span>
+                    <span className="text-right text-muted-foreground">{fmtSigned(b)}</span>
+                    <span className={`text-right ${td > 0 ? "text-social-chemistry" : td < 0 ? "text-destructive" : "text-muted-foreground/60"}`}>
+                      {fmtSigned(td)}
+                    </span>
+                    <span className={`text-right ${sd > 0 ? "text-amber-500" : sd < 0 ? "text-destructive" : "text-muted-foreground/60"}`}>
+                      {fmtSigned(sd)}
+                    </span>
+                    <span className={`text-right font-semibold ${f > 0 ? "text-foreground" : f < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                      {fmtSigned(f)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              {finalSummary || "No stat changes recorded."}
+            </p>
+          )}
+
+          {triggeredTraits.length > 0 && (
+            <div className="pt-1 border-t border-border/50">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                Traits that modified this
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {triggeredTraits.map((t) => (
+                  <Badge key={t} variant="outline" className="text-[9px] h-4 px-1 capitalize border-social-chemistry/40">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {synergies.length > 0 && (
+            <div className="pt-1 border-t border-border/50 space-y-0.5">
+              <p className="text-[10px] uppercase tracking-wide text-amber-500 mb-0.5">
+                Synergies triggered
+              </p>
+              {synergies.map((s) => (
+                <div key={s.key} className="text-[10px]">
+                  <span className="font-semibold text-amber-500">{s.label}</span>
+                  {s.bonus && (
+                    <span className="text-muted-foreground">
+                      {" "}—{" "}
+                      {Object.entries(s.bonus)
+                        .filter(([, v]) => Number(v) !== 0)
+                        .map(([k, v]) => `${fmtSigned(Number(v))} ${STAT_LABELS[k] ?? k}`)
+                        .join(", ")}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!hasBreakdown && (
+            <p className="text-[9px] text-muted-foreground/70 pt-1 border-t border-border/50">
+              Older interaction — only the final result is stored.
+            </p>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
