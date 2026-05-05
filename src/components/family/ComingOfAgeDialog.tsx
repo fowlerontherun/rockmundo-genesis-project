@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Crown, ArrowRight, Lock, UserPlus } from "lucide-react";
+import { Sparkles, Crown, ArrowRight, Lock, UserPlus, User, Check } from "lucide-react";
 import { useConvertChildToPlayable, useComingOfAgeAvailability } from "@/hooks/useComingOfAge";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface Props {
   child: {
@@ -26,9 +27,10 @@ interface Props {
 export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const [open, setOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const navigate = useNavigate();
   const convert = useConvertChildToPlayable();
-  const { switchCharacter } = useCharacterSlots();
+  const { switchCharacter, characters } = useCharacterSlots();
   const { eligible, canConvertNow, needsSlot, slots } = useComingOfAgeAvailability(child);
 
   // Auto-prompt once per session
@@ -43,6 +45,27 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
     }
   }
 
+  // Build a map of occupied slot numbers → character (only living characters count).
+  const slotMap = useMemo(() => {
+    const m = new Map<number, (typeof characters)[number]>();
+    for (const c of characters) {
+      if (c.slot_number != null && !c.died_at) m.set(c.slot_number, c);
+    }
+    return m;
+  }, [characters]);
+
+  const maxSlots = slots?.maxSlots ?? 0;
+  const slotList = useMemo(
+    () => Array.from({ length: maxSlots }, (_, i) => i + 1),
+    [maxSlots],
+  );
+  const freeSlots = slotList.filter((n) => !slotMap.has(n));
+
+  // Auto-select the first free slot whenever the dialog opens / slots load
+  if (open && selectedSlot == null && freeSlots.length > 0) {
+    setSelectedSlot(freeSlots[0]);
+  }
+
   if (!eligible && !child.child_profile_id) return null;
 
   const topPotentials = Object.entries(child.inherited_potentials ?? {})
@@ -51,21 +74,31 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const avgBond = Math.round(((child.bond_parent_a ?? 50) + (child.bond_parent_b ?? 50)) / 2);
 
   const handleConvert = async () => {
-    const newProfileId = await convert.mutateAsync(child.id);
+    const newProfileId = await convert.mutateAsync({
+      childId: child.id,
+      slotNumber: selectedSlot ?? null,
+    });
     setOpen(false);
-    // Offer to switch immediately
+    setSelectedSlot(null);
     try {
       await switchCharacter.mutateAsync(newProfileId);
       navigate("/dashboard");
     } catch {
-      // Stay in current character; user can switch from character menu
+      // Stay on current character; user can switch later.
     }
   };
 
   const fullName = `${child.name} ${child.surname}`;
+  const slotChosenAndFree = selectedSlot != null && !slotMap.has(selectedSlot);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setSelectedSlot(null);
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" className="gap-1.5 bg-gradient-to-r from-social-loyalty to-social-chemistry text-primary-foreground">
@@ -107,21 +140,66 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
             </p>
           </div>
 
-          <div className="rounded-md border border-border/60 p-3 space-y-1">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Character slots</p>
+          {/* Slot chooser */}
+          <div className="rounded-md border border-border/60 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Pick a character slot</p>
+              {slots && (
+                <span className="text-[10px] text-muted-foreground">
+                  {slots.usedSlots}/{slots.maxSlots} used
+                </span>
+              )}
+            </div>
+
             {slots ? (
-              <p className="text-xs">
-                {slots.usedSlots} of {slots.maxSlots} used
-                {needsSlot && (
-                  <span className="ml-2 text-destructive inline-flex items-center gap-1">
-                    <Lock className="h-3 w-3" /> No free slot
-                  </span>
-                )}
-              </p>
+              freeSlots.length === 0 ? (
+                <p className="text-[11px] text-destructive inline-flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> No free slot — purchase one or retire a character.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {slotList.map((n) => {
+                    const occupant = slotMap.get(n);
+                    const isOccupied = !!occupant;
+                    const isSelected = selectedSlot === n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        disabled={isOccupied}
+                        onClick={() => setSelectedSlot(n)}
+                        className={cn(
+                          "rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors flex items-center gap-1.5",
+                          isOccupied
+                            ? "border-border/40 bg-muted/30 text-muted-foreground cursor-not-allowed"
+                            : isSelected
+                            ? "border-social-chemistry bg-social-chemistry/10 text-foreground"
+                            : "border-border/60 hover:border-social-chemistry/60",
+                        )}
+                      >
+                        {isSelected && !isOccupied ? (
+                          <Check className="h-3 w-3 text-social-chemistry shrink-0" />
+                        ) : isOccupied ? (
+                          <User className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <UserPlus className="h-3 w-3 shrink-0" />
+                        )}
+                        <span className="font-semibold">Slot {n}</span>
+                        <span className="truncate text-[10px] opacity-80">
+                          {isOccupied
+                            ? occupant?.display_name || occupant?.username || "Occupied"
+                            : "Empty"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )
             ) : (
-              <p className="text-xs text-muted-foreground">Loading…</p>
+              <p className="text-xs text-muted-foreground">Loading slots…</p>
             )}
-            {needsSlot && (
+
+            {needsSlot && freeSlots.length === 0 && (
               <p className="text-[10px] text-muted-foreground">
                 Purchase an extra slot or retire an existing character to make room.
               </p>
@@ -136,11 +214,15 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
           <Button
             size="sm"
             onClick={handleConvert}
-            disabled={!canConvertNow || convert.isPending}
+            disabled={!canConvertNow || !slotChosenAndFree || convert.isPending}
             className="gap-1.5"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            {convert.isPending ? "Creating…" : "Create playable heir"}
+            {convert.isPending
+              ? "Creating…"
+              : selectedSlot
+              ? `Create heir in Slot ${selectedSlot}`
+              : "Create playable heir"}
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </DialogFooter>

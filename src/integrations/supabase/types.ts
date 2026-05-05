@@ -33611,10 +33611,12 @@ export type Database = {
         }
         Returns: Json
       }
-      convert_child_to_playable: {
-        Args: { p_child_id: string }
-        Returns: string
-      }
+      convert_child_to_playable:
+        | { Args: { p_child_id: string }; Returns: string }
+        | {
+            Args: { p_child_id: string; p_slot_number?: number }
+            Returns: string
+          }
       coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
       create_character_profile: {
         Args: never

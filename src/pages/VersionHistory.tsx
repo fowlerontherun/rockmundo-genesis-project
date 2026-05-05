@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.276",
+    date: "2026-05-05",
+    changes: [
+      { type: 'feature', description: "Coming-of-Age dialog now shows a slot chooser — pick which character slot the new playable heir occupies, with occupied slots labelled by their current character." },
+    ],
+  },
+  {
     version: "1.1.275",
     date: "2026-05-05",
     changes: [
