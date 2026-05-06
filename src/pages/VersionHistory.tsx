@@ -14,6 +14,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.291",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box Store: availability windows are now fully surfaced. Each card derives its state from available_from / available_until and shows a live-updating Upcoming / Live / Expired badge, a countdown of either 'Unlocks in …' or 'Ends in …' (refreshing every second), and the exact start/end timestamps in a detail strip. Boxes still locked or already expired are dimmed, the Open Box button is disabled with a contextual label ('Locked', 'Expired', 'Insufficient funds') and a tooltip explaining why, and boxes ending within 24 hours pulse amber to flag the deadline." },
+    ],
+  },
+  {
+    version: "1.1.290",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box Store: each card now has a 'View odds' popover (per-tier drop rate with coloured bars + plain-English explanation of the pity guarantee) and a per-box pity progress bar that pulls live from blind_box_pity. The bar shows opens_since_epic / threshold, the exact count remaining until the next Epic+ guarantee, turns amber within 3 opens of the cap, and pulses gold when the next box is guaranteed Epic+." },
+    ],
+  },
+  {
     version: "1.1.289",
     date: "2026-05-06",
     changes: [
