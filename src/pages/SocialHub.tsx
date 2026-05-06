@@ -36,8 +36,8 @@ function isOnline(lastSeen: string | null | undefined) {
 
 export default function SocialHub() {
   const { user } = useAuth();
-  const { data: profile } = useActiveProfile();
-  const { friendships, loading } = useFriendships(profile?.id ?? null);
+  const { profileId } = useActiveProfile();
+  const { friendships, loading } = useFriendships(profileId ?? null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DecoratedFriendship | null>(null);
 
