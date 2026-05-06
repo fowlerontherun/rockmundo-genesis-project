@@ -15,6 +15,7 @@ import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
 import { useAutoMajorEventCompletion } from "@/hooks/useAutoMajorEventCompletion";
+import { useAutoRejoinTour } from "@/hooks/useAutoRejoinTour";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
@@ -49,6 +50,9 @@ const Layout = () => {
 
   // Auto-complete major events when game date passes event date
   useAutoMajorEventCompletion(user?.id || null);
+
+  // Auto-rejoin nearest tour leg if the player missed a pickup
+  useAutoRejoinTour();
 
   // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
