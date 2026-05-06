@@ -466,14 +466,6 @@ export function FormatSelectionStep({
                           );
                         })()}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-                      </div>
 
                       {/* v1.1.287: Projected P/L per format */}
                       {(() => {
@@ -504,6 +496,13 @@ export function FormatSelectionStep({
                           </div>
                         );
                       })()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
 
       <Card className="p-4 bg-primary/5 space-y-3">
         <div className="flex justify-between items-center">
