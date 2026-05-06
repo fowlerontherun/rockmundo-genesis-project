@@ -287,6 +287,7 @@ const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
+const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
 const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
 const queryClient = new QueryClient();
@@ -335,6 +336,7 @@ function App() {
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
+                    <Route path="blind-boxes" element={<BlindBoxStore />} />
                     <Route path="family/child/:childId" element={<ChildDetail />} />
                     <Route path="family/timeline" element={<FamilyTimeline />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />

@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Crown, UserPlus, Shirt, Sparkles } from "lucide-react";
+import { Crown, UserPlus, Shirt, Sparkles, Package } from "lucide-react";
 
 export default function PremiumStoreHub() {
   return (
@@ -27,6 +27,13 @@ export default function PremiumStoreHub() {
           path: "/skin-store",
           tileImageKey: "premium-skins",
           imagePrompt: "A colorful shop displaying character skins, outfits, and accessories for purchase",
+        },
+        {
+          icon: Package,
+          labelKey: "Blind Boxes",
+          path: "/blind-boxes",
+          imagePrompt: "A row of mystery loot boxes glowing with neon, themed for music genres — metal, synthwave, jazz",
+          description: "Themed mystery boxes: XP, AP, instruments, songs",
         },
         {
           icon: Sparkles,
