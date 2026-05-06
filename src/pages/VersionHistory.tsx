@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.288",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "MMO Expansion Phase A1 — Crafting catalog seeded. The existing Crafting Workshop (/crafting) was empty for everyone; it now ships with 19 raw materials (mahogany, alder, maple, rosewood, ebony, humbuckers, single-coils, active EMG pickups, bass pickups, drum shells, mic capsules, pedal chassis, PCBs, hardware kits) and 12 starter recipes covering: Apprentice S-Style guitar, Journeyman LP-Style, EMG Metal Axe, PJ Bass, Active Metal Bass, Birch & Maple drum kits, Stage Dynamic & Studio Condenser mics, Boutique Overdrive, Digital Delay, and Metal Distortion pedal. Recipes have material requirements, mastery levels (1–35), craft times (90–420 min), difficulty tiers, and rarity outputs. Players can now buy materials, craft custom instruments and pedals, and feed them into the equipment system." },
+      { type: 'feature', description: "MMO Expansion Phase C1 — Unified Social Hub at /social. Replaces the scattered chat/friends UX with one screen: left column lists friends with online presence dot, search box, and Online/All/Pending tabs (live request counter); centre column opens a real-time DM panel for any selected friend (uses the existing Supabase realtime channel); right column shows the friend activity feed. A four-button quick-invite strip at the top jumps directly into Jam, Co-write (Songwriting), Studio (Recording), or Tour Manager. Empty-state of the DM column suggests jumping into Jam Lobby or Nightclubs to find people right now. Tile added to the World & Social hub for discovery." },
+    ],
+  },
+  {
     version: "1.1.287",
     date: "2026-05-06",
     changes: [
