@@ -7,6 +7,7 @@ import { useConvertChildToPlayable, useComingOfAgeAvailability } from "@/hooks/u
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { PlayableHeirTutorialDialog } from "./PlayableHeirTutorialDialog";
 
 interface Props {
   child: {
@@ -28,6 +29,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const [open, setOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const navigate = useNavigate();
   const convert = useConvertChildToPlayable();
   const { switchCharacter, characters } = useCharacterSlots();
@@ -83,6 +85,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
     try {
       await switchCharacter.mutateAsync(newProfileId);
       navigate("/dashboard");
+      setTutorialOpen(true);
     } catch {
       // Stay on current character; user can switch later.
     }
@@ -92,6 +95,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const slotChosenAndFree = selectedSlot != null && !slotMap.has(selectedSlot);
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(o) => {
@@ -228,5 +232,11 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <PlayableHeirTutorialDialog
+      open={tutorialOpen}
+      onOpenChange={setTutorialOpen}
+      heirName={fullName}
+    />
+    </>
   );
 }
