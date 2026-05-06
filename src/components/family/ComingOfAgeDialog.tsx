@@ -95,6 +95,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const slotChosenAndFree = selectedSlot != null && !slotMap.has(selectedSlot);
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(o) => {
