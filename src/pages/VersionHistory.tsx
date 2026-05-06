@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.277",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Added a 'Rejoin Tour Transport' action on the Upcoming Travel list — recover from desynced tour legs and catch up with the band's transport without booking new travel manually. Available per-leg and as a top-level shortcut whenever your active tour has scheduled travel." },
+    ],
+  },
+  {
     version: "1.1.276",
     date: "2026-05-05",
     changes: [
