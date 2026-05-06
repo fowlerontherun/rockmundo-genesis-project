@@ -84,8 +84,22 @@ export default function Characters() {
                   <span className="font-semibold">{slots?.usedSlots ?? 0} / {maxSlots}</span>
                 </div>
                 <Progress value={((slots?.usedSlots ?? 0) / maxSlots) * 100} />
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 rounded-md border p-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">Free</span>
+                    <span className="ml-auto font-semibold">{emptySlotCount}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-md border p-2">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    <span className="text-muted-foreground">Occupied</span>
+                    <span className="ml-auto font-semibold">{characters.length}</span>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  You can have up to {maxSlots} total slots. Buy additional slots to expand your roster.
+                  You can have up to {maxSlots} total slots. {slots?.canCreateNew
+                    ? "Free slots are ready for a new character."
+                    : "All slots are full — buy an additional slot to expand your roster."}
                 </p>
               </>
             )}
