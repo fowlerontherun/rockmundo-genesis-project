@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.287",
+    date: "2026-05-06",
+    changes: [
+      { type: 'fix', description: "Random events now trigger far more often: the active-player window widened from 7 days to 30 days (so most characters are eligible again) and per-run trigger chance bumped from 1/12 (~8.3%) to 1/6 (~16.7%). Active players should now see multiple events per week instead of one every several days." },
+      { type: 'fix', description: "Release Manager P/L: distribution fees now respect the per-format `distribution_fee_percentage` saved by the wizard (clamped 0–50%), instead of always falling back to the global 30/20/15/15% defaults. A cassette saved at 0% is no longer charged 15% behind the scenes." },
+      { type: 'feature', description: "Release wizard now shows a Projected P/L panel under each selected format: expected sell-through % (based on band fame & popularity), gross revenue, tax + distribution net, manufacturing cost, and the resulting profit or loss. Pressing more than 10× projected sales triggers a clear 'likely loss — reduce quantity or raise price' warning." },
+      { type: 'feature', description: "Inbox no longer feels empty: a new daily 06:00 UTC job seeds system messages — a one-time Welcome on first eligibility, a Low cash warning when balance drops under $1,000 (max once per 7 days), Sales milestone notifications when releases cross 1k / 10k / 100k / 1M units, and a Monday weekly recap." },
+    ],
+  },
+  {
     version: "1.1.286",
     date: "2026-05-06",
     changes: [

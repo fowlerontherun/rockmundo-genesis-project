@@ -73,6 +73,44 @@ export function FormatSelectionStep({
     cassette: { release_date: "", quantity: 100, retail_price: DEFAULT_RETAIL_PRICES.cassette, distribution_fee_percentage: 30 }
   });
 
+  // v1.1.287: fetch band fame & popularity for realistic P/L projection
+  const { data: bandStats } = useQuery({
+    queryKey: ["band-pl-stats", bandId],
+    queryFn: async () => {
+      if (!bandId) return null;
+      const { data } = await supabase
+        .from("bands")
+        .select("fame, popularity")
+        .eq("id", bandId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!bandId,
+  });
+
+  // Expected sell-through % for projection (heuristic, UI only)
+  const expectedSellThrough = (formatType: string): number => {
+    const fame = (bandStats as any)?.fame ?? 0;
+    const pop = (bandStats as any)?.popularity ?? 0;
+    if (formatType === "digital" || formatType === "streaming") return 1;
+    return Math.min(0.9, 0.05 + pop / 500 + fame / 1000);
+  };
+
+  const projectFormatPL = (formatType: string) => {
+    const cfg = formatConfigs[formatType];
+    if (!cfg || !cfg.quantity) return null;
+    const sellThrough = expectedSellThrough(formatType);
+    const expectedUnits = Math.round(cfg.quantity * sellThrough);
+    const grossDollars = expectedUnits * (cfg.retail_price || 0);
+    const distRate = Math.max(0, Math.min(50, cfg.distribution_fee_percentage ?? 30)) / 100;
+    const taxRate = 0.10;
+    const netRevenueDollars = grossDollars * (1 - taxRate - distRate);
+    const mfgCostDollars =
+      (selectedFormats.find(f => f.format_type === formatType)?.manufacturing_cost || 0) / 100;
+    const projectedNet = netRevenueDollars - mfgCostDollars;
+    return { sellThrough, expectedUnits, grossDollars, netRevenueDollars, mfgCostDollars, projectedNet };
+  };
+
   const { data: manufacturingCosts } = useQuery({
     queryKey: ["manufacturing-costs"],
     queryFn: async () => {
@@ -428,6 +466,36 @@ export function FormatSelectionStep({
                           );
                         })()}
                       </div>
+
+                      {/* v1.1.287: Projected P/L per format */}
+                      {(() => {
+                        const pl = projectFormatPL(fmt.type);
+                        if (!pl || pl.expectedUnits === 0) return null;
+                        const isLoss = pl.projectedNet < 0;
+                        const overpressed = fmt.type !== "digital" && fmt.type !== "streaming"
+                          && formatConfigs[fmt.type].quantity > pl.expectedUnits * 10;
+                        return (
+                          <div className={`rounded-md border p-2 text-xs space-y-0.5 ${isLoss ? 'border-destructive/50 bg-destructive/5' : 'border-primary/30 bg-primary/5'}`}>
+                            <div className="flex justify-between font-medium">
+                              <span>Projected P/L</span>
+                              <span className={isLoss ? 'text-destructive' : 'text-primary'}>
+                                {isLoss ? '−' : '+'}${Math.abs(pl.projectedNet).toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Expected sales: {pl.expectedUnits.toLocaleString()} units ({Math.round(pl.sellThrough * 100)}%)
+                            </div>
+                            <div className="text-muted-foreground">
+                              Gross ${pl.grossDollars.toFixed(0)} − tax/dist = net ${pl.netRevenueDollars.toFixed(0)} − mfg ${pl.mfgCostDollars.toFixed(0)}
+                            </div>
+                            {overpressed && (
+                              <div className="text-destructive font-medium pt-1">
+                                ⚠ Pressing 10× projected sales — likely loss. Reduce quantity or raise price.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -435,8 +503,8 @@ export function FormatSelectionStep({
             </Card>
           );
         })}
-      </div>
 
+      </div>
       <Card className="p-4 bg-primary/5 space-y-3">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total Manufacturing Cost:</span>
