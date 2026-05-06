@@ -270,6 +270,7 @@ const Travel = () => {
         {/* My Travel Plans Tab */}
         <TabsContent value="upcoming" className="space-y-6">
           {user && <UpcomingTravelList userId={user.id} />}
+          <TravelNotificationPreferences />
         </TabsContent>
 
         {/* Past Travel Tab */}
