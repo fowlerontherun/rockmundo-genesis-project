@@ -414,6 +414,17 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
                       Cancel
                     </Button>
                   )}
+                  {travel.source === "tour" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => rejoinTourMutation.mutate(travel.id)}
+                      disabled={rejoinTourMutation.isPending}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${rejoinTourMutation.isPending ? "animate-spin" : ""}`} />
+                      Rejoin
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
