@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.283",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Automatic tour rejoin: if your character misses a tour pickup (a leg has departed but you have no in-progress travel record), the game now silently invokes the rejoin-tour-transport function and reattaches you to the nearest upcoming leg, syncing your location, profile travel state, scheduled activity and timeline. Polled every 60s globally with a per-leg cooldown to avoid loops. Added an 'Auto-rejoin missed pickups' toggle to the Travel Notifications preferences card so players can opt out." },
+    ],
+  },
+  {
     version: "1.1.282",
     date: "2026-05-06",
     changes: [
