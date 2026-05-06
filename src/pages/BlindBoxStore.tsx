@@ -56,11 +56,58 @@ const TIER_BAR: Record<string, string> = {
   legendary: "bg-amber-400",
 };
 
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "0s";
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+type Availability = {
+  status: "live" | "upcoming" | "expired" | "always";
+  msUntilStart: number;
+  msUntilEnd: number;
+  startsAt: Date | null;
+  endsAt: Date | null;
+  endingSoon: boolean;
+};
+
+function getAvailability(box: BlindBox, now: number): Availability {
+  const startsAt = box.available_from ? new Date(box.available_from) : null;
+  const endsAt = box.available_until ? new Date(box.available_until) : null;
+  const msUntilStart = startsAt ? startsAt.getTime() - now : 0;
+  const msUntilEnd = endsAt ? endsAt.getTime() - now : Infinity;
+  let status: Availability["status"] = "always";
+  if (startsAt && msUntilStart > 0) status = "upcoming";
+  else if (endsAt && msUntilEnd <= 0) status = "expired";
+  else if (startsAt || endsAt) status = "live";
+  return {
+    status,
+    msUntilStart,
+    msUntilEnd,
+    startsAt,
+    endsAt,
+    endingSoon: status === "live" && endsAt !== null && msUntilEnd <= 1000 * 60 * 60 * 24,
+  };
+}
+
 export default function BlindBoxStore() {
   const { profile, profileId } = useActiveProfile();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<BlindBox | null>(null);
   const [reveal, setReveal] = useState<RevealResult | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const { data: boxes = [], isLoading } = useQuery({
     queryKey: ["blind-boxes"],
