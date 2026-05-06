@@ -40,6 +40,12 @@ interface Tour {
   sponsor_cash_value?: number | null;
   merch_boost_multiplier?: number | null;
   support_revenue_share?: number | null;
+  cancelled?: boolean | null;
+  cancellation_date?: string | null;
+  rescheduled_at?: string | null;
+  reschedule_count?: number | null;
+  original_start_date?: string | null;
+  original_end_date?: string | null;
   band: {
     id: string;
     name: string;
