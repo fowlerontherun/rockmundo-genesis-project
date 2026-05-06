@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.285",
+    date: "2026-05-06",
+    changes: [
+      { type: 'improvement', description: "Clearer slot availability across the app: Characters page now shows a Free vs Occupied tally, a status legend (Active / Inactive / Empty), per-slot numbering and a plain-language reason when creation is locked. Studio booking slots show a Free / Yours / Booked / Passed summary and an explicit disabled reason on each unavailable slot ('already passed', 'reserved by <band>', 'you already booked here'). Festival slot offers gained a Pending / Accepted / Rejected / Expired summary row." },
+    ],
+  },
+  {
     version: "1.1.284",
     date: "2026-05-06",
     changes: [
