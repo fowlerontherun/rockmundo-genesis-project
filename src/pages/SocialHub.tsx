@@ -62,8 +62,8 @@ export default function SocialHub() {
 
   const onlineCount = accepted.filter((f) => isOnline((f.otherProfile as any)?.last_active_at)).length;
 
-  const dmChannel = selected && profile?.id && selected.otherProfile?.id
-    ? resolveRelationshipPairKey(profile.id, selected.otherProfile.id)
+  const dmChannel = selected && profileId && selected.otherProfile?.id
+    ? resolveRelationshipPairKey(profileId, selected.otherProfile.id)
     : null;
 
   return (
