@@ -852,7 +852,8 @@ const TourManager = () => {
         </Button>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   const EmptyState = ({ icon: Icon, title, description, action }: { 
     icon: any; 
