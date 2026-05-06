@@ -260,6 +260,8 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
       toast.error(error.message || "Failed to rejoin tour transport");
     },
   });
+
+  const getTransportIcon = (type: string) => {
     const Icon = TRANSPORT_ICONS[type.toLowerCase() as keyof typeof TRANSPORT_ICONS] || Train;
     return <Icon className="h-4 w-4" />;
   };
