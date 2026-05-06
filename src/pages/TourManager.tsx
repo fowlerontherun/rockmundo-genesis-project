@@ -768,13 +768,20 @@ const TourManager = () => {
     setDetailsOpen(true);
   };
 
-  const TourCard = ({ tour, showBandInfo = false }: { tour: Tour; showBandInfo?: boolean }) => (
-    <Card className="hover:border-primary/50 transition-colors">
+  const TourCard = ({ tour, showBandInfo = false }: { tour: Tour; showBandInfo?: boolean }) => {
+    const isCancelled = tour.status === 'cancelled';
+    return (
+    <Card className={cn(
+      "hover:border-primary/50 transition-colors",
+      isCancelled && "opacity-70 border-destructive/40 bg-destructive/[0.02]",
+    )}>
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{tour.name}</CardTitle>
-            <CardDescription className="flex items-center gap-1 mt-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <CardTitle className={cn("text-lg flex items-center gap-2", isCancelled && "line-through text-muted-foreground")}>
+              {tour.name}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-1 mt-1 flex-wrap">
               <Music className="h-3 w-3" />
               {tour.band?.name || 'Unknown Band'}
               {showBandInfo && tour.band?.fame !== null && tour.band?.fame !== undefined && (
@@ -785,10 +792,27 @@ const TourManager = () => {
               )}
             </CardDescription>
           </div>
-          {getStatusBadge(tour.status)}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {getStatusBadge(tour.status)}
+            {getRescheduleBadge(tour)}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {isCancelled && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive flex items-center gap-1.5">
+            <XCircle className="h-3.5 w-3.5" />
+            Cancelled{tour.cancellation_date ? ` on ${format(new Date(tour.cancellation_date), 'MMM d, yyyy')}` : ''}
+            — all remaining shows and travel were cancelled.
+          </div>
+        )}
+        {tour.rescheduled_at && !isCancelled && tour.original_start_date && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5" />
+            Rescheduled — was {format(new Date(tour.original_start_date), 'MMM d')}
+            {tour.original_end_date ? ` – ${format(new Date(tour.original_end_date), 'MMM d, yyyy')}` : ''}.
+          </div>
+        )}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
