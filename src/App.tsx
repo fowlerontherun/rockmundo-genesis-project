@@ -285,6 +285,7 @@ const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
+const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
