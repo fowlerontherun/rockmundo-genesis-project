@@ -504,6 +504,7 @@ export function FormatSelectionStep({
           );
         })}
 
+      </div>
       <Card className="p-4 bg-primary/5 space-y-3">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total Manufacturing Cost:</span>
