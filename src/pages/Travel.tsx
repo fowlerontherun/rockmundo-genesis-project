@@ -18,6 +18,7 @@ import { TransportComparison } from "@/components/travel/TransportComparison";
 import { DepartureTimePicker } from "@/components/travel/DepartureTimePicker";
 import { UpcomingTravelList } from "@/components/travel/UpcomingTravelList";
 import { PastTravelList } from "@/components/travel/PastTravelList";
+import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { bookTravel } from "@/utils/travelSystem";
 import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
 import { getNextAvailableDeparture, isValidDeparture, formatHourToTime, calculateArrivalTime } from "@/utils/transportSchedules";
