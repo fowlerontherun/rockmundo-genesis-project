@@ -342,6 +342,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
           </Button>
         </div>
       )}
+      {upcomingTravel.map((travel) => {
         const canCancel = travel.source === "manual" && isFuture(new Date(travel.departure_time));
         
         return (
