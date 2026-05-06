@@ -2993,6 +2993,169 @@ export type Database = {
           },
         ]
       }
+      blind_box_openings: {
+        Row: {
+          ap_awarded: number
+          box_id: string
+          currency: string
+          id: string
+          instrument_id: string | null
+          price_paid: number
+          profile_id: string
+          reward_summary: Json
+          rolled_at: string
+          skill_slug: string | null
+          song_id: string | null
+          tier: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          ap_awarded?: number
+          box_id: string
+          currency: string
+          id?: string
+          instrument_id?: string | null
+          price_paid?: number
+          profile_id: string
+          reward_summary?: Json
+          rolled_at?: string
+          skill_slug?: string | null
+          song_id?: string | null
+          tier: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          ap_awarded?: number
+          box_id?: string
+          currency?: string
+          id?: string
+          instrument_id?: string | null
+          price_paid?: number
+          profile_id?: string
+          reward_summary?: Json
+          rolled_at?: string
+          skill_slug?: string | null
+          song_id?: string | null
+          tier?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blind_box_openings_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "blind_boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blind_box_pity: {
+        Row: {
+          box_id: string
+          id: string
+          opens_since_epic: number
+          profile_id: string
+          total_opens: number
+          updated_at: string
+        }
+        Insert: {
+          box_id: string
+          id?: string
+          opens_since_epic?: number
+          profile_id: string
+          total_opens?: number
+          updated_at?: string
+        }
+        Update: {
+          box_id?: string
+          id?: string
+          opens_since_epic?: number
+          profile_id?: string
+          total_opens?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blind_box_pity_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "blind_boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blind_boxes: {
+        Row: {
+          active: boolean
+          available_from: string | null
+          available_until: string | null
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          image_url: string | null
+          instrument_pool: Json
+          is_premium: boolean
+          name: string
+          pity_threshold: number
+          price_cash: number
+          price_premium: number
+          skill_slugs: string[]
+          slug: string
+          song_title_pool: string[]
+          theme_genre: string
+          tier_odds: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          available_from?: string | null
+          available_until?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          instrument_pool?: Json
+          is_premium?: boolean
+          name: string
+          pity_threshold?: number
+          price_cash?: number
+          price_premium?: number
+          skill_slugs?: string[]
+          slug: string
+          song_title_pool?: string[]
+          theme_genre: string
+          tier_odds?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          available_from?: string | null
+          available_until?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          instrument_pool?: Json
+          is_premium?: boolean
+          name?: string
+          pity_threshold?: number
+          price_cash?: number
+          price_premium?: number
+          skill_slugs?: string[]
+          slug?: string
+          song_title_pool?: string[]
+          theme_genre?: string
+          tier_odds?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaign_expenditures: {
         Row: {
           amount: number
@@ -24205,6 +24368,7 @@ export type Database = {
           lawyer_hired_at: string | null
           level: number
           parent_profile_id: string | null
+          premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null
@@ -24260,6 +24424,7 @@ export type Database = {
           lawyer_hired_at?: string | null
           level?: number
           parent_profile_id?: string | null
+          premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
@@ -24315,6 +24480,7 @@ export type Database = {
           lawyer_hired_at?: string | null
           level?: number
           parent_profile_id?: string | null
+          premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
@@ -33777,6 +33943,7 @@ export type Database = {
           lawyer_hired_at: string | null
           level: number
           parent_profile_id: string | null
+          premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null

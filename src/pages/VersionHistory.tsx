@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.286",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box Store — new /blind-boxes page (also tiled in the Premium Store hub) selling 6 themed mystery boxes (EMG Metal Crate, Synthwave Neon Pack, Acoustic Folk Bundle, Boom Bap Crate, Punk Rebel Pack, Jazz Lounge Case). Each opening grants themed skill XP, attribute points, a unique themed instrument added to your personal gear, and a fully-completed random-quality song dropped into your catalog. Tier odds (Common 60 / Rare 28 / Epic 10 / Legendary 2) are shown on every card with an Epic+ pity guarantee at 20 opens. Cash boxes deduct from your wallet, premium boxes use a new premium_tokens balance. Confirm dialog shows live balance, cost, and remaining funds, and blocks purchase with a clear 'insufficient funds' message; the open-blind-box edge function re-validates funds server-side." },
+    ],
+  },
+  {
     version: "1.1.285",
     date: "2026-05-06",
     changes: [
