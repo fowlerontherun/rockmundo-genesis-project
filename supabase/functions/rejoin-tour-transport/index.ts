@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     if (requestedLegId) {
       const { data } = await supabase
         .from('tour_travel_legs')
-        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
         .eq('id', requestedLegId)
         .maybeSingle()
       leg = data
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       // Prefer a leg currently in transit, else the next upcoming
       const { data: inTransit } = await supabase
         .from('tour_travel_legs')
-        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
         .in('tour_id', tourIds)
         .lte('departure_date', nowISO)
         .gte('arrival_date', nowISO)
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       } else {
         const { data: upcoming } = await supabase
           .from('tour_travel_legs')
-          .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+          .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
           .in('tour_id', tourIds)
           .gte('departure_date', nowISO)
           .order('departure_date', { ascending: true })
