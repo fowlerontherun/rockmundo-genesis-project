@@ -1,4 +1,4 @@
-import { Gift, Calendar, Flame } from "lucide-react";
+import { Gift, Calendar, Flame, Crown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,8 +6,9 @@ import { claimDailyXp } from "@/utils/progression";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { StreakProgressBar } from "./StreakProgressBar";
-import { calculateTotalStipend, getStreakEmoji, getStreakMilestones } from "@/utils/dualXpSystem";
+import { calculateTotalStipend, getStreakEmoji, getStreakMilestones, VIP_STIPEND_BONUS_MULTIPLIER } from "@/utils/dualXpSystem";
 import { Badge } from "@/components/ui/badge";
+import { useVipStatus } from "@/hooks/useVipStatus";
 
 interface DailyStipendCardProps {
   lastClaimDate?: string | null;
@@ -18,6 +19,8 @@ interface DailyStipendCardProps {
 
 export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, onClaimed }: DailyStipendCardProps) => {
   const queryClient = useQueryClient();
+  const { data: vipStatus } = useVipStatus();
+  const isVip = vipStatus?.isVip ?? false;
   
   // Check if user has claimed today by comparing dates (not timestamps)
   const hasClaimedToday = lastClaimDate 
@@ -43,9 +46,10 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   // Calculate what they'll get (use current streak + 1 if they claim today)
   const effectiveStreak = hasClaimedToday ? streak : streak + 1;
-  const { baseSxp, baseAp, bonusSxp, bonusAp, totalSxp, totalAp } = calculateTotalStipend(
+  const { baseSxp, baseAp, bonusSxp, bonusAp, vipBonusSxp, vipBonusAp, totalSxp, totalAp } = calculateTotalStipend(
     hasClaimedToday ? streak : effectiveStreak,
-    lifetimeSxp
+    lifetimeSxp,
+    isVip,
   );
 
   const emoji = getStreakEmoji(streak);
