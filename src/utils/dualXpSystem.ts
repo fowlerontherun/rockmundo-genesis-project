@@ -180,25 +180,37 @@ export const getScaledBaseAp = (lifetimeSxp: number): number => {
 };
 
 /**
- * Calculate total stipend reward including streak bonuses and AP scaling
+ * VIP daily stipend bonus multiplier (applied to base + streak before cap)
+ */
+export const VIP_STIPEND_BONUS_MULTIPLIER = 0.25;
+
+/**
+ * Calculate total stipend reward including streak bonuses, AP scaling, and optional VIP bonus
  */
 export const calculateTotalStipend = (
   streak: number,
   lifetimeSxp: number = 0,
+  isVip: boolean = false,
   config: DualXpConfig = DEFAULT_DUAL_XP_CONFIG
-): { baseSxp: number; baseAp: number; bonusSxp: number; bonusAp: number; totalSxp: number; totalAp: number } => {
+): { baseSxp: number; baseAp: number; bonusSxp: number; bonusAp: number; vipBonusSxp: number; vipBonusAp: number; totalSxp: number; totalAp: number } => {
   const { sxp: bonusSxp, ap: bonusAp } = calculateStreakBonus(streak, config);
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
-  const rawTotalSxp = config.daily_stipend_sxp + bonusSxp;
-  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, rawTotalSxp);
+  const preCapSxp = config.daily_stipend_sxp + bonusSxp;
+  const preCapAp = scaledBaseAp + bonusAp;
+  const vipBonusSxp = isVip ? Math.round(preCapSxp * VIP_STIPEND_BONUS_MULTIPLIER) : 0;
+  const vipBonusAp = isVip ? Math.round(preCapAp * VIP_STIPEND_BONUS_MULTIPLIER) : 0;
+  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, preCapSxp + vipBonusSxp);
+  const totalAp = preCapAp + vipBonusAp;
 
   return {
     baseSxp: config.daily_stipend_sxp,
     baseAp: scaledBaseAp,
     bonusSxp,
     bonusAp,
+    vipBonusSxp,
+    vipBonusAp,
     totalSxp,
-    totalAp: scaledBaseAp + bonusAp,
+    totalAp,
   };
 };
 
