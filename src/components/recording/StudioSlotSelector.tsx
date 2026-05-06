@@ -90,6 +90,41 @@ export const StudioSlotSelector = ({
               <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
             </div>
           ) : (
+            <>
+              {(() => {
+                const counts = STUDIO_SLOTS.reduce(
+                  (acc, slot) => {
+                    const slotData = slotAvailability?.find(s => s.slot.id === slot.id);
+                    const isPast = selectedDate && isSlotInPast(slot, selectedDate);
+                    if (isPast) acc.past++;
+                    else if (slotData?.isYourBooking) acc.yours++;
+                    else if (slotData?.isBooked) acc.booked++;
+                    else acc.free++;
+                    return acc;
+                  },
+                  { free: 0, booked: 0, yours: 0, past: 0 }
+                );
+                return (
+                  <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+                    <div className="rounded border p-1.5 text-center">
+                      <div className="font-semibold text-green-600 dark:text-green-400">{counts.free}</div>
+                      <div className="text-muted-foreground">Free</div>
+                    </div>
+                    <div className="rounded border p-1.5 text-center">
+                      <div className="font-semibold text-blue-600 dark:text-blue-400">{counts.yours}</div>
+                      <div className="text-muted-foreground">Yours</div>
+                    </div>
+                    <div className="rounded border p-1.5 text-center">
+                      <div className="font-semibold text-red-600 dark:text-red-400">{counts.booked}</div>
+                      <div className="text-muted-foreground">Booked</div>
+                    </div>
+                    <div className="rounded border p-1.5 text-center">
+                      <div className="font-semibold text-muted-foreground">{counts.past}</div>
+                      <div className="text-muted-foreground">Passed</div>
+                    </div>
+                  </div>
+                );
+              })()}
             <RadioGroup value={selectedSlotId} onValueChange={onSlotChange}>
               <div className="grid grid-cols-2 gap-2">
               {STUDIO_SLOTS.map((slot) => {
@@ -99,6 +134,13 @@ export const StudioSlotSelector = ({
                   const bookedBy = slotData?.bookedByBand;
                   const isPast = selectedDate && isSlotInPast(slot, selectedDate);
                   const canSelect = !isBooked && !isPast;
+                  const disabledReason = isPast
+                    ? "This time slot has already passed today"
+                    : isYourBooking
+                      ? "You already have a session booked here"
+                      : isBooked
+                        ? `Reserved by ${bookedBy || "another band"}`
+                        : null;
 
                   return (
                     <div
@@ -113,6 +155,7 @@ export const StudioSlotSelector = ({
                         canSelect && 'cursor-pointer hover:bg-accent/50'
                       )}
                       onClick={() => canSelect && onSlotChange(slot.id)}
+                      title={disabledReason || `Available — ${slot.startTime}-${slot.endTime}`}
                     >
                       <RadioGroupItem value={slot.id} disabled={!canSelect} />
                       <div className="flex-1">
@@ -127,9 +170,14 @@ export const StudioSlotSelector = ({
                               <Ban className="h-3 w-3 mr-1" />
                               Passed
                             </Badge>
+                          ) : isYourBooking ? (
+                            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
+                              Your session
+                            </Badge>
                           ) : isBooked ? (
                             <Badge variant="destructive" className="text-xs">
-                              {isYourBooking ? 'Your session' : 'Booked'}
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Booked
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400">
@@ -142,8 +190,13 @@ export const StudioSlotSelector = ({
                           <Clock className="h-3 w-3" />
                           {slot.startTime} - {slot.endTime} ({slot.duration}h)
                         </div>
-                        {bookedBy && !isYourBooking && !isPast && (
-                          <p className="text-xs text-destructive mt-1">{bookedBy}</p>
+                        {disabledReason && (
+                          <p className={cn(
+                            "text-[11px] mt-1",
+                            isPast ? "text-muted-foreground" : isYourBooking ? "text-blue-600 dark:text-blue-400" : "text-destructive"
+                          )}>
+                            {disabledReason}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -151,6 +204,7 @@ export const StudioSlotSelector = ({
                 })}
               </div>
             </RadioGroup>
+            </>
           )}
         </div>
 
