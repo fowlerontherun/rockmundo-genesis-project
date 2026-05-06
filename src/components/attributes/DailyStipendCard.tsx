@@ -97,6 +97,19 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
             </div>
           )}
           
+          {isVip && (vipBonusSxp > 0 || vipBonusAp > 0) && (
+            <div className="flex justify-between border-t border-border/50 pt-2 text-amber-600 dark:text-amber-400">
+              <span className="flex items-center gap-1">
+                <Crown className="w-3.5 h-3.5" />
+                <Badge variant="outline" className="text-xs px-1.5 py-0 border-amber-500/40">
+                  VIP +{Math.round(VIP_STIPEND_BONUS_MULTIPLIER * 100)}%
+                </Badge>
+                Bonus:
+              </span>
+              <span>+{vipBonusSxp} SXP + {vipBonusAp} AP</span>
+            </div>
+          )}
+
           <div className="flex justify-between font-bold text-base border-t border-border pt-2">
             <span>Total Today:</span>
             <span className="text-primary">{totalSxp} SXP + {totalAp} AP</span>
