@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Coins, Gem, Package, Sparkles, Info, Shield } from "lucide-react";
+import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle } from "lucide-react";
 import { BlindBoxPurchaseDialog } from "@/components/store/BlindBoxPurchaseDialog";
 import { BlindBoxRevealDialog } from "@/components/store/BlindBoxRevealDialog";
 import { cn } from "@/lib/utils";
