@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.289",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box reveal animation overhaul: a phased sequence plays after each opening — tier badge cycles through Common/Rare/Epic/Legendary for ~1.4s before settling on the actual roll, then XP and AP counters animate up with eased count-up + progress bars, the instrument card flips 3D from a sparkle back to its detail face (with manual flip button), and the song preview slides in with play/pause control, a colour-graded quality bar and a faux waveform when playing. Legendary rolls add a pulsing aurora background and shadow glow. A 'Skip animation' button is available throughout." },
+    ],
+  },
+  {
     version: "1.1.288",
     date: "2026-05-06",
     changes: [
