@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.278",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Added a 'Welcome, heir' tutorial overlay that appears right after a child is converted into a playable character — explains what swaps with the new active character (bands, cash, schedule, relationships), highlights legacy bonuses, and offers shortcut buttons to train skills, write a song, recruit a band or find work." },
+    ],
+  },
+  {
     version: "1.1.277",
     date: "2026-05-06",
     changes: [
