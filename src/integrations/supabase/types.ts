@@ -30902,6 +30902,45 @@ export type Database = {
           },
         ]
       }
+      travel_notification_preferences: {
+        Row: {
+          created_at: string
+          email_address: string | null
+          email_enabled: boolean
+          in_app_enabled: boolean
+          notify_eta_delays: boolean
+          notify_rejoin_available: boolean
+          notify_status_changes: boolean
+          profile_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_address?: string | null
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          notify_eta_delays?: boolean
+          notify_rejoin_available?: boolean
+          notify_status_changes?: boolean
+          profile_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_address?: string | null
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          notify_eta_delays?: boolean
+          notify_rejoin_available?: boolean
+          notify_status_changes?: boolean
+          profile_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       travel_timeline_events: {
         Row: {
           band_id: string | null
