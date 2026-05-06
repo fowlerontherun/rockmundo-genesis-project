@@ -29,6 +29,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
   const [open, setOpen] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const navigate = useNavigate();
   const convert = useConvertChildToPlayable();
   const { switchCharacter, characters } = useCharacterSlots();
