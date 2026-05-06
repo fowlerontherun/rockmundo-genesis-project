@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.284",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Added a per-member 'Member Sync Status' panel on each Tour's detail view: shows every active band member's current city, the assigned upcoming/in-transit travel leg (with transport icon, departure & ETA), and a live sync-health badge (In sync / Running late / In transit / Desynced / No leg / Tour complete) plus a plain-language reason. Refreshes every 60s and complements the per-member travel timeline log below it." },
+    ],
+  },
+  {
     version: "1.1.283",
     date: "2026-05-06",
     changes: [

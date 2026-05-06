@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
+import { TourMemberSyncStatus } from "@/components/tours/TourMemberSyncStatus";
 
 interface TourDetailPanelProps {
   tour: {
@@ -244,6 +245,9 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
       )}
+
+      {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
+      {tour.band?.id && <TourMemberSyncStatus tourId={tour.id} bandId={tour.band.id} />}
 
       {/* Per-member travel timeline log */}
       <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />
