@@ -71,7 +71,7 @@ export default function SocialHub() {
       <PageHeader
         icon={Users}
         title="Social Hub"
-        description="Friends, activity, and messages — all in one place."
+        subtitle="Friends, activity, and messages — all in one place."
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="gap-1">
