@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 
 interface TourDetailPanelProps {
   tour: {
@@ -243,6 +244,9 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
       )}
+
+      {/* Per-member travel timeline log */}
+      <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />
     </div>
   );
 }
