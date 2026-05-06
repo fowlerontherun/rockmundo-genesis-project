@@ -181,15 +181,17 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
       if (userBandIds.length > 0) {
-        const { data: tourTravelLegs } = await supabase
+        const { data: tourTravelLegs } = await (supabase as any)
           .from('tour_travel_legs')
-          .select('*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name)')
+          .select('*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name, status)')
           .gte('departure_date', dayStart.toISOString())
-          .lte('departure_date', dayEnd.toISOString());
+          .lte('departure_date', dayEnd.toISOString())
+          .neq('status', 'cancelled');
         
-        // Filter for user's bands
+        // Filter for user's bands and exclude cancelled tours
         travelLegs = (tourTravelLegs || []).filter((leg: any) => 
-          userBandIds.includes(leg.tours?.band_id)
+          userBandIds.includes(leg.tours?.band_id) &&
+          leg.tours?.status !== 'cancelled'
         );
       }
 
