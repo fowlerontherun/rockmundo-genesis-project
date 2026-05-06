@@ -19,6 +19,7 @@ import { TourDetailPanel } from "@/components/tours/TourDetailPanel";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
 import { useBandTourTotals } from "@/hooks/useTourStats";
 
