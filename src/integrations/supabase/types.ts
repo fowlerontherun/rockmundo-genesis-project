@@ -30902,6 +30902,63 @@ export type Database = {
           },
         ]
       }
+      travel_timeline_events: {
+        Row: {
+          band_id: string | null
+          created_at: string
+          event_type: string
+          from_city_id: string | null
+          id: string
+          message: string
+          metadata: Json
+          new_eta: string | null
+          occurred_at: string
+          previous_eta: string | null
+          profile_id: string
+          to_city_id: string | null
+          tour_id: string | null
+          tour_leg_id: string | null
+          travel_history_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string
+          event_type: string
+          from_city_id?: string | null
+          id?: string
+          message: string
+          metadata?: Json
+          new_eta?: string | null
+          occurred_at?: string
+          previous_eta?: string | null
+          profile_id: string
+          to_city_id?: string | null
+          tour_id?: string | null
+          tour_leg_id?: string | null
+          travel_history_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string
+          event_type?: string
+          from_city_id?: string | null
+          id?: string
+          message?: string
+          metadata?: Json
+          new_eta?: string | null
+          occurred_at?: string
+          previous_eta?: string | null
+          profile_id?: string
+          to_city_id?: string | null
+          tour_id?: string | null
+          tour_leg_id?: string | null
+          travel_history_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       tshirt_designs: {
         Row: {
           background_color: string
