@@ -45,8 +45,31 @@ export const FestivalSlotOffers = ({ bandId }: FestivalSlotOffersProps) => {
     );
   }
 
+  const acceptedCount = respondedOffers.filter((o) => o.status === "accepted").length;
+  const rejectedCount = respondedOffers.filter((o) => o.status === "rejected").length;
+  const expiredCount = respondedOffers.filter((o) => o.status === "expired").length;
+
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+        <div className="rounded-md border p-2 text-center">
+          <div className="font-semibold text-primary">{pendingOffers.length}</div>
+          <div className="text-muted-foreground">Pending — needs reply</div>
+        </div>
+        <div className="rounded-md border p-2 text-center">
+          <div className="font-semibold text-green-600 dark:text-green-400">{acceptedCount}</div>
+          <div className="text-muted-foreground">Accepted</div>
+        </div>
+        <div className="rounded-md border p-2 text-center">
+          <div className="font-semibold text-destructive">{rejectedCount}</div>
+          <div className="text-muted-foreground">Rejected</div>
+        </div>
+        <div className="rounded-md border p-2 text-center">
+          <div className="font-semibold text-muted-foreground">{expiredCount}</div>
+          <div className="text-muted-foreground">Expired</div>
+        </div>
+      </div>
+
       {pendingOffers.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Pending Offers</h3>
