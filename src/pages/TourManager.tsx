@@ -157,9 +157,12 @@ const TourManager = () => {
       const isSameDay = createdAt.toDateString() === now.toDateString();
       const refundAmount = isSameDay ? (tour.total_upfront_cost || 0) : 0;
 
-      await supabase.from("gigs").delete().eq("tour_id", tourId);
-      await supabase.from("tour_venues").delete().eq("tour_id", tourId);
-      await supabase.from("tour_travel_legs").delete().eq("tour_id", tourId);
+      // Cancel future gigs (don't delete — keep history)
+      await supabase
+        .from("gigs")
+        .update({ status: "cancelled" })
+        .eq("tour_id", tourId)
+        .in("status", ["scheduled", "in_progress"]);
 
       if (refundAmount > 0 && tour.band_id) {
         const currentBalance = tour.bands?.band_balance || 0;
@@ -169,8 +172,17 @@ const TourManager = () => {
           .eq("id", tour.band_id);
       }
 
-      const { error: deleteError } = await supabase.from("tours").delete().eq("id", tourId);
-      if (deleteError) throw deleteError;
+      // Mark the tour as cancelled — DB trigger cascades to legs + future travel/activities
+      const { error: updateError } = await supabase
+        .from("tours")
+        .update({
+          status: "cancelled",
+          cancelled: true,
+          cancellation_date: now.toISOString(),
+          cancellation_refund_amount: refundAmount,
+        } as any)
+        .eq("id", tourId);
+      if (updateError) throw updateError;
 
       return { refundAmount, isSameDay };
     },
