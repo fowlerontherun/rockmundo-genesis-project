@@ -431,7 +431,16 @@ serve(async (req) => {
               const retailPriceDollars = retailPrice / 100;
               const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
               
-              const distributionRate = getDistributionRate(format.format_type);
+              // v1.1.287: respect per-format distribution_fee_percentage override (clamped 0-50%)
+              const formatOverride = (format as any).distribution_fee_percentage;
+              const fallbackByConfig =
+                format.format_type === "digital" ? digitalDistributionRate
+                : format.format_type === "cd" ? cdDistributionRate
+                : format.format_type === "vinyl" ? vinylDistributionRate
+                : format.format_type === "cassette" ? cassetteDistributionRate
+                : getDistributionRate(format.format_type);
+              const rawRate = formatOverride != null ? formatOverride / 100 : fallbackByConfig;
+              const distributionRate = Math.max(0, Math.min(0.5, rawRate));
               const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
               const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
               const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
