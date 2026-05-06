@@ -261,6 +261,33 @@ Deno.serve(async (req) => {
       }).eq('id', profileId)
     }
 
+    // Log an explicit "rejoin" timeline event (the trigger covers leg-state changes; this captures the catch-up action itself)
+    try {
+      await supabase.from('travel_timeline_events').insert({
+        profile_id: profileId,
+        user_id: userId,
+        band_id: tour.band_id,
+        tour_id: leg.tour_id,
+        tour_leg_id: leg.id,
+        travel_history_id: travelHistoryId,
+        from_city_id: leg.from_city_id,
+        to_city_id: leg.to_city_id,
+        event_type: 'rejoined',
+        message: status === 'completed'
+          ? `Caught up with the tour in ${toCityName}`
+          : `Rejoined tour transport — heading to ${toCityName}`,
+        new_eta: arrivalDate,
+        metadata: {
+          transport_type: leg.travel_mode,
+          duration_hours: Math.ceil(durationHours),
+          status,
+          source: 'rejoin-tour-transport',
+        },
+      })
+    } catch (e) {
+      console.warn('[rejoin-tour-transport] Failed to log timeline event', e)
+    }
+
     return new Response(JSON.stringify({
       success: true,
       status,
