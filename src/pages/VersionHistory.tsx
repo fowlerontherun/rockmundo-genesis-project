@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.281",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Added a detailed travel timeline log that records every leg change for each band member — bookings, departures, arrivals, cancellations, ETA updates and 'Rejoin Tour Transport' catch-up actions. Auto-populated by a database trigger on player_travel_history so any source (manual booking, tour cron, rejoin function, cancellation cascade) is captured. Visible per-member on the Travel page (History tab) and grouped by member on each Tour's detail panel." },
+    ],
+  },
+  {
     version: "1.1.280",
     date: "2026-05-06",
     changes: [
