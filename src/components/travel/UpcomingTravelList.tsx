@@ -319,9 +319,29 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
     );
   }
 
+  const hasTourTravel = upcomingTravel.some((t) => t.source === "tour");
+
   return (
     <div className="space-y-4">
-      {upcomingTravel.map((travel) => {
+      {hasTourTravel && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="text-sm">
+            <p className="font-medium">Out of sync with the tour?</p>
+            <p className="text-xs text-muted-foreground">
+              Catch up with the band's transport without paying for new travel.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => rejoinTourMutation.mutate(undefined)}
+            disabled={rejoinTourMutation.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${rejoinTourMutation.isPending ? "animate-spin" : ""}`} />
+            Rejoin Tour Transport
+          </Button>
+        </div>
+      )}
         const canCancel = travel.source === "manual" && isFuture(new Date(travel.departure_time));
         
         return (
