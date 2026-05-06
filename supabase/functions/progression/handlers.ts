@@ -111,8 +111,29 @@ export async function handleClaimDailyXp(
   const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
   const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
   const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
-  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, BASE_STIPEND_SXP + bonusSxp);
-  const totalAp = Math.min(DAILY_STIPEND_AP_CAP, scaledBaseAp + bonusAp);
+
+  // VIP bonus: active VIP subscribers get +25% on the daily stipend (SXP and AP)
+  const VIP_BONUS_MULTIPLIER = 0.25;
+  let isVip = false;
+  try {
+    const { data: vipData } = await client
+      .from("vip_subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .gte("expires_at", new Date().toISOString())
+      .maybeSingle();
+    isVip = !!vipData;
+  } catch (err) {
+    console.warn("[claim_daily_xp] VIP check failed, proceeding without bonus", err);
+  }
+
+  const preCapSxp = BASE_STIPEND_SXP + bonusSxp;
+  const preCapAp = scaledBaseAp + bonusAp;
+  const vipBonusSxp = isVip ? Math.round(preCapSxp * VIP_BONUS_MULTIPLIER) : 0;
+  const vipBonusAp = isVip ? Math.round(preCapAp * VIP_BONUS_MULTIPLIER) : 0;
+  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, preCapSxp + vipBonusSxp);
+  const totalAp = Math.min(DAILY_STIPEND_AP_CAP, preCapAp + vipBonusAp);
 
   // Get current balances (use new dual currency columns)
   const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
@@ -127,6 +148,9 @@ export async function handleClaimDailyXp(
     base_ap: scaledBaseAp,
     bonus_sxp: bonusSxp,
     bonus_ap: bonusAp,
+    vip_bonus_sxp: vipBonusSxp,
+    vip_bonus_ap: vipBonusAp,
+    is_vip: isVip,
     total_sxp: totalSxp,
     total_ap: totalAp,
     streak: newStreak,

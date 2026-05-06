@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.280",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "VIP players now earn a +25% bonus on both Skill XP (SXP) and Attribute Points (AP) from the Daily Stipend, applied on top of the base reward and any streak milestone bonuses (still subject to the daily caps). The Daily Stipend card shows the VIP bonus row when active." },
+    ],
+  },
+  {
     version: "1.1.279",
     date: "2026-05-06",
     changes: [
