@@ -12,7 +12,7 @@ const corsHeaders = {
 };
 
 const JOB_NAME = "trigger-random-events";
-const TRIGGER_CHANCE = 12; // 1 in 12 chance (~8.3%) — bumped from 15 in v1.1.191
+const TRIGGER_CHANCE = 6; // 1 in 6 chance (~16.7%) — bumped from 12 in v1.1.287
 const CRAVING_TRIGGER_CHANCE = 5; // 1 in 5 chance (20%) for addicted players
 
 Deno.serve(async (req) => {
@@ -36,12 +36,12 @@ Deno.serve(async (req) => {
   try {
     console.log(`[${JOB_NAME}] Starting random event trigger...`);
 
-    // Get active players (logged in within last 7 days) with travel status
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    // Get active players (logged in within last 30 days) with travel status — widened from 7d in v1.1.287
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data: activePlayers, error: playersError } = await supabase
       .from("profiles")
       .select("user_id, health, is_traveling")
-      .gte("updated_at", sevenDaysAgo);
+      .gte("updated_at", thirtyDaysAgo);
 
     if (playersError) throw playersError;
 
