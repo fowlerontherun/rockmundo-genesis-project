@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 
 interface TourDetailPanelProps {
   tour: {
