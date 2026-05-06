@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.291",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box Store: availability windows are now fully surfaced. Each card derives its state from available_from / available_until and shows a live-updating Upcoming / Live / Expired badge, a countdown of either 'Unlocks in …' or 'Ends in …' (refreshing every second), and the exact start/end timestamps in a detail strip. Boxes still locked or already expired are dimmed, the Open Box button is disabled with a contextual label ('Locked', 'Expired', 'Insufficient funds') and a tooltip explaining why, and boxes ending within 24 hours pulse amber to flag the deadline." },
+    ],
+  },
+  {
     version: "1.1.290",
     date: "2026-05-06",
     changes: [
