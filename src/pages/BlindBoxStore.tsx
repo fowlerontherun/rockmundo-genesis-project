@@ -189,9 +189,27 @@ export default function BlindBoxStore() {
             const threshold = box.pity_threshold ?? 20;
             const opensUntil = Math.max(0, threshold - opensSince);
             const pityPct = Math.min(100, (opensSince / threshold) * 100);
+            const avail = getAvailability(box, now);
+            const isOpenable = avail.status === "live" || avail.status === "always";
+            const disabledReason = !profileId
+              ? "Select a character first"
+              : avail.status === "upcoming"
+              ? `Unlocks in ${formatCountdown(avail.msUntilStart)}`
+              : avail.status === "expired"
+              ? "This box has expired"
+              : !canAfford
+              ? "Insufficient funds"
+              : null;
 
             return (
-              <Card key={box.id} className="overflow-hidden">
+              <Card
+                key={box.id}
+                className={cn(
+                  "overflow-hidden transition-opacity",
+                  !isOpenable && "opacity-75",
+                  avail.status === "expired" && "opacity-60",
+                )}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-base">{box.name}</CardTitle>
@@ -201,9 +219,37 @@ export default function BlindBoxStore() {
                       </Badge>
                     )}
                   </div>
-                  <Badge variant="outline" className="w-fit text-[10px]">
-                    {box.theme_genre}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline" className="w-fit text-[10px]">
+                      {box.theme_genre}
+                    </Badge>
+                    {avail.status === "upcoming" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-blue-400/50 text-blue-300">
+                        <CalendarClock className="h-3 w-3" /> Upcoming
+                      </Badge>
+                    )}
+                    {avail.status === "live" && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] gap-1",
+                          avail.endingSoon
+                            ? "border-amber-400/60 text-amber-300 animate-pulse"
+                            : "border-emerald-400/50 text-emerald-300",
+                        )}
+                      >
+                        <Clock className="h-3 w-3" />
+                        {avail.endsAt
+                          ? `Ends in ${formatCountdown(avail.msUntilEnd)}`
+                          : "Live"}
+                      </Badge>
+                    )}
+                    {avail.status === "expired" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-destructive/50 text-destructive">
+                        <XCircle className="h-3 w-3" /> Expired
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-xs text-muted-foreground">{box.description}</p>
