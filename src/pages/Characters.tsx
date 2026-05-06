@@ -84,8 +84,22 @@ export default function Characters() {
                   <span className="font-semibold">{slots?.usedSlots ?? 0} / {maxSlots}</span>
                 </div>
                 <Progress value={((slots?.usedSlots ?? 0) / maxSlots) * 100} />
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 rounded-md border p-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">Free</span>
+                    <span className="ml-auto font-semibold">{emptySlotCount}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-md border p-2">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    <span className="text-muted-foreground">Occupied</span>
+                    <span className="ml-auto font-semibold">{characters.length}</span>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  You can have up to {maxSlots} total slots. Buy additional slots to expand your roster.
+                  You can have up to {maxSlots} total slots. {slots?.canCreateNew
+                    ? "Free slots are ready for a new character."
+                    : "All slots are full — buy an additional slot to expand your roster."}
                 </p>
               </>
             )}
@@ -97,6 +111,11 @@ export default function Characters() {
             <CardTitle>Your Characters</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+              <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] py-0">Active</Badge>
+              <Badge variant="outline" className="text-[10px] py-0">Inactive — switchable</Badge>
+              <Badge variant="outline" className="text-[10px] py-0 border-dashed">Empty slot</Badge>
+            </div>
             {characters.map((character) => {
               const isActive = character.is_active;
               const isSwitching = switchingToId === character.id;
@@ -149,27 +168,44 @@ export default function Characters() {
               );
             })}
 
-            {Array.from({ length: emptySlotCount }).map((_, index) => (
-              <div
-                key={`empty-slot-${index}`}
-                className="flex items-center justify-between gap-3 rounded-md border border-dashed p-3"
-              >
-                <div>
-                  <p className="font-medium">Empty Character Slot</p>
-                  <p className="text-xs text-muted-foreground">Create a new character to use this slot.</p>
+            {Array.from({ length: emptySlotCount }).map((_, index) => {
+              const slotNumber = characters.length + index + 1;
+              const canCreate = slots?.canCreateNew;
+              return (
+                <div
+                  key={`empty-slot-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-dashed p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">Slot #{slotNumber} — Free</p>
+                      <Badge variant="outline" className="text-[10px] py-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400">Available</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {canCreate
+                        ? "Ready to be filled with a new character."
+                        : "Slot exists but creation is locked — buy a slot or check requirements."}
+                    </p>
+                  </div>
+                  {canCreate ? (
+                    <Button size="sm" onClick={() => navigate("/characters/new")}>
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      Add Character
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => navigate("/buy-character-slot")}>
+                      Buy Slot
+                    </Button>
+                  )}
                 </div>
-                {slots?.canCreateNew ? (
-                  <Button size="sm" onClick={() => navigate("/characters/new")}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    Add Character
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => navigate("/buy-character-slot")}>
-                    Buy Slot
-                  </Button>
-                )}
+              );
+            })}
+
+            {emptySlotCount === 0 && characters.length >= maxSlots && (
+              <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                All {maxSlots} slots are occupied. Delete a character or buy an additional slot to free space.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
