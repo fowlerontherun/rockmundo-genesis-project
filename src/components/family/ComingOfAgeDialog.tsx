@@ -85,6 +85,7 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
     try {
       await switchCharacter.mutateAsync(newProfileId);
       navigate("/dashboard");
+      setTutorialOpen(true);
     } catch {
       // Stay on current character; user can switch later.
     }
