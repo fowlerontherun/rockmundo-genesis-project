@@ -97,7 +97,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
         const tourIds = tours?.map(t => t.id) || [];
         
         if (tourIds.length > 0) {
-          const { data: tourLegs } = await supabase
+          const { data: tourLegs } = await (supabase as any)
             .from("tour_travel_legs")
             .select(`
               id,
@@ -108,9 +108,11 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
               travel_cost,
               travel_duration_hours,
               departure_date,
-              arrival_date
+              arrival_date,
+              status
             `)
             .in("tour_id", tourIds)
+            .neq("status", "cancelled")
             .gte("departure_date", new Date().toISOString())
             .order("departure_date", { ascending: true });
 
