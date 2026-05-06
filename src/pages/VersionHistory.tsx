@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.282",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Travel notifications: members now get an in-app inbox alert when their travel status changes (depart / arrive / cancel / reschedule), when an ETA slips later (delay), or when a tour catch-up / Rejoin event happens. Driven by a database trigger on the travel timeline so any source (manual booking, tour cron, rejoin function, cancellation cascade) fires it. Added a 'Travel Notifications' preferences card on the Travel page (Upcoming tab) with toggles for in-app alerts, status changes, ETA delays, catch-ups, and an optional email opt-in (email delivery activates once a sender domain is configured)." },
+    ],
+  },
+  {
     version: "1.1.281",
     date: "2026-05-06",
     changes: [
