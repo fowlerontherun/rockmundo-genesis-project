@@ -742,13 +742,25 @@ const TourManager = () => {
   const upcomingShows = myTours.filter(t => new Date(t.start_date) > new Date()).length;
 
   const getStatusBadge = (status: string) => {
+    if (status === 'cancelled') {
+      return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+    }
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       active: "default",
       scheduled: "secondary",
       completed: "outline",
-      cancelled: "destructive",
     };
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+    return <Badge variant={variants[status] || "outline"} className="capitalize">{status}</Badge>;
+  };
+
+  const getRescheduleBadge = (tour: Tour) => {
+    if (!tour.rescheduled_at || tour.status === 'cancelled') return null;
+    return (
+      <Badge variant="outline" className="gap-1 text-amber-500 border-amber-500/40 bg-amber-500/5">
+        <History className="h-3 w-3" />
+        Rescheduled{(tour.reschedule_count ?? 0) > 1 ? ` ×${tour.reschedule_count}` : ''}
+      </Badge>
+    );
   };
 
   const openTourDetails = (tour: Tour) => {
