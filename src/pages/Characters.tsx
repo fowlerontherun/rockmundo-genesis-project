@@ -111,6 +111,11 @@ export default function Characters() {
             <CardTitle>Your Characters</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+              <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] py-0">Active</Badge>
+              <Badge variant="outline" className="text-[10px] py-0">Inactive — switchable</Badge>
+              <Badge variant="outline" className="text-[10px] py-0 border-dashed">Empty slot</Badge>
+            </div>
             {characters.map((character) => {
               const isActive = character.is_active;
               const isSwitching = switchingToId === character.id;
