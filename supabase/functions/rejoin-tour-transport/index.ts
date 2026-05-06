@@ -115,6 +115,9 @@ Deno.serve(async (req) => {
     }
 
     const tour = (leg as any).tours
+    if ((leg as any).status === 'cancelled') {
+      return new Response(JSON.stringify({ error: 'This tour leg was cancelled and cannot be rejoined' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     if (!tour || !['active', 'scheduled', 'booked'].includes(tour.status)) {
       return new Response(JSON.stringify({ error: 'Tour is not active' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
