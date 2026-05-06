@@ -335,6 +335,40 @@ export default function BlindBoxStore() {
                     />
                   </div>
 
+                  {/* Availability window detail */}
+                  {(avail.startsAt || avail.endsAt) && (
+                    <div className="rounded-md border bg-muted/30 p-2 text-[10px] text-muted-foreground space-y-0.5">
+                      {avail.status === "upcoming" && (
+                        <div className="flex items-center gap-1.5 text-blue-300">
+                          <Lock className="h-3 w-3" />
+                          <span>
+                            Unlocks in <span className="tabular-nums font-semibold">{formatCountdown(avail.msUntilStart)}</span>
+                          </span>
+                        </div>
+                      )}
+                      {avail.status === "live" && avail.endsAt && (
+                        <div className={cn("flex items-center gap-1.5", avail.endingSoon && "text-amber-300")}>
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Ends in <span className="tabular-nums font-semibold">{formatCountdown(avail.msUntilEnd)}</span>
+                          </span>
+                        </div>
+                      )}
+                      {avail.status === "expired" && (
+                        <div className="flex items-center gap-1.5 text-destructive">
+                          <XCircle className="h-3 w-3" />
+                          <span>Expired {avail.endsAt?.toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {avail.startsAt && (
+                        <div className="opacity-70">From: {avail.startsAt.toLocaleString()}</div>
+                      )}
+                      {avail.endsAt && (
+                        <div className="opacity-70">Until: {avail.endsAt.toLocaleString()}</div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 font-semibold">
                       {isPrem ? (
@@ -350,9 +384,16 @@ export default function BlindBoxStore() {
                     <Button
                       size="sm"
                       onClick={() => setSelected(box)}
-                      disabled={!profileId || !canAfford}
+                      disabled={!isOpenable || !profileId || !canAfford}
+                      title={disabledReason ?? undefined}
                     >
-                      {canAfford ? "Open Box" : "Insufficient funds"}
+                      {avail.status === "upcoming"
+                        ? "Locked"
+                        : avail.status === "expired"
+                        ? "Expired"
+                        : canAfford
+                        ? "Open Box"
+                        : "Insufficient funds"}
                     </Button>
                   </div>
                 </CardContent>
