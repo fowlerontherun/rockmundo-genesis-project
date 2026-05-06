@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.290",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Blind Box Store: each card now has a 'View odds' popover (per-tier drop rate with coloured bars + plain-English explanation of the pity guarantee) and a per-box pity progress bar that pulls live from blind_box_pity. The bar shows opens_since_epic / threshold, the exact count remaining until the next Epic+ guarantee, turns amber within 3 opens of the cap, and pulses gold when the next box is guaranteed Epic+." },
+    ],
+  },
+  {
     version: "1.1.289",
     date: "2026-05-06",
     changes: [
