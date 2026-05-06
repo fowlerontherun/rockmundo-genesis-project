@@ -7,6 +7,7 @@ import { useConvertChildToPlayable, useComingOfAgeAvailability } from "@/hooks/u
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { PlayableHeirTutorialDialog } from "./PlayableHeirTutorialDialog";
 
 interface Props {
   child: {
