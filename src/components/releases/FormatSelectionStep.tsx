@@ -473,7 +473,37 @@ export function FormatSelectionStep({
             </Card>
           );
         })}
-      </div>
+                      </div>
+
+                      {/* v1.1.287: Projected P/L per format */}
+                      {(() => {
+                        const pl = projectFormatPL(fmt.type);
+                        if (!pl || pl.expectedUnits === 0) return null;
+                        const isLoss = pl.projectedNet < 0;
+                        const overpressed = fmt.type !== "digital" && fmt.type !== "streaming"
+                          && formatConfigs[fmt.type].quantity > pl.expectedUnits * 10;
+                        return (
+                          <div className={`rounded-md border p-2 text-xs space-y-0.5 ${isLoss ? 'border-destructive/50 bg-destructive/5' : 'border-primary/30 bg-primary/5'}`}>
+                            <div className="flex justify-between font-medium">
+                              <span>Projected P/L</span>
+                              <span className={isLoss ? 'text-destructive' : 'text-primary'}>
+                                {isLoss ? '−' : '+'}${Math.abs(pl.projectedNet).toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Expected sales: {pl.expectedUnits.toLocaleString()} units ({Math.round(pl.sellThrough * 100)}%)
+                            </div>
+                            <div className="text-muted-foreground">
+                              Gross ${pl.grossDollars.toFixed(0)} − tax/dist = net ${pl.netRevenueDollars.toFixed(0)} − mfg ${pl.mfgCostDollars.toFixed(0)}
+                            </div>
+                            {overpressed && (
+                              <div className="text-destructive font-medium pt-1">
+                                ⚠ Pressing 10× projected sales — likely loss. Reduce quantity or raise price.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
       <Card className="p-4 bg-primary/5 space-y-3">
         <div className="flex justify-between items-center">
