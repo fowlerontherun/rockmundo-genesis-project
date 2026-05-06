@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
         departure_date,
         arrival_date,
         travel_duration_hours,
+        status,
         tours!inner(
           id,
           band_id,
@@ -145,6 +146,7 @@ Deno.serve(async (req) => {
           bands:bands!tours_band_id_fkey(id, name)
         )
       `)
+      .neq('status', 'cancelled')
       .lte('departure_date', nowISO)
 
     if (legsError) {

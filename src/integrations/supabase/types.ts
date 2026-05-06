@@ -30509,11 +30509,14 @@ export type Database = {
       tour_travel_legs: {
         Row: {
           arrival_date: string | null
+          cancelled_at: string | null
           created_at: string | null
           departure_date: string | null
           from_city_id: string | null
           id: string
+          rescheduled_from_departure: string | null
           sequence_order: number
+          status: string
           to_city_id: string | null
           tour_id: string
           travel_cost: number | null
@@ -30522,11 +30525,14 @@ export type Database = {
         }
         Insert: {
           arrival_date?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           departure_date?: string | null
           from_city_id?: string | null
           id?: string
+          rescheduled_from_departure?: string | null
           sequence_order?: number
+          status?: string
           to_city_id?: string | null
           tour_id: string
           travel_cost?: number | null
@@ -30535,11 +30541,14 @@ export type Database = {
         }
         Update: {
           arrival_date?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           departure_date?: string | null
           from_city_id?: string | null
           id?: string
+          rescheduled_from_departure?: string | null
           sequence_order?: number
+          status?: string
           to_city_id?: string | null
           tour_id?: string
           travel_cost?: number | null
@@ -30665,7 +30674,11 @@ export type Database = {
           merch_boost_multiplier: number | null
           min_rest_days: number | null
           name: string
+          original_end_date: string | null
+          original_start_date: string | null
           production_rating: number
+          reschedule_count: number
+          rescheduled_at: string | null
           scope: string | null
           selected_continents: string[] | null
           selected_countries: string[] | null
@@ -30712,7 +30725,11 @@ export type Database = {
           merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name: string
+          original_end_date?: string | null
+          original_start_date?: string | null
           production_rating?: number
+          reschedule_count?: number
+          rescheduled_at?: string | null
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null
@@ -30759,7 +30776,11 @@ export type Database = {
           merch_boost_multiplier?: number | null
           min_rest_days?: number | null
           name?: string
+          original_end_date?: string | null
+          original_start_date?: string | null
           production_rating?: number
+          reschedule_count?: number
+          rescheduled_at?: string | null
           scope?: string | null
           selected_continents?: string[] | null
           selected_countries?: string[] | null

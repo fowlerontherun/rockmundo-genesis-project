@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     if (requestedLegId) {
       const { data } = await supabase
         .from('tour_travel_legs')
-        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
         .eq('id', requestedLegId)
         .maybeSingle()
       leg = data
@@ -86,8 +86,9 @@ Deno.serve(async (req) => {
       // Prefer a leg currently in transit, else the next upcoming
       const { data: inTransit } = await supabase
         .from('tour_travel_legs')
-        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+        .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
         .in('tour_id', tourIds)
+        .neq('status', 'cancelled')
         .lte('departure_date', nowISO)
         .gte('arrival_date', nowISO)
         .order('departure_date', { ascending: false })
@@ -98,8 +99,9 @@ Deno.serve(async (req) => {
       } else {
         const { data: upcoming } = await supabase
           .from('tour_travel_legs')
-          .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, tours!inner(id, band_id, status)')
+          .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
           .in('tour_id', tourIds)
+          .neq('status', 'cancelled')
           .gte('departure_date', nowISO)
           .order('departure_date', { ascending: true })
           .limit(1)
@@ -113,6 +115,9 @@ Deno.serve(async (req) => {
     }
 
     const tour = (leg as any).tours
+    if ((leg as any).status === 'cancelled') {
+      return new Response(JSON.stringify({ error: 'This tour leg was cancelled and cannot be rejoined' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     if (!tour || !['active', 'scheduled', 'booked'].includes(tour.status)) {
       return new Response(JSON.stringify({ error: 'Tour is not active' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }

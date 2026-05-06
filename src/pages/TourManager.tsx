@@ -19,6 +19,7 @@ import { TourDetailPanel } from "@/components/tours/TourDetailPanel";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getBandFameTitle } from "@/utils/bandFame";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
 import { useBandTourTotals } from "@/hooks/useTourStats";
 
@@ -40,6 +41,12 @@ interface Tour {
   sponsor_cash_value?: number | null;
   merch_boost_multiplier?: number | null;
   support_revenue_share?: number | null;
+  cancelled?: boolean | null;
+  cancellation_date?: string | null;
+  rescheduled_at?: string | null;
+  reschedule_count?: number | null;
+  original_start_date?: string | null;
+  original_end_date?: string | null;
   band: {
     id: string;
     name: string;
@@ -151,9 +158,12 @@ const TourManager = () => {
       const isSameDay = createdAt.toDateString() === now.toDateString();
       const refundAmount = isSameDay ? (tour.total_upfront_cost || 0) : 0;
 
-      await supabase.from("gigs").delete().eq("tour_id", tourId);
-      await supabase.from("tour_venues").delete().eq("tour_id", tourId);
-      await supabase.from("tour_travel_legs").delete().eq("tour_id", tourId);
+      // Cancel future gigs (don't delete — keep history)
+      await supabase
+        .from("gigs")
+        .update({ status: "cancelled" })
+        .eq("tour_id", tourId)
+        .in("status", ["scheduled", "in_progress"]);
 
       if (refundAmount > 0 && tour.band_id) {
         const currentBalance = tour.bands?.band_balance || 0;
@@ -163,8 +173,17 @@ const TourManager = () => {
           .eq("id", tour.band_id);
       }
 
-      const { error: deleteError } = await supabase.from("tours").delete().eq("id", tourId);
-      if (deleteError) throw deleteError;
+      // Mark the tour as cancelled — DB trigger cascades to legs + future travel/activities
+      const { error: updateError } = await supabase
+        .from("tours")
+        .update({
+          status: "cancelled",
+          cancelled: true,
+          cancellation_date: now.toISOString(),
+          cancellation_refund_amount: refundAmount,
+        } as any)
+        .eq("id", tourId);
+      if (updateError) throw updateError;
 
       return { refundAmount, isSameDay };
     },
@@ -724,13 +743,25 @@ const TourManager = () => {
   const upcomingShows = myTours.filter(t => new Date(t.start_date) > new Date()).length;
 
   const getStatusBadge = (status: string) => {
+    if (status === 'cancelled') {
+      return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Cancelled</Badge>;
+    }
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       active: "default",
       scheduled: "secondary",
       completed: "outline",
-      cancelled: "destructive",
     };
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+    return <Badge variant={variants[status] || "outline"} className="capitalize">{status}</Badge>;
+  };
+
+  const getRescheduleBadge = (tour: Tour) => {
+    if (!tour.rescheduled_at || tour.status === 'cancelled') return null;
+    return (
+      <Badge variant="outline" className="gap-1 text-amber-500 border-amber-500/40 bg-amber-500/5">
+        <History className="h-3 w-3" />
+        Rescheduled{(tour.reschedule_count ?? 0) > 1 ? ` ×${tour.reschedule_count}` : ''}
+      </Badge>
+    );
   };
 
   const openTourDetails = (tour: Tour) => {
@@ -738,13 +769,20 @@ const TourManager = () => {
     setDetailsOpen(true);
   };
 
-  const TourCard = ({ tour, showBandInfo = false }: { tour: Tour; showBandInfo?: boolean }) => (
-    <Card className="hover:border-primary/50 transition-colors">
+  const TourCard = ({ tour, showBandInfo = false }: { tour: Tour; showBandInfo?: boolean }) => {
+    const isCancelled = tour.status === 'cancelled';
+    return (
+    <Card className={cn(
+      "hover:border-primary/50 transition-colors",
+      isCancelled && "opacity-70 border-destructive/40 bg-destructive/[0.02]",
+    )}>
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{tour.name}</CardTitle>
-            <CardDescription className="flex items-center gap-1 mt-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <CardTitle className={cn("text-lg flex items-center gap-2", isCancelled && "line-through text-muted-foreground")}>
+              {tour.name}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-1 mt-1 flex-wrap">
               <Music className="h-3 w-3" />
               {tour.band?.name || 'Unknown Band'}
               {showBandInfo && tour.band?.fame !== null && tour.band?.fame !== undefined && (
@@ -755,10 +793,27 @@ const TourManager = () => {
               )}
             </CardDescription>
           </div>
-          {getStatusBadge(tour.status)}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {getStatusBadge(tour.status)}
+            {getRescheduleBadge(tour)}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {isCancelled && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive flex items-center gap-1.5">
+            <XCircle className="h-3.5 w-3.5" />
+            Cancelled{tour.cancellation_date ? ` on ${format(new Date(tour.cancellation_date), 'MMM d, yyyy')}` : ''}
+            — all remaining shows and travel were cancelled.
+          </div>
+        )}
+        {tour.rescheduled_at && !isCancelled && tour.original_start_date && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5" />
+            Rescheduled — was {format(new Date(tour.original_start_date), 'MMM d')}
+            {tour.original_end_date ? ` – ${format(new Date(tour.original_end_date), 'MMM d, yyyy')}` : ''}.
+          </div>
+        )}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
@@ -798,7 +853,8 @@ const TourManager = () => {
         </Button>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   const EmptyState = ({ icon: Icon, title, description, action }: { 
     icon: any; 
