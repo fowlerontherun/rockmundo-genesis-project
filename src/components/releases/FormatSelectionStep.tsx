@@ -73,6 +73,44 @@ export function FormatSelectionStep({
     cassette: { release_date: "", quantity: 100, retail_price: DEFAULT_RETAIL_PRICES.cassette, distribution_fee_percentage: 30 }
   });
 
+  // v1.1.287: fetch band fame & popularity for realistic P/L projection
+  const { data: bandStats } = useQuery({
+    queryKey: ["band-pl-stats", bandId],
+    queryFn: async () => {
+      if (!bandId) return null;
+      const { data } = await supabase
+        .from("bands")
+        .select("fame, popularity")
+        .eq("id", bandId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!bandId,
+  });
+
+  // Expected sell-through % for projection (heuristic, UI only)
+  const expectedSellThrough = (formatType: string): number => {
+    const fame = (bandStats as any)?.fame ?? 0;
+    const pop = (bandStats as any)?.popularity ?? 0;
+    if (formatType === "digital" || formatType === "streaming") return 1;
+    return Math.min(0.9, 0.05 + pop / 500 + fame / 1000);
+  };
+
+  const projectFormatPL = (formatType: string) => {
+    const cfg = formatConfigs[formatType];
+    if (!cfg || !cfg.quantity) return null;
+    const sellThrough = expectedSellThrough(formatType);
+    const expectedUnits = Math.round(cfg.quantity * sellThrough);
+    const grossDollars = expectedUnits * (cfg.retail_price || 0);
+    const distRate = Math.max(0, Math.min(50, cfg.distribution_fee_percentage ?? 30)) / 100;
+    const taxRate = 0.10;
+    const netRevenueDollars = grossDollars * (1 - taxRate - distRate);
+    const mfgCostDollars =
+      (selectedFormats.find(f => f.format_type === formatType)?.manufacturing_cost || 0) / 100;
+    const projectedNet = netRevenueDollars - mfgCostDollars;
+    return { sellThrough, expectedUnits, grossDollars, netRevenueDollars, mfgCostDollars, projectedNet };
+  };
+
   const { data: manufacturingCosts } = useQuery({
     queryKey: ["manufacturing-costs"],
     queryFn: async () => {
