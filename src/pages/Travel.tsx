@@ -273,6 +273,9 @@ const Travel = () => {
         {/* Past Travel Tab */}
         <TabsContent value="history" className="space-y-6">
           {profileId && <PastTravelList profileId={profileId} />}
+          {profileId && (
+            <TravelTimelineLog profileId={profileId} includeAllMembers={false} />
+          )}
         </TabsContent>
       </Tabs>
 
