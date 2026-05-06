@@ -238,7 +238,28 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
     },
   });
 
-  const getTransportIcon = (type: string) => {
+  const rejoinTourMutation = useMutation({
+    mutationFn: async (tourLegId?: string) => {
+      const { data, error } = await supabase.functions.invoke("rejoin-tour-transport", {
+        body: tourLegId ? { tour_leg_id: tourLegId } : {},
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { message: string; status: string };
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || "Rejoined tour transport");
+      queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] });
+      queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["current-location"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to rejoin tour transport");
+    },
+  });
     const Icon = TRANSPORT_ICONS[type.toLowerCase() as keyof typeof TRANSPORT_ICONS] || Train;
     return <Icon className="h-4 w-4" />;
   };
