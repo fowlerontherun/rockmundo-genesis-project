@@ -243,6 +243,9 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
       )}
+
+      {/* Per-member travel timeline log */}
+      <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />
     </div>
   );
 }
