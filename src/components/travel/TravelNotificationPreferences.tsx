@@ -17,6 +17,7 @@ interface Prefs {
   notify_status_changes: boolean;
   notify_eta_delays: boolean;
   notify_rejoin_available: boolean;
+  auto_rejoin_enabled: boolean;
   email_address: string | null;
 }
 
@@ -26,6 +27,7 @@ const DEFAULTS: Prefs = {
   notify_status_changes: true,
   notify_eta_delays: true,
   notify_rejoin_available: true,
+  auto_rejoin_enabled: true,
   email_address: null,
 };
 
@@ -118,6 +120,21 @@ export const TravelNotificationPreferences = () => {
                 disabled={!prefs.in_app_enabled}
                 onChange={(v) => update({ notify_rejoin_available: v })}
               />
+            </div>
+
+            <div className="border-t border-border pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Auto-rejoin missed pickups</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Automatically reattach to the nearest upcoming tour leg if you miss the band's pickup.
+                  </p>
+                </div>
+                <Switch
+                  checked={prefs.auto_rejoin_enabled}
+                  onCheckedChange={(v) => update({ auto_rejoin_enabled: v })}
+                />
+              </div>
             </div>
 
             <div className="border-t border-border pt-3 space-y-2">

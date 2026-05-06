@@ -30904,6 +30904,7 @@ export type Database = {
       }
       travel_notification_preferences: {
         Row: {
+          auto_rejoin_enabled: boolean
           created_at: string
           email_address: string | null
           email_enabled: boolean
@@ -30916,6 +30917,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_rejoin_enabled?: boolean
           created_at?: string
           email_address?: string | null
           email_enabled?: boolean
@@ -30928,6 +30930,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_rejoin_enabled?: boolean
           created_at?: string
           email_address?: string | null
           email_enabled?: boolean
