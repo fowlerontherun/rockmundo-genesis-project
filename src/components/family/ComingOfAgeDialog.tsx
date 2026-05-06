@@ -232,5 +232,11 @@ export function ComingOfAgeDialog({ child, trigger, autoPrompt }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <PlayableHeirTutorialDialog
+      open={tutorialOpen}
+      onOpenChange={setTutorialOpen}
+      heirName={fullName}
+    />
+    </>
   );
 }
