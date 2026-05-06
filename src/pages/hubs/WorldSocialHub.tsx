@@ -26,6 +26,7 @@ export default function WorldSocialHub() {
         {
           label: "Social",
           tiles: [
+            { icon: Users, labelKey: "Social Hub", path: "/social", imagePrompt: "A unified chat dashboard showing online friends, activity feed, and messages in three columns" },
             { icon: Twitter, labelKey: "nav.twaater", path: "/twaater", imagePrompt: "A social media feed showing tweets, likes, and trending music topics on a phone screen" },
             { icon: Video, labelKey: "nav.dikcok", path: "/dikcok", imagePrompt: "A vertical video app showing viral music clips with hearts and comment bubbles" },
             { icon: Heart, labelKey: "nav.relationships", path: "/relationships", imagePrompt: "Two people connecting over music at a cafe, hearts and music notes floating between them" },
