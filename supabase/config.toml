@@ -3,6 +3,9 @@ project_id = "yztogmdixmchsmimtent"
 [functions.complete-jam-session]
 verify_jwt = true
 
+[functions.rejoin-tour-transport]
+verify_jwt = true
+
 [functions.book-reading-attendance]
 verify_jwt = false
 
