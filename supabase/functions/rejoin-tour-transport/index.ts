@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
           .from('tour_travel_legs')
           .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours, status, tours!inner(id, band_id, status)')
           .in('tour_id', tourIds)
+          .neq('status', 'cancelled')
           .gte('departure_date', nowISO)
           .order('departure_date', { ascending: true })
           .limit(1)
