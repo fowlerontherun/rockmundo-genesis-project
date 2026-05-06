@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.279",
+    date: "2026-05-06",
+    changes: [
+      { type: 'feature', description: "Tours now visibly track cancelled and rescheduled state — cancelled tour cards show a strikethrough title, dimmed style and a red 'Cancelled on …' banner, while rescheduled tours show an amber 'Rescheduled — was …' banner with the original dates and a reschedule count badge." },
+      { type: 'fix', description: "Cancelled tour legs are no longer selectable anywhere — Upcoming Travel, the schedule day view, the Rejoin Tour Transport action and the process-tour-travel cron all skip legs with status='cancelled'. Cancelling a tour now flips its status (instead of deleting it), and a DB trigger cascades to mark all its legs cancelled and cancels any future player travel/scheduled activities tied to it." },
+      { type: 'feature', description: "Editing a tour's start or end date now stamps it as rescheduled (with original dates preserved and a reschedule counter) via a database trigger, so reschedules are tracked even when made from any tool." },
+    ],
+  },
+  {
     version: "1.1.278",
     date: "2026-05-06",
     changes: [
