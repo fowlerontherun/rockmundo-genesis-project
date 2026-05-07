@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.293",
+    date: "2026-05-07",
+    changes: [
+      { type: 'feature', description: "Phase C1 Social Hub: /social now hosts a unified three-column surface (friends list with online/all/pending tabs, DM thread, friend activity feed) plus a new Shared Spaces presence strip showing live occupant counts for the Jam Lobby, Studio, Nightclubs, and Festival Backstage via Supabase Realtime presence channels. Quick-invite buttons jump straight to Jam, Co-write, Studio, and Tour. The Dashboard chat tab has been deprecated — it now redirects to /social with a one-click open button and keeps the legacy channel chat behind a collapsible 'Use legacy channel chat' fallback." },
+    ],
+  },
+  {
     version: "1.1.292",
     date: "2026-05-07",
     changes: [
