@@ -268,9 +268,25 @@ const Dashboard = () => {
           <SkillsAttributesTab profile={profile} />
         </TabsContent>
 
-        {/* Chat Tab */}
+        {/* Chat Tab — moved to unified Social Hub */}
         <TabsContent value="chat" className="space-y-4">
-          <ChatChannelSelector isVip={vipStatus?.isVip || false} />
+          <Card>
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <h3 className="text-lg font-semibold">Chat moved to the Social Hub</h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Friends, DMs, activity feed, and live presence in shared spaces are now in one place.
+              </p>
+              <Link to="/social">
+                <Button size="sm">Open Social Hub</Button>
+              </Link>
+              <details className="text-xs text-muted-foreground mt-2">
+                <summary className="cursor-pointer">Use legacy channel chat</summary>
+                <div className="mt-3">
+                  <ChatChannelSelector isVip={vipStatus?.isVip || false} />
+                </div>
+              </details>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Schedule Tab */}
