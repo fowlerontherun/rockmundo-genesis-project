@@ -106,6 +106,10 @@ export default function SocialHub() {
         ))}
       </div>
 
+      <div className="mb-3">
+        <SharedSpacesPresence profileId={profileId ?? null} />
+      </div>
+
       <div className="grid lg:grid-cols-[280px_1fr_320px] gap-3">
         {/* COL 1: Friends */}
         <Card className="lg:order-1 order-1 flex flex-col h-[calc(100vh-260px)] min-h-[400px]">
