@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.292",
+    date: "2026-05-07",
+    changes: [
+      { type: 'feature', description: "Phase A1 Luthiery foundations: starter blueprints (Apprentice S-Style Guitar, PJ Bass, Stage Dynamic Mic) are now automatically granted to every existing and newly-created profile via a SECURITY DEFINER function + trigger on profiles. The crafting_blueprints.source check constraint was extended to allow 'starter', and a unique (profile_id, recipe_id) constraint was added to keep grants idempotent. Players can now open the Crafting Workshop, see unlocked blueprints, buy materials, start a craft, and roll for quality on collection." },
+    ],
+  },
+  {
     version: "1.1.291",
     date: "2026-05-06",
     changes: [
