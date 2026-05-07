@@ -3156,6 +3156,74 @@ export type Database = {
         }
         Relationships: []
       }
+      busking_sessions: {
+        Row: {
+          city_id: string
+          crowd_size: number
+          duration_minutes: number
+          fame_gained: number
+          id: string
+          landmark_id: string | null
+          played_at: string
+          profile_id: string
+          tips_earned: number
+          vibe: string
+        }
+        Insert: {
+          city_id: string
+          crowd_size?: number
+          duration_minutes: number
+          fame_gained?: number
+          id?: string
+          landmark_id?: string | null
+          played_at?: string
+          profile_id: string
+          tips_earned?: number
+          vibe?: string
+        }
+        Update: {
+          city_id?: string
+          crowd_size?: number
+          duration_minutes?: number
+          fame_gained?: number
+          id?: string
+          landmark_id?: string | null
+          played_at?: string
+          profile_id?: string
+          tips_earned?: number
+          vibe?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "busking_sessions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_landmark_id_fkey"
+            columns: ["landmark_id"]
+            isOneToOne: false
+            referencedRelation: "city_landmarks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_expenditures: {
         Row: {
           amount: number
@@ -4820,6 +4888,56 @@ export type Database = {
             columns: ["winner_id"]
             isOneToOne: false
             referencedRelation: "city_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_landmarks: {
+        Row: {
+          base_cash_reward: number
+          base_fame_reward: number
+          city_id: string
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          map_x: number
+          map_y: number
+          name: string
+          slug: string
+        }
+        Insert: {
+          base_cash_reward?: number
+          base_fame_reward?: number
+          city_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          map_x?: number
+          map_y?: number
+          name: string
+          slug: string
+        }
+        Update: {
+          base_cash_reward?: number
+          base_fame_reward?: number
+          city_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          map_x?: number
+          map_y?: number
+          name?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_landmarks_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -14118,6 +14236,61 @@ export type Database = {
           {
             foreignKeyName: "labels_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landmark_visits: {
+        Row: {
+          cash_delta: number
+          event_kind: string
+          event_summary: string
+          fame_delta: number
+          id: string
+          landmark_id: string
+          profile_id: string
+          visited_at: string
+        }
+        Insert: {
+          cash_delta?: number
+          event_kind: string
+          event_summary: string
+          fame_delta?: number
+          id?: string
+          landmark_id: string
+          profile_id: string
+          visited_at?: string
+        }
+        Update: {
+          cash_delta?: number
+          event_kind?: string
+          event_summary?: string
+          fame_delta?: number
+          id?: string
+          landmark_id?: string
+          profile_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landmark_visits_landmark_id_fkey"
+            columns: ["landmark_id"]
+            isOneToOne: false
+            referencedRelation: "city_landmarks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landmark_visits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landmark_visits_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
