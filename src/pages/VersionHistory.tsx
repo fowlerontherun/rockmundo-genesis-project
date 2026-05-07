@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.294",
+    date: "2026-05-07",
+    changes: [
+      { type: 'feature', description: "Phase B1 Landmarks & Busking: new tables city_landmarks (5 hand-curated spots — record store, dive bar, rehearsal space, park, recording school — across the top 20 most populous cities = 100 seeded landmarks), landmark_visits, and busking_sessions, all with strict profile_id-owner RLS. New /landmarks page with a city picker, a clickable map (pins positioned via map_x/map_y) that opens a detail dialog rolling a typed mini-event (rare find / open mic / tourist crowd / etc.) and applying cash + fame deltas to the active profile. Park and dive-bar pins also expose a Busk action with 15/30/60-minute set lengths; crowd size, tips, fame, and vibe are rolled per session, persisted, and surfaced in a recent-activity panel alongside the visit feed." },
+    ],
+  },
+  {
     version: "1.1.293",
     date: "2026-05-07",
     changes: [

@@ -286,6 +286,7 @@ const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
 const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
+const CityLandmarks = lazyWithRetry(() => import("./pages/CityLandmarks"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
@@ -481,6 +482,7 @@ function App() {
                     <Route path="hub/world-social" element={<WorldSocialHub />} />
                     <Route path="hub/career-business" element={<CareerBusinessHub />} />
                     <Route path="social" element={<SocialHubUnified />} />
+                    <Route path="landmarks" element={<CityLandmarks />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
