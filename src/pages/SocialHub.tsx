@@ -20,6 +20,7 @@ import { DirectMessagePanel } from "@/features/relationships/components/DirectMe
 import { FriendActivityFeed } from "@/features/relationships/components/FriendActivityFeed";
 import { resolveRelationshipPairKey } from "@/features/relationships/api";
 import { cn } from "@/lib/utils";
+import { SharedSpacesPresence } from "@/components/social/SharedSpacesPresence";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 
 const QUICK_INVITES = [
