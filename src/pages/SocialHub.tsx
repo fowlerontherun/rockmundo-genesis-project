@@ -20,6 +20,7 @@ import { DirectMessagePanel } from "@/features/relationships/components/DirectMe
 import { FriendActivityFeed } from "@/features/relationships/components/FriendActivityFeed";
 import { resolveRelationshipPairKey } from "@/features/relationships/api";
 import { cn } from "@/lib/utils";
+import { SharedSpacesPresence } from "@/components/social/SharedSpacesPresence";
 import type { DecoratedFriendship } from "@/features/relationships/types";
 
 const QUICK_INVITES = [
@@ -103,6 +104,10 @@ export default function SocialHub() {
             </Link>
           </Button>
         ))}
+      </div>
+
+      <div className="mb-3">
+        <SharedSpacesPresence profileId={profileId ?? null} />
       </div>
 
       <div className="grid lg:grid-cols-[280px_1fr_320px] gap-3">
