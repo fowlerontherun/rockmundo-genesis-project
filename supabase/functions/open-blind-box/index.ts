@@ -121,22 +121,38 @@ serve(async (req) => {
     ];
     const quality = rand(r.quality[0], r.quality[1]);
 
-    // Award XP via experience_ledger + wallet update
+    // Duplicate detection — same box + same instrument name previously unboxed
+    const { data: priorOpenings } = await admin
+      .from("blind_box_openings")
+      .select("id, reward_summary")
+      .eq("profile_id", profile.id)
+      .eq("box_id", box.id);
+    const dupeCount = (priorOpenings ?? []).filter(
+      (p: any) => (p.reward_summary?.instrument ?? "").toLowerCase() === instrument.name.toLowerCase(),
+    ).length;
+    const isDuplicate = dupeCount > 0;
+
+    // Duplicate scaling: rebate XP, rebate AP (ceil/2), and grant shards
+    const tierMultiplier: Record<Tier, number> = { common: 1, rare: 2, epic: 4, legendary: 8 };
+    const dupeXp = isDuplicate ? Math.round(xp * 0.5) : xp;
+    const dupeAp = isDuplicate ? Math.max(1, Math.ceil(ap / 2)) : ap;
+    const shardCount = isDuplicate ? tierMultiplier[tier] * (1 + Math.min(3, dupeCount)) : 0;
+
+    // XP ledger / wallet
     await admin.from("experience_ledger").insert({
       user_id: user.id, profile_id: profile.id,
-      activity_type: "blind_box", xp_amount: xp, skill_slug: skillSlug,
-      metadata: { box_slug: box.slug, tier },
+      activity_type: isDuplicate ? "blind_box_duplicate" : "blind_box",
+      xp_amount: dupeXp, skill_slug: skillSlug,
+      metadata: { box_slug: box.slug, tier, duplicate: isDuplicate, dupe_count: dupeCount },
     });
-
-    // Wallet bump
     const { data: wallet } = await admin
       .from("player_xp_wallet").select("*")
       .eq("profile_id", profile.id).maybeSingle();
     if (wallet) {
       await admin.from("player_xp_wallet").update({
-        xp_balance: (wallet.xp_balance ?? 0) + xp,
-        lifetime_xp: (wallet.lifetime_xp ?? 0) + xp,
-        skill_xp_balance: (wallet.skill_xp_balance ?? 0) + xp,
+        xp_balance: (wallet.xp_balance ?? 0) + dupeXp,
+        lifetime_xp: (wallet.lifetime_xp ?? 0) + dupeXp,
+        skill_xp_balance: (wallet.skill_xp_balance ?? 0) + dupeXp,
       }).eq("profile_id", profile.id);
     }
 
@@ -146,50 +162,102 @@ serve(async (req) => {
       .eq("profile_id", profile.id).maybeSingle();
     if (attrs) {
       await admin.from("player_attributes")
-        .update({ attribute_points: (attrs.attribute_points ?? 0) + ap })
+        .update({ attribute_points: (attrs.attribute_points ?? 0) + dupeAp })
         .eq("profile_id", profile.id);
     }
 
-    // Instrument
-    const { data: gear } = await admin.from("player_personal_gear").insert({
-      user_id: user.id,
-      gear_type: instrument.type,
-      gear_name: `${instrument.name} (${box.name})`,
-      quality_rating: quality,
-      condition_rating: 100,
-      purchase_cost: Math.round(price),
-      stat_boosts: { theme: box.theme_genre, tier },
-      notes: `Unboxed from ${box.name} — ${tier.toUpperCase()} tier`,
-    }).select().single();
+    // Instrument: only mint if this is NOT a duplicate
+    let gear: any = null;
+    if (!isDuplicate) {
+      const ins = await admin.from("player_personal_gear").insert({
+        user_id: user.id,
+        gear_type: instrument.type,
+        gear_name: `${instrument.name} (${box.name})`,
+        quality_rating: quality,
+        condition_rating: 100,
+        purchase_cost: Math.round(price),
+        stat_boosts: { theme: box.theme_genre, tier },
+        notes: `Unboxed from ${box.name} — ${tier.toUpperCase()} tier`,
+      }).select().single();
+      gear = ins.data;
+    }
 
-    // Song
-    const { data: song } = await admin.from("songs").insert({
-      user_id: user.id,
-      profile_id: profile.id,
-      title: `${songTitle}`,
-      genre: box.theme_genre,
-      status: "completed",
-      quality_score: quality,
-      song_rating: quality,
-      melody_strength: quality,
-      lyrics_strength: quality,
-      rhythm_strength: quality,
-      arrangement_strength: quality,
-      production_potential: quality,
-      music_progress: 1000,
-      lyrics_progress: 1000,
-      catalog_status: "owned",
-      ownership_type: "solo",
-      completed_at: new Date().toISOString(),
-    }).select().single();
+    // Duplicate -> award crafting materials (shards) of matching rarity tier
+    const dupeMaterials: Array<{ name: string; quantity: number; rarity: string }> = [];
+    if (isDuplicate && shardCount > 0) {
+      const rarityForTier: Record<Tier, string[]> = {
+        common: ["common"],
+        rare: ["common", "uncommon"],
+        epic: ["uncommon", "rare"],
+        legendary: ["rare", "legendary"],
+      };
+      const { data: materials } = await admin
+        .from("crafting_materials")
+        .select("id, name, rarity")
+        .in("rarity", rarityForTier[tier]);
+      if (materials && materials.length > 0) {
+        const pick = materials[rand(0, materials.length - 1)];
+        // upsert quantity
+        const { data: existing } = await admin
+          .from("player_crafting_materials")
+          .select("id, quantity")
+          .eq("profile_id", profile.id)
+          .eq("material_id", pick.id)
+          .maybeSingle();
+        if (existing) {
+          await admin.from("player_crafting_materials")
+            .update({ quantity: (existing.quantity ?? 0) + shardCount })
+            .eq("id", existing.id);
+        } else {
+          await admin.from("player_crafting_materials").insert({
+            profile_id: profile.id,
+            material_id: pick.id,
+            quantity: shardCount,
+          });
+        }
+        dupeMaterials.push({ name: pick.name, quantity: shardCount, rarity: pick.rarity });
+      }
+    }
+
+    // Song — duplicates skip song generation as well to avoid catalog spam
+    let song: any = null;
+    if (!isDuplicate) {
+      const ins = await admin.from("songs").insert({
+        user_id: user.id,
+        profile_id: profile.id,
+        title: `${songTitle}`,
+        genre: box.theme_genre,
+        status: "completed",
+        quality_score: quality,
+        song_rating: quality,
+        melody_strength: quality,
+        lyrics_strength: quality,
+        rhythm_strength: quality,
+        arrangement_strength: quality,
+        production_potential: quality,
+        music_progress: 1000,
+        lyrics_progress: 1000,
+        catalog_status: "owned",
+        ownership_type: "solo",
+        completed_at: new Date().toISOString(),
+      }).select().single();
+      song = ins.data;
+    }
 
     // Ledger + pity update
     await admin.from("blind_box_openings").insert({
       user_id: user.id, profile_id: profile.id, box_id: box.id,
-      tier, xp_awarded: xp, ap_awarded: ap, skill_slug: skillSlug,
-      instrument_id: gear?.id, song_id: song?.id,
+      tier, xp_awarded: dupeXp, ap_awarded: dupeAp, skill_slug: skillSlug,
+      instrument_id: gear?.id ?? null, song_id: song?.id ?? null,
       price_paid: price, currency: box.currency,
-      reward_summary: { instrument: instrument.name, song: songTitle, quality },
+      reward_summary: {
+        instrument: instrument.name,
+        song: songTitle,
+        quality,
+        duplicate: isDuplicate,
+        dupe_count: dupeCount,
+        materials: dupeMaterials,
+      },
     });
 
     const newPity = (tier === "epic" || tier === "legendary") ? 0 : opensSinceEpic + 1;
@@ -202,11 +270,16 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      tier, xp, ap, skill_slug: skillSlug,
-      instrument: { ...instrument, quality, id: gear?.id },
-      song: { id: song?.id, title: songTitle, quality, genre: box.theme_genre },
+      tier, xp: dupeXp, ap: dupeAp, skill_slug: skillSlug,
+      instrument: { ...instrument, quality, id: gear?.id ?? null },
+      song: { id: song?.id ?? null, title: songTitle, quality, genre: box.theme_genre },
       new_balance: balance - price,
       currency: box.currency,
+      duplicate: isDuplicate,
+      dupe_count: dupeCount,
+      base_xp: xp,
+      base_ap: ap,
+      materials: dupeMaterials,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
