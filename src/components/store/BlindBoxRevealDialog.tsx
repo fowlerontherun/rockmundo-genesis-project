@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Music, Sparkles, Star, Wrench, Zap, Play, Pause, RotateCw } from "lucide-react";
+import { Music, Sparkles, Star, Wrench, Zap, Play, Pause, RotateCw, Repeat, Hammer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RevealResult } from "@/pages/BlindBoxStore";
 
