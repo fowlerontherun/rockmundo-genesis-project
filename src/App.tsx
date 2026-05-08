@@ -342,6 +342,7 @@ function App() {
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="blind-boxes" element={<BlindBoxStore />} />
                     <Route path="blind-boxes/analytics" element={<BlindBoxAnalytics />} />
+                    <Route path="blind-boxes/inventory" element={<BlindBoxInventory />} />
                     <Route path="family/child/:childId" element={<ChildDetail />} />
                     <Route path="family/timeline" element={<FamilyTimeline />} />
                     <Route path="buy-character-slot" element={<BuyCharacterSlot />} />
