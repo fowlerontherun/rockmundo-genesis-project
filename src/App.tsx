@@ -290,6 +290,7 @@ const CityLandmarks = lazyWithRetry(() => import("./pages/CityLandmarks"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
+const BlindBoxAnalytics = lazyWithRetry(() => import("./pages/BlindBoxAnalytics"));
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
 const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
 const queryClient = new QueryClient();
