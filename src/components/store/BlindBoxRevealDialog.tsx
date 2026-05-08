@@ -123,7 +123,12 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
                 phase === "rolling" && "animate-spin",
               )}
             />
-            {phase === "rolling" ? "Rolling…" : "Box opened!"}
+            {phase === "rolling" ? "Rolling…" : reveal.duplicate ? "Duplicate converted!" : "Box opened!"}
+            {reveal.duplicate && phase !== "rolling" && (
+              <Badge variant="outline" className="ml-1 gap-1 text-[10px] border-amber-400/60 text-amber-200">
+                <Repeat className="h-3 w-3" /> ×{(reveal.dupe_count ?? 0) + 1}
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
