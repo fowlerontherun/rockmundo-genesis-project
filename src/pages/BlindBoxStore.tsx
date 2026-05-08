@@ -38,9 +38,14 @@ export type RevealResult = {
   ap: number;
   skill_slug: string;
   instrument: { name: string; type: string; quality: number };
-  song: { id: string; title: string; quality: number; genre: string };
+  song: { id: string | null; title: string; quality: number; genre: string };
   new_balance: number;
   currency: "cash" | "premium";
+  duplicate?: boolean;
+  dupe_count?: number;
+  base_xp?: number;
+  base_ap?: number;
+  materials?: Array<{ name: string; quantity: number; rarity: string }>;
 };
 
 const TIER_COLOR: Record<string, string> = {
