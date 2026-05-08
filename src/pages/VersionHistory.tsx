@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.297",
+    date: "2026-05-08",
+    changes: [
+      { type: 'feature', description: "Blind box duplicate handling: open-blind-box edge function now checks prior blind_box_openings rows for the same box+instrument name. Duplicates skip minting a new player_personal_gear row and a new song (no catalog spam), instead awarding 50% XP, ceil(½) AP, and crafting shards scaled by tier (common ×1, rare ×2, epic ×4, legendary ×8) multiplied by 1+min(3, dupeCount). Shard rarity matches the rolled tier (common→common, rare→common/uncommon, epic→uncommon/rare, legendary→rare/legendary) and upserts into player_crafting_materials. The reveal dialog detects duplicate=true and replaces the instrument flip-card and song-preview sections with a clear conversion breakdown (XP rebate vs base, AP rebate vs base, and each shard granted with name + quantity + rarity), plus a ×N pull-count badge in the title." },
+    ],
+  },
+  {
     version: "1.1.296",
     date: "2026-05-08",
     changes: [
