@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.296",
+    date: "2026-05-08",
+    changes: [
+      { type: 'feature', description: "Blind Box Loot Inventory at /blind-boxes/inventory: pulls every blind_box_openings row for the active profile and joins to player_personal_gear and songs to render unboxed instruments and song previews as cards. Multi-select tier toggles (with per-tier counts), box dropdown, quality range slider (0–100), keyword search across loot/song/box names, and sort by newest/oldest/quality/tier. Tabs split All / Instruments / Songs; song cards expose an inline play/pause button bound to a hidden <audio> when an audio_url exists. Quick-jump buttons added to the Blind Box Store header." },
+    ],
+  },
+  {
     version: "1.1.295",
     date: "2026-05-08",
     changes: [

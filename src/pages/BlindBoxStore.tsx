@@ -168,6 +168,11 @@ export default function BlindBoxStore() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="h-7">
+            <Link to="/blind-boxes/inventory">
+              <Package className="h-3.5 w-3.5 mr-1" /> Inventory
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-7">
             <Link to="/blind-boxes/analytics">
               <BarChart3 className="h-3.5 w-3.5 mr-1" /> Analytics
             </Link>
