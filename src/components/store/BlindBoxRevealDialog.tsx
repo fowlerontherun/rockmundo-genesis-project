@@ -410,3 +410,20 @@ function QualityBadge({ quality }: { quality: number }) {
     </Badge>
   );
 }
+
+function BreakdownRow({
+  label, value, note, icon,
+}: { label: string; value: string; note?: string; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-0.5">
+      <span className="flex items-center gap-1.5 text-foreground">
+        {icon}
+        {label}
+      </span>
+      <span className="flex items-center gap-2">
+        {note && <span className="text-[10px] text-muted-foreground">{note}</span>}
+        <span className="font-semibold tabular-nums">{value}</span>
+      </span>
+    </div>
+  );
+}
