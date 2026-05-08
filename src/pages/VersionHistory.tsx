@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.295",
+    date: "2026-05-08",
+    changes: [
+      { type: 'feature', description: "Blind Box Analytics dashboard at /blind-boxes/analytics: pull rates by tier compared against expected odds (per-box or aggregate), quality distribution histogram with min/avg/max, total opens / XP / AP / best roll stat strip, cumulative Epic+ pulls and rolling average quality over time, and a daily opens line chart. Filters by box and by 7d / 30d / all-time, with a quick-jump button added to the Blind Box Store header." },
+    ],
+  },
+  {
     version: "1.1.294",
     date: "2026-05-07",
     changes: [

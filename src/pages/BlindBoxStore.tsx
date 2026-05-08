@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle } from "lucide-react";
+import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3 } from "lucide-react";
 import { BlindBoxPurchaseDialog } from "@/components/store/BlindBoxPurchaseDialog";
 import { BlindBoxRevealDialog } from "@/components/store/BlindBoxRevealDialog";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 export type BlindBox = {
@@ -165,7 +166,12 @@ export default function BlindBoxStore() {
             Themed mystery boxes — XP, AP, a unique instrument, and a random song.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="h-7">
+            <Link to="/blind-boxes/analytics">
+              <BarChart3 className="h-3.5 w-3.5 mr-1" /> Analytics
+            </Link>
+          </Button>
           <Badge variant="outline" className="gap-1">
             <Coins className="h-3 w-3" /> ${cash.toLocaleString()}
           </Badge>
