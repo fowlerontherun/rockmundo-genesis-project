@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3 } from "lucide-react";
+import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3, Bell, BellOff } from "lucide-react";
 import { BlindBoxPurchaseDialog } from "@/components/store/BlindBoxPurchaseDialog";
 import { BlindBoxRevealDialog } from "@/components/store/BlindBoxRevealDialog";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export type BlindBox = {
   id: string;
