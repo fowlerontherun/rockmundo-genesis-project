@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.298",
+    date: "2026-05-09",
+    changes: [
+      { type: 'feature', description: "Blind box share sheet: revealed cards now have a Share button in the footer that opens a side sheet rendering a 1080×1350 social-ready PNG (tier badge, quality ring, instrument + song details, XP/AP pill) drawn directly to a <canvas>. Actions include native Web Share (with image attachment when supported), Download PNG, Copy image (ClipboardItem PNG), Copy link to /song/{id}, and Copy caption. Caption auto-generates with tier, title, and quality." },
+    ],
+  },
+  {
     version: "1.1.297",
     date: "2026-05-08",
     changes: [
