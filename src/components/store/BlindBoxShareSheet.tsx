@@ -218,8 +218,9 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
     try {
       const blob = await getBlob();
       if (!blob) throw new Error("no blob");
-      // @ts-expect-error - ClipboardItem types
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      const ClipboardItemCtor = (window as unknown as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
+      if (!ClipboardItemCtor) throw new Error("ClipboardItem unsupported");
+      await navigator.clipboard.write([new ClipboardItemCtor({ "image/png": blob })]);
       flash("image");
       toast({ title: "Image copied", description: "Paste anywhere as PNG." });
     } catch {
