@@ -149,6 +149,49 @@ export default function BlindBoxStore() {
 
   const pityByBox = new Map(pityRows.map((p) => [p.box_id, p]));
 
+  const { data: watchRows = [] } = useQuery({
+    queryKey: ["blind-box-watchlist", profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .select("box_id, notified_live_at");
+      if (error) throw error;
+      return ((data ?? []) as unknown) as Array<{ box_id: string; notified_live_at: string | null }>;
+    },
+  });
+  const watchedBoxIds = new Set(watchRows.map((w) => w.box_id));
+  const { toast } = useToast();
+
+  const toggleWatch = async (box: BlindBox) => {
+    if (!profileId) return;
+    const { data: userRes } = await supabase.auth.getUser();
+    const userId = userRes.user?.id;
+    if (!userId) return;
+    if (watchedBoxIds.has(box.id)) {
+      const { error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .delete()
+        .eq("user_id", userId)
+        .eq("box_id", box.id);
+      if (error) {
+        toast({ title: "Could not remove watch", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Reminder off", description: `You won't be notified when ${box.name} goes live.` });
+    } else {
+      const { error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .insert({ user_id: userId, profile_id: profileId, box_id: box.id });
+      if (error) {
+        toast({ title: "Could not set reminder", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Reminder set", description: `We'll notify you when ${box.name} goes live.` });
+    }
+    qc.invalidateQueries({ queryKey: ["blind-box-watchlist", profileId] });
+  };
+
   const cash = profile?.cash ?? 0;
   const tokens = (profile as any)?.premium_tokens ?? 0;
 
