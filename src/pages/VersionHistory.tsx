@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.299",
+    date: "2026-05-09",
+    changes: [
+      { type: 'feature', description: "Blind box go-live notifications: new blind_box_watchlist table (user_id, profile_id, box_id, notified_live_at) with strict per-user RLS lets players subscribe to upcoming boxes via a new 'Notify me' bell button on each Upcoming card in the Blind Box Store. A SECURITY DEFINER notify_blind_box_live() function runs every minute via pg_cron, finds boxes whose available_from has passed (and that are still active and not expired), inserts an in-app notification (category=store, type=blind_box_live, action_path=/blind-boxes) for every watcher who hasn't been pinged yet, and stamps notified_live_at so reminders never fire twice." },
+    ],
+  },
+  {
     version: "1.1.298",
     date: "2026-05-09",
     changes: [
