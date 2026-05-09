@@ -441,20 +441,36 @@ export default function BlindBoxStore() {
                         </>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => setSelected(box)}
-                      disabled={!isOpenable || !profileId || !canAfford}
-                      title={disabledReason ?? undefined}
-                    >
-                      {avail.status === "upcoming"
-                        ? "Locked"
-                        : avail.status === "expired"
-                        ? "Expired"
-                        : canAfford
-                        ? "Open Box"
-                        : "Insufficient funds"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {avail.status === "upcoming" && profileId && (
+                        <Button
+                          size="sm"
+                          variant={watchedBoxIds.has(box.id) ? "secondary" : "outline"}
+                          onClick={() => toggleWatch(box)}
+                          title={watchedBoxIds.has(box.id) ? "Stop notifying me" : "Notify me when this box goes live"}
+                        >
+                          {watchedBoxIds.has(box.id) ? (
+                            <><BellOff className="h-3.5 w-3.5" /> Watching</>
+                          ) : (
+                            <><Bell className="h-3.5 w-3.5" /> Notify me</>
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => setSelected(box)}
+                        disabled={!isOpenable || !profileId || !canAfford}
+                        title={disabledReason ?? undefined}
+                      >
+                        {avail.status === "upcoming"
+                          ? "Locked"
+                          : avail.status === "expired"
+                          ? "Expired"
+                          : canAfford
+                          ? "Open Box"
+                          : "Insufficient funds"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
