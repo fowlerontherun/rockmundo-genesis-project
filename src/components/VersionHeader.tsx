@@ -1,4 +1,4 @@
-export const version = "1.1.297";
+export const version = "1.1.298";
 
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";

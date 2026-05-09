@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Music, Sparkles, Star, Wrench, Zap, Play, Pause, RotateCw, Repeat, Hammer } from "lucide-react";
+import { Music, Sparkles, Star, Wrench, Zap, Play, Pause, RotateCw, Repeat, Hammer, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RevealResult } from "@/pages/BlindBoxStore";
+import { BlindBoxShareSheet } from "./BlindBoxShareSheet";
 
 const TIER_COLORS: Record<string, string> = {
   common: "bg-slate-500/20 text-slate-200 border-slate-500/40",
@@ -57,6 +58,7 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
   const [rollingTier, setRollingTier] = useState<string>("common");
   const [flipped, setFlipped] = useState(false);
   const [songPlaying, setSongPlaying] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Reset and run sequence whenever a new reveal arrives
   useEffect(() => {
@@ -357,12 +359,22 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
               Skip animation
             </Button>
           ) : (
-            <Button onClick={onClose} className="w-full">
-              Awesome
-            </Button>
+            <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShareOpen(true)}
+                className="flex-1"
+              >
+                <Share2 className="h-4 w-4" /> Share
+              </Button>
+              <Button onClick={onClose} className="flex-1">
+                Awesome
+              </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
+      <BlindBoxShareSheet reveal={reveal} open={shareOpen} onOpenChange={setShareOpen} />
     </Dialog>
   );
 }
