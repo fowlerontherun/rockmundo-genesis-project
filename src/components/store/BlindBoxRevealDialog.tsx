@@ -58,6 +58,7 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
   const [rollingTier, setRollingTier] = useState<string>("common");
   const [flipped, setFlipped] = useState(false);
   const [songPlaying, setSongPlaying] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Reset and run sequence whenever a new reveal arrives
   useEffect(() => {
