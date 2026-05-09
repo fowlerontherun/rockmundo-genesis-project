@@ -359,12 +359,22 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
               Skip animation
             </Button>
           ) : (
-            <Button onClick={onClose} className="w-full">
-              Awesome
-            </Button>
+            <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShareOpen(true)}
+                className="flex-1"
+              >
+                <Share2 className="h-4 w-4" /> Share
+              </Button>
+              <Button onClick={onClose} className="flex-1">
+                Awesome
+              </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
+      <BlindBoxShareSheet reveal={reveal} open={shareOpen} onOpenChange={setShareOpen} />
     </Dialog>
   );
 }
