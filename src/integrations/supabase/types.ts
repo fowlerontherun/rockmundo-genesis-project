@@ -3087,6 +3087,41 @@ export type Database = {
           },
         ]
       }
+      blind_box_watchlist: {
+        Row: {
+          box_id: string
+          created_at: string
+          id: string
+          notified_live_at: string | null
+          profile_id: string | null
+          user_id: string
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          id?: string
+          notified_live_at?: string | null
+          profile_id?: string | null
+          user_id: string
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          id?: string
+          notified_live_at?: string | null
+          profile_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blind_box_watchlist_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "blind_boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blind_boxes: {
         Row: {
           active: boolean
@@ -34374,6 +34409,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      notify_blind_box_live: { Args: never; Returns: number }
       owns_rehearsal_room: { Args: { _room_id: string }; Returns: boolean }
       place_song_bid: {
         Args: {

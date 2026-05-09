@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3 } from "lucide-react";
+import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3, Bell, BellOff } from "lucide-react";
 import { BlindBoxPurchaseDialog } from "@/components/store/BlindBoxPurchaseDialog";
 import { BlindBoxRevealDialog } from "@/components/store/BlindBoxRevealDialog";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export type BlindBox = {
   id: string;
@@ -147,6 +148,49 @@ export default function BlindBoxStore() {
   });
 
   const pityByBox = new Map(pityRows.map((p) => [p.box_id, p]));
+
+  const { data: watchRows = [] } = useQuery({
+    queryKey: ["blind-box-watchlist", profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .select("box_id, notified_live_at");
+      if (error) throw error;
+      return ((data ?? []) as unknown) as Array<{ box_id: string; notified_live_at: string | null }>;
+    },
+  });
+  const watchedBoxIds = new Set(watchRows.map((w) => w.box_id));
+  const { toast } = useToast();
+
+  const toggleWatch = async (box: BlindBox) => {
+    if (!profileId) return;
+    const { data: userRes } = await supabase.auth.getUser();
+    const userId = userRes.user?.id;
+    if (!userId) return;
+    if (watchedBoxIds.has(box.id)) {
+      const { error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .delete()
+        .eq("user_id", userId)
+        .eq("box_id", box.id);
+      if (error) {
+        toast({ title: "Could not remove watch", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Reminder off", description: `You won't be notified when ${box.name} goes live.` });
+    } else {
+      const { error } = await supabase
+        .from("blind_box_watchlist" as any)
+        .insert({ user_id: userId, profile_id: profileId, box_id: box.id });
+      if (error) {
+        toast({ title: "Could not set reminder", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Reminder set", description: `We'll notify you when ${box.name} goes live.` });
+    }
+    qc.invalidateQueries({ queryKey: ["blind-box-watchlist", profileId] });
+  };
 
   const cash = profile?.cash ?? 0;
   const tokens = (profile as any)?.premium_tokens ?? 0;
@@ -397,20 +441,36 @@ export default function BlindBoxStore() {
                         </>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => setSelected(box)}
-                      disabled={!isOpenable || !profileId || !canAfford}
-                      title={disabledReason ?? undefined}
-                    >
-                      {avail.status === "upcoming"
-                        ? "Locked"
-                        : avail.status === "expired"
-                        ? "Expired"
-                        : canAfford
-                        ? "Open Box"
-                        : "Insufficient funds"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {avail.status === "upcoming" && profileId && (
+                        <Button
+                          size="sm"
+                          variant={watchedBoxIds.has(box.id) ? "secondary" : "outline"}
+                          onClick={() => toggleWatch(box)}
+                          title={watchedBoxIds.has(box.id) ? "Stop notifying me" : "Notify me when this box goes live"}
+                        >
+                          {watchedBoxIds.has(box.id) ? (
+                            <><BellOff className="h-3.5 w-3.5" /> Watching</>
+                          ) : (
+                            <><Bell className="h-3.5 w-3.5" /> Notify me</>
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => setSelected(box)}
+                        disabled={!isOpenable || !profileId || !canAfford}
+                        title={disabledReason ?? undefined}
+                      >
+                        {avail.status === "upcoming"
+                          ? "Locked"
+                          : avail.status === "expired"
+                          ? "Expired"
+                          : canAfford
+                          ? "Open Box"
+                          : "Insufficient funds"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
