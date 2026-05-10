@@ -58,6 +58,13 @@ export default function BlindBoxAnalytics() {
   const { profileId } = useActiveProfile();
   const [boxFilter, setBoxFilter] = useState<string>("all");
   const [range, setRange] = useState<"7d" | "30d" | "all">("30d");
+  const [tierFilter, setTierFilter] = useState<string>("all");
+  const [qMin, setQMin] = useState<string>("");
+  const [qMax, setQMax] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 25;
 
   const { data: boxes = [] } = useQuery({
     queryKey: ["blind-boxes-meta"],
