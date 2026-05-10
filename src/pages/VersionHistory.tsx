@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.301",
+    date: "2026-05-10",
+    changes: [
+      { type: 'fix', description: "Travel lockouts: tour travel legs that were stored with travel_duration_hours=0 (or full midnight-to-midnight 24h blocks) were locking players out of every other activity for an entire in-game day per leg. Migration recomputes durations from city coordinates using realistic per-mode speeds (plane 1250 km/h, train 320, tour_bus 115, bus 95, ship 65) and rewrites arrival_date = departure + hours on tour_travel_legs, mirrors the corrected times into player_travel_history, and shrinks the matching player_scheduled_activities calendar blocks. Also hardened process-tour-travel and rejoin-tour-transport edge functions to recompute on the fly whenever a leg's stored span is ≥20h, so the bug can't reappear from legacy or third-party-created legs." },
+    ],
+  },
+  {
     version: "1.1.300",
     date: "2026-05-10",
     changes: [
