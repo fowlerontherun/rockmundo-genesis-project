@@ -194,7 +194,10 @@ Deno.serve(async (req) => {
         let durationHours = leg.travel_duration_hours
         let actualArrivalDate = leg.arrival_date
 
-        if (!durationHours || durationHours <= 0) {
+        // Recompute when duration is missing OR the stored block spans 20h+
+        // (legacy midnight-to-midnight rows that locked players for a full day).
+        const storedSpanHours = (new Date(leg.arrival_date).getTime() - new Date(leg.departure_date).getTime()) / 3600000
+        if (!durationHours || durationHours <= 0 || storedSpanHours >= 20) {
           // Fetch city coordinates to calculate real duration
           const [fromCityRes, toCityRes] = await Promise.all([
             supabase.from('cities').select('name, country, latitude, longitude').eq('id', leg.from_city_id).single(),
