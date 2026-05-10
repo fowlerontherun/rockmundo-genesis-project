@@ -423,6 +423,141 @@ export default function BlindBoxAnalytics() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">Opening Drill-Down</CardTitle>
+                <Button size="sm" variant="outline" onClick={exportCsv} disabled={tableRows.length === 0}>
+                  <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+                <Select value={tierFilter} onValueChange={(v) => { setTierFilter(v); setPage(0); }}>
+                  <SelectTrigger className="h-8"><SelectValue placeholder="Tier" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All tiers</SelectItem>
+                    {TIERS.map((t) => (
+                      <SelectItem key={t} value={t}>{TIER_LABEL[t]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="date"
+                  className="h-8"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                  placeholder="From"
+                />
+                <Input
+                  type="date"
+                  className="h-8"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                  placeholder="To"
+                />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="h-8"
+                  placeholder="Min quality"
+                  value={qMin}
+                  onChange={(e) => { setQMin(e.target.value); setPage(0); }}
+                />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="h-8"
+                  placeholder="Max quality"
+                  value={qMax}
+                  onChange={(e) => { setQMax(e.target.value); setPage(0); }}
+                />
+              </div>
+
+              <ResponsiveTable>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Box</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead className="text-right">Quality</TableHead>
+                      <TableHead>Instrument</TableHead>
+                      <TableHead>Song</TableHead>
+                      <TableHead className="text-right">XP</TableHead>
+                      <TableHead className="text-right">AP</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                          No openings match these filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pageRows.map((o) => (
+                        <TableRow key={o.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {new Date(o.rolled_at).toLocaleString("en-US", {
+                              month: "short", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit",
+                            })}
+                          </TableCell>
+                          <TableCell className="max-w-[140px] truncate">{boxNameById.get(o.box_id) ?? "—"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px]"
+                              style={{ borderColor: TIER_HSL[o.tier], color: TIER_HSL[o.tier] }}
+                            >
+                              {TIER_LABEL[o.tier] ?? o.tier}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{o.reward_summary?.quality ?? "—"}</TableCell>
+                          <TableCell className="max-w-[140px] truncate">{o.reward_summary?.instrument ?? "—"}</TableCell>
+                          <TableCell className="max-w-[160px] truncate">{o.reward_summary?.song ?? "—"}</TableCell>
+                          <TableCell className="text-right tabular-nums">{o.xp_awarded ?? 0}</TableCell>
+                          <TableCell className="text-right tabular-nums">{o.ap_awarded ?? 0}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
+
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {tableRows.length === 0 ? 0 : page * PAGE_SIZE + 1}–
+                  {Math.min(tableRows.length, (page + 1) * PAGE_SIZE)} of {tableRows.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="px-1 tabular-nums">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
