@@ -305,8 +305,11 @@ Deno.serve(async (req) => {
           : 0.2;
         
         const songHype = releaseHypeMap.get(release.song_id) || 0;
-        const streamHypeMultiplier = 1 + (songHype / 500);
-        
+        // Cap hype multiplier at 3x to prevent runaway feedback loop where hype
+        // drove daily streams which drove hype which drove streams (caused
+        // single-day spikes of 100M+ streams per song in early March 2026).
+        const streamHypeMultiplier = Math.min(3, 1 + (songHype / 500));
+
         // Get territories for this release
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
@@ -314,8 +317,11 @@ Deno.serve(async (req) => {
 
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        // Apply genre trend + seasonal + sentiment + reputation modifier to daily streams
-        const dailyStreams = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        // Apply genre trend + seasonal + sentiment + reputation modifier to daily streams.
+        // Hard cap per release at 5M streams/day — even global megahits don't reach
+        // 100M+ streams/day on a single song-platform combo.
+        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
         // Build deterministic region breakdown based on territories/fans
