@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.302",
+    date: "2026-05-10",
+    changes: [
+      { type: 'fix', description: "Streaming runaway revenue: the daily-streams scheduler had an unbounded hype feedback loop (more streams → more song hype → bigger streamHypeMultiplier → exponentially more streams) which produced spikes of 100M–750M streams in a single song-platform-region row, accumulating to trillions of streams and hundreds of millions of fake dollars per band. Added a hard cap of 3x on streamHypeMultiplier and a 5,000,000 streams/day per song_release ceiling so the loop can't escape again, then ran a one-time data fix that clamps every historical streaming_analytics_daily row to that 5M ceiling and recomputes song_releases.total_streams / total_revenue from the corrected daily rows. Top band on the server dropped from 3.7T streams / $147M streaming revenue to 3.0B streams / $12M streaming revenue — still the #1 band, just no longer earning Spotify-impossible numbers." },
+    ],
+  },
+  {
     version: "1.1.301",
     date: "2026-05-10",
     changes: [
