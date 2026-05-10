@@ -106,6 +106,57 @@ export default function BlindBoxAnalytics() {
     });
   }, [openings, boxFilter, range]);
 
+  const tableRows = useMemo(() => {
+    const fromTs = dateFrom ? new Date(dateFrom).getTime() : 0;
+    const toTs = dateTo ? new Date(dateTo).getTime() + 86400000 : 0;
+    const min = qMin ? Number(qMin) : -Infinity;
+    const max = qMax ? Number(qMax) : Infinity;
+    const rows = filtered.filter((o) => {
+      if (tierFilter !== "all" && o.tier !== tierFilter) return false;
+      const ts = new Date(o.rolled_at).getTime();
+      if (fromTs && ts < fromTs) return false;
+      if (toTs && ts >= toTs) return false;
+      const q = Number(o.reward_summary?.quality ?? 0);
+      if (q < min || q > max) return false;
+      return true;
+    });
+    return rows.slice().sort((a, b) => new Date(b.rolled_at).getTime() - new Date(a.rolled_at).getTime());
+  }, [filtered, tierFilter, dateFrom, dateTo, qMin, qMax]);
+
+  const boxNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of boxes) m.set(b.id, b.name);
+    return m;
+  }, [boxes]);
+
+  const totalPages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
+  const pageRows = tableRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  const exportCsv = () => {
+    const header = ["Date", "Box", "Tier", "Quality", "Instrument", "Song", "XP", "AP"];
+    const lines = [header.join(",")];
+    for (const o of tableRows) {
+      const cells = [
+        new Date(o.rolled_at).toISOString(),
+        boxNameById.get(o.box_id) ?? o.box_id,
+        o.tier,
+        String(o.reward_summary?.quality ?? ""),
+        o.reward_summary?.instrument ?? "",
+        o.reward_summary?.song ?? "",
+        String(o.xp_awarded ?? 0),
+        String(o.ap_awarded ?? 0),
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`);
+      lines.push(cells.join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `blind-box-openings-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const total = filtered.length;
   const tierCounts = useMemo(() => {
     const c: Record<string, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
