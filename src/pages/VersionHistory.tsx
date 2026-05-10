@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.300",
+    date: "2026-05-10",
+    changes: [
+      { type: 'feature', description: "Blind Box Analytics drill-down: new Opening Drill-Down card lists every blind_box_openings row (date, box, tier, quality, instrument, song, XP, AP) with paginated 25-per-page browsing and dedicated filters for tier, custom date range (from/to), and quality min/max — layered on top of the existing box and time-range selectors. Includes an Export CSV button that emits the currently-filtered rows as a downloadable .csv." },
+    ],
+  },
+  {
     version: "1.1.299",
     date: "2026-05-09",
     changes: [
