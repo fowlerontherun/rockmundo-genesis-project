@@ -137,7 +137,8 @@ Deno.serve(async (req) => {
     // Recalc duration/arrival if missing
     let durationHours = leg.travel_duration_hours
     let arrivalDate = leg.arrival_date
-    if (!durationHours || durationHours <= 0 || !arrivalDate) {
+    const storedSpanHours = arrivalDate ? (new Date(arrivalDate).getTime() - new Date(leg.departure_date).getTime()) / 3600000 : 0
+    if (!durationHours || durationHours <= 0 || !arrivalDate || storedSpanHours >= 20) {
       const [fromRes, toRes] = await Promise.all([
         supabase.from('cities').select('latitude, longitude').eq('id', leg.from_city_id).maybeSingle(),
         supabase.from('cities').select('latitude, longitude').eq('id', leg.to_city_id).maybeSingle(),
