@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.303",
+    date: "2026-05-11",
+    changes: [
+      { type: 'feature', description: "Streaming & Revenue Dashboard: new /streaming/dashboard page aggregates streaming_analytics_daily across all of the player's solo and band song_releases with filters for band, platform, region (listener_region / release country), and date range (7d/30d/90d/all/custom). Shows KPI cards for total streams, revenue and unique listeners, a stacked time-series chart of daily streams + revenue, breakdown bar charts for platform and top 10 regions, and a paginated drill-down table (25/page) of every daily row with CSV export of the currently-filtered set." },
+    ],
+  },
+  {
     version: "1.1.302",
     date: "2026-05-10",
     changes: [
