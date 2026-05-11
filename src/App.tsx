@@ -331,6 +331,7 @@ function App() {
                     <Route path="dikcok" element={<DikCok />} />
                     <Route path="tour-manager" element={<TourManager />} />
                     <Route path="streaming" element={<Navigate to="/streaming-platforms" replace />} />
+                    <Route path="streaming/dashboard" element={<StreamingRevenueDashboard />} />
                     <Route path="music/charts" element={<ChartsPage />} />
                     <Route path="christmas-charts" element={<ChristmasCharts />} />
                     <Route path="seasonal-events" element={<SeasonalEventsCalendar />} />
