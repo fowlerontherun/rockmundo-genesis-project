@@ -21,7 +21,21 @@ import {
   BarChart,
   Bar,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
+
+const PIE_COLORS = [
+  "hsl(217 91% 60%)",
+  "hsl(142 76% 45%)",
+  "hsl(43 96% 56%)",
+  "hsl(270 91% 65%)",
+  "hsl(0 84% 60%)",
+  "hsl(187 85% 45%)",
+  "hsl(24 95% 55%)",
+  "hsl(310 80% 60%)",
+];
 
 type Row = {
   id: string;
