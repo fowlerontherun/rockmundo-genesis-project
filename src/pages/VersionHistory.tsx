@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.304",
+    date: "2026-05-11",
+    changes: [
+      { type: 'feature', description: "Streaming dashboard revenue breakdown: added two new charts to /streaming/dashboard — a Platform Revenue Share donut (with $ amounts and % per platform) and a horizontal Revenue by Region bar chart (top 10 regions, with $ and % legend underneath). Both react to the existing band/platform/region/date filters so players can quickly see which platforms and territories drive their band's earnings." },
+    ],
+  },
+  {
     version: "1.1.303",
     date: "2026-05-11",
     changes: [
