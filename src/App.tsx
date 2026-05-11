@@ -291,6 +291,7 @@ const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusines
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
 const BlindBoxAnalytics = lazyWithRetry(() => import("./pages/BlindBoxAnalytics"));
+const StreamingRevenueDashboard = lazyWithRetry(() => import("./pages/StreamingRevenueDashboard"));
 const BlindBoxInventory = lazyWithRetry(() => import("./pages/BlindBoxInventory"));
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
 const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
