@@ -383,6 +383,102 @@ export default function StreamingRevenueDashboard() {
         </Card>
       </div>
 
+      {/* Revenue breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span>Platform Revenue Share</span>
+              <span className="text-xs text-muted-foreground font-normal">
+                ${platformSeries.reduce((s, p) => s + p.revenue, 0).toLocaleString()}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {platformSeries.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-12">No revenue yet.</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={platformSeries}
+                      dataKey="revenue"
+                      nameKey="platform"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={(e: any) => `${e.platform} ${(e.percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {platformSeries.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1 mt-2">
+                  {platformSeries.map((p, i) => {
+                    const total = platformSeries.reduce((s, x) => s + x.revenue, 0) || 1;
+                    const pct = (p.revenue / total) * 100;
+                    return (
+                      <div key={p.platform} className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="truncate max-w-[120px]">{p.platform}</span>
+                        </div>
+                        <span className="text-green-500 font-medium">${p.revenue.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span>Revenue by Region</span>
+              <span className="text-xs text-muted-foreground font-normal">
+                ${regionSeries.reduce((s, r) => s + r.revenue, 0).toLocaleString()}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {regionSeries.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-12">No regional revenue yet.</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={regionSeries} layout="vertical" margin={{ left: 8, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`} />
+                    <YAxis type="category" dataKey="region" width={70} />
+                    <Tooltip formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                    <Bar dataKey="revenue" fill="hsl(142 76% 45%)" name="Revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="space-y-1 mt-2">
+                  {regionSeries.map((r) => {
+                    const total = regionSeries.reduce((s, x) => s + x.revenue, 0) || 1;
+                    const pct = (r.revenue / total) * 100;
+                    return (
+                      <div key={r.region} className="flex items-center justify-between text-[11px]">
+                        <span className="truncate max-w-[140px]">{r.region}</span>
+                        <span className="text-green-500 font-medium">${r.revenue.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Drill-down table */}
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
