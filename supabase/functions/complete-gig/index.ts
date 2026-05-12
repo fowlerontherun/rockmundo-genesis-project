@@ -807,8 +807,8 @@ serve(async (req) => {
         band_id: gig.band_id,
         source: 'gig_performance',
         amount: bandGigEarnings,
-        description: `Gig performance earnings${labelGigCut > 0 ? ` (360 deal: $${labelGigCut} to label)` : ''}`,
-        metadata: { gig_id: gigId, outcome_id: outcome.id, label_cut: labelGigCut }
+        description: `Gig performance earnings${cityGigTax > 0 ? ` (city tax: $${cityGigTax})` : ''}${labelGigCut > 0 ? ` (360 deal: $${labelGigCut} to label)` : ''}`,
+        metadata: { gig_id: gigId, outcome_id: outcome.id, label_cut: labelGigCut, city_tax: cityGigTax, city_id: venueCityId }
       });
 
     if (earningsError) console.error('Error adding earnings:', earningsError);
