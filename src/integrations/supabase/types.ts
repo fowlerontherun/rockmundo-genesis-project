@@ -34194,6 +34194,16 @@ export type Database = {
         }
         Returns: string
       }
+      credit_city_treasury: {
+        Args: {
+          p_amount: number
+          p_city_id: string
+          p_description?: string
+          p_reference_id?: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decrement_gettit_comment_vote: {
         Args: { comment_id: string; vote_field: string }
