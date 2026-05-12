@@ -719,9 +719,39 @@ serve(async (req) => {
       console.log('gig_fan_conversions table may not exist, skipping');
     }
 
+    // ── City Income Tax on gig profits → routed to city treasury ──
+    let cityGigTax = 0;
+    let bandGigEarnings = netProfit;
+    try {
+      if (venueCityId && netProfit > 0) {
+        const { data: laws } = await supabaseClient
+          .from('city_laws')
+          .select('income_tax_rate')
+          .eq('city_id', venueCityId)
+          .is('effective_until', null)
+          .maybeSingle();
+        const taxRate = Math.max(0, Math.min(50, Number(laws?.income_tax_rate ?? 0))) / 100;
+        if (taxRate > 0) {
+          cityGigTax = Math.round(netProfit * taxRate);
+          bandGigEarnings = netProfit - cityGigTax;
+          if (cityGigTax > 0) {
+            await supabaseClient.rpc('credit_city_treasury', {
+              p_city_id: venueCityId,
+              p_amount: cityGigTax,
+              p_type: 'gig_income_tax',
+              p_description: `Gig income tax (${(taxRate * 100).toFixed(1)}%) from ${gig.bands?.name ?? 'band'}`,
+              p_reference_id: gigId,
+            });
+            console.log(`City tax: $${cityGigTax} (${(taxRate * 100).toFixed(1)}%) → ${venueCityName} treasury`);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Error applying city gig tax:', e);
+    }
+
     // ── 360 Deal: Label takes a cut of touring/gig revenue ──
     let labelGigCut = 0;
-    let bandGigEarnings = netProfit;
     
     try {
       // Check if band has an active 360 deal
