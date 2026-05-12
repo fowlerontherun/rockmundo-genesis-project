@@ -153,17 +153,21 @@ serve(async (req) => {
         xp_balance: (wallet.xp_balance ?? 0) + dupeXp,
         lifetime_xp: (wallet.lifetime_xp ?? 0) + dupeXp,
         skill_xp_balance: (wallet.skill_xp_balance ?? 0) + dupeXp,
+        skill_xp_lifetime: (wallet.skill_xp_lifetime ?? 0) + dupeXp,
+        attribute_points_balance: (wallet.attribute_points_balance ?? 0) + dupeAp,
+        attribute_points_lifetime: (wallet.attribute_points_lifetime ?? 0) + dupeAp,
       }).eq("profile_id", profile.id);
-    }
-
-    // AP grant
-    const { data: attrs } = await admin
-      .from("player_attributes").select("attribute_points")
-      .eq("profile_id", profile.id).maybeSingle();
-    if (attrs) {
-      await admin.from("player_attributes")
-        .update({ attribute_points: (attrs.attribute_points ?? 0) + dupeAp })
-        .eq("profile_id", profile.id);
+    } else {
+      // Initialize wallet if it doesn't exist
+      await admin.from("player_xp_wallet").insert({
+        profile_id: profile.id,
+        xp_balance: dupeXp,
+        lifetime_xp: dupeXp,
+        skill_xp_balance: dupeXp,
+        skill_xp_lifetime: dupeXp,
+        attribute_points_balance: dupeAp,
+        attribute_points_lifetime: dupeAp,
+      });
     }
 
     // Instrument: only mint if this is NOT a duplicate
