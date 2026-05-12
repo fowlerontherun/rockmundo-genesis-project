@@ -763,13 +763,12 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
       
-      if (activeContract360 && netProfit > 0) {
+      if (activeContract360 && bandGigEarnings > 0) {
         const dealTypeName = (activeContract360 as any).label_deal_types?.name || '';
         if (dealTypeName === '360 Deal') {
-          // 360 deals take label's royalty % from touring revenue too
           const labelPct = (activeContract360.royalty_label_pct || 20) / 100;
-          labelGigCut = Math.round(netProfit * labelPct);
-          bandGigEarnings = netProfit - labelGigCut;
+          labelGigCut = Math.round(bandGigEarnings * labelPct);
+          bandGigEarnings = bandGigEarnings - labelGigCut;
           
           // Credit label
           const { data: label } = await supabaseClient
