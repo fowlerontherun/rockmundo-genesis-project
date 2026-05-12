@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const { data: bandsWithMerch, error: bandsError } = await supabase
       .from("bands")
       .select(`
-        id, name, fame, total_fans, casual_fans, dedicated_fans, superfans,
+        id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
         player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
       `)
       .gt("total_fans", 0);
