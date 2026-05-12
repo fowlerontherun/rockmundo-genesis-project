@@ -467,6 +467,21 @@ serve(async (req) => {
                 country: territory.country || null,
               });
 
+              // Route sales tax to band's home city treasury
+              if (homeCityId && salesTaxAmount > 0) {
+                try {
+                  await supabaseClient.rpc("credit_city_treasury", {
+                    p_city_id: homeCityId,
+                    p_amount: salesTaxAmount,
+                    p_type: "record_sales_tax",
+                    p_description: `${format.format_type} sales tax (${(salesTaxRate * 100).toFixed(1)}%)`,
+                    p_reference_id: release.id,
+                  });
+                } catch (e) {
+                  console.error("Failed to credit city treasury for sales tax", e);
+                }
+              }
+
               if (!isDigital) {
                 await supabaseClient
                   .from("release_formats")

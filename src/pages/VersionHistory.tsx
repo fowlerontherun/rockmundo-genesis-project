@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.306",
+    date: "2026-05-12",
+    changes: [
+      { type: 'feature', description: "City taxes now actually flow into city treasuries. New credit_city_treasury SECURITY DEFINER RPC updates city_treasury balance/total_tax_collected and inserts a city_treasury_ledger row in one call." },
+      { type: 'feature', description: "Gigs: complete-gig now applies the venue city's income_tax_rate to net gig profit and routes the tax to that city's treasury (ledger type gig_income_tax) before the 360 deal label cut, so band earnings reflect post-tax pay." },
+      { type: 'feature', description: "Record sales: generate-daily-sales and admin-boost-plays now credit each sale's sales_tax_amount to the band's home city treasury (ledger type record_sales_tax) instead of the tax disappearing into thin air." },
+      { type: 'feature', description: "Merch: simulate-merch-sales now aggregates each band's daily sales_tax + vat and credits the total to the band's home city treasury (ledger type merch_sales_tax)." },
+    ],
+  },
+  {
     version: "1.1.305",
     date: "2026-05-12",
     changes: [

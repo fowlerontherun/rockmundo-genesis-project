@@ -155,6 +155,26 @@ Deno.serve(async (req) => {
         net_revenue: Math.round(netRevenue * 100),
       });
 
+      // Route sales tax to band's home city treasury
+      try {
+        const { data: bandRow } = await supabaseAdmin
+          .from("bands")
+          .select("home_city_id")
+          .eq("id", release.band_id)
+          .maybeSingle();
+        if (bandRow?.home_city_id && salesTaxAmount > 0) {
+          await supabaseAdmin.rpc("credit_city_treasury", {
+            p_city_id: bandRow.home_city_id,
+            p_amount: salesTaxAmount,
+            p_type: "record_sales_tax",
+            p_description: `Admin pump ${saleType} sales tax`,
+            p_reference_id: release.id,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to credit city treasury for admin-boost sales tax", e);
+      }
+
       if (saleInsertError) {
         return new Response(JSON.stringify({ error: saleInsertError.message }), {
           status: 500,

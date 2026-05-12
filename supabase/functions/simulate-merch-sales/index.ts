@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const { data: bandsWithMerch, error: bandsError } = await supabase
       .from("bands")
       .select(`
-        id, name, fame, total_fans, casual_fans, dedicated_fans, superfans,
+        id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
         player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
       `)
       .gt("total_fans", 0);
@@ -282,6 +282,21 @@ Deno.serve(async (req) => {
         const bandNetRevenue = ordersToInsert.reduce((sum, o) => sum + o.net_revenue, 0);
         const bandTotalTaxes = ordersToInsert.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
         const bandTotalCosts = ordersToInsert.reduce((sum, o) => sum + (o.unit_price * o.quantity) - o.net_revenue - o.sales_tax - o.vat, 0);
+
+        // Route merch sales tax (sales_tax + vat) to band's home city treasury
+        try {
+          if ((band as any).home_city_id && bandTotalTaxes > 0) {
+            await supabase.rpc("credit_city_treasury", {
+              p_city_id: (band as any).home_city_id,
+              p_amount: bandTotalTaxes,
+              p_type: "merch_sales_tax",
+              p_description: `Merch sales tax for ${band.name} (${ordersToInsert.length} orders)`,
+              p_reference_id: band.id,
+            });
+          }
+        } catch (e) {
+          console.error(`[${JOB_NAME}] Failed to credit city treasury for merch tax:`, e);
+        }
         
         // ── 360 Deal: Check if band has a label contract that takes merch cut ──
         let labelMerchCut = 0;
