@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.305",
+    date: "2026-05-12",
+    changes: [
+      { type: 'feature', description: "Blind boxes hub tile: added a custom neon mystery-box tile image at /hub-tiles/blind-boxes.png so the Blind Boxes entry in the Premium Store hub renders artwork instead of a generic icon." },
+      { type: 'fix', description: "Blind box rewards now actually reach the player: AP and skill XP from openings were being written to player_attributes.attribute_points (an unread field) and were missing skill_xp_lifetime / attribute_points_lifetime totals on the wallet. open-blind-box now writes AP to player_xp_wallet.attribute_points_balance + attribute_points_lifetime and tops up skill_xp_lifetime, so the AP/XP shown in the reveal actually appears on the character sheet. Also seeds an empty wallet row if one is missing." },
+      { type: 'feature', description: "Buy Gems flow: added a Buy Gems button + dialog on /blind-boxes that converts in-game cash into premium tokens via a new buy-premium-tokens edge function ($10,000 cash = 1 token, max 500 tokens per purchase). Players can now top up tokens to open premium boxes without leaving the store." },
+    ],
+  },
+  {
     version: "1.1.304",
     date: "2026-05-11",
     changes: [

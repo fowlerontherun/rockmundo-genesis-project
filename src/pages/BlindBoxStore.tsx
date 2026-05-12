@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Coins, Gem, Package, Sparkles, Info, Shield, Clock, CalendarClock, Lock, XCircle, BarChart3, Bell, BellOff } from "lucide-react";
 import { BlindBoxPurchaseDialog } from "@/components/store/BlindBoxPurchaseDialog";
 import { BlindBoxRevealDialog } from "@/components/store/BlindBoxRevealDialog";
+import { BuyGemsDialog } from "@/components/store/BuyGemsDialog";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +110,7 @@ export default function BlindBoxStore() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<BlindBox | null>(null);
   const [reveal, setReveal] = useState<RevealResult | null>(null);
+  const [buyGemsOpen, setBuyGemsOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -232,8 +234,13 @@ export default function BlindBoxStore() {
           <Badge variant="outline" className="gap-1">
             <Gem className="h-3 w-3 text-purple-400" /> {tokens} tokens
           </Badge>
+          <Button size="sm" variant="default" className="h-7 gap-1" onClick={() => setBuyGemsOpen(true)}>
+            <Gem className="h-3.5 w-3.5" /> Buy Gems
+          </Button>
         </div>
       </div>
+
+      <BuyGemsDialog open={buyGemsOpen} onOpenChange={setBuyGemsOpen} cash={cash} tokens={tokens} />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading boxes…</p>
