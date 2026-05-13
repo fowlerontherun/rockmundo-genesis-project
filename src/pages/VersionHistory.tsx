@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.307",
+    date: "2026-05-13",
+    changes: [
+      { type: 'feature', description: "New admin page at /admin/city-treasuries showing all city treasury balances, total tax collected, total spent, and weekly budgets across every city. Includes summary cards for total balance, tax collected, total spent, and active treasury count." },
+      { type: 'feature', description: "Tax type breakdown cards on the admin treasury page: separate totals for gig income tax, record sales tax, and merch sales tax so admins can see which revenue stream contributes most to city treasuries." },
+      { type: 'feature', description: "Tax ledger entries table with tabs for All Taxes / Gig Tax / Record Tax / Merch Tax. Shows 200 most recent entries with city name, amount, description, and timestamp." },
+    ],
+  },
+  {
     version: "1.1.306",
     date: "2026-05-12",
     changes: [
