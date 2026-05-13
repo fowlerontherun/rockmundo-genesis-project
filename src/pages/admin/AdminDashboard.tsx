@@ -8,7 +8,8 @@ import {
   Users, Music, Mic2, BarChart3, DollarSign, Activity, 
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
-  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard
+  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard,
+  Landmark, Crown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,6 +77,9 @@ const AdminDashboard = () => {
     { label: "Player Management", path: "/admin/players", icon: Users },
     { label: "Release Admin", path: "/admin/releases", icon: Music },
     { label: "Cron Monitor", path: "/admin/cron-monitor", icon: Clock },
+    // City & Governance
+    { label: "City Treasuries", path: "/admin/city-treasuries", icon: Landmark },
+    { label: "City Governance", path: "/admin/city-governance", icon: Crown },
     // Content Management
     { label: "AI Song Generation", path: "/admin/ai-song-generation", icon: Headphones },
     { label: "Songwriting", path: "/admin/songwriting", icon: Mic2 },
