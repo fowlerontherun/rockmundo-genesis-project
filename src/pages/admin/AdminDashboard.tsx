@@ -8,7 +8,8 @@ import {
   Users, Music, Mic2, BarChart3, DollarSign, Activity, 
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
-  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard
+  Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard,
+  Landmark, Crown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
