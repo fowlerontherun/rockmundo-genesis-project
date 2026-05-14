@@ -214,6 +214,7 @@ const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultipl
 const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
 const CityTreasuryAdmin = lazyWithRetry(() => import("./pages/admin/CityTreasuryAdmin"));
+const CityTreasuryDetail = lazyWithRetry(() => import("./pages/admin/CityTreasuryDetail"));
 const PracticeTracksAdmin = lazyWithRetry(() => import("./pages/admin/PracticeTracksAdmin"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
