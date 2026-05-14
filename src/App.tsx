@@ -214,6 +214,7 @@ const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultipl
 const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
 const CityTreasuryAdmin = lazyWithRetry(() => import("./pages/admin/CityTreasuryAdmin"));
+const CityTreasuryDetail = lazyWithRetry(() => import("./pages/admin/CityTreasuryDetail"));
 const PracticeTracksAdmin = lazyWithRetry(() => import("./pages/admin/PracticeTracksAdmin"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
@@ -517,6 +518,7 @@ function App() {
                     <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/city-governance" element={<CityGovernanceAdmin />} />
                     <Route path="admin/city-treasuries" element={<CityTreasuryAdmin />} />
+                    <Route path="admin/city-treasuries/:cityId" element={<CityTreasuryDetail />} />
                     <Route path="admin/districts" element={<AdminDistricts />} />
                     <Route path="admin/city-studios" element={<AdminCityStudios />} />
                     <Route path="admin/production-notes" element={<AdminProductionNotes />} />

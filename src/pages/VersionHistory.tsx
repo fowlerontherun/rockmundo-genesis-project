@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.308",
+    date: "2026-05-14",
+    changes: [
+      { type: 'feature', description: "New admin city treasury drill-down at /admin/city-treasuries/:cityId showing balance, total tax collected, total spent, weekly budget, salaries paid, and pending commitments for a single city." },
+      { type: 'feature', description: "Filtered ledger view per city with type, direction (credits/debits), date range, and free-text search filters; shows live filtered totals (credits, debits, net) and supports CSV export of the filtered ledger." },
+      { type: 'feature', description: "City names in the admin City Treasury Balances table are now clickable links into the new drill-down page." },
+    ],
+  },
+  {
     version: "1.1.307",
     date: "2026-05-13",
     changes: [

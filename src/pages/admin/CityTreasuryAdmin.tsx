@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,7 +215,12 @@ const CityTreasuryAdmin = () => {
                     cityRows.map((row) => (
                       <TableRow key={row.city.id}>
                         <TableCell className="font-medium">
-                          {row.city.name}
+                          <Link
+                            to={`/admin/city-treasuries/${row.city.id}`}
+                            className="hover:underline text-primary"
+                          >
+                            {row.city.name}
+                          </Link>
                           <span className="block text-xs text-muted-foreground">{row.city.country}</span>
                         </TableCell>
                         <TableCell className="text-right font-medium text-emerald-500">
