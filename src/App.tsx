@@ -518,6 +518,7 @@ function App() {
                     <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/city-governance" element={<CityGovernanceAdmin />} />
                     <Route path="admin/city-treasuries" element={<CityTreasuryAdmin />} />
+                    <Route path="admin/city-treasuries/:cityId" element={<CityTreasuryDetail />} />
                     <Route path="admin/districts" element={<AdminDistricts />} />
                     <Route path="admin/city-studios" element={<AdminCityStudios />} />
                     <Route path="admin/production-notes" element={<AdminProductionNotes />} />
