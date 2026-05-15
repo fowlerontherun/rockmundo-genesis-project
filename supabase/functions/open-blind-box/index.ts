@@ -170,20 +170,67 @@ serve(async (req) => {
       });
     }
 
-    // Instrument: only mint if this is NOT a duplicate
+    // Instrument: only mint if this is NOT a duplicate.
+    // We mint into THREE places so the item is visible everywhere:
+    //  1. player_personal_gear  -> Blind Box Inventory page
+    //  2. equipment_items       -> a unique catalog entry for this unboxed item
+    //  3. player_equipment      -> grants ownership shown in My Gear / loadouts
     let gear: any = null;
+    let equipmentItemId: string | null = null;
+    let playerEquipmentId: string | null = null;
     if (!isDuplicate) {
-      const ins = await admin.from("player_personal_gear").insert({
+      const displayName = `${instrument.name} (${box.name})`;
+      const rarityForTier: Record<Tier, string> = {
+        common: "common",
+        rare: "rare",
+        epic: "epic",
+        legendary: "legendary",
+      };
+      const statBoosts: Record<string, number> = {};
+      if (skillSlug) statBoosts[skillSlug] = Math.max(1, Math.round(quality / 10));
+
+      const ppgIns = await admin.from("player_personal_gear").insert({
         user_id: user.id,
         gear_type: instrument.type,
-        gear_name: `${instrument.name} (${box.name})`,
+        gear_name: displayName,
         quality_rating: quality,
         condition_rating: 100,
         purchase_cost: Math.round(price),
-        stat_boosts: { theme: box.theme_genre, tier },
+        stat_boosts: { theme: box.theme_genre, tier, ...statBoosts },
         notes: `Unboxed from ${box.name} — ${tier.toUpperCase()} tier`,
       }).select().single();
-      gear = ins.data;
+      if (ppgIns.error) console.error("[open-blind-box] player_personal_gear insert failed:", ppgIns.error);
+      gear = ppgIns.data;
+
+      // Catalog entry so it can be shown in My Gear / loadouts
+      const eqIns = await admin.from("equipment_items").insert({
+        name: displayName,
+        category: instrument.type,
+        subcategory: "blind_box",
+        price: Math.round(price),
+        rarity: rarityForTier[tier],
+        description: `Unboxed from the ${box.name} blind box (${box.theme_genre}). ${tier.toUpperCase()} tier.`,
+        stat_boosts: statBoosts,
+        skill_boost_slug: skillSlug ?? null,
+        stock: 0,
+      }).select("id").single();
+      if (eqIns.error) {
+        console.error("[open-blind-box] equipment_items insert failed:", eqIns.error);
+      } else {
+        equipmentItemId = eqIns.data.id;
+        const peIns = await admin.from("player_equipment").insert({
+          user_id: profile.id, // player_equipment.user_id stores profile_id
+          equipment_id: equipmentItemId,
+          condition: 100,
+          is_equipped: false,
+          equipped: false,
+        }).select("id").single();
+        if (peIns.error) {
+          console.error("[open-blind-box] player_equipment insert failed:", peIns.error);
+        } else {
+          playerEquipmentId = peIns.data.id;
+        }
+      }
     }
 
     // Duplicate -> award crafting materials (shards) of matching rarity tier
@@ -229,9 +276,11 @@ serve(async (req) => {
       const ins = await admin.from("songs").insert({
         user_id: user.id,
         profile_id: profile.id,
-        title: `${songTitle}`,
+        title: songTitle,
         genre: box.theme_genre,
-        status: "completed",
+        status: "recorded", // CHECK constraint allows: draft | recorded | released
+        catalog_status: "private",
+        ownership_type: "personal",
         quality_score: quality,
         song_rating: quality,
         melody_strength: quality,
@@ -241,10 +290,11 @@ serve(async (req) => {
         production_potential: quality,
         music_progress: 1000,
         lyrics_progress: 1000,
-        catalog_status: "owned",
-        ownership_type: "solo",
         completed_at: new Date().toISOString(),
       }).select().single();
+      if (ins.error) {
+        console.error("[open-blind-box] songs insert failed:", ins.error);
+      }
       song = ins.data;
     }
 
@@ -275,7 +325,13 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       tier, xp: dupeXp, ap: dupeAp, skill_slug: skillSlug,
-      instrument: { ...instrument, quality, id: gear?.id ?? null },
+      instrument: {
+        ...instrument,
+        quality,
+        id: gear?.id ?? null,
+        equipment_item_id: equipmentItemId,
+        player_equipment_id: playerEquipmentId,
+      },
       song: { id: song?.id ?? null, title: songTitle, quality, genre: box.theme_genre },
       new_balance: balance - price,
       currency: box.currency,
