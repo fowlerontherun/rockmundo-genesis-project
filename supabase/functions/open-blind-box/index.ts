@@ -276,9 +276,11 @@ serve(async (req) => {
       const ins = await admin.from("songs").insert({
         user_id: user.id,
         profile_id: profile.id,
-        title: `${songTitle}`,
+        title: songTitle,
         genre: box.theme_genre,
-        status: "completed",
+        status: "recorded", // CHECK constraint allows: draft | recorded | released
+        catalog_status: "private",
+        ownership_type: "personal",
         quality_score: quality,
         song_rating: quality,
         melody_strength: quality,
@@ -288,10 +290,11 @@ serve(async (req) => {
         production_potential: quality,
         music_progress: 1000,
         lyrics_progress: 1000,
-        catalog_status: "owned",
-        ownership_type: "solo",
         completed_at: new Date().toISOString(),
       }).select().single();
+      if (ins.error) {
+        console.error("[open-blind-box] songs insert failed:", ins.error);
+      }
       song = ins.data;
     }
 
