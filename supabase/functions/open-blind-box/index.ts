@@ -325,7 +325,13 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       tier, xp: dupeXp, ap: dupeAp, skill_slug: skillSlug,
-      instrument: { ...instrument, quality, id: gear?.id ?? null },
+      instrument: {
+        ...instrument,
+        quality,
+        id: gear?.id ?? null,
+        equipment_item_id: equipmentItemId,
+        player_equipment_id: playerEquipmentId,
+      },
       song: { id: song?.id ?? null, title: songTitle, quality, genre: box.theme_genre },
       new_balance: balance - price,
       currency: box.currency,
