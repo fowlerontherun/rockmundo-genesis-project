@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.309",
+    date: "2026-05-15",
+    changes: [
+      { type: 'fix', description: "Blind box songs now actually save and appear in your song catalog. Previous song inserts silently failed because the function used status='completed' (the songs table only allows draft/recorded/released) and invalid catalog_status='owned'/ownership_type='solo'. Now uses status='recorded', catalog_status='private', ownership_type='personal' so the song is a real, usable track in Song Manager." },
+      { type: 'feature', description: "Blind box instruments now appear in My Gear / loadouts. Each unboxed instrument also creates a unique equipment_items catalog row (rarity matches box tier, skill boost from box) and a player_equipment grant linked to the active character, alongside the existing player_personal_gear ledger entry." },
+      { type: 'fix', description: "open-blind-box edge function now logs insert errors instead of silently swallowing them, making future ledger mismatches debuggable." },
+    ],
+  },
+  {
     version: "1.1.308",
     date: "2026-05-14",
     changes: [
