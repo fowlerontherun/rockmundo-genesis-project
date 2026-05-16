@@ -53,6 +53,7 @@ const Travel = () => {
   const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentCity, setCurrentCity] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
