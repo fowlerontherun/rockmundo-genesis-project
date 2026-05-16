@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.326",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Onboarding Appearance step — now has clearer copy explaining that hitting 'Save as Profile Avatar' is what locks the AI avatar onto the profile (and that the step is optional). The final review (Your Story So Far) now renders a live avatar preview pulled from profiles.avatar_url next to your display name, so you can see exactly what will appear on the dashboard before clicking Begin Journey." },
+      { type: 'fix', description: "Avatar save now invalidates profile-avatar, profile, active-profile and onboarding-avatar-preview query keys so the FloatingAvatarWidget, dashboard header, and onboarding review refresh immediately after a new avatar is saved." },
+    ],
+  },
+  {
     version: "1.1.325",
     date: "2026-05-16",
     changes: [
