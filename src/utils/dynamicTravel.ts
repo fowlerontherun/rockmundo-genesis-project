@@ -263,8 +263,15 @@ export function getAvailableModes(
     
     // Mode-specific constraints
     if (mode === 'bus') {
-      // Bus requires same country
-      if (fromCity.country !== toCity.country) {
+      // Bus normally within same country, but allow short cross-border European
+      // coach routes (≤ 250 km) so neighbouring capitals are always reachable.
+      const sameCountry = fromCity.country === toCity.country;
+      const shortEuropeanHop =
+        !sameCountry &&
+        fromCity.region === 'Europe' &&
+        toCity.region === 'Europe' &&
+        distanceKm <= 250;
+      if (!sameCountry && !shortEuropeanHop) {
         available = false;
         unavailableReason = 'Bus travel only within same country';
       }
