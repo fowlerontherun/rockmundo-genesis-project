@@ -168,7 +168,12 @@ const CraftingWorkshop = () => {
         </TabsContent>
 
         <TabsContent value="salvage">
-          <SalvagePanel equipment={equipment} />
+          <SalvagePanel
+            equipment={equipment}
+            materialsCatalog={materialsCatalog}
+            onSalvage={(equipmentId) => salvageEquipment({ equipmentId })}
+            isSalvaging={isSalvaging}
+          />
         </TabsContent>
 
         <TabsContent value="enchant">
