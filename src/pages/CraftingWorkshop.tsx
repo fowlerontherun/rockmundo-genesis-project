@@ -26,6 +26,8 @@ const CraftingWorkshop = () => {
     isCrafting,
     collectCraft,
     isCollecting,
+    salvageEquipment,
+    isSalvaging,
   } = useCraftingSystem();
 
   const { data: equipmentData } = usePlayerEquipment();
