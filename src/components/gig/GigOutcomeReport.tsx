@@ -120,6 +120,7 @@ export const GigOutcomeReport = ({
   ticketPrice = 20,
   stageBehaviorUsed,
   bandId,
+  gigId,
 }: Props) => {
   if (!outcome) return null;
 
