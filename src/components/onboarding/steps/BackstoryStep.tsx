@@ -27,9 +27,25 @@ export const BackstoryStep = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(data.backstoryText);
+  const { profileId } = useActiveProfile();
+
+  const { data: avatarProfile } = useQuery({
+    queryKey: ["onboarding-avatar-preview", profileId],
+    queryFn: async () => {
+      if (!profileId) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", profileId)
+        .maybeSingle();
+      return data as { avatar_url: string | null } | null;
+    },
+    enabled: !!profileId,
+  });
 
   const selectedOrigin = origins.find((o) => o.id === data.originId);
   const selectedTraits = traits.filter((t) => data.traitIds.includes(t.id));
+  const displayName = data.artistName || data.displayName || "You";
 
   const generateBackstory = async () => {
     setIsGenerating(true);
