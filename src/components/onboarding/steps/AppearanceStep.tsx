@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, ImageIcon } from "lucide-react";
 import { AiAvatarCreator } from "@/components/avatar-system/AiAvatarCreator";
 
 export const AppearanceStep = () => {
@@ -10,7 +10,13 @@ export const AppearanceStep = () => {
         </div>
         <h2 className="text-xl font-bold text-foreground">Create Your Look</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Upload a photo to generate your AI avatar. You can always change this later.
+          Upload a photo to generate your AI avatar. Tap{" "}
+          <span className="font-medium text-foreground">Save as Profile Avatar</span> to lock it in —
+          it will appear on your profile, dashboard and band pages.
+        </p>
+        <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ImageIcon className="h-3 w-3" />
+          Optional — you can skip and add an avatar later from the Avatar Designer.
         </p>
       </div>
 

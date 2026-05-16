@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { BookOpen, RefreshCw, Loader2, Sparkles, Check } from "lucide-react";
+import { BookOpen, RefreshCw, Loader2, Sparkles, Check, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import type { OnboardingData } from "../OnboardingWizard";
 import type { CharacterOrigin, PersonalityTrait } from "@/types/roleplaying";
 
@@ -24,9 +27,25 @@ export const BackstoryStep = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(data.backstoryText);
+  const { profileId } = useActiveProfile();
+
+  const { data: avatarProfile } = useQuery({
+    queryKey: ["onboarding-avatar-preview", profileId],
+    queryFn: async () => {
+      if (!profileId) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", profileId)
+        .maybeSingle();
+      return data as { avatar_url: string | null } | null;
+    },
+    enabled: !!profileId,
+  });
 
   const selectedOrigin = origins.find((o) => o.id === data.originId);
   const selectedTraits = traits.filter((t) => data.traitIds.includes(t.id));
+  const displayName = data.artistName || data.displayName || "You";
 
   const generateBackstory = async () => {
     setIsGenerating(true);
@@ -97,6 +116,29 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
           Every legend has an origin. Here's yours.
         </p>
       </div>
+
+      {/* Avatar + identity preview */}
+      <Card className="bg-muted/30">
+        <CardContent className="flex items-center gap-4 p-4">
+          <Avatar className="h-20 w-20 border-2 border-primary/30">
+            {avatarProfile?.avatar_url ? (
+              <AvatarImage src={avatarProfile.avatar_url} alt={displayName} />
+            ) : null}
+            <AvatarFallback>
+              <User className="h-8 w-8 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Profile</p>
+            <p className="truncate text-lg font-semibold">{displayName}</p>
+            <p className="text-xs text-muted-foreground">
+              {avatarProfile?.avatar_url
+                ? "Avatar saved to your profile"
+                : "No avatar set — you can add one any time from the Avatar Designer"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary of choices */}
       <Card className="bg-muted/30">

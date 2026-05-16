@@ -181,6 +181,8 @@ export function AiAvatarCreator() {
 
       queryClient.invalidateQueries({ queryKey: ["profile-avatar"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["onboarding-avatar-preview"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       toast.success("Avatar saved to your profile!");
     } catch (err) {
       console.error("Save avatar error:", err);
