@@ -305,6 +305,14 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
             <ToggleGroupItem value="all" size="sm">All</ToggleGroupItem>
             <ToggleGroupItem value="unlearned" size="sm">Unlearned</ToggleGroupItem>
           </ToggleGroup>
+          <Button
+            variant={hideMaxed ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setHideMaxed(v => !v)}
+            className="text-xs h-8"
+          >
+            {hideMaxed ? 'Hide maxed' : 'Show maxed'}
+          </Button>
         </div>
       </div>
 
