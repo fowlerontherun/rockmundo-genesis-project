@@ -39,7 +39,7 @@ export function useInbox(category?: InboxCategory | 'all') {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['inbox', userId, category],
+    queryKey: ['inbox', userId, profileId, category],
     queryFn: async () => {
       if (!userId) return [];
 
@@ -61,7 +61,14 @@ export function useInbox(category?: InboxCategory | 'all') {
         throw error;
       }
 
-      return (data || []) as InboxMessage[];
+      // Only show messages addressed to the currently active character, or
+      // legacy/system-wide messages (no profile_id tag).
+      const rows = (data || []) as InboxMessage[];
+      if (!profileId) return rows;
+      return rows.filter((m) => {
+        const pid = (m.metadata as any)?.profile_id;
+        return !pid || pid === profileId;
+      });
     },
     enabled: !!profileId,
     refetchInterval: 30000,
