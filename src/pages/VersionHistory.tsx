@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.314",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Gig completion now awards personal fame and fans to every band member's profile, not just the band. Each non-touring (core) member gains 60% of the gig's fame_gained personally, plus a 30%-of-new-fans pool split across the lineup. Touring members get a smaller 10% fame slice and no personal fans (they passed through). Values are clamped to INT4 limits and the granted amounts are written into experience_ledger.metadata as personal_fame_gained / personal_fans_gained so the new Daily Summary inbox surface them correctly." },
+      { type: 'improvement', description: "complete-gig now loads members in a single query (including touring members and profile_id) instead of two passes, and logs the per-member fame/fans rewards for easier debugging." },
+    ],
+  },
+  {
     version: "1.1.313",
     date: "2026-05-16",
     changes: [
