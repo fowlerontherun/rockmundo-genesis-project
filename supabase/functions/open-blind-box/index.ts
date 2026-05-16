@@ -270,15 +270,19 @@ serve(async (req) => {
       }
     }
 
-    // Song — duplicates skip song generation as well to avoid catalog spam
+    // Song — duplicates skip song generation to avoid catalog spam.
+    // Drop a FINISHED WRITTEN song (not pre-recorded) so the player can
+    // record it themselves, or sell / trade it on the marketplace like
+    // any song produced through the normal songwriting flow.
     let song: any = null;
     if (!isDuplicate) {
       const ins = await admin.from("songs").insert({
         user_id: user.id,
         profile_id: profile.id,
+        original_writer_id: profile.id,
         title: songTitle,
         genre: box.theme_genre,
-        status: "recorded", // CHECK constraint allows: draft | recorded | released
+        // status defaults to 'draft' — i.e. a fully written, unrecorded song
         catalog_status: "private",
         ownership_type: "personal",
         quality_score: quality,
@@ -288,9 +292,9 @@ serve(async (req) => {
         rhythm_strength: quality,
         arrangement_strength: quality,
         production_potential: quality,
-        music_progress: 1000,
-        lyrics_progress: 1000,
-        completed_at: new Date().toISOString(),
+        music_progress: 2000,
+        lyrics_progress: 2000,
+        completed_at: null,
       }).select().single();
       if (ins.error) {
         console.error("[open-blind-box] songs insert failed:", ins.error);

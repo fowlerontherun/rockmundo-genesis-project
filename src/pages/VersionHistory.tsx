@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.316",
+    date: "2026-05-16",
+    changes: [
+      { type: 'fix', description: "Blind box song drops are now delivered as finished WRITTEN songs (status='draft', music/lyrics progress 2000/2000, completed_at null, original_writer_id set to the opener's profile) instead of being pre-recorded. Players can now take them into the studio to record them, or list them for sale / trade on the marketplace just like songs produced through the normal songwriting flow." },
+    ],
+  },
+  {
     version: "1.1.315",
     date: "2026-05-16",
     changes: [
