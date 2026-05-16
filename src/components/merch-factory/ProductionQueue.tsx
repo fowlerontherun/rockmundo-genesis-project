@@ -34,11 +34,12 @@ export function ProductionQueue({ factoryId }: ProductionQueueProps) {
   
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
           Production Queue
         </CardTitle>
+        <CreateProductionOrderDialog factoryId={factoryId} />
       </CardHeader>
       <CardContent>
         {orders?.length === 0 ? (
