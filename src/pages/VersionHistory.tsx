@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.320",
+    date: "2026-05-16",
+    changes: [
+      { type: 'improvement', description: "Skill tree now has a 'Hide maxed' toggle that is on by default — skills already at their tier cap (basic 10, professional 20, mastery 30) are hidden so the list focuses on skills you can still level up. Click to show them again." },
+    ],
+  },
+  {
     version: "1.1.319",
     date: "2026-05-16",
     changes: [
