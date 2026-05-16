@@ -25,6 +25,8 @@ export interface MarketplaceListing {
     genre: string;
     quality_score: number;
     duration_display: string | null;
+    acquisition_source?: string | null;
+    ownership_type?: string | null;
   } | null;
   bid_count?: number;
 }
@@ -64,7 +66,7 @@ export const useSongAuctions = (userId?: string) => {
         .select(`
           *,
           songs (
-            id, title, genre, quality_score, duration_display
+            id, title, genre, quality_score, duration_display, acquisition_source, ownership_type
           )
         `)
         .eq("listing_status", "active")
@@ -89,7 +91,7 @@ export const useSongAuctions = (userId?: string) => {
         .select(`
           *,
           songs (
-            id, title, genre, quality_score, duration_display
+            id, title, genre, quality_score, duration_display, acquisition_source, ownership_type
           )
         `)
         .eq("seller_user_id", userId)
@@ -108,7 +110,7 @@ export const useSongAuctions = (userId?: string) => {
       if (!userId) return [];
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, duration_display, ownership_type")
+        .select("id, title, genre, quality_score, duration_display, ownership_type, acquisition_source")
         .eq("profile_id", userId)
         .eq("ownership_type", "purchased")
         .order("updated_at", { ascending: false });
@@ -128,7 +130,7 @@ export const useSongAuctions = (userId?: string) => {
       // Get draft songs I own that are NOT purchased
       const { data: songs, error } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type")
+        .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type, acquisition_source")
         .eq("profile_id", userId)
         .neq("ownership_type", "purchased")
         .eq("status", "draft")

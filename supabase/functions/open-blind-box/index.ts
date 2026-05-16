@@ -285,6 +285,7 @@ serve(async (req) => {
         // status defaults to 'draft' — i.e. a fully written, unrecorded song
         catalog_status: "private",
         ownership_type: "personal",
+        acquisition_source: "blind_box",
         quality_score: quality,
         song_rating: quality,
         melody_strength: quality,

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Music, DollarSign, Clock, Gavel, Tag } from "lucide-react";
+import { Plus, Music, DollarSign, Clock, Gavel, Tag, Package, Gift } from "lucide-react";
 import { useSongAuctions } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
@@ -73,21 +73,34 @@ export const CreateListingTab = ({ userId }: CreateListingTabProps) => {
                 <SelectValue placeholder={sellableLoading ? "Loading songs..." : "Select a song..."} />
               </SelectTrigger>
               <SelectContent>
-                {sellableSongs.map(song => (
-                  <SelectItem key={song.id} value={song.id}>
-                    <span className="flex items-center gap-2">
-                      <Music className="h-3 w-3" />
-                      {song.title}
-                      <Badge variant="outline" className="text-xs">{song.genre}</Badge>
-                      <Badge variant="secondary" className="text-xs">Q: {song.quality_score}</Badge>
-                    </span>
-                  </SelectItem>
-                ))}
+                {sellableSongs.map(song => {
+                  const src = (song as any).acquisition_source as string | undefined;
+                  return (
+                    <SelectItem key={song.id} value={song.id}>
+                      <span className="flex items-center gap-2">
+                        <Music className="h-3 w-3" />
+                        {song.title}
+                        <Badge variant="outline" className="text-xs">{song.genre}</Badge>
+                        <Badge variant="secondary" className="text-xs">Q: {song.quality_score}</Badge>
+                        {src === "blind_box" && (
+                          <Badge variant="default" className="text-[10px] gap-1 bg-purple-500/20 text-purple-300 border-purple-500/30">
+                            <Package className="h-2.5 w-2.5" />Blind Box
+                          </Badge>
+                        )}
+                        {src === "gift" && (
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <Gift className="h-2.5 w-2.5" />Gift
+                          </Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             {sellableSongs.length === 0 && !sellableLoading && (
               <p className="text-sm text-muted-foreground">
-                No eligible songs. Only unrecorded draft songs that haven't been added to a setlist or rehearsed can be sold.
+                No eligible songs. You can list any unrecorded draft song you wrote, received as a gift, or pulled from a blind box — as long as it isn't already in a setlist, rehearsed, or actively listed.
               </p>
             )}
           </div>

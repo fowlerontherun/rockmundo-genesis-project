@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.321",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Songs now carry an acquisition_source field (written / blind_box / gift / purchased) so the marketplace can label them properly. Blind box drops are tagged with acquisition_source='blind_box' and ownership_type='personal' — they show up as fully sellable and tradable on the Song Market right alongside songs you wrote yourself." },
+      { type: 'improvement', description: "Marketplace listing rules clarified: any unrecorded draft song the player owns (written, gifted, or blind-box) that isn't already in a setlist, rehearsed, or actively listed can be put up for sale or auction. The 'No eligible songs' copy on CreateListingTab now reflects this." },
+      { type: 'improvement', description: "Browse Listings and Browse Auctions now show source badges (Blind Box, Gifted) on each card, and Browse Listings has a new source filter (All / Original / Blind Box / Gifted) so buyers can hunt specifically for blind-box drops." },
+    ],
+  },
+  {
     version: "1.1.320",
     date: "2026-05-16",
     changes: [

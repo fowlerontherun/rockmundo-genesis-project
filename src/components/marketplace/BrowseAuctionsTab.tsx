@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Music, DollarSign, Clock, Gavel, ShoppingCart, Users } from "lucide-react";
+import { Music, DollarSign, Clock, Gavel, ShoppingCart, Users, Package, Gift } from "lucide-react";
 import { useSongAuctions } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining, calculateMinimumBid } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
@@ -85,10 +85,18 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
                 </div>
               </CardHeader>
               <CardContent className="flex-1 space-y-3">
-                {/* Quality */}
-                <Badge variant="outline" className="text-xs">
-                  Quality: {listing.songs?.quality_score || 0}
-                </Badge>
+                {/* Quality + source */}
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="outline" className="text-xs">
+                    Quality: {listing.songs?.quality_score || 0}
+                  </Badge>
+                  {(() => {
+                    const src = (listing.songs as any)?.acquisition_source ?? "written";
+                    if (src === "blind_box") return <Badge variant="outline" className="text-[10px] gap-1 bg-purple-500/20 text-purple-300 border-purple-500/30"><Package className="h-3 w-3" />Blind Box</Badge>;
+                    if (src === "gift") return <Badge variant="outline" className="text-[10px] gap-1 bg-pink-500/15 text-pink-300 border-pink-500/30"><Gift className="h-3 w-3" />Gifted</Badge>;
+                    return null;
+                  })()}
+                </div>
 
                 {/* Price Display */}
                 <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">

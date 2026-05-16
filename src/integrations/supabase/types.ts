@@ -30194,6 +30194,7 @@ export type Database = {
       }
       songs: {
         Row: {
+          acquisition_source: string
           added_to_repertoire_at: string | null
           added_to_repertoire_by: string | null
           ai_generated_lyrics: boolean | null
@@ -30257,6 +30258,7 @@ export type Database = {
           version: string | null
         }
         Insert: {
+          acquisition_source?: string
           added_to_repertoire_at?: string | null
           added_to_repertoire_by?: string | null
           ai_generated_lyrics?: boolean | null
@@ -30320,6 +30322,7 @@ export type Database = {
           version?: string | null
         }
         Update: {
+          acquisition_source?: string
           added_to_repertoire_at?: string | null
           added_to_repertoire_by?: string | null
           ai_generated_lyrics?: boolean | null
