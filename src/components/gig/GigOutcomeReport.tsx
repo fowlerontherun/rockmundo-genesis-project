@@ -586,7 +586,7 @@ export const GigOutcomeReport = ({
               gigId={gigId}
               bandId={bandId}
               fameGained={fameGained}
-              newFansTotal={safeNumber(fanConversion?.totalNewFans ?? (outcome as any).fans_gained ?? 0)}
+              newFansTotal={safeNumber(fanConversion?.newFansGained ?? (outcome as any).fans_gained ?? 0)}
             />
           )}
 
