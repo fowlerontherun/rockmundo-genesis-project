@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
           .from('player_employment')
           .update({
             shifts_completed: (shift.player_employment.shifts_completed || 0) + 1,
-            total_earnings: (shift.player_employment.total_earnings || 0) + (shift.earnings || 0),
+            total_earnings: (shift.player_employment.total_earnings || 0) + netEarnings,
             last_shift_at: nowIso,
           })
           .eq('id', shift.employment_id);
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
           throw profileFetchError;
         }
 
-        const updatedCash = (profile?.cash || 0) + (shift.earnings || 0);
+        const updatedCash = (profile?.cash || 0) + netEarnings;
         const updatedHealth = Math.max(
           0,
           Math.min(100, (profile?.health || 100) + (shift.health_impact || 0))
