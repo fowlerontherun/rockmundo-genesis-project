@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.312",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "City treasury review: wage income tax is now actually withheld at clock-out. shift-clock-out reads the job's city_id, looks up the active city_laws.income_tax_rate, deducts it from the shift earnings before crediting the player's cash and employment.total_earnings, and credits the city treasury with a new 'employment_income_tax' ledger entry tagged with the shift id. Audit metadata (gross, net, tax, city) is also written to experience_ledger." },
+      { type: 'improvement', description: "City treasury detail page gains a 'Revenue & Spend by Source' card that lifts every credit/debit type out of the raw ledger and shows lifetime entries, credits, debits, net, and share of total credits per source — so admins can see at a glance whether gig income tax, record sales tax, merch sales tax, wage withholdings, and other streams are flowing in correctly." },
+      { type: 'improvement', description: "Confirmed the four existing tax credit paths are correctly routed: complete-gig → venue city (gig_income_tax), generate-daily-sales → home city (record_sales_tax), admin-boost-plays → home city (record_sales_tax), simulate-merch-sales → home city (merch_sales_tax). All use the credit_city_treasury RPC which updates balance, total_tax_collected, and writes a ledger row atomically." },
+    ],
+  },
+  {
     version: "1.1.311",
     date: "2026-05-16",
     changes: [
