@@ -201,6 +201,17 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
         break;
     }
 
+    // Hide maxed skills (default on)
+    if (hideMaxed) {
+      filtered = filtered.filter(skill => {
+        const sp = progress.find(p => p.skill_slug === skill.slug);
+        const lvl = sp?.current_level ?? 0;
+        const tier = getSkillTier(skill.slug);
+        const cap = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
+        return lvl < cap;
+      });
+    }
+
     // Sort by tier then name
     filtered.sort((a, b) => {
       const tierOrder = { basic: 0, professional: 1, mastery: 2 };
@@ -210,7 +221,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
     });
 
     return filtered;
-  }, [skills, progress, selectedCategory, filterMode, learnedSlugs, educationSlugs]);
+  }, [skills, progress, selectedCategory, filterMode, learnedSlugs, educationSlugs, hideMaxed]);
 
   // Count skills per category
   const categoryCounts = useMemo(() => {
