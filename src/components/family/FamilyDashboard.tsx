@@ -168,6 +168,11 @@ export function FamilyDashboard() {
         </Card>
       )}
 
+      {/* Wedding & Honeymoon planning */}
+      {marriage && (marriage.status === "active" || marriage.status === "accepted" || marriage.status === "proposed") && (
+        <WeddingHoneymoonSection marriageId={marriage.id} />
+      )}
+
       {/* Ready Births */}
       {readyBirths.map(req => (
         <Card key={req.id} className="border-social-loyalty/40 bg-social-loyalty/5 shadow-[0_0_16px_hsl(var(--social-loyalty)/0.15)]">
