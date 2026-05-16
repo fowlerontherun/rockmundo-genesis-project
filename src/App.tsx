@@ -210,6 +210,7 @@ const MusicVideosAdmin = lazyWithRetry(() => import("./pages/admin/MusicVideosAd
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
+const FameFansAttribution = lazyWithRetry(() => import("./pages/admin/FameFansAttribution"));
 const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultiplier"));
 const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
