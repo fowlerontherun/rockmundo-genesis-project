@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Music, DollarSign, Clock, Gavel, Tag } from "lucide-react";
+import { Plus, Music, DollarSign, Clock, Gavel, Tag, Package, Gift } from "lucide-react";
 import { useSongAuctions } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
