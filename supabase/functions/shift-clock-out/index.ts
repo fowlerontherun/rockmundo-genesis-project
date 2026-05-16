@@ -147,12 +147,43 @@ Deno.serve(async (req) => {
           throw shiftFetchError ?? new Error('Shift not found');
         }
 
-        // Fetch job details for fame penalty tier
+        // Fetch job details for fame penalty tier + city for income tax routing
         const { data: job } = await supabaseClient
           .from('jobs')
-          .select('title, category, fame_penalty_tier, base_fame_impact')
+          .select('title, category, fame_penalty_tier, base_fame_impact, city_id')
           .eq('id', shift.job_id)
           .single();
+
+        // Compute city income tax withholding on shift earnings
+        let cityIncomeTax = 0;
+        const grossEarnings = shift.earnings || 0;
+        let netEarnings = grossEarnings;
+        try {
+          if (job?.city_id && grossEarnings > 0) {
+            const { data: laws } = await supabaseClient
+              .from('city_laws')
+              .select('income_tax_rate')
+              .eq('city_id', job.city_id)
+              .is('effective_until', null)
+              .maybeSingle();
+            const taxRate = Math.max(0, Math.min(50, Number(laws?.income_tax_rate ?? 0))) / 100;
+            if (taxRate > 0) {
+              cityIncomeTax = Math.round(grossEarnings * taxRate);
+              netEarnings = grossEarnings - cityIncomeTax;
+              if (cityIncomeTax > 0) {
+                await supabaseClient.rpc('credit_city_treasury', {
+                  p_city_id: job.city_id,
+                  p_amount: cityIncomeTax,
+                  p_type: 'employment_income_tax',
+                  p_description: `Wage withholding (${(taxRate * 100).toFixed(1)}%) — ${job?.title ?? 'shift'}`,
+                  p_reference_id: shiftId,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.log('[shift-clock-out] Error applying city income tax:', e);
+        }
 
         // Calculate dynamic fame impact
         const { fameImpact: dynamicFameImpact, bandName } = await calculateDynamicFameImpact(
