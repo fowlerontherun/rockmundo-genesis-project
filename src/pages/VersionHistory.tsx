@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.322",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Twaater profile pages: the Replies tab now lists every reply this account has posted (pulled from twaat_replies) with the parent twaat preview and a 'View thread' link. The Likes tab lists every twaat this account has liked, rendered as full TwaatCards so you can re-like, reply or retwaat from the same row." },
+    ],
+  },
+  {
     version: "1.1.321",
     date: "2026-05-16",
     changes: [
