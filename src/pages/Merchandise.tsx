@@ -15,6 +15,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
 import { TShirtDesignerNew } from "@/components/merchandise/TShirtDesignerNew";
+import { VariantManager } from "@/components/merchandise/VariantManager";
 import { SavedDesigns } from "@/components/merchandise/SavedDesigns";
 import { MerchItemCard } from "@/components/merchandise/MerchItemCard";
 import { MerchCatalog } from "@/components/merchandise/MerchCatalog";
