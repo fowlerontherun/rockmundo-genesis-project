@@ -52,9 +52,60 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Fetch replies authored by this profile (twaat_replies table)
+  const { data: replies, isLoading: repliesLoading } = useQuery({
+    queryKey: ["twaater-profile-replies", profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("twaat_replies")
+        .select(`
+          id, body, created_at, parent_twaat_id,
+          parent:twaats!twaat_replies_parent_twaat_id_fkey(
+            id, body, created_at,
+            account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified)
+          )
+        `)
+        .eq("account_id", profile?.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Fetch twaats this profile has liked
+  const { data: likedTwaats, isLoading: likesLoading } = useQuery({
+    queryKey: ["twaater-profile-likes", profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("twaater_reactions")
+        .select(`
+          created_at,
+          twaat:twaats!twaater_reactions_twaat_id_fkey(
+            *,
+            account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type),
+            metrics:twaat_metrics(*)
+          )
+        `)
+        .eq("account_id", profile?.id)
+        .eq("reaction_type", "like")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return (data ?? [])
+        .map((row: any) => row.twaat)
+        .filter((t: any) => t && !t.deleted_at);
     },
     enabled: !!profile?.id,
   });
@@ -252,19 +303,84 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
           </TabsContent>
           
           <TabsContent value="replies">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Replies coming soon</p>
-              </CardContent>
-            </Card>
+            {repliesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : replies && replies.length > 0 ? (
+              <div className="divide-y" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+                {replies.map((reply: any) => (
+                  <div key={reply.id} className="px-4 py-3">
+                    {reply.parent && (
+                      <div className="text-xs text-muted-foreground mb-1">
+                        Replying to{" "}
+                        <span style={{ color: 'hsl(var(--twaater-purple))' }}>
+                          @{reply.parent.account?.handle ?? "unknown"}
+                        </span>
+                        {reply.parent.body && (
+                          <span className="ml-2 italic opacity-75 line-clamp-1">
+                            “{reply.parent.body}”
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-sm">{profile.display_name}</span>
+                        {profile.verified && (
+                          <BadgeCheck className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
+                        )}
+                        <span className="text-xs text-muted-foreground">@{profile.handle}</span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm mt-1 whitespace-pre-wrap break-words">{reply.body}</p>
+                    {reply.parent?.id && (
+                      <button
+                        onClick={() => navigate(`/twaater/twaat/${reply.parent.id}`)}
+                        className="text-xs mt-2 hover:underline"
+                        style={{ color: 'hsl(var(--twaater-purple))' }}
+                      >
+                        View thread
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No replies yet</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
-          
+
           <TabsContent value="likes">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Liked twaats coming soon</p>
-              </CardContent>
-            </Card>
+            {likesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : likedTwaats && likedTwaats.length > 0 ? (
+              <div>
+                {likedTwaats.map((twaat: any) => (
+                  <TwaatCard
+                    key={twaat.id}
+                    twaat={twaat}
+                    viewerAccountId={viewerAccountId}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No liked twaats yet</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
