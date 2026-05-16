@@ -66,13 +66,15 @@ export function useSendFriendGift() {
         }))
         .select().single();
       if (error) throw error;
-      // Bump affection on character_relationship row (best effort, ignore if missing)
-      await supabase.rpc('increment_relationship_score' as any, {
-        p_entity_a_id: params.senderProfileId,
-        p_entity_b_id: params.recipientProfileId,
-        p_field: 'affection_score',
-        p_delta: cfg.affection,
-      }).catch(() => {});
+      // Best-effort affection bump via RPC if available
+      try {
+        await (supabase as any).rpc('increment_relationship_score', {
+          p_entity_a_id: params.senderProfileId,
+          p_entity_b_id: params.recipientProfileId,
+          p_field: 'affection_score',
+          p_delta: cfg.affection,
+        });
+      } catch { /* RPC may not exist */ }
       return data;
     },
     onSuccess: () => {
