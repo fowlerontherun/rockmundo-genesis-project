@@ -575,6 +575,7 @@ function App() {
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/fame-fans-gifting" element={<FameFansGifting />} />
+                    <Route path="admin/fame-fans-attribution" element={<FameFansAttribution />} />
                     <Route path="admin/releases" element={<ReleasesAdmin />} />
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
                     <Route path="admin/user-roles" element={<AdminUserRolesPage />} />
