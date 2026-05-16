@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.317",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Acting career expansion: new /acting hub with three tabs (Offers / My Films / My Series). Film offers now support 3-round counter-offer negotiation via a new NegotiateOfferDialog (counter, accept, reject); studio acceptance probability scales with fame and how modest the counter is — too high and the studio walks away." },
+      { type: 'feature', description: "Scripted TV series: new schema (scripted_series, series_seasons, player_series_contracts, series_episodes, series_performance_weekly, series_renewal_offers) lets the player land per-episode contracts, with per-ep pay that can be negotiated up-front and again at renewal time. Seasons can be renewed or cancelled based on a viewer-trend + critic-score formula." },
+      { type: 'feature', description: "Deep performance breakdown: every released film tracks opening weekend, 12 weeks of box-office decay (film_performance_weekly), critic/audience scores, merch revenue, streaming views and awards. Every active season tracks aired episodes with live + 7-day viewers, weekly ad/merch/streaming revenue, total viewers, critic/audience scores. Both surface in FilmBreakdownCard / SeriesBreakdownCard with line charts." },
+      { type: 'feature', description: "Sequel pipeline: 6 weeks after a film releases, acting-daily-tick rolls a sequel chance based on box office + critic score and spawns a fresh pr_media_offers row with +60% pay and a SEQUEL badge." },
+      { type: 'feature', description: "Season renewals: when a final episode airs, acting-daily-tick decides renew vs cancel, then issues series_renewal_offers to each active cast member with raise scaled to avg viewers. Players accept/counter/reject via RenewalOfferCard → respond-series-renewal edge function, which auto-generates the next season + episodes on accept." },
+      { type: 'feature', description: "New edge functions: negotiate-acting-offer (3-round counter logic for films + series), acting-daily-tick (release, weekly box office, sequel rolls, episode airing, finale resolution, renewal generation), respond-series-renewal (accept/counter/reject renewals + auto-generate next season)." },
+      { type: 'improvement', description: "MediaHub adds a new 'Acting Career' tile linking to /acting." },
+    ],
+  },
+  {
     version: "1.1.316",
     date: "2026-05-16",
     changes: [
