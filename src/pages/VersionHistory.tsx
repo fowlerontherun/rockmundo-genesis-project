@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.323",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Crafting Workshop — Salvage flow is now fully functional. Every owned item shows a per-row preview of the materials it will yield (quantity scales with rarity and condition). Salvaging an equipped item is blocked; a confirm dialog spells out exactly what you'll get before the item is destroyed. On confirm, the player_equipment row is deleted and the yielded crafting materials are added to your inventory in one atomic flow." },
+    ],
+  },
+  {
     version: "1.1.322",
     date: "2026-05-16",
     changes: [
