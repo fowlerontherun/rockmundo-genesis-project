@@ -307,19 +307,62 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
           </TabsContent>
           
           <TabsContent value="replies">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Replies coming soon</p>
-              </CardContent>
-            </Card>
+            {repliesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : replies && replies.length > 0 ? (
+              <div>
+                {replies.map((reply: any) => (
+                  <div key={reply.id}>
+                    {reply.parent && (
+                      <div className="px-4 pt-3 text-xs text-muted-foreground border-b" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+                        Replying to{" "}
+                        <span style={{ color: 'hsl(var(--twaater-purple))' }}>
+                          @{reply.parent.account?.handle ?? "unknown"}
+                        </span>
+                        {reply.parent.body && (
+                          <span className="ml-2 italic opacity-75 line-clamp-1">
+                            “{reply.parent.body}”
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <TwaatCard twaat={reply} viewerAccountId={viewerAccountId} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No replies yet</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
-          
+
           <TabsContent value="likes">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Liked twaats coming soon</p>
-              </CardContent>
-            </Card>
+            {likesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : likedTwaats && likedTwaats.length > 0 ? (
+              <div>
+                {likedTwaats.map((twaat: any) => (
+                  <TwaatCard
+                    key={twaat.id}
+                    twaat={twaat}
+                    viewerAccountId={viewerAccountId}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No liked twaats yet</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
