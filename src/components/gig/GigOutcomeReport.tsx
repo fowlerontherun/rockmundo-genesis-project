@@ -580,6 +580,16 @@ export const GigOutcomeReport = ({
           {/* Band Member Performances */}
           <BandMemberPerformanceCard bandId={bandId || null} overallRating={overallRating} />
 
+          {/* Per-member fame & fans rewards from this gig */}
+          {bandId && gigId && (
+            <MemberRewardsCard
+              gigId={gigId}
+              bandId={bandId}
+              fameGained={fameGained}
+              newFansTotal={safeNumber(fanConversion?.totalNewFans ?? (outcome as any).fans_gained ?? 0)}
+            />
+          )}
+
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (
             <Card>
