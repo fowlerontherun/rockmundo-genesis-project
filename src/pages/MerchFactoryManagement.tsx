@@ -97,10 +97,7 @@ export default function MerchFactoryManagement() {
               </TabsContent>
               
               <TabsContent value="contracts">
-                <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Factory contracts coming soon</p>
-                </div>
+                <FactoryContractsManager factoryId={factory.id} />
               </TabsContent>
             </Tabs>
           </div>
