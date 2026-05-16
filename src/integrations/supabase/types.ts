@@ -10349,6 +10349,83 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_gifts: {
+        Row: {
+          affection_bonus: number | null
+          cost_cents: number
+          created_at: string
+          gift_name: string
+          gift_type: string
+          id: string
+          message: string | null
+          metadata: Json | null
+          recipient_profile_id: string
+          sender_profile_id: string
+        }
+        Insert: {
+          affection_bonus?: number | null
+          cost_cents?: number
+          created_at?: string
+          gift_name: string
+          gift_type: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          recipient_profile_id: string
+          sender_profile_id: string
+        }
+        Update: {
+          affection_bonus?: number | null
+          cost_cents?: number
+          created_at?: string
+          gift_name?: string
+          gift_type?: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          recipient_profile_id?: string
+          sender_profile_id?: string
+        }
+        Relationships: []
+      }
+      friendship_milestones: {
+        Row: {
+          awarded_at: string
+          friendship_id: string
+          id: string
+          metadata: Json | null
+          milestone_label: string
+          milestone_type: string
+          profile_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          friendship_id: string
+          id?: string
+          metadata?: Json | null
+          milestone_label: string
+          milestone_type: string
+          profile_id: string
+        }
+        Update: {
+          awarded_at?: string
+          friendship_id?: string
+          id?: string
+          metadata?: Json | null
+          milestone_label?: string
+          milestone_type?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendship_milestones_friendship_id_fkey"
+            columns: ["friendship_id"]
+            isOneToOne: false
+            referencedRelation: "friendships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -12250,6 +12327,71 @@ export type Database = {
           years_active?: number | null
         }
         Relationships: []
+      }
+      honeymoons: {
+        Row: {
+          bond_gained: number | null
+          cost_cents: number
+          created_at: string
+          destination_city_id: string | null
+          destination_name: string | null
+          duration_days: number
+          ends_at: string
+          fame_gained: number | null
+          health_gained: number | null
+          id: string
+          marriage_id: string
+          metadata: Json | null
+          package_tier: string
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bond_gained?: number | null
+          cost_cents?: number
+          created_at?: string
+          destination_city_id?: string | null
+          destination_name?: string | null
+          duration_days?: number
+          ends_at: string
+          fame_gained?: number | null
+          health_gained?: number | null
+          id?: string
+          marriage_id: string
+          metadata?: Json | null
+          package_tier?: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bond_gained?: number | null
+          cost_cents?: number
+          created_at?: string
+          destination_city_id?: string | null
+          destination_name?: string | null
+          duration_days?: number
+          ends_at?: string
+          fame_gained?: number | null
+          health_gained?: number | null
+          id?: string
+          marriage_id?: string
+          metadata?: Json | null
+          package_tier?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "honeymoons_marriage_id_fkey"
+            columns: ["marriage_id"]
+            isOneToOne: false
+            referencedRelation: "marriages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hospitals: {
         Row: {
@@ -16190,11 +16332,17 @@ export type Database = {
       }
       marriages: {
         Row: {
+          anniversary_count: number | null
           created_at: string
           end_reason: string | null
           ended_at: string | null
           ended_by: string | null
+          engagement_announced: boolean | null
+          engagement_ring_cost_cents: number | null
+          engagement_started_at: string | null
+          honeymoon_id: string | null
           id: string
+          last_anniversary_at: string | null
           metadata: Json | null
           partner_a_id: string
           partner_b_id: string
@@ -16203,13 +16351,20 @@ export type Database = {
           status: string
           updated_at: string
           wedding_date: string | null
+          wedding_id: string | null
         }
         Insert: {
+          anniversary_count?: number | null
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
           ended_by?: string | null
+          engagement_announced?: boolean | null
+          engagement_ring_cost_cents?: number | null
+          engagement_started_at?: string | null
+          honeymoon_id?: string | null
           id?: string
+          last_anniversary_at?: string | null
           metadata?: Json | null
           partner_a_id: string
           partner_b_id: string
@@ -16218,13 +16373,20 @@ export type Database = {
           status?: string
           updated_at?: string
           wedding_date?: string | null
+          wedding_id?: string | null
         }
         Update: {
+          anniversary_count?: number | null
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
           ended_by?: string | null
+          engagement_announced?: boolean | null
+          engagement_ring_cost_cents?: number | null
+          engagement_started_at?: string | null
+          honeymoon_id?: string | null
           id?: string
+          last_anniversary_at?: string | null
           metadata?: Json | null
           partner_a_id?: string
           partner_b_id?: string
@@ -16233,6 +16395,7 @@ export type Database = {
           status?: string
           updated_at?: string
           wedding_date?: string | null
+          wedding_id?: string | null
         }
         Relationships: [
           {
@@ -20363,6 +20526,7 @@ export type Database = {
           birth_game_date: Json | null
           bond_parent_a: number | null
           bond_parent_b: number | null
+          child_fame: number
           child_profile_id: string | null
           child_request_id: string | null
           controller_user_id: string | null
@@ -20373,6 +20537,8 @@ export type Database = {
           id: string
           inherited_potentials: Json | null
           last_interaction_at: string | null
+          last_monthly_cost_at: string | null
+          last_progressed_at: string | null
           marriage_id: string | null
           mood: number
           name: string
@@ -20390,6 +20556,7 @@ export type Database = {
           birth_game_date?: Json | null
           bond_parent_a?: number | null
           bond_parent_b?: number | null
+          child_fame?: number
           child_profile_id?: string | null
           child_request_id?: string | null
           controller_user_id?: string | null
@@ -20400,6 +20567,8 @@ export type Database = {
           id?: string
           inherited_potentials?: Json | null
           last_interaction_at?: string | null
+          last_monthly_cost_at?: string | null
+          last_progressed_at?: string | null
           marriage_id?: string | null
           mood?: number
           name: string
@@ -20417,6 +20586,7 @@ export type Database = {
           birth_game_date?: Json | null
           bond_parent_a?: number | null
           bond_parent_b?: number | null
+          child_fame?: number
           child_profile_id?: string | null
           child_request_id?: string | null
           controller_user_id?: string | null
@@ -20427,6 +20597,8 @@ export type Database = {
           id?: string
           inherited_potentials?: Json | null
           last_interaction_at?: string | null
+          last_monthly_cost_at?: string | null
+          last_progressed_at?: string | null
           marriage_id?: string | null
           mood?: number
           name?: string
@@ -33989,6 +34161,124 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      wedding_guests: {
+        Row: {
+          created_at: string
+          gift_cents: number | null
+          guest_name: string | null
+          guest_npc_id: string | null
+          guest_profile_id: string | null
+          id: string
+          relationship_to_couple: string | null
+          rsvp_status: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          gift_cents?: number | null
+          guest_name?: string | null
+          guest_npc_id?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          relationship_to_couple?: string | null
+          rsvp_status?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          gift_cents?: number | null
+          guest_name?: string | null
+          guest_npc_id?: string | null
+          guest_profile_id?: string | null
+          id?: string
+          relationship_to_couple?: string | null
+          rsvp_status?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_guests_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weddings: {
+        Row: {
+          actual_attendance: number | null
+          ceremony_at: string
+          cost_cents: number
+          created_at: string
+          fame_gained: number | null
+          guest_count: number
+          id: string
+          marriage_id: string
+          media_buzz: number | null
+          metadata: Json | null
+          photos_jsonb: Json | null
+          status: string
+          theme: string | null
+          tier: string
+          updated_at: string
+          venue_city_id: string | null
+          venue_name: string | null
+          vows_a: string | null
+          vows_b: string | null
+        }
+        Insert: {
+          actual_attendance?: number | null
+          ceremony_at: string
+          cost_cents?: number
+          created_at?: string
+          fame_gained?: number | null
+          guest_count?: number
+          id?: string
+          marriage_id: string
+          media_buzz?: number | null
+          metadata?: Json | null
+          photos_jsonb?: Json | null
+          status?: string
+          theme?: string | null
+          tier?: string
+          updated_at?: string
+          venue_city_id?: string | null
+          venue_name?: string | null
+          vows_a?: string | null
+          vows_b?: string | null
+        }
+        Update: {
+          actual_attendance?: number | null
+          ceremony_at?: string
+          cost_cents?: number
+          created_at?: string
+          fame_gained?: number | null
+          guest_count?: number
+          id?: string
+          marriage_id?: string
+          media_buzz?: number | null
+          metadata?: Json | null
+          photos_jsonb?: Json | null
+          status?: string
+          theme?: string | null
+          tier?: string
+          updated_at?: string
+          venue_city_id?: string | null
+          venue_name?: string | null
+          vows_a?: string | null
+          vows_b?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weddings_marriage_id_fkey"
+            columns: ["marriage_id"]
+            isOneToOne: false
+            referencedRelation: "marriages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       world_parliament_motions: {
         Row: {
