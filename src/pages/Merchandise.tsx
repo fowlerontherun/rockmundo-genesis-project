@@ -1386,7 +1386,15 @@ const Merchandise = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="designer" className="space-y-6">
+        <TabsContent value="variants" className="space-y-6">
+          <VariantManager
+            merchandiseId={selectedProductId}
+            productName={selectedProduct?.design_name ?? "Selected product"}
+            basePrice={safeNumber(selectedProduct?.selling_price ?? 0)}
+            baseCost={safeNumber(selectedProduct?.cost_to_produce ?? 0)}
+          />
+        </TabsContent>
+
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <TShirtDesignerNew 
