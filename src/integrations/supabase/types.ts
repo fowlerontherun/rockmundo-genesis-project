@@ -35505,6 +35505,23 @@ export type Database = {
           employee_count: number
         }[]
       }
+      get_fame_fans_attribution: {
+        Args: { p_day: string; p_profile_id: string }
+        Returns: {
+          axis: string
+          cash_delta: number
+          delta: number
+          entity_id: string
+          entity_kind: string
+          event_type: string
+          gig_grade: string
+          notes: Json
+          occurred_at: string
+          scope: string
+          source_system: string
+          xp_delta: number
+        }[]
+      }
       get_friendship_lifetime_xp: {
         Args: { profile_a: string; profile_b: string }
         Returns: number

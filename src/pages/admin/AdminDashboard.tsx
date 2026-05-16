@@ -89,6 +89,7 @@ const AdminDashboard = () => {
     { label: "Labels Admin", path: "/admin/labels", icon: Building2 },
     { label: "Band Admin", path: "/admin/bands", icon: Users },
     { label: "Fame & Fans Gifting", path: "/admin/fame-fans-gifting", icon: Gift },
+    { label: "Fame & Fans Attribution", path: "/admin/fame-fans-attribution", icon: Activity },
     // Social & PR
     { label: "Public Relations", path: "/admin/pr", icon: Megaphone },
     { label: "Twaater Admin", path: "/admin/twaater", icon: MessageSquare },

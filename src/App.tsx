@@ -210,6 +210,7 @@ const MusicVideosAdmin = lazyWithRetry(() => import("./pages/admin/MusicVideosAd
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
 const CollectionItemsAdmin = lazyWithRetry(() => import("./pages/admin/CollectionItemsAdmin"));
 const FameFansGifting = lazyWithRetry(() => import("./pages/admin/FameFansGifting"));
+const FameFansAttribution = lazyWithRetry(() => import("./pages/admin/FameFansAttribution"));
 const StreamMultiplier = lazyWithRetry(() => import("./pages/admin/StreamMultiplier"));
 const SalesBalanceAdmin = lazyWithRetry(() => import("./pages/admin/SalesBalanceAdmin"));
 const CityGovernanceAdmin = lazyWithRetry(() => import("./pages/admin/CityGovernanceAdmin"));
@@ -574,6 +575,7 @@ function App() {
                     <Route path="admin/labels" element={<LabelsAdmin />} />
                     <Route path="admin/bands" element={<BandAdmin />} />
                     <Route path="admin/fame-fans-gifting" element={<FameFansGifting />} />
+                    <Route path="admin/fame-fans-attribution" element={<FameFansAttribution />} />
                     <Route path="admin/releases" element={<ReleasesAdmin />} />
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
                     <Route path="admin/user-roles" element={<AdminUserRolesPage />} />

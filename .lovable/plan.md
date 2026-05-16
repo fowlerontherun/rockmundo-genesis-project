@@ -1,71 +1,92 @@
-# Film & TV career expansion
+# Fame & Fans Attribution Debug Panel
 
-## Current state (audited)
+A new admin-only page that, for any character on any given day, shows the exact list of events that contributed to their fame and fans totals, with the XP, cash, and gig grade context attached to each event.
 
-- `film_studios`, `film_productions` (catalog) and `player_film_contracts` exist with `box_office_gross` and `sequel_eligible` fields already on the contract.
-- `FilmOffersPanel` shows pending film offers from `pr_media_offers` (media_type='film'). Accept-only — no negotiation, no sequel pipeline, no post-release performance breakdown.
-- `tv_shows` / `tv_networks` exist but model **talk-show appearances** (host_name, time_slot, days_of_week) used by PR. No scripted-series acting concept exists at all.
-- Hard cap of 2 films/year. Fame gate 25,000.
+## Goal
 
-## What we'll build
+Today fame and fans move because of many systems (gigs, festivals, releases, music videos, awards, sponsorships, social drama, DikCok, modeling, fan conversions, decay, etc.) but there is no single place to see "why did this character gain 42 fame and 1,210 fans on May 14?". This panel makes that auditable for admins / QA.
 
-A full acting-career layer covering both **films** (with sequel chances) and **scripted TV series** (multi-season, renewable/cancellable, per-episode pay), with a shared negotiation flow and a deep performance breakdown for each production.
+## Scope
 
-### v1.1.317 — Negotiation + film sequels + film performance
+In scope:
+- Admin-only React page under the existing admin hub.
+- Read-only aggregation over existing event tables — no schema changes to gameplay tables.
+- One new lightweight `fame_fans_attribution_daily` materialized rollup + a SECURITY DEFINER RPC that returns per-event detail rows for a (character, date) pair.
+- Per-character view: pick a character, pick a date (default: today, game-time), see two stacked breakdowns (Fame, Fans), each as an itemized list and a totals strip.
+- Per-event detail row includes: timestamp, source system, event type, fame delta, fans delta, XP delta (if any), cash delta (if any), gig grade (if gig/festival), linked entity (gig id, release id, etc.) with deep link.
+- CSV export of the day's rows.
+- Filters: source system multi-select, "only positive", "only negative/decay".
 
-**Schema**
-- New table `film_negotiations` (offer_id, round, last_offer_cents, player_counter_cents, status: pending/accepted/rejected/expired, expires_at). Up to 3 counter rounds.
-- Extend `pr_media_offers` with `role_type` (cameo/supporting/lead), `base_pay_cents`, `negotiation_id`, `parent_film_id` (for sequels).
-- Extend `player_film_contracts` with `role_type`, `total_pay_cents`, `critic_score`, `audience_score`, `opening_weekend_cents`, `merch_revenue_cents`, `streaming_views`, `awards_won`, `is_sequel`, `parent_contract_id`, `released_at`, `performance_calculated_at`.
-- New table `film_performance_weekly` (contract_id, week_number, box_office_week_cents, streaming_views, merch_units, merch_revenue_cents, screens, drop_pct). 12 weeks of post-release tracking per film.
+Out of scope (can follow up):
+- Editing or reversing events.
+- Band-wide aggregation page (we surface band events for bands the character is in, but the primary axis is the character).
+- Backfilling historical data that was never logged in the first place — we use what the existing tables already store.
 
-**Edge functions**
-- `negotiate-acting-offer` — handles counter-offer rounds. Higher fame = better counter acceptance odds. Lowballing risks the studio walking.
-- `release-film` — fires when premiere_date hits via daily tick. Rolls opening weekend (function of fame × role × studio prestige × random), schedules 12 weeks of decay using existing economic-engine logarithmic clamps.
-- `roll-film-sequel` — after week 6, if box-office / critic score crosses threshold, spawns a new `pr_media_offers` row with `parent_film_id` and bumped pay (typically +40–80%).
+## Data sources (already in DB)
 
-**UI**
-- `FilmOffersPanel` gets a negotiate button → `AcceptingOfferDialog` with counter input, expected acceptance probability hint, role/duration/sequel-history info.
-- New `MyFilmsPage` (under Media hub): cards for in-production / released / archived films with breakdown — opening weekend, total box office, critic & audience scores, merch revenue, streaming views, awards, and a 12-week revenue line chart.
-- Sequel offers tagged with a "SEQUEL" badge and a quick link to the parent's breakdown.
+Fame contributors:
+- `band_fame_events` (event_type, fame_gained, event_data, band_id) — primary fame ledger.
+- `band_fame_history` (city/country/global scopes, fame_change, event_type).
+- `reputation_events`, `award_red_carpet_events`, `eurovision_events`, `major_event_performances`, `festival_performance_history`, `social_drama_events`, `nightclub_events`, `fashion_events` — secondary fame triggers; joined via their own `created_at`/event_type/metadata.
 
-### v1.1.318 — Scripted TV series (separate from talk shows)
+Fans contributors:
+- `gig_fan_conversions` (new_fans_gained, repeat_fans, superfans_converted, attendance, conversion_rate).
+- `band_city_fans` / `band_country_fans` / `band_demographic_fans` — diffed day-over-day to derive net change per scope.
+- `fan_interactions`, `fan_campaigns`, `dikcok_fan_missions`, `dikcok_fan_tips`.
 
-**Schema** (new, doesn't touch `tv_shows` talk-show table)
-- `scripted_series` (id, title, network_id, genre, premise, target_role_type, base_pay_per_episode_cents, episodes_per_season, premiere_date, min_fame_required, prestige_level).
-- `series_seasons` (series_id, season_number, status: announced/filming/airing/wrapped/cancelled, episode_count, premiere_date, finale_date, avg_viewers, total_viewers, critic_score, audience_score, renewal_decision_at).
-- `player_series_contracts` (user_id, series_id, season_id, role_name, role_type, pay_per_episode_cents, episode_count, total_pay_cents, status: pending/active/wrapped/dropped, joined_at, departed_at).
-- `series_episodes` (season_id, episode_number, title, airdate, viewers_live, viewers_7day, social_buzz). Generated when season enters airing.
-- `series_performance_weekly` (season_id, week_number, viewers, merch_revenue_cents, streaming_views, ad_revenue_cents).
-- `series_renewal_offers` (series_id, prior_season_id, new_season_number, offered_pay_per_episode_cents, episodes, expires_at, status). Linked to the existing `negotiate-acting-offer` flow.
+XP / cash context per event:
+- `experience_ledger` (xp_amount, skill_slug, activity_type, metadata) joined by `metadata->>source_id` / time window.
+- `profile_daily_xp_grants` for daily XP caps context.
+- Cash from `transactions` (existing) joined by metadata link or time-correlated.
 
-**Edge functions**
-- `seed-scripted-series` — periodically (weekly cron) seeds a small pool of new series open to casting; tier-gated by fame.
-- `generate-series-offer` — when a player is eligible, drops a `pr_media_offers` row with `media_type='series'` + role + episodes + per-episode pay; negotiation reuses `negotiate-acting-offer`.
-- `air-series-episodes` — daily; rolls weekly viewers per episode (function of network reach × cast fame × prior-season hype × random), populates `series_episodes` + `series_performance_weekly`.
-- `resolve-season-finale` — when last episode airs, computes season totals, rolls renewal vs cancellation using viewer-trend + critic score:
-  - Renewed: spawns `series_renewal_offers` to every active cast member (often with a raise scaled to prior season's avg viewers).
-  - Cancelled: marks season `cancelled`, posts inbox to cast, contract ends.
-- `process-series-renewals` — accepts/rejects/negotiates the offer; rejection ends the player's run on that series (others can continue).
+Gig grade:
+- `player_gig_xp` + gig result tables already store letter grade / score; surface alongside any fame/fans row whose event_data references that `gig_id`.
 
-**UI**
-- Extend Media hub with a "Acting" sub-section grouping film offers, series offers, current contracts, history.
-- `MySeriesPage` per active series: season list, episode airing schedule, weekly viewer chart, season-to-date totals, merch revenue, renewal countdown, cast.
-- Reuse `AcceptingOfferDialog` for series offers (label says "per episode"; shows total = pay × episodes).
-- Inbox entries fire for: offer received, negotiation accepted/rejected, filming starts/ends, premiere airs, weekly performance digest, renewal/cancellation decisions.
+Character ↔ band linkage:
+- Use existing `band_members` to map `profile_id` → `band_id[]` so we pull band-scoped events for bands the character belongs to.
 
-### v1.1.319 — Cross-cutting polish
+## Backend
 
-- Hub: `MediaHub` adds an "Acting Career" tile with badge for new offers/decisions.
-- Activity blocking: filming days and series-shooting blocks reuse the universal activity blocking pattern (no gigs, no studio sessions during filming).
-- Daily Summary inbox surfaces per-day acting earnings + this week's film/series performance bullet.
-- Admin tools page: `ActingAdmin` to grant offers, force renewals, seed series.
-- VersionHistory + version bumps at each step.
+1. SQL migration adds:
+   - `public.get_fame_fans_attribution(p_profile_id uuid, p_day date)` SECURITY DEFINER, returns `setof` rows: `occurred_at, axis ('fame'|'fans'), source_system, event_type, delta, xp_delta, cash_delta, gig_grade, entity_kind, entity_id, scope, notes jsonb`.
+   - Internally `UNION ALL` over the tables above, filtered to the character's profile_id and bands, bounded by `[p_day, p_day + 1 day)` in game time.
+   - Grants execute to `authenticated`; the function itself checks `has_role(auth.uid(),'admin')` and raises if not.
+   - Optional `fame_fans_attribution_daily` matview keyed by (profile_id, day, axis, source_system) for the summary strip; refreshed by an existing daily cron piggyback (no new cron).
 
-## Out of scope
+2. No edits to existing event-writing code. If a contributor isn't currently writing a discoverable row, it shows up as "untracked" in a diagnostics footer so we can fix it later.
 
-- 3D/animated film cinematics, casting minigames, audition mechanics (just probability-based offers based on fame/skill).
-- Touring with the cast, romance with co-stars (existing relationship engine already covers cross-NPC dating; not adding film-specific paths now).
+## Frontend
 
-## Open question
-Want me to also build a **basic acting skill** (with its own XP track) that improves pay-offer and renewal odds? Or leave that to a future pass and gate purely on fame for now?
+New route `src/pages/admin/FameFansAttribution.tsx`, linked from the admin hub tile grid (admin-only, gated by `useUserRole`).
+
+Layout:
+```text
+[ Character picker ]  [ Date picker ]  [ Source filter ]  [ Export CSV ]
+
+Totals strip:
+  Fame  +123  (gigs +80, releases +30, awards +13, decay -0)
+  Fans  +1,210 (gig conv +900, social +210, decay -100)
+
+Tabs: Fame | Fans
+  Table columns: Time · Source · Event · Δ · XP · Cash · Gig grade · Entity (link)
+  Sticky footer: row count, sum delta, "unattributed delta" diff vs stored daily total.
+```
+
+Components:
+- `FameFansAttributionPanel.tsx` — main page.
+- `AttributionTotalsStrip.tsx` — chips per source.
+- `AttributionTable.tsx` — virtualised list, deep-link entity column.
+- `useFameFansAttribution(profileId, day)` hook over the RPC.
+
+Reuses existing admin chrome and design tokens. High-density mobile rows (per project memory).
+
+## Verification
+
+- Pick a character that just did a gig: confirm a `gig` row appears with the right grade, fame delta matches `band_fame_events.fame_gained`, fans delta matches `gig_fan_conversions.new_fans_gained`.
+- Pick a character with a recent music video release: confirm release and MV-impact rows appear.
+- Day with no activity returns empty tables and zero totals (no error).
+- Non-admin user hitting `/admin/fame-fans` is redirected.
+
+## Versioning
+
+Bump banner to `1.1.317` and add a `feature` entry to the Version History page describing the new admin attribution panel.
