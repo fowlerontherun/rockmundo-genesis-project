@@ -262,6 +262,10 @@ Deno.serve(async (req) => {
               fame_change: dynamicFameImpact,
               job_title: job?.title,
               band_name: bandName,
+              gross_earnings: grossEarnings,
+              net_earnings: netEarnings,
+              city_income_tax: cityIncomeTax,
+              city_id: job?.city_id ?? null,
             },
           });
 
