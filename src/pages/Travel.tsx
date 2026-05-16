@@ -115,6 +115,37 @@ const Travel = () => {
     }
   }, [selectedMode]);
 
+  // Deep-link: ?destination=<cityId> opens the booking dialog directly.
+  useEffect(() => {
+    const destId = searchParams.get("destination");
+    if (!destId || !currentCity || selectedDestination) return;
+    if (destId === currentCity.id) {
+      toast.info("You're already in this city.");
+      searchParams.delete("destination");
+      setSearchParams(searchParams, { replace: true });
+      return;
+    }
+    (async () => {
+      const dest = await fetchCityWithCoords(destId);
+      if (!dest || !dest.latitude || !dest.longitude || !currentCity.latitude || !currentCity.longitude) {
+        toast.error("Destination not found");
+        return;
+      }
+      const distanceKm = calculateDistance(
+        currentCity.latitude, currentCity.longitude,
+        dest.latitude, dest.longitude,
+      );
+      const options = getAvailableModes(distanceKm, currentCity, dest);
+      const available = options.filter(o => o.available);
+      const cheapest = available.length ? available.reduce((m, o) => (o.cost < m.cost ? o : m)) : null;
+      const fastest = available.length ? available.reduce((m, o) => (o.durationHours < m.durationHours ? o : m)) : null;
+      handleSelectDestination({ city: dest, distanceKm, options, cheapestOption: cheapest, fastestOption: fastest });
+      searchParams.delete("destination");
+      setSearchParams(searchParams, { replace: true });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, currentCity]);
+
   const handleBookTravel = async () => {
     if (!user || !selectedDestination || !selectedMode || !currentCity || !departureDate || departureHour === null) return;
 
