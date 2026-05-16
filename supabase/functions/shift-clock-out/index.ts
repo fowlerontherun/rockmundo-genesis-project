@@ -325,12 +325,12 @@ Deno.serve(async (req) => {
         } catch (_e) { /* non-critical */ }
 
         processedCount += 1;
-        totalEarnings += shift.earnings || 0;
+        totalEarnings += netEarnings;
         totalXpAwarded += shift.xp_earned || 0;
         totalFameChange += dynamicFameImpact;
 
         console.log(
-          `Clocked out shift ${shiftId}, awarded ${shift.earnings} cash, ${shift.xp_earned} XP, fame change: ${dynamicFameImpact}`
+          `Clocked out shift ${shiftId}: gross $${grossEarnings}, tax $${cityIncomeTax}, net $${netEarnings}, ${shift.xp_earned} XP, fame ${dynamicFameImpact}`
         );
       } catch (shiftError) {
         errorCount += 1;
