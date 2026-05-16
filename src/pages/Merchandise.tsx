@@ -200,55 +200,21 @@ const statusVariants: Record<MerchandiseStatus, "default" | "secondary" | "destr
 };
 
 type TabConfig = {
-  value: "overview" | "sales" | "add-product" | "manage-product" | "designer" | "manager" | "costs";
+  value: "overview" | "sales" | "add-product" | "manage-product" | "variants" | "designer" | "manager" | "costs";
   label: string;
   description: string;
   icon: LucideIcon;
 };
 
 const TAB_CONFIG: TabConfig[] = [
-  {
-    value: "overview",
-    label: "Overview",
-    description: "Performance & alerts",
-    icon: BarChart3,
-  },
-  {
-    value: "sales",
-    label: "Sales",
-    description: "Revenue & analytics",
-    icon: TrendingUp,
-  },
-  {
-    value: "add-product",
-    label: "Add Product",
-    description: "Launch something new",
-    icon: PackagePlus,
-  },
-  {
-    value: "manage-product",
-    label: "Manage Inventory",
-    description: "Restock & adjust",
-    icon: ClipboardList,
-  },
-  {
-    value: "designer",
-    label: "T-Shirt Designer",
-    description: "Plan the visuals",
-    icon: Sparkles,
-  },
-  {
-    value: "manager",
-    label: "Manager",
-    description: "Merch manager NPC",
-    icon: Shirt,
-  },
-  {
-    value: "costs",
-    label: "Costs",
-    description: "Operating expenses",
-    icon: BarChart3,
-  },
+  { value: "overview", label: "Overview", description: "Performance & alerts", icon: BarChart3 },
+  { value: "sales", label: "Sales", description: "Revenue & analytics", icon: TrendingUp },
+  { value: "add-product", label: "Add Product", description: "Launch something new", icon: PackagePlus },
+  { value: "manage-product", label: "Manage Inventory", description: "Restock & adjust", icon: ClipboardList },
+  { value: "variants", label: "Variants", description: "Sizes, colors & SKUs", icon: Shirt },
+  { value: "designer", label: "T-Shirt Designer", description: "Plan the visuals", icon: Sparkles },
+  { value: "manager", label: "Manager", description: "Merch manager NPC", icon: Shirt },
+  { value: "costs", label: "Costs", description: "Operating expenses", icon: BarChart3 },
 ];
 
 const safeNumber = (value: number | null) => (typeof value === "number" && !Number.isNaN(value) ? value : 0);
