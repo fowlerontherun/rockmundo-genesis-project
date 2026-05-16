@@ -6,6 +6,7 @@ import { useMerchFactory } from "@/hooks/useMerchFactory";
 import { ProductCatalogManager } from "@/components/merch-factory/ProductCatalogManager";
 import { ProductionQueue } from "@/components/merch-factory/ProductionQueue";
 import { FactoryWorkerRoster } from "@/components/merch-factory/FactoryWorkerRoster";
+import { FactoryContractsManager } from "@/components/merch-factory/FactoryContractsManager";
 import { FactoryCard } from "@/components/merch-factory/FactoryCard";
 import { VipGate } from "@/components/company/VipGate";
 
