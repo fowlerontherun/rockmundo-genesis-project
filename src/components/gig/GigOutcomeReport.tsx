@@ -25,6 +25,7 @@ import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculato
 import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 import { getBehavior } from "@/utils/stageBehaviors";
 import { BandMemberPerformanceCard } from "./BandMemberPerformanceCard";
+import { MemberRewardsCard } from "./MemberRewardsCard";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
