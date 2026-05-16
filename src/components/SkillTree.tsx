@@ -83,6 +83,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filterMode, setFilterMode] = useState<FilterMode>('learned');
+  const [hideMaxed, setHideMaxed] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
