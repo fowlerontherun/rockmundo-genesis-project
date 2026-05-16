@@ -25,6 +25,8 @@ export interface MarketplaceListing {
     genre: string;
     quality_score: number;
     duration_display: string | null;
+    acquisition_source?: string | null;
+    ownership_type?: string | null;
   } | null;
   bid_count?: number;
 }
