@@ -18,6 +18,7 @@ import { BirthCompletionDialog } from "./BirthCompletionDialog";
 import { ChildCard } from "./ChildCard";
 import { ComingOfAgeDialog } from "./ComingOfAgeDialog";
 import { FamilyLegacyPanel } from "@/components/social/FamilyLegacyPanel";
+import { WeddingHoneymoonSection } from "./WeddingHoneymoonSection";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -166,6 +167,11 @@ export function FamilyDashboard() {
             <p className="text-xs mt-1">Reach the "Engaged" stage in a romance to propose marriage.</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Wedding & Honeymoon planning */}
+      {marriage && (marriage.status === "active" || marriage.status === "accepted" || marriage.status === "proposed") && (
+        <WeddingHoneymoonSection marriageId={marriage.id} />
       )}
 
       {/* Ready Births */}

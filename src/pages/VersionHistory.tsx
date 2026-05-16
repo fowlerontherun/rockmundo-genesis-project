@@ -14,6 +14,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.315",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Weddings: new weddings table + WeddingPlannerDialog lets married couples choose a tier (courthouse → legendary), guest count, theme, venue, and ceremony date. Cost is computed from tier × guests and stored in cents. A new complete-wedding edge function resolves the ceremony, distributes fame (scaled by tier and RSVP attendance), flips marriage status to active, and posts an inbox + activity feed entry to both partners." },
+      { type: 'feature', description: "Honeymoons: new honeymoons table + HoneymoonDialog with four packages (budget/standard/luxury/world_tour). Booking creates a row with starts_at/ends_at; complete-honeymoon refills health, bumps romance scores (affection/loyalty/attraction to 100), grants tier-scaled fame, and sets last_anniversary_at." },
+      { type: 'feature', description: "Friend gifts: friend_gifts table + useFriendGifts hook + FriendGiftDialog. Six-item catalog (flowers → surprise vacation) with cost and affection bonus. Sender-only insert RLS; both parties can read." },
+      { type: 'feature', description: "Friendship milestones table for one-time awards (best friends 30d, 1y anniversary, 100 interactions). Per-profile RLS." },
+      { type: 'feature', description: "Children — finish-up: player_children gains child_fame, school_stage, last_progressed_at, last_monthly_cost_at columns. New family-daily-tick edge function auto-fires birth inbox notifications, progresses every child's age and school stage from their birth_game_date, completes scheduled weddings + honeymoons, and posts yearly anniversary inbox entries with vow-renewal prompt." },
+      { type: 'feature', description: "FamilyDashboard surfaces a new Wedding & Honeymoon card under the marriage status, showing planned countdown, 'Hold ceremony now' trigger when ready, and a Book honeymoon CTA after the wedding completes." },
+      { type: 'improvement', description: "Marriage engagement schema extended: marriages now tracks engagement_started_at, engagement_ring_cost_cents, engagement_announced, wedding_id, honeymoon_id, last_anniversary_at, anniversary_count." },
+    ],
+  },
+  {
     version: "1.1.314",
     date: "2026-05-16",
     changes: [
