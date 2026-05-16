@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { MapPin, Plane, Train, Bus, Ship, Globe, ArrowRight, Calendar } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,13 @@ import { PastTravelList } from "@/components/travel/PastTravelList";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { TravelNotificationPreferences } from "@/components/travel/TravelNotificationPreferences";
 import { bookTravel } from "@/utils/travelSystem";
-import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import {
+  CityWithCoords,
+  TravelOption,
+  fetchCityWithCoords,
+  calculateDistance,
+  getAvailableModes,
+} from "@/utils/dynamicTravel";
 import { getNextAvailableDeparture, isValidDeparture, formatHourToTime, calculateArrivalTime } from "@/utils/transportSchedules";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +53,7 @@ const Travel = () => {
   const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentCity, setCurrentCity] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -107,6 +114,37 @@ const Travel = () => {
       setDepartureHour(next.hour);
     }
   }, [selectedMode]);
+
+  // Deep-link: ?destination=<cityId> opens the booking dialog directly.
+  useEffect(() => {
+    const destId = searchParams.get("destination");
+    if (!destId || !currentCity || selectedDestination) return;
+    if (destId === currentCity.id) {
+      toast.info("You're already in this city.");
+      searchParams.delete("destination");
+      setSearchParams(searchParams, { replace: true });
+      return;
+    }
+    (async () => {
+      const dest = await fetchCityWithCoords(destId);
+      if (!dest || !dest.latitude || !dest.longitude || !currentCity.latitude || !currentCity.longitude) {
+        toast.error("Destination not found");
+        return;
+      }
+      const distanceKm = calculateDistance(
+        currentCity.latitude, currentCity.longitude,
+        dest.latitude, dest.longitude,
+      );
+      const options = getAvailableModes(distanceKm, currentCity, dest);
+      const available = options.filter(o => o.available);
+      const cheapest = available.length ? available.reduce((m, o) => (o.cost < m.cost ? o : m)) : null;
+      const fastest = available.length ? available.reduce((m, o) => (o.durationHours < m.durationHours ? o : m)) : null;
+      handleSelectDestination({ city: dest, distanceKm, options, cheapestOption: cheapest, fastestOption: fastest });
+      searchParams.delete("destination");
+      setSearchParams(searchParams, { replace: true });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, currentCity]);
 
   const handleBookTravel = async () => {
     if (!user || !selectedDestination || !selectedMode || !currentCity || !departureDate || departureHour === null) return;

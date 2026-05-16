@@ -216,6 +216,9 @@ export const CityContent = ({
           </div>
           
           <div className="flex flex-col items-stretch gap-3 min-w-[200px]">
+            <Button asChild>
+              <Link to={`/travel?destination=${city.id}`}>✈️ Travel here</Link>
+            </Button>
             <Button variant="outline" asChild>
               <Link to="/cities">Back to cities</Link>
             </Button>
