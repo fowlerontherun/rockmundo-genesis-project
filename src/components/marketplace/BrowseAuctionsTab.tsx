@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Music, DollarSign, Clock, Gavel, ShoppingCart, Users } from "lucide-react";
+import { Music, DollarSign, Clock, Gavel, ShoppingCart, Users, Package, Gift } from "lucide-react";
 import { useSongAuctions } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining, calculateMinimumBid } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
