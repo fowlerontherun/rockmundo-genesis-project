@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.324",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "DikCok — Reactions (Like / Fire / LOL / Wow) and Comments are now live on every video. Reactions toggle per user against dikcok_reactions and counts update instantly; comments insert into dikcok_comments and render with the author's profile name and relative timestamp. RLS enforces that only the signed-in user can add/remove their own reaction or post their own comment." },
+    ],
+  },
+  {
     version: "1.1.323",
     date: "2026-05-16",
     changes: [
