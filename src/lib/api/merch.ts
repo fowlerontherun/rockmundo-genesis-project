@@ -113,6 +113,10 @@ const defaultInventoryStub: MerchInventoryItem = {
   storage_cost_daily: 0.10,
   logistics_pct: 0.05,
   tax_pct: 0.08,
+  drop_starts_at: null,
+  superfan_only: false,
+  release_id: null,
+  channel_split: { online: 50, gig: 40, wholesale: 10 } as any,
 };
 
 const generateOrderId = (bandId: string, index: number) => `${bandId}-${index}`;
