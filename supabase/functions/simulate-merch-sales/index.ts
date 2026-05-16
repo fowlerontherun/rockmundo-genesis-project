@@ -71,11 +71,31 @@ Deno.serve(async (req) => {
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
+        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce, superfan_only, drop_starts_at, available_until, is_limited_edition, limited_quantity, tour_exclusive_tour_id)
       `)
       .gt("total_fans", 0);
 
     if (bandsError) throw bandsError;
+
+    // Preload all variants for these bands' merch in one query
+    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; size: string | null; color: string | null; is_active: boolean; }>>();
+    try {
+      const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
+      if (merchIds.length > 0) {
+        const { data: variants } = await supabase
+          .from("merch_variants")
+          .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, size, color, is_active")
+          .in("merchandise_id", merchIds)
+          .eq("is_active", true);
+        for (const v of variants || []) {
+          const arr = variantMap.get((v as any).merchandise_id) || [];
+          arr.push(v as any);
+          variantMap.set((v as any).merchandise_id, arr);
+        }
+      }
+    } catch (vErr) {
+      console.error(`[${JOB_NAME}] Variant preload error:`, vErr);
+    }
 
     // === FETCH BAND SENTIMENT & REPUTATION FOR MERCH DEMAND (v1.0.947 / v1.0.988) ===
     const bandSentimentMap = new Map<string, number>();
@@ -138,88 +158,115 @@ Deno.serve(async (req) => {
 
       const ordersToInsert = [];
 
-      // Create a mutable copy of merchandise to track stock during this batch
-      const merchWithCurrentStock = merchandise.map(m => ({
-        ...m,
-        currentStock: m.stock_quantity,
-      }));
+      // Track per-merch and per-variant stock decrements
+      const variantStateMap = new Map<string, Array<{ id: string; stock: number; price: number | null; cost: number | null }>>();
+      const merchWithCurrentStock = (merchandise as any[]).map((m: any) => {
+        const variants = (variantMap.get(m.id) || []).map(v => ({
+          id: v.id,
+          stock: v.stock_quantity,
+          price: v.selling_price_override,
+          cost: v.cost_to_produce_override,
+        }));
+        if (variants.length > 0) variantStateMap.set(m.id, variants);
+        const variantStock = variants.reduce((s, v) => s + v.stock, 0);
+        return {
+          ...m,
+          hasVariants: variants.length > 0,
+          currentStock: variants.length > 0 ? variantStock : m.stock_quantity,
+        };
+      });
+
+      const variantStockUpdates: Map<string, number> = new Map();
+      const superfanRatio = (band.superfans || 0) / Math.max(1, band.total_fans || 1);
+      const dedicatedRatio = (band.dedicated_fans || 0) / Math.max(1, band.total_fans || 1);
 
       for (let i = 0; i < actualSales; i++) {
-        // Pick random merchandise (weighted by quality - better items sell more)
         const qualityWeights: Record<string, number> = {
-          exclusive: 5,
-          premium: 4,
-          standard: 3,
-          basic: 2,
-          poor: 1,
+          exclusive: 5, premium: 4, standard: 3, basic: 2, poor: 1,
         };
 
-        const availableMerch = merchWithCurrentStock.filter(m => m.currentStock > 0);
-        if (availableMerch.length === 0) {
-          console.log(`[${JOB_NAME}] Band ${band.name}: Out of stock on all items`);
-          break;
-        }
+        // Customer type first so we can gate superfan-only items
+        let customerType = "fan";
+        const rand = Math.random();
+        if (rand < superfanRatio * 2) customerType = "superfan";
+        else if (rand < (superfanRatio * 2 + dedicatedRatio)) customerType = "collector";
 
-        const weightedMerch = availableMerch.map(m => ({
+        const nowMs = Date.now();
+        const availableMerch = merchWithCurrentStock.filter((m: any) => {
+          if (m.currentStock <= 0) return false;
+          if (m.drop_starts_at && new Date(m.drop_starts_at).getTime() > nowMs) return false;
+          if (m.available_until && new Date(m.available_until).getTime() < nowMs) return false;
+          if (m.superfan_only && customerType !== "superfan") return false;
+          return true;
+        });
+        if (availableMerch.length === 0) continue;
+
+        const weightedMerch = availableMerch.map((m: any) => ({
           ...m,
           weight: qualityWeights[m.quality_tier || 'basic'] || 2,
         }));
-
-        const selectedMerch = weightedRandomSelect(weightedMerch);
+        const selectedMerch: any = weightedRandomSelect(weightedMerch);
         if (!selectedMerch) continue;
 
-        // Determine quantity (1-3, usually 1) - but cap at available stock
-        let quantity = Math.random() > 0.85 ? (Math.random() > 0.7 ? 3 : 2) : 1;
-        quantity = Math.min(quantity, selectedMerch.currentStock);
+        // Pick variant if any
+        let selectedVariantId: string | null = null;
+        let variantPrice: number | null = null;
+        let variantCost: number | null = null;
+        if (selectedMerch.hasVariants) {
+          const variants = variantStateMap.get(selectedMerch.id) || [];
+          const stocked = variants.filter(v => v.stock > 0);
+          if (stocked.length === 0) continue;
+          const picked = stocked[Math.floor(Math.random() * stocked.length)];
+          selectedVariantId = picked.id;
+          variantPrice = picked.price;
+          variantCost = picked.cost;
+        }
 
+        let quantity = Math.random() > 0.85 ? (Math.random() > 0.7 ? 3 : 2) : 1;
+        if (selectedVariantId) {
+          const v = (variantStateMap.get(selectedMerch.id) || []).find(x => x.id === selectedVariantId);
+          quantity = Math.min(quantity, v?.stock ?? 0);
+        } else {
+          quantity = Math.min(quantity, selectedMerch.currentStock);
+        }
         if (quantity <= 0) continue;
 
-        // Update the current stock tracker
-        const merchIndex = merchWithCurrentStock.findIndex(m => m.id === selectedMerch.id);
-        if (merchIndex >= 0) {
-          merchWithCurrentStock[merchIndex].currentStock -= quantity;
+        const merchIndex = merchWithCurrentStock.findIndex((m: any) => m.id === selectedMerch.id);
+        if (merchIndex >= 0) merchWithCurrentStock[merchIndex].currentStock -= quantity;
+        if (selectedVariantId) {
+          const v = (variantStateMap.get(selectedMerch.id) || []).find(x => x.id === selectedVariantId);
+          if (v) v.stock -= quantity;
+          variantStockUpdates.set(selectedVariantId, (variantStockUpdates.get(selectedVariantId) || 0) + quantity);
+        } else {
+          stockUpdates.set(selectedMerch.id, (stockUpdates.get(selectedMerch.id) || 0) + quantity);
         }
-
-        // Track total stock reduction per merchandise item
-        const currentReduction = stockUpdates.get(selectedMerch.id) || 0;
-        stockUpdates.set(selectedMerch.id, currentReduction + quantity);
         totalStockReduced += quantity;
 
-        // Determine order type
         const orderType = ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)];
 
-        // Determine customer type based on fan composition
-        let customerType = "fan";
-        const rand = Math.random();
-        const superfanRatio = (band.superfans || 0) / Math.max(1, band.total_fans || 1);
-        const dedicatedRatio = (band.dedicated_fans || 0) / Math.max(1, band.total_fans || 1);
+        // Fan-tier loyalty discount
+        let discountPct = 0;
+        if (customerType === "superfan") discountPct = 10;
+        else if (customerType === "collector") discountPct = 5;
 
-        if (rand < superfanRatio * 2) {
-          customerType = "superfan";
-        } else if (rand < (superfanRatio * 2 + dedicatedRatio)) {
-          customerType = "collector";
-        }
-
-        // Select country with tax rates
         const selectedCountry = weightedRandomSelect(COUNTRIES);
         const country = selectedCountry.name;
 
-        const unitPrice = Math.min(selectedMerch.selling_price || 20, 9999); // Cap at max price
-        const productionCost = selectedMerch.cost_to_produce || 0;
+        const baseUnitPrice = variantPrice ?? selectedMerch.selling_price ?? 20;
+        const productionCost = variantCost ?? selectedMerch.cost_to_produce ?? 0;
+        const unitPrice = Math.min(Math.max(1, Math.round(baseUnitPrice * (1 - discountPct / 100))), 9999);
         const subtotal = unitPrice * quantity;
         const totalCost = productionCost * quantity;
 
-        // Calculate taxes (keep as decimals for numeric columns)
         const salesTax = Math.round(subtotal * selectedCountry.salesTaxRate * 100) / 100;
         const vat = Math.round(subtotal * selectedCountry.vatRate * 100) / 100;
-        // total_price and unit_price are INTEGER columns - must be whole numbers
         const totalPrice = Math.round(subtotal + salesTax + vat);
-        // Net revenue = sales minus taxes minus production costs
         const netRevenue = Math.max(0, subtotal - totalCost);
 
         ordersToInsert.push({
           band_id: band.id,
           merchandise_id: selectedMerch.id,
+          variant_id: selectedVariantId,
           quantity,
           unit_price: Math.round(unitPrice),
           total_price: totalPrice,
@@ -229,11 +276,31 @@ Deno.serve(async (req) => {
           order_type: orderType,
           customer_type: customerType,
           country,
+          discount_pct: discountPct,
         });
 
         totalRevenue += totalPrice;
         totalTaxes += salesTax + vat;
         totalNetRevenue += netRevenue;
+      }
+
+      // Apply variant stock decrements
+      for (const [variantId, reduction] of variantStockUpdates) {
+        try {
+          const { data: cur } = await supabase
+            .from("merch_variants").select("stock_quantity").eq("id", variantId).single();
+          if (cur) {
+            const newStock = Math.max(0, (cur.stock_quantity || 0) - reduction);
+            await supabase.from("merch_variants").update({ stock_quantity: newStock }).eq("id", variantId);
+            if (newStock === 0) {
+              await supabase.from("merch_stockout_events").insert({
+                band_id: band.id, variant_id: variantId, channel: "online",
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`[${JOB_NAME}] Failed to update variant ${variantId}:`, e);
+        }
       }
 
       if (ordersToInsert.length > 0) {
