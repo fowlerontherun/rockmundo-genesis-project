@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Radio, Tv, Newspaper, BookOpen, Mic, Film, Globe } from "lucide-react";
+import { Radio, Tv, Newspaper, BookOpen, Mic, Film, Globe, Clapperboard } from "lucide-react";
 
 export default function MediaHub() {
   return (
@@ -13,6 +13,7 @@ export default function MediaHub() {
         { icon: BookOpen, labelKey: "nav.magazines", path: "/media/magazines", imagePrompt: "Glossy music magazines spread out showing artist covers and feature stories" },
         { icon: Mic, labelKey: "nav.podcasts", path: "/media/podcasts", imagePrompt: "A podcast recording setup with professional microphone, headphones, and soundwaves" },
         { icon: Film, labelKey: "nav.films", path: "/media/films", imagePrompt: "A movie theater marquee showing music documentary and concert film titles" },
+        { icon: Clapperboard, labelKey: "nav.actingCareer", path: "/acting", imagePrompt: "A film set with director's chair, clapperboard, stage lights and a script on a table" },
         { icon: Globe, labelKey: "nav.websites", path: "/media/websites", imagePrompt: "A computer screen showing music blog websites with reviews and artist interviews" },
       ]}
     />

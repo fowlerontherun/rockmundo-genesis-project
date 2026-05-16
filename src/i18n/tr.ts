@@ -163,6 +163,7 @@ export const tr: TranslationKeys = {
     magazines: "Dergiler",
     podcasts: "Podcastler",
     films: "Filmler",
+    actingCareer: "Oyunculuk Kariyeri",
     selfPr: "Kendi Tanıtımın",
     websites: "Web Siteleri",
     journal: "Günlük",

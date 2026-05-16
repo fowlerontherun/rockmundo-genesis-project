@@ -50,6 +50,51 @@ export type Database = {
         }
         Relationships: []
       }
+      acting_negotiations: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          initial_offer_cents: number
+          offer_id: string
+          player_counter_cents: number | null
+          round: number
+          status: string
+          studio_offer_cents: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          initial_offer_cents: number
+          offer_id: string
+          player_counter_cents?: number | null
+          round?: number
+          status?: string
+          studio_offer_cents: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          initial_offer_cents?: number
+          offer_id?: string
+          player_counter_cents?: number | null
+          round?: number
+          status?: string
+          studio_offer_cents?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_feed: {
         Row: {
           activity_type: string
@@ -10250,6 +10295,53 @@ export type Database = {
             columns: ["stage_slot_id"]
             isOneToOne: false
             referencedRelation: "festival_stage_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      film_performance_weekly: {
+        Row: {
+          box_office_week_cents: number
+          contract_id: string
+          drop_pct: number | null
+          id: string
+          merch_revenue_cents: number
+          merch_units: number
+          recorded_at: string
+          screens: number
+          streaming_views: number
+          week_number: number
+        }
+        Insert: {
+          box_office_week_cents?: number
+          contract_id: string
+          drop_pct?: number | null
+          id?: string
+          merch_revenue_cents?: number
+          merch_units?: number
+          recorded_at?: string
+          screens?: number
+          streaming_views?: number
+          week_number: number
+        }
+        Update: {
+          box_office_week_cents?: number
+          contract_id?: string
+          drop_pct?: number | null
+          id?: string
+          merch_revenue_cents?: number
+          merch_units?: number
+          recorded_at?: string
+          screens?: number
+          streaming_views?: number
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_performance_weekly_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "player_film_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -21381,6 +21473,8 @@ export type Database = {
       player_film_contracts: {
         Row: {
           accepted_at: string | null
+          audience_score: number | null
+          awards_won: number | null
           band_id: string | null
           box_office_gross: number | null
           casting_date: string | null
@@ -21388,22 +21482,34 @@ export type Database = {
           completed_at: string | null
           contract_year: number
           created_at: string | null
+          critic_score: number | null
           fame_boost: number | null
           fan_boost: number | null
           film_id: string
+          film_title: string | null
           filming_end: string | null
           filming_end_date: string | null
           filming_start: string | null
           filming_start_date: string | null
           id: string
+          is_sequel: boolean | null
+          merch_revenue_cents: number | null
+          opening_weekend_cents: number | null
+          parent_contract_id: string | null
+          performance_calculated_at: string | null
           premiere_date: string | null
+          released_at: string | null
           role_type: string | null
           sequel_eligible: boolean | null
           status: string | null
+          streaming_views: number | null
+          total_pay_cents: number | null
           user_id: string
         }
         Insert: {
           accepted_at?: string | null
+          audience_score?: number | null
+          awards_won?: number | null
           band_id?: string | null
           box_office_gross?: number | null
           casting_date?: string | null
@@ -21411,22 +21517,34 @@ export type Database = {
           completed_at?: string | null
           contract_year: number
           created_at?: string | null
+          critic_score?: number | null
           fame_boost?: number | null
           fan_boost?: number | null
           film_id: string
+          film_title?: string | null
           filming_end?: string | null
           filming_end_date?: string | null
           filming_start?: string | null
           filming_start_date?: string | null
           id?: string
+          is_sequel?: boolean | null
+          merch_revenue_cents?: number | null
+          opening_weekend_cents?: number | null
+          parent_contract_id?: string | null
+          performance_calculated_at?: string | null
           premiere_date?: string | null
+          released_at?: string | null
           role_type?: string | null
           sequel_eligible?: boolean | null
           status?: string | null
+          streaming_views?: number | null
+          total_pay_cents?: number | null
           user_id: string
         }
         Update: {
           accepted_at?: string | null
+          audience_score?: number | null
+          awards_won?: number | null
           band_id?: string | null
           box_office_gross?: number | null
           casting_date?: string | null
@@ -21434,18 +21552,28 @@ export type Database = {
           completed_at?: string | null
           contract_year?: number
           created_at?: string | null
+          critic_score?: number | null
           fame_boost?: number | null
           fan_boost?: number | null
           film_id?: string
+          film_title?: string | null
           filming_end?: string | null
           filming_end_date?: string | null
           filming_start?: string | null
           filming_start_date?: string | null
           id?: string
+          is_sequel?: boolean | null
+          merch_revenue_cents?: number | null
+          opening_weekend_cents?: number | null
+          parent_contract_id?: string | null
+          performance_calculated_at?: string | null
           premiere_date?: string | null
+          released_at?: string | null
           role_type?: string | null
           sequel_eligible?: boolean | null
           status?: string | null
+          streaming_views?: number | null
+          total_pay_cents?: number | null
           user_id?: string
         }
         Relationships: [
@@ -23261,6 +23389,69 @@ export type Database = {
           },
         ]
       }
+      player_series_contracts: {
+        Row: {
+          created_at: string
+          departed_at: string | null
+          episode_count: number
+          id: string
+          joined_at: string
+          pay_per_episode_cents: number
+          role_name: string | null
+          role_type: string
+          season_id: string
+          series_id: string
+          status: string
+          total_pay_cents: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          departed_at?: string | null
+          episode_count: number
+          id?: string
+          joined_at?: string
+          pay_per_episode_cents: number
+          role_name?: string | null
+          role_type?: string
+          season_id: string
+          series_id: string
+          status?: string
+          total_pay_cents: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          departed_at?: string | null
+          episode_count?: number
+          id?: string
+          joined_at?: string
+          pay_per_episode_cents?: number
+          role_name?: string | null
+          role_type?: string
+          season_id?: string
+          series_id?: string
+          status?: string
+          total_pay_cents?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_series_contracts_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "series_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_series_contracts_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "scripted_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skill_books: {
         Row: {
           book_id: string
@@ -24794,11 +24985,13 @@ export type Database = {
         Row: {
           accepted_at: string | null
           band_id: string | null
+          base_pay_cents: number | null
           compensation: number | null
           completed_at: string | null
           cooldown_days: number | null
           created_at: string | null
           duration_hours: number | null
+          episode_count: number | null
           expires_at: string
           fame_boost: number | null
           fan_boost: number | null
@@ -24808,10 +25001,16 @@ export type Database = {
           linked_tour_id: string | null
           media_outlet_id: string | null
           media_type: string
+          negotiation_id: string | null
           offer_type: string
           outlet_name: string | null
+          parent_film_id: string | null
+          pay_per_episode_cents: number | null
           proposed_date: string
           release_hype_boost_percent: number | null
+          role_type: string | null
+          season_id: string | null
+          series_id: string | null
           show_id: string | null
           show_name: string | null
           status: string | null
@@ -24822,11 +25021,13 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           band_id?: string | null
+          base_pay_cents?: number | null
           compensation?: number | null
           completed_at?: string | null
           cooldown_days?: number | null
           created_at?: string | null
           duration_hours?: number | null
+          episode_count?: number | null
           expires_at: string
           fame_boost?: number | null
           fan_boost?: number | null
@@ -24836,10 +25037,16 @@ export type Database = {
           linked_tour_id?: string | null
           media_outlet_id?: string | null
           media_type: string
+          negotiation_id?: string | null
           offer_type: string
           outlet_name?: string | null
+          parent_film_id?: string | null
+          pay_per_episode_cents?: number | null
           proposed_date: string
           release_hype_boost_percent?: number | null
+          role_type?: string | null
+          season_id?: string | null
+          series_id?: string | null
           show_id?: string | null
           show_name?: string | null
           status?: string | null
@@ -24850,11 +25057,13 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           band_id?: string | null
+          base_pay_cents?: number | null
           compensation?: number | null
           completed_at?: string | null
           cooldown_days?: number | null
           created_at?: string | null
           duration_hours?: number | null
+          episode_count?: number | null
           expires_at?: string
           fame_boost?: number | null
           fan_boost?: number | null
@@ -24864,10 +25073,16 @@ export type Database = {
           linked_tour_id?: string | null
           media_outlet_id?: string | null
           media_type?: string
+          negotiation_id?: string | null
           offer_type?: string
           outlet_name?: string | null
+          parent_film_id?: string | null
+          pay_per_episode_cents?: number | null
           proposed_date?: string
           release_hype_boost_percent?: number | null
+          role_type?: string | null
+          season_id?: string | null
+          series_id?: string | null
           show_id?: string | null
           show_name?: string | null
           status?: string | null
@@ -27794,6 +28009,62 @@ export type Database = {
         }
         Relationships: []
       }
+      scripted_series: {
+        Row: {
+          base_pay_per_episode_cents: number
+          created_at: string
+          current_season: number
+          episodes_per_season: number
+          genre: string | null
+          id: string
+          is_open_for_casting: boolean
+          min_fame_required: number
+          network_id: string | null
+          premise: string | null
+          prestige_level: number
+          target_role_type: string
+          title: string
+        }
+        Insert: {
+          base_pay_per_episode_cents?: number
+          created_at?: string
+          current_season?: number
+          episodes_per_season?: number
+          genre?: string | null
+          id?: string
+          is_open_for_casting?: boolean
+          min_fame_required?: number
+          network_id?: string | null
+          premise?: string | null
+          prestige_level?: number
+          target_role_type?: string
+          title: string
+        }
+        Update: {
+          base_pay_per_episode_cents?: number
+          created_at?: string
+          current_season?: number
+          episodes_per_season?: number
+          genre?: string | null
+          id?: string
+          is_open_for_casting?: boolean
+          min_fame_required?: number
+          network_id?: string | null
+          premise?: string | null
+          prestige_level?: number
+          target_role_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripted_series_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "tv_networks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_genre_modifiers: {
         Row: {
           created_at: string
@@ -28328,6 +28599,222 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_episodes: {
+        Row: {
+          airdate: string | null
+          aired: boolean
+          created_at: string
+          episode_number: number
+          id: string
+          season_id: string
+          social_buzz: number | null
+          title: string | null
+          viewers_7day: number | null
+          viewers_live: number | null
+        }
+        Insert: {
+          airdate?: string | null
+          aired?: boolean
+          created_at?: string
+          episode_number: number
+          id?: string
+          season_id: string
+          social_buzz?: number | null
+          title?: string | null
+          viewers_7day?: number | null
+          viewers_live?: number | null
+        }
+        Update: {
+          airdate?: string | null
+          aired?: boolean
+          created_at?: string
+          episode_number?: number
+          id?: string
+          season_id?: string
+          social_buzz?: number | null
+          title?: string | null
+          viewers_7day?: number | null
+          viewers_live?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_episodes_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "series_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_performance_weekly: {
+        Row: {
+          ad_revenue_cents: number | null
+          id: string
+          merch_revenue_cents: number | null
+          recorded_at: string
+          season_id: string
+          streaming_views: number | null
+          viewers: number | null
+          week_number: number
+        }
+        Insert: {
+          ad_revenue_cents?: number | null
+          id?: string
+          merch_revenue_cents?: number | null
+          recorded_at?: string
+          season_id: string
+          streaming_views?: number | null
+          viewers?: number | null
+          week_number: number
+        }
+        Update: {
+          ad_revenue_cents?: number | null
+          id?: string
+          merch_revenue_cents?: number | null
+          recorded_at?: string
+          season_id?: string
+          streaming_views?: number | null
+          viewers?: number | null
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_performance_weekly_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "series_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_renewal_offers: {
+        Row: {
+          created_at: string
+          episode_count: number
+          expires_at: string
+          id: string
+          new_season_number: number
+          offered_pay_per_episode_cents: number
+          prior_season_id: string
+          responded_at: string | null
+          series_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          episode_count: number
+          expires_at?: string
+          id?: string
+          new_season_number: number
+          offered_pay_per_episode_cents: number
+          prior_season_id: string
+          responded_at?: string | null
+          series_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          episode_count?: number
+          expires_at?: string
+          id?: string
+          new_season_number?: number
+          offered_pay_per_episode_cents?: number
+          prior_season_id?: string
+          responded_at?: string | null
+          series_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_renewal_offers_prior_season_id_fkey"
+            columns: ["prior_season_id"]
+            isOneToOne: false
+            referencedRelation: "series_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_renewal_offers_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "scripted_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series_seasons: {
+        Row: {
+          audience_score: number | null
+          avg_viewers: number | null
+          created_at: string
+          critic_score: number | null
+          episode_count: number
+          episodes_aired: number
+          filming_end: string | null
+          filming_start: string | null
+          finale_date: string | null
+          id: string
+          premiere_date: string | null
+          renewal_decision: string | null
+          renewal_decision_at: string | null
+          season_number: number
+          series_id: string
+          status: string
+          total_merch_revenue_cents: number | null
+          total_viewers: number | null
+        }
+        Insert: {
+          audience_score?: number | null
+          avg_viewers?: number | null
+          created_at?: string
+          critic_score?: number | null
+          episode_count?: number
+          episodes_aired?: number
+          filming_end?: string | null
+          filming_start?: string | null
+          finale_date?: string | null
+          id?: string
+          premiere_date?: string | null
+          renewal_decision?: string | null
+          renewal_decision_at?: string | null
+          season_number: number
+          series_id: string
+          status?: string
+          total_merch_revenue_cents?: number | null
+          total_viewers?: number | null
+        }
+        Update: {
+          audience_score?: number | null
+          avg_viewers?: number | null
+          created_at?: string
+          critic_score?: number | null
+          episode_count?: number
+          episodes_aired?: number
+          filming_end?: string | null
+          filming_start?: string | null
+          finale_date?: string | null
+          id?: string
+          premiere_date?: string | null
+          renewal_decision?: string | null
+          renewal_decision_at?: string | null
+          season_number?: number
+          series_id?: string
+          status?: string
+          total_merch_revenue_cents?: number | null
+          total_viewers?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_seasons_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "scripted_series"
             referencedColumns: ["id"]
           },
         ]

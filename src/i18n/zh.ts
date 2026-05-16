@@ -164,6 +164,7 @@ export const zh: TranslationKeys = {
     magazines: "杂志",
     podcasts: "播客",
     films: "电影",
+    actingCareer: "演艺生涯",
     selfPr: "自我公关",
     websites: "网站",
     journal: "日记",

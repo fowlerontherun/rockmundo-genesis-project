@@ -164,6 +164,7 @@ export const ja: TranslationKeys = {
     magazines: "雑誌",
     podcasts: "ポッドキャスト",
     films: "映画",
+    actingCareer: "俳優キャリア",
     selfPr: "セルフPR",
     websites: "ウェブサイト",
     journal: "ジャーナル",

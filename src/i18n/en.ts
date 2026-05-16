@@ -166,6 +166,7 @@ export const en = {
     magazines: "Magazines",
     podcasts: "Podcasts",
     films: "Films",
+    actingCareer: "Acting Career",
     selfPr: "Self-PR",
     websites: "Websites",
     journal: "Journal",

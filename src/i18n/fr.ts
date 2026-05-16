@@ -165,6 +165,7 @@ export const fr: TranslationKeys = {
     magazines: "Magazines",
     podcasts: "Podcasts",
     films: "Films",
+    actingCareer: "Carrière d'acteur",
     selfPr: "Auto-promotion",
     websites: "Sites Web",
     journal: "Journal",
