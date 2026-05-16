@@ -37,7 +37,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
     enabled: !!handle,
   });
 
-  // Fetch profile twaats (top-level only)
+  // Fetch profile twaats
   const { data: twaats } = useQuery({
     queryKey: ["twaater-profile-twaats", profile?.id],
     queryFn: async () => {
@@ -50,34 +50,30 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
         `)
         .eq("account_id", profile?.id)
         .is("deleted_at", null)
-        .is("parent_twaat_id", null)
         .order("created_at", { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
     },
     enabled: !!profile?.id,
   });
 
-  // Fetch replies authored by this profile (twaats with parent_twaat_id set)
+  // Fetch replies authored by this profile (twaat_replies table)
   const { data: replies, isLoading: repliesLoading } = useQuery({
     queryKey: ["twaater-profile-replies", profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("twaats")
+        .from("twaat_replies")
         .select(`
-          *,
-          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type),
-          metrics:twaat_metrics(*),
-          parent:twaats!twaats_parent_twaat_id_fkey(
+          id, body, created_at, parent_twaat_id,
+          parent:twaats!twaat_replies_parent_twaat_id_fkey(
             id, body, created_at,
             account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified)
           )
         `)
         .eq("account_id", profile?.id)
         .is("deleted_at", null)
-        .not("parent_twaat_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
