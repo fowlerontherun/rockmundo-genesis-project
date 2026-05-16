@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { MapPin, Plane, Train, Bus, Ship, Globe, ArrowRight, Calendar } from "lucide-react";
 import { PageLayout } from "@/components/ui/PageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,13 @@ import { PastTravelList } from "@/components/travel/PastTravelList";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { TravelNotificationPreferences } from "@/components/travel/TravelNotificationPreferences";
 import { bookTravel } from "@/utils/travelSystem";
-import { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import {
+  CityWithCoords,
+  TravelOption,
+  fetchCityWithCoords,
+  calculateDistance,
+  getAvailableModes,
+} from "@/utils/dynamicTravel";
 import { getNextAvailableDeparture, isValidDeparture, formatHourToTime, calculateArrivalTime } from "@/utils/transportSchedules";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
