@@ -52,7 +52,7 @@ export const TRANSPORT_MODES = {
     speedKmh: 944,          // ~10% faster (was 850)
     costPerKm: 0.12,
     comfort: 55, 
-    minDistance: 200,       // Planes for longer distances
+    minDistance: 100,       // Short-hop flights allowed so every city pair is reachable
     maxDistance: 20000, 
     icon: 'plane', 
     baseCost: 150,          // Airport fees, taxes etc
