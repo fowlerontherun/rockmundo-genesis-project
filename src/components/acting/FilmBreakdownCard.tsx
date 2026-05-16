@@ -20,7 +20,7 @@ export function FilmBreakdownCard({ contract: c }: { contract: any }) {
   const released = !!c.released_at;
   const totalGross = Number(c.box_office_gross ?? 0);
   const merch = Number(c.merch_revenue_cents ?? 0);
-  const totalPay = Number(c.total_pay_cents ?? c.compensation * 100 ?? 0);
+  const totalPay = Number(c.total_pay_cents ?? (c.compensation ? c.compensation * 100 : 0));
 
   return (
     <Card>
