@@ -102,6 +102,24 @@ const CityTreasuryDetail = () => {
     return Array.from(set).sort();
   }, [ledger]);
 
+  // Lifetime breakdown by type (all loaded entries, ignores active filters)
+  const typeBreakdown = useMemo(() => {
+    const map = new Map<string, { credits: number; debits: number; count: number }>();
+    for (const e of ledger) {
+      const cur = map.get(e.type) || { credits: 0, debits: 0, count: 0 };
+      if (e.amount >= 0) cur.credits += e.amount;
+      else cur.debits += Math.abs(e.amount);
+      cur.count += 1;
+      map.set(e.type, cur);
+    }
+    return Array.from(map.entries())
+      .map(([type, v]) => ({ type, ...v, net: v.credits - v.debits }))
+      .sort((a, b) => (b.credits - b.debits) - (a.credits - a.debits));
+  }, [ledger]);
+
+  const lifetimeCredits = typeBreakdown.reduce((s, t) => s + t.credits, 0);
+  const lifetimeDebits = typeBreakdown.reduce((s, t) => s + t.debits, 0);
+
   const filtered = useMemo(() => {
     const start = startDate ? new Date(startDate).getTime() : null;
     const end = endDate ? new Date(endDate).getTime() + 24 * 60 * 60 * 1000 : null;
@@ -209,7 +227,90 @@ const CityTreasuryDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Filters */}
+        {/* Lifetime breakdown by source */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Revenue & Spend by Source</CardTitle>
+            <CardDescription>
+              Lifetime totals across every credit / debit type (from the loaded ledger window).
+              Use this to verify each tax stream is flowing into the treasury.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {typeBreakdown.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No ledger entries yet. Once gig income tax, record sales tax, merch sales tax, or wage
+                withholdings land in this city they will appear here grouped by source.
+              </p>
+            ) : (
+              <ResponsiveTable>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source</TableHead>
+                      <TableHead className="text-right">Entries</TableHead>
+                      <TableHead className="text-right">Credits</TableHead>
+                      <TableHead className="text-right">Debits</TableHead>
+                      <TableHead className="text-right">Net</TableHead>
+                      <TableHead className="text-right">% of Credits</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {typeBreakdown.map((row) => {
+                      const pct = lifetimeCredits > 0 ? (row.credits / lifetimeCredits) * 100 : 0;
+                      return (
+                        <TableRow key={row.type}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[11px] capitalize">
+                              {row.type.replace(/_/g, " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">{row.count}</TableCell>
+                          <TableCell className="text-right text-emerald-500 font-medium">
+                            {row.credits > 0 ? `+${fmt.format(row.credits)}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right text-destructive font-medium">
+                            {row.debits > 0 ? `-${fmt.format(row.debits)}` : "—"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-semibold ${row.net >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                          >
+                            {row.net >= 0 ? "+" : "-"}{fmt.format(Math.abs(row.net))}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-muted-foreground">
+                            {row.credits > 0 ? `${pct.toFixed(1)}%` : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    <TableRow className="bg-muted/40 font-semibold">
+                      <TableCell>Total</TableCell>
+                      <TableCell className="text-right">
+                        {typeBreakdown.reduce((s, r) => s + r.count, 0)}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-500">
+                        +{fmt.format(lifetimeCredits)}
+                      </TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -{fmt.format(lifetimeDebits)}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right ${
+                          lifetimeCredits - lifetimeDebits >= 0 ? "text-emerald-500" : "text-destructive"
+                        }`}
+                      >
+                        {lifetimeCredits - lifetimeDebits >= 0 ? "+" : "-"}
+                        {fmt.format(Math.abs(lifetimeCredits - lifetimeDebits))}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">

@@ -147,12 +147,43 @@ Deno.serve(async (req) => {
           throw shiftFetchError ?? new Error('Shift not found');
         }
 
-        // Fetch job details for fame penalty tier
+        // Fetch job details for fame penalty tier + city for income tax routing
         const { data: job } = await supabaseClient
           .from('jobs')
-          .select('title, category, fame_penalty_tier, base_fame_impact')
+          .select('title, category, fame_penalty_tier, base_fame_impact, city_id')
           .eq('id', shift.job_id)
           .single();
+
+        // Compute city income tax withholding on shift earnings
+        let cityIncomeTax = 0;
+        const grossEarnings = shift.earnings || 0;
+        let netEarnings = grossEarnings;
+        try {
+          if (job?.city_id && grossEarnings > 0) {
+            const { data: laws } = await supabaseClient
+              .from('city_laws')
+              .select('income_tax_rate')
+              .eq('city_id', job.city_id)
+              .is('effective_until', null)
+              .maybeSingle();
+            const taxRate = Math.max(0, Math.min(50, Number(laws?.income_tax_rate ?? 0))) / 100;
+            if (taxRate > 0) {
+              cityIncomeTax = Math.round(grossEarnings * taxRate);
+              netEarnings = grossEarnings - cityIncomeTax;
+              if (cityIncomeTax > 0) {
+                await supabaseClient.rpc('credit_city_treasury', {
+                  p_city_id: job.city_id,
+                  p_amount: cityIncomeTax,
+                  p_type: 'employment_income_tax',
+                  p_description: `Wage withholding (${(taxRate * 100).toFixed(1)}%) — ${job?.title ?? 'shift'}`,
+                  p_reference_id: shiftId,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.log('[shift-clock-out] Error applying city income tax:', e);
+        }
 
         // Calculate dynamic fame impact
         const { fameImpact: dynamicFameImpact, bandName } = await calculateDynamicFameImpact(
@@ -179,7 +210,7 @@ Deno.serve(async (req) => {
           .from('player_employment')
           .update({
             shifts_completed: (shift.player_employment.shifts_completed || 0) + 1,
-            total_earnings: (shift.player_employment.total_earnings || 0) + (shift.earnings || 0),
+            total_earnings: (shift.player_employment.total_earnings || 0) + netEarnings,
             last_shift_at: nowIso,
           })
           .eq('id', shift.employment_id);
@@ -198,7 +229,7 @@ Deno.serve(async (req) => {
           throw profileFetchError;
         }
 
-        const updatedCash = (profile?.cash || 0) + (shift.earnings || 0);
+        const updatedCash = (profile?.cash || 0) + netEarnings;
         const updatedHealth = Math.max(
           0,
           Math.min(100, (profile?.health || 100) + (shift.health_impact || 0))
@@ -231,6 +262,10 @@ Deno.serve(async (req) => {
               fame_change: dynamicFameImpact,
               job_title: job?.title,
               band_name: bandName,
+              gross_earnings: grossEarnings,
+              net_earnings: netEarnings,
+              city_income_tax: cityIncomeTax,
+              city_id: job?.city_id ?? null,
             },
           });
 
@@ -290,12 +325,12 @@ Deno.serve(async (req) => {
         } catch (_e) { /* non-critical */ }
 
         processedCount += 1;
-        totalEarnings += shift.earnings || 0;
+        totalEarnings += netEarnings;
         totalXpAwarded += shift.xp_earned || 0;
         totalFameChange += dynamicFameImpact;
 
         console.log(
-          `Clocked out shift ${shiftId}, awarded ${shift.earnings} cash, ${shift.xp_earned} XP, fame change: ${dynamicFameImpact}`
+          `Clocked out shift ${shiftId}: gross $${grossEarnings}, tax $${cityIncomeTax}, net $${netEarnings}, ${shift.xp_earned} XP, fame ${dynamicFameImpact}`
         );
       } catch (shiftError) {
         errorCount += 1;
