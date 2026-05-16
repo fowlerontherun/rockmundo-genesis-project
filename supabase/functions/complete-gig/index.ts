@@ -867,32 +867,82 @@ serve(async (req) => {
       console.log('Media cycle update skipped:', mediaErr);
     }
 
-    // Distribute XP to band members
+    // Distribute XP, personal fame, and personal fans to band members
     const { data: members } = await supabaseClient
       .from('band_members')
-      .select('user_id')
-      .eq('band_id', gig.band_id)
-      .eq('is_touring_member', false);
+      .select('user_id, profile_id, is_touring_member')
+      .eq('band_id', gig.band_id);
 
     if (members && members.length > 0) {
-      const xpPerMember = Math.floor(memberXpBase / members.length);
-      
-      // Award XP to each member
-      for (const member of members) {
+      // Only non-touring members get XP and personal fame/fans
+      const coreMembers = members.filter((m: any) => !m.is_touring_member);
+      const touringMembers = members.filter((m: any) => m.is_touring_member);
+      const xpPerMember = coreMembers.length > 0 ? Math.floor(memberXpBase / coreMembers.length) : 0;
+
+      // Personal fame: each core member gets 60% of the band's fame gain (it's a shared accomplishment)
+      // Personal fans: each core member gets a 30% share of new fans, split across the lineup
+      const personalFamePerCore = Math.max(0, Math.round(fameGained * 0.6));
+      const personalFansPerCore = coreMembers.length > 0
+        ? Math.max(0, Math.round((newFansTotal * 0.3) / coreMembers.length))
+        : 0;
+      // Touring members get a token slice (10% fame, no personal fans) — they passed through
+      const personalFameTouring = Math.max(0, Math.round(fameGained * 0.1));
+
+      for (const member of coreMembers) {
+        // XP ledger (existing behaviour)
         await supabaseClient
           .from('experience_ledger')
           .insert({
             user_id: member.user_id,
             activity_type: 'gig_performance',
             xp_amount: xpPerMember,
-            metadata: { 
-              gig_id: gigId, 
+            metadata: {
+              gig_id: gigId,
               band_id: gig.band_id,
               rating: avgRating.toFixed(1),
-              attendance: outcome.actual_attendance
+              attendance: outcome.actual_attendance,
+              personal_fame_gained: personalFamePerCore,
+              personal_fans_gained: personalFansPerCore,
             }
           });
+
+        // Personal fame + fans on the member's profile
+        if (member.profile_id && (personalFamePerCore > 0 || personalFansPerCore > 0)) {
+          const { data: memberProfile } = await supabaseClient
+            .from('profiles')
+            .select('fame, fans')
+            .eq('id', member.profile_id)
+            .maybeSingle();
+          if (memberProfile) {
+            await supabaseClient
+              .from('profiles')
+              .update({
+                fame: clampInt4((memberProfile.fame || 0) + personalFamePerCore),
+                fans: clampInt4((memberProfile.fans || 0) + personalFansPerCore),
+              })
+              .eq('id', member.profile_id);
+          }
+        }
       }
+
+      // Touring members: small personal fame slice, no fans
+      for (const member of touringMembers) {
+        if (member.profile_id && personalFameTouring > 0) {
+          const { data: memberProfile } = await supabaseClient
+            .from('profiles')
+            .select('fame')
+            .eq('id', member.profile_id)
+            .maybeSingle();
+          if (memberProfile) {
+            await supabaseClient
+              .from('profiles')
+              .update({ fame: clampInt4((memberProfile.fame || 0) + personalFameTouring) })
+              .eq('id', member.profile_id);
+          }
+        }
+      }
+
+      console.log(`Member rewards: ${coreMembers.length} core got +${personalFamePerCore} fame / +${personalFansPerCore} fans each, ${touringMembers.length} touring got +${personalFameTouring} fame each`);
     }
 
     // Mark gig as completed
