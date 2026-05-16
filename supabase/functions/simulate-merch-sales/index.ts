@@ -71,11 +71,31 @@ Deno.serve(async (req) => {
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce)
+        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce, superfan_only, drop_starts_at, available_until, is_limited_edition, limited_quantity, tour_exclusive_tour_id)
       `)
       .gt("total_fans", 0);
 
     if (bandsError) throw bandsError;
+
+    // Preload all variants for these bands' merch in one query
+    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; size: string | null; color: string | null; is_active: boolean; }>>();
+    try {
+      const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
+      if (merchIds.length > 0) {
+        const { data: variants } = await supabase
+          .from("merch_variants")
+          .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, size, color, is_active")
+          .in("merchandise_id", merchIds)
+          .eq("is_active", true);
+        for (const v of variants || []) {
+          const arr = variantMap.get((v as any).merchandise_id) || [];
+          arr.push(v as any);
+          variantMap.set((v as any).merchandise_id, arr);
+        }
+      }
+    } catch (vErr) {
+      console.error(`[${JOB_NAME}] Variant preload error:`, vErr);
+    }
 
     // === FETCH BAND SENTIMENT & REPUTATION FOR MERCH DEMAND (v1.0.947 / v1.0.988) ===
     const bandSentimentMap = new Map<string, number>();
