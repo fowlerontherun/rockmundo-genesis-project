@@ -83,6 +83,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filterMode, setFilterMode] = useState<FilterMode>('learned');
+  const [hideMaxed, setHideMaxed] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
@@ -200,6 +201,17 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
         break;
     }
 
+    // Hide maxed skills (default on)
+    if (hideMaxed) {
+      filtered = filtered.filter(skill => {
+        const sp = progress.find(p => p.skill_slug === skill.slug);
+        const lvl = sp?.current_level ?? 0;
+        const tier = getSkillTier(skill.slug);
+        const cap = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
+        return lvl < cap;
+      });
+    }
+
     // Sort by tier then name
     filtered.sort((a, b) => {
       const tierOrder = { basic: 0, professional: 1, mastery: 2 };
@@ -209,7 +221,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
     });
 
     return filtered;
-  }, [skills, progress, selectedCategory, filterMode, learnedSlugs, educationSlugs]);
+  }, [skills, progress, selectedCategory, filterMode, learnedSlugs, educationSlugs, hideMaxed]);
 
   // Count skills per category
   const categoryCounts = useMemo(() => {
@@ -293,6 +305,14 @@ export const SkillTree: React.FC<SkillTreeProps> = ({ xpBalance = 0, onXpSpent }
             <ToggleGroupItem value="all" size="sm">All</ToggleGroupItem>
             <ToggleGroupItem value="unlearned" size="sm">Unlearned</ToggleGroupItem>
           </ToggleGroup>
+          <Button
+            variant={hideMaxed ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setHideMaxed(v => !v)}
+            className="text-xs h-8"
+          >
+            {hideMaxed ? 'Hide maxed' : 'Show maxed'}
+          </Button>
         </div>
       </div>
 
