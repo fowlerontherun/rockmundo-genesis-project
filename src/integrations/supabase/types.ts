@@ -16669,6 +16669,39 @@ export type Database = {
         }
         Relationships: []
       }
+      merch_bundles: {
+        Row: {
+          band_id: string
+          bundle_price: number
+          components: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          band_id: string
+          bundle_price: number
+          components?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          band_id?: string
+          bundle_price?: number
+          components?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       merch_collaboration_offers: {
         Row: {
           band_id: string
@@ -17146,53 +17179,68 @@ export type Database = {
       merch_orders: {
         Row: {
           band_id: string
+          bundle_id: string | null
           city: string | null
+          city_id: string | null
           country: string | null
           created_at: string | null
           customer_type: string
+          discount_pct: number
           gig_id: string | null
           id: string
           merchandise_id: string | null
           net_revenue: number | null
           order_type: string
+          promo_code: string | null
           quantity: number
           sales_tax: number | null
           total_price: number
           unit_price: number
+          variant_id: string | null
           vat: number | null
         }
         Insert: {
           band_id: string
+          bundle_id?: string | null
           city?: string | null
+          city_id?: string | null
           country?: string | null
           created_at?: string | null
           customer_type?: string
+          discount_pct?: number
           gig_id?: string | null
           id?: string
           merchandise_id?: string | null
           net_revenue?: number | null
           order_type?: string
+          promo_code?: string | null
           quantity?: number
           sales_tax?: number | null
           total_price: number
           unit_price: number
+          variant_id?: string | null
           vat?: number | null
         }
         Update: {
           band_id?: string
+          bundle_id?: string | null
           city?: string | null
+          city_id?: string | null
           country?: string | null
           created_at?: string | null
           customer_type?: string
+          discount_pct?: number
           gig_id?: string | null
           id?: string
           merchandise_id?: string | null
           net_revenue?: number | null
           order_type?: string
+          promo_code?: string | null
           quantity?: number
           sales_tax?: number | null
           total_price?: number
           unit_price?: number
+          variant_id?: string | null
           vat?: number | null
         }
         Relationships: [
@@ -17204,6 +17252,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "merch_orders_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "merch_bundles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "merch_orders_gig_id_fkey"
             columns: ["gig_id"]
             isOneToOne: false
@@ -17212,6 +17267,63 @@ export type Database = {
           },
           {
             foreignKeyName: "merch_orders_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_price_rules: {
+        Row: {
+          band_id: string
+          config: Json
+          created_at: string
+          discount_pct: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          merchandise_id: string | null
+          promo_code: string | null
+          rule_type: string
+          starts_at: string | null
+        }
+        Insert: {
+          band_id: string
+          config?: Json
+          created_at?: string
+          discount_pct?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          merchandise_id?: string | null
+          promo_code?: string | null
+          rule_type: string
+          starts_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          config?: Json
+          created_at?: string
+          discount_pct?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          merchandise_id?: string | null
+          promo_code?: string | null
+          rule_type?: string
+          starts_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_price_rules_merchandise_id_fkey"
             columns: ["merchandise_id"]
             isOneToOne: false
             referencedRelation: "player_merchandise"
@@ -17408,6 +17520,317 @@ export type Database = {
             columns: ["production_queue_id"]
             isOneToOne: false
             referencedRelation: "merch_production_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_stock_transfers: {
+        Row: {
+          band_id: string
+          cost: number
+          created_at: string
+          eta: string
+          from_warehouse_id: string
+          id: string
+          merchandise_id: string
+          quantity: number
+          status: string
+          to_warehouse_id: string
+          variant_id: string | null
+        }
+        Insert: {
+          band_id: string
+          cost?: number
+          created_at?: string
+          eta: string
+          from_warehouse_id: string
+          id?: string
+          merchandise_id: string
+          quantity: number
+          status?: string
+          to_warehouse_id: string
+          variant_id?: string | null
+        }
+        Update: {
+          band_id?: string
+          cost?: number
+          created_at?: string
+          eta?: string
+          from_warehouse_id?: string
+          id?: string
+          merchandise_id?: string
+          quantity?: number
+          status?: string
+          to_warehouse_id?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_stock_transfers_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "merch_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_stock_transfers_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_stock_transfers_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "merch_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_stock_transfers_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_stockout_events: {
+        Row: {
+          band_id: string
+          channel: string | null
+          id: string
+          merchandise_id: string | null
+          occurred_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          band_id: string
+          channel?: string | null
+          id?: string
+          merchandise_id?: string | null
+          occurred_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          band_id?: string
+          channel?: string | null
+          id?: string
+          merchandise_id?: string | null
+          occurred_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_stockout_events_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_stockout_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_variants: {
+        Row: {
+          color: string | null
+          cost_to_produce_override: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          merchandise_id: string
+          selling_price_override: number | null
+          size: string | null
+          sku: string | null
+          stock_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          cost_to_produce_override?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchandise_id: string
+          selling_price_override?: number | null
+          size?: string | null
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          cost_to_produce_override?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchandise_id?: string
+          selling_price_override?: number | null
+          size?: string | null
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_variants_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_warehouse_stock: {
+        Row: {
+          id: string
+          merchandise_id: string
+          stock: number
+          updated_at: string
+          variant_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          id?: string
+          merchandise_id: string
+          stock?: number
+          updated_at?: string
+          variant_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          id?: string
+          merchandise_id?: string
+          stock?: number
+          updated_at?: string
+          variant_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_warehouse_stock_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_warehouse_stock_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_warehouse_stock_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "merch_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_warehouses: {
+        Row: {
+          band_id: string
+          capacity: number
+          city_id: string | null
+          created_at: string
+          id: string
+          is_primary: boolean
+          name: string
+          storage_cost_daily: number
+        }
+        Insert: {
+          band_id: string
+          capacity?: number
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name: string
+          storage_cost_daily?: number
+        }
+        Update: {
+          band_id?: string
+          capacity?: number
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name?: string
+          storage_cost_daily?: number
+        }
+        Relationships: []
+      }
+      merch_wholesale_orders: {
+        Row: {
+          band_id: string
+          buyer_name: string
+          country: string | null
+          created_at: string
+          discount_pct: number
+          fulfill_at: string | null
+          id: string
+          lead_time_days: number
+          merchandise_id: string | null
+          status: string
+          total_price: number
+          total_quantity: number
+          unit_price: number
+          variant_id: string | null
+        }
+        Insert: {
+          band_id: string
+          buyer_name: string
+          country?: string | null
+          created_at?: string
+          discount_pct?: number
+          fulfill_at?: string | null
+          id?: string
+          lead_time_days?: number
+          merchandise_id?: string | null
+          status?: string
+          total_price: number
+          total_quantity: number
+          unit_price: number
+          variant_id?: string | null
+        }
+        Update: {
+          band_id?: string
+          buyer_name?: string
+          country?: string | null
+          created_at?: string
+          discount_pct?: number
+          fulfill_at?: string | null
+          id?: string
+          lead_time_days?: number
+          merchandise_id?: string | null
+          status?: string
+          total_price?: number
+          total_quantity?: number
+          unit_price?: number
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_wholesale_orders_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_wholesale_orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -21729,22 +22152,26 @@ export type Database = {
         Row: {
           available_until: string | null
           band_id: string
+          channel_split: Json
           collaboration_id: string | null
           cost_to_produce: number
           created_at: string
           custom_design_id: string | null
           design_name: string
           design_preview_url: string | null
+          drop_starts_at: string | null
           id: string
           is_limited_edition: boolean | null
           item_type: string
           limited_quantity: number | null
           logistics_pct: number
           quality_tier: string | null
+          release_id: string | null
           sales_boost_pct: number | null
           selling_price: number
           stock_quantity: number
           storage_cost_daily: number
+          superfan_only: boolean
           tax_pct: number
           tour_exclusive_tour_id: string | null
           updated_at: string
@@ -21752,22 +22179,26 @@ export type Database = {
         Insert: {
           available_until?: string | null
           band_id: string
+          channel_split?: Json
           collaboration_id?: string | null
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name: string
           design_preview_url?: string | null
+          drop_starts_at?: string | null
           id?: string
           is_limited_edition?: boolean | null
           item_type: string
           limited_quantity?: number | null
           logistics_pct?: number
           quality_tier?: string | null
+          release_id?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
           storage_cost_daily?: number
+          superfan_only?: boolean
           tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
@@ -21775,22 +22206,26 @@ export type Database = {
         Update: {
           available_until?: string | null
           band_id?: string
+          channel_split?: Json
           collaboration_id?: string | null
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
           design_name?: string
           design_preview_url?: string | null
+          drop_starts_at?: string | null
           id?: string
           is_limited_edition?: boolean | null
           item_type?: string
           limited_quantity?: number | null
           logistics_pct?: number
           quality_tier?: string | null
+          release_id?: string | null
           sales_boost_pct?: number | null
           selling_price?: number
           stock_quantity?: number
           storage_cost_daily?: number
+          superfan_only?: boolean
           tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
@@ -34497,6 +34932,7 @@ export type Database = {
         Args: { p_hype_boost: number; p_song_id: string }
         Returns: undefined
       }
+      user_has_band_access: { Args: { _band_id: string }; Returns: boolean }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
