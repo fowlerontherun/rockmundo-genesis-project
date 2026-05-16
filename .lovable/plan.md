@@ -1,92 +1,67 @@
-# Fame & Fans Attribution Debug Panel
+# Project Review: Unfinished, Expandable & Bug‑Fix Candidates
 
-A new admin-only page that, for any character on any given day, shows the exact list of events that contributed to their fame and fans totals, with the XP, cash, and gig grade context attached to each event.
+A scan of `docs/`, `.lovable/plan.md`, source TODOs, "coming soon" strings, and stub components surfaced the following backlog. Grouped by category, with concrete file/line evidence so any item can be picked up directly.
 
-## Goal
+## 1. Explicitly Unfinished ("coming soon" / stubs)
 
-Today fame and fans move because of many systems (gigs, festivals, releases, music videos, awards, sponsorships, social drama, DikCok, modeling, fan conversions, decay, etc.) but there is no single place to see "why did this character gain 42 fame and 1,210 fans on May 14?". This panel makes that auditable for admins / QA.
+| # | Area | Where | Status |
+|---|------|-------|--------|
+| 1 | DikCok reactions | `src/components/dikcok/DikCokEngagement.tsx:48,70` | UI present, toast "Reactions coming soon" — no table writes |
+| 2 | DikCok comments | `DikCokEngagement.tsx:82` | Same — comment button is a stub |
+| 3 | Twaater replies tab | `src/components/twaater/TwaaterProfilePage.tsx:257` | Tab renders placeholder text |
+| 4 | Twaater liked-twaats tab | `TwaaterProfilePage.tsx:265` | Same — no query |
+| 5 | Crafting → Salvage | `src/components/crafting/SalvagePanel.tsx:45` | Button toasts "Salvage coming soon" |
+| 6 | Merch factory contracts | `src/pages/MerchFactoryManagement.tsx:101` | Whole tab is placeholder copy |
+| 7 | Merch custom art uploader | `src/pages/Merchandise.tsx:767` | "Mock uploader coming soon" |
+| 8 | Song gifting | `src/pages/Songwriting.tsx:2226` | Button stubbed |
+| 9 | Simple band manager — song catalog | `src/pages/SimpleBandManager.tsx:152` | Empty-state placeholder |
+| 10 | Award Shows metrics | `src/pages/AwardShows.tsx:43` | "Placeholders will later sync to real ticketing/stream deltas/influencer reach" |
+| 11 | Onboarding avatar uploader | `src/components/onboarding/AvatarPreview.tsx:71` | Image uploads disabled, URL-only fallback |
+| 12 | Tour wizard member travel costs | `src/hooks/useTourWizard.ts:448` | Placeholder calc, not using real member count |
+| 13 | Generic "table not implemented" stub | `src/components/StubComponent.tsx` | Any feature still routed here is dead UI |
 
-## Scope
+## 2. Large Feature Plans Authored But Not Implemented
 
-In scope:
-- Admin-only React page under the existing admin hub.
-- Read-only aggregation over existing event tables — no schema changes to gameplay tables.
-- One new lightweight `fame_fans_attribution_daily` materialized rollup + a SECURITY DEFINER RPC that returns per-event detail rows for a (character, date) pair.
-- Per-character view: pick a character, pick a date (default: today, game-time), see two stacked breakdowns (Fame, Fans), each as an itemized list and a totals strip.
-- Per-event detail row includes: timestamp, source system, event type, fame delta, fans delta, XP delta (if any), cash delta (if any), gig grade (if gig/festival), linked entity (gig id, release id, etc.) with deep link.
-- CSV export of the day's rows.
-- Filters: source system multi-select, "only positive", "only negative/decay".
+Each of these has a doc but no/partial code:
 
-Out of scope (can follow up):
-- Editing or reversing events.
-- Band-wide aggregation page (we surface band events for bands the character is in, but the primary axis is the character).
-- Backfilling historical data that was never logged in the first place — we use what the existing tables already store.
+- **Festival expansion** — `docs/festival-expansion-tasks.md` lists **50** discrete tasks (contract negotiation UI, schedule conflict detection, setlist editor per slot, gear validation, perform-now minigame, admin lifecycle states, ticket tiers, fan voting, lineup posters, map view, sponsorship hooks, merge of duplicate admin screens). Almost none are shipped — biggest single backlog in the repo.
+- **DikCok social platform** — `docs/plans/dikcok-social-media-plan.md` — engagement loop (reactions/comments/shares) ties into stubs #1–#2.
+- **Marriage & children** — `docs/marriage-and-children-system-plan.md` — partially shipped per memory; verify gestation/inheritance edge cases.
+- **Music video release workflow** — `docs/music-video-release-workflow.md` — confirm release-side wiring.
+- **Record label system**, **TV/podcast/radio**, **Studio booking**, **Night clubs**, **Realtime gig system** — each doc has scope beyond current implementation; spot-check against current code before committing scope.
 
-## Data sources (already in DB)
+## 3. Bug-Fix / Hardening Candidates
 
-Fame contributors:
-- `band_fame_events` (event_type, fame_gained, event_data, band_id) — primary fame ledger.
-- `band_fame_history` (city/country/global scopes, fame_change, event_type).
-- `reputation_events`, `award_red_carpet_events`, `eurovision_events`, `major_event_performances`, `festival_performance_history`, `social_drama_events`, `nightclub_events`, `fashion_events` — secondary fame triggers; joined via their own `created_at`/event_type/metadata.
+Drawn from console-error patterns, memory rules, and code smells:
 
-Fans contributors:
-- `gig_fan_conversions` (new_fans_gained, repeat_fans, superfans_converted, attendance, conversion_rate).
-- `band_city_fans` / `band_country_fans` / `band_demographic_fans` — diffed day-over-day to derive net change per scope.
-- `fan_interactions`, `fan_campaigns`, `dikcok_fan_missions`, `dikcok_fan_tips`.
+1. **Placeholder lyrics still possible** in `generate-song-audio` (`index.ts:749, 832`) and `admin-generate-song-audio` (`:666`) — repeated regression in VersionHistory (lines 9208, 9237, 9439). Worth replacing the fallback with a hard error + retry queue.
+2. **Stub `(supabase as any)` casts** — audit for tables that now have generated types (per Core memory, only allowed when types are missing).
+3. **Admin festival screens duplication** — task 50 of festival list; merging removes drift.
+4. **Tour member travel cost placeholder** (#12 above) under-reports tour cost; financial bug.
+5. **Bot twaat hardcoded "coming soon" strings** (`generate-bot-twaats:165,210,230`, `useBotTwaats.ts:13,36`) leak placeholder copy into live feed.
+6. **`StubComponent`** — any route still rendering it is a broken feature surface; grep callers and either delete or implement.
+7. **Onboarding avatar** — URL-only flow is fragile; many users will hit it. Needs the proper uploader (Lovable Cloud storage).
+8. **Songwriting "gift" + Merch uploader** — both are user-visible dead buttons; either implement or hide.
 
-XP / cash context per event:
-- `experience_ledger` (xp_amount, skill_slug, activity_type, metadata) joined by `metadata->>source_id` / time window.
-- `profile_daily_xp_grants` for daily XP caps context.
-- Cash from `transactions` (existing) joined by metadata link or time-correlated.
+## 4. Likely Expansions of Already-Shipped Systems
 
-Gig grade:
-- `player_gig_xp` + gig result tables already store letter grade / score; surface alongside any fame/fans row whose event_data references that `gig_id`.
+Low-risk, high-value additions on top of working features:
 
-Character ↔ band linkage:
-- Use existing `band_members` to map `profile_id` → `band_id[]` so we pull band-scoped events for bands the character belongs to.
+- **Fame & Fans Attribution panel** (just shipped) → add band-aggregate view and CSV per-week export; surface the "untracked" diagnostics it already computes.
+- **Gig MemberRewardsCard** (just shipped) → extend to festivals and open-mic outcome reports.
+- **Skill tree "Hide maxed" filter** (just shipped) → mirror the same toggle on Education/Mentors and Stage Practice skill lists.
+- **Marketplace blind-box/gift filters** (just shipped) → add same `acquisition_source` chips to song detail pages and inbox notifications.
+- **Acting daily tick cron** (just scheduled) → add an admin dashboard widget showing last run + last-payload summary, matching other cron monitors.
 
-## Backend
+## 5. Recommended Next Slice (if you want one)
 
-1. SQL migration adds:
-   - `public.get_fame_fans_attribution(p_profile_id uuid, p_day date)` SECURITY DEFINER, returns `setof` rows: `occurred_at, axis ('fame'|'fans'), source_system, event_type, delta, xp_delta, cash_delta, gig_grade, entity_kind, entity_id, scope, notes jsonb`.
-   - Internally `UNION ALL` over the tables above, filtered to the character's profile_id and bands, bounded by `[p_day, p_day + 1 day)` in game time.
-   - Grants execute to `authenticated`; the function itself checks `has_role(auth.uid(),'admin')` and raises if not.
-   - Optional `fame_fans_attribution_daily` matview keyed by (profile_id, day, axis, source_system) for the summary strip; refreshed by an existing daily cron piggyback (no new cron).
+A focused, shippable batch:
 
-2. No edits to existing event-writing code. If a contributor isn't currently writing a discoverable row, it shows up as "untracked" in a diagnostics footer so we can fix it later.
+1. Wire DikCok reactions + comments to real tables (kills 2 stubs, completes the engagement loop).
+2. Implement Twaater replies + liked-twaats tabs (2 more stubs, all simple reads).
+3. Delete or hide the remaining "coming soon" buttons (Salvage, Song gifting, Merch uploader, Merch factory contracts) until owners commit.
+4. Pick top 10 of the Festival 50 (contract UI, conflict detection, setlist editor, perform-now outcome breakdown, admin lifecycle states) as a v1.2 festival pass.
 
-## Frontend
+## How to use this list
 
-New route `src/pages/admin/FameFansAttribution.tsx`, linked from the admin hub tile grid (admin-only, gated by `useUserRole`).
-
-Layout:
-```text
-[ Character picker ]  [ Date picker ]  [ Source filter ]  [ Export CSV ]
-
-Totals strip:
-  Fame  +123  (gigs +80, releases +30, awards +13, decay -0)
-  Fans  +1,210 (gig conv +900, social +210, decay -100)
-
-Tabs: Fame | Fans
-  Table columns: Time · Source · Event · Δ · XP · Cash · Gig grade · Entity (link)
-  Sticky footer: row count, sum delta, "unattributed delta" diff vs stored daily total.
-```
-
-Components:
-- `FameFansAttributionPanel.tsx` — main page.
-- `AttributionTotalsStrip.tsx` — chips per source.
-- `AttributionTable.tsx` — virtualised list, deep-link entity column.
-- `useFameFansAttribution(profileId, day)` hook over the RPC.
-
-Reuses existing admin chrome and design tokens. High-density mobile rows (per project memory).
-
-## Verification
-
-- Pick a character that just did a gig: confirm a `gig` row appears with the right grade, fame delta matches `band_fame_events.fame_gained`, fans delta matches `gig_fan_conversions.new_fans_gained`.
-- Pick a character with a recent music video release: confirm release and MV-impact rows appear.
-- Day with no activity returns empty tables and zero totals (no error).
-- Non-admin user hitting `/admin/fame-fans` is redirected.
-
-## Versioning
-
-Bump banner to `1.1.317` and add a `feature` entry to the Version History page describing the new admin attribution panel.
+Tell me which group (1–5) or which numbered items you want to tackle and I'll create per-item implementation plans with file-level changes and a version bump.
