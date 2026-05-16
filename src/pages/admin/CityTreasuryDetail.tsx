@@ -102,6 +102,24 @@ const CityTreasuryDetail = () => {
     return Array.from(set).sort();
   }, [ledger]);
 
+  // Lifetime breakdown by type (all loaded entries, ignores active filters)
+  const typeBreakdown = useMemo(() => {
+    const map = new Map<string, { credits: number; debits: number; count: number }>();
+    for (const e of ledger) {
+      const cur = map.get(e.type) || { credits: 0, debits: 0, count: 0 };
+      if (e.amount >= 0) cur.credits += e.amount;
+      else cur.debits += Math.abs(e.amount);
+      cur.count += 1;
+      map.set(e.type, cur);
+    }
+    return Array.from(map.entries())
+      .map(([type, v]) => ({ type, ...v, net: v.credits - v.debits }))
+      .sort((a, b) => (b.credits - b.debits) - (a.credits - a.debits));
+  }, [ledger]);
+
+  const lifetimeCredits = typeBreakdown.reduce((s, t) => s + t.credits, 0);
+  const lifetimeDebits = typeBreakdown.reduce((s, t) => s + t.debits, 0);
+
   const filtered = useMemo(() => {
     const start = startDate ? new Date(startDate).getTime() : null;
     const end = endDate ? new Date(endDate).getTime() + 24 * 60 * 60 * 1000 : null;
