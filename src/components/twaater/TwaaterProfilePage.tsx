@@ -308,11 +308,11 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : replies && replies.length > 0 ? (
-              <div>
+              <div className="divide-y" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
                 {replies.map((reply: any) => (
-                  <div key={reply.id}>
+                  <div key={reply.id} className="px-4 py-3">
                     {reply.parent && (
-                      <div className="px-4 pt-3 text-xs text-muted-foreground border-b" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+                      <div className="text-xs text-muted-foreground mb-1">
                         Replying to{" "}
                         <span style={{ color: 'hsl(var(--twaater-purple))' }}>
                           @{reply.parent.account?.handle ?? "unknown"}
@@ -324,7 +324,29 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
                         )}
                       </div>
                     )}
-                    <TwaatCard twaat={reply} viewerAccountId={viewerAccountId} />
+                    <div className="flex items-start gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-sm">{profile.display_name}</span>
+                        {profile.verified && (
+                          <BadgeCheck className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
+                        )}
+                        <span className="text-xs text-muted-foreground">@{profile.handle}</span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm mt-1 whitespace-pre-wrap break-words">{reply.body}</p>
+                    {reply.parent?.id && (
+                      <button
+                        onClick={() => navigate(`/twaater/twaat/${reply.parent.id}`)}
+                        className="text-xs mt-2 hover:underline"
+                        style={{ color: 'hsl(var(--twaater-purple))' }}
+                      >
+                        View thread
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
