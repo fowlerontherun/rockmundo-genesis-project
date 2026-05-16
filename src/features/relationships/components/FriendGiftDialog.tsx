@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipientProfileId, recipientName }: Props) {
-  const [giftType, setGiftType] = useState(GIFT_CATALOG[0].value);
+  const [giftType, setGiftType] = useState<string>(GIFT_CATALOG[0].value);
   const [message, setMessage] = useState("");
   const send = useSendFriendGift();
   const cfg = GIFT_CATALOG.find((g) => g.value === giftType)!;
