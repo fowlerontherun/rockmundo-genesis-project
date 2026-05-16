@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Radio, Tv, Newspaper, BookOpen, Mic, Film, Globe } from "lucide-react";
+import { Radio, Tv, Newspaper, BookOpen, Mic, Film, Globe, Clapperboard } from "lucide-react";
 
 export default function MediaHub() {
   return (
