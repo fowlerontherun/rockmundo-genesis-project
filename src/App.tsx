@@ -395,6 +395,8 @@ function App() {
                     <Route path="media/magazines" element={<MagazinesBrowser />} />
                     <Route path="media/podcasts" element={<PodcastsBrowser />} />
                     <Route path="media/films" element={<FilmsBrowser />} />
+                    <Route path="acting" element={<ActingCareer />} />
+                    <Route path="media/acting" element={<ActingCareer />} />
                     <Route path="media/websites" element={<WebsitesBrowser />} />
                     <Route path="media/self-promotion" element={<SelfPromotionBrowser />} />
                     <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
