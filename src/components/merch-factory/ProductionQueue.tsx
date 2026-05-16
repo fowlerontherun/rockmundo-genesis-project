@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ClipboardList, Clock, CheckCircle, Truck, XCircle } from "lucide-react";
 import { useProductionQueue, useUpdateProductionStatus } from "@/hooks/useMerchFactory";
+import { CreateProductionOrderDialog } from "./CreateProductionOrderDialog";
 import { formatDistanceToNow } from "date-fns";
 
 interface ProductionQueueProps {
@@ -34,11 +34,12 @@ export function ProductionQueue({ factoryId }: ProductionQueueProps) {
   
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
           Production Queue
         </CardTitle>
+        <CreateProductionOrderDialog factoryId={factoryId} />
       </CardHeader>
       <CardContent>
         {orders?.length === 0 ? (

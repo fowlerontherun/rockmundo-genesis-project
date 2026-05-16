@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.325",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Merch Factory — end-to-end fulfillment is live. Production Queue now has a 'New Order' dialog that picks any catalog product, optionally assigns a client band, validates the minimum order quantity, and writes a fully-priced order to merch_production_queue. If the chosen band has an active contract, the unit cost is auto-discounted and the priority level is inherited from the contract." },
+      { type: 'feature', description: "Merch Factory Contracts tab — replaces the 'coming soon' placeholder with a full manager. Create per-order / monthly retainer / exclusive contracts against any band (discount %, priority, monthly minimums), see active vs ended contracts, and end an active contract in one click. New hooks: useCreateFactoryContract, useEndFactoryContract, useAllBands." },
+    ],
+  },
+  {
     version: "1.1.324",
     date: "2026-05-16",
     changes: [

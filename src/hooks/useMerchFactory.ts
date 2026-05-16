@@ -320,3 +320,68 @@ export function useFactoryContracts(factoryId: string | undefined) {
     enabled: !!factoryId,
   });
 }
+
+export function useCreateFactoryContract() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (contract: {
+      factory_id: string;
+      client_band_id?: string | null;
+      client_label_id?: string | null;
+      contract_type: 'per_order' | 'monthly' | 'exclusive';
+      discount_percentage?: number;
+      minimum_monthly_orders?: number | null;
+      priority_level?: number;
+      end_date?: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from('merch_factory_contracts')
+        .insert(contract)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['merch-factory-contracts', variables.factory_id] });
+      toast.success("Contract created!");
+    },
+    onError: (error) => toast.error(`Failed to create contract: ${error.message}`),
+  });
+}
+
+export function useEndFactoryContract() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ contractId, factoryId }: { contractId: string; factoryId: string }) => {
+      const { error } = await supabase
+        .from('merch_factory_contracts')
+        .update({ is_active: false, end_date: new Date().toISOString() })
+        .eq('id', contractId);
+      if (error) throw error;
+      return { contractId, factoryId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['merch-factory-contracts', data.factoryId] });
+      toast.success("Contract ended");
+    },
+    onError: (error) => toast.error(`Failed to end contract: ${error.message}`),
+  });
+}
+
+export function useAllBands() {
+  return useQuery({
+    queryKey: ['merch-factory-band-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bands')
+        .select('id, name')
+        .order('name')
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+}

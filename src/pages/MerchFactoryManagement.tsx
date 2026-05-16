@@ -6,6 +6,7 @@ import { useMerchFactory } from "@/hooks/useMerchFactory";
 import { ProductCatalogManager } from "@/components/merch-factory/ProductCatalogManager";
 import { ProductionQueue } from "@/components/merch-factory/ProductionQueue";
 import { FactoryWorkerRoster } from "@/components/merch-factory/FactoryWorkerRoster";
+import { FactoryContractsManager } from "@/components/merch-factory/FactoryContractsManager";
 import { FactoryCard } from "@/components/merch-factory/FactoryCard";
 import { VipGate } from "@/components/company/VipGate";
 
@@ -96,10 +97,7 @@ export default function MerchFactoryManagement() {
               </TabsContent>
               
               <TabsContent value="contracts">
-                <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Factory contracts coming soon</p>
-                </div>
+                <FactoryContractsManager factoryId={factory.id} />
               </TabsContent>
             </Tabs>
           </div>
