@@ -227,6 +227,7 @@ const NewspapersBrowser = lazyWithRetry(() => import("./pages/media/NewspapersBr
 const MagazinesBrowser = lazyWithRetry(() => import("./pages/media/MagazinesBrowser"));
 const PodcastsBrowser = lazyWithRetry(() => import("./pages/media/PodcastsBrowser"));
 const FilmsBrowser = lazyWithRetry(() => import("./pages/media/FilmsBrowser"));
+const ActingCareer = lazyWithRetry(() => import("./pages/ActingCareer"));
 const WebsitesBrowser = lazyWithRetry(() => import("./pages/media/WebsitesBrowser"));
 const SelfPromotionBrowser = lazyWithRetry(() => import("./pages/media/SelfPromotionBrowser"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
