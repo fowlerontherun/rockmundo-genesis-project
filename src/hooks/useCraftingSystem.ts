@@ -288,6 +288,73 @@ export const useCraftingSystem = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Salvage equipment into crafting materials
+  const salvageEquipment = useMutation({
+    mutationFn: async ({ equipmentId }: { equipmentId: string }) => {
+      if (!profileId) throw new Error("Not authenticated");
+
+      // Re-fetch the row to guard against stale UI state
+      const { data: row, error: fetchErr } = await (supabase as any)
+        .from("player_equipment")
+        .select(
+          `id, equipment_id, condition, is_equipped,
+           equipment:equipment_items!equipment_id (id, name, category, rarity)`
+        )
+        .eq("id", equipmentId)
+        .eq("user_id", profileId)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!row) throw new Error("Equipment not found in your inventory");
+      if (row.is_equipped) throw new Error("Unequip the item before salvaging");
+
+      const yields = computeSalvageYields(row, materialsCatalog);
+      if (yields.length === 0) {
+        throw new Error("This item cannot be salvaged right now");
+      }
+
+      // Award materials (upsert by material_id)
+      for (const y of yields) {
+        const existing = playerMaterials.find((pm) => pm.material_id === y.materialId);
+        if (existing) {
+          const { error } = await (supabase as any)
+            .from("player_crafting_materials")
+            .update({ quantity: existing.quantity + y.quantity })
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await (supabase as any)
+            .from("player_crafting_materials")
+            .insert({
+              profile_id: profileId,
+              material_id: y.materialId,
+              quantity: y.quantity,
+            });
+          if (error) throw error;
+        }
+      }
+
+      // Destroy the equipment row
+      const { error: delErr } = await (supabase as any)
+        .from("player_equipment")
+        .delete()
+        .eq("id", equipmentId)
+        .eq("user_id", profileId);
+      if (delErr) throw delErr;
+
+      return { yields, itemName: row.equipment?.name ?? "Item" };
+    },
+    onSuccess: ({ yields, itemName }) => {
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-crafting-materials", profileId] });
+      const summary = yields
+        .map((y) => `${y.quantity}× ${y.material.name}`)
+        .join(", ");
+      toast.success(`${itemName} salvaged: ${summary}`);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   return {
     materialsCatalog,
     playerMaterials,
@@ -301,5 +368,7 @@ export const useCraftingSystem = () => {
     isCrafting: startCrafting.isPending,
     collectCraft: collectCraft.mutate,
     isCollecting: collectCraft.isPending,
+    salvageEquipment: salvageEquipment.mutate,
+    isSalvaging: salvageEquipment.isPending,
   };
 };
