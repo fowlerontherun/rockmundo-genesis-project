@@ -24940,6 +24940,36 @@ export type Database = {
           },
         ]
       }
+      profile_daily_snapshots: {
+        Row: {
+          cash: number
+          created_at: string
+          fame: number
+          fans: number
+          id: string
+          profile_id: string
+          snapshot_date: string
+        }
+        Insert: {
+          cash?: number
+          created_at?: string
+          fame?: number
+          fans?: number
+          id?: string
+          profile_id: string
+          snapshot_date: string
+        }
+        Update: {
+          cash?: number
+          created_at?: string
+          fame?: number
+          fans?: number
+          id?: string
+          profile_id?: string
+          snapshot_date?: string
+        }
+        Relationships: []
+      }
       profile_daily_xp_grants: {
         Row: {
           attribute_points_amount: number | null

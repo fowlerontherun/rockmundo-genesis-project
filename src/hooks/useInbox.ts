@@ -39,7 +39,7 @@ export function useInbox(category?: InboxCategory | 'all') {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['inbox', userId, category],
+    queryKey: ['inbox', userId, profileId, category],
     queryFn: async () => {
       if (!userId) return [];
 
@@ -61,7 +61,14 @@ export function useInbox(category?: InboxCategory | 'all') {
         throw error;
       }
 
-      return (data || []) as InboxMessage[];
+      // Only show messages addressed to the currently active character, or
+      // legacy/system-wide messages (no profile_id tag).
+      const rows = (data || []) as InboxMessage[];
+      if (!profileId) return rows;
+      return rows.filter((m) => {
+        const pid = (m.metadata as any)?.profile_id;
+        return !pid || pid === profileId;
+      });
     },
     enabled: !!profileId,
     refetchInterval: 30000,
@@ -169,16 +176,16 @@ export function useInbox(category?: InboxCategory | 'all') {
 }
 
 export function useUnreadInboxCount() {
-  const { userId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ['inbox-unread-count', userId],
+    queryKey: ['inbox-unread-count', userId, profileId],
     queryFn: async () => {
       if (!userId) return 0;
 
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('player_inbox')
-        .select('*', { count: 'exact', head: true })
+        .select('metadata')
         .eq('user_id', userId)
         .eq('is_read', false)
         .eq('is_archived', false);
@@ -188,7 +195,11 @@ export function useUnreadInboxCount() {
         return 0;
       }
 
-      return count || 0;
+      if (!profileId) return data?.length ?? 0;
+      return (data ?? []).filter((m: any) => {
+        const pid = m?.metadata?.profile_id;
+        return !pid || pid === profileId;
+      }).length;
     },
     enabled: !!userId,
     refetchInterval: 30000,
