@@ -117,6 +117,29 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
         </p>
       </div>
 
+      {/* Avatar + identity preview */}
+      <Card className="bg-muted/30">
+        <CardContent className="flex items-center gap-4 p-4">
+          <Avatar className="h-20 w-20 border-2 border-primary/30">
+            {avatarProfile?.avatar_url ? (
+              <AvatarImage src={avatarProfile.avatar_url} alt={displayName} />
+            ) : null}
+            <AvatarFallback>
+              <User className="h-8 w-8 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Profile</p>
+            <p className="truncate text-lg font-semibold">{displayName}</p>
+            <p className="text-xs text-muted-foreground">
+              {avatarProfile?.avatar_url
+                ? "Avatar saved to your profile"
+                : "No avatar set — you can add one any time from the Avatar Designer"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Summary of choices */}
       <Card className="bg-muted/30">
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
