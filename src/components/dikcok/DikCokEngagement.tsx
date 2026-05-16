@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,82 +28,114 @@ interface Reaction {
   reaction_type: string;
 }
 
-interface Comment {
+interface CommentRow {
   id: string;
-  content: string;
-  likes: number;
-  created_at: string;
-  user?: {
-    display_name: string | null;
-    username: string | null;
-  };
+  body: string;
+  likes: number | null;
+  created_at: string | null;
+  user_id: string;
+  author?: { display_name: string | null; username: string | null } | null;
 }
 
 export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
-  const { profileId } = useActiveProfile();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
-  // Fetch reactions - placeholder for new table
   const { data: reactions } = useQuery({
     queryKey: ["dikcok-reactions", videoId],
     queryFn: async () => {
-      // Tables being created - return empty for now
-      return [] as Reaction[];
+      const { data, error } = await supabase
+        .from("dikcok_reactions")
+        .select("id, video_id, user_id, reaction_type")
+        .eq("video_id", videoId);
+      if (error) throw error;
+      return (data ?? []) as Reaction[];
     },
   });
 
-  // Fetch comments - simplified
   const { data: comments } = useQuery({
     queryKey: ["dikcok-comments", videoId],
     queryFn: async () => {
-      // For now return empty - tables are being created
-      return [] as Comment[];
+      const { data, error } = await supabase
+        .from("dikcok_comments")
+        .select("id, body, likes, created_at, user_id")
+        .eq("video_id", videoId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const rows = (data ?? []) as CommentRow[];
+      const userIds = Array.from(new Set(rows.map((r) => r.user_id))).filter(Boolean);
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, display_name, username")
+          .in("user_id", userIds);
+        const map = new Map((profs ?? []).map((p: any) => [p.user_id, p]));
+        rows.forEach((r) => {
+          r.author = (map.get(r.user_id) as any) ?? null;
+        });
+      }
+      return rows;
     },
   });
 
-  // Add reaction mutation
   const addReactionMutation = useMutation({
     mutationFn: async (reactionType: string) => {
-      if (!profileId) throw new Error("Must be logged in");
-      toast({ title: "Reactions coming soon!" });
-      return { action: "pending" };
+      if (!userId) throw new Error("Must be logged in");
+      const existing = reactions?.find(
+        (r) => r.user_id === userId && r.reaction_type === reactionType,
+      );
+      if (existing) {
+        const { error } = await supabase
+          .from("dikcok_reactions")
+          .delete()
+          .eq("id", existing.id);
+        if (error) throw error;
+        return { action: "removed" as const };
+      }
+      const { error } = await supabase
+        .from("dikcok_reactions")
+        .insert({ video_id: videoId, user_id: userId, reaction_type: reactionType });
+      if (error) throw error;
+      return { action: "added" as const };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dikcok-reactions", videoId] });
     },
+    onError: (e: any) => toast({ title: "Reaction failed", description: e.message, variant: "destructive" }),
   });
 
-  // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!profileId) throw new Error("Must be logged in");
-      toast({ title: "Comments coming soon!" });
+      if (!userId) throw new Error("Must be logged in");
+      const { error } = await supabase
+        .from("dikcok_comments")
+        .insert({ video_id: videoId, user_id: userId, body: content });
+      if (error) throw error;
     },
     onSuccess: () => {
       setComment("");
+      queryClient.invalidateQueries({ queryKey: ["dikcok-comments", videoId] });
     },
+    onError: (e: any) => toast({ title: "Comment failed", description: e.message, variant: "destructive" }),
   });
 
-  const getReactionCount = (type: string) => {
-    return reactions?.filter(r => r.reaction_type === type).length || 0;
-  };
+  const getReactionCount = (type: string) =>
+    reactions?.filter((r) => r.reaction_type === type).length || 0;
 
-  const hasReacted = (type: string) => {
-    return reactions?.some(r => r.user_id === profileId && r.reaction_type === type);
-  };
+  const hasReacted = (type: string) =>
+    reactions?.some((r) => r.user_id === userId && r.reaction_type === type) ?? false;
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (comment.trim()) {
-      addCommentMutation.mutate(comment.trim());
-    }
+    if (comment.trim()) addCommentMutation.mutate(comment.trim());
   };
 
   return (
     <div className="space-y-4">
-      {/* Reactions */}
       <div className="flex gap-2 flex-wrap">
         {REACTION_TYPES.map(({ type, icon: Icon, label, color }) => (
           <Button
@@ -111,8 +143,9 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
             variant={hasReacted(type) ? "default" : "outline"}
             size="sm"
             onClick={() => addReactionMutation.mutate(type)}
-            disabled={!profileId || addReactionMutation.isPending}
+            disabled={!userId || addReactionMutation.isPending}
             className="gap-1"
+            aria-label={label}
           >
             <Icon className={`h-4 w-4 ${hasReacted(type) ? "" : color}`} />
             <span>{getReactionCount(type)}</span>
@@ -120,15 +153,13 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
         ))}
       </div>
 
-      {/* Comments Section */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4" />
           <span className="font-medium">{comments?.length || 0} Comments</span>
         </div>
 
-        {/* Comment Input */}
-        {profileId && (
+        {userId && (
           <form onSubmit={handleSubmitComment} className="flex gap-2">
             <Input
               placeholder="Add a comment..."
@@ -136,31 +167,28 @@ export const DikCokEngagement = ({ videoId }: DikCokEngagementProps) => {
               onChange={(e) => setComment(e.target.value)}
               maxLength={280}
             />
-            <Button 
-              type="submit" 
-              size="icon"
-              disabled={!comment.trim() || addCommentMutation.isPending}
-            >
+            <Button type="submit" size="icon" disabled={!comment.trim() || addCommentMutation.isPending}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
         )}
 
-        {/* Comments List */}
         <ScrollArea className="h-[200px]">
           <div className="space-y-3">
             {comments?.map((c) => (
               <div key={c.id} className="bg-muted/50 p-3 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-medium text-sm">
-                    {c.user?.display_name || c.user?.username || "Anonymous"}
+                    {c.author?.display_name || c.author?.username || "Anonymous"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
-                  </span>
+                  {c.created_at && (
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm">{c.content}</p>
-                {c.likes > 0 && (
+                <p className="text-sm">{c.body}</p>
+                {(c.likes ?? 0) > 0 && (
                   <Badge variant="outline" className="mt-2 text-xs">
                     <Heart className="h-3 w-3 mr-1" /> {c.likes}
                   </Badge>
