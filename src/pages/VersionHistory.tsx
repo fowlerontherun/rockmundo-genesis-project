@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.310",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Merchandise expansion phase 1 – Variants: new merch_variants table lets you split a product into per-size/per-color SKUs, each with its own stock, optional price override and cost override. New 'Variants' tab on the Merchandise page to add, edit, restock, deactivate or delete variants for the selected product." },
+      { type: 'feature', description: "Sales engine now respects variants: if a product has any active variants, simulate-merch-sales picks from variant stock (item-level stock is ignored), decrements the chosen variant, and logs a stockout event when a variant hits zero." },
+      { type: 'feature', description: "Drop windows and superfan-only items are now enforced by the sales engine. Items outside their drop_starts_at / available_until window are skipped, and superfan_only items only sell to superfans. Fan-tier loyalty discounts (superfans -10%, collectors -5%) are auto-applied at checkout time." },
+      { type: 'feature', description: "Schema groundwork for upcoming phases: merch_warehouses, merch_warehouse_stock, merch_price_rules, merch_bundles, merch_wholesale_orders, merch_stock_transfers, merch_stockout_events; player_merchandise gains drop_starts_at / superfan_only / release_id / channel_split; merch_orders gains variant_id / bundle_id / discount_pct / promo_code / city_id." },
+    ],
+  },
+  {
     version: "1.1.309",
     date: "2026-05-15",
     changes: [
