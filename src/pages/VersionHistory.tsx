@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.319",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "Gig outcome report now includes a Member Rewards card showing exactly how much personal fame and personal fans each band member earned directly from the gig. Pulls actual granted values from experience_ledger metadata when available, otherwise falls back to the documented formula (60% fame + 30%/N fans for core members, 10% fame and 0 fans for touring members). Surfaces in both Perform Gig and the Gig History viewer." },
+    ],
+  },
+  {
     version: "1.1.318",
     date: "2026-05-16",
     changes: [

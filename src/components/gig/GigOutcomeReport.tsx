@@ -25,6 +25,7 @@ import type { VenueRelationshipResult } from "@/utils/venueRelationshipCalculato
 import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 import { getBehavior } from "@/utils/stageBehaviors";
 import { BandMemberPerformanceCard } from "./BandMemberPerformanceCard";
+import { MemberRewardsCard } from "./MemberRewardsCard";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -96,6 +97,7 @@ interface Props {
   ticketPrice?: number;
   stageBehaviorUsed?: string | null;
   bandId?: string | null;
+  gigId?: string | null;
 }
 
 export const GigOutcomeReport = ({
@@ -118,6 +120,7 @@ export const GigOutcomeReport = ({
   ticketPrice = 20,
   stageBehaviorUsed,
   bandId,
+  gigId,
 }: Props) => {
   if (!outcome) return null;
 
@@ -576,6 +579,16 @@ export const GigOutcomeReport = ({
 
           {/* Band Member Performances */}
           <BandMemberPerformanceCard bandId={bandId || null} overallRating={overallRating} />
+
+          {/* Per-member fame & fans rewards from this gig */}
+          {bandId && gigId && (
+            <MemberRewardsCard
+              gigId={gigId}
+              bandId={bandId}
+              fameGained={fameGained}
+              newFansTotal={safeNumber(fanConversion?.newFansGained ?? (outcome as any).fans_gained ?? 0)}
+            />
+          )}
 
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (

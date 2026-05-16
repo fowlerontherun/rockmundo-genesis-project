@@ -714,6 +714,7 @@ export default function PerformGig() {
         chemistryMoments={outcome?.chemistryMoments || []}
         stageBehaviorUsed={outcome?.stage_behavior_used}
         bandId={gig.band_id}
+        gigId={gig.id}
       />
     </div>
   );
