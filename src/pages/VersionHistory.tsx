@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.318",
+    date: "2026-05-16",
+    changes: [
+      { type: 'feature', description: "New admin/debug panel at /admin/fame-fans-attribution: pick any character and any day to see an itemised breakdown of every event that contributed to their fame and fans (band_fame_events, band_fame_history, reputation_events, gig_fan_conversions, DikCok missions) with XP, cash, gig grade, entity link, scope and raw metadata. Includes per-source totals strip, source filter, CSV export and an XP-context tab from experience_ledger. Backed by a new SECURITY DEFINER RPC get_fame_fans_attribution(profile_id, day) that's admin-gated." },
+    ],
+  },
+  {
     version: "1.1.317",
     date: "2026-05-16",
     changes: [
