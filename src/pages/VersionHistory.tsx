@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.311",
+    date: "2026-05-16",
+    changes: [
+      { type: 'improvement', description: "Travel connectivity review: verified all 16,110 city pairs across the 180 in-game cities are now reachable. Plane minimum distance lowered from 200km to 100km so short-hop flights are available, and coach/bus routes now cover short cross-border European hops up to 250km, fixing 16 previously unreachable pairs like Brussels↔Amsterdam, Vienna↔Bratislava, and Zagreb↔Ljubljana." },
+      { type: 'feature', description: "Simplified travel access: Travel page now honours ?destination=<cityId> deep-links and opens the booking dialog directly with the destination preselected. Every city detail page gains a one-click 'Travel here' button at the top, so any city tile or map link can take you straight to booking transport." },
+    ],
+  },
+  {
     version: "1.1.310",
     date: "2026-05-16",
     changes: [
