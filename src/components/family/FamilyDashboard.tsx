@@ -18,6 +18,7 @@ import { BirthCompletionDialog } from "./BirthCompletionDialog";
 import { ChildCard } from "./ChildCard";
 import { ComingOfAgeDialog } from "./ComingOfAgeDialog";
 import { FamilyLegacyPanel } from "@/components/social/FamilyLegacyPanel";
+import { WeddingHoneymoonSection } from "./WeddingHoneymoonSection";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
