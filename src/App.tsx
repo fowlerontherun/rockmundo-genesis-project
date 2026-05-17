@@ -413,7 +413,7 @@ function App() {
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="band-vehicles" element={<BandVehicles />} />
-                    <Route path="relationships" element={<Relationships />} />
+                    <Route path="relationships" element={<Navigate to="/social?tab=friends" replace />} />
                     <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
@@ -458,7 +458,7 @@ function App() {
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
-                    <Route path="players/search" element={<PlayerSearch />} />
+                    <Route path="players/search" element={<Navigate to="/social?tab=discover" replace />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="bands/search" element={<BandSearch />} />
