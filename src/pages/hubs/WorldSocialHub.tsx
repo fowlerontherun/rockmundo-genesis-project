@@ -26,12 +26,10 @@ export default function WorldSocialHub() {
         {
           label: "Social",
           tiles: [
-            { icon: Users, labelKey: "Social Hub", path: "/social", imagePrompt: "A unified chat dashboard showing online friends, activity feed, and messages in three columns" },
+            { icon: Users, labelKey: "Social Hub", path: "/social", imagePrompt: "A unified social hub with friends list, chat windows, family tree and party invites" },
             { icon: Twitter, labelKey: "nav.twaater", path: "/twaater", imagePrompt: "A social media feed showing tweets, likes, and trending music topics on a phone screen" },
             { icon: Video, labelKey: "nav.dikcok", path: "/dikcok", imagePrompt: "A vertical video app showing viral music clips with hearts and comment bubbles" },
-            { icon: Heart, labelKey: "nav.relationships", path: "/relationships", imagePrompt: "Two people connecting over music at a cafe, hearts and music notes floating between them" },
             { icon: HandHeart, labelKey: "nav.gettit", path: "/gettit", imagePrompt: "A Reddit-style forum with music discussion threads, upvotes, and community posts" },
-            { icon: UserPlus, labelKey: "nav.playerSearch", path: "/players/search", imagePrompt: "A search interface showing musician profiles with instruments and genre tags" },
             { icon: Sparkles, labelKey: "nav.underworld", path: "/underworld", imagePrompt: "A dark underground club scene with mysterious lighting and shadowy figures dealing" },
             { icon: Dices, labelKey: "nav.casino", path: "/casino", imagePrompt: "A neon-lit casino floor with roulette wheels, card tables, and slot machines glowing in the dark" },
             { icon: Ticket, labelKey: "Lottery", path: "/lottery", imagePrompt: "A golden lottery ticket with sparkles and a spinning prize wheel" },

@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.327",
+    date: "2026-05-17",
+    changes: [
+      { type: 'feature', description: "Social Hub merger — /relationships, /social tile launcher and /players/search are now one unified /social page with five tabs: Friends (full relationship engine), Messages (realtime DMs + 1:1 voice), Family (marriage/children dashboard), Discover (player search), and Invites (incoming/outgoing). Legacy URLs redirect with their deep-link tab preserved." },
+      { type: 'feature', description: "Realtime direct messages — new direct_messages table with deterministic channel_id, RLS scoped to the two friends, postgres_changes subscription for instant updates, and per-thread unread tracking. Hook: useDirectMessages." },
+      { type: 'feature', description: "1:1 voice chat between friends — DirectVoiceChat wraps the existing JamVoiceChat infra with a per-channel session id (dm-voice-<channelId>), reachable from inside any DM thread." },
+      { type: 'feature', description: "Social invites — new social_invites table + InviteFriendDialog lets you invite any friend to a Gig, Recording, Jam, Songwriting session, Meetup or Date with a scheduled time and message. InvitesInbox shows incoming/outgoing with accept/decline/cancel. Realtime updates via useInviteRealtime." },
+      { type: 'feature', description: "Underworld gifting — new UnderworldGiftDialog plus SECURITY DEFINER RPC gift_underworld_item transfers an item from your underworld inventory to a friend in a single safe call (decrements your stack, creates a recipient row marked as a gift)." },
+      { type: 'improvement', description: "World & Social hub — the duplicate 'Relationships' and 'Player Search' tiles were collapsed into a single 'Social Hub' tile that opens the new unified page." },
+    ],
+  },
+  {
     version: "1.1.326",
     date: "2026-05-16",
     changes: [
