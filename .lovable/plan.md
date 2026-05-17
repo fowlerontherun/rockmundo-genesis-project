@@ -1,67 +1,127 @@
-# Project Review: Unfinished, Expandable & Bug‑Fix Candidates
 
-A scan of `docs/`, `.lovable/plan.md`, source TODOs, "coming soon" strings, and stub components surfaced the following backlog. Grouped by category, with concrete file/line evidence so any item can be picked up directly.
+## Goal
 
-## 1. Explicitly Unfinished ("coming soon" / stubs)
+Collapse the overlapping `/relationships`, `/social` (tile hub), and `/players/search` surfaces into a single **Social** destination that feels Popmundo-simple: find a player → friend them → talk, meet, invite, gift, marry, raise kids — all in one place, with realtime chat and voice already wired in.
 
-| # | Area | Where | Status |
-|---|------|-------|--------|
-| 1 | DikCok reactions | `src/components/dikcok/DikCokEngagement.tsx:48,70` | UI present, toast "Reactions coming soon" — no table writes |
-| 2 | DikCok comments | `DikCokEngagement.tsx:82` | Same — comment button is a stub |
-| 3 | Twaater replies tab | `src/components/twaater/TwaaterProfilePage.tsx:257` | Tab renders placeholder text |
-| 4 | Twaater liked-twaats tab | `TwaaterProfilePage.tsx:265` | Same — no query |
-| 5 | Crafting → Salvage | `src/components/crafting/SalvagePanel.tsx:45` | Button toasts "Salvage coming soon" |
-| 6 | Merch factory contracts | `src/pages/MerchFactoryManagement.tsx:101` | Whole tab is placeholder copy |
-| 7 | Merch custom art uploader | `src/pages/Merchandise.tsx:767` | "Mock uploader coming soon" |
-| 8 | Song gifting | `src/pages/Songwriting.tsx:2226` | Button stubbed |
-| 9 | Simple band manager — song catalog | `src/pages/SimpleBandManager.tsx:152` | Empty-state placeholder |
-| 10 | Award Shows metrics | `src/pages/AwardShows.tsx:43` | "Placeholders will later sync to real ticketing/stream deltas/influencer reach" |
-| 11 | Onboarding avatar uploader | `src/components/onboarding/AvatarPreview.tsx:71` | Image uploads disabled, URL-only fallback |
-| 12 | Tour wizard member travel costs | `src/hooks/useTourWizard.ts:448` | Placeholder calc, not using real member count |
-| 13 | Generic "table not implemented" stub | `src/components/StubComponent.tsx` | Any feature still routed here is dead UI |
+## Current state (what we're consolidating)
 
-## 2. Large Feature Plans Authored But Not Implemented
+- `/social` (`src/pages/SocialHub.tsx`) — just a 6‑tile launcher (Twaater, DikCok, Relationships, Gettit, Player Search, Underworld).
+- `/relationships` (`src/pages/Relationships.tsx`, 1670 lines) — the real engine: friendships, character relationships, interactions, drama, gifts, mentorship, embedded `FamilyDashboard`, coop quests, leaderboards.
+- `/players/search` (`PlayerSearch.tsx`) + `/player/:id` (`PlayerProfile.tsx`) — standalone discovery.
+- `src/features/relationships/` already has: `FriendshipList`, `FriendSearchDialog`, `DirectMessagePanel`, `FriendGiftDialog`, `FriendActivityFeed`, `Timeline`, hooks (`useFriendships`, `useRelationshipEvents`).
+- `src/components/family/` has the full marriage/children stack (Proposal, Wedding, Honeymoon, Birth, ChildCard, ComingOfAge, MarriageStatusCard…). `family/timeline` and `family/child/:id` stay as deep-link pages.
+- `JamSessionsEnhanced` already exposes voice via `JamVoiceChat` (see `FestivalVoiceChat.tsx`), and `useJamSessionChat.ts` is the proven realtime-chat + presence pattern we'll reuse.
+- Gifting today: `FriendGiftDialog` (money / gear). No underworld-items gifting yet.
+- Invites today: none for gigs / recording / jams / songwriting from a friend context. Each system has its own page.
 
-Each of these has a doc but no/partial code:
+## Target design
 
-- **Festival expansion** — `docs/festival-expansion-tasks.md` lists **50** discrete tasks (contract negotiation UI, schedule conflict detection, setlist editor per slot, gear validation, perform-now minigame, admin lifecycle states, ticket tiers, fan voting, lineup posters, map view, sponsorship hooks, merge of duplicate admin screens). Almost none are shipped — biggest single backlog in the repo.
-- **DikCok social platform** — `docs/plans/dikcok-social-media-plan.md` — engagement loop (reactions/comments/shares) ties into stubs #1–#2.
-- **Marriage & children** — `docs/marriage-and-children-system-plan.md` — partially shipped per memory; verify gestation/inheritance edge cases.
-- **Music video release workflow** — `docs/music-video-release-workflow.md` — confirm release-side wiring.
-- **Record label system**, **TV/podcast/radio**, **Studio booking**, **Night clubs**, **Realtime gig system** — each doc has scope beyond current implementation; spot-check against current code before committing scope.
+One page at `/social` (Relationships becomes a redirect). Mobile-first, high‑density, tab‑driven — matches our existing UI density rules.
 
-## 3. Bug-Fix / Hardening Candidates
+```text
+┌─ Social ────────────────────────────────────────────┐
+│ [ Friends | Chat | Family | Feed | Discover ]       │
+├─────────────────────────────────────────────────────┤
+│ Friends:  search bar → add friend                   │
+│   • Friend row → opens FriendDetailPanel with:      │
+│     Chat · Voice · Gift · Invite ▾ · Meet up ▾      │
+│     Relationship gauges (affection/trust/…)         │
+│     Family link (if married / parent / sibling)     │
+├─────────────────────────────────────────────────────┤
+│ Chat: realtime DM threads + voice-call button       │
+│ Family: existing FamilyDashboard (marriage, kids)   │
+│ Feed: FriendActivityFeed + drama events             │
+│ Discover: PlayerSearch results + suggested players  │
+└─────────────────────────────────────────────────────┘
+```
 
-Drawn from console-error patterns, memory rules, and code smells:
+### Friend action menu (per friend, Popmundo-style)
 
-1. **Placeholder lyrics still possible** in `generate-song-audio` (`index.ts:749, 832`) and `admin-generate-song-audio` (`:666`) — repeated regression in VersionHistory (lines 9208, 9237, 9439). Worth replacing the fallback with a hard error + retry queue.
-2. **Stub `(supabase as any)` casts** — audit for tables that now have generated types (per Core memory, only allowed when types are missing).
-3. **Admin festival screens duplication** — task 50 of festival list; merging removes drift.
-4. **Tour member travel cost placeholder** (#12 above) under-reports tour cost; financial bug.
-5. **Bot twaat hardcoded "coming soon" strings** (`generate-bot-twaats:165,210,230`, `useBotTwaats.ts:13,36`) leak placeholder copy into live feed.
-6. **`StubComponent`** — any route still rendering it is a broken feature surface; grep callers and either delete or implement.
-7. **Onboarding avatar** — URL-only flow is fragile; many users will hit it. Needs the proper uploader (Lovable Cloud storage).
-8. **Songwriting "gift" + Merch uploader** — both are user-visible dead buttons; either implement or hide.
+- **Chat** — opens realtime DM thread (existing `DirectMessagePanel`, upgraded to Supabase Realtime using the `useJamSessionChat` pattern).
+- **Voice** — 1‑to‑1 voice room using `JamVoiceChat` with `sessionId = dm-voice-<friendshipId>`.
+- **Gift ▾** — Money · Gear (from `useEquipmentStore`) · **Underworld item** (new — pulls from the player's underworld inventory).
+- **Invite ▾** — to **Gig** (own scheduled gig), **Recording session**, **Jam session**, **Songwriting session**.
+- **Meet up ▾** — Casual meetup · **Date** (romance flag) · Choose venue from current city.
+- **Relationship actions** — existing interaction presets (flirt, collab, confront, support…).
+- **Family** — if relationship is `partner` and both single → "Propose" (`ProposalDialog`); if married → quick link to Family tab; if shared child → child shortcuts.
 
-## 4. Likely Expansions of Already-Shipped Systems
+## Implementation plan
 
-Low-risk, high-value additions on top of working features:
+### 1. New unified page
 
-- **Fame & Fans Attribution panel** (just shipped) → add band-aggregate view and CSV per-week export; surface the "untracked" diagnostics it already computes.
-- **Gig MemberRewardsCard** (just shipped) → extend to festivals and open-mic outcome reports.
-- **Skill tree "Hide maxed" filter** (just shipped) → mirror the same toggle on Education/Mentors and Stage Practice skill lists.
-- **Marketplace blind-box/gift filters** (just shipped) → add same `acquisition_source` chips to song detail pages and inbox notifications.
-- **Acting daily tick cron** (just scheduled) → add an admin dashboard widget showing last run + last-payload summary, matching other cron monitors.
+- Rename `src/pages/SocialHub.tsx` → `SocialHubUnified` (single component). Drop the 6‑tile launcher.
+- Lift the working content out of `Relationships.tsx` into smaller tab components under `src/features/social-hub/`:
+  - `FriendsTab.tsx` (search + list + detail drawer)
+  - `ChatTab.tsx` (DM threads + voice)
+  - `FamilyTab.tsx` (wraps `FamilyDashboard`, surfaces marriage/children CTAs)
+  - `FeedTab.tsx` (activity + drama + weekly recap)
+  - `DiscoverTab.tsx` (player search + suggestions, replaces `/players/search` UX inside the hub)
+- Routes: `/social` = new hub. `/relationships` → `<Navigate to="/social" replace>`. `/players/search` → redirect to `/social?tab=discover`. Keep `/player/:id` as profile page. Keep deep `family/*` routes.
+- Update `WorldSocialHub.tsx` tile group so "Social Hub", "Relationships", "Player Search" collapse into one "Social" tile.
 
-## 5. Recommended Next Slice (if you want one)
+### 2. Realtime chat (DMs)
 
-A focused, shippable batch:
+- New table `direct_messages` (channel_id, sender_profile_id, body, created_at) with RLS limiting to the two friend profiles. `channel_id = sorted pair of profile ids`.
+- New `useDirectMessages(friendshipId)` hook modelled on `useJamSessionChat`: query + Realtime `postgres_changes` subscription + presence channel for typing/online.
+- Rewire `DirectMessagePanel` to use it; add unread badges on friend rows.
 
-1. Wire DikCok reactions + comments to real tables (kills 2 stubs, completes the engagement loop).
-2. Implement Twaater replies + liked-twaats tabs (2 more stubs, all simple reads).
-3. Delete or hide the remaining "coming soon" buttons (Salvage, Song gifting, Merch uploader, Merch factory contracts) until owners commit.
-4. Pick top 10 of the Festival 50 (contract UI, conflict detection, setlist editor, perform-now outcome breakdown, admin lifecycle states) as a v1.2 festival pass.
+### 3. Voice chat (1:1)
 
-## How to use this list
+- Reuse `JamVoiceChat` via a thin wrapper `DirectVoiceChat` with `sessionId = dm-voice-<channelId>`. No new infra.
+- Voice button on friend row + inside chat thread.
 
-Tell me which group (1–5) or which numbered items you want to tackle and I'll create per-item implementation plans with file-level changes and a version bump.
+### 4. Invites system
+
+- New table `social_invites` (id, from_profile_id, to_profile_id, kind: `gig|recording|jam|songwriting|meetup|date`, ref_id nullable, scheduled_at, location_city_id, status: `pending|accepted|declined|expired`, message).
+- New `InviteDialog` with kind switcher. For each kind, fetch eligible refs:
+  - **Gig** → caller's upcoming `gigs` they own.
+  - **Recording** → bookable `recording_sessions` slots.
+  - **Jam** → existing jam session or "create + invite".
+  - **Songwriting** → active songwriting projects where caller can add collaborators.
+- Inbox surface: invites land in existing `/inbox` and as a badge on the friend row. Accepting writes the appropriate join row (gig attendee, jam participant, songwriting collaborator) and logs a relationship interaction (+trust/+affection).
+
+### 5. Meet ups & dates
+
+- Special `kind = meetup|date` invite. On accept, both characters' `Schedule` gets a blocked slot (uses the existing universal activity-blocking pattern from memory). Date completion triggers `flirt`/`deep_conversation` interaction preset and feeds `attraction_score`.
+
+### 6. Gifting — extend `FriendGiftDialog`
+
+- Add a third tab: **Underworld item**. Pull from the caller's underworld inventory (`underworld_inventory` style table — confirm exact name during implementation). Transfer = decrement caller, insert into recipient, log interaction `gift` (+affection +loyalty), notify recipient. Money + Gear paths already work.
+
+### 7. Family linkage
+
+- In `FriendDetailPanel`, compute relationship-to-family state from existing `useWeddings`, `useChildPlanning`, marriage/spouse rows and show contextual CTAs:
+  - Single + romance partner → **Propose** (`ProposalDialog`)
+  - Engaged → **Plan wedding** (`WeddingPlannerDialog`)
+  - Married → **Honeymoon**, **Plan child** (`ChildPlanningDialog`), **Open Family**
+  - Co‑parent → list shared children with link to `/family/child/:id`
+- Friend row badges: 💍 spouse, 👶 co‑parent, 👨‍👩‍👧 family.
+
+### 8. Cleanup / redirects
+
+- Delete the old tile-only `SocialHub.tsx` body (keep filename as the unified page, since `App.tsx` already imports it as `SocialHubUnified`).
+- Remove duplicate "Social Hub" + "Relationships" + "Player Search" tiles from `WorldSocialHub.tsx`.
+- Keep `Relationships.tsx` only long enough to migrate its logic into tab files, then delete it and add the redirect.
+
+### 9. Version + history (per project rule)
+
+- Bump `VersionHeader.tsx` (next patch).
+- Add a `VersionHistory.tsx` entry describing the merger, realtime DMs, 1:1 voice, invites, underworld gifting, and family CTAs.
+
+## Database changes (single migration)
+
+- `direct_messages` table + RLS (only the two friends can read/insert; only sender can update/delete own).
+- `social_invites` table + RLS (only sender and recipient see it; recipient can update `status`).
+- Index `direct_messages(channel_id, created_at)` and `social_invites(to_profile_id, status)`.
+- Enable Realtime replication on both tables.
+
+## Out of scope (explicit)
+
+- Twaater, DikCok, Gettit, Underworld, Casino stay on their own routes (the user only asked to merge Relationships + Social Hub launcher). Their tiles remain in `WorldSocialHub`.
+- No changes to the gigs/recording/songwriting/jam business logic — only the invite entry points are new.
+
+## Open questions
+
+1. For **underworld-item gifts** — restrict to legal-grey items only, or allow anything in the player's underworld inventory (with reputation consequences logged via existing roleplaying axes)?
+2. **Voice chat scope** — 1:1 only, or also small group calls from a friend group? (Default plan: 1:1 only.)
+3. **Date mechanic** — should a successful date have a chance to advance romance to `partner` automatically once attraction ≥ threshold, or always require an explicit "Ask to be partner" action?
