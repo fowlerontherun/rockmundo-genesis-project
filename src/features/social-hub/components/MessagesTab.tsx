@@ -6,19 +6,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, MessageSquare } from "lucide-react";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { DirectMessageThread } from "./DirectMessageThread";
-import type { DecoratedFriendship } from "@/features/relationships/types";
 
 export function MessagesTab({ myProfileId }: { myProfileId: string | null | undefined }) {
   const { friendships, loading } = useFriendships(myProfileId ?? null);
   const accepted = useMemo(
-    () =>
-      friendships.filter(
-        (f) => f.status === "accepted" || (f as DecoratedFriendship).status === "accepted",
-      ),
+    () => friendships.filter((f) => f.friendship.status === "accepted" && f.otherProfile),
     [friendships],
   );
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
-  const active = accepted.find((f) => f.other_profile?.id === activeFriendId);
+  const active = accepted.find((f) => f.otherProfile?.id === activeFriendId);
 
   if (!myProfileId) {
     return <p className="text-sm text-muted-foreground">Sign in to view your conversations.</p>;
@@ -46,13 +42,12 @@ export function MessagesTab({ myProfileId }: { myProfileId: string | null | unde
             <ScrollArea className="h-[420px]">
               <div className="space-y-1">
                 {accepted.map((f) => {
-                  const other = f.other_profile;
-                  if (!other) return null;
-                  const active = activeFriendId === other.id;
+                  const other = f.otherProfile!;
+                  const isActive = activeFriendId === other.id;
                   return (
                     <Button
-                      key={f.id}
-                      variant={active ? "secondary" : "ghost"}
+                      key={f.friendship.id}
+                      variant={isActive ? "secondary" : "ghost"}
                       className="w-full justify-start gap-2 px-2"
                       onClick={() => setActiveFriendId(other.id)}
                     >
@@ -74,12 +69,12 @@ export function MessagesTab({ myProfileId }: { myProfileId: string | null | unde
         </CardContent>
       </Card>
       <div>
-        {active?.other_profile ? (
+        {active?.otherProfile ? (
           <DirectMessageThread
             myProfileId={myProfileId}
-            otherProfileId={active.other_profile.id}
+            otherProfileId={active.otherProfile.id}
             otherDisplayName={
-              active.other_profile.display_name ?? active.other_profile.username ?? "Friend"
+              active.otherProfile.display_name ?? active.otherProfile.username ?? "Friend"
             }
           />
         ) : (
