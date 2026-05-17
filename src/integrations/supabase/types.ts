@@ -8239,6 +8239,36 @@ export type Database = {
           },
         ]
       }
+      direct_messages: {
+        Row: {
+          body: string
+          channel_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_profile_id: string
+          sender_profile_id: string
+        }
+        Insert: {
+          body: string
+          channel_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_profile_id: string
+          sender_profile_id: string
+        }
+        Update: {
+          body?: string
+          channel_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_profile_id?: string
+          sender_profile_id?: string
+        }
+        Relationships: []
+      }
       education_mentors: {
         Row: {
           attribute_keys: Json
@@ -29507,6 +29537,51 @@ export type Database = {
         }
         Relationships: []
       }
+      social_invites: {
+        Row: {
+          created_at: string
+          from_profile_id: string
+          id: string
+          kind: Database["public"]["Enums"]["social_invite_kind"]
+          location_city_id: string | null
+          message: string | null
+          ref_id: string | null
+          responded_at: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["social_invite_status"]
+          to_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_profile_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["social_invite_kind"]
+          location_city_id?: string | null
+          message?: string | null
+          ref_id?: string | null
+          responded_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["social_invite_status"]
+          to_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_profile_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["social_invite_kind"]
+          location_city_id?: string | null
+          message?: string | null
+          ref_id?: string | null
+          responded_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["social_invite_status"]
+          to_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           comments: number | null
@@ -35703,6 +35778,10 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      profile_belongs_to_current_user: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
       promote_twaat: {
         Args: { p_hours: number; p_twaat_id: string }
         Returns: Json
@@ -35793,6 +35872,19 @@ export type Database = {
         | "system"
       inbox_priority: "low" | "normal" | "high" | "urgent"
       show_type_enum: "concert" | "festival" | "private" | "street"
+      social_invite_kind:
+        | "gig"
+        | "recording"
+        | "jam"
+        | "songwriting"
+        | "meetup"
+        | "date"
+      social_invite_status:
+        | "pending"
+        | "accepted"
+        | "declined"
+        | "expired"
+        | "cancelled"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
         | "engagement"
@@ -35961,6 +36053,21 @@ export const Constants = {
       ],
       inbox_priority: ["low", "normal", "high", "urgent"],
       show_type_enum: ["concert", "festival", "private", "street"],
+      social_invite_kind: [
+        "gig",
+        "recording",
+        "jam",
+        "songwriting",
+        "meetup",
+        "date",
+      ],
+      social_invite_status: [
+        "pending",
+        "accepted",
+        "declined",
+        "expired",
+        "cancelled",
+      ],
       twaater_linked_type: ["single", "album", "gig", "tour", "busking"],
       twaater_outcome_group: [
         "engagement",
