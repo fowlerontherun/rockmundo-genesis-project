@@ -50,7 +50,8 @@ export default function SocialHub() {
     <PageLayout>
       <PageHeader
         title="Social"
-        description="Friends, family, chat & invites — all in one place."
+        subtitle="Friends, family, chat & invites — all in one place."
+        icon={Users}
       />
 
       <Tabs
@@ -82,7 +83,7 @@ export default function SocialHub() {
         <TabsContent value="family">
           <Suspense fallback={<Fallback />}>
             {profileId ? (
-              <FamilyDashboard profileId={profileId} />
+              <FamilyDashboard />
             ) : (
               <Card>
                 <CardContent className="p-6 text-sm text-muted-foreground">
