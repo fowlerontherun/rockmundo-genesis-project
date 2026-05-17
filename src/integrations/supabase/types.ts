@@ -35685,6 +35685,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      gift_underworld_item: {
+        Args: { _purchase_id: string; _recipient_profile_id: string }
+        Returns: string
+      }
       grant_starter_crafting_blueprints: {
         Args: { _profile_id: string }
         Returns: undefined
