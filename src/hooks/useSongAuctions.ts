@@ -107,20 +107,20 @@ export const useSongAuctions = (userId?: string) => {
 
   // My purchased songs
   const { data: purchasedSongs = [], isLoading: purchasesLoading } = useQuery({
-    queryKey: ["song-market-purchases", userId],
+    queryKey: ["song-market-purchases", profileId, userId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId && !userId) return [];
       const { data, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_display, ownership_type, acquisition_source")
-        .eq("profile_id", userId)
+        .or(`profile_id.eq.${profileId ?? "00000000-0000-0000-0000-000000000000"},user_id.eq.${userId ?? "00000000-0000-0000-0000-000000000000"}`)
         .eq("ownership_type", "purchased")
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!userId,
+    enabled: !!(profileId || userId),
   });
 
   // My sellable songs (owned, draft only, not recorded/rehearsed/in setlist)
