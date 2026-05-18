@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.328",
+    date: "2026-05-18",
+    changes: [
+      { type: 'bugfix', description: "Song Market 'List a Song' now shows songs pulled from blind boxes (and gifts). The sellable/purchased queries used to filter by auth user_id against songs.profile_id, missing every blind-box drop; they now match either the character profile_id or auth user_id." },
+      { type: 'feature', description: "Inventory Manager — added an 'Instruments' tab showing every personal instrument (including blind-box pulls) with quality, condition, original cost and a one-click 'Sell for 50%' action backed by the new sell_personal_gear SECURITY DEFINER RPC. Refund is credited to the active character and the matching equipment_items / player_equipment / blind_box_openings links are cleaned up automatically." },
+    ],
+  },
+  {
     version: "1.1.327",
     date: "2026-05-17",
     changes: [
