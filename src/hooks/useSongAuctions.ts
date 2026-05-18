@@ -125,15 +125,15 @@ export const useSongAuctions = (userId?: string) => {
 
   // My sellable songs (owned, draft only, not recorded/rehearsed/in setlist)
   const { data: sellableSongs = [], isLoading: sellableLoading } = useQuery({
-    queryKey: ["song-market-sellable", userId],
+    queryKey: ["song-market-sellable", profileId, userId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!profileId && !userId) return [];
 
-      // Get draft songs I own that are NOT purchased
+      // Get draft songs I own (match either character profile_id or auth user_id)
       const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type, acquisition_source")
-        .eq("profile_id", userId)
+        .or(`profile_id.eq.${profileId ?? "00000000-0000-0000-0000-000000000000"},user_id.eq.${userId ?? "00000000-0000-0000-0000-000000000000"}`)
         .neq("ownership_type", "purchased")
         .eq("status", "draft")
         .neq("archived", true)
@@ -149,7 +149,7 @@ export const useSongAuctions = (userId?: string) => {
         supabase
           .from("marketplace_listings")
           .select("song_id")
-          .eq("seller_user_id", userId)
+          .eq("seller_user_id", userId!)
           .eq("listing_status", "active"),
         supabase
           .from("setlist_songs")
@@ -170,7 +170,7 @@ export const useSongAuctions = (userId?: string) => {
 
       return songs.filter(s => !excludedIds.has(s.id));
     },
-    enabled: !!userId,
+    enabled: !!(profileId || userId),
   });
 
   // Bids on a specific listing
