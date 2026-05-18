@@ -30,11 +30,46 @@ const rarityStyles: Record<string, string> = {
 
 const InventoryManager = () => {
   // profileId already available from useActiveProfile below
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
+  const queryClient = useQueryClient();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const { inventoryItems, inventoryLoading, useItem } = useUnderworldInventory();
+
+  // Personal instruments / gear (e.g. from blind boxes)
+  const { data: personalGear = [], isLoading: gearLoading } = useQuery({
+    queryKey: ["inventory-personal-gear", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("player_personal_gear")
+        .select("id, gear_name, gear_type, quality_rating, condition_rating, purchase_cost, stat_boosts, notes, created_at")
+        .eq("user_id", userId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const sellGear = useMutation({
+    mutationFn: async (gearId: string) => {
+      const { data, error } = await supabase.rpc("sell_personal_gear" as any, { p_gear_id: gearId });
+      if (error) throw error;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error ?? "Sale failed");
+      return result;
+    },
+    onSuccess: (result) => {
+      toast.success(`Sold for $${(result.refund ?? 0).toLocaleString()}`);
+      queryClient.invalidateQueries({ queryKey: ["inventory-personal-gear"] });
+      queryClient.invalidateQueries({ queryKey: ["blind-box-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-equipment"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   // Fetch books from player_book_reading_sessions (the real book ownership table)
   const { data: bookSessions = [], isLoading: booksLoading } = useQuery({
