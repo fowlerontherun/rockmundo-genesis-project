@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home, Guitar, DollarSign } from "lucide-react";
 import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworldInventory";
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { toast } from "sonner";
 
 const categoryIcons: Record<string, React.ElementType> = {
   consumable: Zap,
