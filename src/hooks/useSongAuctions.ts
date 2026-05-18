@@ -57,6 +57,7 @@ export interface MarketplaceTransaction {
 export const useSongAuctions = (userId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   // Browse active listings (excludes own)
   const { data: activeListings = [], isLoading: listingsLoading } = useQuery({
