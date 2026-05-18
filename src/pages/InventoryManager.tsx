@@ -136,8 +136,15 @@ const InventoryManager = () => {
         <p className="text-muted-foreground">Manage your items, books, equipment, and property keys.</p>
       </div>
 
-      <Tabs defaultValue="underworld" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+      <Tabs defaultValue="instruments" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsTrigger value="instruments" className="gap-2">
+            <Guitar className="h-4 w-4" />
+            Instruments
+            {personalGear.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{personalGear.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="underworld" className="gap-2">
             <Package className="h-4 w-4" />
             Underworld Items
@@ -160,6 +167,82 @@ const InventoryManager = () => {
             )}
           </TabsTrigger>
         </TabsList>
+
+        {/* Instruments Tab */}
+        <TabsContent value="instruments" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Guitar className="h-5 w-5 text-primary" /> My Instruments
+              </CardTitle>
+              <CardDescription>
+                Personal instruments and gear — including items pulled from blind boxes. Sell back for 50% of value.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!userId ? (
+                <p className="text-sm text-muted-foreground">Sign in to view your instruments.</p>
+              ) : gearLoading ? (
+                <p className="text-sm text-muted-foreground">Loading instruments...</p>
+              ) : personalGear.length === 0 ? (
+                <div className="text-center py-8">
+                  <Guitar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No instruments yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Buy gear from the equipment store or open a blind box to add instruments here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {personalGear.map((g: any) => {
+                    const refund = Math.max(0, Math.floor((g.purchase_cost ?? 0) / 2));
+                    return (
+                      <Card key={g.id} className="border-2">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <CardTitle className="text-base leading-tight">{g.gear_name}</CardTitle>
+                            <Badge variant="outline" className="capitalize text-xs">{g.gear_type}</Badge>
+                          </div>
+                          {g.notes && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{g.notes}</p>
+                          )}
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Quality</span>
+                            <span className="font-medium">{g.quality_rating ?? 0}/100</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Condition</span>
+                            <span className="font-medium">{g.condition_rating ?? 0}/100</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Original Cost</span>
+                            <span className="font-medium">${(g.purchase_cost ?? 0).toLocaleString()}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-full gap-1"
+                            disabled={sellGear.isPending}
+                            onClick={() => {
+                              if (confirm(`Sell ${g.gear_name} for $${refund.toLocaleString()}?`)) {
+                                sellGear.mutate(g.id);
+                              }
+                            }}
+                          >
+                            <DollarSign className="h-3 w-3" />
+                            Sell for ${refund.toLocaleString()}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Underworld Items Tab */}
         <TabsContent value="underworld" className="space-y-4 mt-4">
