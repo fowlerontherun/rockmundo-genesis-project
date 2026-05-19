@@ -603,18 +603,19 @@ export const GigOutcomeReport = ({
               <CardContent>
                 <div className="space-y-3">
                   {songPerformances
-                    .sort((a, b) => a.setlist_position - b.setlist_position)
+                    .sort((a, b) => a.position - b.position)
                     .map((perf) => {
                       const song = songs.find(s => s.id === perf.song_id);
+                      const title = song?.title || perf.song_title || perf.performance_item_name || 'Unknown Song';
                       return (
-                        <div key={perf.song_id} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold">
-                                {perf.setlist_position}. {song?.title || 'Unknown Song'}
+                        <div key={`${perf.song_id}-${perf.position}`} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-start gap-2 flex-wrap">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm sm:text-base break-words">
+                                {perf.position}. {title}
                               </p>
                               {renderStars(perf.performance_score, 25)}
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                                 {perf.performance_score.toFixed(1)} / 25 stars
                               </p>
                             </div>
@@ -624,27 +625,27 @@ export const GigOutcomeReport = ({
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                               <p className="text-muted-foreground">Song Quality</p>
-                              <Progress value={(perf.song_quality_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.song_quality_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Rehearsal</p>
-                              <Progress value={(perf.rehearsal_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.rehearsal_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Chemistry</p>
-                              <Progress value={(perf.chemistry_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.chemistry_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Equipment</p>
-                              <Progress value={(perf.equipment_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.equipment_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Crew</p>
-                              <Progress value={(perf.crew_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.crew_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Skills</p>
-                              <Progress value={(perf.member_skills_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.member_skill_contrib / 25) * 100} className="h-1" />
                             </div>
                           </div>
                         </div>
