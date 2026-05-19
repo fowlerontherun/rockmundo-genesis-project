@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
       .from("bands")
       .select("id, name, band_balance, weekly_pay_percent, leader_id, status")
       .gt("weekly_pay_percent", 0)
-      .in("status", ["active", "hiatus"]);
+      .in("status", ["active", "on_hiatus"]);
 
     if (bandsError) throw bandsError;
 
