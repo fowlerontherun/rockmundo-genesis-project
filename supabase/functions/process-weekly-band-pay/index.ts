@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
         .from("band_members")
         .select("id, user_id, profile_id, is_touring_member")
         .eq("band_id", band.id)
-        .eq("is_touring_member", false);
+        .eq("is_touring_member", false)
+        .eq("member_status", "active");
 
       if (membersError) {
         console.error(`Error fetching members for band ${band.id}:`, membersError);
