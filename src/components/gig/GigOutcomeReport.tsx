@@ -312,17 +312,41 @@ export const GigOutcomeReport = ({
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const songPerformances = outcome.gig_song_performances || [];
+  const providedPerformances = outcome.gig_song_performances || [];
+
+  // If outcome rows didn't include per-song breakdowns, fetch them by gig_id
+  const { data: fetchedPerformances } = useQuery({
+    queryKey: ["gig-song-performances", gigId],
+    enabled: !!gigId && isOpen && providedPerformances.length === 0,
+    queryFn: async () => {
+      const { data: outcomeRow } = await supabase
+        .from("gig_outcomes")
+        .select("id")
+        .eq("gig_id", gigId as string)
+        .maybeSingle();
+      if (!outcomeRow?.id) return [] as SongPerformance[];
+      const { data, error } = await supabase
+        .from("gig_song_performances")
+        .select("*")
+        .eq("gig_outcome_id", outcomeRow.id)
+        .order("position");
+      if (error) throw error;
+      return (data || []) as unknown as SongPerformance[];
+    },
+  });
+
+  const songPerformances: SongPerformance[] =
+    providedPerformances.length > 0 ? (providedPerformances as SongPerformance[]) : (fetchedPerformances || []);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-3">
+          <DialogTitle className="text-xl sm:text-2xl flex items-center gap-3">
             <Music className="w-6 h-6" />
             Gig Performance Report
           </DialogTitle>
-          <p className="text-muted-foreground">{venueName}</p>
+          <p className="text-muted-foreground text-sm">{venueName}</p>
         </DialogHeader>
 
         <div className="space-y-6">
