@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.330",
+    date: "2026-05-19",
+    changes: [
+      { type: 'fix', description: "Gig Performance Report: dialog now fits mobile screens (95vw, tighter padding) and the per-song setlist breakdown finally renders — the report queries gig_song_performances directly and uses the actual DB column names (position, song_quality_contrib, etc.) instead of the never-matching legacy names." },
+      { type: 'fix', description: "Performance Factors (Equipment / Crew / Chemistry / Skills) were displayed as `2 / 100` because the stored averages are on a 0–25 contribution scale, not 0–100. Progress bars and labels are now correctly rendered as `/25`." },
+    ],
+  },
+  {
     version: "1.1.329",
     date: "2026-05-19",
     changes: [
