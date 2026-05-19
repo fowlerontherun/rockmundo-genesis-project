@@ -688,30 +688,30 @@ export const GigOutcomeReport = ({
             <CardContent className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-semibold">Equipment Quality</p>
-                <Progress value={breakdown.equipment_quality} className="h-2 mt-1" />
+                <Progress value={(breakdown.equipment_quality / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.equipment_quality.toFixed(0)}/100
+                  {breakdown.equipment_quality.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Crew Skill</p>
-                <Progress value={breakdown.crew_skill} className="h-2 mt-1" />
+                <Progress value={(breakdown.crew_skill / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.crew_skill.toFixed(0)}/100
+                  {breakdown.crew_skill.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Band Chemistry</p>
-                <Progress value={breakdown.band_chemistry} className="h-2 mt-1" />
+                <Progress value={(breakdown.band_chemistry / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.band_chemistry.toFixed(0)}/100
+                  {breakdown.band_chemistry.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Member Skills</p>
-                <Progress value={(breakdown.member_skills / 150) * 100} className="h-2 mt-1" />
+                <Progress value={(breakdown.member_skills / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.member_skills.toFixed(0)}/150
+                  {breakdown.member_skills.toFixed(1)}/25
                 </p>
               </div>
             </CardContent>
