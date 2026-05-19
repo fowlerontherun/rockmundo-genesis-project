@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Star, TrendingUp, TrendingDown, Minus, Music, DollarSign, Sparkles, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 import {
   EMPTY_GEAR_EFFECTS,
@@ -30,15 +32,17 @@ const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigit
 
 interface SongPerformance {
   song_id: string;
-  setlist_position: number;
+  position: number;
   performance_score: number;
-  song_quality_contribution: number;
-  rehearsal_contribution: number;
-  chemistry_contribution: number;
-  equipment_contribution: number;
-  crew_contribution: number;
-  member_skills_contribution: number;
+  song_quality_contrib: number;
+  rehearsal_contrib: number;
+  chemistry_contrib: number;
+  equipment_contrib: number;
+  crew_contrib: number;
+  member_skill_contrib: number;
   crowd_response: string;
+  song_title?: string | null;
+  performance_item_name?: string | null;
 }
 
 interface GigOutcome {
@@ -308,17 +312,41 @@ export const GigOutcomeReport = ({
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const songPerformances = outcome.gig_song_performances || [];
+  const providedPerformances = outcome.gig_song_performances || [];
+
+  // If outcome rows didn't include per-song breakdowns, fetch them by gig_id
+  const { data: fetchedPerformances } = useQuery({
+    queryKey: ["gig-song-performances", gigId],
+    enabled: !!gigId && isOpen && providedPerformances.length === 0,
+    queryFn: async () => {
+      const { data: outcomeRow } = await supabase
+        .from("gig_outcomes")
+        .select("id")
+        .eq("gig_id", gigId as string)
+        .maybeSingle();
+      if (!outcomeRow?.id) return [] as SongPerformance[];
+      const { data, error } = await supabase
+        .from("gig_song_performances")
+        .select("*")
+        .eq("gig_outcome_id", outcomeRow.id)
+        .order("position");
+      if (error) throw error;
+      return (data || []) as unknown as SongPerformance[];
+    },
+  });
+
+  const songPerformances: SongPerformance[] =
+    providedPerformances.length > 0 ? (providedPerformances as SongPerformance[]) : (fetchedPerformances || []);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-3">
+          <DialogTitle className="text-xl sm:text-2xl flex items-center gap-3">
             <Music className="w-6 h-6" />
             Gig Performance Report
           </DialogTitle>
-          <p className="text-muted-foreground">{venueName}</p>
+          <p className="text-muted-foreground text-sm">{venueName}</p>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -432,8 +460,8 @@ export const GigOutcomeReport = ({
               venueCapacity={venueCapacity}
               songPerformances={songPerformances.map(sp => ({
                 song_id: sp.song_id,
-                song_title: songs.find(s => s.id === sp.song_id)?.title,
-                position: sp.setlist_position,
+                song_title: sp.song_title || songs.find(s => s.id === sp.song_id)?.title || sp.performance_item_name || undefined,
+                position: sp.position,
                 performance_score: sp.performance_score,
                 crowd_response: sp.crowd_response,
               }))}
@@ -599,18 +627,19 @@ export const GigOutcomeReport = ({
               <CardContent>
                 <div className="space-y-3">
                   {songPerformances
-                    .sort((a, b) => a.setlist_position - b.setlist_position)
+                    .sort((a, b) => a.position - b.position)
                     .map((perf) => {
                       const song = songs.find(s => s.id === perf.song_id);
+                      const title = song?.title || perf.song_title || perf.performance_item_name || 'Unknown Song';
                       return (
-                        <div key={perf.song_id} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold">
-                                {perf.setlist_position}. {song?.title || 'Unknown Song'}
+                        <div key={`${perf.song_id}-${perf.position}`} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-start gap-2 flex-wrap">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm sm:text-base break-words">
+                                {perf.position}. {title}
                               </p>
                               {renderStars(perf.performance_score, 25)}
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                                 {perf.performance_score.toFixed(1)} / 25 stars
                               </p>
                             </div>
@@ -620,27 +649,27 @@ export const GigOutcomeReport = ({
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                               <p className="text-muted-foreground">Song Quality</p>
-                              <Progress value={(perf.song_quality_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.song_quality_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Rehearsal</p>
-                              <Progress value={(perf.rehearsal_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.rehearsal_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Chemistry</p>
-                              <Progress value={(perf.chemistry_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.chemistry_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Equipment</p>
-                              <Progress value={(perf.equipment_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.equipment_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Crew</p>
-                              <Progress value={(perf.crew_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.crew_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
                               <p className="text-muted-foreground">Skills</p>
-                              <Progress value={(perf.member_skills_contribution / 25) * 100} className="h-1" />
+                              <Progress value={(perf.member_skill_contrib / 25) * 100} className="h-1" />
                             </div>
                           </div>
                         </div>
@@ -659,30 +688,30 @@ export const GigOutcomeReport = ({
             <CardContent className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-semibold">Equipment Quality</p>
-                <Progress value={breakdown.equipment_quality} className="h-2 mt-1" />
+                <Progress value={(breakdown.equipment_quality / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.equipment_quality.toFixed(0)}/100
+                  {breakdown.equipment_quality.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Crew Skill</p>
-                <Progress value={breakdown.crew_skill} className="h-2 mt-1" />
+                <Progress value={(breakdown.crew_skill / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.crew_skill.toFixed(0)}/100
+                  {breakdown.crew_skill.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Band Chemistry</p>
-                <Progress value={breakdown.band_chemistry} className="h-2 mt-1" />
+                <Progress value={(breakdown.band_chemistry / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.band_chemistry.toFixed(0)}/100
+                  {breakdown.band_chemistry.toFixed(1)}/25
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Member Skills</p>
-                <Progress value={(breakdown.member_skills / 150) * 100} className="h-2 mt-1" />
+                <Progress value={(breakdown.member_skills / 25) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {breakdown.member_skills.toFixed(0)}/150
+                  {breakdown.member_skills.toFixed(1)}/25
                 </p>
               </div>
             </CardContent>
