@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.329",
+    date: "2026-05-19",
+    changes: [
+      { type: 'fix', description: "Band weekly payroll now actually pays members. The process-weekly-band-pay edge function was crashing every Saturday with `invalid input value for enum band_status: \"hiatus\"` because the bands.status enum uses `on_hiatus`, not `hiatus`. Fixed the status filter and also added a `member_status = 'active'` check so departed members aren't paid." },
+    ],
+  },
+  {
     version: "1.1.328",
     date: "2026-05-18",
     changes: [
