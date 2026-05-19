@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
       .from("bands")
       .select("id, name, band_balance, weekly_pay_percent, leader_id, status")
       .gt("weekly_pay_percent", 0)
-      .in("status", ["active", "hiatus"]);
+      .in("status", ["active", "on_hiatus"]);
 
     if (bandsError) throw bandsError;
 
@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
         .from("band_members")
         .select("id, user_id, profile_id, is_touring_member")
         .eq("band_id", band.id)
-        .eq("is_touring_member", false);
+        .eq("is_touring_member", false)
+        .eq("member_status", "active");
 
       if (membersError) {
         console.error(`Error fetching members for band ${band.id}:`, membersError);
