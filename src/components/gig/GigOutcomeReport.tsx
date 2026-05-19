@@ -32,15 +32,17 @@ const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigit
 
 interface SongPerformance {
   song_id: string;
-  setlist_position: number;
+  position: number;
   performance_score: number;
-  song_quality_contribution: number;
-  rehearsal_contribution: number;
-  chemistry_contribution: number;
-  equipment_contribution: number;
-  crew_contribution: number;
-  member_skills_contribution: number;
+  song_quality_contrib: number;
+  rehearsal_contrib: number;
+  chemistry_contrib: number;
+  equipment_contrib: number;
+  crew_contrib: number;
+  member_skill_contrib: number;
   crowd_response: string;
+  song_title?: string | null;
+  performance_item_name?: string | null;
 }
 
 interface GigOutcome {
