@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Star, TrendingUp, TrendingDown, Minus, Music, DollarSign, Sparkles, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 import {
   EMPTY_GEAR_EFFECTS,
