@@ -436,8 +436,8 @@ export const GigOutcomeReport = ({
               venueCapacity={venueCapacity}
               songPerformances={songPerformances.map(sp => ({
                 song_id: sp.song_id,
-                song_title: songs.find(s => s.id === sp.song_id)?.title,
-                position: sp.setlist_position,
+                song_title: sp.song_title || songs.find(s => s.id === sp.song_id)?.title || sp.performance_item_name || undefined,
+                position: sp.position,
                 performance_score: sp.performance_score,
                 crowd_response: sp.crowd_response,
               }))}
