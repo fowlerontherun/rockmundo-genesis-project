@@ -57,7 +57,14 @@ interface GigOutcome {
   net_profit: number;
   fame_gained: number;
   chemistry_impact: number;
-  breakdown_data: {
+  // Flat columns from gig_outcomes table (0-25 scale)
+  equipment_quality_avg?: number | null;
+  crew_skill_avg?: number | null;
+  band_chemistry_level?: number | null;
+  member_skill_avg?: number | null;
+  merch_items_sold?: number | null;
+  // Legacy/optional nested form (kept for backwards compatibility)
+  breakdown_data?: {
     equipment_quality: number;
     crew_skill: number;
     band_chemistry: number;
@@ -80,6 +87,7 @@ interface GigOutcome {
   };
   gig_song_performances?: SongPerformance[];
 }
+
 
 interface Props {
   isOpen: boolean;
