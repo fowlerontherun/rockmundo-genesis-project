@@ -632,10 +632,10 @@ export const GigOutcomeReport = ({
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>Setlist Performance</CardTitle>
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-base sm:text-xl">Setlist Performance</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
                 <div className="space-y-3">
                   {songPerformances
                     .sort((a, b) => a.position - b.position)
@@ -643,43 +643,61 @@ export const GigOutcomeReport = ({
                       const song = songs.find(s => s.id === perf.song_id);
                       const title = song?.title || perf.song_title || perf.performance_item_name || 'Unknown Song';
                       return (
-                        <div key={`${perf.song_id}-${perf.position}`} className="border rounded-lg p-3 space-y-2">
+                        <div key={`${perf.song_id}-${perf.position}`} className="border rounded-lg p-2 sm:p-3 space-y-2">
                           <div className="flex justify-between items-start gap-2 flex-wrap">
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-sm sm:text-base break-words">
                                 {perf.position}. {title}
                               </p>
                               {renderStars(perf.performance_score, 25)}
-                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1">
                                 {perf.performance_score.toFixed(1)} / 25 stars
                               </p>
                             </div>
-                            {getCrowdResponseBadge(perf.crowd_response)}
+                            <div className="shrink-0">{getCrowdResponseBadge(perf.crowd_response)}</div>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
                             <div>
-                              <p className="text-muted-foreground">Song Quality</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Song Quality</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.song_quality_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.song_quality_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Rehearsal</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Rehearsal</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.rehearsal_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.rehearsal_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Chemistry</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Chemistry</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.chemistry_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.chemistry_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Equipment</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Equipment</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.equipment_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.equipment_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Crew</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Crew</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.crew_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.crew_contrib / 25) * 100} className="h-1" />
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Skills</p>
+                              <div className="flex justify-between">
+                                <p className="text-muted-foreground">Skills</p>
+                                <p className="text-muted-foreground tabular-nums">{perf.member_skill_contrib.toFixed(1)}/25</p>
+                              </div>
                               <Progress value={(perf.member_skill_contrib / 25) * 100} className="h-1" />
                             </div>
                           </div>
@@ -693,35 +711,35 @@ export const GigOutcomeReport = ({
 
           {/* Factor Analysis */}
           <Card>
-            <CardHeader>
-              <CardTitle>Performance Factors</CardTitle>
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="text-base sm:text-xl">Performance Factors</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <p className="text-sm font-semibold">Equipment Quality</p>
+                <p className="text-xs sm:text-sm font-semibold">Equipment Quality</p>
                 <Progress value={(breakdown.equipment_quality / 25) * 100} className="h-2 mt-1" />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   {breakdown.equipment_quality.toFixed(1)}/25
                 </p>
               </div>
               <div>
-                <p className="text-sm font-semibold">Crew Skill</p>
+                <p className="text-xs sm:text-sm font-semibold">Crew Skill</p>
                 <Progress value={(breakdown.crew_skill / 25) * 100} className="h-2 mt-1" />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   {breakdown.crew_skill.toFixed(1)}/25
                 </p>
               </div>
               <div>
-                <p className="text-sm font-semibold">Band Chemistry</p>
+                <p className="text-xs sm:text-sm font-semibold">Band Chemistry</p>
                 <Progress value={(breakdown.band_chemistry / 25) * 100} className="h-2 mt-1" />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   {breakdown.band_chemistry.toFixed(1)}/25
                 </p>
               </div>
               <div>
-                <p className="text-sm font-semibold">Member Skills</p>
+                <p className="text-xs sm:text-sm font-semibold">Member Skills</p>
                 <Progress value={(breakdown.member_skills / 25) * 100} className="h-2 mt-1" />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   {breakdown.member_skills.toFixed(1)}/25
                 </p>
               </div>
@@ -730,20 +748,20 @@ export const GigOutcomeReport = ({
 
           {/* Impact Summary */}
           <Card>
-            <CardHeader>
-              <CardTitle>Impact</CardTitle>
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="text-base sm:text-xl">Impact</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4">
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 grid grid-cols-3 gap-2 sm:gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">+{fameGained}</p>
-                <p className="text-sm text-muted-foreground">Fame Gained</p>
+                <p className="text-lg sm:text-2xl font-bold text-primary">+{fameGained}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Fame Gained</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  {chemistryImpact > 0 && <TrendingUp className="w-4 h-4 text-green-500" />}
-                  {chemistryImpact < 0 && <TrendingDown className="w-4 h-4 text-red-500" />}
-                  {chemistryImpact === 0 && <Minus className="w-4 h-4 text-muted" />}
-                  <p className={`text-2xl font-bold ${
+                  {chemistryImpact > 0 && <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />}
+                  {chemistryImpact < 0 && <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />}
+                  {chemistryImpact === 0 && <Minus className="w-3 h-3 sm:w-4 sm:h-4 text-muted" />}
+                  <p className={`text-lg sm:text-2xl font-bold ${
                     chemistryImpact > 0 ? 'text-green-500' :
                     chemistryImpact < 0 ? 'text-red-500' :
                     'text-muted-foreground'
@@ -751,16 +769,17 @@ export const GigOutcomeReport = ({
                     {chemistryImpact > 0 ? '+' : ''}{chemistryImpact}
                   </p>
                 </div>
-                <p className="text-sm text-muted-foreground">Chemistry Change</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Chemistry</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-500">
+                <p className="text-lg sm:text-2xl font-bold text-blue-500">
                   {breakdown.merch_items_sold}
                 </p>
-                <p className="text-sm text-muted-foreground">Merch Items Sold</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Merch Sold</p>
               </div>
             </CardContent>
           </Card>
+
         </div>
       </DialogContent>
     </Dialog>
