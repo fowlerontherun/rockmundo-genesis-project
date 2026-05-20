@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.332",
+    date: "2026-05-20",
+    changes: [
+      { type: 'improvement', description: "Gig Performance Report mobile pass: tighter padding (p-3 sm:p-6 on every card), smaller responsive titles/badges/stars, venue name truncates, star rows wrap, Performance Factors and per-song breakdowns stack to a single column on mobile with inline value labels, and Impact tiles shrink so all three fit without overflow." },
+    ],
+  },
+  {
     version: "1.1.331",
     date: "2026-05-20",
     changes: [
