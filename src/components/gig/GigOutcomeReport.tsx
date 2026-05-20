@@ -291,11 +291,11 @@ export const GigOutcomeReport = ({
     const hasPartial = rating % 1 >= 0.5;
     
     return (
-      <div className="flex gap-0.5">
+      <div className="flex flex-wrap gap-0.5">
         {Array.from({ length: maxStars }).map((_, i) => (
           <Star
             key={i}
-            className={`w-3 h-3 ${
+            className={`w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 ${
               i < filled
                 ? 'fill-yellow-500 text-yellow-500'
                 : i === filled && hasPartial
@@ -307,6 +307,7 @@ export const GigOutcomeReport = ({
       </div>
     );
   };
+
 
   const getCrowdResponseBadge = (response: string) => {
     const variants: Record<string, { variant: any; label: string }> = {
