@@ -351,36 +351,37 @@ export const GigOutcomeReport = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl flex items-center gap-3">
-            <Music className="w-6 h-6" />
-            Gig Performance Report
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-base sm:text-2xl flex items-center gap-2 sm:gap-3">
+            <Music className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+            <span className="truncate">Gig Performance Report</span>
           </DialogTitle>
-          <p className="text-muted-foreground text-sm">{venueName}</p>
+          <p className="text-muted-foreground text-xs sm:text-sm truncate">{venueName}</p>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           {/* Overall Performance */}
           <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center justify-between gap-2 flex-wrap text-base sm:text-xl">
                 <span>Overall Performance</span>
-                <Badge className={`${grade.color} text-lg px-4 py-1`}>
+                <Badge className={`${grade.color} text-xs sm:text-lg px-2 sm:px-4 py-0.5 sm:py-1`}>
                   {grade.grade} - {grade.label}
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
               <div className="flex items-center gap-4">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {renderStars(overallRating)}
-                  <p className="text-3xl font-bold mt-2">
+                  <p className="text-2xl sm:text-3xl font-bold mt-2">
                     {overallRating.toFixed(1)} / 25
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
 
           {/* Stage Behavior Used */}
           {stageBehaviorUsed && (() => {
