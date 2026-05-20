@@ -169,12 +169,13 @@ export const GigOutcomeReport = ({
   const chemistryImpact = safeNumber(outcome.chemistry_impact);
 
   const breakdown = {
-    equipment_quality: safeNumber(outcome.breakdown_data?.equipment_quality),
-    crew_skill: safeNumber(outcome.breakdown_data?.crew_skill),
-    band_chemistry: safeNumber(outcome.breakdown_data?.band_chemistry),
-    member_skills: safeNumber(outcome.breakdown_data?.member_skills),
-    merch_items_sold: safeNumber(outcome.breakdown_data?.merch_items_sold),
+    equipment_quality: safeNumber(outcome.breakdown_data?.equipment_quality ?? outcome.equipment_quality_avg),
+    crew_skill: safeNumber(outcome.breakdown_data?.crew_skill ?? outcome.crew_skill_avg),
+    band_chemistry: safeNumber(outcome.breakdown_data?.band_chemistry ?? outcome.band_chemistry_level),
+    member_skills: safeNumber(outcome.breakdown_data?.member_skills ?? outcome.member_skill_avg),
+    merch_items_sold: safeNumber(outcome.breakdown_data?.merch_items_sold ?? outcome.merch_items_sold),
   };
+
 
   const buildFallbackGearEffects = (): GearModifierEffects => {
     const attendanceBonus = safeNumber(outcome.social_buzz_impact);
