@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.331",
+    date: "2026-05-20",
+    changes: [
+      { type: 'fix', description: "Gig Performance Factors (Equipment / Crew / Chemistry / Member Skills) were showing 0 (previously the 2/100 bug) because the report read a non-existent `breakdown_data` JSON column. Now reads the actual stored columns — `equipment_quality_avg`, `crew_skill_avg`, `band_chemistry_level`, `member_skill_avg`, `merch_items_sold` — on the correct 0–25 contribution scale, with the legacy nested shape kept as a fallback." },
+    ],
+  },
+  {
     version: "1.1.330",
     date: "2026-05-19",
     changes: [
