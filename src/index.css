@@ -6,51 +6,76 @@
 
 @layer base {
   :root {
-    /* RockMundo Nightfall Palette */
-    --background: 220 62% 8%;
-    --foreground: 210 20% 92%;
+    /* RockMundo Unified Dark Palette
+       Surfaces: #121212 bg / #1E1E1E surface / #2A2A2A elevated
+       Accent: #6C5CE7  Success: #00C853  Warning: #FFB300  Danger: #FF5252 */
+    --background: 0 0% 7%;            /* #121212 */
+    --foreground: 0 0% 98%;
 
-    --card: 217 45% 14%;
-    --card-foreground: 210 25% 90%;
+    --card: 0 0% 12%;                 /* #1E1E1E */
+    --card-foreground: 0 0% 96%;
 
-    --popover: 225 60% 10%;
-    --popover-foreground: 210 20% 94%;
+    --popover: 0 0% 16%;              /* #2A2A2A */
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 197 88% 60%;
-    --primary-foreground: 222 90% 12%;
+    --elevated: 0 0% 16%;             /* #2A2A2A */
+    --elevated-foreground: 0 0% 98%;
 
-    --secondary: 227 36% 22%;
-    --secondary-foreground: 210 20% 92%;
+    --primary: 249 75% 63%;           /* #6C5CE7 */
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 220 32% 18%;
-    --muted-foreground: 214 18% 72%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 92%;
 
-    --accent: 195 95% 68%;
-    --accent-foreground: 226 90% 10%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 70%;
 
-    --destructive: 348 79% 52%;
-    --destructive-foreground: 0 0% 98%;
+    --accent: 249 75% 63%;
+    --accent-foreground: 0 0% 100%;
 
-    --success: 152 64% 48%;
-    --success-foreground: 222 90% 12%;
+    --destructive: 0 100% 66%;        /* #FF5252 */
+    --destructive-foreground: 0 0% 100%;
 
-    --warning: 43 96% 62%;
-    --warning-foreground: 228 90% 14%;
+    --success: 140 100% 39%;          /* #00C853 */
+    --success-foreground: 0 0% 100%;
 
-    --border: 221 32% 20%;
-    --input: 221 28% 22%;
-    --ring: 197 88% 60%;
+    --warning: 42 100% 50%;           /* #FFB300 */
+    --warning-foreground: 0 0% 10%;
 
-    --radius: 0.75rem;
+    --border: 0 0% 20%;
+    --input: 0 0% 18%;
+    --ring: 249 75% 63%;
+
+    /* Unified radius scale */
+    --radius: 0.5rem;                 /* 8px (standard) */
+    --radius-sm: 0.25rem;             /* 4px */
+    --radius-lg: 0.75rem;             /* 12px */
+    --radius-xl: 1rem;                /* 16px */
+
+    /* Unified 8px spacing scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+    --space-8: 4rem;
+
+    /* Unified elevation shadows */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 2px 6px hsl(0 0% 0% / 0.45);
+    --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.55);
+    --shadow-xl: 0 16px 48px hsl(0 0% 0% / 0.6);
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(197 88% 60%), hsl(225 90% 18%));
-    --gradient-stage: linear-gradient(180deg, hsl(220 62% 8%) 0%, hsl(217 45% 14%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(195 95% 68%) 0%, hsl(220 62% 8%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(249 75% 63%), hsl(249 75% 40%));
+    --gradient-stage: linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 12%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(249 75% 63%) 0%, hsl(0 0% 7%) 100%);
 
-    /* Shadows */
-    --shadow-electric: 0 0 24px hsl(197 88% 60% / 0.35);
-    --shadow-glow: 0 0 48px hsl(195 95% 68% / 0.25);
+    /* Accent glow shadows (legacy refs) */
+    --shadow-electric: 0 0 24px hsl(249 75% 63% / 0.35);
+    --shadow-glow: 0 0 48px hsl(249 75% 63% / 0.25);
 
     /* Social System Tokens */
     --social-love: 340 82% 60%;
@@ -59,11 +84,11 @@
     --social-tension-glow: 0 72% 55% / 0.3;
     --social-chemistry: 270 70% 58%;
     --social-chemistry-glow: 270 70% 58% / 0.35;
-    --social-trust: 197 88% 60%;
-    --social-loyalty: 152 64% 48%;
-    --social-jealousy: 43 96% 62%;
+    --social-trust: 249 75% 63%;
+    --social-loyalty: 140 100% 39%;
+    --social-jealousy: 42 100% 50%;
     --social-attraction: 320 72% 62%;
-    --social-drama: 348 79% 52%;
+    --social-drama: 0 100% 66%;
     --social-warm: 24 95% 58%;
     --social-cold: 210 60% 50%;
     --shadow-love: 0 0 20px hsl(340 82% 60% / 0.3);
@@ -71,14 +96,14 @@
     --shadow-chemistry: 0 0 20px hsl(270 70% 58% / 0.3);
 
     /* Sidebar colors */
-    --sidebar-background: 222 62% 7%;
-    --sidebar-foreground: 210 22% 88%;
-    --sidebar-primary: 197 88% 60%;
-    --sidebar-primary-foreground: 222 90% 12%;
-    --sidebar-accent: 224 45% 16%;
-    --sidebar-accent-foreground: 210 24% 90%;
-    --sidebar-border: 221 32% 20%;
-    --sidebar-ring: 197 88% 60%;
+    --sidebar-background: 0 0% 9%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 249 75% 63%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 249 75% 63%;
 
     /* Twaater Purple Theme */
     --twaater-bg: 250 30% 12%;
