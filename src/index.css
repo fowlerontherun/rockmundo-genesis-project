@@ -415,6 +415,27 @@
   font-family: 'Oswald', sans-serif;
 }
 
+/* ============ Unified Typography Scale ============ */
+.text-page-title { @apply text-3xl sm:text-4xl font-bold tracking-tight text-foreground; }
+.text-page-subtitle { @apply text-base sm:text-lg text-muted-foreground; }
+.text-section-title { @apply text-xl sm:text-2xl font-semibold tracking-tight text-foreground; }
+.text-card-title { @apply text-lg font-semibold leading-snug text-foreground; }
+.text-body { @apply text-sm leading-relaxed text-foreground; }
+.text-body-sm { @apply text-xs leading-relaxed text-muted-foreground; }
+.text-label { @apply text-xs font-medium uppercase tracking-wide text-muted-foreground; }
+.text-caption { @apply text-[11px] text-muted-foreground; }
+
+/* ============ Unified Elevation Utilities ============ */
+.elevation-1 { box-shadow: var(--shadow-sm); }
+.elevation-2 { box-shadow: var(--shadow-md); }
+.elevation-3 { box-shadow: var(--shadow-lg); }
+.elevation-4 { box-shadow: var(--shadow-xl); }
+
+/* ============ Unified Surface Utilities ============ */
+.surface-base { background-color: hsl(var(--background)); }
+.surface-card { background-color: hsl(var(--card)); }
+.surface-elevated { background-color: hsl(var(--elevated)); }
+
 /* Animation classes */
 .animate-glow {
   animation: glow 2s ease-in-out infinite alternate;
