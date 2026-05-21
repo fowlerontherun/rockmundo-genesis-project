@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.333",
+    date: "2026-05-21",
+    changes: [
+      { type: 'improvement', description: "Unified design system pass — default dark palette retokenised to the new RockMundo spec (bg #121212, surface #1E1E1E, elevated #2A2A2A, accent #6C5CE7, success #00C853, warning #FFB300, danger #FF5252). All hex values stored as HSL semantic tokens so every existing component, page and modal picks them up automatically without code changes." },
+      { type: 'improvement', description: "Standardised radius scale (4 / 8 / 12 / 16px via --radius-sm/md/lg/xl) and 8px spacing scale (--space-1..8). Tailwind rounded-sm/md/lg/xl now map to the unified scale." },
+      { type: 'improvement', description: "Standardised elevation: --shadow-sm/md/lg/xl tokens + .elevation-1..4 utilities + shadow-ds-sm/md/lg/xl Tailwind classes for cards, modals and floating surfaces." },
+      { type: 'improvement', description: "Standardised typography utilities (.text-page-title, .text-page-subtitle, .text-section-title, .text-card-title, .text-body, .text-body-sm, .text-label, .text-caption) so every page uses the same heading/body/label hierarchy." },
+      { type: 'improvement', description: "Button variants rationalised: canonical primary / secondary / danger / ghost / link with shared disabled state (bg-muted, muted-foreground). Existing default / destructive / outline kept as aliases so no call-site breaks." },
+      { type: 'improvement', description: "New 'elevated' surface token + Tailwind colour (bg-elevated / text-elevated-foreground) for #2A2A2A surfaces like popovers, dropdowns and secondary buttons." },
+    ],
+  },
+  {
     version: "1.1.332",
     date: "2026-05-20",
     changes: [
