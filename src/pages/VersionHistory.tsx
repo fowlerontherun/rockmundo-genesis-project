@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.334",
+    date: "2026-05-22",
+    changes: [
+      { type: 'improvement', description: "Introduced a shared `StandardPageLayout` template (Header → Stats bar → Primary content → Secondary actions, with global bottom nav from <Layout/>) so every major screen uses the same vertical structure and spacing." },
+      { type: 'improvement', description: "Applied the new template to Dashboard, Character Hub, Career Hub (via CategoryHub), Music Studio, Releases, Song Marketplace and the Advanced Gig System page. No business logic, data fetching or routes were changed — purely structural." },
+      { type: 'improvement', description: "CategoryHub (all 10 RockMundo hubs) now flows through StandardPageLayout, giving Character, Career and every other hub the same header/content/back-nav rhythm." },
+    ],
+  },
+  {
     version: "1.1.333",
     date: "2026-05-21",
     changes: [
