@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Disc } from "lucide-react";
@@ -12,7 +12,7 @@ import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
-  const navigate = useNavigate();
+  const { profileId } = useActiveProfile();
   const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const userId = profileId;
