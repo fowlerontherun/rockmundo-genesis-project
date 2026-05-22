@@ -13,7 +13,6 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
   const { profileId } = useActiveProfile();
-  const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const userId = profileId;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
