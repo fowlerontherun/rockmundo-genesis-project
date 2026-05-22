@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/useTranslation";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHubTileImage } from "@/hooks/useHubTileImage";
@@ -94,9 +93,7 @@ export const CategoryHub = ({ titleKey, description, tiles, groups }: CategoryHu
   );
 
   return (
-    <PageLayout>
-      <PageHeader title={t(titleKey)} subtitle={description} />
-
+    <StandardPageLayout title={t(titleKey)} subtitle={description} bareContent>
       {tiles && renderTileGrid(tiles)}
 
       {groups?.map((group) => (
@@ -107,6 +104,6 @@ export const CategoryHub = ({ titleKey, description, tiles, groups }: CategoryHu
           {renderTileGrid(group.tiles)}
         </div>
       ))}
-    </PageLayout>
+    </StandardPageLayout>
   );
 };

@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Plus, Disc } from "lucide-react";
+import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
@@ -13,7 +12,6 @@ import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
-  const navigate = useNavigate();
   const { profileId } = useActiveProfile();
   const { t } = useTranslation();
   const userId = profileId;
@@ -49,20 +47,20 @@ export default function ReleaseManager() {
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title={t('releases.title')}
-        subtitle={t('releases.description')}
-        backTo="/hub/music"
-        backLabel={t('releases.backToMusicHub')}
-        actions={
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('releases.newRelease')}
-          </Button>
-        }
-      />
-
+    <StandardPageLayout
+      title={t('releases.title')}
+      subtitle={t('releases.description')}
+      icon={Disc}
+      backTo="/hub/music"
+      backLabel={t('releases.backToMusicHub')}
+      bareContent
+      headerActions={
+        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          {t('releases.newRelease')}
+        </Button>
+      }
+    >
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="releases">{t('releases.myReleases')}</TabsTrigger>
@@ -83,6 +81,6 @@ export default function ReleaseManager() {
         onOpenChange={setShowCreateDialog}
         userId={userId}
       />
-    </PageLayout>
+    </StandardPageLayout>
   );
 }

@@ -13,8 +13,7 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
 import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
@@ -123,7 +122,19 @@ const Dashboard = () => {
     return progressInLevel / xpNeededForLevel * 100;
   };
 
-  return <PageLayout>
+  return <StandardPageLayout
+      title={t('dashboard.title')}
+      subtitle={`${t('dashboard.welcome')}, ${(profile as any)?.display_name || (profile as any)?.username || "Player"}`}
+      icon={User}
+      bareContent
+      secondaryActions={
+        <>
+          <Link to="/schedule"><Button variant="outline" size="sm">Schedule</Button></Link>
+          <Link to="/statistics"><Button variant="outline" size="sm">Statistics</Button></Link>
+          <Link to="/inbox"><Button variant="outline" size="sm">Inbox</Button></Link>
+        </>
+      }
+    >
       <PlayerSurveyModal
         open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
         onClose={() => setSurveyDismissed(true)}
@@ -131,13 +142,10 @@ const Dashboard = () => {
         onSubmit={submitSurvey}
         isSubmitting={isSurveySubmitting}
       />
-      <PageHeader
-        title={t('dashboard.title')}
-        subtitle={`${t('dashboard.welcome')}, ${(profile as any)?.display_name || (profile as any)?.username || "Player"}`}
-      />
 
       <DebtWarningBanner />
       <GigLocationWarning />
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -395,6 +403,6 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </PageLayout>;
+    </StandardPageLayout>;
 };
 export default Dashboard;
