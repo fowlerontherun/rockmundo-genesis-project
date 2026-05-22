@@ -1,26 +1,52 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, DollarSign, Users, Music, TrendingUp } from "lucide-react";
+import { Calendar, DollarSign, Users, Music, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 
 const SimpleAdvancedGigSystem = () => {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Music className="h-8 w-8" />
-            Advanced Gig System
-          </h1>
-          <p className="text-muted-foreground">Simplified view of your performance schedule</p>
-        </div>
+    <StandardPageLayout
+      title="Advanced Gig System"
+      subtitle="Simplified view of your performance schedule"
+      icon={Music}
+      bareContent
+      headerActions={
         <Link to="/gigs">
           <Button>View Full Gig Manager</Button>
         </Link>
-      </div>
-
+      }
+      stats={
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+              <Calendar className="h-3 w-3" /> Total Gigs
+            </div>
+            <div className="text-lg font-bold">0</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+              <DollarSign className="h-3 w-3" /> Earnings
+            </div>
+            <div className="text-lg font-bold">$0</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+              <Users className="h-3 w-3" /> Attendance
+            </div>
+            <div className="text-lg font-bold">0</div>
+          </div>
+        </div>
+      }
+      secondaryActions={
+        <>
+          <Link to="/gigs"><Button variant="outline" size="sm">Browse Venues</Button></Link>
+          <Link to="/setlists"><Button variant="outline" size="sm">Manage Setlists</Button></Link>
+          <Link to="/band"><Button variant="outline" size="sm">Band Manager</Button></Link>
+        </>
+      }
+    >
       <Tabs defaultValue="upcoming">
         <TabsList>
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -64,45 +90,6 @@ const SimpleAdvancedGigSystem = () => {
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Total Gigs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">All time</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Total Earnings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$0</div>
-                <p className="text-xs text-muted-foreground mt-1">From performances</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Total Attendance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">Fans reached</p>
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
             <CardHeader>
               <CardTitle>Performance Trends</CardTitle>
@@ -118,7 +105,7 @@ const SimpleAdvancedGigSystem = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </StandardPageLayout>
   );
 };
 

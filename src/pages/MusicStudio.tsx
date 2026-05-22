@@ -11,8 +11,7 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 
 const MusicStudio = () => {
   const musicFeatures = [
@@ -67,15 +66,23 @@ const MusicStudio = () => {
   ];
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Music Hub"
-        subtitle="Your central command center for all things music creation. From writing and recording to releasing and performing, manage every aspect of your musical journey."
-        backTo="/hub/music"
-        backLabel="Back to Music Hub"
-        icon={Sparkles}
-      />
-
+    <StandardPageLayout
+      title="Music Hub"
+      subtitle="Your central command center for all things music creation. From writing and recording to releasing and performing, manage every aspect of your musical journey."
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      icon={Sparkles}
+      bareContent
+      secondaryActions={
+        <>
+          <Link to="/songwriting"><Button variant="outline" size="sm">Songwriting</Button></Link>
+          <Link to="/recording-studio"><Button variant="outline" size="sm">Recording Studio</Button></Link>
+          <Link to="/song-market"><Button variant="outline" size="sm">Marketplace</Button></Link>
+          <Link to="/streaming-platforms"><Button variant="outline" size="sm">Streaming</Button></Link>
+        </>
+      }
+      secondaryTitle="Related"
+    >
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {musicFeatures.map((feature) => {
@@ -115,9 +122,10 @@ const MusicStudio = () => {
             </Card>
           );
         })}
+
+        {/* Pro Tip card stays within the primary grid for visual cohesion */}
       </div>
 
-      {/* Quick Stats or Tips Section */}
       <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -127,13 +135,13 @@ const MusicStudio = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            💡 <strong>Recording Tip:</strong> Start with songwriting to create your tracks, then head to the Recording Studio 
-            to enhance their quality with professional producers. Higher quality songs perform better on streaming platforms 
+            💡 <strong>Recording Tip:</strong> Start with songwriting to create your tracks, then head to the Recording Studio
+            to enhance their quality with professional producers. Higher quality songs perform better on streaming platforms
             and at live shows!
           </p>
         </CardContent>
       </Card>
-    </PageLayout>
+    </StandardPageLayout>
   );
 };
 
