@@ -22,6 +22,7 @@ import { EventNotificationModal } from "@/components/events/EventNotificationMod
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
 import { InterviewModal } from "@/components/pr/InterviewModal";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
@@ -97,6 +98,7 @@ const Layout = () => {
             </Alert>
           )}
           <CharacterGate>
+            <Breadcrumbs />
             <Outlet />
           </CharacterGate>
           <TutorialTooltip />

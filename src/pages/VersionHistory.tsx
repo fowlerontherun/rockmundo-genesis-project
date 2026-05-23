@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.335",
+    date: "2026-05-23",
+    changes: [
+      { type: 'improvement', description: "Redesigned navigation around a persistent 5-tab bottom bar: Home, Artist, Career, Market, Menu — visible on every page on mobile and desktop." },
+      { type: 'improvement', description: "Active tab is now visually obvious: primary color, scaled icon and an accent bar above the icon." },
+      { type: 'improvement', description: "Added auto-generated breadcrumb navigation (e.g. Home › Hub › Music › Recording) on every deeper page, rendered above page content. Hidden on top-level routes." },
+      { type: 'improvement', description: "Reduced hidden menus: the 'Menu' tab opens the full hub list, no more separate top-bar hamburger logic to discover." },
+    ],
+  },
+  {
     version: "1.1.334",
     date: "2026-05-22",
     changes: [
