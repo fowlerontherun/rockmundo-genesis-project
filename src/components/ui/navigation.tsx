@@ -19,7 +19,7 @@ import { useUnreadInboxCount } from "@/hooks/useInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
-  History,
+  History, ShoppingBag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,20 +41,22 @@ const Navigation = () => {
 
   const hubLinks: HubLink[] = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: User, labelKey: "nav.character", path: "/hub/character" },
+    { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
+    { icon: ShoppingBag, labelKey: "nav.market", path: "/song-market" },
     { icon: Music, labelKey: "nav.music", path: "/hub/music" },
     { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
     { icon: Globe, labelKey: "nav.worldSocial", path: "/hub/world-social" },
-    { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
-    { icon: User, labelKey: "nav.character", path: "/hub/character" },
   ];
 
   const adminLink: HubLink = { icon: Settings, labelKey: "nav.admin", path: "/admin" };
 
-  const mobileShortcuts = [
-    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
-    { icon: Music, labelKey: "nav.music", path: "/hub/music" },
-    { icon: Users, labelKey: "nav.band", path: "/hub/band-live" },
-    { icon: Globe, labelKey: "nav.world", path: "/hub/world-social" },
+  // Persistent bottom tabs — Home, Artist, Career, Market, Menu
+  const bottomTabs: { icon: LucideIcon; label: string; path: string }[] = [
+    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: User, label: "Artist", path: "/hub/character" },
+    { icon: Briefcase, label: "Career", path: "/hub/career-business" },
+    { icon: ShoppingBag, label: "Market", path: "/song-market" },
   ];
 
   const handleLogout = async () => {
@@ -207,69 +209,69 @@ const Navigation = () => {
 
       {/* Desktop Bottom Navigation */}
       <div className="hidden lg:flex fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg">
-        <div className="flex justify-around items-center py-2 px-4 w-full max-w-4xl mx-auto">
-          {mobileShortcuts.map((item) => {
+        <div className="flex justify-around items-stretch py-1 px-4 w-full max-w-4xl mx-auto">
+          {bottomTabs.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
-              <Button
+              <button
                 key={item.path}
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 h-14 px-6 ${
-                  active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
-                }`}
                 onClick={() => handleNavigation(item.path)}
                 aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center justify-center gap-1 h-14 flex-1 transition-colors ${
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'scale-110' : ''} transition-transform`} />
-                <span className="text-xs font-medium">{t(item.labelKey)}</span>
-              </Button>
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-10 rounded-full bg-primary" />
+                )}
+                <Icon className={`h-5 w-5 ${active ? "scale-110" : ""} transition-transform`} />
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
             );
           })}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col gap-1 h-14 px-6 text-muted-foreground hover:text-foreground"
+          <button
             onClick={() => setIsOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 h-14 flex-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Menu className="h-5 w-5" />
-            <span className="text-xs font-medium">{t('nav.more')}</span>
-          </Button>
+            <span className="text-xs font-medium">Menu</span>
+          </button>
         </div>
       </div>
 
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg safe-area-bottom">
-        <div className="flex justify-around items-center py-1.5 px-1">
-          {mobileShortcuts.map((item) => {
+        <div className="flex justify-around items-stretch py-1 px-1">
+          {bottomTabs.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
-              <Button
+              <button
                 key={item.path}
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-0.5 h-11 px-3 min-w-0 ${
-                  active ? "text-primary bg-primary/10" : "text-muted-foreground"
-                }`}
                 onClick={() => handleNavigation(item.path)}
                 aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center justify-center gap-0.5 h-12 flex-1 min-w-0 transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'scale-110' : ''} transition-transform`} />
-                <span className="text-[10px] font-oswald truncate">{t(item.labelKey)}</span>
-              </Button>
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                )}
+                <Icon className={`h-5 w-5 ${active ? "scale-110" : ""} transition-transform`} />
+                <span className="text-[10px] font-oswald truncate">{item.label}</span>
+              </button>
             );
           })}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col gap-0.5 h-11 px-3 min-w-0 text-muted-foreground"
+          <button
             onClick={() => setIsOpen(true)}
+            className="flex flex-col items-center justify-center gap-0.5 h-12 flex-1 min-w-0 text-muted-foreground"
           >
             <Menu className="h-5 w-5" />
-            <span className="text-[10px] font-oswald">{t('nav.more')}</span>
-          </Button>
+            <span className="text-[10px] font-oswald">Menu</span>
+          </button>
         </div>
       </div>
     </>
