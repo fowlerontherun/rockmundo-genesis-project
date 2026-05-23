@@ -19,7 +19,7 @@ import { useUnreadInboxCount } from "@/hooks/useInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
-  History,
+  History, ShoppingBag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,20 +41,22 @@ const Navigation = () => {
 
   const hubLinks: HubLink[] = [
     { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: User, labelKey: "nav.character", path: "/hub/character" },
+    { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
+    { icon: ShoppingBag, labelKey: "nav.market", path: "/song-market" },
     { icon: Music, labelKey: "nav.music", path: "/hub/music" },
     { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
     { icon: Globe, labelKey: "nav.worldSocial", path: "/hub/world-social" },
-    { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
-    { icon: User, labelKey: "nav.character", path: "/hub/character" },
   ];
 
   const adminLink: HubLink = { icon: Settings, labelKey: "nav.admin", path: "/admin" };
 
-  const mobileShortcuts = [
-    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
-    { icon: Music, labelKey: "nav.music", path: "/hub/music" },
-    { icon: Users, labelKey: "nav.band", path: "/hub/band-live" },
-    { icon: Globe, labelKey: "nav.world", path: "/hub/world-social" },
+  // Persistent bottom tabs — Home, Artist, Career, Market, Menu
+  const bottomTabs: { icon: LucideIcon; label: string; path: string }[] = [
+    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: User, label: "Artist", path: "/hub/character" },
+    { icon: Briefcase, label: "Career", path: "/hub/career-business" },
+    { icon: ShoppingBag, label: "Market", path: "/song-market" },
   ];
 
   const handleLogout = async () => {
