@@ -1,10 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Music, Info, ListPlus, Clock, Flame, Star, Guitar, Disc } from "lucide-react";
 import { SongRehearsalStatus } from "./SongRehearsalStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ContentCard } from "@/components/ui/ContentCard";
 
 interface SongCardProps {
   song: {
@@ -23,9 +22,7 @@ interface SongCardProps {
     fame?: number | null;
     version?: string | null;
     parent_song_id?: string | null;
-    bands?: {
-      name: string;
-    } | null;
+    bands?: { name: string } | null;
   };
   onViewDetails: (songId: string) => void;
 }
@@ -49,97 +46,93 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
     if (!seconds) return "3:00";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getQualityColor = (quality: number) => {
-    if (quality >= 1500) return "bg-purple-500/10 text-purple-500 border-purple-500/20";
-    if (quality >= 1000) return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    if (quality >= 500) return "bg-green-500/10 text-green-500 border-green-500/20";
-    return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-  };
-
-  const getQualityLabel = (quality: number) => {
-    if (quality >= 1500) return "Exceptional";
-    if (quality >= 1000) return "High";
-    if (quality >= 500) return "Medium";
-    return "Low";
-  };
+  const qualityTone =
+    song.quality_score >= 1500
+      ? "info"
+      : song.quality_score >= 1000
+      ? "info"
+      : song.quality_score >= 500
+      ? "success"
+      : "warning";
+  const qualityLabel =
+    song.quality_score >= 1500
+      ? "Exceptional"
+      : song.quality_score >= 1000
+      ? "High"
+      : song.quality_score >= 500
+      ? "Medium"
+      : "Low";
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg truncate">{song.title}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {song.bands?.name || "Solo Artist"}
-            </p>
-          </div>
-          <Music className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{song.genre}</Badge>
-          <Badge className={getQualityColor(song.quality_score)}>
-            {getQualityLabel(song.quality_score)} ({song.quality_score})
-          </Badge>
-          {song.version && song.version !== 'standard' && (
-            <Badge variant="outline" className={`gap-1 ${song.version === 'acoustic' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20'}`}>
-              {song.version === 'acoustic' ? <Guitar className="h-3 w-3" /> : <Disc className="h-3 w-3" />}
-              {song.version === 'acoustic' ? 'Acoustic' : 'Remix'}
-            </Badge>
-          )}
-          {(song.hype ?? 0) > 0 && (
-            <Badge variant="outline" className="gap-1 bg-orange-500/10 text-orange-500 border-orange-500/20">
-              <Flame className="h-3 w-3" />
-              {song.hype} Hype
-            </Badge>
-          )}
-          {(song.fame ?? 0) > 0 && (
-            <Badge variant="outline" className="gap-1 bg-purple-500/10 text-purple-500 border-purple-500/20">
-              <Star className="h-3 w-3" />
-              {song.fame} Fame
-            </Badge>
-          )}
-          {song.status && (
-            <Badge variant={song.status === "recorded" ? "default" : song.status === "draft" ? "secondary" : "outline"}>
-              {song.status === "recorded" ? "Recorded" : song.status === "draft" ? "Draft" : song.status}
-            </Badge>
-          )}
-          {song.catalog_status && (
-            <Badge variant="secondary">{song.catalog_status}</Badge>
-          )}
-          <Badge variant="outline" className="gap-1">
-            <Clock className="h-3 w-3" />
-            {song.duration_display || formatDuration(song.duration_seconds)}
-          </Badge>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <SongRehearsalStatus songId={song.id} bandId={song.band_id || userBand?.id} />
-        </div>
-
-        <div className="flex gap-2">
-          <Button
+    <ContentCard
+      title={song.title}
+      subtitle={song.bands?.name || "Solo Artist"}
+      icon={Music}
+      badges={[
+        { label: song.genre, tone: "muted" },
+        { label: `${qualityLabel} (${song.quality_score})`, tone: qualityTone as any },
+        ...(song.status ? [{ label: song.status, tone: "muted" as const }] : []),
+      ]}
+      primaryAction={{
+        label: "Details",
+        icon: Info,
+        onClick: () => onViewDetails(song.id),
+      }}
+      secondaryActions={[
+        { label: "Add to setlist", icon: ListPlus, onClick: () => {} },
+      ]}
+    >
+      <div className="flex flex-wrap gap-1.5">
+        {song.version && song.version !== "standard" && (
+          <Badge
             variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => onViewDetails(song.id)}
+            className={`gap-1 ${
+              song.version === "acoustic"
+                ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                : "bg-cyan-500/10 text-cyan-600 border-cyan-500/20"
+            }`}
           >
-            <Info className="mr-2 h-4 w-4" />
-            Details
-          </Button>
-          <Button variant="outline" size="sm">
-            <ListPlus className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="text-xs text-muted-foreground">
-          Created {new Date(song.created_at).toLocaleDateString()}
-        </div>
-      </CardContent>
-    </Card>
+            {song.version === "acoustic" ? (
+              <Guitar className="h-3 w-3" />
+            ) : (
+              <Disc className="h-3 w-3" />
+            )}
+            {song.version === "acoustic" ? "Acoustic" : "Remix"}
+          </Badge>
+        )}
+        {(song.hype ?? 0) > 0 && (
+          <Badge
+            variant="outline"
+            className="gap-1 bg-orange-500/10 text-orange-500 border-orange-500/20"
+          >
+            <Flame className="h-3 w-3" />
+            {song.hype} Hype
+          </Badge>
+        )}
+        {(song.fame ?? 0) > 0 && (
+          <Badge
+            variant="outline"
+            className="gap-1 bg-purple-500/10 text-purple-500 border-purple-500/20"
+          >
+            <Star className="h-3 w-3" />
+            {song.fame} Fame
+          </Badge>
+        )}
+        <Badge variant="outline" className="gap-1">
+          <Clock className="h-3 w-3" />
+          {song.duration_display || formatDuration(song.duration_seconds)}
+        </Badge>
+        {song.catalog_status && (
+          <Badge variant="secondary">{song.catalog_status}</Badge>
+        )}
+      </div>
+      <SongRehearsalStatus songId={song.id} bandId={song.band_id || userBand?.id} />
+      <p className="text-xs text-muted-foreground">
+        Created {new Date(song.created_at).toLocaleDateString()}
+      </p>
+    </ContentCard>
   );
 };
