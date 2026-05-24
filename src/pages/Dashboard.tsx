@@ -15,6 +15,7 @@ import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from 
 import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
@@ -183,6 +184,9 @@ const Dashboard = () => {
 
         {/* Profile Tab - Reorganized for clarity */}
         <TabsContent value="profile" className="space-y-4">
+
+          {/* ── Section 0: Modern Hero — Next Best Action, key stats, goals, achievements ── */}
+          <DashboardHero profile={profile} userId={user?.id} />
 
           {/* ── Section 1: Hero Card ── */}
           <Card>
