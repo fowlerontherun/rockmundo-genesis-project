@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.336",
+    date: "2026-05-24",
+    changes: [
+      { type: 'feature', description: "Redesigned the Dashboard home screen with a modern, motivational hero section. Surfaces the most important player info immediately: cash, fans, current project and unread notifications." },
+      { type: 'feature', description: "Added a dominant 'Next Best Action' CTA that adapts to player state (low health/energy, unread inbox, low fame, or 'write your next hit') with a single bold call-to-action button." },
+      { type: 'feature', description: "Added an Active Goals card with progress bars for Level XP, Fanbase growth and Fame milestones." },
+      { type: 'feature', description: "Added a Recent Achievements strip showing the last 3 unlocked achievements with rarity badges." },
+      { type: 'improvement', description: "Reduced clutter on the Dashboard profile tab by leading with the new hero block above the existing identity / vitals stack." },
+    ],
+  },
+  {
     version: "1.1.335",
     date: "2026-05-23",
     changes: [
