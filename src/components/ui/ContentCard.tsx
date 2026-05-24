@@ -201,11 +201,9 @@ export const ContentCard = ({
 
   if (href) {
     return (
-      <Card className={baseClasses} asChild>
-        <Link to={href} onClick={onClick}>
-          {inner}
-        </Link>
-      </Card>
+      <Link to={href} onClick={onClick} className="block">
+        <Card className={baseClasses}>{inner}</Card>
+      </Link>
     );
   }
   if (onClick) {
