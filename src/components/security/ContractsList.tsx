@@ -1,66 +1,66 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, Users, DollarSign } from "lucide-react";
 import { useSecurityContracts } from "@/hooks/useSecurityFirm";
 import type { SecurityContract } from "@/types/security";
 import { format } from "date-fns";
+import { ContentCard, type ContentCardBadge } from "@/components/ui/ContentCard";
 
 interface ContractsListProps {
   firmId: string;
 }
 
-const getStatusColor = (status: SecurityContract['status']) => {
+const statusTone = (status: SecurityContract["status"]): ContentCardBadge["tone"] => {
   switch (status) {
-    case 'active': return 'bg-green-500/10 text-green-500 border-green-500/30';
-    case 'accepted': return 'bg-blue-500/10 text-blue-500 border-blue-500/30';
-    case 'pending': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30';
-    case 'completed': return 'bg-muted text-muted-foreground border-muted';
-    case 'cancelled': return 'bg-red-500/10 text-red-500 border-red-500/30';
-    default: return '';
+    case "active":
+      return "success";
+    case "accepted":
+      return "info";
+    case "pending":
+      return "warning";
+    case "completed":
+      return "muted";
+    case "cancelled":
+      return "danger";
+    default:
+      return "muted";
   }
 };
 
 const ContractCard = ({ contract }: { contract: SecurityContract }) => (
-  <div className="p-4 border rounded-lg space-y-3">
-    <div className="flex items-start justify-between">
-      <div>
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          <span className="font-medium capitalize">{contract.contract_type} Contract</span>
+  <ContentCard
+    title={`${contract.contract_type.charAt(0).toUpperCase()}${contract.contract_type.slice(1)} Contract`}
+    subtitle={contract.notes ?? undefined}
+    icon={FileText}
+    badges={[{ label: contract.status, tone: statusTone(contract.status) }]}
+    trailing={
+      contract.total_fee ? (
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            Total
+          </div>
+          <div className="font-semibold">${contract.total_fee.toLocaleString()}</div>
         </div>
-        {contract.notes && (
-          <p className="text-sm text-muted-foreground mt-1">{contract.notes}</p>
-        )}
-      </div>
-      <Badge className={getStatusColor(contract.status)}>
-        {contract.status}
-      </Badge>
-    </div>
-
-    <div className="grid grid-cols-3 gap-4 text-sm">
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
+      ) : undefined
+    }
+    density="compact"
+  >
+    <div className="grid grid-cols-3 gap-3 text-xs sm:text-sm text-muted-foreground">
+      <div className="flex items-center gap-1.5">
+        <Users className="h-3.5 w-3.5" />
         <span>{contract.guards_required} guards</span>
       </div>
-      <div className="flex items-center gap-2">
-        <DollarSign className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-1.5">
+        <DollarSign className="h-3.5 w-3.5" />
         <span>${contract.fee_per_event.toLocaleString()}/event</span>
       </div>
       {contract.start_date && (
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span>{format(new Date(contract.start_date), 'MMM d, yyyy')}</span>
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          <span>{format(new Date(contract.start_date), "MMM d, yyyy")}</span>
         </div>
       )}
     </div>
-
-    {contract.total_fee && (
-      <div className="pt-2 border-t">
-        <span className="text-sm text-muted-foreground">Total Value: </span>
-        <span className="font-semibold">${contract.total_fee.toLocaleString()}</span>
-      </div>
-    )}
-  </div>
+  </ContentCard>
 );
 
 export const ContractsList = ({ firmId }: ContractsListProps) => {
