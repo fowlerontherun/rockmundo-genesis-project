@@ -185,6 +185,9 @@ const Dashboard = () => {
         {/* Profile Tab - Reorganized for clarity */}
         <TabsContent value="profile" className="space-y-4">
 
+          {/* ── Section 0: Modern Hero — Next Best Action, key stats, goals, achievements ── */}
+          <DashboardHero profile={profile} userId={user?.id} />
+
           {/* ── Section 1: Hero Card ── */}
           <Card>
             <CardContent className="p-4">
