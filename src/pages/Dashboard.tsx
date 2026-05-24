@@ -15,6 +15,7 @@ import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from 
 import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
