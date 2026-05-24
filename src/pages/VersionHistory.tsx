@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.337",
+    date: "2026-05-24",
+    changes: [
+      { type: 'feature', description: "Introduced a unified `ContentCard` primitive — every list/grid item across RockMundo can now use a single card system with title, optional icon/leading visual, status badges, primary CTA, secondary icon actions, trailing slot, body content, consistent padding, subtle border + shadow elevation on hover, and proper tap feedback on mobile." },
+      { type: 'improvement', description: "Refactored the Songs `SongCard` (songs hub, repertoire, marketplace, recording catalogs) to use the new `ContentCard` for consistent header, badges, and action bar." },
+      { type: 'improvement', description: "Refactored the Security `ContractsList` cards to use `ContentCard` (contracts category) — same anatomy as song cards." },
+      { type: 'improvement', description: "ContentCard is now the canonical pattern for songs, gigs, messages, inventory, contracts, and charts — new and migrating list items should adopt it for visual consistency." },
+    ],
+  },
+  {
     version: "1.1.336",
     date: "2026-05-24",
     changes: [
