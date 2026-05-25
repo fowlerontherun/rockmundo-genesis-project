@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.338",
+    date: "2026-05-25",
+    changes: [
+      { type: 'improvement', description: "Button system audit: every Button now defaults to a 44px tap target (min-h-11) for mobile, with sm (36px) and lg (48px) tuned for the same hierarchy. Standardised padding across all sizes." },
+      { type: 'improvement', description: "Primary CTA is now visually dominant — bolder font weight, stronger shadow elevation that lifts on hover, and a subtle press (active:scale) for tactile feedback. Use one `variant=\"primary\"` per screen; supporting actions should use `secondary`/`outline`/`ghost`." },
+      { type: 'improvement', description: "Improved disabled states: reduced saturation + 60% opacity + no shadow, so disabled buttons read as inert without disappearing. Also sets `aria-disabled` for screen readers." },
+      { type: 'feature', description: "Added built-in loading state to `<Button loading loadingText=\"Saving…\">` — renders a spinner, disables the button, sets `aria-busy`, and preserves layout. Replaces ad-hoc `<Loader2 className=\"animate-spin\" />` patterns going forward." },
+      { type: 'improvement', description: "Removed competing button styles — `default`, `destructive`, `outline` aliases now share the same tokens as the canonical `primary`/`danger`/`secondary` variants. No business logic changed." },
+    ],
+  },
+  {
     version: "1.1.337",
     date: "2026-05-24",
     changes: [
