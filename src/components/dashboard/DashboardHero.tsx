@@ -50,26 +50,26 @@ function computeNextBestAction(profile: any, unread: number): NextBestAction {
 
   if (health < 30) {
     return {
-      label: "Recover Your Health",
-      description: "You're burnt out. Rest before your career stalls.",
+      label: "Rest Up",
+      description: "Health critical.",
       to: "/hub/character",
-      cta: "Rest now",
+      cta: "Rest",
       icon: Flame,
     };
   }
   if (energy < 25) {
     return {
-      label: "Refill Your Energy",
-      description: "Low energy means weak performances. Grab some sleep.",
+      label: "Refill Energy",
+      description: "Low energy hurts performance.",
       to: "/schedule",
-      cta: "Schedule rest",
+      cta: "Sleep",
       icon: Flame,
     };
   }
   if (unread > 0) {
     return {
       label: `${unread} New Message${unread === 1 ? "" : "s"}`,
-      description: "Opportunities are waiting in your inbox.",
+      description: "Check your inbox.",
       to: "/inbox",
       cta: "Open inbox",
       icon: Bell,
@@ -77,16 +77,16 @@ function computeNextBestAction(profile: any, unread: number): NextBestAction {
   }
   if (fame < 100) {
     return {
-      label: "Book Your Next Gig",
-      description: "Build fame by performing live. Find a stage tonight.",
+      label: "Book a Gig",
+      description: "Perform to grow fame.",
       to: "/gigs",
       cta: "Find gigs",
       icon: Sparkles,
     };
   }
   return {
-    label: "Write Your Next Hit",
-    description: "Keep momentum going — head to the studio.",
+    label: "Write a Hit",
+    description: "Keep the momentum.",
     to: "/booking/songwriting",
     cta: "Start writing",
     icon: Music2,
@@ -165,15 +165,15 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     },
     {
       icon: Users,
-      label: "Grow Your Fanbase",
+      label: "Fans",
       value: Math.min(100, (fans / 1000) * 100),
-      hint: `${compact.format(fans)} / 1K fans`,
+      hint: `${compact.format(fans)} / 1K`,
     },
     {
       icon: Sparkles,
-      label: "Build Fame",
+      label: "Fame",
       value: Math.min(100, (fame / 500) * 100),
-      hint: `${compact.format(fame)} / 500 fame`,
+      hint: `${compact.format(fame)} / 500`,
     },
   ];
 
@@ -192,7 +192,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  Next Best Action
+                  Do This Next
                 </p>
                 <h2 className="mt-0.5 text-xl sm:text-2xl font-bold tracking-tight truncate">
                   {nba.label}
@@ -226,20 +226,20 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
         />
         <StatTile
           icon={Music2}
-          label="Current Project"
+          label="Project"
           value={currentProject?.title ?? "None"}
           subtle={
             currentProject?.progress != null
               ? `${Math.round(currentProject.progress)}%`
-              : "Start writing"
+              : "Start one"
           }
           tone="accent"
           to={currentProject ? "/booking/songwriting" : "/booking/songwriting"}
         />
         <StatTile
           icon={Bell}
-          label="Notifications"
-          value={unreadCount > 0 ? `${unreadCount} new` : "All clear"}
+          label="Inbox"
+          value={unreadCount > 0 ? `${unreadCount} new` : "Clear"}
           tone={unreadCount > 0 ? "warning" : "muted"}
           to="/inbox"
         />
@@ -251,7 +251,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Target className="h-4 w-4" />
-              Active Goals
+              Goals
             </h3>
           </div>
           <div className="space-y-3">
@@ -281,7 +281,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
-                Recent Achievements
+                Recent Wins
               </h3>
             </div>
             <div className="flex flex-col gap-2">

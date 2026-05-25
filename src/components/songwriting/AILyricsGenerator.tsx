@@ -100,7 +100,7 @@ export const AILyricsGenerator = ({
     <div className="space-y-4">
       <Alert>
         <AlertDescription className="text-xs">
-          ⚠️ Using AI-generated lyrics will apply a -10% XP penalty. You can edit the generated lyrics before completing your song.
+          ⚠️ AI lyrics apply a −10% XP penalty. You can edit before saving.
         </AlertDescription>
       </Alert>
       
@@ -113,7 +113,7 @@ export const AILyricsGenerator = ({
         {isGenerating ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Generating Unique Lyrics...
+            Generating…
           </>
         ) : (
           <>

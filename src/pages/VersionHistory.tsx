@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.339",
+    date: "2026-05-25",
+    changes: [
+      { type: 'improvement', description: "Copy pass on the Dashboard hero: 'Next Best Action' → 'Do This Next'; NBA descriptions trimmed to a single short status line ('Health critical.', 'Low energy hurts performance.', 'Check your inbox.', 'Perform to grow fame.', 'Keep the momentum.'). CTA labels shortened ('Rest', 'Sleep', 'Find gigs')." },
+      { type: 'improvement', description: "Stat tiles use short labels: 'Current Project' → 'Project', 'Notifications' → 'Inbox', 'All clear' → 'Clear', 'Start writing' → 'Start one'. Goal labels reduced to single nouns ('Fans', 'Fame') with compact hints (e.g. '0 / 1K' instead of '0 / 1K fans')." },
+      { type: 'improvement', description: "Section headers tightened: 'Active Goals' → 'Goals', 'Recent Achievements' → 'Recent Wins'." },
+      { type: 'improvement', description: "AI Lyrics Generator alert reduced from two sentences to one ('AI lyrics apply a −10% XP penalty. You can edit before saving.'); loading state simplified to 'Generating…'." },
+      { type: 'improvement', description: "No game mechanics changed — XP penalty, thresholds, routes and conditions are identical, only the displayed text is shorter and more actionable." },
+    ],
+  },
+  {
     version: "1.1.338",
     date: "2026-05-25",
     changes: [
