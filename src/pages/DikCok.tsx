@@ -237,7 +237,7 @@ export default function DikCok() {
           <Card>
             <CardHeader>
               <CardTitle>🔥 Active Challenges</CardTitle>
-              <CardDescription>Complete challenges to earn bonus hype, fans, and exclusive rewards.</CardDescription>
+              <CardDescription>Complete for hype, fans, and rewards.</CardDescription>
             </CardHeader>
             <CardContent>
               {challenges && challenges.length > 0 ? (

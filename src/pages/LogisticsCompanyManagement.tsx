@@ -41,7 +41,7 @@ export default function LogisticsCompanyManagement() {
   }
   
   return (
-    <VipGate feature="Logistics Company" description="Manage your transport fleet, hire drivers, and fulfill logistics contracts.">
+    <VipGate feature="Logistics Company" description="Run a fleet and fulfill contracts.">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

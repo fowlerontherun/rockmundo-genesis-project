@@ -329,7 +329,7 @@ export default function MerchCommercePage() {
               When you become an active band member, this workspace will auto-load your merch inventory, simulate order
               flows, and reveal analytics tuned to your drops.
             </p>
-            <p>Head to the Band Manager to invite teammates and start building your merch economy.</p>
+            <p>Open Band Manager to invite teammates and start your merch.</p>
           </CardContent>
         </Card>
       </div>

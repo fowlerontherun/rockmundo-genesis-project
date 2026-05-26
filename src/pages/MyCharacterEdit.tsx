@@ -648,7 +648,7 @@ const MyCharacterEdit = () => {
                 <User className="h-5 w-5" />
                 Punk Character
               </CardTitle>
-              <CardDescription>Create your custom punk rock character for gigs and performances.</CardDescription>
+              <CardDescription>Customize your performer.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">

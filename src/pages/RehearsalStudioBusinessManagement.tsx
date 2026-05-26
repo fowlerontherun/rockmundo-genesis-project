@@ -46,7 +46,7 @@ export default function RehearsalStudioBusinessManagement() {
   }
   
   return (
-    <VipGate feature="Rehearsal Studio Business" description="Manage your rehearsal studio, staff, equipment, and bookings.">
+    <VipGate feature="Rehearsal Studio Business" description="Run a rehearsal studio.">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

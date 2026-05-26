@@ -606,7 +606,7 @@ const MyGear: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>Inventory highlights</CardTitle>
-          <CardDescription>Purchased gear from the shop is ready for slot assignments and stat bonuses.</CardDescription>
+          <CardDescription>Assign to slots for stat bonuses.</CardDescription>
         </CardHeader>
         <CardContent>
           {inventoryErrorMessage ? (
@@ -1026,7 +1026,7 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
     <CardHeader className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <CardTitle>Auxiliary & Backup Gear</CardTitle>
-        <CardDescription>Track backup guitars, wireless packs, and anything beyond the core board.</CardDescription>
+        <CardDescription>Backups and extras beyond your core rig.</CardDescription>
       </div>
       <Button
         type="button"

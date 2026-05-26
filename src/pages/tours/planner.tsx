@@ -294,7 +294,7 @@ const PlannerPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Planning stepper</CardTitle>
-          <CardDescription>Move through each stage to define your tour operations playbook.</CardDescription>
+          <CardDescription>Step through to plan your tour.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">

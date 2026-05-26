@@ -311,7 +311,7 @@ const MyCompanies = () => {
 
       <VipGate
         feature="Company ownership"
-        description="Create and manage business empires including record labels, security firms, merchandise factories, and more. Build your fortune beyond just performing!"
+        description="Run labels, factories, studios, and more."
       >
         <CompanyDashboardContent />
       </VipGate>

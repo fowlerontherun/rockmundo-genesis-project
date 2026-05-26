@@ -1953,7 +1953,7 @@ const Songwriting = () => {
             <Filter className="h-4 w-4" />
             Refine your view
           </CardTitle>
-          <CardDescription>Slice your studio dashboard by status, theme, and sprint readiness.</CardDescription>
+          <CardDescription>Filter by status, theme, and sprint.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -127,7 +127,7 @@ const WorldPulse = () => {
                 <Building2 className="h-5 w-5" />
                 World Economic Overview
               </CardTitle>
-              <CardDescription>City economies fluctuate — plan your tours around boom periods for maximum earnings</CardDescription>
+              <CardDescription>Tour during booms for max earnings.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

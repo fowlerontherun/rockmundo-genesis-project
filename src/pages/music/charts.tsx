@@ -242,7 +242,7 @@ const ChartsPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Refine the aggregated view to focus on the right market slices.</CardDescription>
+          <CardDescription>Focus on the right market slice.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -420,7 +420,7 @@ const ChartsPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Aggregated summary</CardTitle>
-            <CardDescription>Sortable overview of key performance signals for each chart group.</CardDescription>
+            <CardDescription>Key signals per chart group.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Table>
