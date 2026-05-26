@@ -23,6 +23,7 @@ const versionHistory: VersionEntry[] = [
       { type: 'improvement', description: "Consistent icon style: every domain icon uses the same Lucide stroke weight and sizing rhythm, so list rows, cards, breadcrumbs and CTAs all read as part of the same visual system." },
     ],
   },
+  {
     version: "1.1.339",
     date: "2026-05-25",
     changes: [
