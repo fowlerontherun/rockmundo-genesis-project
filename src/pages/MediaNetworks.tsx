@@ -466,7 +466,7 @@ const MediaNetworks = () => {
               <LineChartIcon className="h-5 w-5" />
               Weekly Impact Trends
             </CardTitle>
-            <CardDescription>Track media buzz, reach, conversion, and sponsor sentiment over the current campaign arc.</CardDescription>
+            <CardDescription>Buzz, reach, and sponsor sentiment this arc.</CardDescription>
           </CardHeader>
           <CardContent className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -541,7 +541,7 @@ const MediaNetworks = () => {
               <CalendarClock className="h-5 w-5" />
               Booking & Syndication Grid
             </CardTitle>
-            <CardDescription>Monitor rehearsals, exclusivity clauses, and predicted reach per slot.</CardDescription>
+            <CardDescription>Rehearsals, clauses, and predicted reach.</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <Table>
@@ -592,7 +592,7 @@ const MediaNetworks = () => {
               <Handshake className="h-5 w-5" />
               Negotiation Simulator
             </CardTitle>
-            <CardDescription>Adjust fees, marketing, and clauses to preview buzz, reach, and risk outcomes.</CardDescription>
+            <CardDescription>Preview buzz, reach, and risk.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3">
@@ -675,7 +675,7 @@ const MediaNetworks = () => {
               <Sparkles className="h-5 w-5" />
               Format Modules & Unlocks
             </CardTitle>
-            <CardDescription>Invest in modules to differentiate content and deliver Popmundo-beating variety.</CardDescription>
+            <CardDescription>Invest in modules to stand out.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {showFormatModules.map((module) => (
@@ -703,7 +703,7 @@ const MediaNetworks = () => {
               <DollarSign className="h-5 w-5" />
               Campaign Roadmap
             </CardTitle>
-            <CardDescription>Coordinate label, manager, and facility campaigns for stacked bonuses.</CardDescription>
+            <CardDescription>Stack label, manager, and facility bonuses.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {mediaCampaigns.map((campaign) => (
@@ -737,7 +737,7 @@ const MediaNetworks = () => {
               <AlertTriangle className="h-5 w-5" />
               Buzz Events & Mitigation
             </CardTitle>
-            <CardDescription>Respond to viral surges and crises before they reshape ratings.</CardDescription>
+            <CardDescription>Handle viral surges and crises early.</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible>

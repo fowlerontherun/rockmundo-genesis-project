@@ -460,7 +460,7 @@ export default function WellnessPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Hospital className="h-5 w-5" /> Hospital</CardTitle>
-                <CardDescription>Check in when your health is critically low for accelerated recovery.</CardDescription>
+                <CardDescription>Faster recovery when health is critical.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {nearestHospital ? (
@@ -506,7 +506,7 @@ export default function WellnessPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Pill className="h-5 w-5" /> No Active Addictions</CardTitle>
-                <CardDescription>You're clean! Risky nightlife behavior can trigger addictions.</CardDescription>
+                <CardDescription>You're clean. Nightlife can trigger addictions.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Alert>

@@ -934,7 +934,7 @@ const Merchandise = () => {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Active Merchandise Catalogue</CardTitle>
-                <CardDescription>Cost structure, pricing, and stock levels synced from Supabase.</CardDescription>
+                <CardDescription>Costs, pricing, and stock — live from Supabase.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -1203,7 +1203,7 @@ const Merchandise = () => {
           <Card>
             <CardHeader>
               <CardTitle>Inventory Maintenance</CardTitle>
-              <CardDescription>Restock, re-price, or retire items based on current performance.</CardDescription>
+              <CardDescription>Restock, reprice, or retire by performance.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">

@@ -609,7 +609,7 @@ export default function RelationshipsPage() {
         </div>
         <CoopQuestActivityLog
           title="Co-op quest activity (all friends)"
-          description="Every quest start, progress tick, completion and reward claim across all your friendships."
+          description="Quest ticks, completions, and rewards."
           limit={30}
         />
       </div>
