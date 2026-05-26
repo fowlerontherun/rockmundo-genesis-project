@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Music, Calendar, Mic, Radio, Users, 
-  TrendingUp, DollarSign, Star, ArrowRight 
-} from "lucide-react";
+import { TrendingUp, ArrowRight, Music } from "lucide-react";
+import { DOMAIN_ICONS } from "@/components/ui/domain-icons";
 import { useNavigate } from "react-router-dom";
+
+const { gigs: GigIcon, studio: StudioIcon, radio: RadioIcon, fans: FansIcon, money: MoneyIcon, charts: ChartsIcon } = DOMAIN_ICONS;
 
 interface QuickAction {
   icon: React.ElementType;
