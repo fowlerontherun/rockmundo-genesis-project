@@ -105,18 +105,21 @@ export const Breadcrumbs = () => {
       </Link>
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
+        const Icon = iconFor(segments[i]);
         return (
           <span key={c.path} className="flex items-center gap-1">
             <ChevronRight className="h-3 w-3 opacity-50" />
             {isLast ? (
-              <span className="font-medium text-foreground truncate max-w-[160px]">
+              <span className="font-medium text-foreground truncate max-w-[180px] inline-flex items-center gap-1">
+                {Icon && <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />}
                 {c.label}
               </span>
             ) : (
               <Link
                 to={c.path}
-                className="hover:text-foreground transition-colors truncate max-w-[120px]"
+                className="hover:text-foreground transition-colors truncate max-w-[120px] inline-flex items-center gap-1"
               >
+                {Icon && <Icon className="h-3.5 w-3.5 opacity-70" aria-hidden />}
                 {c.label}
               </Link>
             )}
