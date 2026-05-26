@@ -18,14 +18,14 @@ interface QuickAction {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    icon: Calendar,
+    icon: GigIcon,
     label: "Book a Gig",
     description: "Find venues and book your next performance",
     href: "/gig-booking",
     variant: "primary",
   },
   {
-    icon: Mic,
+    icon: StudioIcon,
     label: "Record a Song",
     description: "Head to the studio and lay down tracks",
     href: "/recording-studio",
@@ -37,13 +37,13 @@ const QUICK_ACTIONS: QuickAction[] = [
     href: "/songwriting",
   },
   {
-    icon: Radio,
+    icon: RadioIcon,
     label: "Submit to Radio",
     description: "Get your music on the airwaves",
     href: "/radio",
   },
   {
-    icon: Users,
+    icon: FansIcon,
     label: "Manage Band",
     description: "View and manage your band",
     href: "/band",
