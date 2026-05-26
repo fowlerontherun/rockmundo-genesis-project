@@ -128,9 +128,9 @@ export const DashboardStats = ({
   gigs?: number;
 }) => (
   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <StatCard icon={Star} label="Fame" value={fame} />
-    <StatCard icon={DollarSign} label="Cash" value={cash} prefix="$" />
-    <StatCard icon={Music} label="Songs" value={songs} />
-    <StatCard icon={Calendar} label="Gigs Played" value={gigs} />
+    <StatCard icon={DOMAIN_ICONS.fame} label="Fame" value={fame} />
+    <StatCard icon={MoneyIcon} label="Cash" value={cash} prefix="$" />
+    <StatCard icon={DOMAIN_ICONS.songs} label="Songs" value={songs} />
+    <StatCard icon={GigIcon} label="Gigs Played" value={gigs} />
   </div>
 );
