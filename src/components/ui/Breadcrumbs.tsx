@@ -1,5 +1,35 @@
 import { Link, useLocation } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, type LucideIcon } from "lucide-react";
+import { DOMAIN_ICONS, type DomainKey } from "@/components/ui/domain-icons";
+
+// Map URL segments to canonical domain icons for fast visual scanning.
+const SEGMENT_ICONS: Record<string, DomainKey> = {
+  gigs: "gigs",
+  tours: "gigs",
+  songs: "songs",
+  songwriting: "songs",
+  "song-market": "songs",
+  releases: "releases",
+  "release-manager": "releases",
+  finances: "money",
+  charts: "charts",
+  fans: "fans",
+  inventory: "inventory",
+  merchandise: "inventory",
+  inbox: "messages",
+  messages: "messages",
+  studio: "studio",
+  "music-studio": "studio",
+  recording: "studio",
+  contracts: "contracts",
+  awards: "awards",
+  radio: "radio",
+};
+
+const iconFor = (segment: string): LucideIcon | null => {
+  const key = SEGMENT_ICONS[segment];
+  return key ? DOMAIN_ICONS[key] : null;
+};
 
 // Pretty labels for common path segments. Unknown segments are title-cased.
 const LABELS: Record<string, string> = {
