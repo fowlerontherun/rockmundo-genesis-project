@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.340",
+    date: "2026-05-26",
+    changes: [
+      { type: 'feature', description: "Added a canonical domain icon registry (`src/components/ui/domain-icons.tsx`) mapping the core RockMundo concepts — gigs, songs, releases, money, charts, fans, inventory, messages, studio, contracts (plus awards, radio, fame) — to a single Lucide glyph each. One concept = one icon across the entire app." },
+      { type: 'improvement', description: "Breadcrumbs now show a leading domain icon on recognisable segments (Gigs, Songs, Studio, Releases, Inbox, Inventory, Charts, Contracts, Awards, Radio, Finances) so users can scan their location at a glance instead of reading labels." },
+      { type: 'improvement', description: "Dashboard `QuickActionsPanel` and stat tiles (Fame / Cash / Songs / Gigs) now consume the registry — Book a Gig, Record a Song, Submit to Radio and Manage Band all render the canonical icon for their domain." },
+      { type: 'improvement', description: "Consistent icon style: every domain icon uses the same Lucide stroke weight and sizing rhythm, so list rows, cards, breadcrumbs and CTAs all read as part of the same visual system." },
+    ],
+  },
     version: "1.1.339",
     date: "2026-05-25",
     changes: [
