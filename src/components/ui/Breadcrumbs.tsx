@@ -1,5 +1,35 @@
 import { Link, useLocation } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, type LucideIcon } from "lucide-react";
+import { DOMAIN_ICONS, type DomainKey } from "@/components/ui/domain-icons";
+
+// Map URL segments to canonical domain icons for fast visual scanning.
+const SEGMENT_ICONS: Record<string, DomainKey> = {
+  gigs: "gigs",
+  tours: "gigs",
+  songs: "songs",
+  songwriting: "songs",
+  "song-market": "songs",
+  releases: "releases",
+  "release-manager": "releases",
+  finances: "money",
+  charts: "charts",
+  fans: "fans",
+  inventory: "inventory",
+  merchandise: "inventory",
+  inbox: "messages",
+  messages: "messages",
+  studio: "studio",
+  "music-studio": "studio",
+  recording: "studio",
+  contracts: "contracts",
+  awards: "awards",
+  radio: "radio",
+};
+
+const iconFor = (segment: string): LucideIcon | null => {
+  const key = SEGMENT_ICONS[segment];
+  return key ? DOMAIN_ICONS[key] : null;
+};
 
 // Pretty labels for common path segments. Unknown segments are title-cased.
 const LABELS: Record<string, string> = {
@@ -75,18 +105,21 @@ export const Breadcrumbs = () => {
       </Link>
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
+        const Icon = iconFor(segments[i]);
         return (
           <span key={c.path} className="flex items-center gap-1">
             <ChevronRight className="h-3 w-3 opacity-50" />
             {isLast ? (
-              <span className="font-medium text-foreground truncate max-w-[160px]">
+              <span className="font-medium text-foreground truncate max-w-[180px] inline-flex items-center gap-1">
+                {Icon && <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />}
                 {c.label}
               </span>
             ) : (
               <Link
                 to={c.path}
-                className="hover:text-foreground transition-colors truncate max-w-[120px]"
+                className="hover:text-foreground transition-colors truncate max-w-[120px] inline-flex items-center gap-1"
               >
+                {Icon && <Icon className="h-3.5 w-3.5 opacity-70" aria-hidden />}
                 {c.label}
               </Link>
             )}

@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Music, Calendar, Mic, Radio, Users, 
-  TrendingUp, DollarSign, Star, ArrowRight 
-} from "lucide-react";
+import { TrendingUp, ArrowRight, Music } from "lucide-react";
+import { DOMAIN_ICONS } from "@/components/ui/domain-icons";
 import { useNavigate } from "react-router-dom";
+
+const { gigs: GigIcon, studio: StudioIcon, radio: RadioIcon, fans: FansIcon, money: MoneyIcon, charts: ChartsIcon } = DOMAIN_ICONS;
 
 interface QuickAction {
   icon: React.ElementType;
@@ -18,14 +18,14 @@ interface QuickAction {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    icon: Calendar,
+    icon: GigIcon,
     label: "Book a Gig",
     description: "Find venues and book your next performance",
     href: "/gig-booking",
     variant: "primary",
   },
   {
-    icon: Mic,
+    icon: StudioIcon,
     label: "Record a Song",
     description: "Head to the studio and lay down tracks",
     href: "/recording-studio",
@@ -37,13 +37,13 @@ const QUICK_ACTIONS: QuickAction[] = [
     href: "/songwriting",
   },
   {
-    icon: Radio,
+    icon: RadioIcon,
     label: "Submit to Radio",
     description: "Get your music on the airwaves",
     href: "/radio",
   },
   {
-    icon: Users,
+    icon: FansIcon,
     label: "Manage Band",
     description: "View and manage your band",
     href: "/band",
@@ -128,9 +128,9 @@ export const DashboardStats = ({
   gigs?: number;
 }) => (
   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <StatCard icon={Star} label="Fame" value={fame} />
-    <StatCard icon={DollarSign} label="Cash" value={cash} prefix="$" />
-    <StatCard icon={Music} label="Songs" value={songs} />
-    <StatCard icon={Calendar} label="Gigs Played" value={gigs} />
+    <StatCard icon={DOMAIN_ICONS.fame} label="Fame" value={fame} />
+    <StatCard icon={MoneyIcon} label="Cash" value={cash} prefix="$" />
+    <StatCard icon={DOMAIN_ICONS.songs} label="Songs" value={songs} />
+    <StatCard icon={GigIcon} label="Gigs Played" value={gigs} />
   </div>
 );
