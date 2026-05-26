@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.341",
+    date: "2026-05-26",
+    changes: [
+      { type: 'improvement', description: "Copy audit across player-facing screens: shortened CardDescriptions on Wellness, DikCok, WorldPulse, MyCharacterEdit, MyGear, MediaNetworks, Merchandise, Songwriting, Charts, Tour Planner, Relationships, SkillsPage and the Band Manager merch empty state." },
+      { type: 'improvement', description: "Tightened VipGate descriptions for Record Label, Merch Factory, Logistics, Rehearsal Studio, Recording Studio and Security Firm — each now a single short status line." },
+      { type: 'improvement', description: "Shortened the My Companies hub blurb and the Tour Manager empty states (active / scheduled / world tours) to single sentences." },
+      { type: 'improvement', description: "No game mechanics, routes, or gating logic changed — text only." },
+    ],
+  },
+  {
     version: "1.1.340",
     date: "2026-05-26",
     changes: [
