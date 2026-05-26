@@ -964,7 +964,7 @@ const TourManager = () => {
             <EmptyState
               icon={MapPin}
               title="No Active Tour"
-              description="You don't have an active tour right now. Create one to get started!"
+              description="No active tour. Create one to start."
               action={
                 <Button onClick={() => setWizardOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -991,7 +991,7 @@ const TourManager = () => {
             <EmptyState
               icon={Calendar}
               title="No Upcoming Tours"
-              description="You haven't scheduled any future tours yet."
+              description="No upcoming tours scheduled."
               action={
                 <Button onClick={() => setWizardOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -1130,7 +1130,7 @@ const TourManager = () => {
             <EmptyState
               icon={Music}
               title="No Other Tours"
-              description="No other bands are currently touring. Check back later!"
+              description="No bands touring right now."
             />
           ) : (
             <>

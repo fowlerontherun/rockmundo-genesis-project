@@ -41,7 +41,7 @@ export default function MerchFactoryManagement() {
   }
   
   return (
-    <VipGate feature="Merchandise Factory" description="Manage your merch factory, create products, and fulfill orders for bands and labels.">
+    <VipGate feature="Merchandise Factory" description="Produce merch and fulfill orders.">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

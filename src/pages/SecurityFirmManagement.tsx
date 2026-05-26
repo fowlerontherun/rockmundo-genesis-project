@@ -37,7 +37,7 @@ const SecurityFirmManagement = () => {
   }
 
   return (
-    <VipGate feature="Security Firm Management" description="Manage your private security firm, hire guards, and secure contracts for venues and events.">
+    <VipGate feature="Security Firm Management" description="Hire guards and win contracts.">
       <div className="container py-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

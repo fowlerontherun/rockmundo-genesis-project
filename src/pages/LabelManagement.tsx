@@ -195,7 +195,7 @@ export default function LabelManagement() {
   const repTier = getReputationTier(label.reputation_score || 0);
   
   return (
-    <VipGate feature="Record Label" description="Manage your record label, sign artists, and oversee releases.">
+    <VipGate feature="Record Label" description="Sign artists and oversee releases.">
       <div className="container mx-auto p-4 md:p-6 space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
