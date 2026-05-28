@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import { useFeedback } from "@/contexts/FeedbackContext";
 
 export type RewardType = "xp" | "song_gift" | "attribute_point";
 
@@ -52,6 +53,7 @@ function rollWatchReward(bandId: string): WatchRewardResult | null {
 export const useClaimWatchReward = () => {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
+  const feedback = useFeedback();
 
   return useMutation({
     mutationFn: async ({
@@ -113,9 +115,16 @@ export const useClaimWatchReward = () => {
 
       return { ...data, message: reward.message };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data?.message) {
         toast.success(data.message);
+      }
+      if (data?.reward_type === "xp") {
+        feedback.xp(data?.reward_value?.xp_amount ?? 0);
+      } else if (data?.reward_type === "attribute_point") {
+        feedback.achievement(`+1 ${data?.reward_value?.attribute ?? "attribute"}`);
+      } else if (data?.reward_type === "song_gift") {
+        feedback.achievement("Gifted a song!");
       }
       queryClient.invalidateQueries({ queryKey: ["festival-watch-rewards"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });

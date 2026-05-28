@@ -563,3 +563,34 @@
 .animate-pulse-slow { animation: pulse 4s ease-in-out infinite; }
 
 /* Mobile text density — use Tailwind classes, not root font-size changes */
+/* RockMundo Feedback popups */
+@keyframes rmd-float {
+  0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+  15% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; transform: translateY(-6px) scale(1); }
+  100% { opacity: 0; transform: translateY(-24px) scale(0.96); }
+}
+.rmd-float { animation: rmd-float 1.8s ease-out forwards; }
+
+@keyframes rmd-celebrate {
+  0% { opacity: 0; transform: scale(0.6) rotate(-4deg); }
+  20% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  35% { transform: scale(0.98) rotate(-1deg); }
+  50% { transform: scale(1.02) rotate(0deg); }
+  85% { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(0.96) translateY(-12px); }
+}
+.rmd-celebrate { animation: rmd-celebrate 2.4s cubic-bezier(.2,.9,.2,1.2) forwards; }
+
+@keyframes rmd-progress-fill {
+  from { width: var(--rmd-progress-from, 0%); }
+  to { width: var(--rmd-progress-to, 0%); }
+}
+.rmd-progress-fill { animation: rmd-progress-fill 0.9s cubic-bezier(.2,.8,.2,1) forwards; }
+
+@keyframes rmd-success-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.rmd-success-pop { animation: rmd-success-pop 0.45s cubic-bezier(.2,.9,.2,1.2) both; }

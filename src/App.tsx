@@ -9,6 +9,7 @@ import { GameDataProvider } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
 import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { FeedbackProvider } from "./contexts/FeedbackContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
 import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
@@ -307,6 +308,7 @@ function App() {
       <AuthProvider>
         <GameDataProvider>
           <NotificationProvider>
+            <FeedbackProvider>
             <TutorialProvider>
               <RadioProvider>
                 <StageEquipmentCatalogProvider>
@@ -630,6 +632,7 @@ function App() {
                 </StageEquipmentCatalogProvider>
               </RadioProvider>
             </TutorialProvider>
+            </FeedbackProvider>
           </NotificationProvider>
         </GameDataProvider>
       </AuthProvider>
