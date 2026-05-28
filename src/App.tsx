@@ -632,6 +632,7 @@ function App() {
                 </StageEquipmentCatalogProvider>
               </RadioProvider>
             </TutorialProvider>
+            </FeedbackProvider>
           </NotificationProvider>
         </GameDataProvider>
       </AuthProvider>
