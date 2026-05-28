@@ -115,9 +115,16 @@ export const useClaimWatchReward = () => {
 
       return { ...data, message: reward.message };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data?.message) {
         toast.success(data.message);
+      }
+      if (data?.reward_type === "xp") {
+        feedback.xp(data?.reward_value?.xp_amount ?? 0);
+      } else if (data?.reward_type === "attribute_point") {
+        feedback.achievement(`+1 ${data?.reward_value?.attribute ?? "attribute"}`);
+      } else if (data?.reward_type === "song_gift") {
+        feedback.achievement("Gifted a song!");
       }
       queryClient.invalidateQueries({ queryKey: ["festival-watch-rewards"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
