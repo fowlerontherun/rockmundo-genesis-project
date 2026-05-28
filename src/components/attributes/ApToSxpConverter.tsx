@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowRight, RefreshCw, Zap, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useFeedback } from "@/contexts/FeedbackContext";
 
 const AP_TO_SXP_RATE = 100;
 
@@ -16,6 +17,7 @@ interface ApToSxpConverterProps {
 export const ApToSxpConverter = ({ apBalance, onConverted }: ApToSxpConverterProps) => {
   const [apAmount, setApAmount] = useState(1);
   const [isConverting, setIsConverting] = useState(false);
+  const feedback = useFeedback();
 
   const sxpPreview = apAmount * AP_TO_SXP_RATE;
   const isValid = apAmount > 0 && Number.isInteger(apAmount) && apAmount <= apBalance;
@@ -33,6 +35,7 @@ export const ApToSxpConverter = ({ apBalance, onConverted }: ApToSxpConverterPro
       }
 
       toast.success(`Converted ${apAmount} AP → ${sxpPreview.toLocaleString()} SXP`);
+      feedback.xp(sxpPreview, "SXP");
       setApAmount(1);
       onConverted();
     } catch (err: any) {

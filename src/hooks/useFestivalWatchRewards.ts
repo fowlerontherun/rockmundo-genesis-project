@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import { useFeedback } from "@/contexts/FeedbackContext";
 
 export type RewardType = "xp" | "song_gift" | "attribute_point";
 
@@ -52,6 +53,7 @@ function rollWatchReward(bandId: string): WatchRewardResult | null {
 export const useClaimWatchReward = () => {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
+  const feedback = useFeedback();
 
   return useMutation({
     mutationFn: async ({
