@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.342",
+    date: "2026-05-28",
+    changes: [
+      { type: 'feature', description: "New `FeedbackProvider` (`src/contexts/FeedbackContext.tsx`) with floating XP, money, fans and fame popups, success ticks, and centred level-up & achievement celebrations." },
+      { type: 'feature', description: "Added `useFeedback()` hook exposing `xp()`, `money()`, `fans()`, `fame()`, `success()`, `levelUp()`, `achievement()` helpers for any screen to trigger animated, on-screen rewards." },
+      { type: 'feature', description: "New animation utilities in `index.css`: `rmd-float` (popup rise/fade), `rmd-celebrate` (overshoot bounce), `rmd-progress-fill` (animated bar fill), `rmd-success-pop` (success tick)." },
+      { type: 'feature', description: "New `AnimatedProgress` component (`src/components/ui/AnimatedProgress.tsx`) that animates from the previous value to the new value whenever it changes — drop-in for goals and XP bars." },
+      { type: 'improvement', description: "Wired feedback into AP→SXP conversion (XP popup on convert) and festival watch rewards (XP popup for XP rolls, achievement celebration for attribute-point and song-gift rolls)." },
+    ],
+  },
+  {
     version: "1.1.341",
     date: "2026-05-26",
     changes: [
