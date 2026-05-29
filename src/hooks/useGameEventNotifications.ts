@@ -562,14 +562,12 @@ export const useGameEventNotifications = () => {
             
             const msg = typeMessages[notif.type] || { title: 'Twaater', message: 'New activity' };
             
-            addNotification({
+            notify({
+              category: 'social',
               type: 'info',
               title: msg.title,
               message: msg.message,
-              action: {
-                label: 'Open Twaater',
-                onClick: () => navigate('/twaater'),
-              },
+              actionPath: '/twaater',
             });
           }
         }
