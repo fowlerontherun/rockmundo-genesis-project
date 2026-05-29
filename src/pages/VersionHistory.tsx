@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.343",
+    date: "2026-05-29",
+    changes: [
+      { type: 'improvement', description: "Final UX polish pass: unified `:focus-visible` ring across every interactive element, premium primary-tinted text selection, antialiased font smoothing, and `-webkit-tap-highlight-color: transparent` to remove the grey iOS tap flash." },
+      { type: 'improvement', description: "Mobile-first card rhythm: `CardHeader`/`CardContent`/`CardFooter` now use `p-4 sm:p-6` so dense mobile screens get tighter padding while desktop keeps its airy 24px gutter. `CardTitle` shifts to `text-lg sm:text-xl` with `leading-tight` to stop wrap-orphans on 411px viewports." },
+      { type: 'improvement', description: "`CardDescription` gains `leading-relaxed` for calmer multi-line readability. All cards now share the `shadow-ds-sm` elevation token so the surface system reads as one consistent material." },
+      { type: 'improvement', description: "Inputs locked to 16px on mobile to prevent the iOS focus-zoom jolt, then inherit at sm+. Global heading `tracking-tight` for a more premium typographic rhythm." },
+      { type: 'improvement', description: "No game mechanics, routes, or copy changed — purely presentation tokens on shared primitives, so the polish propagates to every screen at once." },
+    ],
+  },
+  {
+
     version: "1.1.342",
     date: "2026-05-28",
     changes: [
