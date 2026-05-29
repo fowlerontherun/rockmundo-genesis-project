@@ -1,16 +1,30 @@
 import { useEffect, useRef } from "react";
-import { useNotifications } from "@/contexts/NotificationContext";
+import { pushNotification, type NotifyCategory } from "@/lib/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNavigate } from "react-router-dom";
 
 export const useGameEventNotifications = () => {
-  const { addNotification } = useNotifications();
+
   const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const navigate = useNavigate();
   const userBandIdsRef = useRef<string[]>([]);
+
+  const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown> }) => {
+    if (!user?.id) return;
+    void pushNotification({
+      userId: user.id,
+      profileId: profileId ?? null,
+      category: args.category as NotifyCategory,
+      type: args.type as any,
+      title: args.title,
+      message: args.message,
+      actionPath: args.actionPath,
+      metadata: args.metadata,
+    });
+  };
 
   // Fetch active profile's band IDs for filtering band-related notifications
   useEffect(() => {
@@ -53,7 +67,8 @@ export const useGameEventNotifications = () => {
             .single();
 
           if (achievement) {
-            addNotification({
+            notify({
+              category: 'achievement',
               type: 'achievement',
               title: `Achievement Unlocked!`,
               message: `${achievement.name} - ${achievement.description}`,
@@ -84,14 +99,12 @@ export const useGameEventNotifications = () => {
           const isOwner = userId === user.id || userBandIdsRef.current.includes(bandId);
           
           if (isOwner && oldStatus === 'manufacturing' && newStatus === 'released') {
-            addNotification({
+            notify({
+              category: 'release',
               type: 'success',
               title: 'Manufacturing Complete!',
               message: `Your release "${payload.new.title}" has finished manufacturing and is now available!`,
-              action: {
-                label: 'View Releases',
-                onClick: () => navigate('/release-manager'),
-              },
+              actionPath: '/release-manager',
             });
           }
         }
@@ -124,15 +137,13 @@ export const useGameEventNotifications = () => {
             const isOwner = song?.user_id === user.id || userBandIdsRef.current.includes(song?.band_id);
             
             if (isOwner && song) {
-              addNotification({
-                type: 'success',
-                title: 'Recording Complete!',
-                message: `"${song.title}" recording session finished with quality score ${payload.new.quality_score || 'N/A'}`,
-                action: {
-                  label: 'View Recording',
-                  onClick: () => navigate('/recording-studio'),
-                },
-              });
+              notify({
+              category: 'recording',
+              type: 'success',
+              title: 'Recording Complete!',
+              message: `"${song.title}" recording session finished with quality score ${payload.new.quality_score || 'N/A'}`,
+              actionPath: '/recording-studio',
+            });
             }
           }
         }
@@ -165,41 +176,36 @@ export const useGameEventNotifications = () => {
             const venueName = (gig.venues as any)?.name || 'Unknown Venue';
             
             if (rating >= 90) {
-              addNotification({
-                type: 'success',
-                title: '🔥 Legendary Performance!',
-                message: `Your gig at ${venueName} was incredible! Rating: ${rating}%`,
-                action: {
-                  label: 'View Results',
-                  onClick: () => navigate('/gig-booking'),
-                },
-              });
+              notify({
+              category: 'gig_result',
+              type: 'success',
+              title: '🔥 Legendary Performance!',
+              message: `Your gig at ${venueName} was incredible! Rating: ${rating}%`,
+              actionPath: '/gig-booking',
+            });
             } else if (rating >= 70) {
-              addNotification({
-                type: 'success',
-                title: 'Great Show!',
-                message: `Your gig at ${venueName} went well! Rating: ${rating}%`,
-                action: {
-                  label: 'View Results',
-                  onClick: () => navigate('/gig-booking'),
-                },
-              });
+              notify({
+              category: 'gig_result',
+              type: 'success',
+              title: 'Great Show!',
+              message: `Your gig at ${venueName} went well! Rating: ${rating}%`,
+              actionPath: '/gig-booking',
+            });
             } else if (rating < 50) {
-              addNotification({
-                type: 'warning',
-                title: 'Tough Crowd',
-                message: `The gig at ${venueName} didn't go as planned. Rating: ${rating}%`,
-                action: {
-                  label: 'View Results',
-                  onClick: () => navigate('/gig-booking'),
-                },
-              });
+              notify({
+              category: 'gig_result',
+              type: 'warning',
+              title: 'Tough Crowd',
+              message: `The gig at ${venueName} didn't go as planned. Rating: ${rating}%`,
+              actionPath: '/gig-booking',
+            });
             } else {
-              addNotification({
-                type: 'info',
-                title: 'Gig Complete',
-                message: `Your gig at ${venueName} is finished. Rating: ${rating}%`,
-              });
+              notify({
+              category: 'gig_result',
+              type: 'info',
+              title: 'Gig Complete',
+              message: `Your gig at ${venueName} is finished. Rating: ${rating}%`,
+            });
             }
           }
         }
@@ -227,14 +233,12 @@ export const useGameEventNotifications = () => {
               .eq('id', offer.venue_id)
               .single();
             
-            addNotification({
+            notify({
+              category: 'gig_result',
               type: 'offer',
               title: 'New Gig Offer!',
               message: `${venue?.name || 'A venue'} wants to book your band! Payout: $${offer.offered_payout || 'TBD'}`,
-              action: {
-                label: 'View Offer',
-                onClick: () => navigate('/gig-booking'),
-              },
+              actionPath: '/gig-booking',
             });
           }
         }
@@ -256,14 +260,12 @@ export const useGameEventNotifications = () => {
           const sponsorship = payload.new;
           
           if (userBandIdsRef.current.includes(sponsorship.band_id) && sponsorship.status === 'pending') {
-            addNotification({
+            notify({
+              category: 'sponsorship',
               type: 'offer',
               title: 'Sponsorship Offer!',
               message: `A brand wants to sponsor your band! Value: $${sponsorship.contract_value || 'TBD'}`,
-              action: {
-                label: 'View Offers',
-                onClick: () => navigate('/sponsorships'),
-              },
+              actionPath: '/sponsorships',
             });
           }
         }
@@ -291,14 +293,12 @@ export const useGameEventNotifications = () => {
               .eq('id', participant.event_id)
               .single();
             
-            addNotification({
+            notify({
+              category: 'offer',
               type: 'offer',
               title: 'Festival Invitation!',
               message: `You've been invited to perform at ${festival?.title || 'a festival'}!`,
-              action: {
-                label: 'View Festival',
-                onClick: () => navigate('/festivals'),
-              },
+              actionPath: '/festivals',
             });
           }
         }
@@ -326,14 +326,12 @@ export const useGameEventNotifications = () => {
               .eq('id', contract.label_id)
               .single();
             
-            addNotification({
+            notify({
+              category: 'record_label',
               type: 'offer',
               title: 'Record Deal Offer!',
               message: `${label?.name || 'A record label'} wants to sign your band!`,
-              action: {
-                label: 'View Contract',
-                onClick: () => navigate('/record-labels'),
-              },
+              actionPath: '/record-labels',
             });
           }
         }
@@ -361,15 +359,13 @@ export const useGameEventNotifications = () => {
             .eq('id', invite.band_id)
             .single();
           
-          addNotification({
-            type: 'offer',
-            title: 'Band Invitation!',
-            message: `You've been invited to join ${band?.name || 'a band'}!`,
-            action: {
-              label: 'View Invitation',
-              onClick: () => navigate('/bands'),
-            },
-          });
+          notify({
+              category: 'record_label',
+              type: 'offer',
+              title: 'Band Invitation!',
+              message: `You've been invited to join ${band?.name || 'a band'}!`,
+              actionPath: '/bands',
+            });
         }
       )
       .subscribe();
@@ -391,7 +387,8 @@ export const useGameEventNotifications = () => {
           
           if (userBandIdsRef.current.includes(payload.new.band_id) && 
               oldStatus !== 'completed' && newStatus === 'completed') {
-            addNotification({
+            notify({
+              category: 'gig_result',
               type: 'success',
               title: 'Rehearsal Complete!',
               message: `Your band rehearsal has finished. Chemistry +${payload.new.chemistry_gain || 0}`,
@@ -418,14 +415,12 @@ export const useGameEventNotifications = () => {
           const newStatus = payload.new?.status;
           
           if (oldStatus !== 'completed' && newStatus === 'completed') {
-            addNotification({
+            notify({
+              category: 'record_label',
               type: 'success',
               title: 'Song Complete!',
               message: `"${payload.new.title || 'Your song'}" is finished! Quality: ${payload.new.quality_score || 'N/A'}`,
-              action: {
-                label: 'View Song',
-                onClick: () => navigate('/songwriting'),
-              },
+              actionPath: '/songwriting',
             });
           }
         }
@@ -488,25 +483,21 @@ export const useGameEventNotifications = () => {
                             entry.chart_type === 'record_sales' ? 'Sales Charts' : 'Charts';
             
             if (entry.rank <= 10) {
-              addNotification({
-                type: 'achievement',
-                title: `🏆 Top 10 Hit!`,
-                message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
-                action: {
-                  label: 'View Charts',
-                  onClick: () => navigate('/country-charts'),
-                },
-              });
+              notify({
+              category: 'achievement',
+              type: 'achievement',
+              title: `🏆 Top 10 Hit!`,
+              message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
+              actionPath: '/country-charts',
+            });
             } else {
-              addNotification({
-                type: 'success',
-                title: 'Charting!',
-                message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
-                action: {
-                  label: 'View Charts',
-                  onClick: () => navigate('/country-charts'),
-                },
-              });
+              notify({
+              category: 'achievement',
+              type: 'success',
+              title: 'Charting!',
+              message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
+              actionPath: '/country-charts',
+            });
             }
           }
         }
@@ -529,12 +520,10 @@ export const useGameEventNotifications = () => {
           const sub = payload.new;
           
           if (sub.status === 'active') {
-            addNotification({
+            notify({
+              category: 'achievement',
               type: 'achievement',
               title: '⭐ VIP Status Activated!',
-              message: sub.subscription_type === 'trial' 
-                ? 'Welcome! Your 2-month VIP trial has started.'
-                : 'Thank you for becoming a VIP member!',
             });
           }
         }
@@ -573,14 +562,12 @@ export const useGameEventNotifications = () => {
             
             const msg = typeMessages[notif.type] || { title: 'Twaater', message: 'New activity' };
             
-            addNotification({
+            notify({
+              category: 'social',
               type: 'info',
               title: msg.title,
               message: msg.message,
-              action: {
-                label: 'Open Twaater',
-                onClick: () => navigate('/twaater'),
-              },
+              actionPath: '/twaater',
             });
           }
         }
@@ -607,17 +594,16 @@ export const useGameEventNotifications = () => {
           const isOwner = userId === user.id || userBandIdsRef.current.includes(bandId);
           
           if (isOwner && oldStatus === 'generating' && newStatus === 'completed') {
-            addNotification({
+            notify({
+              category: 'record_label',
               type: 'success',
               title: '🎵 Audio Generated!',
               message: `AI audio for "${payload.new.title}" is ready to play!`,
-              action: {
-                label: 'Listen Now',
-                onClick: () => navigate('/song-catalog'),
-              },
+              actionPath: '/song-catalog',
             });
           } else if (isOwner && oldStatus === 'generating' && newStatus === 'failed') {
-            addNotification({
+            notify({
+              category: 'recording',
               type: 'warning',
               title: 'Audio Generation Failed',
               message: `Could not generate audio for "${payload.new.title}". Try again later.`,
@@ -631,5 +617,5 @@ export const useGameEventNotifications = () => {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [user?.id, profileId, addNotification, navigate]);
+  }, [user?.id, profileId, navigate]);
 };

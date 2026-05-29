@@ -20,7 +20,7 @@ import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
-import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
+import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
@@ -57,6 +57,9 @@ const Layout = () => {
 
   // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
+
+  // Reminders for gigs in the next 24h
+  useGigDayReminders();
 
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
@@ -105,7 +108,7 @@ const Layout = () => {
         </div>
       </main>
       
-      <FloatingAvatarWidget />
+      {/* FloatingAvatarWidget removed — notifications now live in the top-bar bell */}
       <EventNotificationModal />
       <InterviewModal />
       {pendingReport && (
