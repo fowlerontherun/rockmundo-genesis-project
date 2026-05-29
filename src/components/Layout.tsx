@@ -20,7 +20,7 @@ import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
-import { FloatingAvatarWidget } from "@/components/FloatingAvatarWidget";
+import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 
