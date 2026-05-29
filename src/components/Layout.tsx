@@ -105,7 +105,7 @@ const Layout = () => {
         </div>
       </main>
       
-      <FloatingAvatarWidget />
+      {/* FloatingAvatarWidget removed — notifications now live in the top-bar bell */}
       <EventNotificationModal />
       <InterviewModal />
       {pendingReport && (
