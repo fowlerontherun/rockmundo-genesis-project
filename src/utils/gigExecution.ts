@@ -527,6 +527,24 @@ export async function executeGigPerformance(data: GigExecutionData) {
       }));
       const { error: inboxErr } = await supabase.from('player_inbox').insert(inboxRows);
       if (inboxErr) console.error('[gigExecution] Inbox insert failed:', inboxErr);
+
+      // Also mirror to the top-bar notifications bell for each recipient
+      for (const uid of recipientIds) {
+        try {
+          await supabase.rpc('create_notification' as any, {
+            p_user_id: uid,
+            p_profile_id: null,
+            p_category: 'gig_result',
+            p_type: overallRating >= 16 ? 'success' : overallRating < 8 ? 'warning' : 'info',
+            p_title: overallRating >= 16 ? `🎸 Great show at ${venueName}` : `Gig complete: ${venueName}`,
+            p_message: `${ratingStars} ${overallRating.toFixed(1)}/25 • $${Math.round(netProfit).toLocaleString()} • ${actualAttendance} fans`,
+            p_action_path: '/gigs',
+            p_metadata: { gig_id: gigId, band_id: bandId, rating: overallRating } as any,
+          } as never);
+        } catch (e) {
+          console.error('[gigExecution] notify bell failed:', e);
+        }
+      }
     }
   } catch (inboxError) {
     console.error('[gigExecution] Inbox notification error (non-critical):', inboxError);
