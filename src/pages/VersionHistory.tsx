@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.344",
+    date: "2026-05-29",
+    changes: [
+      { type: 'improvement', description: "Removed the floating character avatar bubble. The unread inbox indicator now lives entirely in the top-bar notifications bell, freeing up bottom-right screen real estate on mobile." },
+      { type: 'fix', description: "Game event notifications (gig outcomes, offers, achievements, releases, recordings, chart entries, label deals, Twaater activity, audio generation…) now persist to the `notifications` table via the SECURITY DEFINER `create_notification` RPC, so they actually appear in the bell instead of being lost to an unrendered in-memory list." },
+      { type: 'fix', description: "Gig outcomes are now mirrored to both the inbox AND the top-bar bell, each with an `actionPath` that deep-links to `/gigs` for full details on click." },
+      { type: 'feature', description: "New `useGigDayReminders` hook: every 5 minutes it scans for scheduled gigs within the next 24h for the player's active bands and posts a `🎸 Gig today at <venue>` notification with hours-until countdown. Deduped via `metadata.gig_id` so each gig only reminds once." },
+      { type: 'improvement', description: "New `src/lib/notify.ts` helper centralises notification creation behind a typed `pushNotification` call so every game system writes to the bell consistently with category, type, action_path, and metadata." },
+    ],
+  },
+  {
     version: "1.1.343",
     date: "2026-05-29",
     changes: [
