@@ -58,6 +58,9 @@ const Layout = () => {
   // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
 
+  // Reminders for gigs in the next 24h
+  useGigDayReminders();
+
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
 
