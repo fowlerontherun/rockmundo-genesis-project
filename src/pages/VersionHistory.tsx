@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.346",
+    date: "2026-05-30",
+    changes: [
+      { type: 'fix', description: "Gig outcomes now reliably reach both the inbox and the top-bar bell via a new `notify_gig_outcome` AFTER INSERT trigger on `gig_outcomes`. The trigger filters to real auth users (skipping NPC band members), is idempotent per gig, and posts a star-rating summary with a deep link back to `/gigs`. Last 30 days of missing outcomes were backfilled." },
+      { type: 'feature', description: "Dashboard hero `What to do next` expanded from a single CTA into a ranked panel: the primary action keeps its dominant button while up to three colour-coded follow-ups (gig today, pending offers, unread inbox, low cash, current songwriting project, rehearsal, releases) render as tappable secondary rows." },
+      { type: 'fix', description: "Dashboard unread count now queries `read_at IS NULL` against the actual `notifications` schema instead of a non-existent `read` boolean, so the inbox tile and bell badge stay in sync." },
+      { type: 'improvement', description: "Hero now also surfaces unread inbox count, today's scheduled gigs, and pending gig offers as live signals feeding the next-action ranker." },
+    ],
+  },
+  {
+
     version: "1.1.345",
     date: "2026-05-30",
     changes: [

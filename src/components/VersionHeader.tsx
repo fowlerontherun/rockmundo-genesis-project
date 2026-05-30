@@ -1,4 +1,4 @@
-export const version = "1.1.345";
+export const version = "1.1.346";
 
 
 import { Badge } from "@/components/ui/badge";
