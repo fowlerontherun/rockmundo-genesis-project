@@ -185,10 +185,18 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     },
   });
 
-  const nba = useMemo(
-    () => computeNextBestAction(profile, unreadCount),
-    [profile, unreadCount]
+  const actions = useMemo(
+    () => buildNextActions(profile, {
+      unread: unreadCount,
+      unreadInbox,
+      pendingGigsToday,
+      pendingOffers,
+      currentProject,
+    }),
+    [profile, unreadCount, unreadInbox, pendingGigsToday, pendingOffers, currentProject]
   );
+  const primary = actions[0];
+  const rest = actions.slice(1);
 
   const cash = profile?.cash ?? 0;
   const fans = profile?.fans ?? 0;
@@ -223,38 +231,66 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     },
   ];
 
-  const Icon = nba.icon;
+  const PrimaryIcon = primary.icon;
 
   return (
     <div className="space-y-4">
-      {/* Next Best Action — dominant CTA */}
+      {/* Next Best Action — dominant CTA + ranked follow-ups */}
       <Card className="relative overflow-hidden border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
         <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
-        <CardContent className="relative p-5 sm:p-6">
+        <CardContent className="relative p-5 sm:p-6 space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3 sm:gap-4 min-w-0">
               <div className="rounded-xl bg-primary/20 p-3 text-primary flex-shrink-0">
-                <Icon className="h-6 w-6" />
+                <PrimaryIcon className="h-6 w-6" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  Do This Next
+                  What to do next
                 </p>
                 <h2 className="mt-0.5 text-xl sm:text-2xl font-bold tracking-tight truncate">
-                  {nba.label}
+                  {primary.label}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{nba.description}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{primary.description}</p>
               </div>
             </div>
-            <Link to={nba.to} className="sm:flex-shrink-0">
+            <Link to={primary.to} className="sm:flex-shrink-0">
               <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg">
-                {nba.cta}
+                {primary.cta}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
+
+          {rest.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {rest.map((a) => {
+                const RowIcon = a.icon;
+                return (
+                  <Link
+                    key={`${a.label}-${a.to}`}
+                    to={a.to}
+                    className={cn(
+                      "group flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-background/60",
+                      toneRing[a.tone ?? "info"]
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <RowIcon className="h-4 w-4 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-tight truncate text-foreground">{a.label}</p>
+                        <p className="text-xs text-muted-foreground truncate">{a.description}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
+
 
       {/* Key stats — money, fans, current project, notifications */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
