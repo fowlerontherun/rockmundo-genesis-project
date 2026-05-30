@@ -497,6 +497,8 @@ function App() {
                     <Route path="hub/career-business" element={<CareerBusinessHub />} />
                     <Route path="social" element={<SocialHubUnified />} />
                     <Route path="landmarks" element={<CityLandmarks />} />
+                    {/* Bare /hub goes to dashboard (no hub index page exists) */}
+                    <Route path="hub" element={<Navigate to="/dashboard" replace />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
