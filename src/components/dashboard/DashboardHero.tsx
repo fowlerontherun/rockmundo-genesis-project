@@ -41,57 +41,45 @@ interface NextBestAction {
   to: string;
   cta: string;
   icon: typeof Sparkles;
+  tone?: "danger" | "warning" | "info" | "success";
 }
 
-function computeNextBestAction(profile: any, unread: number): NextBestAction {
+function buildNextActions(profile: any, opts: {
+  unread: number;
+  unreadInbox: number;
+  pendingGigsToday: number;
+  pendingOffers: number;
+  currentProject: any;
+}): NextBestAction[] {
   const energy = profile?.energy ?? 100;
   const health = profile?.health ?? 100;
   const fame = profile?.fame ?? 0;
+  const cash = profile?.cash ?? 0;
+  const out: NextBestAction[] = [];
 
-  if (health < 30) {
-    return {
-      label: "Rest Up",
-      description: "Health critical.",
-      to: "/hub/character",
-      cta: "Rest",
-      icon: Flame,
-    };
+  if (health < 30) out.push({ label: "Rest up — health critical", description: "Sleep or visit a clinic.", to: "/wellness", cta: "Recover", icon: Flame, tone: "danger" });
+  if (energy < 25) out.push({ label: "Refill energy", description: "Low energy hurts every action.", to: "/schedule", cta: "Sleep", icon: Flame, tone: "warning" });
+  if (opts.pendingGigsToday > 0) out.push({ label: `${opts.pendingGigsToday} gig${opts.pendingGigsToday === 1 ? "" : "s"} today`, description: "Get to the venue and warm up.", to: "/gigs", cta: "Open gigs", icon: Music2, tone: "info" });
+  if (opts.pendingOffers > 0) out.push({ label: `${opts.pendingOffers} pending offer${opts.pendingOffers === 1 ? "" : "s"}`, description: "Review and accept new bookings.", to: "/gig-booking", cta: "Review", icon: Bell, tone: "info" });
+  if (opts.unreadInbox > 0) out.push({ label: `${opts.unreadInbox} unread message${opts.unreadInbox === 1 ? "" : "s"}`, description: "Check your inbox.", to: "/inbox", cta: "Open inbox", icon: Bell, tone: "info" });
+  if (opts.unread > 0 && opts.unreadInbox === 0) out.push({ label: `${opts.unread} new alert${opts.unread === 1 ? "" : "s"}`, description: "Tap the bell for details.", to: "/inbox", cta: "View", icon: Bell, tone: "info" });
+  if (opts.currentProject && (opts.currentProject.progress ?? 0) < 100) out.push({ label: `Continue "${opts.currentProject.title}"`, description: `${Math.round(opts.currentProject.progress ?? 0)}% complete.`, to: "/booking/songwriting", cta: "Resume", icon: Music2, tone: "success" });
+  if (fame < 100) out.push({ label: "Book a gig", description: "Perform to grow fame.", to: "/gigs", cta: "Find gigs", icon: Sparkles, tone: "success" });
+  if (cash < 500) out.push({ label: "Earn quick cash", description: "Take a side job to top up.", to: "/booking/work", cta: "Find work", icon: Coins, tone: "warning" });
+  if (out.length === 0) out.push({ label: "Write a new hit", description: "Keep the momentum going.", to: "/booking/songwriting", cta: "Start writing", icon: Music2, tone: "success" });
+  if (out.length < 3) {
+    if (!out.find(a => a.to === "/rehearsal")) out.push({ label: "Rehearse with your band", description: "Boost chemistry and stage skill.", to: "/rehearsal", cta: "Schedule", icon: Music2, tone: "success" });
+    if (!out.find(a => a.to === "/release-manager")) out.push({ label: "Plan a release", description: "Turn finished songs into income.", to: "/release-manager", cta: "Open", icon: Trophy, tone: "success" });
   }
-  if (energy < 25) {
-    return {
-      label: "Refill Energy",
-      description: "Low energy hurts performance.",
-      to: "/schedule",
-      cta: "Sleep",
-      icon: Flame,
-    };
-  }
-  if (unread > 0) {
-    return {
-      label: `${unread} New Message${unread === 1 ? "" : "s"}`,
-      description: "Check your inbox.",
-      to: "/inbox",
-      cta: "Open inbox",
-      icon: Bell,
-    };
-  }
-  if (fame < 100) {
-    return {
-      label: "Book a Gig",
-      description: "Perform to grow fame.",
-      to: "/gigs",
-      cta: "Find gigs",
-      icon: Sparkles,
-    };
-  }
-  return {
-    label: "Write a Hit",
-    description: "Keep the momentum.",
-    to: "/booking/songwriting",
-    cta: "Start writing",
-    icon: Music2,
-  };
+  return out.slice(0, 4);
 }
+
+const toneRing: Record<NonNullable<NextBestAction["tone"]>, string> = {
+  danger: "border-destructive/50 bg-destructive/10 text-destructive",
+  warning: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  info: "border-primary/40 bg-primary/10 text-primary",
+  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+};
 
 export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
   const profileId = profile?.id;
@@ -104,7 +92,65 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("read", false);
+        .is("read_at", null);
+      return count ?? 0;
+    },
+  });
+
+  const { data: unreadInbox = 0 } = useQuery({
+    queryKey: ["dashboard-unread-inbox", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count } = await (supabase as any)
+        .from("player_inbox")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .eq("is_archived", false);
+      return count ?? 0;
+    },
+  });
+
+  const { data: pendingGigsToday = 0 } = useQuery({
+    queryKey: ["dashboard-gigs-today", profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const start = new Date(); start.setHours(0,0,0,0);
+      const end = new Date(); end.setHours(23,59,59,999);
+      const { data: bm } = await (supabase as any)
+        .from("band_members")
+        .select("band_id")
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
+      const bandIds = (bm ?? []).map((r: any) => r.band_id);
+      if (bandIds.length === 0) return 0;
+      const { count } = await (supabase as any)
+        .from("gigs")
+        .select("id", { count: "exact", head: true })
+        .in("band_id", bandIds)
+        .in("status", ["scheduled", "in_progress"])
+        .gte("scheduled_date", start.toISOString())
+        .lte("scheduled_date", end.toISOString());
+      return count ?? 0;
+    },
+  });
+
+  const { data: pendingOffers = 0 } = useQuery({
+    queryKey: ["dashboard-pending-offers", profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const { data: bm } = await (supabase as any)
+        .from("band_members")
+        .select("band_id")
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
+      const bandIds = (bm ?? []).map((r: any) => r.band_id);
+      if (bandIds.length === 0) return 0;
+      const { count } = await (supabase as any)
+        .from("gig_offers")
+        .select("id", { count: "exact", head: true })
+        .in("band_id", bandIds)
+        .eq("status", "pending");
       return count ?? 0;
     },
   });
