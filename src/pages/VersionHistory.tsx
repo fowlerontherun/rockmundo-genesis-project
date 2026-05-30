@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.345",
+    date: "2026-05-30",
+    changes: [
+      { type: 'fix', description: "Breadcrumb `Hub` link no longer dead-ends. Bare `/hub` now redirects to `/dashboard`, and Breadcrumbs renders prefix-only segments (`hub`, `music`, `admin`, `events`, `bands`, `commerce`, `finance`, `booking`, `casino`, `tours`) as plain non-clickable text so users never tap into a non-existent index page." },
+      { type: 'improvement', description: "Breadcrumbs are mounted globally in `Layout` and now appear on every routed page with 2+ segments, with the icon-driven trail intact." },
+    ],
+  },
+  {
     version: "1.1.344",
     date: "2026-05-29",
     changes: [
