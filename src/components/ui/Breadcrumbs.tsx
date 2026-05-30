@@ -78,6 +78,20 @@ const titleCase = (s: string) =>
 const labelFor = (segment: string) =>
   LABELS[segment] ?? (segment.length > 20 ? "Detail" : titleCase(segment));
 
+// Segments that are URL prefixes without their own page. Render as plain text.
+const NON_ROUTABLE_SEGMENTS = new Set([
+  "hub",
+  "music",
+  "admin",
+  "events",
+  "bands",
+  "commerce",
+  "finance",
+  "booking",
+  "casino",
+  "tours",
+]);
+
 export const Breadcrumbs = () => {
   const location = useLocation();
   const segments = location.pathname.split("/").filter(Boolean);
@@ -88,7 +102,8 @@ export const Breadcrumbs = () => {
 
   const crumbs = segments.map((seg, i) => {
     const path = "/" + segments.slice(0, i + 1).join("/");
-    return { label: labelFor(seg), path };
+    const navigable = !NON_ROUTABLE_SEGMENTS.has(seg);
+    return { label: labelFor(seg), path, navigable, seg };
   });
 
   return (
@@ -105,13 +120,24 @@ export const Breadcrumbs = () => {
       </Link>
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
-        const Icon = iconFor(segments[i]);
+        const Icon = iconFor(c.seg);
         return (
           <span key={c.path} className="flex items-center gap-1">
             <ChevronRight className="h-3 w-3 opacity-50" />
-            {isLast ? (
-              <span className="font-medium text-foreground truncate max-w-[180px] inline-flex items-center gap-1">
-                {Icon && <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />}
+            {isLast || !c.navigable ? (
+              <span
+                className={
+                  isLast
+                    ? "font-medium text-foreground truncate max-w-[180px] inline-flex items-center gap-1"
+                    : "truncate max-w-[120px] inline-flex items-center gap-1 opacity-80"
+                }
+              >
+                {Icon && (
+                  <Icon
+                    className={`h-3.5 w-3.5 ${isLast ? "text-primary" : "opacity-70"}`}
+                    aria-hidden
+                  />
+                )}
                 {c.label}
               </span>
             ) : (
