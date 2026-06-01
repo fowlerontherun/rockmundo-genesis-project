@@ -205,6 +205,46 @@ export const spendSkillXp = async ({
   return data;
 };
 
+export interface UnlearnSkillInput {
+  skillSlug: string;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export interface UnlearnSkillResponse extends ProgressionResponse {
+  result?: {
+    skill_progress: unknown;
+    refunded_xp: number;
+  };
+}
+
+export const unlearnSkill = async ({
+  skillSlug,
+  metadata = {},
+  uniqueEventId,
+}: UnlearnSkillInput): Promise<UnlearnSkillResponse> => {
+  const payload = {
+    action: "unlearn_skill" as const,
+    skill_slug: skillSlug,
+    metadata,
+    event_id: uniqueEventId,
+  };
+
+  const { data, error } = await supabase.functions.invoke<UnlearnSkillResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to unlearn skill");
+  }
+
+  return data;
+};
+
 export interface AdminAwardSpecialXpInput {
   amount: number;
   reason: string;
