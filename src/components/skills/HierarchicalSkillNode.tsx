@@ -91,6 +91,25 @@ export const HierarchicalSkillNode = ({
     }
   });
 
+  const unlearnMutation = useMutation({
+    mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
+    onSuccess: (data) => {
+      const refunded = (data.result as { refunded_xp?: number } | undefined)?.refunded_xp ?? 0;
+      toast.success(`${skill.display_name} unlearned. Refunded ${refunded} SXP.`);
+      queryClient.invalidateQueries({ queryKey: ["gameData"] });
+      onTrain?.();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to unlearn skill");
+    },
+  });
+
+  const calcRequiredXp = (lvl: number) => Math.floor(100 * Math.pow(1.5, lvl));
+  let estInvested = xp;
+  for (let L = 0; L < level; L++) estInvested += calcRequiredXp(L);
+  const estimatedRefund = Math.floor(estInvested * 0.8);
+  const hasProgress = level > 0 || xp > 0;
+
   return (
     <div className="space-y-2">
       <Card 
