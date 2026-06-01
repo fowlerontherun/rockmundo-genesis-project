@@ -165,19 +165,52 @@ export const HierarchicalSkillNode = ({
                 </div>
                 <Progress value={progressPercent} className="h-1.5" />
                 
-                <Button
-                  onClick={() => trainMutation.mutate()}
-                  disabled={!canAfford || isMaxed || trainMutation.isPending || isLocked}
-                  className="w-full h-7 text-xs"
-                  size="sm"
-                >
-                  {isMaxed ? "Maxed" : (
-                    <>
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      Train - {cost} XP
-                    </>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => trainMutation.mutate()}
+                    disabled={!canAfford || isMaxed || trainMutation.isPending || isLocked}
+                    className="flex-1 h-7 text-xs"
+                    size="sm"
+                  >
+                    {isMaxed ? "Maxed" : (
+                      <>
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        Train - {cost} XP
+                      </>
+                    )}
+                  </Button>
+                  {hasProgress && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2"
+                          title="Unlearn (refund 80% XP)"
+                          disabled={unlearnMutation.isPending}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Unlearn {skill.display_name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This resets the skill to level 0. You will be refunded approximately{" "}
+                            <strong>{estimatedRefund} SXP</strong> (80% of the {estInvested} SXP invested).
+                            This cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => unlearnMutation.mutate()}>
+                            Unlearn & Refund
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
-                </Button>
+                </div>
               </>
             )}
           </div>
