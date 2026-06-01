@@ -182,6 +182,19 @@ serve(async (req) => {
         break;
       }
 
+      case "unlearn_skill": {
+        const { state, refundedXp, skillProgress } = await handleUnlearnSkill(
+          client,
+          user.id,
+          profileState,
+          params.skill_slug,
+          params.metadata,
+        );
+        result = state;
+        actionResult = { skill_progress: skillProgress, refunded_xp: refundedXp };
+        break;
+      }
+
       case "award_action_xp":
         result = await handleAwardActionXp(
           client,
