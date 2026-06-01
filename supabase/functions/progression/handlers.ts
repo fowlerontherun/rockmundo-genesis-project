@@ -392,6 +392,94 @@ export async function handleSpendSkillXp(
   return { state, skillProgress: updatedSkillProgress };
 }
 
+export async function handleUnlearnSkill(
+  client: SupabaseClient<Database>,
+  _userId: string,
+  profileState: ProfileState,
+  skillSlug: string,
+  metadata: Record<string, unknown> = {},
+): Promise<{ state: ProfileState; refundedXp: number; skillProgress: SkillProgressRow | null }> {
+  const profileId = profileState.profile.id;
+  const calculateRequiredXp = (level: number) => Math.floor(100 * Math.pow(1.5, level));
+
+  const { data: skill, error: skillFetchError } = await client
+    .from("skill_progress")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("skill_slug", skillSlug)
+    .maybeSingle();
+
+  if (skillFetchError) {
+    throw new Error(skillFetchError.message || "Failed to fetch skill");
+  }
+
+  if (!skill) {
+    throw new Error("No progress found for this skill");
+  }
+
+  const currentLevel = Math.max(0, skill.current_level ?? 0);
+  const currentXp = Math.max(0, skill.current_xp ?? 0);
+
+  // Total XP invested = sum of required XP for each completed level + current xp in progress
+  let totalInvested = currentXp;
+  for (let L = 0; L < currentLevel; L++) {
+    totalInvested += calculateRequiredXp(L);
+  }
+
+  if (totalInvested <= 0) {
+    throw new Error("Nothing to unlearn for this skill");
+  }
+
+  const refundedXp = Math.floor(totalInvested * 0.8);
+
+  // Reset skill progress to zero
+  const { error: resetError } = await client
+    .from("skill_progress")
+    .update({
+      current_xp: 0,
+      current_level: 0,
+      required_xp: calculateRequiredXp(0),
+      last_practiced_at: new Date().toISOString(),
+      metadata: { ...(metadata || {}), unlearned_at: new Date().toISOString(), refunded_xp: refundedXp } as Record<string, string | number | boolean | null>,
+    })
+    .eq("profile_id", profileId)
+    .eq("skill_slug", skillSlug);
+
+  if (resetError) {
+    throw new Error(resetError.message || "Failed to reset skill progress");
+  }
+
+  // Credit refund to wallet
+  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
+  const currentSxpSpent = profileState.wallet?.skill_xp_spent ?? profileState.wallet?.xp_spent ?? 0;
+  const newSpent = Math.max(0, currentSxpSpent - refundedXp);
+
+  const { error: walletError } = await client
+    .from("player_xp_wallet")
+    .update({
+      skill_xp_balance: currentSxpBalance + refundedXp,
+      skill_xp_spent: newSpent,
+      xp_balance: currentSxpBalance + refundedXp,
+      xp_spent: newSpent,
+      last_recalculated: new Date().toISOString(),
+    })
+    .eq("profile_id", profileId);
+
+  if (walletError) {
+    throw new Error(walletError.message || "Failed to refund SXP");
+  }
+
+  const { data: updatedSkillProgress } = await client
+    .from("skill_progress")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("skill_slug", skillSlug)
+    .maybeSingle();
+
+  const state = await fetchProfileState(client, profileId);
+  return { state, refundedXp, skillProgress: updatedSkillProgress };
+}
+
 // AP to SXP conversion rate
 const AP_TO_SXP_RATE = 100;
 
