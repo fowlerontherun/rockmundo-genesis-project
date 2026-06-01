@@ -162,6 +162,42 @@ export const CompactSkillRow = ({
           )}
         </Button>
       )}
+
+      {/* Unlearn button */}
+      {!isLocked && hasProgress && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive"
+              title="Unlearn skill (refund 80% of XP)"
+              disabled={unlearnMutation.isPending}
+            >
+              <RotateCcw className="w-3 h-3" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unlearn {skill.display_name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This resets the skill to level 0. You will be refunded approximately{" "}
+                <strong>{estimatedRefund} SXP</strong> (80% of the {estInvested} SXP invested).
+                This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => unlearnMutation.mutate()}>
+                Unlearn & Refund
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
+  );
+};
     </div>
   );
 };
