@@ -7,7 +7,8 @@ export type ProgressionAction =
   | "admin_award_special_xp"
   | "claim_daily_xp"
   | "spend_attribute_xp"
-  | "spend_skill_xp";
+  | "spend_skill_xp"
+  | "unlearn_skill";
 
 export interface ProgressionProfileSummary {
   id: string;
