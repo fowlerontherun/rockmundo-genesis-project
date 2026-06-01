@@ -2,12 +2,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Lock, ChevronRight, TrendingUp } from "lucide-react";
+import { Lock, ChevronRight, TrendingUp, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { spendSkillXp } from "@/utils/progression";
+import { spendSkillXp, unlearnSkill } from "@/utils/progression";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SkillNodeProps {
   skill: {
