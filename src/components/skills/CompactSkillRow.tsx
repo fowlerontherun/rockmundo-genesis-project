@@ -198,6 +198,3 @@ export const CompactSkillRow = ({
     </div>
   );
 };
-    </div>
-  );
-};
