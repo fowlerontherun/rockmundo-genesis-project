@@ -1,7 +1,7 @@
 import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
-import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp, handleConvertApToSxp } from "./handlers.ts";
+import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp, handleConvertApToSxp, handleUnlearnSkill } from "./handlers.ts";
 import { handleAdminAwardSpecialXp } from "./handlers-admin.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -179,6 +179,19 @@ serve(async (req) => {
         );
         result = state;
         actionResult = { skill_progress: skillProgress };
+        break;
+      }
+
+      case "unlearn_skill": {
+        const { state, refundedXp, skillProgress } = await handleUnlearnSkill(
+          client,
+          user.id,
+          profileState,
+          params.skill_slug,
+          params.metadata,
+        );
+        result = state;
+        actionResult = { skill_progress: skillProgress, refunded_xp: refundedXp };
         break;
       }
 

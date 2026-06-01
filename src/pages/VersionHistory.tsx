@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.347",
+    date: "2026-06-01",
+    changes: [
+      { type: 'feature', description: "Skills can now be unlearned. Each trained skill row exposes a small reset action that opens a confirmation dialog showing the total SXP invested and the 80% refund. Confirming wipes the skill back to level 0 and credits the refunded SXP back to the player's skill XP wallet." },
+      { type: 'feature', description: "New `unlearn_skill` action in the `progression` edge function (and matching `unlearnSkill` client wrapper) computes total invested XP across all completed levels plus in-progress XP, resets `skill_progress`, and credits 80% back to `player_xp_wallet`, keeping legacy `xp_balance`/`xp_spent` columns in sync." },
+    ],
+  },
+  {
     version: "1.1.346",
     date: "2026-05-30",
     changes: [

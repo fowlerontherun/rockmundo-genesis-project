@@ -1,12 +1,23 @@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Lock } from "lucide-react";
+import { TrendingUp, Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { spendSkillXp } from "@/utils/progression";
+import { spendSkillXp, unlearnSkill } from "@/utils/progression";
 import { toast } from "sonner";
 import { EducationSourceBadge, type EducationSource } from "./EducationSourceBadge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CompactSkillRowProps {
   skill: {
@@ -72,6 +83,25 @@ export const CompactSkillRow = ({
     }
   });
 
+  const unlearnMutation = useMutation({
+    mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
+    onSuccess: (data) => {
+      const refunded = (data.result as { refunded_xp?: number } | undefined)?.refunded_xp ?? 0;
+      toast.success(`${skill.display_name} unlearned. Refunded ${refunded} SXP.`);
+      queryClient.invalidateQueries({ queryKey: ["gameData"] });
+      onTrain?.();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to unlearn skill");
+    },
+  });
+
+  // Estimated refund (server is source of truth)
+  const calcRequiredXp = (lvl: number) => Math.floor(100 * Math.pow(1.5, lvl));
+  let estInvested = xp;
+  for (let L = 0; L < level; L++) estInvested += calcRequiredXp(L);
+  const estimatedRefund = Math.floor(estInvested * 0.8);
+
   return (
     <div 
       className={cn(
@@ -131,6 +161,39 @@ export const CompactSkillRow = ({
             </>
           )}
         </Button>
+      )}
+
+      {/* Unlearn button */}
+      {!isLocked && hasProgress && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive"
+              title="Unlearn skill (refund 80% of XP)"
+              disabled={unlearnMutation.isPending}
+            >
+              <RotateCcw className="w-3 h-3" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unlearn {skill.display_name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This resets the skill to level 0. You will be refunded approximately{" "}
+                <strong>{estimatedRefund} SXP</strong> (80% of the {estInvested} SXP invested).
+                This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => unlearnMutation.mutate()}>
+                Unlearn & Refund
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
