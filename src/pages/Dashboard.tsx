@@ -155,6 +155,10 @@ const Dashboard = () => {
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
             </TabsTrigger>
+            <TabsTrigger value="stats" className="flex-shrink-0">
+              <BarChart3 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Stats</span>
+            </TabsTrigger>
             <TabsTrigger value="fame" className="flex-shrink-0">
               <Star className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('dashboard.fame')}</span>
@@ -167,42 +171,35 @@ const Dashboard = () => {
               <Zap className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.skills')}</span>
             </TabsTrigger>
-            <TabsTrigger value="chat" className="flex-shrink-0">
-              <Users className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Chat</span>
-            </TabsTrigger>
             <TabsTrigger value="schedule" className="flex-shrink-0">
               <Calendar className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.schedule')}</span>
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="flex-shrink-0">
-              <Trophy className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t('awards.achievements')}</span>
+            <TabsTrigger value="activity" className="flex-shrink-0">
+              <ActivityIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Activity</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Profile Tab - Reorganized for clarity */}
+        {/* Profile Tab — identity only */}
         <TabsContent value="profile" className="space-y-4">
-
-          {/* ── Section 0: Modern Hero — Next Best Action, key stats, goals, achievements ── */}
           <DashboardHero profile={profile} userId={user?.id} />
 
-          {/* ── Section 1: Hero Card ── */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
-                <Avatar className="h-20 w-20 border-2 border-primary/30 flex-shrink-0">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/30 flex-shrink-0">
                   <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
                   <AvatarFallback className="text-2xl">
                     <User className="h-10 w-10" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-foreground truncate">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">
                     {profile?.display_name || profile?.username || "Unknown"}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
                     {profile?.age && <span>Age {profile.age}</span>}
                     {profile?.gender && <span className="capitalize">{profile.gender}</span>}
                     {currentCity && (
@@ -212,7 +209,6 @@ const Dashboard = () => {
                       </span>
                     )}
                   </div>
-                  {/* Vitals row */}
                   <div className="flex flex-wrap items-center gap-3 mt-2">
                     <div className="flex items-center gap-1.5">
                       <Heart className="h-3.5 w-3.5 text-destructive" />
@@ -230,9 +226,16 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* ── Section 2: Location Banner ── */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <CharacterIdentityCard />
+            <ReputationCard />
+          </div>
+        </TabsContent>
+
+        {/* Stats Tab — detailed overview, location, VIP */}
+        <TabsContent value="stats" className="space-y-4">
           {currentCity && (
-            <LocationHeader 
+            <LocationHeader
               cityName={currentCity.name}
               country={currentCity.country}
               cityId={currentCity.id}
@@ -240,30 +243,10 @@ const Dashboard = () => {
               timezone={currentCity.timezone}
             />
           )}
-
-          {/* ── Section 3: Key Stats Grid ── */}
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-
-          {/* ── Section 4: VIP Status ── */}
           <VipStatusCard />
-
-          {/* ── Section 5: Character Identity & Reputation ── */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <CharacterIdentityCard />
-            <ReputationCard />
-          </div>
-
-          {/* ── Section 6: Recent Activity ── */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RecentActivitySection userId={user?.id} />
-            </CardContent>
-          </Card>
-
         </TabsContent>
+
 
         {/* Fame & Fans Tab */}
         <TabsContent value="fame" className="space-y-4">
