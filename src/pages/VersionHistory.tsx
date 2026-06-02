@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.348",
+    date: "2026-06-02",
+    changes: [
+      { type: 'improvement', description: "Dashboard decluttered. Profile tab now focuses on identity only (hero, vitals, character + reputation). The dense overview grid, location banner, and VIP card moved into a dedicated Stats tab. Recent activity moved into a new Activity tab alongside achievements. Redundant legacy Chat tab removed (already lives in Social Hub)." },
+      { type: 'improvement', description: "Tab bar restructured: Profile · Stats · Fame · Lifestyle · Skills · Schedule · Activity. Reduces vertical scroll on the Profile tab by roughly 60% on mobile." },
+    ],
+  },
+  {
     version: "1.1.347",
     date: "2026-06-01",
     changes: [
