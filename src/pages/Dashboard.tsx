@@ -336,8 +336,17 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
 
-        {/* Achievements Tab */}
-        <TabsContent value="achievements" className="space-y-4">
+        {/* Activity Tab — recent activity + achievements */}
+        <TabsContent value="activity" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RecentActivitySection userId={user?.id} />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
