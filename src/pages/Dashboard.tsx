@@ -44,7 +44,7 @@ const Dashboard = () => {
     currentCity
   } = useGameData();
   const { t } = useTranslation();
-  const { data: vipStatus } = useVipStatus();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
