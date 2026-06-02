@@ -12,7 +12,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame } from "lucide-react";
+import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
