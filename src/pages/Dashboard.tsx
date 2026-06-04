@@ -387,14 +387,20 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                {t('awards.achievements')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  {t('awards.achievements')}
+                  {achievements && achievements.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
+                  )}
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
               {!achievements || achievements.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
                   {t('dashboard.noAchievements', 'No achievements unlocked yet. Keep playing to earn achievements!')}
                 </p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -415,8 +421,8 @@ const Dashboard = () => {
                       </div>
                     </div>)}
                 </div>}
-            </CardContent>
-          </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </TabsContent>
       </Tabs>
     </StandardPageLayout>;
