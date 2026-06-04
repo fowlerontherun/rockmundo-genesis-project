@@ -32,6 +32,7 @@ import { CharacterIdentityCard } from "@/components/character";
 import { ReputationCard } from "@/components/reputation";
 import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
 import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
+import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWidget";
 
 import { Link } from "react-router-dom";
 const Dashboard = () => {
@@ -186,6 +187,8 @@ const Dashboard = () => {
         {/* Profile Tab — identity only */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
+          <CharacterUnreadWidget />
+
 
           <Card>
             <CardContent className="p-4">
