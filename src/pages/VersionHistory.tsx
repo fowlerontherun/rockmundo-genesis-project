@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.349",
+    date: "2026-06-04",
+    changes: [
+      { type: 'improvement', description: "Dashboard default view further minimised. Profile tab now shows only the hero + compact character card by default; Character Identity and Reputation are collapsed behind expandable section toggles." },
+      { type: 'improvement', description: "Stats tab: VIP Status moved into a collapsible. Activity tab: Achievements grid collapsed by default with a count badge. Reduces initial render weight and scroll length across the dashboard." },
+    ],
+  },
+  {
     version: "1.1.348",
     date: "2026-06-02",
     changes: [
