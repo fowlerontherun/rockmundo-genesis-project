@@ -227,11 +227,66 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <CharacterIdentityCard />
-            <ReputationCard />
-          </div>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Character Identity
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <CharacterIdentityCard />
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Reputation
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <ReputationCard />
+            </CollapsibleContent>
+          </Collapsible>
         </TabsContent>
+
+        {/* Stats Tab — detailed overview, location, VIP */}
+        <TabsContent value="stats" className="space-y-4">
+          {currentCity && (
+            <LocationHeader
+              cityName={currentCity.name}
+              country={currentCity.country}
+              cityId={currentCity.id}
+              musicScene={currentCity.music_scene}
+              timezone={currentCity.timezone}
+            />
+          )}
+          <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  VIP Status
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <VipStatusCard />
+            </CollapsibleContent>
+          </Collapsible>
+        </TabsContent>
+
+        {/* placeholder removed below */}
 
         {/* Stats Tab — detailed overview, location, VIP */}
         <TabsContent value="stats" className="space-y-4">
