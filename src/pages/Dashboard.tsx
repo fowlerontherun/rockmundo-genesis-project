@@ -12,7 +12,8 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon } from "lucide-react";
+import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -226,10 +227,35 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <CharacterIdentityCard />
-            <ReputationCard />
-          </div>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Character Identity
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <CharacterIdentityCard />
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Reputation
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <ReputationCard />
+            </CollapsibleContent>
+          </Collapsible>
         </TabsContent>
 
         {/* Stats Tab — detailed overview, location, VIP */}
@@ -244,8 +270,22 @@ const Dashboard = () => {
             />
           )}
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-          <VipStatusCard />
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  VIP Status
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <VipStatusCard />
+            </CollapsibleContent>
+          </Collapsible>
         </TabsContent>
+
 
 
         {/* Fame & Fans Tab */}
@@ -347,14 +387,20 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                {t('awards.achievements')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between group">
+                <span className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  {t('awards.achievements')}
+                  {achievements && achievements.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
+                  )}
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
               {!achievements || achievements.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
                   {t('dashboard.noAchievements', 'No achievements unlocked yet. Keep playing to earn achievements!')}
                 </p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -375,8 +421,8 @@ const Dashboard = () => {
                       </div>
                     </div>)}
                 </div>}
-            </CardContent>
-          </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </TabsContent>
       </Tabs>
     </StandardPageLayout>;
