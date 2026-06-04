@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.350",
+    date: "2026-06-04",
+    changes: [
+      { type: 'fix', description: "Dashboard unread inbox count now matches the Inbox page. Previously the hero counted every unread `player_inbox` row on the account, including messages tagged for other characters in the same account; now it filters by the active character's `metadata.profile_id` (rows without a profile_id are still counted as shared)." },
+    ],
+  },
+  {
     version: "1.1.349",
     date: "2026-06-04",
     changes: [
