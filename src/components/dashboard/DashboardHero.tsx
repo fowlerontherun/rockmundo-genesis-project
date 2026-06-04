@@ -98,18 +98,27 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
   });
 
   const { data: unreadInbox = 0 } = useQuery({
-    queryKey: ["dashboard-unread-inbox", userId],
+    queryKey: ["dashboard-unread-inbox", userId, profileId],
     enabled: !!userId,
     queryFn: async () => {
-      const { count } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("player_inbox")
-        .select("id", { count: "exact", head: true })
+        .select("metadata")
         .eq("user_id", userId)
         .eq("is_read", false)
         .eq("is_archived", false);
-      return count ?? 0;
+      if (error) return 0;
+      if (!profileId) return data?.length ?? 0;
+      // Match Inbox page filtering: only count messages for the active character
+      // (rows with no profile_id in metadata are shared and still count).
+      return (data ?? []).filter((m: any) => {
+        const pid = m?.metadata?.profile_id;
+        return !pid || pid === profileId;
+      }).length;
     },
+    refetchInterval: 30000,
   });
+
 
   const { data: pendingGigsToday = 0 } = useQuery({
     queryKey: ["dashboard-gigs-today", profileId],
