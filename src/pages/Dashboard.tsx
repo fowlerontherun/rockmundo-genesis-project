@@ -187,6 +187,8 @@ const Dashboard = () => {
         {/* Profile Tab — identity only */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
+          <CharacterUnreadWidget />
+
 
           <Card>
             <CardContent className="p-4">
