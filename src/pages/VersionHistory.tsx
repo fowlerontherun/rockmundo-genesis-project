@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.351",
+    date: "2026-06-04",
+    changes: [
+      { type: 'feature', description: "Added per-character unread messages widget to the Profile tab. Shows each character (avatar, name, active badge) with their own inbox + direct message unread counts, plus a one-click Switch button to jump into another character. Shared/legacy messages without a profile_id appear as a 'shared' badge in the header." },
+    ],
+  },
+  {
     version: "1.1.350",
     date: "2026-06-04",
     changes: [
