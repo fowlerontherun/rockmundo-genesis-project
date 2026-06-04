@@ -286,22 +286,6 @@ const Dashboard = () => {
           </Collapsible>
         </TabsContent>
 
-        {/* placeholder removed below */}
-
-        {/* Stats Tab — detailed overview, location, VIP */}
-        <TabsContent value="stats" className="space-y-4">
-          {currentCity && (
-            <LocationHeader
-              cityName={currentCity.name}
-              country={currentCity.country}
-              cityId={currentCity.id}
-              musicScene={currentCity.music_scene}
-              timezone={currentCity.timezone}
-            />
-          )}
-          <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-          <VipStatusCard />
-        </TabsContent>
 
 
         {/* Fame & Fans Tab */}
