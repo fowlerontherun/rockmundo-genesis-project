@@ -174,6 +174,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/offer-automation", label: "Offer Automation", description: "Automated offers" },
       { path: "/admin/page-graphics", label: "Page Graphics", description: "UI images" },
       { path: "/admin/releases", label: "Releases Admin", description: "Fix stuck releases" },
+      { path: "/admin/world-reset", label: "World Reset", description: "Wipe gameplay & restart from epoch" },
     ],
   },
 ];

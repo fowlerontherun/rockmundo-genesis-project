@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.352",
+    date: "2026-06-05",
+    changes: [
+      { type: 'feature', description: "Admin World Reset: new admin page (System → World Reset) that wipes all gameplay data and restarts from the Jan 1 2026 epoch. Flow is gated by a maintenance-mode toggle that broadcasts a countdown banner to every player; the destructive 'Wipe the world' button only enables after the countdown elapses and the admin types RESET WORLD. Each reset archives wiped tables into a timestamped archive_reset_* schema (last 3 kept) and audit-logs the action. User accounts, roles, and curated catalogs (cities, venues, gear, mentors, universities, radio stations, achievements, etc.) are preserved; the preserve list is editable via world_reset_preserve_list." },
+    ],
+  },
+  {
     version: "1.1.351",
     date: "2026-06-04",
     changes: [
