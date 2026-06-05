@@ -23,6 +23,7 @@ import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompl
 import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
@@ -100,6 +101,7 @@ const Layout = () => {
               <AlertDescription>{profileError}</AlertDescription>
             </Alert>
           )}
+          <MaintenanceBanner />
           <CharacterGate>
             <Breadcrumbs />
             <Outlet />

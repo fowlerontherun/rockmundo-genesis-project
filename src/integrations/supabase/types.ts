@@ -143,6 +143,30 @@ export type Database = {
           },
         ]
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       admin_song_gifts: {
         Row: {
           created_at: string | null
@@ -10828,6 +10852,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      game_maintenance: {
+        Row: {
+          created_at: string
+          id: number
+          initiated_by: string | null
+          is_active: boolean
+          message: string | null
+          scheduled_reset_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          initiated_by?: string | null
+          is_active?: boolean
+          message?: string | null
+          scheduled_reset_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          initiated_by?: string | null
+          is_active?: boolean
+          message?: string | null
+          scheduled_reset_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       gear_marketplace_listings: {
         Row: {
@@ -34934,6 +34988,24 @@ export type Database = {
           },
         ]
       }
+      world_reset_preserve_list: {
+        Row: {
+          created_at: string
+          reason: string | null
+          table_name: string
+        }
+        Insert: {
+          created_at?: string
+          reason?: string | null
+          table_name: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       youtube_channels: {
         Row: {
           avg_views: number | null
@@ -35244,6 +35316,42 @@ export type Database = {
         }
         Returns: string
       }
+      admin_disable_maintenance: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: number
+          initiated_by: string | null
+          is_active: boolean
+          message: string | null
+          scheduled_reset_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_maintenance"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_enable_maintenance: {
+        Args: { p_message: string; p_scheduled_at: string }
+        Returns: {
+          created_at: string
+          id: number
+          initiated_by: string | null
+          is_active: boolean
+          message: string | null
+          scheduled_reset_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_maintenance"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
@@ -35295,6 +35403,23 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      admin_list_reset_archives: {
+        Args: never
+        Returns: {
+          created_at: string
+          schema_name: string
+          table_count: number
+        }[]
+      }
+      admin_world_reset: { Args: { p_confirm: string }; Returns: Json }
+      admin_world_reset_preview: {
+        Args: never
+        Returns: {
+          action: string
+          reason: string
+          table_name: string
+        }[]
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
       apply_child_interaction: {
