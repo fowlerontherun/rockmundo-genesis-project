@@ -64,8 +64,7 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
   "Lead Vocals": [
     "instruments_basic_vocal_performance",
     "instruments_professional_vocal_performance",
-    "instruments_mastery_vocal_performance",
-    "instruments_mastery_lead_vocals"
+    "instruments_mastery_vocal_performance"
   ],
   "Keys": [
     "instruments_basic_classical_piano",
