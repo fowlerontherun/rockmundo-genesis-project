@@ -16,7 +16,7 @@ export type SkillTier = "basic" | "professional" | "mastery";
 
 export interface SkillProgressLike {
   skill_slug: string;
-  current_level: number | null;
+  current_level?: number | null;
 }
 
 /** Detect the tier from a slug; returns null if the slug doesn't match the convention. */
