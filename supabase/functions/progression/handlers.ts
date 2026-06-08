@@ -2,8 +2,8 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4
 import type { Database } from "../../../src/types/database-fallback.ts";
 import { fetchProfileState, type ProfileState } from "./index.ts";
 
-// Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
-const MAX_SKILL_LEVEL = 100;
+// Skill level cap (must match src/data/skillConstants.ts MAX_SKILL_LEVEL)
+const MAX_SKILL_LEVEL = 20;
 
 // Streak milestone constants (AP kept low — total daily AP hard-capped at 30)
 // SXP boosted; total daily SXP hard-capped at DAILY_STIPEND_SXP_CAP below
@@ -292,7 +292,7 @@ export async function handleSpendSkillXp(
   metadata: Record<string, unknown> = {},
 ): Promise<{ state: ProfileState; skillProgress: SkillProgressRow }> {
   const profileId = profileState.profile.id;
-  
+
   // Use skill_xp_balance for spending on skills
   const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
 
@@ -304,6 +304,17 @@ export async function handleSpendSkillXp(
 
   if (currentSxpBalance < xpAmount) {
     throw new Error(`Insufficient Skill XP. You have ${currentSxpBalance} SXP but need ${xpAmount} SXP.`);
+  }
+
+  // Tier gating: refuse XP if the prerequisite tier hasn't been maxed.
+  const { data: unlocked, error: gateError } = await client.rpc("skill_tier_unlocked", {
+    p_profile_id: profileId,
+    p_slug: skillSlug,
+  });
+  if (gateError) {
+    console.error("[SpendSkillXp] tier gate check failed", gateError);
+  } else if (unlocked === false) {
+    throw new Error(`This tier is locked — max the lower tier of "${skillSlug}" to level ${MAX_SKILL_LEVEL} first.`);
   }
 
   // Get or create skill progress

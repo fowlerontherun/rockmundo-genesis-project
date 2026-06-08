@@ -1,6 +1,8 @@
 import { type PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { SKILL_TREE_DEFINITIONS, SKILL_TREE_RELATIONSHIPS } from "@/data/skillTree";
+import { isTierUnlocked, getPrerequisiteSlug, TIER_UNLOCK_LEVEL } from "@/data/skillTierGating";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { useGameData } from "@/hooks/useGameData";
@@ -78,6 +80,15 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
     async (input: UpdateSkillProgressInput) => {
       if (!profile) {
         const message = "No active profile selected";
+        setError(message);
+        return null;
+      }
+
+      // Tier gating: refuse XP for higher tiers until the prerequisite is maxed.
+      if (!isTierUnlocked(input.skillSlug, progress)) {
+        const prereq = getPrerequisiteSlug(input.skillSlug);
+        const message = `Locked — reach level ${TIER_UNLOCK_LEVEL} in ${prereq ?? "the prerequisite skill"} first.`;
+        toast.error("Skill tier locked", { description: message });
         setError(message);
         return null;
       }

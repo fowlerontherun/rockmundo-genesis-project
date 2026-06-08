@@ -49,6 +49,17 @@ const MAX_SKILL_LEVEL = 20;
 
 async function grantSkillXp(client: any, profileId: string, skillSlug: string, amount: number) {
   if (amount <= 0 || !skillSlug) return;
+
+  // Tier gating: skip if the higher-tier slug is locked.
+  const { data: unlocked } = await client.rpc("skill_tier_unlocked", {
+    p_profile_id: profileId,
+    p_slug: skillSlug,
+  });
+  if (unlocked === false) {
+    console.log(`[Mentor] Skipping XP for locked tier ${skillSlug} on profile ${profileId}`);
+    return;
+  }
+
   const { data: skill } = await client
     .from("skill_progress")
     .select("current_xp, current_level, required_xp")

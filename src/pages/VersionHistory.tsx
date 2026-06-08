@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.353",
+    date: "2026-06-08",
+    changes: [
+      { type: 'improvement', description: "Skill system overhaul. Every skill family now has a strict Basic → Professional → Mastery path: the higher tier refuses XP until the lower tier reaches level 20. Gating is enforced everywhere XP is awarded — University, Books, Mentors, manual SXP spending, and client-side practice — via a new `skill_tier_unlocked` SQL function and a shared `isTierUnlocked` helper. The client surfaces a toast when an upsert is blocked." },
+      { type: 'improvement', description: "Skill level cap unified. Three edge functions (`progression`, `university-attendance`, `book-reading-attendance`) previously hard-coded `MAX_SKILL_LEVEL = 100` while the client used 20. All three now use 20, matching `src/data/skillConstants.ts` and the new gating threshold." },
+      { type: 'fix', description: "Taxonomy cleanup. Renamed `songwriting_professional_vocal_production` → `songwriting_professional_vocal_processing` (Basic/Pro/Mastery now all use the same stem) and `songwriting_mastery_composing_anthems` → `songwriting_mastery_composing` (matches the Basic/Pro `_composing` pattern). Existing player progress was migrated; readers in `songQuality.ts` and `skillRecordingBonus.ts` updated." },
+      { type: 'fix', description: "Removed six mastery-only capstone instrument slugs (`lead_vocals`, `multi_instrumentalist`, `session_musician`, `bandleader`, `touring_musician`, `studio_virtuoso`). They had no Basic/Pro path and were incompatible with the new gating rule. The single ROLE_SKILL_MAP entry that referenced `lead_vocals` now uses `vocal_performance` slugs only." },
+      { type: 'fix', description: "Fixed `skillLearningMultiplier`. The old version matched short keys like `guitar` against full slugs like `instruments_basic_electric_guitar` and silently returned 1.0× for every real skill. Rewrote with regex prefix/topic matching so every slug now gets the correct attribute-based learning bonus (still capped at 1.5×)." },
+      { type: 'feature', description: "Effect coverage for previously-dead skill families. New `stageSkillBonus.ts` and `audienceBusinessHealthBonus.ts` utilities apply the shared tiered scaler to `stage_*`, `audience_*`, `business_*`, `health_*`, `improv_*`, and the missing `theory_*` topics (ear training, sight reading). `songQuality.ts` now also reads `sampling`, `sound_design`, and `ai_music` slugs (each contributes a capped slice to production potential)." },
+    ],
+  },
+  {
     version: "1.1.352",
     date: "2026-06-05",
     changes: [
