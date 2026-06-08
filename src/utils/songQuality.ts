@@ -56,7 +56,7 @@ export function canWriteGenre(genre: string, skillLevels: Record<string, number>
 
 // Determine skill ceiling based on tier unlocks
 export function getSkillCeiling(skillLevels: Record<string, number>): number {
-  const hasMastery = (skillLevels['songwriting_mastery_composing_anthems'] || 0) >= 10 ||
+  const hasMastery = (skillLevels['songwriting_mastery_composing'] || 0) >= 10 ||
                      (skillLevels['songwriting_mastery_lyrics'] || 0) >= 10 ||
                      (skillLevels['songwriting_mastery_record_production'] || 0) >= 10;
   
@@ -106,7 +106,7 @@ function calculateMelodyStrength(
 ): number {
   const basicSkill = skillLevels['songwriting_basic_composing'] || 0;
   const proSkill = skillLevels['songwriting_professional_composing'] || 0;
-  const masterySkill = skillLevels['songwriting_mastery_composing_anthems'] || 0;
+  const masterySkill = skillLevels['songwriting_mastery_composing'] || 0;
   
   const basicContribution = Math.min(60, basicSkill * 0.6);
   const proContribution = Math.min(70, proSkill * 0.9);
@@ -194,8 +194,30 @@ function calculateProductionPotential(
   
   const skillBase = mixingBase + mixingProC + mixingMastC + dawBase + dawProC + dawMastC;
   const attrBonus = Math.min(80, technicalMastery * 0.08);
-  
-  return skillBase + attrBonus;
+
+  // Sound-design skills (sampling, sound_design, ai_music) add a capped slice each.
+  // Effects were previously unread; now they contribute up to 30 combined points.
+  const samplingMax = Math.max(
+    skillLevels['songwriting_basic_sampling'] || 0,
+    skillLevels['songwriting_professional_sampling'] || 0,
+    skillLevels['songwriting_mastery_sampling'] || 0,
+  );
+  const soundDesignMax = Math.max(
+    skillLevels['songwriting_basic_sound_design'] || 0,
+    skillLevels['songwriting_professional_sound_design'] || 0,
+    skillLevels['songwriting_mastery_sound_design'] || 0,
+  );
+  const aiMusicMax = Math.max(
+    skillLevels['songwriting_basic_ai_music'] || 0,
+    skillLevels['songwriting_professional_ai_music'] || 0,
+    skillLevels['songwriting_mastery_ai_music'] || 0,
+  );
+  const designBonus =
+    Math.min(12, samplingMax * 0.6) +
+    Math.min(12, soundDesignMax * 0.6) +
+    Math.min(6, aiMusicMax * 0.3);
+
+  return skillBase + attrBonus + designBonus;
 }
 
 // Component-level variance (wider adjustments per area for more unpredictability)

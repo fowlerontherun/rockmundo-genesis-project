@@ -25,7 +25,7 @@ const RECORDING_SKILL_SLUGS = {
   ],
   vocalProduction: [
     "songwriting_basic_vocal_processing",
-    "songwriting_professional_vocal_production",
+    "songwriting_professional_vocal_processing",
     "songwriting_mastery_vocal_processing",
   ],
   theory: [

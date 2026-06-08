@@ -1,74 +1,66 @@
 /**
  * Skill Learning Multiplier System
- * 
+ *
  * Higher attribute values in related areas provide a learning speed bonus
- * when gaining skill XP. This creates a logical progression where experienced
- * musicians learn related skills faster.
- * 
- * Multiplier range: 1.0x (no bonus) to 1.5x (max attributes)
+ * when gaining skill XP. Multiplier range: 1.0x → 1.5x.
+ *
+ * Slugs follow `<prefix>_<tier>_<topic>` (e.g. `instruments_basic_electric_guitar`).
+ * We match by topic keywords (regex) so every real slug gets a bonus when the
+ * relevant attribute is high.
  */
 
-import { SKILL_ATTRIBUTE_MAP, type AttributeKey, ATTRIBUTE_MAX_VALUE, FULL_ATTRIBUTE_METADATA, type FullAttributeKey } from './attributeProgression';
+import { SKILL_ATTRIBUTE_MAP, ATTRIBUTE_MAX_VALUE, type FullAttributeKey } from './attributeProgression';
 
-/**
- * Map of skill slugs to the full attribute keys that boost learning speed.
- * Skills benefit from multiple related attributes.
- */
-const SKILL_LEARNING_ATTRIBUTES: Record<string, FullAttributeKey[]> = {
-  // Instrument skills benefit from musicality + musical_ability
-  guitar: ['musicality', 'musical_ability'],
-  acoustic_guitar: ['musicality', 'musical_ability'],
-  electric_guitar: ['musicality', 'musical_ability'],
-  classical_guitar: ['musicality', 'musical_ability'],
-  bass: ['musicality', 'rhythm_sense'],
-  drums: ['rhythm_sense', 'musicality'],
-  keyboards: ['musicality', 'musical_ability'],
-  piano: ['musicality', 'musical_ability'],
-  saxophone: ['musicality', 'musical_ability'],
-  violin: ['musicality', 'musical_ability'],
-  
-  // Vocal skills benefit from vocal talent + musicality
-  vocals: ['vocal_talent', 'musicality'],
-  singing: ['vocal_talent', 'musicality'],
-  rap: ['vocal_talent', 'charisma'],
-  
-  // Performance skills benefit from stage presence + charisma
-  performance: ['stage_presence', 'crowd_engagement'],
-  showmanship: ['stage_presence', 'charisma'],
-  crowd_interaction: ['crowd_engagement', 'charisma'],
-  improvisation: ['creative_insight', 'musicality'],
-  
-  // Creative skills benefit from creative insight + mental focus
-  songwriting: ['creative_insight', 'mental_focus'],
-  composition: ['creative_insight', 'musicality'],
-  creativity: ['creative_insight', 'mental_focus'],
-  lyrics: ['creative_insight', 'mental_focus'],
-  
-  // Technical skills benefit from technical mastery + mental focus
-  technical: ['technical_mastery', 'mental_focus'],
-  mixing: ['technical_mastery', 'mental_focus'],
-  mastering: ['technical_mastery', 'mental_focus'],
-  production: ['technical_mastery', 'creative_insight'],
-  sound_engineering: ['technical_mastery', 'mental_focus'],
-  
-  // Business/social skills benefit from charisma + social reach
-  marketing: ['social_reach', 'charisma'],
-  networking: ['charisma', 'social_reach'],
-  negotiation: ['charisma', 'mental_focus'],
-  management: ['mental_focus', 'charisma'],
-  teaching: ['mental_focus', 'charisma'],
-  
-  // Physical skills benefit from endurance
-  touring: ['physical_endurance', 'mental_focus'],
-  fitness: ['physical_endurance', 'mental_focus'],
-};
+interface MultiplierRule {
+  pattern: RegExp;
+  attributes: FullAttributeKey[];
+}
+
+const RULES: MultiplierRule[] = [
+  // Vocals / rap
+  { pattern: /(?:^|_)(vocal|singing|rapping|ad_libs)(?:$|_)/, attributes: ['vocal_talent', 'musicality'] },
+  // Drums & percussion-style instruments
+  { pattern: /(?:_drums|_percussion|tabla|djembe|bongos|cajon|taiko|snare|timpani|beatmaking)(?:$|_)/, attributes: ['rhythm_sense', 'musicality'] },
+  // Stage skills
+  { pattern: /^stage_/, attributes: ['stage_presence', 'crowd_engagement'] },
+  // Audience psychology
+  { pattern: /^audience_/, attributes: ['crowd_engagement', 'charisma'] },
+  // Business
+  { pattern: /^business_/, attributes: ['social_reach', 'charisma'] },
+  // Health
+  { pattern: /^health_/, attributes: ['physical_endurance', 'mental_focus'] },
+  // Songwriting subtopics
+  { pattern: /songwriting_.*_(?:composing|lyrics|record_production|sampling|sound_design|ai_music)/, attributes: ['creative_insight', 'musicality'] },
+  { pattern: /songwriting_.*_(?:mixing|daw|vocal_processing|beatmaking)/, attributes: ['technical_mastery', 'creative_insight'] },
+  // Theory
+  { pattern: /^theory_/, attributes: ['musicality', 'mental_focus'] },
+  // Improvisation
+  { pattern: /^improv_/, attributes: ['creative_insight', 'musicality'] },
+  // DJ
+  { pattern: /^dj_/, attributes: ['rhythm_sense', 'crowd_engagement'] },
+  // Teaching
+  { pattern: /^teaching_/, attributes: ['mental_focus', 'charisma'] },
+  // Genres
+  { pattern: /^genres_/, attributes: ['musical_ability', 'creative_insight'] },
+  // Luthiery
+  { pattern: /^luthiery_/, attributes: ['technical_mastery', 'mental_focus'] },
+  // Modeling / fashion / clothing
+  { pattern: /^modeling_/, attributes: ['charisma', 'stage_presence'] },
+  { pattern: /^fashion_/, attributes: ['creative_insight', 'charisma'] },
+  { pattern: /^clothing_/, attributes: ['creative_insight', 'technical_mastery'] },
+  // Default instruments bucket (must come last among instrument-related)
+  { pattern: /^instruments_/, attributes: ['musical_ability', 'musicality'] },
+];
+
+function pickAttributes(skillSlug: string): FullAttributeKey[] {
+  for (const rule of RULES) {
+    if (rule.pattern.test(skillSlug)) return rule.attributes;
+  }
+  return [];
+}
 
 /**
  * Calculate the skill learning multiplier based on attribute values.
- * 
- * @param skillSlug - The skill being trained
- * @param attributes - The player's attribute snapshot (or null)
- * @returns multiplier between 1.0 and 1.5
  */
 export function getSkillLearningMultiplier(
   skillSlug: string,
@@ -78,18 +70,14 @@ export function getSkillLearningMultiplier(
     return { multiplier: 1.0, boostPercent: 0, attributeNames: [] };
   }
 
-  // Find the relevant attributes for this skill
-  const relevantAttrs = SKILL_LEARNING_ATTRIBUTES[skillSlug];
-  
-  if (!relevantAttrs || relevantAttrs.length === 0) {
-    // Fallback: check the basic SKILL_ATTRIBUTE_MAP
+  const relevantAttrs = pickAttributes(skillSlug);
+
+  if (relevantAttrs.length === 0) {
     const basicAttr = SKILL_ATTRIBUTE_MAP[skillSlug];
     if (!basicAttr) {
       return { multiplier: 1.0, boostPercent: 0, attributeNames: [] };
     }
-    
     const value = Math.max(0, Math.min(ATTRIBUTE_MAX_VALUE, Number(attributes[basicAttr]) || 0));
-    // Scale: 0-1000 attribute → 1.0x to 1.5x multiplier
     const bonus = (value / ATTRIBUTE_MAX_VALUE) * 0.5;
     return {
       multiplier: 1 + bonus,
@@ -98,21 +86,16 @@ export function getSkillLearningMultiplier(
     };
   }
 
-  // Average the relevant attribute values
   let totalValue = 0;
   const attrNames: string[] = [];
-  
   for (const attrKey of relevantAttrs) {
     const value = Math.max(0, Math.min(ATTRIBUTE_MAX_VALUE, Number(attributes[attrKey]) || 0));
     totalValue += value;
     attrNames.push(attrKey);
   }
-  
   const avgValue = totalValue / relevantAttrs.length;
-  
-  // Scale: 0-1000 average → 1.0x to 1.5x multiplier
   const bonus = (avgValue / ATTRIBUTE_MAX_VALUE) * 0.5;
-  
+
   return {
     multiplier: parseFloat((1 + bonus).toFixed(3)),
     boostPercent: Math.round(bonus * 100),
