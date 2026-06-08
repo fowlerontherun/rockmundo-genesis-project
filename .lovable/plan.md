@@ -1,72 +1,100 @@
-## Goal
-Add an admin-only "World Reset" tool that wipes all gameplay data, archives it first, preserves user accounts/roles and curated catalogs, and rolls the in-game calendar back to the Jan 1, 2026 epoch.
+# Skill System Overhaul
 
-## Scope
+Based on the audit, the project has ~620 skill slugs across 20 families. Three structural problems and one big effect gap drive this plan.
 
-**Wipe (gameplay):**
-- Characters & profiles, character_skills, attributes, achievements, slots
-- Bands, band_members, recruitment, repertoire, rehearsals
-- Songs, recordings, releases, charts, distribution, royalties
-- Gigs, tours, festivals, schedule, setlists
-- Finances: transactions, accounts, payroll, sponsorships, crypto
-- Inbox, direct_messages, notifications, twaater posts, dikcok, friendships, relationships
-- Companies, businesses, housing, vehicles, gear inventories, modeling, politics, awards history
-- Player-owned cosmetics, tattoos, employment history, addictions, health logs
+## Problems found
 
-**Preserve:**
-- `auth.users`, `user_roles`, `profiles` (auth-side only) — accounts can log back in
-- Curated catalogs: cities, venues (template rows), skill_definitions, gear catalog, mentors, universities, radio stations, ticket_operators, genres, season modifiers, game_calendar_config, NPC seed pools, achievement definitions, job listings
-- Storage buckets untouched (avatars etc.) unless explicitly attached to wiped rows
+1. **Naming inconsistencies / duplicates**
+   - `songwriting_professional_vocal_production` sits between `songwriting_basic_vocal_processing` and `songwriting_mastery_vocal_processing` — pick one stem.
+   - `songwriting_mastery_composing_anthems` breaks the `<prefix>_<tier>_<topic>` pattern (Basic/Pro use `_composing`).
+   - 6 "capstone" instrument slugs exist only at Mastery (no Basic/Pro) — incompatible with the new gating rule.
+   - `luthiery_*_technical` topic is semantically empty.
 
-**Reset:**
-- `game_calendar_config` epoch back to 2026-01-01
-- Clear cron-state tables (weekly_chart_runs, daily_processed flags, etc.)
+2. **Tier gating is not enforced**
+   - `PROFESSIONAL_UNLOCK_VALUE = 250 XP`, `MASTERY_UNLOCK_VALUE = 650 XP` exist in `skillTree.ts` but NO learning source consults `SKILL_TREE_RELATIONSHIPS` before granting XP. University, books, mentors (via `relationship-action`), `progression.handleSpendSkillXp`, and client `useSkillPractice` all upsert `skill_progress` blind.
+   - `MAX_SKILL_LEVEL` is 20 in the client and 100 in three edge functions — they disagree.
 
-## Safety model
-1. `game_maintenance` table with `is_active`, `message`, `scheduled_reset_at`, `initiated_by`.
-2. Admin enables maintenance mode → app-wide banner + route guard blocks non-admin gameplay mutations.
-3. Countdown (admin-chosen, default 10 min) shown to all users; reset cannot run until countdown elapses.
-4. Final execution requires admin role + typing `RESET WORLD` confirmation.
-5. All admin actions logged to `admin_audit_log`.
+3. **Dead skills**
+   - `sampling`, `sound_design`, `ai_music`, all `stage_*`, `improv_*`, `audience_*`, `health_*`, `business_*`, `theory_ear_training`, `theory_sight_reading` grant XP but no util reads them.
+   - `skillLearningMultiplier.ts` matches short keys (`guitar`) against full slugs (`instruments_basic_electric_guitar`) — silently returns 1.0× for all real slugs.
 
-## Archive strategy
-- Each reset gets a timestamped schema: `archive_2026_06_05_1234`.
-- SECURITY DEFINER function loops the wipe list and does `CREATE TABLE archive_x.<t> AS TABLE public.<t>` before `TRUNCATE ... CASCADE`.
-- Keep last 3 archive schemas; older ones auto-dropped.
+## Decisions (confirmed)
 
-## Execution
-- Single SECURITY DEFINER function `public.admin_world_reset(p_confirm text)` — checks `has_role(auth.uid(),'admin')`, requires `p_confirm = 'RESET WORLD'`, requires maintenance mode active and scheduled time passed.
-- Function body: create archive schema → archive each table → truncate in FK-safe order → reseed calendar config → insert audit row → disable maintenance mode.
-- Called via `supabase.rpc('admin_world_reset', ...)` from the admin UI — no edge function.
+- **Tier unlock**: must hit `current_level = 20` in lower tier before higher tier accepts XP. Single shared constant.
+- **All four learning paths gated**: University, Books, Mentors, Practice + SXP spend.
+- **Effects**: unify on the existing `tieredSkillBonus` curve (medium pass — no per-skill bespoke tuning), but apply it to every dead family so each skill actually matters.
 
-## Technical details
+## Implementation
 
-**New migration adds:**
-- `public.game_maintenance` (singleton row) + RLS: read = all authenticated, write = admin only.
-- `public.admin_audit_log` (action, actor_id, payload, created_at).
-- Helper SQL functions:
-  - `admin_enable_maintenance(message text, scheduled_at timestamptz)`
-  - `admin_disable_maintenance()`
-  - `admin_world_reset(p_confirm text)` — the main routine.
-  - `admin_list_reset_archives()` / `admin_drop_old_archives()`.
-- All gated by `has_role(auth.uid(),'admin')`.
+### Phase 1 — Taxonomy cleanup (`src/data/skillTree.ts`)
 
-**Frontend (admin only):**
-- New page `src/pages/admin/WorldReset.tsx` linked from existing admin nav.
-  - Section 1: maintenance toggle with message + countdown picker.
-  - Section 2: live list of tables that will be wiped vs preserved (read from a small config constant).
-  - Section 3: list of existing archive schemas with row counts.
-  - Section 4: red "Execute Reset" panel — disabled until maintenance active & timer elapsed; requires typing `RESET WORLD`.
-- New hook `src/hooks/useWorldReset.ts` wrapping the rpc calls + react-query invalidation.
-- New `src/components/MaintenanceBanner.tsx` rendered at the app shell when `game_maintenance.is_active` — shows countdown and blocks gameplay routes for non-admins (route guard via existing layout).
+- Rename `songwriting_professional_vocal_production` → `songwriting_professional_vocal_processing`. Add migration that renames any existing `skill_progress.skill_slug` rows.
+- Rename `songwriting_mastery_composing_anthems` → `songwriting_mastery_composing`. Migration renames rows.
+- Drop the 6 mastery-only capstone instrument configs (`lead_vocals`, `multi_instrumentalist`, `session_musician`, `bandleader`, `touring_musician`, `studio_virtuoso`) OR promote each to a full B/P/M family. Plan: **drop** — they overlap with role-based slugs and are not referenced anywhere meaningful except `instruments_mastery_lead_vocals` in one ROLE_SKILL_MAP entry, which we'll point at `instruments_mastery_vocal_performance` instead.
+- Rename `luthiery_*_technical` topics to descriptive names (`repair`, `building`, `restoration` for B/P/M).
+- Update `skillRecordingBonus.ts` vocal-production slug list to the renamed slugs.
 
-**Bump version** in `VersionHeader.tsx` and add entry to `VersionHistory.tsx` per project convention.
+### Phase 2 — Shared gating helper
+
+New module `src/data/skillTierGating.ts`:
+
+```ts
+export const TIER_UNLOCK_LEVEL = 20; // matches MAX_SKILL_LEVEL
+export type SkillTier = "basic" | "professional" | "mastery";
+export function getTier(slug: string): SkillTier | null;
+export function getPrerequisiteSlug(slug: string): string | null;
+export function isTierUnlocked(slug: string, allProgress): boolean;
+```
+
+Mirror it as a small SQL function so edge functions can validate without importing src:
+
+```sql
+CREATE OR REPLACE FUNCTION public.skill_tier_unlocked(
+  p_profile_id uuid, p_slug text
+) RETURNS boolean ...
+```
+
+### Phase 3 — Wire gating into every XP source
+
+- `supabase/functions/progression/handlers.ts` (`handleSpendSkillXp`) → call `skill_tier_unlocked`, return `{success:false, message:"Max your <basic> skill first"}` if locked. Standardise local `MAX_SKILL_LEVEL` to 20.
+- `supabase/functions/university-attendance/index.ts` → same guard; also block enrollment if the target skill is locked. Cap level at 20.
+- `supabase/functions/book-reading-attendance/index.ts` → same; block purchase/start at the source.
+- `supabase/functions/relationship-action/index.ts` (mentor sessions) → same guard around the existing `skill_progress` upsert.
+- Client `src/hooks/useSkillPractice.ts` and `SkillSystemProvider.updateSkillProgress` → call `isTierUnlocked` before upsert and surface a toast.
+- Extract the duplicated `calculateLearningMultiplier` into `supabase/functions/_shared/learningMultiplier.ts`.
+
+### Phase 4 — Effect coverage (medium pass)
+
+Use `getTieredBonusScaled` for every family, additive into the appropriate output. New utilities, each reading basic/pro/mastery slugs:
+
+- `src/utils/stageSkillBonus.ts` — `stage_*` skills add up to +12% to gig audience score (showmanship, crowd → engagement; tech, visuals → technical execution; social, streaming → fan conversion).
+- `src/utils/theoryFullBonus.ts` — extend recording bonus to also read `ear_training` (+3%) and `sight_reading` (+3%); add to songwriting `melodyStrength` via `harmony` (+5%).
+- `src/utils/improvBonus.ts` — `improv_musical` mitigates random gig disaster severity; `improv_recovery` reduces "song ruined" probability.
+- `src/utils/audienceBonus.ts` — `audience_engagement` boosts merch+tip yield at gigs; `audience_trends` boosts release first-week streams.
+- `src/utils/healthSkillBonus.ts` — `health_conditioning` reduces tour fatigue; `health_vocal` reduces vocal-strain ailment chance; `health_mental` reduces stress accumulation.
+- `src/utils/businessSkillBonus.ts` — `contracts` improves label/sponsorship negotiated terms; `marketing` boosts auto-hype gain; `booking` improves venue offers.
+- `src/utils/songQuality.ts` — add reads for `sampling`, `sound_design`, `ai_music` (each contributes a capped slice to `productionPotential`).
+
+Wire each new util into its single existing caller (gig scoring, songQuality, release predictions, tour fatigue, sponsorship negotiation). No formula re-tuning — all use the shared scaler.
+
+### Phase 5 — Fix `skillLearningMultiplier`
+
+Rewrite `SKILL_LEARNING_ATTRIBUTES` keys to use slug prefixes (`instruments_*_electric_guitar`, `songwriting_*_mixing`) matched via regex helpers, so the multiplier actually fires. Add a unit-style assertion in dev.
+
+### Phase 6 — UI
+
+- `SkillTree.tsx` shows a lock badge on any tier whose prerequisite isn't at 20, with tooltip "Max <basic name> to unlock".
+- University/Book/Mentor enrollment buttons disable + tooltip when target is locked.
+- Bump version to **1.1.353**, add VersionHistory entry summarising taxonomy cleanup and gating.
 
 ## Out of scope
-- Per-user opt-out (full server-wide reset only).
-- Restoring from an archive (archives are inspect-only for now; can add a `restore_from_archive` follow-up).
-- Wiping Supabase Storage objects.
 
-## Open follow-ups for later
-- Optional archive download as JSON.
-- Selective reset (e.g. only charts) using the same archive pipeline.
+- Per-skill bespoke effect tuning (deferred — would be Phase 7).
+- Resetting any existing player skill XP. Players who already over-leveled a Mastery slug keep it; gating only blocks future XP for new players past this point.
+- New skill families.
+- Translating dead modeling/fashion/clothing/teaching/luthiery skills into music effects — those belong to non-music subsystems and stay as-is.
+
+## Verification
+
+- `bunx vitest run` on any existing skill-related tests.
+- Manual: open `SkillTree`, confirm lock badges appear; try to enroll in a Mastery university course with Basic below 20 and confirm it blocks; confirm version banner reads 1.1.353.
