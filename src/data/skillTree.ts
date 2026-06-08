@@ -151,9 +151,9 @@ const songwritingProductionConfigs: TieredSkillConfig[] = [
         slug: "songwriting_professional_composing"
       },
       Mastery: {
-        name: "Composing Anthems & Crowdpleasers",
+        name: "Composing Mastery",
         description: "Write unforgettable anthems, ballads, and show-stopping compositions.",
-        slug: "songwriting_mastery_composing_anthems"
+        slug: "songwriting_mastery_composing"
       }
     }
   },
@@ -333,7 +333,7 @@ const songwritingProductionConfigs: TieredSkillConfig[] = [
       Professional: {
         name: "Professional Vocal Production",
         description: "Direct sessions, comp performances, and sculpt vocal mixes.",
-        slug: "songwriting_professional_vocal_production"
+        slug: "songwriting_professional_vocal_processing"
       },
       Mastery: {
         name: "Vocal Processing Mastery",
@@ -2733,7 +2733,7 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         prerequisites: [
           { slug: "instruments_professional_vocal_performance", requiredValue: 650 },
           { slug: createSlug("instruments", "Professional", "Rapping"), requiredValue: 600 },
-          { slug: "songwriting_professional_vocal_production", requiredValue: 600 }
+          { slug: "songwriting_professional_vocal_processing", requiredValue: 600 }
         ]
       }
     }
@@ -3782,7 +3782,11 @@ const { definitions, relationships } = buildSkillTree([
   ...electronicConfigs,
   ...worldFolkConfigs,
   ...legacyInstrumentsConfigs,
-  ...instrumentMasteryConfigs,
+  // Capstone instrument mastery slugs (lead_vocals, multi_instrumentalist, session_musician,
+  // bandleader, touring_musician, studio_virtuoso) removed in v1.1.353 — they only existed
+  // at the Mastery tier with no Basic/Pro path, which is incompatible with the
+  // basic-then-advanced-then-mastery gating rule. See instrumentMasteryConfigs (kept for
+  // historical reference) but no longer fed into buildSkillTree.
   ...stageShowmanshipConfigs,
   ...musicTheoryConfigs,
   ...musicBusinessConfigs,

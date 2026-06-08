@@ -8,8 +8,8 @@ import {
   startJobRun,
 } from "../_shared/job-logger.ts";
 
-// Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
-const MAX_SKILL_LEVEL = 100;
+// Skill level cap (must match src/data/skillConstants.ts MAX_SKILL_LEVEL)
+const MAX_SKILL_LEVEL = 20;
 
 // Attribute-based learning speed multiplier
 const MAX_ATTRIBUTE_VALUE = 1000;
@@ -141,6 +141,16 @@ async function processAttendance(supabaseClient: any) {
       if (newLevel >= MAX_SKILL_LEVEL) {
         newLevel = MAX_SKILL_LEVEL;
         remainingXp = Math.min(remainingXp, currentXp);
+      }
+
+      // Tier gating: skip XP if the higher tier isn't unlocked.
+      const { data: tierUnlocked } = await supabaseClient.rpc("skill_tier_unlocked", {
+        p_profile_id: session.profile_id,
+        p_slug: book.skill_slug,
+      });
+      if (tierUnlocked === false) {
+        console.log(`[Books] Skipping XP for locked tier ${book.skill_slug} on profile ${session.profile_id}`);
+        continue;
       }
 
       const { error: skillError } = await supabaseClient
