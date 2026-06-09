@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Map, Calendar, Truck, Users, DollarSign, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TouringSystem = () => {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Touring System</h1>
-        <p className="text-muted-foreground">Complete touring infrastructure and logistics</p>
-      </div>
+    <FMPageScaffold
+      title="Touring System"
+      subtitle="Complete touring infrastructure and logistics"
+      icon={Map}
+      backTo="/hub/band-live"
+    >
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
@@ -168,7 +170,7 @@ const TouringSystem = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

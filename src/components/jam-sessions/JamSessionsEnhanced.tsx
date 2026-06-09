@@ -19,6 +19,7 @@ import { JamSessionVenueTraits } from "./JamSessionVenueTraits";
 import { JamSessionChallengeCard } from "./JamSessionChallengeCard";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign, Target } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export const JamSessionsEnhanced = () => {
   const { profileId } = useActiveProfile();
@@ -95,21 +96,18 @@ export const JamSessionsEnhanced = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Music4 className="h-8 w-8" /> Jam Sessions
-          </h1>
-          <p className="text-muted-foreground">
-            Book rehearsal rooms, collaborate with musicians, and earn XP rewards.
-          </p>
-        </div>
-        <Button onClick={() => setIsBookingOpen(true)} size="lg">
-          <Plus className="h-5 w-5 mr-2" />
+    <FMPageScaffold
+      title="Jam Sessions"
+      subtitle="Book rehearsal rooms, collaborate with musicians, and earn XP rewards."
+      icon={Music4}
+      backTo="/hub/band-live"
+      headerActions={
+        <Button onClick={() => setIsBookingOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
           Book Session
         </Button>
-      </div>
+      }
+    >
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">

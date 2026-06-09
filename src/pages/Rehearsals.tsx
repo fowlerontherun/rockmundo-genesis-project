@@ -15,6 +15,7 @@ import { RehearsalBookingDialog } from "@/components/performance/RehearsalBookin
 import { useToast } from "@/hooks/use-toast";
 import { useRehearsalBooking } from "@/hooks/useRehearsalBooking";
 import { useTranslation } from "@/hooks/useTranslation";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Rehearsal {
   id: string;
@@ -318,14 +319,13 @@ const Rehearsals = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <FMPageScaffold
+      title={t('rehearsals.title')}
+      subtitle={t('rehearsals.subtitle')}
+      icon={Music2}
+      backTo="/hub/band-live"
+    >
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('rehearsals.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('rehearsals.subtitle')}
-          </p>
-        </div>
         
       {/* Prominent action card */}
       {isLoadingBands ? (
