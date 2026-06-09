@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.363",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 4a (Music loop pages). Migrated every page in the music vertical to `FMPageScaffold` so they all share the same 40px FM header strip, optional KPI bar, and FM shell framing: Songwriting, RecordingStudio, ReleaseManager, ReleaseDetail, SongManager (Song Catalog), MusicVideos, SongMarket, SongRankings, StagePractice, StreamingPlatforms, StreamingPlatformDetail, StreamingRevenueDashboard." },
+      { type: 'improvement', description: "SongManager now exposes a 3-tile FM KPI bar at the top (Total Songs / Avg Quality / Genres) with tone coloring on Avg Quality. The bespoke `container mx-auto py-8` shell, large 4xl title, and hand-rolled Card stat tiles were removed in favor of the standard `FMKpiBar`." },
+      { type: 'improvement', description: "ReleaseDetail, StreamingPlatformDetail, and StreamingRevenueDashboard dropped their custom `<Button variant=ghost ArrowLeft Back>` patterns — back navigation now lives in the FM `PageHeader` strip (`backTo`/`backLabel`) so it sits flush with the title and the rest of the FM chrome instead of taking up a separate row." },
+      { type: 'improvement', description: "Pages that were already on `PageLayout + PageHeader` (Songwriting, RecordingStudio, StreamingPlatforms) and on `StandardPageLayout` (ReleaseManager, SongMarket) were converted to `FMPageScaffold` directly, dropping one layout-wrapper abstraction. Header `actions` slot becomes `headerActions` on the scaffold and renders inside the same FM strip." },
+      { type: 'fix', description: "StagePractice no longer renders inside its old `max-w-2xl container mx-auto` clamp — it now uses the full FM shell content width via `FMPageScaffold` so the rhythm minigame, selection, and results phases align with every other Music page." },
+    ],
+  },
+  {
     version: "1.1.362",
     date: "2026-06-09",
     changes: [
