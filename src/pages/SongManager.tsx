@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SongPlayer } from "@/components/audio/SongPlayer";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SongManager = () => {
   const navigate = useNavigate();
@@ -139,59 +140,18 @@ const SongManager = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      {/* Header */}
-      <div className="space-y-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/music")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Music Hub
-        </Button>
-        
-        <div className="flex items-center gap-3">
-          <Music className="h-10 w-10 text-primary" />
-          <div>
-            <h1 className="text-4xl font-bold">Song Catalog</h1>
-            <p className="text-muted-foreground">
-              All your songs with rehearsal status
-            </p>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-2">
-              <Music className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Songs</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Quality</p>
-                <p className="text-2xl font-bold">{stats.avgQuality}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-2">
-              <Music2 className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Genres</p>
-                <p className="text-2xl font-bold">{stats.genres}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Song Catalog"
+      subtitle="All your songs with rehearsal status"
+      icon={Music}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      kpis={[
+        { label: "Total Songs", value: stats.total, icon: Music },
+        { label: "Avg Quality", value: stats.avgQuality, icon: Star, tone: stats.avgQuality >= 70 ? "good" : stats.avgQuality >= 40 ? "warn" : "bad" },
+        { label: "Genres", value: stats.genres, icon: Music2 },
+      ]}
+    >
 
       {/* Archive Toggle */}
       <Tabs defaultValue="active" className="w-full" onValueChange={(v) => setShowArchived(v === "archived")}>
@@ -369,7 +329,7 @@ const SongManager = () => {
           onClose={() => setSelectedSongId(null)}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
