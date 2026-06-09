@@ -48,21 +48,12 @@ export default function RehearsalStudioBusinessManagement() {
   
   return (
     <VipGate feature="Rehearsal Studio Business" description="Run a rehearsal studio.">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Music className="h-6 w-6" />
-              {studio.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {studio.cities?.name}, {studio.cities?.country} • ${studio.hourly_rate}/hr
-            </p>
-          </div>
-        </div>
+      <FMPageScaffold
+        title={studio.name}
+        subtitle={`${studio.cities?.name}, ${studio.cities?.country} • $${studio.hourly_rate}/hr`}
+        icon={Music}
+        backTo="/hub/business"
+      >
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
