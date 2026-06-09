@@ -447,7 +447,7 @@ const Auth = () => {
             <img src={logo} alt="RockMundo - Live The Dream" className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" />
           </div>
           <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2">
-            BETA
+            BETA V1
           </Badge>
           <Button
             variant="link"
@@ -458,6 +458,16 @@ const Auth = () => {
             What is RockMundo?
           </Button>
         </div>
+
+        <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertDescription className="space-y-1 text-left">
+            <p className="font-semibold">Thank you for playing Beta V1!</p>
+            <p className="text-sm text-muted-foreground">
+              Beta V2 will be available in August with a full world reset. Enter your Beta code below to sign in.
+            </p>
+          </AlertDescription>
+        </Alert>
 
         <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">
           <CardHeader className="pb-4">
