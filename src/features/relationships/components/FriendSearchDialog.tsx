@@ -97,10 +97,18 @@ export function FriendSearchDialog({ open, onOpenChange, excludeProfileIds, onSe
             ) : (
               <div className="space-y-2">
                 {results.map((profile) => (
-                  <button
+                  <div
                     key={profile.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelect(profile.id)}
-                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left hover:border-primary"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelect(profile.id);
+                      }
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left hover:border-primary cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -112,14 +120,20 @@ export function FriendSearchDialog({ open, onOpenChange, excludeProfileIds, onSe
                         <p className="text-xs text-muted-foreground">Fame {profile.fame ?? "TBD"}</p>
                       </div>
                     </div>
-                    <Button disabled={sending === profile.id}>
+                    <Button
+                      disabled={sending === profile.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelect(profile.id);
+                      }}
+                    >
                       {sending === profile.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         "Send request"
                       )}
                     </Button>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
