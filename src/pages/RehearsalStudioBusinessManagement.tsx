@@ -160,7 +160,7 @@ export default function RehearsalStudioBusinessManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
