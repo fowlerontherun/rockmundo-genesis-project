@@ -397,7 +397,7 @@ const Travel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

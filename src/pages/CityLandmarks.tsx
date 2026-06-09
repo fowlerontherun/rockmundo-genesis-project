@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MapPin, Music2, Coins, Sparkles, Disc3, Beer, GraduationCap, Trees, Building2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -272,26 +271,26 @@ export default function CityLandmarks() {
   const selectedCity = cities.find((c: any) => c.id === cityId);
 
   return (
-    <PageLayout>
-      <PageHeader
-        icon={MapPin}
-        title="City Landmarks"
-        subtitle="Tier-1 cities, hand-curated. Click a pin to visit, or busk for tips."
-        actions={
-          <Select value={cityId ?? ""} onValueChange={setCityId}>
-            <SelectTrigger className="h-8 w-[200px] text-xs">
-              <SelectValue placeholder="Pick a city" />
-            </SelectTrigger>
-            <SelectContent>
-              {cities.map((c: any) => (
-                <SelectItem key={c.id} value={c.id} className="text-xs">
-                  {c.name}, {c.country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        }
-      />
+    <FMPageScaffold
+      icon={MapPin}
+      title="City Landmarks"
+      subtitle="Tier-1 cities, hand-curated. Click a pin to visit, or busk for tips."
+      backTo="/hub/world-social"
+      headerActions={
+        <Select value={cityId ?? ""} onValueChange={setCityId}>
+          <SelectTrigger className="h-8 w-[200px] text-xs">
+            <SelectValue placeholder="Pick a city" />
+          </SelectTrigger>
+          <SelectContent>
+            {cities.map((c: any) => (
+              <SelectItem key={c.id} value={c.id} className="text-xs">
+                {c.name}, {c.country}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+    >
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-3">
         {/* MAP */}
