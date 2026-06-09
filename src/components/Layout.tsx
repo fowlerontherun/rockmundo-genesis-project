@@ -1,12 +1,9 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import Navigation from "@/components/ui/navigation";
-import HorizontalNavigation from "@/components/ui/HorizontalNavigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
-import { useNavStyle } from "@/hooks/useNavStyle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
@@ -24,7 +21,7 @@ import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
-
+import { FMShell } from "@/components/fm/FMShell";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 const Layout = () => {
