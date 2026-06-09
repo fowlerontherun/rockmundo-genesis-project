@@ -181,7 +181,7 @@ const SimpleBandManager = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

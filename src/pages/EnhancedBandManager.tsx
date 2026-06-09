@@ -158,7 +158,7 @@ const EnhancedBandManager = () => {
           </Tabs>
         </>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
