@@ -577,6 +577,6 @@ export default function BandVehicles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }
