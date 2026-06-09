@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import tourManagerImg from "@/assets/crew/tour-manager.jpg";
 import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
@@ -324,11 +325,12 @@ const BandCrewManagement = () => {
 
   if (loadingBand || loadingCrew) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </FMPageScaffold>
     );
-  }
 
   if (!bandId) {
     return (
