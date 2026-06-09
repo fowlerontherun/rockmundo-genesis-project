@@ -28,6 +28,10 @@ import {
   Wrench,
   ShoppingCart,
   Calendar,
+} from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+const __SCAFFOLD_IMPORT_INSERTED__ = true;
+// placeholder
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
