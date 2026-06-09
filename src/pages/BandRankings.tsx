@@ -10,6 +10,7 @@ import { Trophy, Star, Users, MapPin, Music, ChevronLeft, ChevronRight, Loader2 
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MUSIC_GENRES } from "@/data/genres";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface BandWithCity {
   id: string;
@@ -132,16 +133,12 @@ export default function BandRankings() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Trophy className="h-8 w-8 text-yellow-500" />
-            Band Rankings
-          </h1>
-          <p className="text-muted-foreground">Discover the most famous bands in the music world</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Band Rankings"
+      subtitle="Discover the most famous bands in the music world"
+      icon={Trophy}
+      backTo="/hub/band"
+    >
 
       {/* Filters */}
       <Card>
