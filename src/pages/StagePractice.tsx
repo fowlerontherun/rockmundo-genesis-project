@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Gamepad2 } from 'lucide-react';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 import { StagePracticeSelection } from '@/components/stage-practice/StagePracticeSelection';
 import { StagePracticeGame } from '@/components/stage-practice/StagePracticeGame';
 import { StagePracticeResults } from '@/components/stage-practice/StagePracticeResults';
@@ -40,7 +42,13 @@ const StagePractice = () => {
   }, [navigate]);
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-2xl">
+    <FMPageScaffold
+      title="Stage Practice"
+      subtitle="Rhythm minigame — earn daily XP across instruments."
+      icon={Gamepad2}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+    >
       {phase === 'selection' && (
         <StagePracticeSelection onStart={handleStart} />
       )}
@@ -66,7 +74,7 @@ const StagePractice = () => {
           onExit={handleExit}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

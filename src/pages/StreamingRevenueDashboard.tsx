@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { ArrowLeft, BarChart3, Download, TrendingUp, DollarSign, Headphones } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -248,22 +249,18 @@ export default function StreamingRevenueDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/streaming-platforms">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" /> Streaming &amp; Revenue
-          </h1>
-        </div>
+    <FMPageScaffold
+      title="Streaming & Revenue"
+      subtitle="Track plays and revenue across releases, platforms, and bands."
+      icon={BarChart3}
+      backTo="/streaming-platforms"
+      backLabel="Back"
+      headerActions={
         <Button size="sm" variant="outline" onClick={exportCsv} disabled={tableRows.length === 0}>
           <Download className="h-4 w-4 mr-1" /> Export CSV
         </Button>
-      </div>
+      }
+    >
 
       {/* Filters */}
       <Card>
@@ -526,6 +523,6 @@ export default function StreamingRevenueDashboard() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

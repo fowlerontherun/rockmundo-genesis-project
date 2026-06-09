@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Disc } from "lucide-react";
-import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
@@ -47,13 +47,12 @@ export default function ReleaseManager() {
   }
 
   return (
-    <StandardPageLayout
+    <FMPageScaffold
       title={t('releases.title')}
       subtitle={t('releases.description')}
       icon={Disc}
       backTo="/hub/music"
       backLabel={t('releases.backToMusicHub')}
-      bareContent
       headerActions={
         <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -81,6 +80,6 @@ export default function ReleaseManager() {
         onOpenChange={setShowCreateDialog}
         userId={userId}
       />
-    </StandardPageLayout>
+    </FMPageScaffold>
   );
 }
