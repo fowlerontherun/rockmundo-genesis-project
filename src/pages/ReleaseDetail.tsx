@@ -374,6 +374,6 @@ export default function ReleaseDetail() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
