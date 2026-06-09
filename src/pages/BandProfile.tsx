@@ -231,6 +231,6 @@ export default function BandProfile() {
 
       {/* Songs Section */}
       <BandSongsSection bandId={band.id} bandName={band.name} />
-    </div>
+    </FMPageScaffold>
   );
 }
