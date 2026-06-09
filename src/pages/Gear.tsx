@@ -15,6 +15,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { GearMarketplaceBrowser } from "@/components/gear/marketplace/GearMarketplaceBrowser";
 import { GearMarketplaceListings } from "@/components/gear/marketplace/GearMarketplaceListings";
 import { GearMarketplacePurchases } from "@/components/gear/marketplace/GearMarketplacePurchases";
+import { FMFilterBar } from "@/components/fm/FMFilterBar";
 import { 
   Guitar, 
   ShoppingCart, 
