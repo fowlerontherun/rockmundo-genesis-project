@@ -715,6 +715,6 @@ export default function PerformGig() {
         bandId={gig.band_id}
         gigId={gig.id}
       />
-    </div>
+    </FMPageScaffold>
   );
 }

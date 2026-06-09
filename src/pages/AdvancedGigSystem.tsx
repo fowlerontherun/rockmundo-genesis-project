@@ -273,6 +273,6 @@ export default function AdvancedGigSystem() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
