@@ -45,8 +45,8 @@ export const TopStatusBar = () => {
   const energy = (profile as any)?.energy ?? 100;
   const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? "Artist";
 
-  const dateStr = calendar?.currentDate
-    ? new Date(calendar.currentDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+  const dateStr = calendar
+    ? `${calendar.gameDay} ${calendar.monthName} ${calendar.gameYear}`
     : "—";
 
   const handleLogout = async () => {
