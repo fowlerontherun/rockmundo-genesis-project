@@ -523,6 +523,6 @@ export default function StreamingRevenueDashboard() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
