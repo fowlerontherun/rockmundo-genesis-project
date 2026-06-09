@@ -1410,7 +1410,7 @@ const TourManager = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 
