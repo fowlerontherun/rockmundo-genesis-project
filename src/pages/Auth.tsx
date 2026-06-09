@@ -65,7 +65,8 @@ const Auth = () => {
 
   const [loginData, setLoginData] = useState({
     email: "",
-    password: ""
+    password: "",
+    betaCode: ""
   });
 
   const [signupData, setSignupData] = useState({
