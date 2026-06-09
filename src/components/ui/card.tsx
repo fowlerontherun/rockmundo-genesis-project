@@ -2,11 +2,16 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * FM24-styled card primitive.
+ * Flat panel surface (no shadow), square-ish corners, compact dense padding,
+ * and a sub-header strip that mirrors the FM `PanelCard` look.
+ */
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-ds-sm transition-colors",
+      "rounded-sm border border-fm-border bg-fm-panel text-fm-fg",
       className,
     )}
     {...props}
@@ -16,7 +21,14 @@ Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-4 sm:p-6", className)} {...props} />
+    <div
+      ref={ref}
+      className={cn(
+        "flex flex-col gap-0.5 px-3 py-2 bg-fm-panel-2 border-b border-fm-border",
+        className,
+      )}
+      {...props}
+    />
   ),
 );
 CardHeader.displayName = "CardHeader";
@@ -25,7 +37,10 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn("text-lg sm:text-xl font-semibold leading-tight tracking-tight", className)}
+      className={cn(
+        "text-[11px] uppercase tracking-widest font-semibold text-fm-fg-muted leading-tight",
+        className,
+      )}
       {...props}
     />
   ),
@@ -34,21 +49,25 @@ CardTitle.displayName = "CardTitle";
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn("text-sm text-muted-foreground leading-relaxed", className)} {...props} />
+    <p ref={ref} className={cn("text-xs text-fm-fg-muted leading-snug", className)} {...props} />
   ),
 );
 CardDescription.displayName = "CardDescription";
 
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-4 pt-0 sm:p-6 sm:pt-0", className)} {...props} />
+    <div ref={ref} className={cn("p-3", className)} {...props} />
   ),
 );
 CardContent.displayName = "CardContent";
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center p-4 pt-0 sm:p-6 sm:pt-0", className)} {...props} />
+    <div
+      ref={ref}
+      className={cn("flex items-center px-3 py-2 border-t border-fm-border bg-fm-panel-2", className)}
+      {...props}
+    />
   ),
 );
 CardFooter.displayName = "CardFooter";

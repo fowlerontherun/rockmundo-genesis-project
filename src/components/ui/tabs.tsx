@@ -3,6 +3,9 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * FM24-styled tabs. Underline active state, flat, compact density.
+ */
 const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef<
@@ -12,7 +15,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 w-full items-center justify-start overflow-x-auto flex-nowrap rounded-md bg-muted p-1 text-muted-foreground scrollbar-hide",
+      "inline-flex h-9 w-full items-center justify-start gap-0 overflow-x-auto flex-nowrap border-b border-fm-border bg-fm-panel-2 px-1 text-fm-fg-muted scrollbar-hide",
       className,
     )}
     {...props}
@@ -27,7 +30,12 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 h-9 text-xs font-medium uppercase tracking-wide transition-colors",
+      "text-fm-fg-muted hover:text-fm-fg",
+      "data-[state=active]:text-fm-accent",
+      "data-[state=active]:after:absolute data-[state=active]:after:left-2 data-[state=active]:after:right-2 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-fm-accent",
+      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fm-accent",
+      "disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
@@ -42,7 +50,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fm-accent",
       className,
     )}
     {...props}
