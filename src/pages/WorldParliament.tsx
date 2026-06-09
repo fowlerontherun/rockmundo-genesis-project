@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Landmark } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { MotionsList } from "@/components/parliament/MotionsList";
 import { ProposeMotionDialog } from "@/components/parliament/ProposeMotionDialog";
 import { MayorPayPanel } from "@/components/parliament/MayorPayPanel";
@@ -51,17 +52,13 @@ export default function WorldParliamentPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Landmark className="h-8 w-8 text-primary" />
-            World Parliament
-          </h1>
-          <p className="text-sm text-muted-foreground">Where the world's mayors set global policy.</p>
-        </div>
-        {seat?.id && <ProposeMotionDialog />}
-      </div>
+    <FMPageScaffold
+      title="World Parliament"
+      subtitle="Where the world's mayors set global policy."
+      icon={Landmark}
+      backTo="/hub/world-social"
+      headerActions={seat?.id ? <ProposeMotionDialog /> : undefined}
+    >
 
       {!seat?.id && (
         <Card className="border-muted">
@@ -145,6 +142,6 @@ export default function WorldParliamentPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
