@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/useTranslation";
-import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMSection } from "@/components/fm/FMSection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHubTileImage } from "@/hooks/useHubTileImage";
-import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 
 interface HubTile {
   icon: LucideIcon;
@@ -28,82 +28,85 @@ interface CategoryHubProps {
   groups?: TileGroup[];
 }
 
-/** Individual tile that auto-generates its image */
+/** FM-style dense tile: 56px thumbnail, label, optional 1-line description. */
 const HubTileCard = ({ tile }: { tile: HubTile }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const Icon = tile.icon;
 
-  // Derive a stable key from the path, or use explicit override
   const tileKey = tile.tileImageKey || tile.path.replace(/\//g, "-").replace(/^-/, "");
   const { data: imageUrl, isLoading } = useHubTileImage(
     tileKey,
-    tile.imagePrompt || t(tile.labelKey)
+    tile.imagePrompt || t(tile.labelKey),
   );
 
+  const label = t(tile.labelKey);
+
   return (
-    <Card
-      className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group overflow-hidden"
+    <button
+      type="button"
       onClick={() => navigate(tile.path)}
-    >
-      {imageUrl ? (
-        <>
-          <AspectRatio ratio={16 / 9}>
-            <img
-              src={imageUrl}
-              alt={t(tile.labelKey)}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
-          </AspectRatio>
-          <CardContent className="p-3">
-            <span className="text-sm font-medium truncate block">{t(tile.labelKey)}</span>
-          </CardContent>
-        </>
-      ) : isLoading ? (
-        <>
-          <AspectRatio ratio={16 / 9}>
-            <Skeleton className="w-full h-full" />
-          </AspectRatio>
-          <CardContent className="p-3">
-            <span className="text-sm font-medium truncate block">{t(tile.labelKey)}</span>
-          </CardContent>
-        </>
-      ) : (
-        <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
-          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <Icon className="h-7 w-7 text-primary" />
-          </div>
-          <span className="text-sm font-medium line-clamp-2">{t(tile.labelKey)}</span>
-        </CardContent>
+      className={cn(
+        "group flex items-center gap-3 p-2 bg-fm-panel border border-fm-border rounded-sm",
+        "hover:border-fm-accent hover:bg-fm-panel-2 transition-colors text-left w-full",
       )}
-    </Card>
+    >
+      <div className="relative h-14 w-14 flex-shrink-0 bg-fm-panel-2 border border-fm-border rounded-sm overflow-hidden">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={label}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : isLoading ? (
+          <Skeleton className="w-full h-full" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Icon className="h-6 w-6 text-fm-accent" />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-semibold text-fm-fg uppercase tracking-wide truncate">
+          {label}
+        </div>
+        {tile.description && (
+          <div className="text-[11px] text-fm-fg-muted truncate">{tile.description}</div>
+        )}
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 text-fm-fg-muted group-hover:text-fm-accent flex-shrink-0" />
+    </button>
   );
 };
+
+const TileGrid = ({ tiles }: { tiles: HubTile[] }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+    {tiles.map((tile) => (
+      <HubTileCard key={tile.path} tile={tile} />
+    ))}
+  </div>
+);
 
 export const CategoryHub = ({ titleKey, description, tiles, groups }: CategoryHubProps) => {
   const { t } = useTranslation();
-
-  const renderTileGrid = (tilesToRender: HubTile[]) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      {tilesToRender.map((tile) => (
-        <HubTileCard key={tile.path} tile={tile} />
-      ))}
-    </div>
-  );
+  const title = t(titleKey);
 
   return (
-    <StandardPageLayout title={t(titleKey)} subtitle={description} bareContent>
-      {tiles && renderTileGrid(tiles)}
+    <FMPageScaffold title={title} subtitle={description}>
+      {tiles && tiles.length > 0 && (
+        <FMSection title="Categories">
+          <TileGrid tiles={tiles} />
+        </FMSection>
+      )}
 
       {groups?.map((group) => (
-        <div key={group.label} className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {group.label}
-          </h2>
-          {renderTileGrid(group.tiles)}
-        </div>
+        <FMSection key={group.label} title={group.label}>
+          <TileGrid tiles={group.tiles} />
+        </FMSection>
       ))}
-    </StandardPageLayout>
+    </FMPageScaffold>
   );
 };
+
+export default CategoryHub;
