@@ -35936,6 +35936,10 @@ export type Database = {
       rotate_weekly_challenges: { Args: never; Returns: undefined }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      skill_tier_unlocked: {
+        Args: { p_profile_id: string; p_slug: string }
+        Returns: boolean
+      }
       spend_campaign_funds: {
         Args: {
           p_amount: number
