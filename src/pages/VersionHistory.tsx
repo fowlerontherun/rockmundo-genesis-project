@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.355",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "Desktop-only mode: RockMundo now requires a browser window at least 1440×900. Smaller viewports are blocked with a 'Desktop Only' notice. The mobile sheet/horizontal nav variants have been retired." },
+      { type: 'feature', description: "Football Manager 2024 inspired app shell. New chrome: persistent top status bar (character, game date, cash, fame, health, energy pips), primary module tab strip (Overview / Music / Band / Live / Career / World / Social / Store / Admin), contextual sub-tab row for the active module, collapsible left sidebar with grouped sections for the current module, and a persistent bottom action bar with Inbox + Continue button." },
+      { type: 'feature', description: "New FM-style design primitives under `src/components/fm/`: `PanelCard`, `DataTable` (sortable, sticky-header, zebra rows), `AttrCell` (color-coded 0-20 attribute pill, green ≥15 / yellow 8-14 / red <8), and `StatBar`. Pages can opt in by importing these primitives for the FM look." },
+      { type: 'improvement', description: "Added FM color tokens (`--fm-bg`, `--fm-panel`, `--fm-panel-2`, `--fm-border`, `--fm-fg`, `--fm-fg-muted`, `--fm-accent`, `--fm-good`, `--fm-warn`, `--fm-bad`) and exposed them as Tailwind classes (`bg-fm-panel`, `text-fm-accent`, etc.) for the new chrome and any FM-themed panels." },
+    ],
+  },
+  {
     version: "1.1.354",
     date: "2026-06-09",
     changes: [
