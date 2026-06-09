@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/use-auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface City {
   id: string;
@@ -92,66 +93,54 @@ export default function WorldEnvironment() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <FMPageScaffold title="Global Cities" subtitle="Explore music hubs around the world" icon={Globe2} backTo="/hub/world-social">
         <Skeleton className="h-12 w-64" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} className="h-64" />
           ))}
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <header className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Globe2 className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Global Cities</h1>
-              <p className="text-muted-foreground">Explore music hubs around the world</p>
-            </div>
-          </div>
-          {/* <Button onClick={() => navigate("/world-map")} variant="outline">
-            <MapPin className="h-4 w-4 mr-2" />
-            View Map
-          </Button> */}
-        </div>
+    <FMPageScaffold
+      title="Global Cities"
+      subtitle="Explore music hubs around the world"
+      icon={Globe2}
+      backTo="/hub/world-social"
+    >
+      <div className="grid gap-3 md:grid-cols-4">
+        <Input
+          placeholder="Search cities..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="md:col-span-2"
+        />
+        <Select value={countryFilter} onValueChange={setCountryFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Countries" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Countries</SelectItem>
+            {countries.map(country => (
+              <SelectItem key={country} value={country}>{country}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Sort by..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="music_scene">Music Scene</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="population">Population</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div className="grid gap-3 md:grid-cols-4">
-          <Input
-            placeholder="Search cities..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="md:col-span-2"
-          />
-          <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Countries" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Countries</SelectItem>
-              {countries.map(country => (
-                <SelectItem key={country} value={country}>{country}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="music_scene">Music Scene</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="population">Population</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </header>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredCities.map((city) => {
@@ -251,6 +240,6 @@ export default function WorldEnvironment() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

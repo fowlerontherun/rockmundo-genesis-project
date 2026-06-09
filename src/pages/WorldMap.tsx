@@ -8,6 +8,7 @@ import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
 import InteractiveWorldMap from "@/components/map/InteractiveWorldMap";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const WorldMap = () => {
   const { t } = useTranslation();
@@ -92,21 +93,14 @@ const WorldMap = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-8 space-y-3 text-center md:text-left">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-          <Globe2 className="h-4 w-4" aria-hidden="true" />
-          Touring intelligence hub
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">World Map</h1>
-        <p className="mx-auto max-w-3xl text-sm text-muted-foreground md:text-base">
-          Survey Rockmundo's global network of music cities. Each hub reveals its dominant genre, unlocks travel planning
-          data, and helps you decide where the next tour stop should be.
-        </p>
-      </header>
-
+    <FMPageScaffold
+      title="World Map"
+      subtitle="Survey Rockmundo's global network of music cities — each hub reveals its dominant genre and unlocks travel planning data."
+      icon={Globe2}
+      backTo="/hub/world-social"
+    >
       {renderMap()}
-    </div>
+    </FMPageScaffold>
   );
 };
 

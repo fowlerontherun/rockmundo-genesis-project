@@ -12,6 +12,7 @@ import { PartyTreasuryTab } from "@/components/parties/PartyTreasuryTab";
 import { PartyCampaignsTab } from "@/components/parties/PartyCampaignsTab";
 import { PartyManifestoTab } from "@/components/parties/PartyManifestoTab";
 import { JoinPartyDialog } from "@/components/parties/JoinPartyDialog";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import type { PoliticalParty } from "@/types/political-party";
 
 export default function PoliticalPartyPage() {
@@ -23,16 +24,14 @@ export default function PoliticalPartyPage() {
   if (my?.party) {
     const party = my.party;
     return (
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <span className="inline-block h-6 w-6 rounded-full" style={{ backgroundColor: party.colour_hex }} />
-            <div>
-              <h1 className="text-3xl font-bold">{party.name}</h1>
-              <p className="text-sm text-muted-foreground">{party.description}</p>
-            </div>
-          </div>
+      <FMPageScaffold
+        title={party.name}
+        subtitle={party.description ?? undefined}
+        icon={Flag}
+        backTo="/hub/world-social"
+        headerActions={
           <div className="flex items-center gap-2">
+            <span className="inline-block h-4 w-4 rounded-full" style={{ backgroundColor: party.colour_hex }} />
             <Button variant="outline" asChild size="sm">
               <Link to="/political-party/standings"><Trophy className="h-4 w-4 mr-1" /> Standings</Link>
             </Button>
@@ -40,7 +39,8 @@ export default function PoliticalPartyPage() {
               <LogOut className="h-4 w-4 mr-1" /> Leave Party
             </Button>
           </div>
-        </div>
+        }
+      >
 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Core Beliefs</CardTitle></CardHeader>
@@ -71,24 +71,22 @@ export default function PoliticalPartyPage() {
           <TabsContent value="campaigns"><PartyCampaignsTab partyId={party.id} /></TabsContent>
           <TabsContent value="treasury"><PartyTreasuryTab party={party} /></TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Flag className="h-8 w-8 text-primary" />
-            Political Parties
-          </h1>
-          <p className="text-sm text-muted-foreground">Found a new party or join an existing movement.</p>
-        </div>
-        <Button variant="outline" asChild>
+    <FMPageScaffold
+      title="Political Parties"
+      subtitle="Found a new party or join an existing movement."
+      icon={Flag}
+      backTo="/hub/world-social"
+      headerActions={
+        <Button variant="outline" asChild size="sm">
           <Link to="/political-party/standings"><Trophy className="h-4 w-4 mr-1" /> View Standings</Link>
         </Button>
-      </div>
+      }
+    >
 
       <div className="grid gap-6 lg:grid-cols-2">
         <PartyCreateWizard />
@@ -121,6 +119,6 @@ export default function PoliticalPartyPage() {
       </div>
 
       <JoinPartyDialog party={joinTarget} open={!!joinTarget} onOpenChange={(v) => !v && setJoinTarget(null)} />
-    </div>
+    </FMPageScaffold>
   );
 }

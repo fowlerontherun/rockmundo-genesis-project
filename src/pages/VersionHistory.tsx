@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.365",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 5a (World & politics pages). Migrated the world / politics vertical onto `FMPageScaffold`: WorldMap, WorldPulse, WorldEnvironment (Global Cities), WorldParliament, PoliticalParty, PartyStandings, PoliticsCareer, Travel, and CityLandmarks. Each page now ships with the standard FM 40px header strip, back-nav to `/hub/world-social`, optional `headerActions`, and FM shell framing." },
+      { type: 'improvement', description: "Dropped legacy wrappers (`container mx-auto px-4 py-6`, `mx-auto w-full max-w-6xl px-4 py-8`, `PageLayout`+`PageHeader` stack) and bespoke in-page `<h1>` + icon-pill title blocks. Page titles, subtitles, icons, and back-links flow through `FMPageScaffold` props instead so they sit flush with the FM chrome on every screen in the World hub." },
+      { type: 'improvement', description: "Header CTAs and selectors (WorldParliament 'Propose Motion' dialog, PoliticalParty 'Standings' + 'Leave Party' buttons, Political Parties browser 'View Standings', CityLandmarks city picker) moved into the scaffold's `headerActions` slot at `size=\"sm\"` so they share the same FM strip height across the vertical instead of stacking on a separate row." },
+    ],
+  },
+  {
     version: "1.1.364",
     date: "2026-06-09",
     changes: [

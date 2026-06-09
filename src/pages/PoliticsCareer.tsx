@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Award, Building, Flag, Landmark, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const LADDER = [
   { tier: 1, title: "Activist", desc: "Join a party or write endorsement articles" },
@@ -19,14 +19,13 @@ const LADDER = [
 
 export default function PoliticsCareerPage() {
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Trophy className="h-8 w-8 text-primary" />
-          Politics Career
-        </h1>
-        <p className="text-sm text-muted-foreground">Climb the political ladder from activist to world speaker.</p>
-      </div>
+    <FMPageScaffold
+      title="Politics Career"
+      subtitle="Climb the political ladder from activist to world speaker."
+      icon={Trophy}
+      backTo="/hub/world-social"
+    >
+
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Link to="/political-party">
@@ -87,6 +86,6 @@ export default function PoliticsCareerPage() {
           <p>• <strong>Term limits & retirement</strong> with Statesman passive income</p>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

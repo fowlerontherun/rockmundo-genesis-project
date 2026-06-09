@@ -9,6 +9,7 @@ import { GenreTrendsWidget } from "@/components/world/GenreTrendsWidget";
 import { getWorldEconomicOverview } from "@/utils/cityEconomy";
 import { calculateInGameDate } from "@/utils/gameCalendar";
 import { useMemo } from "react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const WorldPulse = () => {
   const { data: recentActivity = [] } = useQuery({
@@ -59,14 +60,12 @@ const WorldPulse = () => {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Globe className="h-8 w-8" />
-          World Pulse
-        </h1>
-        <p className="text-muted-foreground">Real-time global music industry activity</p>
-      </div>
+    <FMPageScaffold
+      title="World Pulse"
+      subtitle="Real-time global music industry activity"
+      icon={Globe}
+      backTo="/hub/world-social"
+    >
 
       <Tabs defaultValue="trending" className="w-full">
         <TabsList>
@@ -241,7 +240,7 @@ const WorldPulse = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

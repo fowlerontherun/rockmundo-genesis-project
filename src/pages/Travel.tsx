@@ -1,7 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { MapPin, Plane, Train, Bus, Ship, Globe, ArrowRight, Calendar } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -207,24 +206,23 @@ const Travel = () => {
 
   if (loading) {
     return (
-      <PageLayout>
+      <FMPageScaffold title={t('travel.title')} icon={Globe} backTo="/hub/world-social" backLabel="Back to World & Social">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="h-48 bg-muted rounded"></div>
         </div>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title={t('travel.title')}
-        subtitle={t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
-        backTo="/hub/world-social"
-        backLabel="Back to World & Social"
-        icon={Globe}
-      />
+    <FMPageScaffold
+      title={t('travel.title')}
+      subtitle={t('travel.destination', 'Explore the world and travel to new cities for gigs, recording, and more.')}
+      icon={Globe}
+      backTo="/hub/world-social"
+      backLabel="Back to World & Social"
+    >
 
       {/* Current Location Card */}
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
@@ -399,7 +397,7 @@ const Travel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
