@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.354",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "Login screen now displays a Beta V1 thank-you message announcing Beta V2 in August with a full world reset, and requires a Beta access code (BETAV2UAG26) in addition to email/password to sign in." },
+    ],
+  },
+  {
     version: "1.1.353",
     date: "2026-06-08",
     changes: [

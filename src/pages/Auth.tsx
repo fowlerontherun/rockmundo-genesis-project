@@ -21,6 +21,8 @@ import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 
 type AuthTab = "login" | "signup" | "forgot";
 
+const BETA_CODE = "BETAV2UAG26";
+
 interface StatusMessage {
   message: string;
   variant?: "info" | "success" | "error";
@@ -63,7 +65,8 @@ const Auth = () => {
 
   const [loginData, setLoginData] = useState({
     email: "",
-    password: ""
+    password: "",
+    betaCode: ""
   });
 
   const [signupData, setSignupData] = useState({
@@ -192,6 +195,11 @@ const Auth = () => {
     setError("");
     setStatus(null);
     setUnverifiedEmail("");
+    if (loginData.betaCode.trim().toUpperCase() !== BETA_CODE) {
+      setError("Invalid Beta code. Please enter the correct Beta access code to sign in.");
+      setLoading(false);
+      return;
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
@@ -439,7 +447,7 @@ const Auth = () => {
             <img src={logo} alt="RockMundo - Live The Dream" className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" />
           </div>
           <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2">
-            BETA
+            BETA V1
           </Badge>
           <Button
             variant="link"
@@ -450,6 +458,16 @@ const Auth = () => {
             What is RockMundo?
           </Button>
         </div>
+
+        <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertDescription className="space-y-1 text-left">
+            <p className="font-semibold">Thank you for playing Beta V1!</p>
+            <p className="text-sm text-muted-foreground">
+              Beta V2 will be available in August with a full world reset. Enter your Beta code below to sign in.
+            </p>
+          </AlertDescription>
+        </Alert>
 
         <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">
           <CardHeader className="pb-4">
@@ -645,6 +663,26 @@ const Auth = () => {
                           />
                         </div>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="login-beta-code" className="font-oswald text-sm">
+                          Beta Access Code
+                        </Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="login-beta-code"
+                            type="text"
+                            placeholder="Enter your Beta code"
+                            autoComplete="off"
+                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary tracking-widest uppercase"
+                            value={loginData.betaCode}
+                            onChange={e => setLoginData({ ...loginData, betaCode: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+
 
                       <Button
                         type="submit"
