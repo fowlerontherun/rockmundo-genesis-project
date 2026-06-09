@@ -3,48 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, DollarSign, Users, Music, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SimpleAdvancedGigSystem = () => {
   return (
-    <StandardPageLayout
+    <FMPageScaffold
       title="Advanced Gig System"
       subtitle="Simplified view of your performance schedule"
       icon={Music}
-      bareContent
+      backTo="/hub/band-live"
+      kpis={[
+        { label: "Total Gigs", value: 0, icon: Calendar },
+        { label: "Earnings", value: "$0", icon: DollarSign },
+        { label: "Attendance", value: 0, icon: Users },
+      ]}
       headerActions={
         <Link to="/gigs">
-          <Button>View Full Gig Manager</Button>
+          <Button size="sm">View Full Gig Manager</Button>
         </Link>
-      }
-      stats={
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Calendar className="h-3 w-3" /> Total Gigs
-            </div>
-            <div className="text-lg font-bold">0</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <DollarSign className="h-3 w-3" /> Earnings
-            </div>
-            <div className="text-lg font-bold">$0</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Users className="h-3 w-3" /> Attendance
-            </div>
-            <div className="text-lg font-bold">0</div>
-          </div>
-        </div>
-      }
-      secondaryActions={
-        <>
-          <Link to="/gigs"><Button variant="outline" size="sm">Browse Venues</Button></Link>
-          <Link to="/setlists"><Button variant="outline" size="sm">Manage Setlists</Button></Link>
-          <Link to="/band"><Button variant="outline" size="sm">Band Manager</Button></Link>
-        </>
       }
     >
       <Tabs defaultValue="upcoming">
@@ -105,8 +81,9 @@ const SimpleAdvancedGigSystem = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </StandardPageLayout>
+    </FMPageScaffold>
   );
 };
 
 export default SimpleAdvancedGigSystem;
+

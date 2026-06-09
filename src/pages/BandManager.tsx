@@ -26,8 +26,7 @@ import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
 import { FameFansOverview } from '@/components/fame/FameFansOverview';
 import { Users, Music, Star, Library } from 'lucide-react';
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
@@ -197,21 +196,22 @@ export default function BandManager() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Manager" icon={Users} backTo="/hub/band-live">
         <div className="text-center">Loading...</div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!selectedBand || userBands.length === 0) {
     return (
-      <div className="container mx-auto p-6 max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Band Manager</h1>
-          <p className="text-muted-foreground">Create a band or become a solo artist to begin</p>
-        </div>
+      <FMPageScaffold
+        title="Band Manager"
+        subtitle="Create a band or become a solo artist to begin"
+        icon={Users}
+        backTo="/hub/band-live"
+      >
         <BandCreationForm onBandCreated={loadUserBands} />
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -228,12 +228,13 @@ export default function BandManager() {
   );
 
   return (
-    <PageLayout>
-      <PageHeader
-        title=""
-        backTo="/hub/band-live"
-        backLabel="Back to Band & Live"
-      />
+    <FMPageScaffold
+      title={selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
+      subtitle={`${selectedBand.genre || ''} • ${selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}`}
+      icon={Music}
+      backTo="/hub/band-live"
+      backLabel="Back to Band & Live"
+    >
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           {/* Band Info with Logo */}
@@ -420,6 +421,6 @@ export default function BandManager() {
           />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

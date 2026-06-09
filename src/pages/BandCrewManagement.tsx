@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import tourManagerImg from "@/assets/crew/tour-manager.jpg";
 import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
@@ -324,28 +325,30 @@ const BandCrewManagement = () => {
 
   if (loadingBand || loadingCrew) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!bandId) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
         <Card className="mx-auto max-w-lg">
           <CardHeader>
             <CardTitle>Join a Band First</CardTitle>
             <CardDescription>You need to be in a band to hire crew members.</CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <FMPageScaffold title={`Crew Management • ${bandName}`} icon={Users} backTo="/hub/band">
+      <div className="space-y-6">
         {/* Header Stats */}
         <Card>
           <CardHeader>
@@ -686,7 +689,7 @@ const BandCrewManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 

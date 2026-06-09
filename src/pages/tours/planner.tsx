@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import TourCostCalculator from "@/components/tours/TourCostCalculator";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Bed, Bus, CheckCircle2, Map } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface StepDefinition {
   id: "route" | "transport" | "accommodation";
@@ -283,13 +284,12 @@ const PlannerPage = () => {
   };
 
   return (
-    <div className="container mx-auto space-y-8 p-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Tour Planner</h1>
-        <p className="text-muted-foreground">
-          Orchestrate routing, transport, and accommodation logistics for your next tour leg.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Tour Planner"
+      subtitle="Orchestrate routing, transport, and accommodation logistics for your next tour leg."
+      icon={Map}
+      backTo="/hub/band-live"
+    >
 
       <Card>
         <CardHeader>
@@ -386,7 +386,7 @@ const PlannerPage = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 

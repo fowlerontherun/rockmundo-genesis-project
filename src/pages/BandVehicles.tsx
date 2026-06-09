@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import vanImg from "@/assets/vehicles/van.jpg";
 import sprinterImg from "@/assets/vehicles/sprinter.jpg";
 import truckImg from "@/assets/vehicles/truck.jpg";
@@ -252,7 +253,7 @@ export default function BandVehicles() {
 
   if (!band) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Band Found</AlertTitle>
@@ -260,18 +261,17 @@ export default function BandVehicles() {
             You need to be in a band to manage vehicles. Create or join a band first.
           </AlertDescription>
         </Alert>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Band Vehicles</h1>
-        <p className="text-muted-foreground">
-          Manage your band's transportation for tours and gigs
-        </p>
-      </header>
+    <FMPageScaffold
+      title="Band Vehicles"
+      subtitle="Manage your band's transportation for tours and gigs"
+      icon={Truck}
+      backTo="/hub/band"
+    >
 
       {/* Capacity Overview */}
       <Card className={hasCapacityIssue ? "border-destructive" : ""}>
@@ -577,6 +577,6 @@ export default function BandVehicles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }

@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
 import { useBandTourTotals } from "@/hooks/useTourStats";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Tour {
   id: string;
@@ -873,17 +874,18 @@ const TourManager = () => {
   );
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Tour Manager</h1>
-          <p className="text-muted-foreground">Plan and manage your band's tours</p>
-        </div>
-        <Button onClick={() => setWizardOpen(true)}>
+    <FMPageScaffold
+      title="Tour Manager"
+      subtitle="Plan and manage your band's tours"
+      icon={Map}
+      backTo="/hub/band-live"
+      headerActions={
+        <Button onClick={() => setWizardOpen(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Create Tour
         </Button>
-      </div>
+      }
+    >
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
@@ -1408,7 +1410,7 @@ const TourManager = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 

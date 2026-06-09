@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Users, Music, Star, TrendingUp, Eye } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Band {
   id: string;
@@ -91,16 +92,12 @@ export default function BandFinder() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Search className="h-8 w-8 text-primary" />
-          {t("bandFinder.title", "Band Finder")}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t("bandFinder.description", "Search and explore bands in the game")}
-        </p>
-      </div>
+    <FMPageScaffold
+      title={t("bandFinder.title", "Band Finder")}
+      subtitle={t("bandFinder.description", "Search and explore bands in the game")}
+      icon={Search}
+      backTo="/hub/band"
+    >
 
       {/* Search */}
       <Card>
@@ -213,6 +210,6 @@ export default function BandFinder() {
           </ScrollArea>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

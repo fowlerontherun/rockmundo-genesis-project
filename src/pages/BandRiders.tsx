@@ -16,6 +16,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from '@/hooks/usePrimaryBand';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TIER_COLORS: Record<string, string> = {
   basic: 'bg-slate-500',
@@ -66,17 +67,17 @@ export default function BandRiders() {
 
   if (bandLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Riders" icon={FileText} backTo="/hub/band">
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!band) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Riders" icon={FileText} backTo="/hub/band">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -89,24 +90,23 @@ export default function BandRiders() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Band Riders</h1>
-          <p className="text-muted-foreground">
-            Create and manage your technical and hospitality requirements for gigs
-          </p>
-        </div>
-        <Button onClick={handleCreateRider}>
+    <FMPageScaffold
+      title="Band Riders"
+      subtitle="Create and manage your technical and hospitality requirements for gigs"
+      icon={FileText}
+      backTo="/hub/band"
+      headerActions={
+        <Button onClick={handleCreateRider} size="sm">
           <Plus className="mr-2 h-4 w-4" />
           Create Rider
         </Button>
-      </div>
+      }
+    >
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -275,6 +275,6 @@ export default function BandRiders() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }

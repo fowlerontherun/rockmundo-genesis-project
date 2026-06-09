@@ -7,6 +7,7 @@ import { useBandChemistry } from "@/hooks/useBandChemistry";
 import { useAdvancedGigs } from "@/hooks/useAdvancedGigs";
 import { Users, TrendingUp, Calendar, AlertTriangle, Music } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const EnhancedBandManager = () => {
   const [user, setUser] = useState<any>(null);
@@ -57,11 +58,12 @@ const EnhancedBandManager = () => {
   const unresolvedConflicts = conflicts.filter((c) => !c.resolved);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Enhanced Band Manager</h1>
-        <p className="text-muted-foreground">Advanced analytics and coordination tools</p>
-      </div>
+    <FMPageScaffold
+      title="Enhanced Band Manager"
+      subtitle="Advanced analytics and coordination tools"
+      icon={Users}
+      backTo="/hub/band-live"
+    >
 
       {!band ? (
         <Card>
@@ -156,7 +158,7 @@ const EnhancedBandManager = () => {
           </Tabs>
         </>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

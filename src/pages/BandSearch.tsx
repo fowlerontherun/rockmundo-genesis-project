@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function BandSearch() {
   const { profileId, userId } = useActiveProfile();
@@ -131,13 +132,12 @@ export default function BandSearch() {
   });
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Band Search</h1>
-          <p className="text-muted-foreground">Discover bands and rate them</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Band Search"
+      subtitle="Discover bands and rate them"
+      icon={Search}
+      backTo="/hub/band"
+    >
 
       {/* Search Input */}
       <div className="relative max-w-md">
@@ -285,6 +285,6 @@ export default function BandSearch() {
           })}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

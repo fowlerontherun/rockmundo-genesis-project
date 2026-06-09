@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Users, TrendingUp, Music } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Band {
   id: string;
@@ -84,11 +85,12 @@ export default function BandBrowser() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Browse Bands</h1>
-        <p className="text-muted-foreground">Discover active bands and their members</p>
-      </div>
+    <FMPageScaffold
+      title="Browse Bands"
+      subtitle="Discover active bands and their members"
+      icon={Users}
+      backTo="/hub/band"
+    >
 
       <Card>
         <CardHeader>
@@ -175,6 +177,6 @@ export default function BandBrowser() {
           ))}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

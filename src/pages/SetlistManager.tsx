@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Layout from "@/components/Layout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,43 +86,34 @@ const SetlistManager = () => {
   }
 
   return (
-    <div>
-      <div className="container mx-auto p-4 max-w-6xl">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Setlist Manager</h1>
-            <p className="text-muted-foreground">
-              Create and manage setlists for {band.name}
-            </p>
-            <Badge variant="outline" className="mt-1">
-              {setlists?.length || 0}/5 Setlists
-            </Badge>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <Button 
-              onClick={() => setShowCreateDialog(true)} 
-              size="lg"
-              disabled={!canCreateSetlist}
-            >
-              {canCreateSetlist ? (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Setlist
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Limit Reached
-                </>
-              )}
-            </Button>
-            {!canCreateSetlist && (
-              <p className="text-sm text-muted-foreground">
-                Delete a setlist to create new one
-              </p>
+    <FMPageScaffold
+      title="Setlist Manager"
+      subtitle={`Create and manage setlists for ${band.name}`}
+      icon={Music}
+      backTo="/hub/band-live"
+      headerActions={
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant="outline">{setlists?.length || 0}/5 Setlists</Badge>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            size="sm"
+            disabled={!canCreateSetlist}
+          >
+            {canCreateSetlist ? (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                New Setlist
+              </>
+            ) : (
+              <>
+                <Lock className="mr-2 h-4 w-4" />
+                Limit Reached
+              </>
             )}
-          </div>
+          </Button>
         </div>
+      }
+    >
 
         {!canCreateSetlist && (
           <Alert className="mb-6">
@@ -257,8 +248,7 @@ const SetlistManager = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 

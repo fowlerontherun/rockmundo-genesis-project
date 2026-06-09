@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdvancedGigs } from "@/hooks/useAdvancedGigs";
 import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function AdvancedGigSystem() {
   const { bandId } = useParams<{ bandId: string }>();
@@ -37,15 +38,15 @@ export default function AdvancedGigSystem() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Advanced Gig System" icon={Music} backTo="/hub/band-live">
         <p className="text-muted-foreground">Loading gig system data...</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!userBandId) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Advanced Gig System" icon={Music} backTo="/hub/band-live">
         <Card>
           <CardHeader>
             <CardTitle>Advanced Gig System</CardTitle>
@@ -54,16 +55,17 @@ export default function AdvancedGigSystem() {
             <p className="text-muted-foreground">Join or create a band to manage gigs and offers.</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Advanced Gig System</h1>
-        <p className="text-muted-foreground">Manage offers, resolve conflicts, and track upcoming performances.</p>
-      </div>
+    <FMPageScaffold
+      title="Advanced Gig System"
+      subtitle="Manage offers, resolve conflicts, and track upcoming performances."
+      icon={Music}
+      backTo="/hub/band-live"
+    >
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -271,6 +273,6 @@ export default function AdvancedGigSystem() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }

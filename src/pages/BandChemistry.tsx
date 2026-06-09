@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBandChemistry } from "@/hooks/useBandChemistry";
 import { Heart, TrendingUp, TrendingDown, Users, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function BandChemistry() {
   const { bandId } = useParams<{ bandId: string }>();
@@ -37,15 +38,15 @@ export default function BandChemistry() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Chemistry" icon={Heart} backTo="/hub/band">
         <p className="text-muted-foreground">Loading band chemistry data...</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!band) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Chemistry" icon={Heart} backTo="/hub/band">
         <Card>
           <CardHeader>
             <CardTitle>Band Chemistry</CardTitle>
@@ -54,7 +55,7 @@ export default function BandChemistry() {
             <p className="text-muted-foreground">Join or create a band to view chemistry metrics.</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -63,11 +64,12 @@ export default function BandChemistry() {
   const daysTogether = band.days_together || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Band Chemistry</h1>
-        <p className="text-muted-foreground">Monitor group dynamics, member contributions, and chemistry trends.</p>
-      </div>
+    <FMPageScaffold
+      title="Band Chemistry"
+      subtitle="Monitor group dynamics, member contributions, and chemistry trends."
+      icon={Heart}
+      backTo="/hub/band"
+    >
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -223,6 +225,6 @@ export default function BandChemistry() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }

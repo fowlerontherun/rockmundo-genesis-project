@@ -11,6 +11,7 @@ import { BandSongsSection } from "@/components/band/BandSongsSection";
 import { BandApplicationDialog } from "@/components/band/BandApplicationDialog";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function BandProfile() {
   const { t } = useTranslation();
@@ -83,32 +84,32 @@ export default function BandProfile() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl space-y-6 p-6">
+      <FMPageScaffold title="Band Profile" icon={Users} backTo="/hub/band">
         <Card>
           <CardContent className="p-6">
             <p className="text-center text-muted-foreground">Loading band...</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!band) {
     return (
-      <div className="container mx-auto max-w-4xl space-y-6 p-6">
+      <FMPageScaffold title="Band Profile" icon={Users} backTo="/hub/band">
         <Card>
           <CardContent className="p-6">
             <p className="text-center text-muted-foreground">Band not found.</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   const canApply = band.is_recruiting && !isMember && !existingApplication && profileId;
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-6">
+    <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
@@ -230,6 +231,6 @@ export default function BandProfile() {
 
       {/* Songs Section */}
       <BandSongsSection bandId={band.id} bandName={band.name} />
-    </div>
+    </FMPageScaffold>
   );
 }
