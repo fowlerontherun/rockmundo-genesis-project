@@ -21,6 +21,8 @@ import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 
 type AuthTab = "login" | "signup" | "forgot";
 
+const BETA_CODE = "BETAV2UAG26";
+
 interface StatusMessage {
   message: string;
   variant?: "info" | "success" | "error";
