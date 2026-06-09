@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.358",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "New FM-style filter primitive `FMFilterBar` (`src/components/fm/FMFilterBar.tsx`): a 32px fm-panel-2 strip with optional search input (icon + clearable), pill-style single-value filter (uppercase, count badges, cyan-accent active state), a left label slot, and a right slot for extra controls. Reusable across any table view." },
+      { type: 'feature', description: "Finances → Transaction History now ships with three live controls: free-text search across description / source / band, type pills (All / Income / Expense with counts), and a Source dropdown auto-built from the transaction set. Header subtitle reflects filtered totals and the row count, and Load More respects the active filter set." },
+      { type: 'feature', description: "Finances → Band Finances table gets search by band name and P&L pills (All / Profitable / Loss with counts). Re-skinned amounts to FM tone classes (`text-fm-good` / `text-fm-bad`) instead of bespoke emerald/destructive." },
+      { type: 'feature', description: "Dashboard → Activity tab Recent Activity now pulls up to 50 entries and exposes a filter bar with free-text search and three pills (All / Paid / Other) so players can pluck specific events out of the feed. Items re-styled as compact fm-panel rows." },
+    ],
+  },
+  {
     version: "1.1.357",
     date: "2026-06-09",
     changes: [
