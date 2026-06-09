@@ -75,16 +75,13 @@ const SongRankings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Trophy className="h-8 w-8 text-primary" />
-            Song Rankings
-          </h1>
-          <p className="text-muted-foreground">Discover top songs and cover them for your band</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Song Rankings"
+      subtitle="Discover top songs and cover them for your band"
+      icon={Trophy}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+    >
 
       <Tabs value={rankingType} onValueChange={(v) => setRankingType(v as RankingType)}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
