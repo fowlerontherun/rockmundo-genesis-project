@@ -21,6 +21,7 @@ import { format, differenceInMinutes, differenceInDays, isBefore, addMinutes } f
 import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -388,7 +389,7 @@ export default function PerformGig() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Perform Gig" icon={Music} backTo="/gig-booking" backLabel="Back to Gig Booking">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
@@ -397,13 +398,13 @@ export default function PerformGig() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!gig) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Perform Gig" icon={Music} backTo="/gig-booking" backLabel="Back to Gig Booking">
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Gig not found</p>
@@ -412,7 +413,7 @@ export default function PerformGig() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -421,15 +422,13 @@ export default function PerformGig() {
   const capacity = gig.venues?.capacity || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/gig-booking')}
-        className="gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Gig Booking
-      </Button>
+    <FMPageScaffold
+      title={venueName}
+      subtitle={venueLocation}
+      icon={Music}
+      backTo="/gig-booking"
+      backLabel="Back to Gig Booking"
+    >
 
       {/* Gig Info Header */}
       <Card>
