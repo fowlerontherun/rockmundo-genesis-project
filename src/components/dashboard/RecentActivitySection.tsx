@@ -68,7 +68,7 @@ export function RecentActivitySection({ userId: _userId }: RecentActivitySection
 
   return (
     <div className="space-y-2">
-      <FMFilterBar
+      <FMFilterBar<EarningsFilter>
         label="Activity"
         search={search}
         onSearchChange={setSearch}
