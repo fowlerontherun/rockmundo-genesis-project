@@ -12,6 +12,8 @@ import { PromoTourCard } from "@/components/releases/PromoTourCard";
 import { usePromoTourCompletion } from "@/hooks/usePromoTourCompletion";
 import { HypeMeter } from "@/components/releases/HypeMeter";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Disc3 } from "lucide-react";
 
 export default function ReleaseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -95,21 +97,13 @@ export default function ReleaseDetail() {
   const radioPlays = release.radio?.reduce((sum: number, r: any) => sum + (r.play_count || 0), 0) || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Button variant="ghost" onClick={() => navigate("/release-manager")}>
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Release Manager
-      </Button>
-
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-4xl font-bold">{release.title}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge>{release.release_type}</Badge>
-            <Badge variant="outline">{release.release_status}</Badge>
-          </div>
-        </div>
-      </div>
+    <FMPageScaffold
+      title={release.title}
+      subtitle={`${release.release_type} · ${release.release_status}`}
+      icon={Disc3}
+      backTo="/release-manager"
+      backLabel="Back to Release Manager"
+    >
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
