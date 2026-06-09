@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, History } from "lucide-react";
+import { FMFilterBar, type FilterPill } from "@/components/fm/FMFilterBar";
 import type { FinancialTransaction } from "@/hooks/useFinances";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -27,35 +27,73 @@ const SOURCE_LABELS: Record<string, string> = {
   travel: "Travel",
 };
 
+const labelFor = (source: string) =>
+  SOURCE_LABELS[source] || source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
 interface TransactionsListProps {
   transactions: FinancialTransaction[];
 }
 
+type TypeFilter = "all" | "income" | "expense";
+
 export const TransactionsList = ({ transactions }: TransactionsListProps) => {
-  const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(25);
 
-  const filteredTransactions = transactions
-    .filter((t) => filter === "all" || t.type === filter)
-    .slice(0, limit);
+  const counts = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      if (t.type === "income") income++;
+      else if (t.type === "expense") expense++;
+    }
+    return { all: transactions.length, income, expense };
+  }, [transactions]);
 
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const sources = useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach((t) => set.add(t.source));
+    return Array.from(set).sort();
+  }, [transactions]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return transactions.filter((t) => {
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
+      if (sourceFilter !== "all" && t.source !== sourceFilter) return false;
+      if (!q) return true;
+      const hay = `${t.description ?? ""} ${t.bandName ?? ""} ${labelFor(t.source)}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [transactions, typeFilter, sourceFilter, search]);
+
+  const totalIncome = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = filtered.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+
+  const visible = filtered.slice(0, limit);
+
+  const pills: FilterPill<TypeFilter>[] = [
+    { value: "all", label: "All", count: counts.all },
+    { value: "income", label: "Income", count: counts.income },
+    { value: "expense", label: "Expense", count: counts.expense },
+  ];
 
   if (transactions.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
+            <History className="h-4 w-4" />
             Transaction History
           </CardTitle>
           <CardDescription>Your financial activity</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[200px] items-center justify-center">
           <div className="text-center">
-            <History className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">
+            <History className="mx-auto h-8 w-8 text-fm-fg-muted/50" />
+            <p className="mt-2 text-xs text-fm-fg-muted">
               No transactions yet. Start earning to see your history.
             </p>
           </div>
@@ -67,29 +105,51 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Transaction History
-            </CardTitle>
-            <CardDescription>
-              {currencyFormatter.format(totalIncome)} earned • {currencyFormatter.format(totalExpenses)} spent
-            </CardDescription>
-          </div>
-          <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="income">Income</SelectItem>
-              <SelectItem value="expense">Expenses</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <History className="h-4 w-4" />
+          Transaction History
+        </CardTitle>
+        <CardDescription>
+          {currencyFormatter.format(totalIncome)} earned • {currencyFormatter.format(totalExpenses)} spent
+          {filtered.length !== transactions.length && (
+            <> • {filtered.length} of {transactions.length} shown</>
+          )}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
+        <FMFilterBar<TypeFilter>
+          label="Filter"
+          search={search}
+          onSearchChange={(v) => {
+            setSearch(v);
+            setLimit(25);
+          }}
+          searchPlaceholder="Search description, source, band…"
+          pills={pills}
+          activePill={typeFilter}
+          onPillChange={(v) => {
+            setTypeFilter(v);
+            setLimit(25);
+          }}
+          right={
+            <select
+              value={sourceFilter}
+              onChange={(e) => {
+                setSourceFilter(e.target.value);
+                setLimit(25);
+              }}
+              className="h-6 px-1.5 text-xs bg-fm-panel border border-fm-border rounded-sm text-fm-fg focus:outline-none focus:border-fm-accent"
+            >
+              <option value="all">All sources</option>
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  {labelFor(s)}
+                </option>
+              ))}
+            </select>
+          }
+        />
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -101,41 +161,52 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="text-muted-foreground">
-                  {format(new Date(t.date), "MMM d, yyyy")}
-                </TableCell>
-                <TableCell>
-                  {t.type === "income" ? (
-                    <Badge variant="outline" className="text-emerald-500 border-emerald-500/30">
-                      <ArrowUpRight className="mr-1 h-3 w-3" />
-                      Income
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-destructive border-destructive/30">
-                      <ArrowDownRight className="mr-1 h-3 w-3" />
-                      Expense
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {SOURCE_LABELS[t.source] || t.source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                </TableCell>
-                <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                  {t.description || t.bandName || "—"}
-                </TableCell>
-                <TableCell className={`text-right font-semibold ${t.type === "income" ? "text-emerald-500" : "text-destructive"}`}>
-                  {t.type === "income" ? "+" : "-"}{currencyFormatter.format(t.amount)}
+            {visible.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-fm-fg-muted py-6">
+                  No transactions match your filters.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              visible.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="text-fm-fg-muted">
+                    {format(new Date(t.date), "MMM d, yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    {t.type === "income" ? (
+                      <Badge variant="outline" className="text-fm-good border-fm-good/30">
+                        <ArrowUpRight className="mr-1 h-3 w-3" />
+                        Income
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-fm-bad border-fm-bad/30">
+                        <ArrowDownRight className="mr-1 h-3 w-3" />
+                        Expense
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{labelFor(t.source)}</TableCell>
+                  <TableCell className="text-fm-fg-muted max-w-[200px] truncate">
+                    {t.description || t.bandName || "—"}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-semibold ${
+                      t.type === "income" ? "text-fm-good" : "text-fm-bad"
+                    }`}
+                  >
+                    {t.type === "income" ? "+" : "-"}
+                    {currencyFormatter.format(t.amount)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
-        {transactions.length > limit && (
-          <div className="mt-4 text-center">
+        {filtered.length > limit && (
+          <div className="mt-2 text-center">
             <Button variant="outline" size="sm" onClick={() => setLimit(limit + 25)}>
-              Load More
+              Load More ({filtered.length - limit} remaining)
             </Button>
           </div>
         )}
