@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -209,30 +208,29 @@ export default function BandFameMap() {
 
   if (bandsLoading) {
     return (
-      <PageLayout>
+      <FMPageScaffold title="Fame Map" icon={Globe} backTo="/hub/band" backLabel="Band Hub">
         <Skeleton className="h-12 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-96 w-full" />
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   if (!bands.length || !bandId) {
     return (
-      <PageLayout>
-        <PageHeader
-          title="Fame Map"
-          subtitle="Global popularity & demographic breakdown"
-          icon={Globe}
-          backTo="/hub/band"
-          backLabel="Band Hub"
-        />
+      <FMPageScaffold
+        title="Fame Map"
+        subtitle="Global popularity & demographic breakdown"
+        icon={Globe}
+        backTo="/hub/band"
+        backLabel="Band Hub"
+      >
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             You need to be in an active band to view the Fame Map.
           </CardContent>
         </Card>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
@@ -257,30 +255,29 @@ export default function BandFameMap() {
   const maxTopFans = top10Fans[0]?.total_fans || 1;
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Fame Map"
-        subtitle={band?.name ? `${band.name} • Global popularity & demographics` : "Global popularity & demographics"}
-        icon={Globe}
-        backTo="/hub/band"
-        backLabel="Band Hub"
-        actions={
-          bands.length > 1 ? (
-            <Select value={bandId} onValueChange={setSelectedBandId}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {bands.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null
-        }
-      />
+    <FMPageScaffold
+      title="Fame Map"
+      subtitle={band?.name ? `${band.name} • Global popularity & demographics` : "Global popularity & demographics"}
+      icon={Globe}
+      backTo="/hub/band"
+      backLabel="Band Hub"
+      headerActions={
+        bands.length > 1 ? (
+          <Select value={bandId} onValueChange={setSelectedBandId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {bands.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null
+      }
+    >
 
       {/* Summary */}
       <Card className="border-primary/20">
@@ -684,7 +681,7 @@ export default function BandFameMap() {
           </Card>
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
 
