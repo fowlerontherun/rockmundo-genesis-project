@@ -225,6 +225,6 @@ export default function BandChemistry() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
