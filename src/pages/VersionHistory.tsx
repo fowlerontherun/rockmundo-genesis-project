@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.357",
+    date: "2026-06-09",
+    changes: [
+      { type: 'improvement', description: "Global FM24 re-skin of core UI primitives so every page inherits the Football Manager look without bespoke conversion. `Card` is now a flat fm-panel surface with a tinted `CardHeader` strip, uppercase 11px tracked-out `CardTitle`, square corners, and dense 12px padding. `CardFooter` mirrors the header strip." },
+      { type: 'improvement', description: "Tabs primitive rebuilt FM-style: 36px tall, no rounded pills, uppercase tracked labels, muted-foreground default state, active state shown as cyan `fm-accent` text plus a 2px underline anchored on the bottom border of the strip. Affects every page that uses shadcn `<Tabs>` (Dashboard, Finances, Band manager, Songs, Education, etc.)." },
+      { type: 'improvement', description: "Table primitive rebuilt as a compact dense FM data table: 28px row height, sticky `fm-panel-2` header with 10px uppercase tracked labels, zebra rows (`odd:fm-panel even:fm-panel-2/40`), 1px `fm-border` separators, and an `fm-accent` selection/hover wash. The wrapper now draws the FM panel border so tables read as standalone widgets." },
+      { type: 'improvement', description: "`PageHeader` collapsed into a single 40px FM strip: back button, accent icon, uppercase title and small subtitle on one row with right-aligned actions, framed as an `fm-panel-2` bar. Page chrome no longer competes with the FM shell's status / tab / sub-tab strips." },
+    ],
+  },
+  {
     version: "1.1.356",
     date: "2026-06-09",
     changes: [
