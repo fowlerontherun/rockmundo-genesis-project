@@ -385,8 +385,7 @@ const PlannerPage = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
