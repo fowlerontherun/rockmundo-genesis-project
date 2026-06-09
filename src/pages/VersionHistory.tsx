@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.359",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "Gear → Shop tab rebuilt with FM24 filter bar: search across name/brand/description, rarity pills (All / Common / Uncommon / Rare / Epic / Legendary), and right-aligned compact dropdowns for Category, Brand and Sort, plus a one-click Reset that appears once any filter is active. Replaces the bulky 5-column filter card with a single 32px strip flush against the catalog list." },
+      { type: 'fix', description: "Relationships → Friends list: fixed `validateDOMNesting` warning where action buttons were rendered inside an outer `<button>` row. The friend row is now a keyboard-accessible `<div role=\"button\">` and the inline accept / decline / remove buttons sit in a click-stopped action group, eliminating the nested-interactive-element React warning that was spamming the console on Social and Relationships pages." },
+    ],
+  },
+  {
     version: "1.1.358",
     date: "2026-06-09",
     changes: [
