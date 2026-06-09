@@ -75,8 +75,7 @@ import {
   Zap,
 } from "lucide-react";
 import logger from "@/lib/logger";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Song {
   id: string;
@@ -1350,25 +1349,24 @@ const Songwriting = () => {
   }
 
    return (
-    <PageLayout>
-        <PageHeader
-          title={t('songwriting.title')}
-          subtitle={t('songwriting.subtitle')}
-          icon={Music}
-          backTo="/hub/music"
-          backLabel="Back to Music Hub"
-          actions={
-            <Button
-              onClick={() => checkAutoCompletions(true)}
-              variant="outline"
-              size="sm"
-              disabled={isRefreshing}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {isRefreshing ? t('common.loading') : t('songwriting.refreshSessions')}
-            </Button>
-          }
-        />
+    <FMPageScaffold
+      title={t('songwriting.title')}
+      subtitle={t('songwriting.subtitle')}
+      icon={Music}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      headerActions={
+        <Button
+          onClick={() => checkAutoCompletions(true)}
+          variant="outline"
+          size="sm"
+          disabled={isRefreshing}
+        >
+          <CheckCircle2 className="mr-2 h-4 w-4" />
+          {isRefreshing ? t('common.loading') : t('songwriting.refreshSessions')}
+        </Button>
+      }
+    >
         
         {/* Session Info Banner */}
         <Card className="bg-primary/5 border-primary/20">
