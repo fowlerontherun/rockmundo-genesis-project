@@ -229,7 +229,7 @@ const StreamingPlatforms = () => {
         onOpenChange={setReleaseDialogOpen}
         userId={userId}
       />
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
