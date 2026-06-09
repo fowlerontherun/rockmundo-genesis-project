@@ -664,6 +664,26 @@ const Auth = () => {
                         </div>
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="login-beta-code" className="font-oswald text-sm">
+                          Beta Access Code
+                        </Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="login-beta-code"
+                            type="text"
+                            placeholder="Enter your Beta code"
+                            autoComplete="off"
+                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary tracking-widest uppercase"
+                            value={loginData.betaCode}
+                            onChange={e => setLoginData({ ...loginData, betaCode: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+
+
                       <Button
                         type="submit"
                         className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
