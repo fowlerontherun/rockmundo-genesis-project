@@ -331,23 +331,24 @@ const BandCrewManagement = () => {
         </div>
       </FMPageScaffold>
     );
+  }
 
   if (!bandId) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
         <Card className="mx-auto max-w-lg">
           <CardHeader>
             <CardTitle>Join a Band First</CardTitle>
             <CardDescription>You need to be in a band to hire crew members.</CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <FMPageScaffold title={`Crew Management • ${bandName}`} icon={Users} backTo="/hub/band">
+      <div className="space-y-6">
         {/* Header Stats */}
         <Card>
           <CardHeader>
