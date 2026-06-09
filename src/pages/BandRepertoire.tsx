@@ -12,6 +12,7 @@ import { Music, Radio, Disc, Users, TrendingUp, Search, ArrowLeft, PlayCircle } 
 import { useNavigate } from "react-router-dom";
 import { RepertoireSongCard } from "@/components/band/RepertoireSongCard";
 import { BandRepertoireHeader } from "@/components/band/BandRepertoireHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface RepertoireSong {
   id: string;
@@ -185,7 +186,7 @@ const BandRepertoire = () => {
 
   if (!bandId) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <FMPageScaffold title="Band Repertoire" icon={Music} backTo="/hub/band">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
@@ -198,22 +199,17 @@ const BandRepertoire = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/band")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{bandName} Repertoire</h1>
-          <p className="text-muted-foreground">All songs, recordings, and performance data</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title={`${bandName} Repertoire`}
+      subtitle="All songs, recordings, and performance data"
+      icon={Music}
+      backTo="/hub/band"
+    >
 
       {/* Stats Header */}
       <BandRepertoireHeader
