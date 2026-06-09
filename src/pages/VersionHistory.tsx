@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.356",
+    date: "2026-06-09",
+    changes: [
+      { type: 'fix', description: "Navigation broken-link audit. The FM module nav previously referenced 18 paths that don't exist as routes (`/perform-gig`, `/band-browser`, `/band-chemistry`, `/equipment-store`, `/fan-management`, `/festival-browser`, `/finance/portfolio`, `/logistics-company`, `/merch-factory`, `/music-studio`, `/notifications`, `/rehearsal`, `/security-firm`, `/setlist-manager`, `/social-media`, `/venue-management`, `/advanced-gig`, `/city`). Every link now resolves to a real `Route` defined in `App.tsx` (e.g. `/chemistry`, `/rehearsals`, `/setlists`, `/venues`, `/gear`, `/recording-studio`, `/bands/browse`, `/world-map`, `/social`)." },
+      { type: 'improvement', description: "Sidebar expanded with the full module surface area: Band module now lists Repertoire, Riders, Vehicles, Crew, Band Finder, Rankings, and Fame Map. Live module lists Stage Setup and Stage Equipment. Career module adds the Booking endpoints (Education / Work). Admin module adds World Reset, Debug Panel, and Dashboard." },
+      { type: 'improvement', description: "Desktop space optimization. `PageLayout` no longer constrains content to `max-w-6xl`; pages now use the full FM-shell content width with tight 8px padding. `StandardPageLayout` panels switched to flat FM panel styling (`bg-fm-panel`, `border-fm-border`, square corners) so per-page content sits flush with the shell chrome. FMShell main content padding tightened from 16px to 12px." },
+    ],
+  },
+  {
     version: "1.1.355",
     date: "2026-06-09",
     changes: [

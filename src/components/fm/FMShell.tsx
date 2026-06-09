@@ -14,7 +14,7 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
       <div className="flex-1 flex min-h-0">
         <FMSidebar />
         <main className="flex-1 overflow-auto bg-fm-bg">
-          <div className="p-4">{children}</div>
+          <div className="px-3 py-3">{children}</div>
         </main>
       </div>
       <BottomActionBar />

@@ -2,19 +2,18 @@ import { cn } from "@/lib/utils";
 
 interface PageLayoutProps {
   children: React.ReactNode;
+  /** Retained for API compat; ignored — every page is full-width on desktop. */
   wide?: boolean;
   className?: string;
 }
 
-export const PageLayout = ({ children, wide = false, className }: PageLayoutProps) => {
+/**
+ * Desktop-only page wrapper. Uses the full FM-shell content width with light
+ * horizontal padding.
+ */
+export const PageLayout = ({ children, className }: PageLayoutProps) => {
   return (
-    <div
-      className={cn(
-        "container mx-auto px-4 py-6 space-y-6",
-        !wide && "max-w-6xl",
-        className
-      )}
-    >
+    <div className={cn("w-full px-2 py-3 space-y-4", className)}>
       {children}
     </div>
   );

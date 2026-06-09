@@ -76,19 +76,19 @@ export const StandardPageLayout = ({
 
       {/* 2. Stats bar */}
       {stats && (
-        <section aria-label="Key stats" className="rounded-lg border bg-card/50 p-3 sm:p-4">
+        <section aria-label="Key stats" className="rounded-sm border border-fm-border bg-fm-panel-2 p-3">
           {stats}
         </section>
       )}
 
       {/* 3. Primary content */}
       {bareContent ? (
-        <section aria-label="Main content" className={cn("space-y-6", primaryClassName)}>
+        <section aria-label="Main content" className={cn("space-y-4", primaryClassName)}>
           {children}
         </section>
       ) : (
-        <Card className={primaryClassName}>
-          <CardContent className="p-4 sm:p-6 space-y-4">{children}</CardContent>
+        <Card className={cn("bg-fm-panel border-fm-border rounded-sm", primaryClassName)}>
+          <CardContent className="p-4 space-y-4">{children}</CardContent>
         </Card>
       )}
 
