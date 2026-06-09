@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Music2, TrendingUp, DollarSign, Settings, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SimpleBandManager = () => {
   const { profileId } = useActiveProfile();
@@ -29,15 +30,15 @@ const SimpleBandManager = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Manager" icon={Users} backTo="/hub/band-live">
         <p className="text-muted-foreground">Loading band data...</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!band) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Band Manager" icon={Users} backTo="/hub/band-live">
         <Card>
           <CardHeader>
             <CardTitle>No Band Found</CardTitle>
@@ -52,27 +53,25 @@ const SimpleBandManager = () => {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Users className="h-8 w-8" />
-            {band.name}
-          </h1>
-          <p className="text-muted-foreground">{band.genre} • {members.length} members</p>
-        </div>
+    <FMPageScaffold
+      title={band.name}
+      subtitle={`${band.genre} • ${members.length} members`}
+      icon={Users}
+      backTo="/hub/band-live"
+      headerActions={
         <Link to="/bands">
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <Settings className="h-4 w-4 mr-2" />
             Advanced Settings
           </Button>
         </Link>
-      </div>
+      }
+    >
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
