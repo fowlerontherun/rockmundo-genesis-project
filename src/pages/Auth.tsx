@@ -195,6 +195,11 @@ const Auth = () => {
     setError("");
     setStatus(null);
     setUnverifiedEmail("");
+    if (loginData.betaCode.trim().toUpperCase() !== BETA_CODE) {
+      setError("Invalid Beta code. Please enter the correct Beta access code to sign in.");
+      setLoading(false);
+      return;
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
