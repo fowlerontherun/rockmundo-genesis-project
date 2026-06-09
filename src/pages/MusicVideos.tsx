@@ -670,7 +670,8 @@ const MusicVideos = () => {
           </DialogContent>
         </Dialog>
         </div>
-      </div>
+      }
+    >
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -1146,7 +1147,7 @@ const MusicVideos = () => {
           }
         }}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 
