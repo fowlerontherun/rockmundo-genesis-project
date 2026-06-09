@@ -275,6 +275,6 @@ export default function BandRiders() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }
