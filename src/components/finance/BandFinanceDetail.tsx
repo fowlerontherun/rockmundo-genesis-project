@@ -93,7 +93,7 @@ export const BandFinanceDetail = ({ bands, transactions }: BandFinanceDetailProp
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <FMFilterBar
+        <FMFilterBar<PnlFilter>
           label="Bands"
           search={search}
           onSearchChange={setSearch}

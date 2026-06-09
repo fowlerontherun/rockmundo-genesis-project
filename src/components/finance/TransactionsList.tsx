@@ -117,7 +117,7 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <FMFilterBar
+        <FMFilterBar<TypeFilter>
           label="Filter"
           search={search}
           onSearchChange={(v) => {
