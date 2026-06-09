@@ -12,8 +12,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,20 +98,19 @@ export default function RecordingStudio() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title={t('recording.title')}
-        subtitle={t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
-        icon={Music}
-        backTo="/hub/music"
-        backLabel="Back to Music Hub"
-        actions={
-          <Button onClick={() => setWizardOpen(true)} size="default" className="w-full sm:w-auto flex-shrink-0">
-            <Plus className="h-5 w-5 mr-2" />
-            {t('recording.startSession', 'New Recording')}
-          </Button>
-        }
-      />
+    <FMPageScaffold
+      title={t('recording.title')}
+      subtitle={t('recording.recordingProgress', 'Record your songs with professional producers and studios')}
+      icon={Music}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      headerActions={
+        <Button onClick={() => setWizardOpen(true)} size="default" className="w-full sm:w-auto flex-shrink-0">
+          <Plus className="h-5 w-5 mr-2" />
+          {t('recording.startSession', 'New Recording')}
+        </Button>
+      }
+    >
 
       {!currentCityId && (
         <Card className="bg-yellow-500/10 border-yellow-500/20">
