@@ -29,8 +29,6 @@ const Layout = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
   const { profileId } = useActiveProfile();
-  const { navStyle } = useNavStyle();
-  const isHorizontal = navStyle === "horizontal";
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
