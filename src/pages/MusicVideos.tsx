@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VipVideoCreationDialog } from "@/components/music-video/VipVideoCreationDialog";
 import { MusicVideoViewerDialog } from "@/components/music-video/MusicVideoViewerDialog";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface MusicVideo {
   id: string;
@@ -534,12 +535,13 @@ const MusicVideos = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Music Videos</h1>
-          <p className="text-muted-foreground">Create, release, and track your music video success</p>
-        </div>
+    <FMPageScaffold
+      title="Music Videos"
+      subtitle="Create, release, and track your music video success"
+      icon={Video}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      headerActions={
         <div className="flex items-center gap-2">
           {/* VIP AI Video Generator */}
           <VipVideoCreationDialog
