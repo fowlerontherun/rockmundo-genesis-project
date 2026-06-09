@@ -11,7 +11,7 @@ export const BottomActionBar = () => {
     <footer className="h-12 flex items-center gap-2 px-3 bg-fm-panel border-t border-fm-border">
       <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/version-history")}>
         <History className="h-3.5 w-3.5" />
-        <span className="text-xs">v1.1.363</span>
+        <span className="text-xs">v1.1.364</span>
       </Button>
 
       <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/schedule")}>
