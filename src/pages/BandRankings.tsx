@@ -307,6 +307,6 @@ export default function BandRankings() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

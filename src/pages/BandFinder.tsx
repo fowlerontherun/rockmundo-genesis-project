@@ -210,6 +210,6 @@ export default function BandFinder() {
           </ScrollArea>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

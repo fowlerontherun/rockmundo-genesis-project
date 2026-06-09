@@ -177,6 +177,6 @@ export default function BandBrowser() {
           ))}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

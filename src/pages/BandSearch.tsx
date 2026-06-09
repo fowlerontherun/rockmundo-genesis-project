@@ -285,6 +285,6 @@ export default function BandSearch() {
           })}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
