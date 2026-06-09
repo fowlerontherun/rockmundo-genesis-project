@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.360",
+    date: "2026-06-09",
+    changes: [
+      { type: 'fix', description: "React nested-interactive audit across the whole app. Ran a JSX-aware scanner over every `.tsx` file looking for `<button>`/`<Button>` opens that sat inside another button (the classic `validateDOMNesting: <button> cannot appear as a descendant of <button>` warning) and for `.map(...)` returning JSX without a `key` prop. Sweep found one real remaining offender: `FriendSearchDialog` rendered each search result as an outer `<button>` row with a 'Send request' `<Button>` nested inside it." },
+      { type: 'fix', description: "`FriendSearchDialog` row converted to a keyboard-accessible `<div role=\"button\" tabIndex={0}>` with Enter/Space handlers and a focus ring. The inline 'Send request' Button now calls `e.stopPropagation()` so it doesn't double-fire the row's select handler. Resolves the last nested-button DOM warning surfaced from Social → Find Players." },
+      { type: 'improvement', description: "No missing-key violations found. All other nested-button matches reported by naive grep (e.g. avatar-designer color swatches, merch designer palette buttons) were verified as self-closing `<button .../>` and are correct." },
+    ],
+  },
+  {
     version: "1.1.359",
     date: "2026-06-09",
     changes: [
