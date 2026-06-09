@@ -85,27 +85,21 @@ const Layout = () => {
   }
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      {isHorizontal ? <HorizontalNavigation /> : <Navigation />}
-      <main className={`flex-1 ${isHorizontal ? 'pt-24 lg:pt-24' : 'pt-12 lg:pt-16'} pb-20 overflow-x-hidden max-w-full`}>
-        <div className="p-3 md:p-4 max-w-full overflow-x-hidden">
-          {profileError && (
-            <Alert variant="destructive" className="mb-4 max-w-2xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Profile error</AlertTitle>
-              <AlertDescription>{profileError}</AlertDescription>
-            </Alert>
-          )}
-          <MaintenanceBanner />
-          <CharacterGate>
-            <Breadcrumbs />
-            <Outlet />
-          </CharacterGate>
-          <TutorialTooltip />
-        </div>
-      </main>
-      
-      {/* FloatingAvatarWidget removed — notifications now live in the top-bar bell */}
+    <FMShell>
+      {profileError && (
+        <Alert variant="destructive" className="mb-4 max-w-2xl">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Profile error</AlertTitle>
+          <AlertDescription>{profileError}</AlertDescription>
+        </Alert>
+      )}
+      <MaintenanceBanner />
+      <CharacterGate>
+        <Breadcrumbs />
+        <Outlet />
+      </CharacterGate>
+      <TutorialTooltip />
+
       <EventNotificationModal />
       <InterviewModal />
       {pendingReport && (
@@ -118,7 +112,7 @@ const Layout = () => {
           durationHours={pendingReport.durationHours}
         />
       )}
-    </div>
+    </FMShell>
   );
 };
 
