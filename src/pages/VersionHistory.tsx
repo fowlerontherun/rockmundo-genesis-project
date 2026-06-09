@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.362",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 3 (Module hubs). Rebuilt the shared `CategoryHub` component on the new FM primitives, which migrates all 14 hub pages in a single shot: Character, Music, Band, Live, BandLive, Career, CareerBusiness, World, WorldSocial, Social, Commerce, Media, Events, PremiumStore. Each hub now renders inside `FMPageScaffold` with a `PageHeader` strip, and tile groups are wrapped in `FMSection` panels (collapsible titled headers with uppercase tracked labels)." },
+      { type: 'improvement', description: "Hub tiles re-skinned FM-style: 56px square thumbnail (auto-generated image or accent icon fallback), uppercase 12px label, optional 11px muted description, chevron affordance, hover state flips the border to `fm-accent`. Dense 4-column responsive grid (1/2/3/4 across mobile→xl) replaces the previous 4-column oversized image cards. Each tile is now half the vertical footprint, so all categories on a hub fit on one screen at desktop." },
+      { type: 'improvement', description: "Hubs no longer route through `StandardPageLayout`; they now use `FMPageScaffold` directly so the FM shell chrome (TopStatusBar + ModuleTabs + SubTabs + sidebar + BottomActionBar + chat dock) frames hub content flush with the rest of the app." },
+    ],
+  },
+  {
     version: "1.1.361",
     date: "2026-06-09",
     changes: [
