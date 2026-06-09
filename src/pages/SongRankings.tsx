@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Trophy, BarChart3, Headphones, Star, Music, Search, Copy } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SongRankings = () => {
   const { profileId } = useActiveProfile();
@@ -206,7 +207,7 @@ const SongRankings = () => {
           onOpenChange={setCoverDialogOpen}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
