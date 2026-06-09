@@ -164,12 +164,19 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
   const profile = friendship.otherProfile;
 
   return (
-    <button
-      type="button"
-      className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition hover:border-primary ${
+    <div
+      role="button"
+      tabIndex={0}
+      className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition hover:border-primary cursor-pointer ${
         selected ? "border-primary bg-primary/5" : "border-muted"
       }`}
       onClick={() => onSelect(friendship)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(friendship);
+        }
+      }}
     >
       <div className="flex flex-1 items-center gap-3">
         <Avatar className="h-10 w-10">
@@ -183,13 +190,13 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
         <Badge variant="outline" className="text-xs capitalize">
           {friendship.friendship.status}
         </Badge>
         {actions}
       </div>
-    </button>
+    </div>
   );
 }
 
