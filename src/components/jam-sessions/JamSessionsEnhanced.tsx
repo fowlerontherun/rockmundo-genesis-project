@@ -349,7 +349,7 @@ export const JamSessionsEnhanced = () => {
         }}
         results={lastResults}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 

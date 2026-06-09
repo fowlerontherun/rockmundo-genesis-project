@@ -584,7 +584,7 @@ const Rehearsals = () => {
           onClose={() => setShowBookingDialog(false)}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
