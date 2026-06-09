@@ -71,24 +71,22 @@ export default function PoliticalPartyPage() {
           <TabsContent value="campaigns"><PartyCampaignsTab partyId={party.id} /></TabsContent>
           <TabsContent value="treasury"><PartyTreasuryTab party={party} /></TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Flag className="h-8 w-8 text-primary" />
-            Political Parties
-          </h1>
-          <p className="text-sm text-muted-foreground">Found a new party or join an existing movement.</p>
-        </div>
-        <Button variant="outline" asChild>
+    <FMPageScaffold
+      title="Political Parties"
+      subtitle="Found a new party or join an existing movement."
+      icon={Flag}
+      backTo="/hub/world-social"
+      headerActions={
+        <Button variant="outline" asChild size="sm">
           <Link to="/political-party/standings"><Trophy className="h-4 w-4 mr-1" /> View Standings</Link>
         </Button>
-      </div>
+      }
+    >
 
       <div className="grid gap-6 lg:grid-cols-2">
         <PartyCreateWizard />
@@ -121,6 +119,6 @@ export default function PoliticalPartyPage() {
       </div>
 
       <JoinPartyDialog party={joinTarget} open={!!joinTarget} onOpenChange={(v) => !v && setJoinTarget(null)} />
-    </div>
+    </FMPageScaffold>
   );
 }
