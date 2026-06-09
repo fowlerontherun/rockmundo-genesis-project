@@ -689,7 +689,7 @@ const BandCrewManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 
