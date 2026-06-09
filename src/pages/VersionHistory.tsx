@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.361",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 1 (Foundation primitives). New shared widgets so subsequent page migrations are mechanical: `FMKpiBar` (compact KPI strip of label/value/delta tiles), `FMSection` (collapsible titled panel), `FMStatChart` (Recharts wrapper preset to FM tokens with line/bar/area + stacked variants), `FMAnalysisPanel` (chart + side breakdown layout), `FMPageScaffold` (PageHeader + KPI slot + content), and `FMLoading` / `FMEmpty` / `FMError` standardized states." },
+      { type: 'feature', description: "FM24 standardization — Phase 2 (Always-on in-game chat). New `FMChatDock` mounted globally inside `FMShell` (fixed bottom-right) so chat is reachable from every authenticated screen without leaving the page. Collapsible 260px friends rail with presence/avatars, click a friend to open a 320×420 chat window (max two side-by-side), reusing the existing `DirectMessageThread` (Supabase realtime, voice, read receipts). Global `useChatDock()` hook exposes `openThread(profileId, displayName)` for any 'Message' button across the app. Suppressed on `/auth`, `/onboarding`, `/create-character`." },
+      { type: 'improvement', description: "`FMShell` now wraps the app tree in `ChatDockProvider` and renders `FMChatDock` after the `BottomActionBar`, so the dock floats above the FM chrome but stays inside the shell viewport." },
+    ],
+  },
+  {
     version: "1.1.360",
     date: "2026-06-09",
     changes: [
