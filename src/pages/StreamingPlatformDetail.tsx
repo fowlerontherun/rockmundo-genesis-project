@@ -12,6 +12,8 @@ import { StreamingChartList } from "@/components/streaming/StreamingChartList";
 import { PlatformPlaylistGrid } from "@/components/streaming/PlatformPlaylistGrid";
 import { useGameData } from "@/hooks/useGameData";
 import { useStreaming } from "@/hooks/useStreaming";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Radio } from "lucide-react";
 
 const StreamingPlatformDetail = () => {
   const { platformId } = useParams<{ platformId: string }>();
@@ -74,11 +76,13 @@ const StreamingPlatformDetail = () => {
   const brandColor = platform.brand_color || "#6366f1";
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Button variant="ghost" onClick={() => navigate("/streaming-platforms")}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Streaming
-      </Button>
+    <FMPageScaffold
+      title={platform.platform_name}
+      subtitle={platform.description ?? undefined}
+      icon={Radio}
+      backTo="/streaming-platforms"
+      backLabel="Back to Streaming"
+    >
 
       {/* Platform Header */}
       <Card className="overflow-hidden">
@@ -258,7 +262,7 @@ const StreamingPlatformDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
