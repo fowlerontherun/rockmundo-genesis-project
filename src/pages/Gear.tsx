@@ -15,6 +15,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { GearMarketplaceBrowser } from "@/components/gear/marketplace/GearMarketplaceBrowser";
 import { GearMarketplaceListings } from "@/components/gear/marketplace/GearMarketplaceListings";
 import { GearMarketplacePurchases } from "@/components/gear/marketplace/GearMarketplacePurchases";
+import { FMFilterBar } from "@/components/fm/FMFilterBar";
 import { 
   Guitar, 
   ShoppingCart, 
@@ -216,86 +217,75 @@ export default function Gear() {
 
         {/* Shop Tab */}
         <TabsContent value="shop" className="space-y-4">
-          {/* Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="md:col-span-2">
-                  <Label>Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search equipment..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Category</Label>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat} value={cat} className="capitalize">
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Brand</Label>
-                  <Select value={brandFilter} onValueChange={setBrandFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brands.map(brand => (
-                        <SelectItem key={brand} value={brand}>
-                          {brand === "all" ? "All Brands" : brand}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Rarity</Label>
-                  <Select value={rarityFilter} onValueChange={setRarityFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="common">Common</SelectItem>
-                      <SelectItem value="uncommon">Uncommon</SelectItem>
-                      <SelectItem value="rare">Rare</SelectItem>
-                      <SelectItem value="epic">Epic</SelectItem>
-                      <SelectItem value="legendary">Legendary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Sort By</Label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
-                      <SelectItem value="quality">Quality</SelectItem>
-                      <SelectItem value="rarity">Rarity</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* FM-style Filter Bar */}
+          <FMFilterBar
+            label={`Catalog (${filteredCatalog.length})`}
+            search={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search equipment, brand…"
+            pills={["all", "common", "uncommon", "rare", "epic", "legendary"].map((r) => ({
+              value: r,
+              label: r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1),
+            }))}
+            activePill={rarityFilter}
+            onPillChange={setRarityFilter}
+            right={
+              <>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-6 w-32 text-xs bg-fm-panel border-fm-border">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat} className="capitalize text-xs">
+                        {cat === "all" ? "All Categories" : cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={brandFilter} onValueChange={setBrandFilter}>
+                  <SelectTrigger className="h-6 w-32 text-xs bg-fm-panel border-fm-border">
+                    <SelectValue placeholder="Brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand) => (
+                      <SelectItem key={brand} value={brand} className="text-xs">
+                        {brand === "all" ? "All Brands" : brand}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="h-6 w-36 text-xs bg-fm-panel border-fm-border">
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name" className="text-xs">Name</SelectItem>
+                    <SelectItem value="price-low" className="text-xs">Price: Low → High</SelectItem>
+                    <SelectItem value="price-high" className="text-xs">Price: High → Low</SelectItem>
+                    <SelectItem value="quality" className="text-xs">Quality</SelectItem>
+                    <SelectItem value="rarity" className="text-xs">Rarity</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(searchQuery || categoryFilter !== "all" || rarityFilter !== "all" || brandFilter !== "all") && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-[11px] uppercase tracking-wide"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setCategoryFilter("all");
+                      setRarityFilter("all");
+                      setBrandFilter("all");
+                    }}
+                  >
+                    Reset
+                  </Button>
+                )}
+              </>
+            }
+          />
+
 
           {/* Equipment Grid - Grouped by Category then Subcategory */}
           {isLoading ? (
