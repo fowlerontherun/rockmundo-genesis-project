@@ -2,8 +2,8 @@ import {
   LayoutDashboard, Music, Users, Mic2, Briefcase, Globe, MessageSquare,
   Building2, Shield, BookOpen, DollarSign, Calendar, Trophy, Radio,
   Disc3, ListMusic, BarChart3, Guitar, MapPin, Plane, Heart, Sparkles,
-  Newspaper, Tv, Hammer, Factory, ShieldCheck, GraduationCap, Award,
-  Star, ShoppingBag, type LucideIcon,
+  Newspaper, Tv, Hammer, GraduationCap, Award,
+  Star, ShoppingBag, Package, type LucideIcon,
 } from "lucide-react";
 
 export type FMSubLink = { label: string; path: string; icon?: LucideIcon };
@@ -12,11 +12,8 @@ export type FMModule = {
   label: string;
   icon: LucideIcon;
   rootPath: string;
-  /** Routes that count as "in this module" for highlighting */
   matchPaths: string[];
-  /** Secondary horizontal sub-tabs */
   subTabs: FMSubLink[];
-  /** Sidebar groups (collapsible) */
   sidebar: { label: string; items: FMSubLink[] }[];
 };
 
@@ -26,7 +23,7 @@ export const FM_MODULES: FMModule[] = [
     label: "Overview",
     icon: LayoutDashboard,
     rootPath: "/dashboard",
-    matchPaths: ["/dashboard", "/my-character", "/hub/character"],
+    matchPaths: ["/dashboard", "/my-character", "/hub/character", "/inbox", "/schedule", "/wellness", "/avatar-designer"],
     subTabs: [
       { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
       { label: "Character", path: "/hub/character", icon: Users },
@@ -39,11 +36,10 @@ export const FM_MODULES: FMModule[] = [
         label: "You",
         items: [
           { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-          { label: "Character", path: "/hub/character", icon: Users },
+          { label: "Character Hub", path: "/hub/character", icon: Users },
+          { label: "Edit Character", path: "/my-character", icon: Users },
           { label: "Avatar Designer", path: "/avatar-designer", icon: Sparkles },
           { label: "Wellness", path: "/wellness", icon: Heart },
-          { label: "Wardrobe", path: "/clothing-shop", icon: ShoppingBag },
-          { label: "Tattoo Parlour", path: "/tattoo-parlour", icon: Star },
         ],
       },
       {
@@ -51,7 +47,7 @@ export const FM_MODULES: FMModule[] = [
         items: [
           { label: "Inbox", path: "/inbox", icon: MessageSquare },
           { label: "Schedule", path: "/schedule", icon: Calendar },
-          { label: "Notifications", path: "/notifications", icon: MessageSquare },
+          { label: "Statistics", path: "/statistics", icon: BarChart3 },
         ],
       },
     ],
@@ -61,11 +57,11 @@ export const FM_MODULES: FMModule[] = [
     label: "Music",
     icon: Music,
     rootPath: "/hub/music",
-    matchPaths: ["/hub/music", "/songwriting", "/recording-studio", "/music-studio", "/release-manager", "/song-market", "/song-rankings", "/music/charts"],
+    matchPaths: ["/hub/music", "/songwriting", "/recording-studio", "/release-manager", "/song-market", "/song-rankings", "/music/charts", "/streaming-platforms", "/streaming", "/stage-practice"],
     subTabs: [
       { label: "Hub", path: "/hub/music", icon: Music },
       { label: "Songwriting", path: "/songwriting", icon: ListMusic },
-      { label: "Studio", path: "/music-studio", icon: Disc3 },
+      { label: "Studio", path: "/recording-studio", icon: Disc3 },
       { label: "Releases", path: "/release-manager", icon: Disc3 },
       { label: "Charts", path: "/music/charts", icon: BarChart3 },
       { label: "Market", path: "/song-market", icon: ShoppingBag },
@@ -75,7 +71,7 @@ export const FM_MODULES: FMModule[] = [
         label: "Create",
         items: [
           { label: "Songwriting", path: "/songwriting", icon: ListMusic },
-          { label: "Music Studio", path: "/music-studio", icon: Disc3 },
+          { label: "Recording Studio", path: "/recording-studio", icon: Disc3 },
           { label: "Stage Practice", path: "/stage-practice", icon: Guitar },
         ],
       },
@@ -83,7 +79,7 @@ export const FM_MODULES: FMModule[] = [
         label: "Release & Distribute",
         items: [
           { label: "Release Manager", path: "/release-manager", icon: Disc3 },
-          { label: "Streaming", path: "/streaming-platforms", icon: Radio },
+          { label: "Streaming Platforms", path: "/streaming-platforms", icon: Radio },
           { label: "Charts", path: "/music/charts", icon: BarChart3 },
           { label: "Song Rankings", path: "/song-rankings", icon: Trophy },
           { label: "Song Market", path: "/song-market", icon: ShoppingBag },
@@ -96,27 +92,36 @@ export const FM_MODULES: FMModule[] = [
     label: "Band",
     icon: Users,
     rootPath: "/band",
-    matchPaths: ["/band", "/hub/band", "/hub/band-live", "/band-chemistry", "/band-browser", "/setlist-manager"],
+    matchPaths: ["/band", "/hub/band", "/hub/band-live", "/chemistry", "/bands", "/setlists", "/rehearsals", "/band-crew", "/band-riders", "/band-vehicles", "/band-rankings", "/band-fame-map"],
     subTabs: [
       { label: "Manage", path: "/band", icon: Users },
-      { label: "Chemistry", path: "/band-chemistry", icon: Sparkles },
-      { label: "Setlists", path: "/setlist-manager", icon: ListMusic },
-      { label: "Browse", path: "/band-browser", icon: Users },
+      { label: "Chemistry", path: "/chemistry", icon: Sparkles },
+      { label: "Setlists", path: "/setlists", icon: ListMusic },
+      { label: "Rehearsals", path: "/rehearsals", icon: Guitar },
+      { label: "Crew", path: "/band-crew", icon: Users },
+      { label: "Browse", path: "/bands/browse", icon: Users },
     ],
     sidebar: [
       {
         label: "Your Band",
         items: [
           { label: "Band Manager", path: "/band", icon: Users },
-          { label: "Chemistry", path: "/band-chemistry", icon: Sparkles },
-          { label: "Setlists", path: "/setlist-manager", icon: ListMusic },
-          { label: "Rehearsal", path: "/rehearsal", icon: Guitar },
+          { label: "Repertoire", path: "/band/repertoire", icon: ListMusic },
+          { label: "Chemistry", path: "/chemistry", icon: Sparkles },
+          { label: "Setlists", path: "/setlists", icon: ListMusic },
+          { label: "Rehearsals", path: "/rehearsals", icon: Guitar },
+          { label: "Riders", path: "/band-riders", icon: ListMusic },
+          { label: "Vehicles", path: "/band-vehicles", icon: Plane },
+          { label: "Crew", path: "/band-crew", icon: Users },
         ],
       },
       {
-        label: "Recruit & Browse",
+        label: "Discover",
         items: [
-          { label: "Band Browser", path: "/band-browser", icon: Users },
+          { label: "Browse Bands", path: "/bands/browse", icon: Users },
+          { label: "Band Finder", path: "/bands/finder", icon: Users },
+          { label: "Rankings", path: "/band-rankings", icon: Trophy },
+          { label: "Fame Map", path: "/band-fame-map", icon: MapPin },
         ],
       },
     ],
@@ -125,11 +130,11 @@ export const FM_MODULES: FMModule[] = [
     id: "live",
     label: "Live",
     icon: Mic2,
-    rootPath: "/hub/live",
-    matchPaths: ["/hub/live", "/perform-gig", "/gig-booking", "/advanced-gig", "/festivals", "/festival-browser", "/tour-manager"],
+    rootPath: "/gigs",
+    matchPaths: ["/hub/live", "/hub/band-live", "/gigs", "/gig-booking", "/festivals", "/tour-manager", "/awards", "/hall-of-immortals", "/stage-setup", "/stage-equipment"],
     subTabs: [
-      { label: "Perform", path: "/perform-gig", icon: Mic2 },
       { label: "Book Gigs", path: "/gig-booking", icon: Calendar },
+      { label: "My Gigs", path: "/gigs", icon: Mic2 },
       { label: "Festivals", path: "/festivals", icon: Trophy },
       { label: "Tours", path: "/tour-manager", icon: Plane },
       { label: "Awards", path: "/awards", icon: Award },
@@ -138,9 +143,10 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Gigs",
         items: [
-          { label: "Perform", path: "/perform-gig", icon: Mic2 },
           { label: "Book Gigs", path: "/gig-booking", icon: Calendar },
-          { label: "Advanced Gigs", path: "/advanced-gig", icon: Mic2 },
+          { label: "My Gigs", path: "/gigs", icon: Mic2 },
+          { label: "Stage Setup", path: "/stage-setup", icon: Guitar },
+          { label: "Stage Equipment", path: "/stage-equipment", icon: Guitar },
         ],
       },
       {
@@ -148,7 +154,6 @@ export const FM_MODULES: FMModule[] = [
         items: [
           { label: "Tour Manager", path: "/tour-manager", icon: Plane },
           { label: "Festivals", path: "/festivals", icon: Trophy },
-          { label: "Festival Browser", path: "/festival-browser", icon: Trophy },
         ],
       },
       {
@@ -165,7 +170,7 @@ export const FM_MODULES: FMModule[] = [
     label: "Career",
     icon: Briefcase,
     rootPath: "/hub/career-business",
-    matchPaths: ["/hub/career-business", "/finances", "/employment", "/education", "/teaching", "/sponsorships", "/record-label"],
+    matchPaths: ["/hub/career-business", "/finances", "/employment", "/education", "/teaching", "/sponsorships", "/record-label", "/booking", "/venues", "/merchandise", "/venue-business", "/merch-factory", "/logistics-company", "/security-firm"],
     subTabs: [
       { label: "Hub", path: "/hub/career-business", icon: Briefcase },
       { label: "Finances", path: "/finances", icon: DollarSign },
@@ -179,7 +184,6 @@ export const FM_MODULES: FMModule[] = [
         label: "Money",
         items: [
           { label: "Finances", path: "/finances", icon: DollarSign },
-          { label: "Portfolio", path: "/finance/portfolio", icon: BarChart3 },
           { label: "Sponsorships", path: "/sponsorships", icon: Award },
         ],
       },
@@ -189,16 +193,16 @@ export const FM_MODULES: FMModule[] = [
           { label: "Education", path: "/education", icon: GraduationCap },
           { label: "Teaching", path: "/teaching", icon: BookOpen },
           { label: "Employment", path: "/employment", icon: Briefcase },
+          { label: "Book Education", path: "/booking/education", icon: GraduationCap },
+          { label: "Book Work", path: "/booking/work", icon: Briefcase },
         ],
       },
       {
         label: "Business",
         items: [
           { label: "Record Label", path: "/record-label", icon: Disc3 },
-          { label: "Venues", path: "/venue-management", icon: Building2 },
-          { label: "Merch Factory", path: "/merch-factory", icon: Factory },
-          { label: "Logistics", path: "/logistics-company", icon: Plane },
-          { label: "Security Firm", path: "/security-firm", icon: ShieldCheck },
+          { label: "Venues", path: "/venues", icon: Building2 },
+          { label: "Merchandise", path: "/merchandise", icon: ShoppingBag },
         ],
       },
     ],
@@ -207,20 +211,19 @@ export const FM_MODULES: FMModule[] = [
     id: "world",
     label: "World",
     icon: Globe,
-    rootPath: "/hub/world-social",
-    matchPaths: ["/hub/world-social", "/world-map", "/city", "/world-pulse", "/world-parliament"],
+    rootPath: "/world-map",
+    matchPaths: ["/hub/world-social", "/world-map", "/world-pulse", "/world-parliament", "/political-party", "/politics-career"],
     subTabs: [
       { label: "Map", path: "/world-map", icon: MapPin },
-      { label: "City", path: "/city", icon: Building2 },
       { label: "Pulse", path: "/world-pulse", icon: Radio },
       { label: "Parliament", path: "/world-parliament", icon: Hammer },
+      { label: "Party", path: "/political-party", icon: Users },
     ],
     sidebar: [
       {
         label: "Explore",
         items: [
           { label: "World Map", path: "/world-map", icon: MapPin },
-          { label: "Current City", path: "/city", icon: Building2 },
           { label: "World Pulse", path: "/world-pulse", icon: Radio },
         ],
       },
@@ -229,6 +232,7 @@ export const FM_MODULES: FMModule[] = [
         items: [
           { label: "World Parliament", path: "/world-parliament", icon: Hammer },
           { label: "Political Party", path: "/political-party", icon: Users },
+          { label: "Party Standings", path: "/political-party/standings", icon: BarChart3 },
           { label: "Politics Career", path: "/politics-career", icon: Briefcase },
         ],
       },
@@ -239,12 +243,12 @@ export const FM_MODULES: FMModule[] = [
     label: "Social",
     icon: MessageSquare,
     rootPath: "/social",
-    matchPaths: ["/social", "/relationships", "/twaater", "/dikcok", "/gettit", "/social-media", "/public-relations"],
+    matchPaths: ["/social", "/twaater", "/dikcok", "/gettit", "/public-relations"],
     subTabs: [
       { label: "Hub", path: "/social", icon: MessageSquare },
-      { label: "Relationships", path: "/relationships", icon: Heart },
       { label: "Twaater", path: "/twaater", icon: Newspaper },
       { label: "DikCok", path: "/dikcok", icon: Tv },
+      { label: "Gettit", path: "/gettit", icon: MessageSquare },
       { label: "PR", path: "/public-relations", icon: Newspaper },
     ],
     sidebar: [
@@ -252,18 +256,17 @@ export const FM_MODULES: FMModule[] = [
         label: "People",
         items: [
           { label: "Social Hub", path: "/social", icon: MessageSquare },
-          { label: "Relationships", path: "/relationships", icon: Heart },
-          { label: "Fans", path: "/fan-management", icon: Users },
+          { label: "Friends", path: "/social?tab=friends", icon: Heart },
         ],
       },
       {
         label: "Media",
         items: [
           { label: "Twaater", path: "/twaater", icon: Newspaper },
+          { label: "Twaater Messages", path: "/twaater/messages", icon: MessageSquare },
           { label: "DikCok", path: "/dikcok", icon: Tv },
           { label: "Gettit", path: "/gettit", icon: MessageSquare },
           { label: "Public Relations", path: "/public-relations", icon: Newspaper },
-          { label: "Social Media", path: "/social-media", icon: MessageSquare },
         ],
       },
     ],
@@ -272,26 +275,30 @@ export const FM_MODULES: FMModule[] = [
     id: "commerce",
     label: "Store",
     icon: ShoppingBag,
-    rootPath: "/equipment-store",
-    matchPaths: ["/equipment-store", "/clothing-shop", "/tattoo-parlour", "/inventory"],
+    rootPath: "/gear",
+    matchPaths: ["/gear", "/gear-shop", "/clothing-shop", "/clothing-designer", "/tattoo-parlour", "/inventory", "/merchandise"],
     subTabs: [
-      { label: "Gear", path: "/equipment-store", icon: Guitar },
+      { label: "Gear", path: "/gear", icon: Guitar },
       { label: "Clothing", path: "/clothing-shop", icon: ShoppingBag },
       { label: "Tattoos", path: "/tattoo-parlour", icon: Star },
-      { label: "Inventory", path: "/inventory", icon: ShoppingBag },
+      { label: "Inventory", path: "/inventory", icon: Package },
     ],
     sidebar: [
       {
         label: "Shops",
         items: [
-          { label: "Equipment", path: "/equipment-store", icon: Guitar },
-          { label: "Clothing", path: "/clothing-shop", icon: ShoppingBag },
+          { label: "Equipment / Gear", path: "/gear", icon: Guitar },
+          { label: "Clothing Shop", path: "/clothing-shop", icon: ShoppingBag },
+          { label: "Clothing Designer", path: "/clothing-designer", icon: Sparkles },
           { label: "Tattoo Parlour", path: "/tattoo-parlour", icon: Star },
         ],
       },
       {
         label: "Owned",
-        items: [{ label: "Inventory", path: "/inventory", icon: ShoppingBag }],
+        items: [
+          { label: "Inventory", path: "/inventory", icon: Package },
+          { label: "Merchandise", path: "/merchandise", icon: ShoppingBag },
+        ],
       },
     ],
   },
@@ -302,19 +309,26 @@ export const FM_MODULES: FMModule[] = [
     rootPath: "/admin",
     matchPaths: ["/admin"],
     subTabs: [
-      { label: "Panel", path: "/admin", icon: Shield },
+      { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
+      { label: "Players", path: "/admin/user-roles", icon: Users },
+      { label: "Analytics", path: "/admin/analytics", icon: BarChart3 },
+      { label: "Debug", path: "/admin/debug-panel", icon: Hammer },
     ],
     sidebar: [
       {
         label: "Admin",
-        items: [{ label: "Admin Panel", path: "/admin", icon: Shield }],
+        items: [
+          { label: "Admin Panel", path: "/admin", icon: Shield },
+          { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
+          { label: "World Reset", path: "/admin/world-reset", icon: Hammer },
+          { label: "Debug Panel", path: "/admin/debug-panel", icon: Hammer },
+        ],
       },
     ],
   },
 ];
 
 export function findModuleForPath(pathname: string): FMModule {
-  // Longest matching path wins
   let best: { mod: FMModule; len: number } | null = null;
   for (const mod of FM_MODULES) {
     for (const p of mod.matchPaths) {
