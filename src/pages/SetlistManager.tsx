@@ -248,8 +248,7 @@ const SetlistManager = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
