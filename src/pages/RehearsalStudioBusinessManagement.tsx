@@ -6,6 +6,7 @@ import { ArrowLeft, Music, Users, Package, Wrench, DollarSign } from "lucide-rea
 import { VipGate } from "@/components/company/VipGate";
 import { useRehearsalStudio, useRehearsalRoomStaff, useRehearsalRoomEquipment, useRehearsalRoomUpgrades, useRehearsalRoomTransactions } from "@/hooks/useRehearsalStudioBusiness";
 import { RehearsalStudioStaffManager, RehearsalStudioEquipmentManager, RehearsalStudioUpgradesManager } from "@/components/rehearsal-studio-business";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function RehearsalStudioBusinessManagement() {
   const { studioId } = useParams();
@@ -23,25 +24,25 @@ export default function RehearsalStudioBusinessManagement() {
   
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Rehearsal Studio" icon={Music} backTo="/hub/business">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!studio) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Rehearsal Studio" icon={Music} backTo="/hub/business">
         <div className="text-center py-12">
           <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold">Rehearsal Studio Not Found</h2>
           <p className="text-muted-foreground mb-4">The studio you're looking for doesn't exist.</p>
           <Button onClick={() => navigate(-1)}>Go Back</Button>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
   
