@@ -240,6 +240,6 @@ export default function WorldEnvironment() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
