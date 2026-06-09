@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.364",
+    date: "2026-06-09",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 4b (Band loop pages). Migrated the entire band vertical onto `FMPageScaffold` so every screen now ships with the standard FM 40px header strip, back-nav, optional `headerActions`, and FM shell framing: BandManager, EnhancedBandManager, SimpleBandManager, BandProfile, BandRepertoire, BandChemistry, BandCrewManagement, BandRiders, BandVehicles, BandFameMap, BandFinder, BandSearch, BandBrowser, BandRankings, Rehearsals, RehearsalStudioBusinessManagement, SetlistManager, GigBooking, PerformGig, AdvancedGigSystem, SimpleAdvancedGigSystem, TourManager, TouringSystem, tours/planner, and JamSessionsEnhanced." },
+      { type: 'improvement', description: "Dropped bespoke `container mx-auto p-6 / max-w-7xl mx-auto / min-h-screen bg-background` wrappers and ad-hoc inline `<h1>/<p>` title blocks across band pages — page titles, subtitles, icons, and back-links now flow through `FMPageScaffold` props instead so they sit flush with the FM chrome on every screen." },
+      { type: 'improvement', description: "Header CTAs (Create Tour, Book Session, Create Rider, Setlist quota, Tour Manager band selector, GigBooking band badge, Fame Map band picker) moved into the scaffold's `headerActions` slot at `size=\"sm\"` so they share the same FM strip height across the vertical instead of stacking on a separate row." },
+      { type: 'improvement', description: "Removed redundant in-page `<Button variant=ghost><ArrowLeft/>Back</Button>` rows on PerformGig and BandRepertoire — back navigation is now provided by the FM `PageHeader` (`backTo`/`backLabel`)." },
+      { type: 'improvement', description: "SimpleAdvancedGigSystem replaced its `StandardPageLayout` wrapper with `FMPageScaffold` + `kpis` (Total Gigs / Earnings / Attendance), matching the Phase 4a Music KPI pattern. SetlistManager dropped the legacy `<Layout>` wrapper for the same reason." },
+      { type: 'fix', description: "BandFameMap and GigBooking no longer double-render a `PageLayout + PageHeader` stack — their `actions` slot is preserved as `headerActions` on the new scaffold, eliminating the extra vertical space the previous header reserved above the KPI / tab rows." },
+    ],
+  },
+  {
     version: "1.1.363",
     date: "2026-06-09",
     changes: [
