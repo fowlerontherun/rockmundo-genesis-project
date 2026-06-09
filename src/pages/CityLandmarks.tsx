@@ -500,6 +500,6 @@ export default function CityLandmarks() {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
