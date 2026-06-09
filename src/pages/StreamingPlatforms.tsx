@@ -3,8 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Disc, Music, BarChart3, Globe, TrendingUp, DollarSign, Users, Plus, ListMusic } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useGameData } from "@/hooks/useGameData";
 import { StreamingMyReleasesTab } from "@/components/streaming/StreamingMyReleasesTab";
 import { DetailedAnalyticsTab } from "@/components/streaming/DetailedAnalyticsTab";
@@ -111,20 +110,19 @@ const StreamingPlatforms = () => {
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Streaming Platforms"
-        subtitle="Release your music and track performance across platforms"
-        icon={Disc}
-        backTo="/hub/music"
-        backLabel="Back to Music Hub"
-        actions={
-          <Button onClick={() => setReleaseDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Release to Stream
-          </Button>
-        }
-      />
+    <FMPageScaffold
+      title="Streaming Platforms"
+      subtitle="Release your music and track performance across platforms"
+      icon={Disc}
+      backTo="/hub/music"
+      backLabel="Back to Music Hub"
+      headerActions={
+        <Button onClick={() => setReleaseDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Release to Stream
+        </Button>
+      }
+    >
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
