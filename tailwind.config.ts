@@ -88,6 +88,18 @@ export default {
           warm: "hsl(var(--social-warm))",
           cold: "hsl(var(--social-cold))",
         },
+        fm: {
+          bg: "hsl(var(--fm-bg))",
+          panel: "hsl(var(--fm-panel))",
+          "panel-2": "hsl(var(--fm-panel-2))",
+          border: "hsl(var(--fm-border))",
+          fg: "hsl(var(--fm-fg))",
+          "fg-muted": "hsl(var(--fm-fg-muted))",
+          accent: "hsl(var(--fm-accent))",
+          good: "hsl(var(--fm-good))",
+          warn: "hsl(var(--fm-warn))",
+          bad: "hsl(var(--fm-bad))",
+        },
       },
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',
