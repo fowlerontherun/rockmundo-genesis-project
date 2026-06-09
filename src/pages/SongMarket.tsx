@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingBag } from "lucide-react";
-import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useGameData } from "@/hooks/useGameData";
 import { BrowseAuctionsTab } from "@/components/marketplace/BrowseAuctionsTab";
 import { MyAuctionListingsTab } from "@/components/marketplace/MyAuctionListingsTab";
@@ -20,15 +20,13 @@ export default function SongMarket() {
   }
 
   return (
-    <StandardPageLayout
-      wide
+    <FMPageScaffold
       title="Song Marketplace"
       subtitle="Buy, sell, and auction original songs. Purchased songs cannot be resold."
       icon={ShoppingBag}
       backTo="/hub/music"
       backLabel="Back to Music Hub"
       headerActions={<CreateListingTab userId={userId} />}
-      bareContent
     >
       <Tabs defaultValue="browse" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -49,6 +47,6 @@ export default function SongMarket() {
           <PurchasedSongsTab userId={userId} />
         </TabsContent>
       </Tabs>
-    </StandardPageLayout>
+    </FMPageScaffold>
   );
 }
