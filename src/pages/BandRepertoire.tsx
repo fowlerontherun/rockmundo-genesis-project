@@ -460,7 +460,7 @@ const BandRepertoire = () => {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
