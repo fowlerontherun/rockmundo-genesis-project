@@ -112,6 +112,18 @@
     --twaater-hover: 250 30% 20%;
     --twaater-purple: 270 80% 65%;
     --twaater-purple-hover: 270 80% 70%;
+
+    /* Football Manager 2024 inspired chrome tokens */
+    --fm-bg: 220 25% 8%;
+    --fm-panel: 220 22% 12%;
+    --fm-panel-2: 220 20% 15%;
+    --fm-border: 220 15% 22%;
+    --fm-fg: 210 20% 92%;
+    --fm-fg-muted: 215 12% 62%;
+    --fm-accent: 195 90% 55%;
+    --fm-good: 142 65% 48%;
+    --fm-warn: 42 95% 55%;
+    --fm-bad: 0 75% 58%;
   }
 
   .dark {

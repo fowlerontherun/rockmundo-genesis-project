@@ -1,12 +1,9 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import Navigation from "@/components/ui/navigation";
-import HorizontalNavigation from "@/components/ui/HorizontalNavigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
-import { useNavStyle } from "@/hooks/useNavStyle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
@@ -24,7 +21,7 @@ import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
-
+import { FMShell } from "@/components/fm/FMShell";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 const Layout = () => {
@@ -32,8 +29,6 @@ const Layout = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
   const { profileId } = useActiveProfile();
-  const { navStyle } = useNavStyle();
-  const isHorizontal = navStyle === "horizontal";
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
@@ -90,27 +85,21 @@ const Layout = () => {
   }
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      {isHorizontal ? <HorizontalNavigation /> : <Navigation />}
-      <main className={`flex-1 ${isHorizontal ? 'pt-24 lg:pt-24' : 'pt-12 lg:pt-16'} pb-20 overflow-x-hidden max-w-full`}>
-        <div className="p-3 md:p-4 max-w-full overflow-x-hidden">
-          {profileError && (
-            <Alert variant="destructive" className="mb-4 max-w-2xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Profile error</AlertTitle>
-              <AlertDescription>{profileError}</AlertDescription>
-            </Alert>
-          )}
-          <MaintenanceBanner />
-          <CharacterGate>
-            <Breadcrumbs />
-            <Outlet />
-          </CharacterGate>
-          <TutorialTooltip />
-        </div>
-      </main>
-      
-      {/* FloatingAvatarWidget removed — notifications now live in the top-bar bell */}
+    <FMShell>
+      {profileError && (
+        <Alert variant="destructive" className="mb-4 max-w-2xl">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Profile error</AlertTitle>
+          <AlertDescription>{profileError}</AlertDescription>
+        </Alert>
+      )}
+      <MaintenanceBanner />
+      <CharacterGate>
+        <Breadcrumbs />
+        <Outlet />
+      </CharacterGate>
+      <TutorialTooltip />
+
       <EventNotificationModal />
       <InterviewModal />
       {pendingReport && (
@@ -123,7 +112,7 @@ const Layout = () => {
           durationHours={pendingReport.durationHours}
         />
       )}
-    </div>
+    </FMShell>
   );
 };
 

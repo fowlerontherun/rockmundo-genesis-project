@@ -1,100 +1,75 @@
-# Skill System Overhaul
+## FM24-Style Desktop-Only Overhaul
 
-Based on the audit, the project has ~620 skill slugs across 20 families. Three structural problems and one big effect gap drive this plan.
+Football Manager 2024 references: dark navy/slate chrome, persistent top status bar (manager/club/date/cash), persistent bottom action bar (Continue + notifications), left sidebar for module sections, top tabs for the active module with a secondary sub-tab strip, and dense data tables with color-coded attribute cells. We replicate that shell and convert our major pages to the same idiom.
 
-## Problems found
+### Phase 1 — Desktop gate (block under 1440px)
 
-1. **Naming inconsistencies / duplicates**
-   - `songwriting_professional_vocal_production` sits between `songwriting_basic_vocal_processing` and `songwriting_mastery_vocal_processing` — pick one stem.
-   - `songwriting_mastery_composing_anthems` breaks the `<prefix>_<tier>_<topic>` pattern (Basic/Pro use `_composing`).
-   - 6 "capstone" instrument slugs exist only at Mastery (no Basic/Pro) — incompatible with the new gating rule.
-   - `luthiery_*_technical` topic is semantically empty.
+- New `src/components/DesktopOnlyGate.tsx`: full-screen branded message ("RockMundo is desktop-only. Please use a browser at 1440×900 or larger.") shown whenever `window.innerWidth < 1440`. Listens to resize.
+- Mount inside `src/App.tsx` above all routes so even `/auth` is gated.
+- Remove `src/hooks/use-mobile.tsx` consumers' mobile branches (sidebar Sheet, horizontal nav). Delete `HorizontalNavigation` mobile sheet path. Keep `useIsMobile` file but unused.
+- Set viewport meta in `index.html` to `width=1440` (no user-scalable) so accidental mobile loads still see the gate.
+- Strip Capacitor/PWA mobile install hints if present.
 
-2. **Tier gating is not enforced**
-   - `PROFESSIONAL_UNLOCK_VALUE = 250 XP`, `MASTERY_UNLOCK_VALUE = 650 XP` exist in `skillTree.ts` but NO learning source consults `SKILL_TREE_RELATIONSHIPS` before granting XP. University, books, mentors (via `relationship-action`), `progression.handleSpendSkillXp`, and client `useSkillPractice` all upsert `skill_progress` blind.
-   - `MAX_SKILL_LEVEL` is 20 in the client and 100 in three edge functions — they disagree.
+### Phase 2 — FM24 app shell
 
-3. **Dead skills**
-   - `sampling`, `sound_design`, `ai_music`, all `stage_*`, `improv_*`, `audience_*`, `health_*`, `business_*`, `theory_ear_training`, `theory_sight_reading` grant XP but no util reads them.
-   - `skillLearningMultiplier.ts` matches short keys (`guitar`) against full slugs (`instruments_basic_electric_guitar`) — silently returns 1.0× for all real slugs.
+New `src/components/fm/` directory:
 
-## Decisions (confirmed)
+- `FMShell.tsx` — replaces `Layout.tsx` render tree. Grid:
+  ```text
+  ┌─────────────────────── TopStatusBar (h-12) ───────────────────────┐
+  ├──────────┬──────────────── ModuleTabs (h-10) ────────────────────┤
+  │ Sidebar  ├──────────────── SubTabs (h-9) ─────────────────────────┤
+  │ (w-56,   │                                                        │
+  │ collap-  │              <Outlet /> page content                   │
+  │ sible    │                                                        │
+  │ to w-12) │                                                        │
+  ├──────────┴──────────────── BottomActionBar (h-12) ────────────────┤
+  └────────────────────────────────────────────────────────────────────┘
+  ```
+- `TopStatusBar.tsx` — character avatar + name, active band, game date + season, cash, fame, energy/health pips, quick search, settings.
+- `ModuleTabs.tsx` — primary modules across the top: Overview, Music, Band, Live, Career, World, Social, Business, Admin. Active module is highlighted FM-style (lit underline).
+- `SubTabs.tsx` — secondary strip driven by the current module's route children (e.g. Music → Songwriting / Recording / Releases / Charts).
+- `FMSidebar.tsx` — collapsible left rail with grouped sections for the current module's deep links + global pinned items. Uses shadcn `Sidebar` with `collapsible="icon"`, default expanded, persisted.
+- `BottomActionBar.tsx` — Continue (advance day) button on the right, notifications inbox bell, pending events count, and contextual quick actions.
+- `src/config/fmNavigation.ts` — single source of truth: modules → subtabs → sidebar groups → route. Drives all three nav surfaces.
 
-- **Tier unlock**: must hit `current_level = 20` in lower tier before higher tier accepts XP. Single shared constant.
-- **All four learning paths gated**: University, Books, Mentors, Practice + SXP spend.
-- **Effects**: unify on the existing `tieredSkillBonus` curve (medium pass — no per-skill bespoke tuning), but apply it to every dead family so each skill actually matters.
+### Phase 3 — Dense data table primitive
 
-## Implementation
+- `src/components/fm/DataTable.tsx` — wraps shadcn `Table` with: zebra rows, 28px row height, sortable headers, sticky header, optional row click handler, color-coded attribute cell (`<AttrCell value={n} />` green ≥15, yellow 8–14, red <8 on the 0–20 scale).
+- `src/components/fm/AttrCell.tsx`, `StatBar.tsx`, `PanelCard.tsx` (FM-style flat panel with thin header bar).
 
-### Phase 1 — Taxonomy cleanup (`src/data/skillTree.ts`)
+### Phase 4 — Convert major pages to FM idiom
 
-- Rename `songwriting_professional_vocal_production` → `songwriting_professional_vocal_processing`. Add migration that renames any existing `skill_progress.skill_slug` rows.
-- Rename `songwriting_mastery_composing_anthems` → `songwriting_mastery_composing`. Migration renames rows.
-- Drop the 6 mastery-only capstone instrument configs (`lead_vocals`, `multi_instrumentalist`, `session_musician`, `bandleader`, `touring_musician`, `studio_virtuoso`) OR promote each to a full B/P/M family. Plan: **drop** — they overlap with role-based slugs and are not referenced anywhere meaningful except `instruments_mastery_lead_vocals` in one ROLE_SKILL_MAP entry, which we'll point at `instruments_mastery_vocal_performance` instead.
-- Rename `luthiery_*_technical` topics to descriptive names (`repair`, `building`, `restoration` for B/P/M).
-- Update `skillRecordingBonus.ts` vocal-production slug list to the renamed slugs.
+Each page rebuilt around `PanelCard` grids and `DataTable`:
 
-### Phase 2 — Shared gating helper
+1. **Dashboard / Overview** (`src/pages/Index.tsx`) — 3-column FM overview: left = character vitals, center = inbox + next gig + active project, right = band morale, finances mini, top songs.
+2. **Band** (`EnhancedBandManager.tsx`) — member roster as `DataTable` with skill attr cells, cohesion bar, role; right panel = selected member detail.
+3. **Finances** (`Finances.tsx`) — KPI strip + income/expense table by category + weekly trend panel.
+4. **Schedule** (`Schedule.tsx`) — FM calendar grid (week view) + activity table.
+5. **Gigs** (`SimpleAdvancedGigSystem.tsx`) — upcoming/past tables with payout, venue, audience attr cells.
+6. **Songs** (`MusicHub.tsx` repertoire) — sortable song table: quality, plays, revenue, last release.
+7. **Education** (`Education.tsx`) — courses table with progress bar attr cell.
 
-New module `src/data/skillTierGating.ts`:
+Other pages keep current internals but render inside `FMShell` and `PanelCard` wrappers so chrome is consistent.
 
-```ts
-export const TIER_UNLOCK_LEVEL = 20; // matches MAX_SKILL_LEVEL
-export type SkillTier = "basic" | "professional" | "mastery";
-export function getTier(slug: string): SkillTier | null;
-export function getPrerequisiteSlug(slug: string): string | null;
-export function isTierUnlocked(slug: string, allProgress): boolean;
-```
+### Phase 5 — Theme
 
-Mirror it as a small SQL function so edge functions can validate without importing src:
+- Add FM-flavored tokens to `index.css` and `tailwind.config.ts`:
+  - `--fm-bg: 220 25% 8%`, `--fm-panel: 220 22% 12%`, `--fm-panel-2: 220 20% 15%`, `--fm-border: 220 15% 22%`, `--fm-accent: 200 90% 55%` (cyan), `--fm-good: 145 65% 45%`, `--fm-warn: 45 90% 55%`, `--fm-bad: 0 70% 55%`.
+- Keep existing semantic tokens; FM tokens are additive for the shell + tables.
 
-```sql
-CREATE OR REPLACE FUNCTION public.skill_tier_unlocked(
-  p_profile_id uuid, p_slug text
-) RETURNS boolean ...
-```
+### Out of scope
 
-### Phase 3 — Wire gating into every XP source
+- Per-page gameplay logic changes (purely UI/chrome rewrap).
+- Mobile/PWA support (explicitly removed).
+- Animation/sound polish beyond hover/active states.
+- Translating every minor page — only the seven listed get full FM table treatment; others get shell-only.
 
-- `supabase/functions/progression/handlers.ts` (`handleSpendSkillXp`) → call `skill_tier_unlocked`, return `{success:false, message:"Max your <basic> skill first"}` if locked. Standardise local `MAX_SKILL_LEVEL` to 20.
-- `supabase/functions/university-attendance/index.ts` → same guard; also block enrollment if the target skill is locked. Cap level at 20.
-- `supabase/functions/book-reading-attendance/index.ts` → same; block purchase/start at the source.
-- `supabase/functions/relationship-action/index.ts` (mentor sessions) → same guard around the existing `skill_progress` upsert.
-- Client `src/hooks/useSkillPractice.ts` and `SkillSystemProvider.updateSkillProgress` → call `isTierUnlocked` before upsert and surface a toast.
-- Extract the duplicated `calculateLearningMultiplier` into `supabase/functions/_shared/learningMultiplier.ts`.
+### Version
 
-### Phase 4 — Effect coverage (medium pass)
+Bump to **1.1.355**, add VersionHistory entry summarizing desktop-only gate + FM24 shell + table conversions.
 
-Use `getTieredBonusScaled` for every family, additive into the appropriate output. New utilities, each reading basic/pro/mastery slugs:
+### Risk notes
 
-- `src/utils/stageSkillBonus.ts` — `stage_*` skills add up to +12% to gig audience score (showmanship, crowd → engagement; tech, visuals → technical execution; social, streaming → fan conversion).
-- `src/utils/theoryFullBonus.ts` — extend recording bonus to also read `ear_training` (+3%) and `sight_reading` (+3%); add to songwriting `melodyStrength` via `harmony` (+5%).
-- `src/utils/improvBonus.ts` — `improv_musical` mitigates random gig disaster severity; `improv_recovery` reduces "song ruined" probability.
-- `src/utils/audienceBonus.ts` — `audience_engagement` boosts merch+tip yield at gigs; `audience_trends` boosts release first-week streams.
-- `src/utils/healthSkillBonus.ts` — `health_conditioning` reduces tour fatigue; `health_vocal` reduces vocal-strain ailment chance; `health_mental` reduces stress accumulation.
-- `src/utils/businessSkillBonus.ts` — `contracts` improves label/sponsorship negotiated terms; `marketing` boosts auto-hype gain; `booking` improves venue offers.
-- `src/utils/songQuality.ts` — add reads for `sampling`, `sound_design`, `ai_music` (each contributes a capped slice to `productionPotential`).
-
-Wire each new util into its single existing caller (gig scoring, songQuality, release predictions, tour fatigue, sponsorship negotiation). No formula re-tuning — all use the shared scaler.
-
-### Phase 5 — Fix `skillLearningMultiplier`
-
-Rewrite `SKILL_LEARNING_ATTRIBUTES` keys to use slug prefixes (`instruments_*_electric_guitar`, `songwriting_*_mixing`) matched via regex helpers, so the multiplier actually fires. Add a unit-style assertion in dev.
-
-### Phase 6 — UI
-
-- `SkillTree.tsx` shows a lock badge on any tier whose prerequisite isn't at 20, with tooltip "Max <basic name> to unlock".
-- University/Book/Mentor enrollment buttons disable + tooltip when target is locked.
-- Bump version to **1.1.353**, add VersionHistory entry summarising taxonomy cleanup and gating.
-
-## Out of scope
-
-- Per-skill bespoke effect tuning (deferred — would be Phase 7).
-- Resetting any existing player skill XP. Players who already over-leveled a Mastery slug keep it; gating only blocks future XP for new players past this point.
-- New skill families.
-- Translating dead modeling/fashion/clothing/teaching/luthiery skills into music effects — those belong to non-music subsystems and stay as-is.
-
-## Verification
-
-- `bunx vitest run` on any existing skill-related tests.
-- Manual: open `SkillTree`, confirm lock badges appear; try to enroll in a Mastery university course with Basic below 20 and confirm it blocks; confirm version banner reads 1.1.353.
+- Many pages currently assume `useIsMobile`; we'll leave the hook returning false (gate prevents true) so no runtime errors.
+- `Layout.tsx` keeps its background hooks (`useAutoGigStart`, calendars, etc.); only the render tree is replaced.
