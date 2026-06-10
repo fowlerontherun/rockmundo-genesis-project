@@ -157,6 +157,6 @@ export default function TwaaterAnalytics() {
           </>
         )}
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }

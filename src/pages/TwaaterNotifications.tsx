@@ -36,9 +36,9 @@ export default function TwaaterNotifications() {
 
   if (!profile || accountLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-        <p>Loading...</p>
-      </div>
+      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+        <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
+      </FMPageScaffold>
     );
   }
 
