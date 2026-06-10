@@ -60,6 +60,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const sponsorTierLabels: Record<string, { label: string; variant: "outline" | "default" }> = {
   bronze: { label: "Bronze", variant: "outline" },
@@ -329,16 +330,14 @@ const MediaNetworks = () => {
   const sponsorHealthColor = negotiationOutcome.risk > 60 ? "text-destructive" : negotiationOutcome.risk > 40 ? "text-warning" : "text-emerald-500";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Media Control Center</h1>
-          <p className="text-muted-foreground">
-            Operate your television specials, podcast franchises, and radio tours with unified analytics, negotiation tools, and
-            upgrade planning.
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
+    <FMPageScaffold
+      title="Media Control Center"
+      subtitle="Operate your television specials, podcast franchises, and radio tours with unified analytics, negotiation tools, and upgrade planning."
+      icon={Tv}
+      backTo="/hub/media"
+      headerActions={
+        <div className="flex items-center gap-2">
+
           <div className="w-48">
             <Label htmlFor="city-filter">City Focus</Label>
             <Select value={selectedCity} onValueChange={setSelectedCity}>
