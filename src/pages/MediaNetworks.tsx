@@ -792,7 +792,7 @@ const MediaNetworks = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
