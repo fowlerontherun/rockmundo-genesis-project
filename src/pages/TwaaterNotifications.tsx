@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, Repeat2, MessageCircle, UserPlus, Quote, CheckCheck, Bell, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const notificationIcons: Record<string, typeof Heart> = {
   like: Heart,
@@ -104,27 +105,21 @@ export default function TwaaterNotifications() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-50 border-b px-4 py-3 flex items-center gap-4" style={{ backgroundColor: "hsl(var(--twaater-bg))", borderColor: "hsl(var(--twaater-border))" }}>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/twaater")}>
-            <ArrowLeft className="h-5 w-5" />
+    <FMPageScaffold
+      title="Notifications"
+      icon={Bell}
+      backTo="/twaater"
+      backLabel="Back to Twaater"
+      headerActions={
+        unreadCount > 0 ? (
+          <Button variant="outline" size="sm" onClick={() => markAllAsRead()} className="gap-1">
+            <CheckCheck className="h-4 w-4" /> Mark all read
           </Button>
-          <TwaaterLogo size="sm" />
-          <h1 className="font-semibold">Notifications</h1>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllAsRead()}
-              className="ml-auto text-[hsl(var(--twaater-purple))]"
-            >
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Mark all read
-            </Button>
-          )}
-        </div>
+        ) : undefined
+      }
+    >
+      <div className="rounded-sm border border-fm-border overflow-hidden" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
+
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="w-full">
