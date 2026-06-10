@@ -1663,6 +1663,6 @@ export default function RelationshipsPage() {
         onSelectOption={handleInteractionSelect}
         isProcessing={logInteraction.isPending}
       />
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
