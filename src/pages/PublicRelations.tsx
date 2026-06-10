@@ -107,17 +107,17 @@ export default function PublicRelations() {
 
   if (!userId) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Public Relations" icon={Megaphone} backTo="/hub/career">
         <Alert>
           <AlertDescription>Please sign in to access PR features.</AlertDescription>
         </Alert>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (bandLoading) {
     return (
-      <div className="container mx-auto space-y-6 p-6">
+      <FMPageScaffold title="Public Relations" icon={Megaphone} backTo="/hub/career">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -125,37 +125,32 @@ export default function PublicRelations() {
           ))}
         </div>
         <Skeleton className="h-96" />
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!userBand) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Public Relations" icon={Megaphone} backTo="/hub/career">
         <Alert>
           <AlertDescription>
             You need to be the leader of an active band to access PR features.
           </AlertDescription>
         </Alert>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-stage">
-      <div className="container mx-auto space-y-6 p-4 sm:p-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Megaphone className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="font-oswald text-2xl sm:text-4xl">Public Relations</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage media appearances and boost your fame
-            </p>
-          </div>
-        </div>
-
+    <FMPageScaffold
+      title="Public Relations"
+      subtitle="Manage media appearances and boost your fame"
+      icon={Megaphone}
+      backTo="/hub/career"
+    >
+      <div className="space-y-6">
         {/* Stats Cards */}
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           <Card className="bg-card/50 backdrop-blur">
             <CardContent className="p-4">
