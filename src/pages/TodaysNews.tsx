@@ -208,7 +208,7 @@ export default function TodaysNewsPage() {
           <ClassifiedAds />
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
 
