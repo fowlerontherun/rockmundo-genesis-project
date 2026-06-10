@@ -325,6 +325,6 @@ export default function PlayerSearch() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }
