@@ -201,7 +201,7 @@ const RadioStationDetail = () => {
           station={station}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
