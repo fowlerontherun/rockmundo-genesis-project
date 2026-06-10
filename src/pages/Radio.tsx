@@ -64,6 +64,7 @@ import { RadioInvitations } from "@/components/radio/RadioInvitations";
 import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 
 import type { Database } from "@/lib/supabase-types";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type RadioStationRow = Database["public"]["Tables"]["radio_stations"]["Row"];
 type RadioShowRow = Database["public"]["Tables"]["radio_shows"]["Row"];
