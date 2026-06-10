@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import {
   Megaphone,
   Tv,
@@ -258,6 +259,6 @@ export default function PublicRelations() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
