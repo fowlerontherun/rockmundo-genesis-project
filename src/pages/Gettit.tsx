@@ -20,6 +20,8 @@ import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { HandHeart } from "lucide-react";
 
 interface Subreddit {
   id: string;
@@ -378,8 +380,9 @@ const GettitPage = () => {
   });
 
   return (
-    <div className="container mx-auto max-w-6xl py-6 px-4">
+    <FMPageScaffold title="Gettit" subtitle="Player community forums" icon={HandHeart} backTo="/hub/world-social">
       <div className="flex flex-col lg:flex-row gap-6">
+
         {/* Sidebar - Subreddits */}
         <div className="lg:w-64 flex-shrink-0">
           <Card>
