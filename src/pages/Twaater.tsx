@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function Twaater() {
   const { profile } = useGameData();
@@ -69,14 +70,23 @@ export default function Twaater() {
 
   const displayAccount = currentAccount || account;
 
-  if (!profile || accountLoading) return <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}><p>Loading...</p></div>;
-  if (!account) return <TwaaterAccountSetup ownerType={selectedOwnerType} ownerId={selectedOwnerId || ""} profileUsername={profile.username} />;
+  if (!profile || accountLoading) return (
+    <FMPageScaffold title="Twaater" icon={Home} backTo="/hub/world-social">
+      <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
+    </FMPageScaffold>
+  );
+  if (!account) return (
+    <FMPageScaffold title="Twaater" icon={Home} backTo="/hub/world-social">
+      <TwaaterAccountSetup ownerType={selectedOwnerType} ownerId={selectedOwnerId || ""} profileUsername={profile.username} />
+    </FMPageScaffold>
+  );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-      <div className="max-w-4xl mx-auto flex gap-6">
-        {/* Main Content */}
-        <div className="flex-1 max-w-2xl">
+    <FMPageScaffold title="Twaater" icon={Home} backTo="/hub/world-social">
+      <div className="rounded-sm border border-fm-border overflow-hidden" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
+        <div className="flex gap-6">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
           <div className="sticky top-0 z-50 border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "hsl(var(--twaater-bg))", borderColor: "hsl(var(--twaater-border))" }}>
             <TwaaterLogo size="md" />
             <div className="flex items-center gap-3">
