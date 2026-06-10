@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { NominateButton } from "@/components/elections/NominateButton";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -247,21 +248,21 @@ export default function PlayerProfile() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl space-y-6 p-6">
+      <FMPageScaffold title="Player Profile" icon={User} backTo="/players/search">
         <Card><CardContent className="p-6">
           <p className="text-center text-muted-foreground">Loading profile...</p>
         </CardContent></Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!profile) {
     return (
-      <div className="container mx-auto max-w-4xl space-y-6 p-6">
+      <FMPageScaffold title="Player Profile" icon={User} backTo="/players/search">
         <Card><CardContent className="p-6">
           <p className="text-center text-muted-foreground">Player not found.</p>
         </CardContent></Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -278,7 +279,8 @@ export default function PlayerProfile() {
   ];
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-6">
+    <FMPageScaffold title={profile.display_name || profile.username || "Player"} icon={User} backTo="/players/search">
+
       {/* Hero Card */}
       <Card>
         <CardContent className="p-6">
@@ -616,6 +618,6 @@ export default function PlayerProfile() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
