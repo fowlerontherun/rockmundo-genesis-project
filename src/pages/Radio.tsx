@@ -1248,8 +1248,7 @@ export default function Radio() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+      </Tabs>
+    </FMPageScaffold>
   );
 }
