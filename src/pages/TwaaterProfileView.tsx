@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -141,42 +142,41 @@ const TwaaterProfileView = () => {
 
   if (accountLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--twaater-bg))' }}>
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!profileAccount) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'hsl(var(--twaater-bg))' }}>
-        <h2 className="text-2xl font-bold">Profile Not Found</h2>
-        <p className="text-muted-foreground">@{handle} doesn't exist</p>
-        <Button onClick={() => navigate("/twaater")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Feed
-        </Button>
-      </div>
+      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+        <div className="flex flex-col items-center justify-center gap-4 py-16">
+          <h2 className="text-2xl font-bold">Profile Not Found</h2>
+          <p className="text-muted-foreground">@{handle} doesn't exist</p>
+          <Button onClick={() => navigate("/twaater")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Feed
+          </Button>
+        </div>
+      </FMPageScaffold>
     );
   }
 
   const isOwnProfile = viewerAccount?.id === profileAccount.id;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'hsl(var(--twaater-bg))' }}>
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 backdrop-blur-sm border-b p-4 flex items-center gap-4" style={{ backgroundColor: 'hsl(var(--twaater-bg) / 0.8)', borderColor: 'hsl(var(--twaater-border))' }}>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/twaater")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold">{profileAccount.display_name}</h1>
-            <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {twaats?.length || 0} twaats
-            </p>
-          </div>
-        </div>
+    <FMPageScaffold
+      title={profileAccount.display_name}
+      subtitle={`${twaats?.length || 0} twaats`}
+      icon={Users}
+      backTo="/twaater"
+      backLabel="Back to Twaater"
+    >
+      <div className="rounded-sm border border-fm-border" style={{ backgroundColor: 'hsl(var(--twaater-bg))' }}>
+
 
         {/* Profile Card */}
         <div className="p-4">
