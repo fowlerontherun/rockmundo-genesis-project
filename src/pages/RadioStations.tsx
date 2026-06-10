@@ -288,7 +288,7 @@ const RadioStations = () => {
           station={selectedStation}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
