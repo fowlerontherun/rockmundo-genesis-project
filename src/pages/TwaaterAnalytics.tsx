@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BarChart3, Eye, Heart, MessageCircle, Repeat2, TrendingUp, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const StatCard = ({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string | number; hint?: string }) => (
@@ -27,25 +28,22 @@ export default function TwaaterAnalytics() {
 
   if (!account) {
     return (
-      <div className="p-6">
+      <FMPageScaffold title="Twaater Analytics" icon={BarChart3} backTo="/twaater">
         <p className="text-muted-foreground">You need a Twaater account first.</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-      <div className="max-w-5xl mx-auto p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/twaater"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
-          </Button>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" /> Analytics
-          </h1>
-          <Badge variant="outline" className="ml-2">@{account.handle}</Badge>
-          <Badge variant="secondary" className="ml-auto">Last 30 days</Badge>
-        </div>
+    <FMPageScaffold
+      title="Twaater Analytics"
+      subtitle={`@${account.handle} · Last 30 days`}
+      icon={BarChart3}
+      backTo="/twaater"
+      backLabel="Back to Twaater"
+    >
+      <div className="rounded-sm border border-fm-border p-4 space-y-4" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
+
 
         {isLoading || !data ? (
           <Card><CardContent className="p-6 text-center text-muted-foreground">Loading…</CardContent></Card>
