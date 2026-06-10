@@ -278,7 +278,7 @@ const TwaaterProfileView = () => {
           )}
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
