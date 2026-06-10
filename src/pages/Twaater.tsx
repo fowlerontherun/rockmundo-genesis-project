@@ -184,6 +184,6 @@ export default function Twaater() {
           {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
