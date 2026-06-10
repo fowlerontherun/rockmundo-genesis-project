@@ -693,7 +693,7 @@ const GettitPage = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 
