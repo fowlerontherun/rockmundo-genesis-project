@@ -149,6 +149,6 @@ export default function TwaaterNotifications() {
           ))}
         </Tabs>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
