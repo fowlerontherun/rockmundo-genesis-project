@@ -183,6 +183,7 @@ export default function Twaater() {
           <TrendingHashtags />
           {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
         </div>
+        </div>
       </div>
     </FMPageScaffold>
   );
