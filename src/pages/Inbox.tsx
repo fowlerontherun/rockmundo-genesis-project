@@ -7,8 +7,7 @@ import { useInbox, useUnreadInboxCount, type InboxCategory, type InboxMessage as
 import { InboxMessage } from "@/components/inbox/InboxMessage";
 import { InboxFilters } from "@/components/inbox/InboxFilters";
 import { InboxEmptyState } from "@/components/inbox/InboxEmptyState";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type DateGroup = 'today' | 'yesterday' | 'this_week' | 'older';
 
@@ -62,27 +61,27 @@ export default function InboxPage() {
   const hasUnread = (unreadCount || 0) > 0;
 
   return (
-    <PageLayout className="max-w-3xl">
-      <PageHeader
-        title="Inbox"
-        subtitle={hasUnread ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : undefined}
-        backTo="/dashboard"
-        backLabel="Back to Dashboard"
-        icon={InboxIcon}
-        actions={
-          hasUnread ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => markAllAsRead()}
-              className="gap-2"
-            >
-              <CheckCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Mark all read</span>
-            </Button>
-          ) : undefined
-        }
-      />
+    <FMPageScaffold
+      title="Inbox"
+      subtitle={hasUnread ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : undefined}
+      backTo="/dashboard"
+      backLabel="Back to Dashboard"
+      icon={InboxIcon}
+      headerActions={
+        hasUnread ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => markAllAsRead()}
+            className="gap-2"
+          >
+            <CheckCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Mark all read</span>
+          </Button>
+        ) : undefined
+      }
+    >
+
 
       {/* Filters */}
       <InboxFilters
@@ -127,6 +126,6 @@ export default function InboxPage() {
           })}
         </div>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

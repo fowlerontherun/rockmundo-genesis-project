@@ -11,6 +11,7 @@ import { MyRadioSubmissions } from "@/components/radio/MyRadioSubmissions";
 import { RadioStationFilters, RadioFilters, defaultFilters } from "@/components/radio/RadioStationFilters";
 import { AirplayDashboard } from "@/components/radio/AirplayDashboard";
 import type { RadioStation } from "@/hooks/useRadioStations";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const RadioStations = () => {
   const navigate = useNavigate();
@@ -100,13 +101,13 @@ const RadioStations = () => {
   }, [mySubmissions]);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Radio Stations</h1>
-          <p className="text-muted-foreground">Track radio airplay and station performance</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Radio Stations"
+      subtitle="Track radio airplay and station performance"
+      icon={Radio}
+      backTo="/hub/media"
+    >
+
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -287,7 +288,7 @@ const RadioStations = () => {
           station={selectedStation}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

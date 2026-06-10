@@ -14,6 +14,7 @@ import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { resolveRelationshipPairKey } from "@/features/relationships/api";
 import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
 import { useToast } from "@/hooks/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface PlayerProfile {
   id: string;
@@ -126,11 +127,13 @@ export default function PlayerSearch() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Search Players</h1>
-        <p className="text-muted-foreground">Find other musicians and view their profiles</p>
-      </div>
+    <FMPageScaffold
+      title="Search Players"
+      subtitle="Find other musicians and view their profiles"
+      icon={Search}
+      backTo="/hub/world-social"
+    >
+
 
       <Card>
         <CardHeader>
@@ -322,6 +325,6 @@ export default function PlayerSearch() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }

@@ -1,4 +1,4 @@
-import { Bell, Loader2, MessageSquare, TrendingUp, Video } from "lucide-react";
+import { Bell, Loader2, MessageSquare, TrendingUp, Video, Share2 } from "lucide-react";
 
 import {
   Card,
@@ -19,6 +19,7 @@ import { TwaaterMentionsFeed } from "@/components/twaater/TwaaterMentionsFeed";
 import { useDailyTwaatXP } from "@/hooks/useDailyTwaatXP";
 import { DikCokExperience } from "@/components/dikcok/DikCokExperience";
 import { TrendingTwaats } from "@/components/twaater/TrendingTwaats";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SocialMedia = () => {
   const { profile } = useGameData();
@@ -33,7 +34,7 @@ const SocialMedia = () => {
 
   if (!profile) {
     return (
-      <div className="container mx-auto space-y-6 py-6">
+      <FMPageScaffold title={t('social.title')} subtitle={t('social.description')} icon={Share2} backTo="/hub/world-social">
         <Card>
           <CardHeader>
             <CardTitle>{t('twaater.title')}</CardTitle>
@@ -42,21 +43,17 @@ const SocialMedia = () => {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 py-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('social.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('social.description')}
-          </p>
-        </div>
-      </div>
-
+    <FMPageScaffold
+      title={t('social.title')}
+      subtitle={t('social.description')}
+      icon={Share2}
+      backTo="/hub/world-social"
+    >
       <Tabs defaultValue="twaater" className="space-y-6">
         <TabsList>
           <TabsTrigger value="twaater" className="flex items-center gap-2">
@@ -192,7 +189,7 @@ const SocialMedia = () => {
           <DikCokExperience profile={profile} />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

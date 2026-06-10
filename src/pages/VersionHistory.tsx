@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.366",
+    date: "2026-06-10",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 5b (Social, media & news pages). Migrated the remaining social / media vertical onto `FMPageScaffold`: SocialMedia, SocialHub-adjacent pages, DikCok, Gettit, Twaater (hub) and its subpages (TwaaterAnalytics, TwaaterNotifications, TwaaterTwaatView, TwaaterHashtagView, TwaaterMessagesPage, TwaaterProfile, TwaaterProfileView), Relationships, PlayerSearch, PlayerProfile, Inbox, MediaNetworks, Radio, RadioStations, RadioStationDetail, PublicRelations, FanManagement, and TodaysNews." },
+      { type: 'improvement', description: "Dropped legacy wrappers (`container mx-auto py-N`, `max-w-Nxl mx-auto`, `min-h-screen bg-gradient-stage`, `PageLayout`+`PageHeader` stack) and bespoke in-page `<h1>` + icon-pill title blocks. Page titles, subtitles, icons, and back-links flow through `FMPageScaffold` props instead so every social / media screen sits flush with the FM 40px header strip." },
+      { type: 'improvement', description: "Twaater subpages (analytics, notifications, twaat detail, hashtag, messages, profile views) now sit inside the FM shell with a back link to `/twaater` instead of a custom `min-h-screen` purple page chrome. The purple Twaater theme is preserved as an inner styled panel, keeping the social-network feel while inheriting the FM frame and persistent in-game chat dock." },
+      { type: 'improvement', description: "Header CTAs and selectors (Inbox 'Mark all read', DikCok band selector + create dialog, Relationships friend / connection badges, TwaaterNotifications 'Mark all read', TwaaterMessages back-to-conversations, MediaNetworks city/show selectors) moved into the scaffold's `headerActions` slot at `size=\"sm\"` so they share the same FM strip height across the vertical." },
+    ],
+  },
+  {
     version: "1.1.365",
     date: "2026-06-09",
     changes: [

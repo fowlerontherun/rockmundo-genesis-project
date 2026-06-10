@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign, Sparkles, Trophy } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
 import { useDikCokChallenges } from "@/hooks/useDikCokChallenges";
@@ -75,14 +74,18 @@ export default function DikCok() {
     enabled: !!effectiveBandId,
   });
 
-  if (!profile || bandsLoading) return <div className="container mx-auto p-6 flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if (!profile || bandsLoading) return (
+    <FMPageScaffold title="DikCok" icon={Video} backTo="/hub/world-social">
+      <div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    </FMPageScaffold>
+  );
 
   if (!userBands?.length) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <FMPageScaffold title="DikCok" subtitle="Create viral short-form videos and grow your fanbase" icon={Video} backTo="/hub/world-social">
         <div className="text-center py-12">
           <Video className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-3xl font-bold mb-2">Join the DikCok Revolution</h1>
+          <h2 className="text-3xl font-bold mb-2">Join the DikCok Revolution</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Create viral short-form videos to grow your fanbase. You need to be in a band first!
           </p>
@@ -92,7 +95,7 @@ export default function DikCok() {
             </Link>
           </div>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -107,34 +110,32 @@ export default function DikCok() {
   }, 0);
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="DikCok"
-        subtitle="Create viral short-form videos and grow your fanbase"
-        icon={Video}
-        backTo="/hub/world-social"
-        backLabel="Back to World & Social"
-        actions={
-          <div className="flex items-center gap-3">
-            {userBands.length > 1 && (
-              <Select value={effectiveBandId || ""} onValueChange={setSelectedBandId}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select band" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userBands.map((m) => (
-                    <SelectItem key={m.band_id} value={m.band_id}>
-                      {(m.bands as any)?.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} bandGenre={selectedBand.genre} />}
-          </div>
-        }
-      />
-
+    <FMPageScaffold
+      title="DikCok"
+      subtitle="Create viral short-form videos and grow your fanbase"
+      icon={Video}
+      backTo="/hub/world-social"
+      backLabel="Back to World & Social"
+      headerActions={
+        <div className="flex items-center gap-2">
+          {userBands.length > 1 && (
+            <Select value={effectiveBandId || ""} onValueChange={setSelectedBandId}>
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue placeholder="Select band" />
+              </SelectTrigger>
+              <SelectContent>
+                {userBands.map((m) => (
+                  <SelectItem key={m.band_id} value={m.band_id}>
+                    {(m.bands as any)?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} bandGenre={selectedBand.genre} />}
+        </div>
+      }
+    >
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
@@ -290,6 +291,6 @@ export default function DikCok() {
           {selectedBand && <DikCokCreatorDashboard band={selectedBand} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

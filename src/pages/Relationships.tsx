@@ -17,8 +17,7 @@ import {
   Shield, Zap, Star, Crown, AlertCircle,
   UserPlus, MessageSquare, Gift, Handshake,
 } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { ScoreGauge } from "@/components/social/ScoreGauge";
 import { InteractionModal, type InteractionOption, type InteractionResult } from "@/components/social/InteractionModal";
 import { useCharacterRelationships, useLogInteraction } from "@/hooks/useCharacterRelationships";
@@ -570,24 +569,23 @@ export default function RelationshipsPage() {
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Social & Relationships"
-        subtitle="Manage your connections, track chemistry, and navigate the drama of the music world."
-        backTo="/hub/world-social"
-        backLabel="Back to World & Social"
-        icon={Heart}
-        actions={
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {friendships.filter(f => f.friendship.status === "accepted").length} friends
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {relationships.length} connections
-            </Badge>
-          </div>
-        }
-      />
+    <FMPageScaffold
+      title="Social & Relationships"
+      subtitle="Manage your connections, track chemistry, and navigate the drama of the music world."
+      backTo="/hub/world-social"
+      backLabel="Back to World & Social"
+      icon={Heart}
+      headerActions={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {friendships.filter(f => f.friendship.status === "accepted").length} friends
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {relationships.length} connections
+          </Badge>
+        </div>
+      }
+    >
 
       <div className="mb-4 space-y-4">
         <StreakBanner />
@@ -1665,6 +1663,6 @@ export default function RelationshipsPage() {
         onSelectOption={handleInteractionSelect}
         isProcessing={logInteraction.isPending}
       />
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

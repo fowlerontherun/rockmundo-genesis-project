@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function TwaaterTwaatView() {
   const { twaatId } = useParams();
@@ -59,42 +60,33 @@ export default function TwaaterTwaatView() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!twaat) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-        <div className="max-w-2xl mx-auto p-4">
-          <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">Twaat not found</p>
-              <Button onClick={() => navigate("/twaater")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Feed
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">Twaat not found</p>
+            <Button onClick={() => navigate("/twaater")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Feed
+            </Button>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 backdrop-blur-sm border-b px-4 py-3 flex items-center gap-4" style={{ backgroundColor: "hsl(var(--twaater-bg) / 0.8)", borderColor: "hsl(var(--twaater-border))" }}>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/twaater")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <TwaaterLogo size="sm" />
-          <span className="font-semibold">Twaat</span>
-        </div>
-
+    <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater" backLabel="Back to Twaater">
+      <div className="rounded-sm border border-fm-border overflow-hidden" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
         {/* Main Twaat */}
         <TwaatCard twaat={twaat} viewerAccountId={account?.id} />
 
@@ -122,6 +114,6 @@ export default function TwaaterTwaatView() {
           )}
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }

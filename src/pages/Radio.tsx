@@ -64,6 +64,7 @@ import { RadioInvitations } from "@/components/radio/RadioInvitations";
 import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 
 import type { Database } from "@/lib/supabase-types";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type RadioStationRow = Database["public"]["Tables"]["radio_stations"]["Row"];
 type RadioShowRow = Database["public"]["Tables"]["radio_shows"]["Row"];
@@ -531,25 +532,19 @@ export default function Radio() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-stage">
-      <div className="container mx-auto space-y-4 px-4 py-6 sm:px-6 sm:py-8">
-        {/* Header */}
-        <div className="flex flex-wrap items-center gap-3">
-          <RadioIcon className="h-8 w-8 sm:h-9 sm:w-9" />
-          <div>
-            <h1 className="font-oswald text-2xl sm:text-4xl">{t('radio.title')}</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              {t('radio.description')}
-            </p>
-          </div>
-        </div>
+    <FMPageScaffold
+      title={t('radio.title')}
+      subtitle={t('radio.description')}
+      icon={RadioIcon}
+      backTo="/hub/media"
+    >
+      <Alert className="py-2">
+        <Music className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          {t('radio.submitInfo')}
+        </AlertDescription>
+      </Alert>
 
-        <Alert className="py-2">
-          <Music className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            {t('radio.submitInfo')}
-          </AlertDescription>
-        </Alert>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
           {/* Mobile-optimized tabs with horizontal scroll */}
@@ -1254,8 +1249,7 @@ export default function Radio() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+      </Tabs>
+    </FMPageScaffold>
   );
 }

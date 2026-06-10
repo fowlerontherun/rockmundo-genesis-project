@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Music, Calendar } from "lucide-react";
+import { Users, Music, Calendar, Newspaper } from "lucide-react";
 import { format } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { NewspaperMasthead } from "@/components/news/NewspaperMasthead";
 import { BreakingNewsTicker } from "@/components/news/BreakingNewsTicker";
@@ -78,7 +79,8 @@ export default function TodaysNewsPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <FMPageScaffold title="Today's News" subtitle="The world is reading…" icon={Newspaper} backTo="/hub/media">
+
       {/* Masthead */}
       <NewspaperMasthead />
 
@@ -206,7 +208,7 @@ export default function TodaysNewsPage() {
           <ClassifiedAds />
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
 

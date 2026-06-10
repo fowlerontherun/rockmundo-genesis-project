@@ -9,6 +9,7 @@ import { ArrowLeft, Radio, MapPin, Music, Users, Clock, Star } from "lucide-reac
 import { useState } from "react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
 import type { RadioStation } from "@/hooks/useRadioStations";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const RadioStationDetail = () => {
   const { stationId } = useParams();
@@ -49,44 +50,37 @@ const RadioStationDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
+      <FMPageScaffold title="Radio Station" icon={Radio} backTo="/radio">
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
             Loading station...
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!station) {
     return (
-      <div className="container mx-auto py-8">
+      <FMPageScaffold title="Radio Station" icon={Radio} backTo="/radio">
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
             Station not found
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/radio">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Radio className="h-8 w-8 text-primary" />
-            {station.name}
-          </h1>
-          <p className="text-muted-foreground">Radio Station Details</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title={station.name}
+      subtitle="Radio Station Details"
+      icon={Radio}
+      backTo="/radio"
+      backLabel="Back to Radio"
+    >
+
 
       {/* Station Info */}
       <Card>
@@ -207,7 +201,7 @@ const RadioStationDetail = () => {
           station={station}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

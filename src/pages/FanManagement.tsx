@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,11 +25,13 @@ const FanManagement = () => {
       : 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Fan Management</h1>
-        <p className="text-muted-foreground">Build and engage your fanbase with targeted campaigns</p>
-      </div>
+    <FMPageScaffold
+      title="Fan Management"
+      subtitle="Build and engage your fanbase with targeted campaigns"
+      icon={Users}
+      backTo="/hub/career"
+    >
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -232,7 +235,7 @@ const FanManagement = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
