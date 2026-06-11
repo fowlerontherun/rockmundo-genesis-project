@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Users, Plus, ShieldCheck, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +54,13 @@ export default function BuyCharacterSlot() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader title="Character Slots" subtitle="Manage your roster, switch characters, and buy extra slots in one place." />
+    <FMPageScaffold
+      title="Character Slots"
+      subtitle="Manage your roster, switch characters, and buy extra slots in one place."
+      icon={Users}
+      backTo="/hub/premium-store"
+    >
+
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <Card>
@@ -184,6 +188,6 @@ export default function BuyCharacterSlot() {
           </CardContent>
         </Card>
       </div>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

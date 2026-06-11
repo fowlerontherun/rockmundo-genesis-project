@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useSkinStore";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useTranslation } from "@/hooks/useTranslation";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SkinStore = () => {
   const { t } = useTranslation();
@@ -81,26 +82,21 @@ const SkinStore = () => {
   const selectedCollectionData = collections.find((c) => c.id === selectedCollection);
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ShoppingBag className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Skin Store</h1>
-            <p className="text-sm text-muted-foreground">
-              Customize your avatar with exclusive skins and outfits
-            </p>
-          </div>
-        </div>
-        
-        {vipStatus?.isVip && (
+    <FMPageScaffold
+      title="Skin Store"
+      subtitle="Customize your avatar with exclusive skins and outfits"
+      icon={ShoppingBag}
+      backTo="/hub/premium-store"
+      headerActions={
+        vipStatus?.isVip ? (
           <Badge className="bg-warning/20 text-warning border-warning/30">
             <Crown className="h-3.5 w-3.5 mr-1" />
             VIP Member
           </Badge>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
+
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -354,7 +350,7 @@ const SkinStore = () => {
         onClose={() => setPreviewItem(null)}
         onPurchase={handlePurchase}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 
