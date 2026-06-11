@@ -122,7 +122,7 @@ const EnhancedEquipmentStore = () => {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
