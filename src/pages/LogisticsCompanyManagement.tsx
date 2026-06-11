@@ -8,6 +8,7 @@ import { useLogisticsCompanyById } from "@/hooks/useLogisticsBusiness";
 import { VipGate } from "@/components/company/VipGate";
 import { LogisticsFleetManager, LogisticsDriversManager, LogisticsContractsManager, LogisticsUpgradesManager } from "@/components/logistics-business";
 import { LICENSE_TIER_NAMES, LICENSE_TIER_FLEET_LIMITS, LICENSE_TIER_OPERATING_RADIUS } from "@/types/logistics-business";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function LogisticsCompanyManagement() {
   const { companyId } = useParams();
@@ -42,21 +43,13 @@ export default function LogisticsCompanyManagement() {
   
   return (
     <VipGate feature="Logistics Company" description="Run a fleet and fulfill contracts.">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Truck className="h-6 w-6" />
-              {company.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {company.specializations?.[0]?.replace('_', ' ') || 'General'} • {LICENSE_TIER_NAMES[company.license_tier]}
-            </p>
-          </div>
-        </div>
+      <FMPageScaffold
+        title={company.name}
+        subtitle={`${company.specializations?.[0]?.replace('_', ' ') || 'General'} • ${LICENSE_TIER_NAMES[company.license_tier]}`}
+        icon={Truck}
+        backTo="/my-companies"
+        backLabel="Back to Companies"
+      >
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

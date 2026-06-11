@@ -272,7 +272,7 @@ export default function RecordingStudioBusinessManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
