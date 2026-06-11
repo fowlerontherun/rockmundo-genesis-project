@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface VipTier {
   name: string;
@@ -123,14 +124,22 @@ export default function VipSubscribe() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-      </div>
+      <FMPageScaffold title="VIP Membership" icon={Crown} backTo="/hub/premium-store">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-8">
+    <FMPageScaffold
+      title="VIP Membership"
+      subtitle="Unlock companies, venues, radio influence, and more."
+      icon={Crown}
+      backTo="/hub/premium-store"
+    >
+
       {/* Hero Section */}
       <div className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30">
@@ -319,6 +328,6 @@ export default function VipSubscribe() {
           ← Back to Game
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
