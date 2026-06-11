@@ -119,7 +119,7 @@ export default function LogisticsCompanyManagement() {
             <LogisticsUpgradesManager logisticsCompanyId={company.id} />
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }

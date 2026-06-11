@@ -10,6 +10,7 @@ import { ContractsList } from "@/components/security/ContractsList";
 import { SecurityUpgradesManager } from "@/components/security/SecurityUpgradesManager";
 import { LICENSE_LEVEL_NAMES, LICENSE_LEVEL_VENUE_CAPACITY, EQUIPMENT_QUALITY_NAMES } from "@/types/security";
 import { VipGate } from "@/components/company/VipGate";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SecurityFirmManagement = () => {
   const { companyId } = useParams<{ companyId: string }>();
@@ -38,25 +39,19 @@ const SecurityFirmManagement = () => {
 
   return (
     <VipGate feature="Security Firm Management" description="Hire guards and win contracts.">
-      <div className="container py-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">{firm.name}</h1>
-            </div>
-            <p className="text-muted-foreground">
-              Subsidiary of {company.name}
-            </p>
-          </div>
+      <FMPageScaffold
+        title={firm.name}
+        subtitle={`Subsidiary of ${company.name}`}
+        icon={Shield}
+        backTo="/my-companies"
+        backLabel="Back to Companies"
+        headerActions={
           <Button variant="outline" size="sm">
             <Settings className="h-4 w-4 mr-1" />
             Settings
           </Button>
-        </div>
+        }
+      >
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
