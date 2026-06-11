@@ -100,20 +100,18 @@ const ClothingDesignerInner = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container max-w-5xl mx-auto py-6 px-4 space-y-6">
-      {/* Brand Dashboard */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Scissors className="h-6 w-6" />
-          {brand.brand_name}
-        </h1>
-        <p className="text-muted-foreground text-sm">{brand.brand_description || "Your clothing brand"}</p>
-      </div>
+    <FMPageScaffold
+      title={brand.brand_name}
+      subtitle={brand.brand_description || "Your clothing brand"}
+      icon={Scissors}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+    >
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
