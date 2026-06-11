@@ -95,7 +95,7 @@ export default function MerchFactoryManagement() {
             </Tabs>
           </div>
         </div>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
