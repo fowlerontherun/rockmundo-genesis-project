@@ -149,7 +149,7 @@ const VenueManagement = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
