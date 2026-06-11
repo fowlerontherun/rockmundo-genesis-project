@@ -8,8 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Scale, Crown, Lock, FileText } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge as BadgeUI } from "@/components/ui/badge";
 import { LabelDirectory } from "@/components/labels/LabelDirectory";
 import { MyContractsTab } from "@/components/labels/MyContractsTab";
@@ -193,13 +192,14 @@ const RecordLabel = () => {
   const hasError = entityError || dealTypesError || territoriesError;
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Record Label Hub"
-        subtitle={`Scout label partners, manage release campaigns, and monitor royalties. Launching a label requires at least $${formattedMinimumBalance}. Current balance: $${formattedPersonalBalance}.`}
-        backTo="/hub/career-business"
-        backLabel="Back to Career & Business"
-      />
+    <FMPageScaffold
+      title="Record Label Hub"
+      subtitle={`Scout label partners, manage release campaigns, and monitor royalties. Launching a label requires at least $${formattedMinimumBalance}. Current balance: $${formattedPersonalBalance}.`}
+      icon={Disc}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+    >
+
 
       {/* Deal Types Explained */}
       <Card>
@@ -405,7 +405,7 @@ const RecordLabel = () => {
         currentBalance={personalBalance}
         hasActiveLawyer={hasActiveLawyer}
       />
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
