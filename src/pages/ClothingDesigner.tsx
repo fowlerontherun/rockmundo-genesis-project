@@ -18,6 +18,7 @@ import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { calculateClothingScores, GENRE_STYLES } from "@/utils/clothingQuality";
 import { ClothingDesignForm } from "@/components/clothing/ClothingDesignForm";
 import { ClothingItemCard } from "@/components/clothing/ClothingItemCard";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ClothingDesignerInner = () => {
   const { brand, items, loading, createBrand, createItem } = useClothingBrand();
@@ -39,7 +40,7 @@ const ClothingDesignerInner = () => {
   // Brand creation flow
   if (!brand) {
     return (
-      <div className="container max-w-lg mx-auto py-8 px-4">
+      <FMPageScaffold title="Clothing Brand" subtitle="Launch your fashion empire." icon={Scissors} backTo="/hub/career-business">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
