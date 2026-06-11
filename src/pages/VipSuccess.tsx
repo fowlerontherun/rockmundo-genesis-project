@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Crown, CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function VipSuccess() {
   const navigate = useNavigate();
@@ -38,7 +39,8 @@ export default function VipSuccess() {
   }, [navigate]);
 
   return (
-    <div className="container mx-auto p-6 flex items-center justify-center min-h-[600px]">
+    <FMPageScaffold title="VIP Membership Activated" icon={Crown} backTo="/hub/premium-store">
+      <div className="flex items-center justify-center min-h-[600px]">
       <Card className="max-w-md w-full bg-gradient-to-br from-amber-500/10 via-background to-background border-amber-500/30">
         <CardContent className="p-8 text-center space-y-6">
           {/* Success Animation */}
@@ -108,6 +110,7 @@ export default function VipSuccess() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </FMPageScaffold>
   );
 }

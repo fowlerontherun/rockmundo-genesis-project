@@ -124,7 +124,7 @@ const SecurityFirmManagement = () => {
 
         {/* Upgrades */}
         <SecurityUpgradesManager firmId={firm.id} companyBalance={company.balance || 0} />
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 };
