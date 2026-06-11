@@ -256,7 +256,7 @@ export default function BlindBoxInventory() {
           <Grid items={filtered.filter((e) => e.s)} playing={playing} onPlay={togglePlay} loading={isLoading} mode="songs" />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
 
@@ -352,6 +352,6 @@ function Grid({
           </CardContent>
         </Card>
       ))}
-    </FMPageScaffold>
+    </div>
   );
 }
