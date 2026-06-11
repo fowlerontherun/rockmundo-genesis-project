@@ -25,6 +25,7 @@ import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab"
 import { LabelMarketingBudgetCard } from "@/components/labels/management/LabelMarketingBudgetCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
   return useQuery({
@@ -196,7 +197,24 @@ export default function LabelManagement() {
   
   return (
     <VipGate feature="Record Label" description="Sign artists and oversee releases.">
-      <div className="container mx-auto p-4 md:p-6 space-y-4">
+      <FMPageScaffold
+        title={label.name}
+        subtitle={`${label.genre_focus?.length ? label.genre_focus.join(', ') : 'Record label'}${city?.name ? ` • ${city.name}, ${city.country}` : ''}`}
+        icon={Disc}
+        backTo="/labels"
+        backLabel="Back to Labels"
+        headerActions={
+          <>
+            {isPlayerOwned && <Crown className="h-4 w-4 text-warning shrink-0" />}
+            <Badge variant="outline" className={cn("text-[10px] shrink-0", repTier.color)}>
+              <Star className="h-3 w-3 mr-0.5" />
+              {repTier.label} ({label.reputation_score || 0})
+            </Badge>
+            <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
+          </>
+        }
+      >
+
         {/* Header */}
         <div className="flex items-start gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mt-1 shrink-0">
