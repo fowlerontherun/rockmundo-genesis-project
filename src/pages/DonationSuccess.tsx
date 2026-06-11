@@ -169,6 +169,6 @@ export default function DonationSuccess() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
