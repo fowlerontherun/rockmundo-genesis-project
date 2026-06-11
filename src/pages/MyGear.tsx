@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench } from "lucide-react";
+import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench, Guitar } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 import { calculateRepairCost } from "@/utils/equipmentDegradation";
 import { supabase } from "@/integrations/supabase/client";
@@ -552,20 +553,18 @@ const MyGear: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Personal Loadout Planner</h1>
-          <p className="max-w-3xl text-muted-foreground">
-            Build and tune your performance rig. Assign microphones, dial in pedal board slots, and track auxiliary gear in a
-            single view. Inline editors update the loadout instantly while enforcing slot limits and compatibility rules.
-          </p>
-      </div>
-      <Button variant="outline" size="sm" onClick={handleResetLoadout}>
-        <RefreshCcw className="h-4 w-4" />
-        Reset to defaults
-      </Button>
-    </div>
+    <FMPageScaffold
+      title="Personal Loadout Planner"
+      subtitle="Build and tune your performance rig with mics, pedal boards, and auxiliary gear."
+      icon={Guitar}
+      backTo="/hub/career-business"
+      headerActions={
+        <Button variant="outline" size="sm" onClick={handleResetLoadout}>
+          <RefreshCcw className="h-4 w-4 mr-1" />
+          Reset
+        </Button>
+      }
+    >
 
       {prefillNotice && noticeGear ? (
         <Alert className="border-primary/40 bg-primary/5">
