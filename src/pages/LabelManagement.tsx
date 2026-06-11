@@ -385,7 +385,7 @@ export default function LabelManagement() {
             <LabelGenreExpertise labelId={label.id} />
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
