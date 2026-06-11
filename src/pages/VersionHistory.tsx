@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.367",
+    date: "2026-06-11",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 6 (Commerce, Premium & Career-business pages). Migrated the remaining commerce/premium/career-business vertical onto `FMPageScaffold`: Employment, Merchandise, InventoryManager, OffersDashboard, ActingCareer, ClothingDesigner, EnhancedEquipmentStore, Gear, MyGear, LabelManagement, RecordLabel, VenueManagement, VenueBusinessManagement, MerchFactoryManagement, RecordingStudioBusinessManagement, LogisticsCompanyManagement, SecurityFirmManagement, VipSubscribe, BuyCharacterSlot, SkinStore, BlindBoxStore, BlindBoxInventory, BlindBoxAnalytics, SlotPurchaseSuccess, VipSuccess, and DonationSuccess." },
+      { type: 'improvement', description: "Replaced legacy wrappers (`PageLayout` + `PageHeader` stacks, `container mx-auto p-N`, bespoke `<h1>` header rows, and `Button variant=ghost icon` back-arrow rows) with the unified `FMPageScaffold` props (`title`, `subtitle`, `icon`, `backTo`, `backLabel`, `headerActions`). Career-business pages back-link to `/hub/career-business`; premium store pages back-link to `/hub/premium-store`; subsidiary business management pages (Venue / Studio / Factory / Logistics / Security) back-link to `/my-companies`." },
+      { type: 'improvement', description: "Page-specific CTAs and meta moved into the scaffold's `headerActions` slot at `size=\"sm\"`: Gear cash balance, OffersDashboard loading spinner, SkinStore VIP badge, BlindBoxStore inventory / analytics / wallet / Buy Gems row, BlindBoxInventory & Analytics filters, LabelManagement reputation tier + tier badge + crown, MyGear 'Reset to defaults', VenueBusinessManagement venue-type badge, RecordingStudioBusinessManagement quality badge, and SecurityFirmManagement settings button — all aligned to the FM 40px header strip." },
+    ],
+  },
+  {
     version: "1.1.366",
     date: "2026-06-10",
     changes: [
