@@ -7,7 +7,7 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Scale, Crown, Lock, FileText } from "lucide-react";
+import { Loader2, Plus, Scale, Crown, Lock, FileText, Disc } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge as BadgeUI } from "@/components/ui/badge";
 import { LabelDirectory } from "@/components/labels/LabelDirectory";
