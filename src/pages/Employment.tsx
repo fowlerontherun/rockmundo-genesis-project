@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, CalendarCheck, Filter, MapPin, Search, Building2, History } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, parseISO } from "date-fns";
@@ -447,14 +446,14 @@ export default function Employment() {
   const currentJob = currentEmployment?.jobs ?? null;
 
   return (
-    <PageLayout>
-        <PageHeader
-          title="Employment"
-          subtitle={currentCityName ? `Find jobs to earn money while pursuing your music career • Currently in: ${currentCityName}` : "Find jobs to earn money while pursuing your music career"}
-          backTo="/hub/career-business"
-          backLabel="Back to Career & Business"
-          icon={Briefcase}
-        />
+    <FMPageScaffold
+      title="Employment"
+      subtitle={currentCityName ? `Find jobs to earn money while pursuing your music career • Currently in: ${currentCityName}` : "Find jobs to earn money while pursuing your music career"}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+      icon={Briefcase}
+    >
+
 
         {activityStatus && (
           <Alert>
@@ -831,6 +830,6 @@ export default function Employment() {
             )}
           </TabsContent>
         </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
