@@ -8,6 +8,7 @@ import { useEquipmentStore } from "@/hooks/useEquipmentStore";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ShoppingCart, Package, Wrench } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const EnhancedEquipmentStore = () => {
   const { profileId } = useActiveProfile();
@@ -21,11 +22,12 @@ const EnhancedEquipmentStore = () => {
   );
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Equipment Store</h1>
-        <p className="text-muted-foreground">Browse professional music equipment</p>
-      </div>
+    <FMPageScaffold
+      title="Equipment Store"
+      subtitle="Browse professional music equipment"
+      icon={ShoppingCart}
+      backTo="/hub/career-business"
+    >
 
       <Tabs defaultValue="store">
         <TabsList>

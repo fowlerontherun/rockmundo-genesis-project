@@ -163,7 +163,7 @@ const ClothingDesignerInner = () => {
           </div>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
