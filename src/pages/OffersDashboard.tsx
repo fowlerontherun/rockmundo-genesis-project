@@ -37,7 +37,9 @@ import {
   Send,
   TrendingUp,
   Loader2,
+  Handshake,
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -231,21 +233,21 @@ const OffersDashboard = () => {
 
   if (!profileId) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Partnership Dashboard" icon={Handshake} backTo="/hub/career-business">
         <p className="text-muted-foreground">Please log in to view your offers.</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Offer & Contract Intelligence</p>
-          <h1 className="text-2xl font-bold">Partnership Dashboard</h1>
-        </div>
-        {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-      </div>
+    <FMPageScaffold
+      title="Partnership Dashboard"
+      subtitle="Offer & Contract Intelligence"
+      icon={Handshake}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+      headerActions={isLoading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : undefined}
+    >
 
       {/* Filter */}
       <Card>
@@ -405,7 +407,7 @@ const OffersDashboard = () => {
           </Table>
         </ScrollArea>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 };
 

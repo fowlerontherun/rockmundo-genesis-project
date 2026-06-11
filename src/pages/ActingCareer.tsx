@@ -13,6 +13,7 @@ import { RenewalOfferCard } from "@/components/acting/RenewalOfferCard";
 import { FilmBreakdownCard } from "@/components/acting/FilmBreakdownCard";
 import { SeriesBreakdownCard } from "@/components/acting/SeriesBreakdownCard";
 import { format, parseISO } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function ActingCareer() {
   const { user } = useAuth();
@@ -64,17 +65,13 @@ export default function ActingCareer() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Film className="h-8 w-8 text-primary" /> Acting Career
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Films, scripted TV series, negotiations, sequel pipelines and weekly performance.
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Acting Career"
+      subtitle="Films, scripted TV series, negotiations, sequel pipelines and weekly performance."
+      icon={Film}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+    >
 
       <Tabs defaultValue="offers" className="space-y-4">
         <TabsList className="flex flex-wrap">
