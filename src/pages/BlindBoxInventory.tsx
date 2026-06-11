@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Package, Music, Guitar, Sparkles, Search, ArrowLeft, Play, Pause, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type Opening = {
   id: string;
@@ -156,16 +157,13 @@ export default function BlindBoxInventory() {
   }, {});
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-3 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="h-6 w-6 text-primary" /> Loot Inventory
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Every instrument and song you've unboxed — filter by tier and quality.
-          </p>
-        </div>
+    <FMPageScaffold
+      title="Loot Inventory"
+      subtitle="Every instrument and song you've unboxed — filter by tier and quality."
+      icon={Package}
+      backTo="/blind-boxes"
+      backLabel="Back to Store"
+      headerActions={
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
             <Link to="/blind-boxes/analytics"><BarChart3 className="h-4 w-4 mr-1" /> Analytics</Link>
@@ -174,7 +172,9 @@ export default function BlindBoxInventory() {
             <Link to="/blind-boxes"><ArrowLeft className="h-4 w-4 mr-1" /> Store</Link>
           </Button>
         </div>
-      </div>
+      }
+    >
+
 
       <Card>
         <CardContent className="p-3 space-y-3">
@@ -352,6 +352,6 @@ function Grid({
           </CardContent>
         </Card>
       ))}
-    </div>
+    </FMPageScaffold>
   );
 }

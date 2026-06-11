@@ -27,6 +27,9 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+//
+} from "recharts";
 
 type Opening = {
   id: string;
