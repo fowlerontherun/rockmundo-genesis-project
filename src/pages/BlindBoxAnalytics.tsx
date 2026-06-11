@@ -27,6 +27,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type Opening = {
   id: string;
@@ -229,16 +230,13 @@ export default function BlindBoxAnalytics() {
   }, [filtered]);
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-4 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" /> Blind Box Analytics
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Pull rates, average quality, and your progression over time.
-          </p>
-        </div>
+    <FMPageScaffold
+      title="Blind Box Analytics"
+      subtitle="Pull rates, average quality, and your progression over time."
+      icon={BarChart3}
+      backTo="/blind-boxes"
+      backLabel="Back to Store"
+      headerActions={
         <div className="flex flex-wrap gap-2">
           <Select value={boxFilter} onValueChange={setBoxFilter}>
             <SelectTrigger className="h-8 w-[160px]">
@@ -269,7 +267,9 @@ export default function BlindBoxAnalytics() {
             </Link>
           </Button>
         </div>
-      </div>
+      }
+    >
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -560,7 +560,7 @@ export default function BlindBoxAnalytics() {
           </Card>
         </>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
 

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type CityRow = Database['public']['Tables']['cities']['Row'];
@@ -60,22 +61,21 @@ const VenueManagement = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Music Venues" icon={Building2} backTo="/hub/career-business">
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Music Venues</h1>
-        <p className="text-muted-foreground">
-          Discover performance venues across different cities and prestige levels
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Music Venues"
+      subtitle="Discover performance venues across different cities and prestige levels"
+      icon={Building2}
+      backTo="/hub/career-business"
+    >
 
       <div className="flex flex-wrap gap-4">
         <div className="w-full sm:w-64">
@@ -149,7 +149,7 @@ const VenueManagement = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

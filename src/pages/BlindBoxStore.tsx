@@ -14,6 +14,7 @@ import { BuyGemsDialog } from "@/components/store/BuyGemsDialog";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export type BlindBox = {
   id: string;
@@ -207,16 +208,12 @@ export default function BlindBoxStore() {
   };
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-4 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="h-6 w-6 text-primary" /> Blind Box Store
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Themed mystery boxes — XP, AP, a unique instrument, and a random song.
-          </p>
-        </div>
+    <FMPageScaffold
+      title="Blind Box Store"
+      subtitle="Themed mystery boxes — XP, AP, a unique instrument, and a random song."
+      icon={Package}
+      backTo="/hub/premium-store"
+      headerActions={
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="h-7">
             <Link to="/blind-boxes/inventory">
@@ -238,9 +235,11 @@ export default function BlindBoxStore() {
             <Gem className="h-3.5 w-3.5" /> Buy Gems
           </Button>
         </div>
-      </div>
+      }
+    >
 
       <BuyGemsDialog open={buyGemsOpen} onOpenChange={setBuyGemsOpen} cash={cash} tokens={tokens} />
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading boxes…</p>
@@ -493,6 +492,6 @@ export default function BlindBoxStore() {
         onPurchased={onPurchased}
       />
       <BlindBoxRevealDialog reveal={reveal} onClose={() => setReveal(null)} />
-    </div>
+    </FMPageScaffold>
   );
 }

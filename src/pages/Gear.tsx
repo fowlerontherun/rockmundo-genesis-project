@@ -16,6 +16,7 @@ import { GearMarketplaceBrowser } from "@/components/gear/marketplace/GearMarket
 import { GearMarketplaceListings } from "@/components/gear/marketplace/GearMarketplaceListings";
 import { GearMarketplacePurchases } from "@/components/gear/marketplace/GearMarketplacePurchases";
 import { FMFilterBar } from "@/components/fm/FMFilterBar";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { 
   Guitar, 
   ShoppingCart, 
@@ -173,23 +174,18 @@ export default function Gear() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Guitar className="h-10 w-10 text-primary" />
-          <div>
-            <h1 className="text-4xl font-bold">Gear</h1>
-            <p className="text-muted-foreground">
-              Manage your equipment and boost your performance
-            </p>
-          </div>
-        </div>
+    <FMPageScaffold
+      title="Gear"
+      subtitle="Manage your equipment and boost your performance"
+      icon={Guitar}
+      backTo="/hub/career-business"
+      headerActions={
         <div className="text-right">
-          <div className="text-sm text-muted-foreground">Available Balance</div>
-          <div className="text-2xl font-bold">{formatCurrency(profile?.cash || 0)}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Balance</div>
+          <div className="text-base font-bold tabular-nums">{formatCurrency(profile?.cash || 0)}</div>
         </div>
-      </div>
+      }
+    >
 
       <Tabs defaultValue="shop" className="space-y-4">
         <TabsList className="flex w-full overflow-x-auto justify-start">
@@ -769,6 +765,6 @@ export default function Gear() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }

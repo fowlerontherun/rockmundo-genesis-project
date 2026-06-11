@@ -41,8 +41,7 @@ import {
   Wand2,
   X,
 } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -799,14 +798,14 @@ const Merchandise = () => {
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Merchandise Operations"
-        subtitle={`Manage ${bandName}'s merch catalogue, monitor sell-through, and prep your next drop without leaving the control room.`}
-        backTo="/hub/career-business"
-        backLabel="Back to Career & Business"
-        icon={Shirt}
-      />
+    <FMPageScaffold
+      title="Merchandise Operations"
+      subtitle={`Manage ${bandName}'s merch catalogue, monitor sell-through, and prep your next drop without leaving the control room.`}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+      icon={Shirt}
+    >
+
 
       <Tabs
         value={activeTab}
@@ -1443,7 +1442,7 @@ const Merchandise = () => {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

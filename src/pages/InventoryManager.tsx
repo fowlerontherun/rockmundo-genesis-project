@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home, Guitar, DollarSign } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home, Guitar, DollarSign, Store } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworldInventory";
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -130,11 +131,14 @@ const InventoryManager = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inventory Manager</h1>
-        <p className="text-muted-foreground">Manage your items, books, equipment, and property keys.</p>
-      </div>
+    <FMPageScaffold
+      title="Inventory Manager"
+      subtitle="Manage your items, books, equipment, and property keys."
+      icon={Store}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+    >
+
 
       <Tabs defaultValue="instruments" className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
@@ -555,7 +559,7 @@ const InventoryManager = () => {
         onUse={handleUseItem}
         isUsing={useItem.isPending}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 

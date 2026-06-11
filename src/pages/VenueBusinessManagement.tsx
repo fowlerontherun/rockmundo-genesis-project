@@ -9,6 +9,7 @@ import { useVenueStaff, useVenueBookings, useVenueUpgrades, useVenueFinancials }
 import { VipGate } from "@/components/company/VipGate";
 import { VenueStaffManager, VenueBookingsManager, VenueUpgradesManager } from "@/components/venue-business";
 import { supabase } from "@/integrations/supabase/client";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function VenueBusinessManagement() {
   const { venueId } = useParams();
@@ -88,23 +89,14 @@ export default function VenueBusinessManagement() {
   
   return (
     <VipGate feature="Venue Business Management" description="Manage your venue, staff, bookings, and upgrades.">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Building2 className="h-6 w-6" />
-              {venue.name}
-            </h1>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {venue.city?.name}, {venue.city?.country}
-              <Badge variant="outline" className="ml-2 capitalize">{venue.venue_type}</Badge>
-            </p>
-          </div>
-        </div>
+      <FMPageScaffold
+        title={venue.name}
+        subtitle={`${venue.city?.name}, ${venue.city?.country}`}
+        icon={Building2}
+        backTo="/my-companies"
+        backLabel="Back to Companies"
+        headerActions={<Badge variant="outline" className="capitalize">{venue.venue_type}</Badge>}
+      >
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -253,7 +245,7 @@ export default function VenueBusinessManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }

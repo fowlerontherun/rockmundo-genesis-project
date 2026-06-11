@@ -7,6 +7,7 @@ import { Heart, Trophy, Sparkles, Home } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function DonationSuccess() {
   const navigate = useNavigate();
@@ -126,7 +127,7 @@ export default function DonationSuccess() {
   }, [profileId, processed, sessionId, toast]);
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-2xl">
+    <FMPageScaffold title="Thank You" icon={Heart} backTo="/hub/career-business">
       <Card className="bg-gradient-to-br from-pink-500/10 via-background to-amber-500/10 border-pink-500/30">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-to-r from-pink-500/20 to-amber-500/20">
@@ -168,6 +169,6 @@ export default function DonationSuccess() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

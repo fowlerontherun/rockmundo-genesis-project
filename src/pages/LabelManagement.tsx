@@ -25,6 +25,7 @@ import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab"
 import { LabelMarketingBudgetCard } from "@/components/labels/management/LabelMarketingBudgetCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function useLabelByIdOrCompanyId(idOrCompanyId: string | undefined) {
   return useQuery({
@@ -196,40 +197,36 @@ export default function LabelManagement() {
   
   return (
     <VipGate feature="Record Label" description="Sign artists and oversee releases.">
-      <div className="container mx-auto p-4 md:p-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mt-1 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2 truncate">
-                <Disc className="h-5 w-5 shrink-0 text-primary" />
-                {label.name}
-              </h1>
-              {isPlayerOwned && <Crown className="h-4 w-4 text-warning shrink-0" />}
-              <Badge variant="outline" className={cn("text-[10px] shrink-0", repTier.color)}>
-                <Star className="h-3 w-3 mr-0.5" />
-                {repTier.label} ({label.reputation_score || 0})
-              </Badge>
-              <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-              {label.genre_focus?.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <Music className="h-3 w-3" />
-                  {label.genre_focus.join(', ')}
-                </span>
-              )}
-              {city?.name && (
-                <span className="flex items-center gap-1">
-                  <Globe2 className="h-3 w-3" />
-                  {city.name}, {city.country}
-                </span>
-              )}
-            </div>
-          </div>
+      <FMPageScaffold
+        title={label.name}
+        subtitle={`${label.genre_focus?.length ? label.genre_focus.join(', ') : 'Record label'}${city?.name ? ` • ${city.name}, ${city.country}` : ''}`}
+        icon={Disc}
+        backTo="/labels"
+        backLabel="Back to Labels"
+        headerActions={
+          <>
+            {isPlayerOwned && <Crown className="h-4 w-4 text-warning shrink-0" />}
+            <Badge variant="outline" className={cn("text-[10px] shrink-0", repTier.color)}>
+              <Star className="h-3 w-3 mr-0.5" />
+              {repTier.label} ({label.reputation_score || 0})
+            </Badge>
+            <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
+          </>
+        }
+      >
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+          {label.genre_focus?.length > 0 && (
+            <span className="flex items-center gap-1">
+              <Music className="h-3 w-3" />
+              {label.genre_focus.join(', ')}
+            </span>
+          )}
+          {city?.name && (
+            <span className="flex items-center gap-1">
+              <Globe2 className="h-3 w-3" />
+              {city.name}, {city.country}
+            </span>
+          )}
         </div>
 
         {/* Overview Stats Bar */}
@@ -388,7 +385,7 @@ export default function LabelManagement() {
             <LabelGenreExpertise labelId={label.id} />
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }

@@ -18,6 +18,7 @@ import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { calculateClothingScores, GENRE_STYLES } from "@/utils/clothingQuality";
 import { ClothingDesignForm } from "@/components/clothing/ClothingDesignForm";
 import { ClothingItemCard } from "@/components/clothing/ClothingItemCard";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ClothingDesignerInner = () => {
   const { brand, items, loading, createBrand, createItem } = useClothingBrand();
@@ -39,7 +40,7 @@ const ClothingDesignerInner = () => {
   // Brand creation flow
   if (!brand) {
     return (
-      <div className="container max-w-lg mx-auto py-8 px-4">
+      <FMPageScaffold title="Clothing Brand" subtitle="Launch your fashion empire." icon={Scissors} backTo="/hub/career-business">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -99,20 +100,18 @@ const ClothingDesignerInner = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container max-w-5xl mx-auto py-6 px-4 space-y-6">
-      {/* Brand Dashboard */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Scissors className="h-6 w-6" />
-          {brand.brand_name}
-        </h1>
-        <p className="text-muted-foreground text-sm">{brand.brand_description || "Your clothing brand"}</p>
-      </div>
+    <FMPageScaffold
+      title={brand.brand_name}
+      subtitle={brand.brand_description || "Your clothing brand"}
+      icon={Scissors}
+      backTo="/hub/career-business"
+      backLabel="Back to Career & Business"
+    >
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
@@ -164,7 +163,7 @@ const ClothingDesignerInner = () => {
           </div>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +41,7 @@ export default function SlotPurchaseSuccess() {
   }, [sessionId, queryClient]);
 
   return (
-    <PageLayout>
+    <FMPageScaffold title="Character Slot Purchase" backTo="/hub/premium-store">
       <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center space-y-4">
@@ -73,6 +73,6 @@ export default function SlotPurchaseSuccess() {
           </CardContent>
         </Card>
       </div>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

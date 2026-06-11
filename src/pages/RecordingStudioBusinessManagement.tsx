@@ -17,6 +17,7 @@ import {
   RecordingStudioUpgradesManager 
 } from "@/components/recording-studio-business";
 import { supabase } from "@/integrations/supabase/client";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function RecordingStudioBusinessManagement() {
   const { studioId } = useParams();
@@ -100,23 +101,14 @@ export default function RecordingStudioBusinessManagement() {
   
   return (
     <VipGate feature="Recording Studio Business" description="Run a recording studio.">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Mic className="h-6 w-6" />
-              {studio.name}
-            </h1>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {studio.cities?.name}, {studio.cities?.country}
-              <Badge variant="outline" className="ml-2">Quality: {studio.quality_rating}/100</Badge>
-            </p>
-          </div>
-        </div>
+      <FMPageScaffold
+        title={studio.name}
+        subtitle={`${studio.cities?.name}, ${studio.cities?.country}`}
+        icon={Mic}
+        backTo="/my-companies"
+        backLabel="Back to Companies"
+        headerActions={<Badge variant="outline">Quality: {studio.quality_rating}/100</Badge>}
+      >
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -280,7 +272,7 @@ export default function RecordingStudioBusinessManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }

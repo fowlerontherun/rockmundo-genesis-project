@@ -9,6 +9,7 @@ import { FactoryWorkerRoster } from "@/components/merch-factory/FactoryWorkerRos
 import { FactoryContractsManager } from "@/components/merch-factory/FactoryContractsManager";
 import { FactoryCard } from "@/components/merch-factory/FactoryCard";
 import { VipGate } from "@/components/company/VipGate";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function MerchFactoryManagement() {
   const { companyId } = useParams();
@@ -42,21 +43,13 @@ export default function MerchFactoryManagement() {
   
   return (
     <VipGate feature="Merchandise Factory" description="Produce merch and fulfill orders.">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Factory className="h-6 w-6" />
-              {factory.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {factory.city?.name}, {factory.city?.country}
-            </p>
-          </div>
-        </div>
+      <FMPageScaffold
+        title={factory.name}
+        subtitle={`${factory.city?.name}, ${factory.city?.country}`}
+        icon={Factory}
+        backTo="/my-companies"
+        backLabel="Back to Companies"
+      >
         
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-1">
@@ -102,7 +95,7 @@ export default function MerchFactoryManagement() {
             </Tabs>
           </div>
         </div>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
