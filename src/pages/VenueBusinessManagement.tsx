@@ -245,7 +245,7 @@ export default function VenueBusinessManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </FMPageScaffold>
     </VipGate>
   );
 }
