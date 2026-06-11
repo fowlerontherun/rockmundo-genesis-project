@@ -228,22 +228,6 @@ export default function LabelManagement() {
             </span>
           )}
         </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-              {label.genre_focus?.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <Music className="h-3 w-3" />
-                  {label.genre_focus.join(', ')}
-                </span>
-              )}
-              {city?.name && (
-                <span className="flex items-center gap-1">
-                  <Globe2 className="h-3 w-3" />
-                  {city.name}, {city.country}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Overview Stats Bar */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
