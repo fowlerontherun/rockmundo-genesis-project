@@ -765,6 +765,6 @@ export default function Gear() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
