@@ -175,6 +175,6 @@ export default function ActingCareer() {
           perEpisode={neg.perEpisode} episodeCount={neg.episodeCount} title={neg.title}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
