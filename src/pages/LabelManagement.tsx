@@ -214,25 +214,20 @@ export default function LabelManagement() {
           </>
         }
       >
-
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mt-1 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2 truncate">
-                <Disc className="h-5 w-5 shrink-0 text-primary" />
-                {label.name}
-              </h1>
-              {isPlayerOwned && <Crown className="h-4 w-4 text-warning shrink-0" />}
-              <Badge variant="outline" className={cn("text-[10px] shrink-0", repTier.color)}>
-                <Star className="h-3 w-3 mr-0.5" />
-                {repTier.label} ({label.reputation_score || 0})
-              </Badge>
-              <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
-            </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+          {label.genre_focus?.length > 0 && (
+            <span className="flex items-center gap-1">
+              <Music className="h-3 w-3" />
+              {label.genre_focus.join(', ')}
+            </span>
+          )}
+          {city?.name && (
+            <span className="flex items-center gap-1">
+              <Globe2 className="h-3 w-3" />
+              {city.name}, {city.country}
+            </span>
+          )}
+        </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
               {label.genre_focus?.length > 0 && (
                 <span className="flex items-center gap-1">
