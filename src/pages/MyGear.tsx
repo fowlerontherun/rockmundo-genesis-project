@@ -748,7 +748,7 @@ const MyGear: React.FC = () => {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
