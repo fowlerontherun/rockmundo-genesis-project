@@ -221,15 +221,18 @@ export default function PersonalVehicles() {
   const displaySpeed = (cat: VehicleCategory, kmh: number) => cat === "boat" ? Math.round(kmh * 0.54) : kmh;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold">Vehicles & Vessels</h1>
-        <p className="text-muted-foreground">Buy cars, motorbikes, boats and yachts. Insurance & upkeep charged daily.</p>
-        <div className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm">
-          <DollarSign className="h-4 w-4" />
-          <span>Cash: ${Number(profile?.cash ?? 0).toLocaleString()}</span>
+    <FMPageScaffold
+      title="Vehicles & Vessels"
+      subtitle="Buy cars, motorbikes, boats and yachts. Insurance & upkeep charged daily."
+      icon={Car}
+      backTo="/hub/character"
+      headerActions={
+        <div className="inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs">
+          <DollarSign className="h-3.5 w-3.5" />
+          <span className="tabular-nums">${Number(profile?.cash ?? 0).toLocaleString()}</span>
         </div>
-      </header>
+      }
+    >
 
       <Tabs defaultValue="market" className="space-y-4">
         <TabsList>
