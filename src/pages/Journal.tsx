@@ -193,7 +193,7 @@ const Journal = () => {
         onSubmit={handleCreateNote}
         isLoading={createMutation.isPending}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 
