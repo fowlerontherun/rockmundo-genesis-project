@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, Bike, DollarSign, Gauge, CalendarDays, Shield, Anchor } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type VehicleCategory = "car" | "motorbike" | "boat";
 
