@@ -235,24 +235,28 @@ export default function WellnessPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-oswald">Wellness & Lifestyle</h1>
-        <div className="flex gap-2">
+    <FMPageScaffold
+      title="Wellness & Lifestyle"
+      subtitle="Manage health, recovery, holidays, and addictions"
+      icon={Heart}
+      backTo="/hub/character"
+      headerActions={
+        <div className="flex gap-1.5 flex-wrap">
           {hasActiveAddiction && (
-            <Badge variant="destructive" className="animate-pulse">⚠️ Addiction Active</Badge>
+            <Badge variant="destructive" className="text-[10px] animate-pulse">⚠️ Addiction</Badge>
           )}
           {activeHospitalization && (
-            <Badge variant="destructive">🏥 Hospitalized</Badge>
+            <Badge variant="destructive" className="text-[10px]">🏥 Hospital</Badge>
           )}
           {activeHoliday && (
-            <Badge variant="secondary">🌴 On Holiday ({daysRemaining}d left)</Badge>
+            <Badge variant="secondary" className="text-[10px]">🌴 Holiday ({daysRemaining}d)</Badge>
           )}
-          <Badge variant={health < 30 ? "destructive" : health < 70 ? "secondary" : "default"}>
+          <Badge variant={health < 30 ? "destructive" : health < 70 ? "secondary" : "default"} className="text-[10px]">
             {healthStatus.label}
           </Badge>
         </div>
-      </div>
+      }
+    >
 
       {healthStatus.warning && (
         <Alert variant={health < 30 ? "destructive" : "default"}>
