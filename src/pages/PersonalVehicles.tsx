@@ -402,6 +402,6 @@ export default function PersonalVehicles() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
