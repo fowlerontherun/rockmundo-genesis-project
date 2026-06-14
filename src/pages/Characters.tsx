@@ -230,6 +230,6 @@ export default function Characters() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
