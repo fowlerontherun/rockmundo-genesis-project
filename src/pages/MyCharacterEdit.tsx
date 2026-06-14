@@ -669,7 +669,7 @@ const MyCharacterEdit = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
