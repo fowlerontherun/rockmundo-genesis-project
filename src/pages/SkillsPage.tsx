@@ -241,7 +241,7 @@ const SkillsPage = () => {
           skillName={selectedSkill.name}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
