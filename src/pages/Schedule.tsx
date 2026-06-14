@@ -8,8 +8,7 @@ import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const Schedule = () => {
   const { t } = useTranslation();
