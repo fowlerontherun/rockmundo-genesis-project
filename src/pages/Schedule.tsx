@@ -107,7 +107,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
