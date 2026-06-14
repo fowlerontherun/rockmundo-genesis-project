@@ -83,7 +83,7 @@ const Education = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
