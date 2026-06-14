@@ -13,6 +13,8 @@ import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
 import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
 import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Sparkles } from "lucide-react";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
