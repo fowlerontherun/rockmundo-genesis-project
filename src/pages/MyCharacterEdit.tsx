@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Link, useNavigate } from "react-router-dom";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { calculateInGameAge } from "@/utils/gameCalendar";
 
 type AttributeKey = keyof PlayerAttributes;
