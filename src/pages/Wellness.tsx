@@ -35,6 +35,7 @@ import { useAddictions } from "@/hooks/useAddictions";
 import { useHolidays, HOLIDAY_DESTINATIONS } from "@/hooks/useHolidays";
 import { getSeverityLabel, getAddictionTypeLabel, getRecoveryProgramDetails, getDaysCleanMilestone } from "@/utils/addictionSystem";
 import type { RecoveryProgram } from "@/utils/addictionSystem";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function WellnessPage() {
   const { profile, attributes, loading } = useGameData();
