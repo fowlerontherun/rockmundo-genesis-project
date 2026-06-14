@@ -594,7 +594,7 @@ const Housing = () => {
           )}
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
