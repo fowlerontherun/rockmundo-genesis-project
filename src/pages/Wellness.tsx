@@ -761,6 +761,6 @@ export default function WellnessPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
