@@ -59,11 +59,12 @@ export default function Characters() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Characters"
-        subtitle="See all of your character slots and switch who you are currently playing."
-      />
+    <FMPageScaffold
+      title="Characters"
+      subtitle="See all of your character slots and switch who you are currently playing."
+      icon={Users}
+      backTo="/hub/character"
+    >
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr]">
         <Card>
