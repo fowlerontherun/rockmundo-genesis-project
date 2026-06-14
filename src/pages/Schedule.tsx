@@ -21,30 +21,21 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Schedule"
-        subtitle="Plan and manage your activities"
-        backTo="/dashboard"
-        backLabel="Back to Dashboard"
-        icon={Calendar}
-        actions={
-          <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>
-              Songwriting
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
-              Performance
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>
-              Education
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>
-              Life
-            </Button>
-          </div>
-        }
-      />
+    <FMPageScaffold
+      title="Schedule"
+      subtitle="Plan and manage your activities"
+      backTo="/dashboard"
+      backLabel="Back to Dashboard"
+      icon={Calendar}
+      headerActions={
+        <div className="flex gap-1.5 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>Songwriting</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>Performance</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>Education</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>Life</Button>
+        </div>
+      }
+    >
 
       <GigLocationWarning />
       
