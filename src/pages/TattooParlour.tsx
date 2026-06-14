@@ -709,6 +709,6 @@ export default function TattooParlour() {
         onSubmit={(data) => customMutation.mutate(data)}
         isPending={customMutation.isPending}
       />
-    </div>
+    </FMPageScaffold>
   );
 }
