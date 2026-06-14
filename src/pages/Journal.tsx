@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Plus, Search, FileText, Trophy, Filter } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export type JournalFilterType = "all" | "milestone" | "note";
 export type JournalCategory = "all" | "career" | "performance" | "chart" | "fan" | "personal" | "goal" | "memory";
