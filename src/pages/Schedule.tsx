@@ -8,8 +8,7 @@ import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const Schedule = () => {
   const { t } = useTranslation();
@@ -22,30 +21,21 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Schedule"
-        subtitle="Plan and manage your activities"
-        backTo="/dashboard"
-        backLabel="Back to Dashboard"
-        icon={Calendar}
-        actions={
-          <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>
-              Songwriting
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
-              Performance
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>
-              Education
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>
-              Life
-            </Button>
-          </div>
-        }
-      />
+    <FMPageScaffold
+      title="Schedule"
+      subtitle="Plan and manage your activities"
+      backTo="/dashboard"
+      backLabel="Back to Dashboard"
+      icon={Calendar}
+      headerActions={
+        <div className="flex gap-1.5 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>Songwriting</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>Performance</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>Education</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>Life</Button>
+        </div>
+      }
+    >
 
       <GigLocationWarning />
       
@@ -117,7 +107,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

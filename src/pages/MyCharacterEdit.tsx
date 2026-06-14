@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Link, useNavigate } from "react-router-dom";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { calculateInGameAge } from "@/utils/gameCalendar";
 
 type AttributeKey = keyof PlayerAttributes;
@@ -382,11 +383,12 @@ const MyCharacterEdit = () => {
   const characterAge = calendarData ? calculateInGameAge(initialAge, calendarData) : initialAge;
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">My Character</h1>
-        <p className="text-muted-foreground">Manage your profile image and allocate your hard-earned XP.</p>
-      </div>
+    <FMPageScaffold
+      title="My Character"
+      subtitle="Manage your profile image and allocate your hard-earned XP."
+      icon={User}
+      backTo="/hub/character"
+    >
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <div className="space-y-6">
@@ -667,7 +669,7 @@ const MyCharacterEdit = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 

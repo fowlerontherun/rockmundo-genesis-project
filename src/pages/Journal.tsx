@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Plus, Search, FileText, Trophy, Filter } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export type JournalFilterType = "all" | "milestone" | "note";
 export type JournalCategory = "all" | "career" | "performance" | "chart" | "fan" | "personal" | "goal" | "memory";
@@ -72,23 +73,18 @@ const Journal = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-oswald font-bold flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-primary" />
-            {t("journal.title", "Career Journal")}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t("journal.subtitle", "Document your band's story and career milestones")}
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+    <FMPageScaffold
+      title={t("journal.title", "Career Journal")}
+      subtitle={t("journal.subtitle", "Document your band's story and career milestones")}
+      icon={BookOpen}
+      backTo="/hub/character"
+      headerActions={
+        <Button size="sm" onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           {t("journal.addNote", "Add Note")}
         </Button>
-      </div>
+      }
+    >
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -197,7 +193,7 @@ const Journal = () => {
         onSubmit={handleCreateNote}
         isLoading={createMutation.isPending}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 

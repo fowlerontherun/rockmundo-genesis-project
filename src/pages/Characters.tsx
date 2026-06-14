@@ -5,8 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PageLayout } from "@/components/ui/PageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
@@ -60,11 +59,12 @@ export default function Characters() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Characters"
-        subtitle="See all of your character slots and switch who you are currently playing."
-      />
+    <FMPageScaffold
+      title="Characters"
+      subtitle="See all of your character slots and switch who you are currently playing."
+      icon={Users}
+      backTo="/hub/character"
+    >
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr]">
         <Card>
@@ -230,6 +230,6 @@ export default function Characters() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

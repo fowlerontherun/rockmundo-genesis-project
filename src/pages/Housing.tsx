@@ -26,8 +26,7 @@ import {
   getMarketPrice,
 } from "@/hooks/useHousing";
 import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -182,14 +181,13 @@ const Housing = () => {
   const formatPrice = (amount: number) => `$${amount.toLocaleString()}`;
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Housing"
-        subtitle={activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
-        backTo="/hub/world-social"
-        backLabel="Back to World & Social"
-        icon={Home}
-      />
+    <FMPageScaffold
+      title="Housing"
+      subtitle={activeCountry ? `Browse properties in ${activeCountry}` : "Select a country to view available properties"}
+      backTo="/hub/world-social"
+      backLabel="Back to World & Social"
+      icon={Home}
+    >
 
       {/* Country & City Filters */}
       <Card className="bg-muted/30">
@@ -596,7 +594,7 @@ const Housing = () => {
           )}
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

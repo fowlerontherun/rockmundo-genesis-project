@@ -13,6 +13,8 @@ import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
 import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
 import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Sparkles } from "lucide-react";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -70,11 +72,13 @@ const SkillsPage = () => {
 
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Skills & Attributes</h1>
-        <p className="text-muted-foreground">Master your craft and unlock new abilities</p>
-      </div>
+    <FMPageScaffold
+      title="Skills & Attributes"
+      subtitle="Master your craft and unlock new abilities"
+      icon={Sparkles}
+      backTo="/hub/character"
+    >
+
 
       <XpWalletDisplay
         skillXpBalance={skillXpBalance}
@@ -237,7 +241,7 @@ const SkillsPage = () => {
           skillName={selectedSkill.name}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
