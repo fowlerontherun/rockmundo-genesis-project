@@ -337,17 +337,17 @@ export default function TattooParlour() {
   };
 
   return (
-    <div className="space-y-6 p-4 max-w-6xl mx-auto">
-      <div className="flex items-center gap-3">
-        <Palette className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Tattoo Parlour</h1>
-          <p className="text-sm text-muted-foreground">Get inked. Build sleeves. Boost your stage presence.</p>
-        </div>
-        {profile?.cash != null && (
-          <Badge variant="outline" className="ml-auto text-sm">${profile.cash.toLocaleString()}</Badge>
-        )}
-      </div>
+    <FMPageScaffold
+      title="Tattoo Parlour"
+      subtitle="Get inked. Build sleeves. Boost your stage presence."
+      icon={Palette}
+      backTo="/hub/character"
+      headerActions={
+        profile?.cash != null ? (
+          <Badge variant="outline" className="text-xs tabular-nums">${profile.cash.toLocaleString()}</Badge>
+        ) : null
+      }
+    >
 
       {playerTattoos && <TattooInfectionAlert tattoos={playerTattoos} onTreat={(id) => treatMutation.mutate(id)} />}
 
