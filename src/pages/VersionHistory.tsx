@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.368",
+    date: "2026-06-14",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7a (Life & Activities pages). Migrated Wellness, Housing, PersonalVehicles, Schedule, Journal, MyCharacterEdit, Characters, AvatarDesigner, SkillsPage, Education, and TattooParlour to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `PageLayout`/`PageHeader` stacks, `container mx-auto` wrappers, and bespoke in-page `<h1>` header rows with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). Status badges (addiction, hospitalization, holiday, health), cash balances, and primary CTAs (Add Note, booking shortcuts) moved into the 40px FM header strip via `headerActions` at `size=\"sm\"`. Life & Activities pages back-link to `/hub/character` by default." },
+    ],
+  },
+  {
     version: "1.1.367",
     date: "2026-06-11",
     changes: [
