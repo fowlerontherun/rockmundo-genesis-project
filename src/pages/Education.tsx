@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useTranslation } from "@/hooks/useTranslation";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { GraduationCap } from "lucide-react";
 
 import { SummaryTab } from "@/features/education/components/SummaryTab";
 import { BooksTab } from "@/features/education/components/BooksTab";
