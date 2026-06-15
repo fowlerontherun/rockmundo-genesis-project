@@ -457,7 +457,7 @@ const NarrativeStoryPage = () => {
           </Card>
         </>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
