@@ -240,23 +240,13 @@ export default function FestivalPerformance() {
   // Use new performance loop if enabled
   if (canPerform && !hasPerformed && useNewLoop) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Music className="h-6 w-6" />
-              {participation.festival?.title || "Festival Performance"}
-            </h1>
-            <p className="text-muted-foreground">
-              {participation.slot_type} slot • {primaryBand?.name}
-            </p>
-          </div>
-          <Badge>{participation.status}</Badge>
-        </div>
-        
+      <FMPageScaffold
+        title={participation.festival?.title || "Festival Performance"}
+        subtitle={`${participation.slot_type} slot • ${primaryBand?.name ?? ""}`}
+        icon={Music}
+        backTo="/festivals"
+        headerActions={<Badge>{participation.status}</Badge>}
+      >
         <FestivalPerformanceLoop
           participationId={participationId!}
           bandId={primaryBand?.id}
@@ -268,9 +258,10 @@ export default function FestivalPerformance() {
             navigate("/festivals");
           }}
         />
-      </div>
+      </FMPageScaffold>
     );
   }
+
 
   return (
     <div className="container mx-auto p-6 space-y-6">
