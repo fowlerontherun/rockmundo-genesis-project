@@ -186,7 +186,7 @@ const SeasonalEventsCalendar = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
