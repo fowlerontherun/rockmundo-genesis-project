@@ -480,6 +480,6 @@ export default function Eurovision() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
