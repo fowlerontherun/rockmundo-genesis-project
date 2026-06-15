@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, History, Music, Coins } from 'lucide-react';
+import { Loader2, History, Music, Coins, Music2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import type { Database, Tables } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 const SESSION_LENGTHS = [30, 60, 120] as const;
 
