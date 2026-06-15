@@ -264,25 +264,18 @@ export default function FestivalPerformance() {
 
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Music className="h-6 w-6" />
-            {participation.festival?.title || "Festival Performance"}
-          </h1>
-          <p className="text-muted-foreground">
-            {participation.slot_type} slot • {primaryBand?.name}
-          </p>
-        </div>
+    <FMPageScaffold
+      title={participation.festival?.title || "Festival Performance"}
+      subtitle={`${participation.slot_type} slot • ${primaryBand?.name ?? ""}`}
+      icon={Music}
+      backTo="/festivals"
+      headerActions={
         <Badge variant={hasPerformed ? "default" : "secondary"}>
           {participation.status}
         </Badge>
-      </div>
+      }
+    >
+
 
       {/* Performance Area */}
       {canPerform && !hasPerformed && (
