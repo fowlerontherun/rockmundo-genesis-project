@@ -100,19 +100,13 @@ export default function OpenMicNights() {
   };
 
   return (
-    <div className="container max-w-6xl py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Mic className="h-8 w-8 text-primary" />
-            Open Mic Nights
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Showcase your talent, gain fans and fame - every city, every week
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Open Mic Nights"
+      subtitle="Showcase your talent, gain fans and fame — every city, every week"
+      icon={Mic}
+      backTo="/hub/live"
+    >
+
 
       {/* Info Banner */}
       <Alert className="border-primary/30 bg-primary/5">
