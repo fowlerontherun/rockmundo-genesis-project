@@ -346,6 +346,6 @@ export default function OpenMicNights() {
           onConfirm={handleSongSelection}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
