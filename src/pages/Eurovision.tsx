@@ -227,19 +227,22 @@ export default function Eurovision() {
 
   if (eventLoading) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <FMPageScaffold title="Eurovision" icon={Sparkles} backTo="/hub/events">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!currentEvent) {
     return (
-      <div className="container mx-auto max-w-4xl p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Eurovision Song Contest</h1>
-        </div>
+      <FMPageScaffold
+        title="Eurovision Song Contest"
+        subtitle="Check back later for the next Eurovision season!"
+        icon={Sparkles}
+        backTo="/hub/events"
+      >
         <Card>
           <CardContent className="py-12 text-center">
             <Trophy className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -247,7 +250,7 @@ export default function Eurovision() {
             <p className="text-muted-foreground">Check back later for the next Eurovision season!</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -258,26 +261,20 @@ export default function Eurovision() {
   };
 
   return (
-    <div className="container mx-auto max-w-5xl p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Eurovision {currentEvent.year}</h1>
-            {currentEvent.host_city && (
-              <p className="text-muted-foreground">
-                Hosted in {currentEvent.host_city}, {currentEvent.host_country}
-              </p>
-            )}
-          </div>
-        </div>
-        <Badge className={`${statusColors[currentEvent.status]} text-white px-4 py-2 text-sm`}>
+    <FMPageScaffold
+      title={`Eurovision ${currentEvent.year}`}
+      subtitle={currentEvent.host_city ? `Hosted in ${currentEvent.host_city}, ${currentEvent.host_country}` : undefined}
+      icon={Sparkles}
+      backTo="/hub/events"
+      headerActions={
+        <Badge className={`${statusColors[currentEvent.status]} text-white text-[10px]`}>
           {currentEvent.status === "submissions" && "Submissions Open"}
           {currentEvent.status === "voting" && "Voting Open"}
           {currentEvent.status === "complete" && "Competition Complete"}
         </Badge>
-      </div>
+      }
+    >
+
 
       {/* Your Entry Section */}
       {currentEvent.status === "submissions" && (
