@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Loader2, Lock, Music4 } from "lucide-react";
 import { MUSIC_GENRES } from "@/data/genres";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type JamSessionRow = Database["public"]["Tables"]["jam_sessions"]["Row"];
 
