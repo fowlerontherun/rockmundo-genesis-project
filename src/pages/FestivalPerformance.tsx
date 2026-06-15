@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FestivalPerformanceOutcome } from "@/components/festivals/FestivalPerformanceOutcome";
 import { FestivalPerformanceLoop } from "@/components/festivals/performance/FestivalPerformanceLoop";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+
 
 interface PerformanceState {
   phase: "warmup" | "performing" | "climax" | "complete";
