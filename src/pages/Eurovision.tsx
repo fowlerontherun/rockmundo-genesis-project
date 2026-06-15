@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Sparkles, Music2, Trophy, Vote, Loader2, CheckCircle, Crown, Flag, Play, Pause } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 // Simple inline audio player component
 function SimpleAudioPlayer({ audioUrl, title }: { audioUrl: string; title: string }) {
