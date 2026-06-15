@@ -435,14 +435,13 @@ export default function Festivals() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Festivals"
-        subtitle="Perform at major music festivals and gain exposure"
-        backTo="/hub/band-live"
-        backLabel="Back to Band & Live"
-        icon={Music2}
-      />
+    <FMPageScaffold
+      title="Festivals"
+      subtitle="Perform at major music festivals and gain exposure"
+      icon={Music2}
+      backTo="/hub/band-live"
+      backLabel="Back to Band & Live"
+    >
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
