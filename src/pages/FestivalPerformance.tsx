@@ -453,6 +453,6 @@ export default function FestivalPerformance() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
