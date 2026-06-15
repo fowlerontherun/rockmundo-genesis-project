@@ -22,6 +22,7 @@ import {
   type NarrativeChoice,
   type NarrativeStateRecord,
 } from "@/lib/narratives";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 const STORY_STATE_QUERY_KEY = "narrative-story-state" as const;
 
 // Temporary types until database migration is applied
