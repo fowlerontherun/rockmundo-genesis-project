@@ -84,16 +84,13 @@ const SeasonalEventsCalendar = () => {
   }, [calendar]);
 
   return (
-    <div className="container mx-auto space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Calendar className="h-7 w-7" />
-          Seasonal Events Calendar
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Discover season-specific events and holidays throughout the game year.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Seasonal Events Calendar"
+      subtitle="Discover season-specific events and holidays throughout the game year."
+      icon={Calendar}
+      backTo="/hub/events"
+    >
+
 
       {/* Current season progress */}
       {calendar && (
