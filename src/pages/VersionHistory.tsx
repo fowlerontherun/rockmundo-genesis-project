@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.369",
+    date: "2026-06-15",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7b (Live Performance & Events pages). Migrated Busking, OpenMicNights, JamSessions, Festivals, FestivalsNew, FestivalDetail, FestivalPerformance, MajorEvents, AwardShows, Eurovision, SeasonalEventsCalendar, events/builder, and events/narratives/[storyId] to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container mx-auto` / `max-w-Nxl` wrappers, `PageLayout`+`PageHeader` stacks, and bespoke in-page `<h1>` + back-arrow rows with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). Live performance pages (Busking, OpenMicNights, JamSessions) back-link to `/hub/live`; festival/event pages (Festivals, MajorEvents, AwardShows, Eurovision, SeasonalEventsCalendar, events/builder, narrative stories) back-link to `/hub/events`; FestivalsNew preserves its `/hub/band-live` link." },
+      { type: 'improvement', description: "Header CTAs/status moved into the scaffold's `headerActions` slot at compact size: JamSessions signed-in identity, Festivals 'Live Experience' badge, FestivalDetail 'Apply' button, FestivalPerformance status badge, AwardShows 'Awards Network Preview' badge, Eurovision status pill, events/builder 'Dynamic planning canvas' badge, narrative theme tags. Loading/empty branches now also render inside the FM scaffold instead of standalone full-page divs." },
+    ],
+  },
+  {
     version: "1.1.368",
     date: "2026-06-14",
     changes: [
