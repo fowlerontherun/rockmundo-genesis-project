@@ -210,6 +210,6 @@ export default function AwardShows() {
         campaign reminders, and real-time voting analytics. Until then, use these scaffolds to map out your London
         award season strategy and coordinate your crew.
       </footer>
-    </div>
+    </FMPageScaffold>
   );
 }
