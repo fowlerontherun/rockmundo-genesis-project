@@ -20,6 +20,7 @@ import {
   CheckCircle, Lock, Sparkles, Music, History, Calendar, Clock, Repeat,
   Ban, Guitar
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const categoryIcons: Record<string, string> = {
   sports: '🏟️',
