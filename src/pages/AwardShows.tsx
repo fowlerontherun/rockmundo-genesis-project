@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Award as AwardIcon, CalendarDays, MapPin, Star, Users } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const scheduleLabels: Record<keyof (typeof awardShows)[number]["schedule"], string> = {
   nominationsOpen: "Nominations",
