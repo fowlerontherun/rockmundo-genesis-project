@@ -21,6 +21,7 @@ import type {
   SponsorPackage,
   TicketTier,
 } from "@/components/events/types";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const steps = [
   {
@@ -279,21 +280,19 @@ const EventBuilderPage = () => {
   };
 
   return (
-    <div className="container mx-auto space-y-8 py-8">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Event builder</h1>
-            <p className="text-muted-foreground">
-              Build a multi-day experience with a single workflow tying together lineup design, monetization, and analytics.
-            </p>
-          </div>
-          <Badge variant="outline" className="self-start md:self-auto">
-            <Sparkles className="mr-1 h-4 w-4" /> Dynamic planning canvas
-          </Badge>
-        </div>
-        <Progress value={progressValue} className="h-2" />
-      </div>
+    <FMPageScaffold
+      title="Event builder"
+      subtitle="Build a multi-day experience with a single workflow tying together lineup design, monetization, and analytics."
+      icon={CalendarDays}
+      backTo="/hub/events"
+      headerActions={
+        <Badge variant="outline">
+          <Sparkles className="mr-1 h-4 w-4" /> Dynamic planning canvas
+        </Badge>
+      }
+    >
+      <Progress value={progressValue} className="h-2" />
+
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <div className="space-y-2">
@@ -343,7 +342,7 @@ const EventBuilderPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 

@@ -20,6 +20,7 @@ import {
   CheckCircle, Lock, Sparkles, Music, History, Calendar, Clock, Repeat,
   Ban, Guitar
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const categoryIcons: Record<string, string> = {
   sports: '🏟️',
@@ -127,23 +128,22 @@ export default function MajorEvents() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <FMPageScaffold title="Major Events" icon={Trophy} backTo="/hub/events">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-primary" />
-          Major Events
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Perform at the world's biggest events for massive cash, fame, and fans.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Major Events"
+      subtitle="Perform at the world's biggest events for massive cash, fame, and fans."
+      icon={Trophy}
+      backTo="/hub/events"
+    >
+
 
       {calendar && (
         <Card className="bg-primary/5 border-primary/20">
@@ -464,6 +464,6 @@ export default function MajorEvents() {
         onConfirm={handleSongConfirm}
         bandId={activeBand?.id}
       />
-    </div>
+    </FMPageScaffold>
   );
 }

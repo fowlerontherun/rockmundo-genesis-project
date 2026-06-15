@@ -19,7 +19,8 @@
  import { useFestivalTickets } from "@/hooks/useFestivalTickets";
  import { useFestivalStages } from "@/hooks/useFestivalStages";
  import { useFestivalQuality } from "@/hooks/useFestivalFinances";
- import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
  
  export default function FestivalDetail() {
    const { festivalId } = useParams();
@@ -78,64 +79,50 @@
  
    const genreMatch = calculateGenreMatch();
  
-   if (isLoading) {
-     return (
-       <div className="container mx-auto py-8">
-         <div className="animate-pulse space-y-4">
-           <div className="h-8 bg-muted rounded w-1/3" />
-           <div className="h-64 bg-muted rounded" />
-         </div>
-       </div>
-     );
-   }
- 
-   if (!festival) {
-     return (
-       <div className="container mx-auto py-8 text-center">
-         <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-         <h2 className="text-xl font-semibold mb-4">Festival Not Found</h2>
-         <Button onClick={() => navigate("/festivals")}>Back to Festivals</Button>
-       </div>
-     );
-   }
- 
-   const isUpcoming = isFuture(new Date(festival.start_date));
-   const confirmedActs = festival.participants?.filter((p: any) => 
-     p.status === "confirmed" || p.status === "invited"
-   ) || [];
-   const headliners = confirmedActs.filter((p: any) => p.slot_type === "headline");
-   const mainActs = confirmedActs.filter((p: any) => p.slot_type === "main");
-   const supportActs = confirmedActs.filter((p: any) => p.slot_type === "support" || p.slot_type === "opening");
- 
-   return (
-     <div className="container mx-auto py-8 space-y-6">
-       {/* Header */}
-       <div className="flex items-start gap-4">
-         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-           <ArrowLeft className="h-4 w-4" />
-         </Button>
-         <div className="flex-1">
-           <h1 className="text-3xl font-bold">{festival.title}</h1>
-           <div className="flex flex-wrap items-center gap-4 mt-2 text-muted-foreground">
-             <span className="flex items-center gap-1">
-               <MapPin className="h-4 w-4" />
-               {festival.location}
-             </span>
-             <span className="flex items-center gap-1">
-               <Calendar className="h-4 w-4" />
-               {format(new Date(festival.start_date), "MMM d")} - {format(new Date(festival.end_date), "MMM d, yyyy")}
-             </span>
-             {isUpcoming && (
-               <Badge variant="secondary">
-                 {formatDistanceToNow(new Date(festival.start_date), { addSuffix: true })}
-               </Badge>
-             )}
-           </div>
-         </div>
-         <Button onClick={() => navigate(`/festivals`)}>
-           Apply
-         </Button>
-       </div>
+  if (isLoading) {
+    return (
+      <FMPageScaffold title="Festival" icon={Music} backTo="/festivals">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-64 bg-muted rounded" />
+        </div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (!festival) {
+    return (
+      <FMPageScaffold title="Festival" icon={Music} backTo="/festivals">
+        <div className="text-center py-8">
+          <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-xl font-semibold mb-4">Festival Not Found</h2>
+          <Button onClick={() => navigate("/festivals")}>Back to Festivals</Button>
+        </div>
+      </FMPageScaffold>
+    );
+  }
+
+  const isUpcoming = isFuture(new Date(festival.start_date));
+  const confirmedActs = festival.participants?.filter((p: any) =>
+    p.status === "confirmed" || p.status === "invited"
+  ) || [];
+  const headliners = confirmedActs.filter((p: any) => p.slot_type === "headline");
+  const mainActs = confirmedActs.filter((p: any) => p.slot_type === "main");
+  const supportActs = confirmedActs.filter((p: any) => p.slot_type === "support" || p.slot_type === "opening");
+
+  return (
+    <FMPageScaffold
+      title={festival.title}
+      subtitle={`${festival.location} • ${format(new Date(festival.start_date), "MMM d")} - ${format(new Date(festival.end_date), "MMM d, yyyy")}${isUpcoming ? ` • ${formatDistanceToNow(new Date(festival.start_date), { addSuffix: true })}` : ""}`}
+      icon={Music}
+      backTo="/festivals"
+      headerActions={
+        <Button size="sm" onClick={() => navigate(`/festivals`)}>
+          Apply
+        </Button>
+      }
+    >
+
  
        {/* Stats Overview */}
        <div className="grid gap-4 md:grid-cols-4">
@@ -480,6 +467,6 @@
            </CardContent>
          </Card>
        )}
-     </div>
+    </FMPageScaffold>
    );
  }

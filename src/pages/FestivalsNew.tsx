@@ -29,8 +29,7 @@ import {
   Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const performanceSlots = [
   { value: "opening", label: "Opening Act (6:00 PM)" },
@@ -436,14 +435,13 @@ export default function Festivals() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Festivals"
-        subtitle="Perform at major music festivals and gain exposure"
-        backTo="/hub/band-live"
-        backLabel="Back to Band & Live"
-        icon={Music2}
-      />
+    <FMPageScaffold
+      title="Festivals"
+      subtitle="Perform at major music festivals and gain exposure"
+      icon={Music2}
+      backTo="/hub/band-live"
+      backLabel="Back to Band & Live"
+    >
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
@@ -652,6 +650,6 @@ export default function Festivals() {
           )}
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Award as AwardIcon, CalendarDays, MapPin, Star, Users } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const scheduleLabels: Record<keyof (typeof awardShows)[number]["schedule"], string> = {
   nominationsOpen: "Nominations",
@@ -19,42 +20,40 @@ export default function AwardShows() {
     (profile as any)?.stage_name || profile?.display_name || profile?.username || "your project";
 
   return (
-    <div className="container mx-auto space-y-12 px-4 py-10">
-      <header className="space-y-4 text-center md:text-left">
-        <Badge variant="secondary" className="text-sm uppercase tracking-wide">
+    <FMPageScaffold
+      title="London Award Shows"
+      subtitle={`Plan nomination campaigns, voting pushes, and performance narratives for ${stageIdentity}.`}
+      icon={AwardIcon}
+      backTo="/hub/events"
+      headerActions={
+        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
           Awards Network Preview
         </Badge>
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">London Award Shows</h1>
-          <p className="mx-auto max-w-3xl text-muted-foreground md:mx-0 md:text-base">
-            Rockmundo is mapping the capital&apos;s prestige circuits so {stageIdentity} can plan nomination campaigns,
-            voting pushes, and performance narratives ahead of the live data feeds. Each showcase below outlines
-            rehearsal windows, category sourcing, and the exact fame boosts tied to attendance and wins.
+      }
+    >
+      <div className="grid gap-4 rounded-lg border border-dashed border-primary/40 bg-muted/10 p-6 md:grid-cols-2">
+        <div className="space-y-2 text-left">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <AwardIcon className="h-5 w-5 text-primary" />
+            Why prep now?
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Build momentum by aligning release cadences and tour stops with the nomination sourcing windows. These
+            placeholders will later sync to real ticketing, stream deltas, and influencer reach metrics.
           </p>
         </div>
-        <div className="grid gap-4 rounded-lg border border-dashed border-primary/40 bg-muted/10 p-6 md:grid-cols-2">
-          <div className="space-y-2 text-left">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <AwardIcon className="h-5 w-5 text-primary" />
-              Why prep now?
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Build momentum by aligning release cadences and tour stops with the nomination sourcing windows. These
-              placeholders will later sync to real ticketing, stream deltas, and influencer reach metrics.
-            </p>
-          </div>
-          <div className="space-y-2 text-left">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Star className="h-5 w-5 text-primary" />
-              Fame acceleration
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Attendance and wins layer onto your fame ledger. Plan for the ceremonies that best fit your sonic identity
-              and performance capacity to maximize the reputation lift.
-            </p>
-          </div>
+        <div className="space-y-2 text-left">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Star className="h-5 w-5 text-primary" />
+            Fame acceleration
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Attendance and wins layer onto your fame ledger. Plan for the ceremonies that best fit your sonic identity
+            and performance capacity to maximize the reputation lift.
+          </p>
         </div>
-      </header>
+      </div>
+
 
       <section className="grid gap-8 lg:grid-cols-2">
         {awardShows.map((show) => (
@@ -211,6 +210,6 @@ export default function AwardShows() {
         campaign reminders, and real-time voting analytics. Until then, use these scaffolds to map out your London
         award season strategy and coordinate your crew.
       </footer>
-    </div>
+    </FMPageScaffold>
   );
 }

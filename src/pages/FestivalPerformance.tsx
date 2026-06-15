@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FestivalPerformanceOutcome } from "@/components/festivals/FestivalPerformanceOutcome";
 import { FestivalPerformanceLoop } from "@/components/festivals/performance/FestivalPerformanceLoop";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+
 
 interface PerformanceState {
   phase: "warmup" | "performing" | "climax" | "complete";
@@ -210,26 +212,27 @@ export default function FestivalPerformance() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Festival Performance" icon={Music} backTo="/festivals">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!participation) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Festival Performance" icon={Music} backTo="/festivals">
         <div className="text-center py-12">
           <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold">Performance Not Found</h2>
           <Button onClick={() => navigate(-1)} className="mt-4">Go Back</Button>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
+
 
   const canPerform = participation.status === "confirmed" || participation.status === "pending" || participation.status === "invited";
   const hasPerformed = participation.status === "performed";
@@ -237,23 +240,13 @@ export default function FestivalPerformance() {
   // Use new performance loop if enabled
   if (canPerform && !hasPerformed && useNewLoop) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Music className="h-6 w-6" />
-              {participation.festival?.title || "Festival Performance"}
-            </h1>
-            <p className="text-muted-foreground">
-              {participation.slot_type} slot • {primaryBand?.name}
-            </p>
-          </div>
-          <Badge>{participation.status}</Badge>
-        </div>
-        
+      <FMPageScaffold
+        title={participation.festival?.title || "Festival Performance"}
+        subtitle={`${participation.slot_type} slot • ${primaryBand?.name ?? ""}`}
+        icon={Music}
+        backTo="/festivals"
+        headerActions={<Badge>{participation.status}</Badge>}
+      >
         <FestivalPerformanceLoop
           participationId={participationId!}
           bandId={primaryBand?.id}
@@ -265,30 +258,24 @@ export default function FestivalPerformance() {
             navigate("/festivals");
           }}
         />
-      </div>
+      </FMPageScaffold>
     );
   }
 
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Music className="h-6 w-6" />
-            {participation.festival?.title || "Festival Performance"}
-          </h1>
-          <p className="text-muted-foreground">
-            {participation.slot_type} slot • {primaryBand?.name}
-          </p>
-        </div>
+    <FMPageScaffold
+      title={participation.festival?.title || "Festival Performance"}
+      subtitle={`${participation.slot_type} slot • ${primaryBand?.name ?? ""}`}
+      icon={Music}
+      backTo="/festivals"
+      headerActions={
         <Badge variant={hasPerformed ? "default" : "secondary"}>
           {participation.status}
         </Badge>
-      </div>
+      }
+    >
+
 
       {/* Performance Area */}
       {canPerform && !hasPerformed && (
@@ -466,6 +453,6 @@ export default function FestivalPerformance() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }

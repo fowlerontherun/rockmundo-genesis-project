@@ -22,6 +22,7 @@ import {
   type NarrativeChoice,
   type NarrativeStateRecord,
 } from "@/lib/narratives";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 const STORY_STATE_QUERY_KEY = "narrative-story-state" as const;
 
 // Temporary types until database migration is applied
@@ -255,7 +256,7 @@ const NarrativeStoryPage = () => {
 
   if (!story) {
     return (
-      <div className="p-6">
+      <FMPageScaffold title="Narrative" icon={Sparkles} backTo="/hub/events">
         <Card>
           <CardHeader>
             <CardTitle>Story not found</CardTitle>
@@ -267,13 +268,13 @@ const NarrativeStoryPage = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!user && !authLoading) {
     return (
-      <div className="p-6">
+      <FMPageScaffold title="Narrative" icon={Sparkles} backTo="/hub/events">
         <Card>
           <CardHeader>
             <CardTitle>Sign in to explore narratives</CardTitle>
@@ -283,24 +284,26 @@ const NarrativeStoryPage = () => {
             <Button variant="outline" onClick={() => navigate("/auth")}>Sign in</Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="w-fit">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <div className="flex flex-wrap gap-2">
+    <FMPageScaffold
+      title={story.title}
+      icon={Sparkles}
+      backTo="/hub/events"
+      headerActions={
+        <div className="flex flex-wrap gap-1.5">
           {story.themeTags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="uppercase tracking-wide">
+            <Badge key={tag} variant="secondary" className="text-[10px] uppercase tracking-wide">
               {tag}
             </Badge>
           ))}
         </div>
-      </div>
+      }
+    >
+
 
       <Card>
         <CardHeader>
@@ -454,7 +457,7 @@ const NarrativeStoryPage = () => {
           </Card>
         </>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, History, Music, Coins } from 'lucide-react';
+import { Loader2, History, Music, Coins, Music2 } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import type { Database, Tables } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 const SESSION_LENGTHS = [30, 60, 120] as const;
 
@@ -449,15 +450,14 @@ export default function Busking() {
   const busyStatusLabel = activityStatus?.status.replace(/_/g, ' ');
 
   return (
-    <div className="container mx-auto p-6">
+    <FMPageScaffold
+      title="Busking"
+      subtitle="Pick a spot, choose how long to play, and earn real XP and tips."
+      icon={Music2}
+      backTo="/hub/live"
+    >
       <Card>
-        <CardHeader>
-          <CardTitle>Busking</CardTitle>
-          <CardDescription>
-            Pick a spot, choose how long to play, and book the time to earn real experience and tips.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 pt-6">
           <section>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Choose a location</h3>
             <div className="mt-3 grid gap-4 md:grid-cols-3">
@@ -675,6 +675,6 @@ export default function Busking() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
