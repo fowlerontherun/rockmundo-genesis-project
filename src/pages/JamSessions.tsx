@@ -552,7 +552,7 @@ const JamSessions = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
