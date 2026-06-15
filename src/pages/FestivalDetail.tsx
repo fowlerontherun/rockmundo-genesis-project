@@ -467,6 +467,6 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
            </CardContent>
          </Card>
        )}
-     </div>
+    </FMPageScaffold>
    );
  }
