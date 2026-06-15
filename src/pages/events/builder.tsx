@@ -342,7 +342,7 @@ const EventBuilderPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
