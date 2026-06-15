@@ -5,6 +5,7 @@ import { Music, Ticket, Radio, History } from "lucide-react";
 import { FestivalBrowser } from "@/components/festivals/FestivalBrowser";
 import { LiveFestivalView } from "@/components/festivals/LiveFestivalView";
 import { FestivalHistoryTab } from "@/components/festivals/FestivalHistoryTab";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function Festivals() {
   const [activeTab, setActiveTab] = useState("browse");
@@ -21,18 +22,13 @@ export default function Festivals() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-3">
-          <Music className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Festivals</h1>
-          <Badge variant="secondary" className="text-xs">Live Experience</Badge>
-        </div>
-        <p className="text-muted-foreground max-w-2xl">
-          Browse upcoming festivals, buy tickets, and experience live multi-stage events with commentary, voice chat, and watch rewards.
-        </p>
-      </header>
-
+    <FMPageScaffold
+      title="Festivals"
+      subtitle="Browse upcoming festivals, buy tickets, and experience live multi-stage events with commentary, voice chat, and watch rewards."
+      icon={Music}
+      backTo="/hub/events"
+      headerActions={<Badge variant="secondary" className="text-[10px]">Live Experience</Badge>}
+    >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="browse" className="gap-2">
@@ -68,6 +64,6 @@ export default function Festivals() {
           <FestivalHistoryTab />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
