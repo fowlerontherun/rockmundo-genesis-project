@@ -212,26 +212,27 @@ export default function FestivalPerformance() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Festival Performance" icon={Music} backTo="/festivals">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!participation) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Festival Performance" icon={Music} backTo="/festivals">
         <div className="text-center py-12">
           <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold">Performance Not Found</h2>
           <Button onClick={() => navigate(-1)} className="mt-4">Go Back</Button>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
+
 
   const canPerform = participation.status === "confirmed" || participation.status === "pending" || participation.status === "invited";
   const hasPerformed = participation.status === "performed";
