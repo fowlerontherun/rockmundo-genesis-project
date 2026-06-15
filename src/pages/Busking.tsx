@@ -675,6 +675,6 @@ export default function Busking() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
