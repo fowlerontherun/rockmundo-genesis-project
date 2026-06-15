@@ -29,8 +29,7 @@ import {
   Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const performanceSlots = [
   { value: "opening", label: "Opening Act (6:00 PM)" },
