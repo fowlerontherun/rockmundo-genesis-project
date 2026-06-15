@@ -21,6 +21,7 @@ import type {
   SponsorPackage,
   TicketTier,
 } from "@/components/events/types";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const steps = [
   {
