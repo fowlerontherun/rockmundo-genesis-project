@@ -288,20 +288,20 @@ const JamSessions = () => {
   const isJoining = (sessionId: string) => joiningSessionId === sessionId;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Jam Sessions</h1>
-          <p className="text-muted-foreground">
-            Coordinate collaborative jams, discover new bandmates, and grow your musical chemistry in real time.
-          </p>
-        </div>
-        {profileDisplayName && (
-          <div className="text-sm text-muted-foreground">
+    <FMPageScaffold
+      title="Jam Sessions"
+      subtitle="Coordinate collaborative jams, discover new bandmates, and grow your musical chemistry in real time."
+      icon={Music4}
+      backTo="/hub/live"
+      headerActions={
+        profileDisplayName ? (
+          <div className="text-[11px] text-muted-foreground">
             Signed in as <span className="font-medium text-foreground">{profileDisplayName}</span>
           </div>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
+
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1 self-start">
