@@ -464,6 +464,6 @@ export default function MajorEvents() {
         onConfirm={handleSongConfirm}
         bandId={activeBand?.id}
       />
-    </div>
+    </FMPageScaffold>
   );
 }
