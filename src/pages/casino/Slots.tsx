@@ -9,8 +9,9 @@ import { spinReels, calculateSlotPayout, getSymbolEmoji } from "@/lib/casino/slo
 import type { SlotSymbol } from "@/lib/casino/types";
 import { SLOT_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
-import { ArrowLeft, RotateCw } from "lucide-react";
+import { ArrowLeft, RotateCw, Cherry } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function Slots() {
   const navigate = useNavigate();
