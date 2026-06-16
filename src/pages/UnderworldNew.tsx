@@ -40,6 +40,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import underworldVeil from "@/assets/underworld-veil.svg";
 import { UnderworldStoreTab } from "@/components/underworld/UnderworldStoreTab";
 import { toast } from "sonner";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const loreSections = [
   {
