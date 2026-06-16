@@ -314,15 +314,15 @@ const CommunityFeedPage = () => {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="container mx-auto max-w-4xl space-y-6 py-10">
+      <FMPageScaffold title="Community Feed" icon={Users} backTo="/hub/social" className="max-w-4xl">
         <div className="text-center text-muted-foreground">Loading your community feed...</div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!user || !viewerId) {
     return (
-      <div className="container mx-auto max-w-3xl space-y-4 py-10">
+      <FMPageScaffold title="Community Feed" icon={Users} backTo="/hub/social" className="max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle>Join the community</CardTitle>
@@ -331,13 +331,14 @@ const CommunityFeedPage = () => {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-6 py-10">
+    <FMPageScaffold title="Community Feed" subtitle="Share updates and react to your peers." icon={Users} backTo="/hub/social" className="max-w-3xl">
       {renderComposer()}
+
 
       {isError && (
         <Card>
