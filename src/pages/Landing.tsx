@@ -142,7 +142,7 @@ const Landing = () => {
               <Activity className="h-3 w-3" />
               Season 2026 · Open Beta · v1.1.394
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-3">
+            <h1 className="font-bebas text-5xl md:text-7xl tracking-[0.04em] leading-[0.95] mb-3">
               The music career simulator,
               <br />
               <span className="text-fm-accent">managed like a sport.</span>
@@ -231,7 +231,7 @@ const Landing = () => {
           <div className="flex items-end justify-between mb-6 pb-3 border-b border-fm-border">
             <div>
               <div className="text-[10px] uppercase tracking-widest text-fm-accent mb-1">Module 01</div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Career, Fully Simulated</h2>
+              <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em]">Career, Fully Simulated</h2>
             </div>
             <div className="hidden md:block text-xs text-fm-fg-muted max-w-md text-right">
               Every system feeds the next. Songs feed charts, charts feed tours, tours feed your label,
@@ -262,7 +262,7 @@ const Landing = () => {
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-fm-accent mb-3">
               <Zap className="h-3 w-3" /> Module 02 · Living World
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
+            <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em] mb-3">
               A world that doesn't wait for you
             </h2>
             <p className="text-sm text-fm-fg-muted mb-5">
@@ -304,7 +304,7 @@ const Landing = () => {
       <section className="border-b border-fm-border">
         <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-12 md:py-16 text-center">
           <div className="text-[10px] uppercase tracking-widest text-fm-accent mb-2">Next Cycle</div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Ready to plug in?</h2>
+          <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em] mb-3">Ready to plug in?</h2>
           <p className="text-sm text-fm-fg-muted mb-6 max-w-xl mx-auto">
             The next chart cycle starts soon. Sign in and write your first song.
           </p>
