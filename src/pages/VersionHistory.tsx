@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.370",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7c (Underworld, Casino & Nightlife pages). Migrated UnderworldNew, Prison, Casino, casino/Blackjack, casino/Roulette, casino/Slots, Lottery, NightclubHub, NightclubManagement, and NightClubDetail to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `PageLayout`+`PageHeader` stacks, `container mx-auto` wrappers, bespoke gradient hero headers, and back-arrow + `<h1>` rows with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). Casino sub-games (Blackjack/Roulette/Slots) back-link to `/casino`; Casino & Lottery back-link to `/hub/world-social`; Nightclubs back-link to `/hub/world-social` (browse) or `/nightclubs` (manage/detail); Prison back-links to `/dashboard`; Underworld back-links to `/city`." },
+      { type: 'improvement', description: "Header CTAs/status moved into the scaffold `headerActions` slot at compact size: Casino & casino sub-game cash balances, Lottery jackpot + balance badges, Prison 'Imprisoned' status badge, Underworld 'Secure relay' / '30s ticks' pills. Loading and not-found branches on NightclubManagement and NightClubDetail now render inside the FM scaffold instead of standalone PageLayout shells. UnderworldNew preserves its veil/neon background as an inner panel under the standard FM header." },
+    ],
+  },
+  {
     version: "1.1.369",
     date: "2026-06-15",
     changes: [
