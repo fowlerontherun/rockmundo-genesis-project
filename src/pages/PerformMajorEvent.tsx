@@ -180,22 +180,24 @@ export default function PerformMajorEvent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <FMPageScaffold title="Major Event" icon={Trophy} backTo="/major-events">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!performance) {
     return (
-      <div className="container max-w-4xl py-8">
+      <FMPageScaffold title="Major Event" icon={Trophy} backTo="/major-events">
         <Alert variant="destructive">
           <AlertDescription>Performance not found.</AlertDescription>
         </Alert>
         <Button onClick={() => navigate('/major-events')} className="mt-4">
           Back to Major Events
         </Button>
-      </div>
+      </FMPageScaffold>
     );
   }
 
