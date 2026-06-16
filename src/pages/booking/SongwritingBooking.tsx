@@ -117,16 +117,14 @@ export default function SongwritingBooking() {
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate("/schedule")}
-        className="mb-4"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Schedule
-      </Button>
+    <FMPageScaffold
+      title="Book Songwriting Session"
+      subtitle="Schedule a 1-hour session to continue working on your song"
+      icon={Music}
+      backTo="/schedule"
+      backLabel="Back to Schedule"
+    >
+
 
       <Card>
         <CardHeader>
