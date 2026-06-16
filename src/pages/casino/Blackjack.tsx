@@ -129,14 +129,17 @@ export default function Blackjack() {
     : 0;
 
   return (
-    <div className="space-y-4 max-w-lg mx-auto">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/casino")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">🃏 Blackjack</h1>
-        <span className="ml-auto text-sm text-muted-foreground">${cash.toLocaleString()}</span>
-      </div>
+    <FMPageScaffold
+      title="Blackjack"
+      subtitle="Beat the dealer to 21."
+      icon={Club}
+      backTo="/casino"
+      backLabel="Casino"
+      className="max-w-lg mx-auto"
+      headerActions={
+        <span className="text-xs text-muted-foreground">${cash.toLocaleString()}</span>
+      }
+    >
 
       {/* Dealer */}
       <Card>
