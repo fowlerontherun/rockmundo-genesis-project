@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Minus, Trophy, Music } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Music, BarChart3 } from "lucide-react";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
 import { useVoteWeightedScore } from "@/hooks/useVoteWeightedScore";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const CompetitiveCharts = () => {
   const [country, setCountry] = useState("all");
@@ -199,15 +200,13 @@ const CompetitiveCharts = () => {
   const vinylSalesData = chartEntries?.filter(e => e.chart_type === "vinyl_sales") || [];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Music Charts</h1>
-          <p className="text-muted-foreground">
-            Track your musical success against other artists • Updated daily at 3 AM
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Music Charts"
+      subtitle="Track your musical success against other artists • Updated daily at 3 AM"
+      icon={BarChart3}
+      backTo="/music/charts"
+    >
+
 
       {/* Filters */}
       <Card>
@@ -316,7 +315,7 @@ const CompetitiveCharts = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

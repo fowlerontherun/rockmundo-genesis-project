@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Star, DollarSign, Music, Mic2, Calendar, Medal, Crown, Award } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,14 +54,13 @@ export default function HallOfFame() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Hall of Fame"
-        subtitle="Legendary musicians who've left their mark on Rockmundo"
-        backTo="/hub/character"
-        backLabel="Back to Character"
-        icon={Trophy}
-      />
+    <FMPageScaffold
+      title="Hall of Fame"
+      subtitle="Legendary musicians who've left their mark on Rockmundo"
+      icon={Trophy}
+      backTo="/hub/character"
+    >
+
 
       {/* Sort Tabs */}
       <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as SortType)} className="w-full">
@@ -175,6 +173,6 @@ export default function HallOfFame() {
           )}
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

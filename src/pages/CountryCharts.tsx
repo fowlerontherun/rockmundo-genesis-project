@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { ChartHistoryDialog } from "@/components/charts/ChartHistoryDialog";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string; hasAlbumData: boolean }[] = [
   { value: "combined", label: "Top 50", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales", hasAlbumData: true },
@@ -293,18 +294,14 @@ export default function CountryCharts() {
   const isAlbumView = releaseCategory === "album" || releaseCategory === "ep";
 
   return (
-    <div className="container mx-auto py-6 space-y-6 px-4">
-      {/* Header */}
+    <FMPageScaffold
+      title="Charts"
+      subtitle={`Top 50 ${isAlbumView ? "albums" : "songs"} by region, genre, and sales type`}
+      icon={Music}
+      backTo="/hub/music"
+    >
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Music className="h-8 w-8 text-primary" />
-            Charts
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Top 50 {isAlbumView ? "albums" : "songs"} by region, genre, and sales type
-          </p>
-        </div>
+
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
@@ -462,6 +459,6 @@ export default function CountryCharts() {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
