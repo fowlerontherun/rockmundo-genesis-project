@@ -9,8 +9,9 @@ import { spinWheel, calculateRoulettePayout, getNumberColor, getBetLabel } from 
 import type { RouletteBet, RouletteBetType } from "@/lib/casino/types";
 import { ROULETTE_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, CircleDot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { cn } from "@/lib/utils";
 
 const OUTSIDE_BETS: { type: RouletteBetType; label: string; color?: string }[] = [
