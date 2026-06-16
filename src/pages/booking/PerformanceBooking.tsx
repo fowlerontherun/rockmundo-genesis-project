@@ -16,6 +16,7 @@ import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels"
 import { Badge } from "@/components/ui/badge";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function PerformanceBooking() {
   const navigate = useNavigate();
@@ -308,11 +309,12 @@ export default function PerformanceBooking() {
   }));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Book Performance Activity</h1>
-        <p className="text-muted-foreground">Schedule your music sessions in advance</p>
-      </div>
+    <FMPageScaffold
+      title="Book Performance Activity"
+      subtitle="Schedule your music sessions in advance"
+      icon={Music}
+      backTo="/schedule"
+    >
 
       {conflictResult?.hasConflict && (
         <ScheduleConflictAlert
@@ -656,6 +658,6 @@ export default function PerformanceBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }

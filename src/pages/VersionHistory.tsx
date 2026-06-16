@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.380",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7i (Booking tail). Migrated booking/EducationBooking, booking/PerformanceBooking, booking/SongwritingBooking, and booking/WorkBooking to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container mx-auto p-6 space-y-6` + `container mx-auto p-4 max-w-4xl` wrappers, bespoke `<h1>` rows, and the SongwritingBooking manual back button with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `backLabel`). All four booking pages back-link to `/schedule` for a consistent return path. Icons: EducationBooking → `BookOpen`, PerformanceBooking → `Music`, SongwritingBooking → `Music`, WorkBooking → `Briefcase`." },
+    ],
+  },
+  {
     version: "1.1.379",
     date: "2026-06-16",
     changes: [

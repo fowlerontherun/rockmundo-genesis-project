@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function EducationBooking() {
   const navigate = useNavigate();
@@ -122,11 +123,12 @@ export default function EducationBooking() {
   );
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Book Education Activity</h1>
-        <p className="text-muted-foreground">Schedule your learning sessions in advance</p>
-      </div>
+    <FMPageScaffold
+      title="Book Education Activity"
+      subtitle="Schedule your learning sessions in advance"
+      icon={BookOpen}
+      backTo="/schedule"
+    >
 
       {conflictResult?.hasConflict && (
         <ScheduleConflictAlert result={conflictResult} onPickSlot={handlePickSlot} onDismiss={clearResult} />
@@ -210,6 +212,6 @@ export default function EducationBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }

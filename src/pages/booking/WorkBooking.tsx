@@ -11,6 +11,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ACTIVITY_TYPES = [
   { value: "work", label: "Work Shift", icon: Briefcase },
@@ -81,11 +82,12 @@ export default function WorkBooking() {
   }));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Book Life Activity</h1>
-        <p className="text-muted-foreground">Schedule work, travel, and personal time</p>
-      </div>
+    <FMPageScaffold
+      title="Book Life Activity"
+      subtitle="Schedule work, travel, and personal time"
+      icon={Briefcase}
+      backTo="/schedule"
+    >
 
       {conflictResult?.hasConflict && (
         <ScheduleConflictAlert result={conflictResult} onPickSlot={handlePickSlot} onDismiss={clearResult} />
@@ -156,6 +158,6 @@ export default function WorkBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
