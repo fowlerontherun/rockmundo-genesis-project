@@ -212,6 +212,6 @@ export default function EducationBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
