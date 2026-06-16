@@ -287,7 +287,12 @@ export default function PerformMajorEvent() {
   const eventName = performance.instance?.event?.name || 'Major Event';
   
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
+    <FMPageScaffold
+      title={`${eventName} — Live`}
+      icon={Volume2}
+      backTo="/major-events"
+      headerActions={<Badge variant="default" className="animate-pulse">🔴 LIVE</Badge>}
+    >
       <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
