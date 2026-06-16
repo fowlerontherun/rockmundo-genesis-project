@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.394",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Landing page restyled to match Rockmundo's Football Manager 2024-inspired chrome: dark blue `fm-bg` / `fm-panel` surfaces, cyan `fm-accent` calls-to-action, uppercase tracked-out micro-labels, sticky status bar with live ticker, dashboard-style hero with World Snapshot KPI panel, and a dense modular feature grid (M01·01 … M01·08). Login dialog re-themed as a 'Continue Career' panel. Rockmundo logo now appears in header and footer." },
+    ],
+  },
+  {
     version: "1.1.393",
     date: "2026-06-16",
     changes: [
