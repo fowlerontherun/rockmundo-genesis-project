@@ -566,7 +566,7 @@ const MediaReputationPage = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 };
 
