@@ -493,7 +493,7 @@ export default function Awards() {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
 
