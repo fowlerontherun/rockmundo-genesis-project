@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.374",
+    date: "2026-06-16",
+    changes: [
+      { type: 'fix', description: "Log retention: truncated pg_net's `net._http_response` (497 stale HTTP response bodies, ~262 MB of TOAST bloat) and scheduled a daily 03:15 UTC pg_cron job `prune-pgnet-and-cron-history` that trims `net._http_response` and `cron.job_run_details` to the last 24 h and `public.cron_job_runs` to the last 7 days. VACUUM FULL on the two log tables still needs to be run from the Supabase SQL editor (cannot run inside a migration transaction) to release the ~700 MB to disk." },
+    ],
+  },
+  {
     version: "1.1.373",
     date: "2026-06-16",
     changes: [
