@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.382",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7j (Media browsers). Migrated media/FilmsBrowser, media/MagazinesBrowser, media/NewspapersBrowser, and media/PodcastsBrowser to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container mx-auto p-6 space-y-6` wrappers and bespoke `<h1>` rows with scaffold props (`title`, `subtitle`, `icon`). Icons: FilmsBrowser → `Film`, MagazinesBrowser → `BookOpen`, NewspapersBrowser → `Newspaper`, PodcastsBrowser → `Podcast`. Magazines/Newspapers/Podcasts surface the current-city context inline in the subtitle." },
+      { type: 'improvement', description: "Replaced each browser's ad-hoc `<Skeleton>` grid loading branch with the shared `FMPageSkeleton` (action placeholders + body blocks) inside FMPageScaffold so loading states match the rest of the FM-standardized hierarchy." },
+    ],
+  },
+  {
     version: "1.1.381",
     date: "2026-06-16",
     changes: [
