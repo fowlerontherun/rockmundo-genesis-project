@@ -66,28 +66,18 @@ const FilmsBrowser = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
-        </div>
-      </div>
+      <FMPageScaffold title="Film Productions" subtitle="Browse film and TV production opportunities" icon={Film}>
+        <FMPageSkeleton kpiCount={0} actionCount={3} bodyBlocks={2} />
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Film className="h-8 w-8 text-primary" />
-          Film Productions
-        </h1>
-        <p className="text-muted-foreground">
-          Browse film and TV production opportunities for cameos and roles
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Film Productions"
+      subtitle="Browse film and TV production opportunities for cameos and roles"
+      icon={Film}
+    >
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
