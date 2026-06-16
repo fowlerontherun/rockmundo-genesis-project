@@ -239,7 +239,7 @@ const NightclubHub = () => {
           })}
         </div>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
