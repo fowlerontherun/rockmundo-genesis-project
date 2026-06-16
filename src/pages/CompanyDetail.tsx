@@ -448,17 +448,15 @@ const CompanyDetailContent = () => {
           <MarketRankings companyId={company.id} companyType={company.company_type} />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
 const CompanyDetail = () => {
   return (
-    <div className="container py-6">
-      <VipGate feature="Company management">
-        <CompanyDetailContent />
-      </VipGate>
-    </div>
+    <VipGate feature="Company management">
+      <CompanyDetailContent />
+    </VipGate>
   );
 };
 
