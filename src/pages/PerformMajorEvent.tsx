@@ -24,6 +24,7 @@ import {
   Sparkles,
   DollarSign
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface LiveCommentary {
   text: string;
