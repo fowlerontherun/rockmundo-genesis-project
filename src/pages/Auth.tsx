@@ -153,7 +153,7 @@ const Auth = () => {
           return;
         }
         if (data.session?.user && !isRecovery) {
-          navigate("/", { replace: true });
+          navigate("/home", { replace: true });
         }
       } catch (sessionError) {
         console.error("Unexpected error fetching auth session:", sessionError);
@@ -224,7 +224,7 @@ const Auth = () => {
           title: t('auth.welcomeBack'),
           description: t('auth.loginSuccess')
         });
-        navigate("/", { replace: true });
+        navigate("/home", { replace: true });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('errors.generic');
