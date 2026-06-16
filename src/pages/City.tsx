@@ -325,7 +325,7 @@ export const CityContent = ({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
