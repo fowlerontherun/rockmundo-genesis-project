@@ -9,6 +9,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAddictions } from "@/hooks/useAddictions";
 import { Dices, Club, CircleDot, Cherry, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const GAMES = [
   {
