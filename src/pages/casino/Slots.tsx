@@ -153,6 +153,6 @@ export default function Slots() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
