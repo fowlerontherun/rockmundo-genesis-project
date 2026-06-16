@@ -13,8 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper, Mail } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { format } from "date-fns";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { isLifetimeAchievementCategory, isLifetimeAchievementYear } from "@/lib/api/awards";
