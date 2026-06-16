@@ -1,8 +1,10 @@
+import { Camera } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function ModelingInner() {
   const { profileId } = useActiveProfile();
@@ -11,9 +13,9 @@ function ModelingInner() {
 
   if (!profileId || !profile) {
     return (
-      <div className="container mx-auto py-8">
-        <p className="text-muted-foreground">Please log in to access modeling.</p>
-      </div>
+      <FMPageScaffold title="Modeling" subtitle="Sign in to access modeling offers." icon={Camera} backTo="/hub/career">
+        <p className="text-muted-foreground text-sm">Please log in to access modeling.</p>
+      </FMPageScaffold>
     );
   }
 
@@ -26,14 +28,19 @@ function ModelingInner() {
   const playerFame = profile.fame ?? 0;
 
   return (
-    <div className="container mx-auto p-4 max-w-5xl">
+    <FMPageScaffold
+      title="Modeling"
+      subtitle="Review offers, book shoots, and grow your fashion fame."
+      icon={Camera}
+      backTo="/hub/career"
+    >
       <ModelingOffersPanel
         userId={profileId}
         playerLooks={playerLooks}
         playerFame={playerFame}
         skillLevels={skillLevels}
       />
-    </div>
+    </FMPageScaffold>
   );
 }
 

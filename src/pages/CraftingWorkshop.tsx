@@ -11,6 +11,8 @@ import { CraftingProgress } from "@/components/crafting/CraftingProgress";
 import { SalvagePanel } from "@/components/crafting/SalvagePanel";
 import { CraftedItemReveal } from "@/components/crafting/CraftedItemReveal";
 import { EnchantmentPanel } from "@/components/crafting/EnchantmentPanel";
+import { Badge as _StatusBadge } from "@/components/ui/badge";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const CraftingWorkshop = () => {
   const {
@@ -59,36 +61,28 @@ const CraftingWorkshop = () => {
 
   if (isLoading) {
     return (
-      <div className="p-4">
+      <FMPageScaffold title="Crafting Workshop" subtitle="Build custom instruments from raw materials" icon={Hammer} backTo="/hub/business">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-48" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="p-4 space-y-4 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Hammer className="w-5 h-5 text-primary" />
-            Crafting Workshop
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Build custom instruments from raw materials
-          </p>
-        </div>
+    <FMPageScaffold
+      title="Crafting Workshop"
+      subtitle="Build custom instruments from raw materials"
+      icon={Hammer}
+      backTo="/hub/business"
+      headerActions={
         <div className="flex gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {blueprints.length} Blueprints
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            {activeSessions.length} Active
-          </Badge>
+          <Badge variant="secondary" className="text-xs">{blueprints.length} Blueprints</Badge>
+          <Badge variant="secondary" className="text-xs">{activeSessions.length} Active</Badge>
         </div>
-      </div>
+      }
+    >
 
       <Tabs defaultValue="blueprints">
         <TabsList className="w-full">
@@ -188,7 +182,7 @@ const CraftingWorkshop = () => {
         qualityRoll={revealData.qualityRoll}
         bonusStats={revealData.bonusStats}
       />
-    </div>
+    </FMPageScaffold>
   );
 };
 
