@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { MapPin, Building2, Train, Plane, Music, Sparkles, Loader2, Globe, Users } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
