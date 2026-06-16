@@ -323,7 +323,7 @@ const PodcastsBrowser = () => {
           bandFame={userBand.fame}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
