@@ -413,7 +413,12 @@ export default function PerformOpenMic() {
   const hasAudio = !!(currentSong as any)?.audio_url;
   
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
+    <FMPageScaffold
+      title="Live Performance"
+      icon={Volume2}
+      backTo="/open-mic"
+      headerActions={<Badge variant="default" className="animate-pulse">🔴 LIVE</Badge>}
+    >
       <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
