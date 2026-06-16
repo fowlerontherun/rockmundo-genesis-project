@@ -14,6 +14,7 @@ import { useAllCompanyTaxRecords } from "@/hooks/useCompanyFinance";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CORPORATE_TAX_RATES, type Company } from "@/types/company";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
