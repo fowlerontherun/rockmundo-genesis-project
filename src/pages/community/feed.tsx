@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-query";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
