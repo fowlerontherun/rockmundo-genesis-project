@@ -849,8 +849,6 @@ const StageEquipmentSystem = () => {
           </TabsContent>
         </Tabs>
 
-      </div>
-
       <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -958,7 +956,6 @@ const StageEquipmentSystem = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </FMPageScaffold>
   );
 };
