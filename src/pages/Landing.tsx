@@ -65,32 +65,34 @@ const Landing = () => {
       {/* Top nav */}
       <header className="sticky top-0 z-30 backdrop-blur-md bg-background/70 border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="Rockmundo logo" className="h-8 w-8 object-contain" width={32} height={32} />
-            <span className="font-bold tracking-tight">Rockmundo</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={logo} alt="Rockmundo logo" className="h-8 w-8 object-contain shrink-0" width={32} height={32} />
+            <span className="font-bold tracking-tight hidden xs:inline sm:inline">Rockmundo</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#world" className="hover:text-foreground transition-colors">The World</a>
             <Link to="/about" className="hover:text-foreground transition-colors">About</Link>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {isDev && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/dashboard")}
                 title="Dev-only: enters the app as a guest with mock data"
+                aria-label="Try the demo"
               >
-                <PlayCircle className="h-4 w-4 mr-1.5" />
-                Demo
+                <PlayCircle className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Demo</span>
               </Button>
             )}
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <LogIn className="h-4 w-4 mr-1.5" />
-              Log in
+            <Button size="sm" onClick={() => setOpen(true)} aria-label="Log in">
+              <LogIn className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Log in</span>
             </Button>
           </div>
+
         </div>
       </header>
 
