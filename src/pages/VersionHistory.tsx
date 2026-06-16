@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.387",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Polished `PodcastsBrowser` card interactions: card now gets a primary-tinted border + shadow on hover, the `<Link>` region fills the full card height (`flex-1 flex flex-col`) so the entire title/info area is clickable with a `cursor-pointer`, gains an `accent/40` background tint on hover/focus, the title turns primary on group-hover, and focus-visible shows a `ring-2` with offset for clearer keyboard affordance. Added `aria-label` to the link for screen readers." },
+    ],
+  },
+  {
     version: "1.1.386",
     date: "2026-06-16",
     changes: [
