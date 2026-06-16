@@ -85,7 +85,7 @@ const PodcastsBrowser = () => {
       if (error) throw error;
       return data.map(s => s.podcast_id);
     },
-    enabled: !!userBand?.id,
+    enabled: !!userBand?.id && !!userBandReal,
   });
 
   const filterOptions = useMemo(() => {
