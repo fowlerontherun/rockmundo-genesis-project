@@ -204,10 +204,11 @@ const PodcastsBrowser = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPodcasts.map(pod => (
-            <Card key={pod.id} className="hover:shadow-lg transition-shadow flex flex-col">
+            <Card key={pod.id} className="group hover:shadow-lg hover:border-primary/40 transition-all flex flex-col overflow-hidden">
               <Link
                 to={`/media/podcasts/${pod.id}`}
-                className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+                aria-label={`View details for ${pod.podcast_name}`}
+                className="flex-1 flex flex-col cursor-pointer rounded-t-lg outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-hover:[&_h3]:text-primary [&_h3]:transition-colors"
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
