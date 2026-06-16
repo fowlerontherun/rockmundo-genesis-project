@@ -17,6 +17,12 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Dev-only guest bypass: skip every gate so unauthenticated visitors can
+  // inspect pages in `vite dev`. Production builds keep all gates intact.
+  if (import.meta.env.DEV && !profile) {
+    return <>{children}</>;
+  }
+
   const allowWithoutProfile = (() => {
     const currentPath = location.pathname;
     return currentPath === "/" || currentPath === "/my-character/edit" || currentPath.startsWith("/my-character/");
