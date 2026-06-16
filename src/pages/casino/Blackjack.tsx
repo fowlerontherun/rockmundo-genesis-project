@@ -224,6 +224,6 @@ export default function Blackjack() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
