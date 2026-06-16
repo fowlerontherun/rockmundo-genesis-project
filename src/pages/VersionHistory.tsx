@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.376",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7e (Career, Commerce & Music tail). Migrated Modeling, Teaching, ProducerCareer, Sponsorships, ClothingShop, CraftingWorkshop, StageSetup, StageEquipmentSystem, StageEquipmentSystemPlan, MusicHub, MusicStudio, studio/recording, commerce/merch, side-hustles, talent/discovery, and legal/contracts to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container mx-auto`, `max-w-Nxl`, `min-h-screen bg-background p-6`, and `StandardPageLayout` wrappers and bespoke `<h1>` header rows with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). Career pages (Modeling/Teaching/ProducerCareer/side-hustles/talent) back-link to `/hub/career`; Sponsorships and legal/contracts back-link to `/hub/career-business`; commerce pages (ClothingShop/CraftingWorkshop/commerce/merch) back-link to `/hub/business`; stage pages (StageSetup/StageEquipmentSystem/StageEquipmentSystemPlan) back-link to `/hub/band-live`; music pages (MusicHub→/dashboard, MusicStudio + studio/recording → /hub/music)." },
+      { type: 'improvement', description: "Header CTAs/status migrated to the `headerActions` slot at compact size: Teaching tier badge, ProducerCareer availability switch, CraftingWorkshop blueprint/active counts, StageEquipmentSystem inventory/live counts, StageEquipmentSystemPlan deployment badge, talent/discovery role+location chip. Loading and access-denied branches (Teaching unlock screen, ProducerCareer registration, Sponsorships band-required, StageEquipmentSystem loading + band-required, commerce/merch loading + band-required) now render inside the unified FM scaffold instead of standalone wrappers." },
+    ],
+  },
+  {
     version: "1.1.375",
     date: "2026-06-16",
     changes: [
