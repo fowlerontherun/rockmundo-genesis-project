@@ -405,7 +405,7 @@ export default function PerformOpenMic() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
