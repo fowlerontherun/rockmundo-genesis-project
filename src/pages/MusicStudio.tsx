@@ -11,7 +11,7 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
-import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const MusicStudio = () => {
   const musicFeatures = [
@@ -66,22 +66,11 @@ const MusicStudio = () => {
   ];
 
   return (
-    <StandardPageLayout
+    <FMPageScaffold
       title="Music Hub"
       subtitle="Your central command center for all things music creation. From writing and recording to releasing and performing, manage every aspect of your musical journey."
       backTo="/hub/music"
-      backLabel="Back to Music Hub"
       icon={Sparkles}
-      bareContent
-      secondaryActions={
-        <>
-          <Link to="/songwriting"><Button variant="outline" size="sm">Songwriting</Button></Link>
-          <Link to="/recording-studio"><Button variant="outline" size="sm">Recording Studio</Button></Link>
-          <Link to="/song-market"><Button variant="outline" size="sm">Marketplace</Button></Link>
-          <Link to="/streaming-platforms"><Button variant="outline" size="sm">Streaming</Button></Link>
-        </>
-      }
-      secondaryTitle="Related"
     >
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -141,7 +130,7 @@ const MusicStudio = () => {
           </p>
         </CardContent>
       </Card>
-    </StandardPageLayout>
+    </FMPageScaffold>
   );
 };
 

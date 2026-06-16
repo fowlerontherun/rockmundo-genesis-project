@@ -33,6 +33,7 @@ import {
   submitCastingSubmission,
 } from "@/lib/api/talent";
 import { AlertCircle, Briefcase, Calendar, CheckCircle2, ClipboardList, Filter, Layers, MapPin, Search, Sparkles, Users, Video, XCircle } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const submissionSchema = z.object({
   castingCallRoleId: z.string().optional(),
@@ -387,39 +388,25 @@ const TalentDiscoveryPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Talent Discovery & Auditions</h1>
-            <p className="text-muted-foreground">
-              Find open casting calls, submit tailored materials, and track reviews from casting directors.
-            </p>
-          </div>
-          {profile && (
-            <Card className="w-full max-w-sm border-dashed">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Your talent profile</CardTitle>
-                <CardDescription>
-                  {(profile as any).stage_name ?? (profile as any).full_name ?? "Complete your profile to stand out."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    <span>{(profile as any).primary_role ?? "Role not set"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <span>{(profile as any).location ?? "Location unknown"}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </header>
+    <FMPageScaffold
+      title="Talent Discovery & Auditions"
+      subtitle="Find open casting calls, submit tailored materials, and track reviews from casting directors."
+      icon={Sparkles}
+      backTo="/hub/career"
+      headerActions={
+        profile ? (
+          <Card className="w-full max-w-xs border-dashed">
+            <CardContent className="flex items-center gap-3 py-2 text-xs text-muted-foreground">
+              <Briefcase className="h-3.5 w-3.5" />
+              <span className="truncate">{(profile as any).primary_role ?? "Role not set"}</span>
+              <span>•</span>
+              <MapPin className="h-3.5 w-3.5" />
+              <span className="truncate">{(profile as any).location ?? "Location unknown"}</span>
+            </CardContent>
+          </Card>
+        ) : null
+      }
+    >
 
       <Tabs defaultValue="discover" className="space-y-6">
         <TabsList>
@@ -1123,7 +1110,7 @@ const TalentDiscoveryPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

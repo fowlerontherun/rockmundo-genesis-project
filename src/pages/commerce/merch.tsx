@@ -32,6 +32,7 @@ import {
   summarizeMerchOrders,
   type MerchInventoryItem,
 } from "@/lib/api/merch";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const fabricPalette = ["#111827", "#fde68a", "#f1f5f9", "#0f766e", "#1d4ed8", "#9333ea"];
 const inkPalette = ["#fb7185", "#f97316", "#22d3ee", "#a855f7", "#facc15", "#4ade80"];
@@ -308,15 +309,17 @@ export default function MerchCommercePage() {
 
   if (loadingPrimaryBand) {
     return (
-      <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking band permissions...
-      </div>
+      <FMPageScaffold title="Merch Designer & Control Room" subtitle="Checking band permissions…" icon={Sparkles} backTo="/hub/business">
+        <div className="flex h-[40vh] items-center justify-center text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking band permissions...
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!bandId) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 py-12">
+      <FMPageScaffold title="Merch Designer & Control Room" subtitle="Link your band to unlock commerce tools." icon={Sparkles} backTo="/hub/business">
         <Card>
           <CardHeader>
             <CardTitle>Link your band to unlock commerce tools</CardTitle>
@@ -332,25 +335,19 @@ export default function MerchCommercePage() {
             <p>Open Band Manager to invite teammates and start your merch.</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   const isLoading = inventoryQuery.isLoading || ordersQuery.isLoading;
 
   return (
-    <div className="space-y-10 pb-16">
-      <header className="space-y-3">
-        <div className="flex items-center gap-2 text-sm uppercase tracking-wide text-muted-foreground">
-          <Sparkles className="h-4 w-4 text-primary" /> Commerce Ops Hub
-        </div>
-        <h1 className="text-3xl font-semibold tracking-tight">Merch Designer &amp; Control Room</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Prototype new drops, monitor velocity, and keep {bandName}&apos;s inventory dialed-in without leaving your
-          command center.
-        </p>
-      </header>
-
+    <FMPageScaffold
+      title="Merch Designer & Control Room"
+      subtitle={`Prototype new drops, monitor velocity, and keep ${bandName}'s inventory dialed-in without leaving your command center.`}
+      icon={Sparkles}
+      backTo="/hub/business"
+    >
       <section>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
@@ -743,7 +740,7 @@ export default function MerchCommercePage() {
           </CardContent>
         </Card>
       </section>
-    </div>
+    </FMPageScaffold>
   );
 }
 

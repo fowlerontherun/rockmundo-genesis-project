@@ -34,9 +34,11 @@ import {
   Clock,
   ListChecks,
   Loader2,
+  Mic2,
   Users,
   XCircle,
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { format, formatDistanceToNow } from "date-fns";
 
 const statusBadgeStyles: Record<RecordingStatus, string> = {
@@ -342,14 +344,12 @@ export default function StudioRecordingDashboard() {
   };
 
   return (
-    <div className="container mx-auto space-y-8 py-10">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Studio Recording</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Monitor the progress of every recording project, review the tasks in motion, and coordinate collaborators across
-          the studio pipeline.
-        </p>
-      </header>
+    <FMPageScaffold
+      title="Studio Recording"
+      subtitle="Monitor the progress of every recording project, review the tasks in motion, and coordinate collaborators across the studio pipeline."
+      icon={Mic2}
+      backTo="/hub/music"
+    >
 
       {isLoading ? (
         <Card className="border-dashed">
@@ -387,7 +387,7 @@ export default function StudioRecordingDashboard() {
           </CardContent>
         </Card>
       ) : null}
-    </div>
+    </FMPageScaffold>
   );
 }
 

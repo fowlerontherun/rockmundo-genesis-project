@@ -21,6 +21,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Sliders } from 'lucide-react';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -672,12 +674,12 @@ const StageSetup = () => {
   const visibleRangeEnd = totalResults === 0 ? 0 : Math.min(currentPage * ITEMS_PER_PAGE, totalResults);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Stage Setup</h1>
-        <p className="text-muted-foreground">Comprehensive snapshot of the live rig and crew readiness.</p>
-      </div>
-
+    <FMPageScaffold
+      title="Stage Setup"
+      subtitle="Comprehensive snapshot of the live rig and crew readiness."
+      icon={Sliders}
+      backTo="/hub/band-live"
+    >
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -950,7 +952,7 @@ const StageSetup = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 

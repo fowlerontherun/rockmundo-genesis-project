@@ -28,6 +28,7 @@ import {
   upsertSideHustleProgress,
 } from "@/lib/minigames";
 import type { SideHustleProgressRow } from "@/lib/minigames/progress";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface SideHustleActivity {
   id: string;
@@ -239,18 +240,12 @@ const SideHustlesPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 p-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          <Wand2 className="h-4 w-4" />
-          <span>Side Hustles</span>
-        </div>
-        <h1 className="text-3xl font-bold">City-wide Gig Grind</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Pick up quick freelance runs, sharpen your craft with targeted mini-games,
-          and stash extra cash while your main storyline cools down.
-        </p>
-      </header>
+    <FMPageScaffold
+      title="City-wide Gig Grind"
+      subtitle="Pick up quick freelance runs, sharpen your craft with targeted mini-games, and stash extra cash while your main storyline cools down."
+      icon={Wand2}
+      backTo="/hub/career"
+    >
 
       {progressQuery.isLoading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -350,7 +345,7 @@ const SideHustlesPage = () => {
           })}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

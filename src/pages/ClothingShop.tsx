@@ -13,6 +13,7 @@ import { ShoppingBag, Search, Filter } from "lucide-react";
 import { useClothingMarketplace } from "@/hooks/useClothingMarketplace";
 import { ClothingItemCard } from "@/components/clothing/ClothingItemCard";
 import { CLOTHING_CATEGORIES, GENRE_STYLES, CATEGORY_EMOJIS, type ClothingCategory } from "@/utils/clothingQuality";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ClothingShop = () => {
   const [search, setSearch] = useState("");
@@ -26,14 +27,12 @@ const ClothingShop = () => {
   });
 
   return (
-    <div className="container max-w-5xl mx-auto py-6 px-4 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <ShoppingBag className="h-6 w-6" />
-          Clothing Shop
-        </h1>
-        <p className="text-muted-foreground text-sm">Browse and buy player-designed clothing</p>
-      </div>
+    <FMPageScaffold
+      title="Clothing Shop"
+      subtitle="Browse and buy player-designed clothing"
+      icon={ShoppingBag}
+      backTo="/hub/business"
+    >
 
       {/* Filters */}
       <Card>
@@ -101,7 +100,7 @@ const ClothingShop = () => {
           ))}
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
