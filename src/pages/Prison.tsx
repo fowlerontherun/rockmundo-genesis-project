@@ -209,6 +209,6 @@ export default function Prison() {
           <DialogFooter><Button variant="ghost" onClick={() => setSelectedEvent(null)}>{t('common.cancel')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }
