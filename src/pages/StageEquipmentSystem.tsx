@@ -46,6 +46,7 @@ import {
 } from "@/features/stage-equipment/catalog";
 import { useStageEquipmentCatalog } from "@/features/stage-equipment/catalog-context";
 import { RecommendedSetup } from "@/components/stage-equipment/RecommendedSetup";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
@@ -451,44 +452,52 @@ const StageEquipmentSystem = () => {
 
   if (loadingBand || loadingEquipment) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <FMPageScaffold title="Stage Equipment" subtitle="Loading band rig…" icon={Guitar} backTo="/hub/band-live">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" /> Loading stage equipment data...
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!bandId) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-3xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Join a band to manage stage equipment</CardTitle>
-              <CardDescription>
-                Stage gear lives with your band. Join or create a band to start tracking inventory, live rigs, and upgrades.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert>
-                <CircleDashed className="h-4 w-4" />
-                <AlertTitle>No band selected</AlertTitle>
-                <AlertDescription>
-                  Head to the bands hub to pick your crew. Once you're in, the full equipment system unlocks here.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <FMPageScaffold title="Stage Equipment" subtitle="Join a band to manage stage equipment." icon={Guitar} backTo="/hub/band-live">
+        <Card>
+          <CardHeader>
+            <CardTitle>Join a band to manage stage equipment</CardTitle>
+            <CardDescription>
+              Stage gear lives with your band. Join or create a band to start tracking inventory, live rigs, and upgrades.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <CircleDashed className="h-4 w-4" />
+              <AlertTitle>No band selected</AlertTitle>
+              <AlertDescription>
+                Head to the bands hub to pick your crew. Once you're in, the full equipment system unlocks here.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <Card>
+    <FMPageScaffold
+      title={`Stage Equipment • ${bandName}`}
+      subtitle="Track owned gear, curate your live stage setup, and expand your catalog with precision upgrades."
+      icon={Guitar}
+      backTo="/hub/band-live"
+      headerActions={
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <span><span className="font-semibold text-foreground">{inventory.length}</span> owned</span>
+          <span>Live: <span className="font-semibold text-foreground">{liveSetup.length}</span></span>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-6">
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-2xl">Stage Equipment • {bandName}</CardTitle>
