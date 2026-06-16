@@ -9,8 +9,9 @@ import { spinWheel, calculateRoulettePayout, getNumberColor, getBetLabel } from 
 import type { RouletteBet, RouletteBetType } from "@/lib/casino/types";
 import { ROULETTE_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, CircleDot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { cn } from "@/lib/utils";
 
 const OUTSIDE_BETS: { type: RouletteBetType; label: string; color?: string }[] = [
@@ -78,14 +79,17 @@ export default function Roulette() {
   };
 
   return (
-    <div className="space-y-4 max-w-lg mx-auto">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/casino")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">🎡 Roulette</h1>
-        <span className="ml-auto text-sm text-muted-foreground">${cash.toLocaleString()}</span>
-      </div>
+    <FMPageScaffold
+      title="Roulette"
+      subtitle="Place your bets. Red, black, or lucky number?"
+      icon={CircleDot}
+      backTo="/casino"
+      backLabel="Casino"
+      className="max-w-lg mx-auto"
+      headerActions={
+        <span className="text-xs text-muted-foreground">${cash.toLocaleString()}</span>
+      }
+    >
 
       {/* Wheel result */}
       <Card className="overflow-hidden">
@@ -210,6 +214,6 @@ export default function Roulette() {
           New Spin
         </Button>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

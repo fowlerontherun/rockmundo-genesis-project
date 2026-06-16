@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub, type NightClubDrink } from "@/utils/worldEnvironment";
 import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
@@ -199,34 +198,32 @@ const NightClubDetail = () => {
 
   if (loading) {
     return (
-      <PageLayout>
+      <FMPageScaffold title="Loading…" icon={Disc3} backTo="/nightclubs">
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   if (!club) {
     return (
-      <PageLayout>
-        <PageHeader title="Club Not Found" backTo="/nightclubs" backLabel="Back to Clubs" />
+      <FMPageScaffold title="Club Not Found" icon={Disc3} backTo="/nightclubs" backLabel="Back to Clubs">
         <p className="text-muted-foreground">This nightclub doesn't exist or has been removed.</p>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   const qualityLabel = QUALITY_LABELS[club.qualityLevel] ?? `Tier ${club.qualityLevel}`;
 
   return (
-    <PageLayout>
-      <PageHeader
-        title={club.name}
-        subtitle={`${qualityLabel} nightclub${cityName ? ` in ${cityName}` : ""}`}
-        icon={Disc3}
-        backTo={club.cityId ? `/cities/${club.cityId}` : "/nightclubs"}
-        backLabel={cityName ? `Back to ${cityName}` : "Back to Clubs"}
-      />
+    <FMPageScaffold
+      title={club.name}
+      subtitle={`${qualityLabel} nightclub${cityName ? ` in ${cityName}` : ""}`}
+      icon={Disc3}
+      backTo={club.cityId ? `/cities/${club.cityId}` : "/nightclubs"}
+      backLabel={cityName ? `Back to ${cityName}` : "Back to Clubs"}
+    >
 
       {/* Club Info */}
       <Card>
@@ -640,7 +637,7 @@ const NightClubDetail = () => {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

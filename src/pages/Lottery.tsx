@@ -2,8 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Ticket, Trophy, History, Timer, TicketCheck } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { NumberPicker } from "@/components/lottery/NumberPicker";
 import { DrawResults } from "@/components/lottery/DrawResults";
 import { TicketHistory } from "@/components/lottery/TicketHistory";
@@ -101,24 +100,24 @@ const Lottery = () => {
   );
 
   return (
-    <PageLayout className="max-w-3xl">
-      <PageHeader
-        title="Weekly Lottery"
-        subtitle="Pick 7 numbers + 1 bonus for a chance to win big!"
-        backTo="/hub/world-social"
-        backLabel="Back to World & Social"
-        icon={Ticket}
-        actions={
-          <div className="flex flex-col items-end gap-1">
-            <Badge className="bg-primary/10 text-primary text-sm font-bold">
-              🏆 Jackpot: ${jackpotAmount.toLocaleString()}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              Balance: ${cash.toLocaleString()}
-            </Badge>
-          </div>
-        }
-      />
+    <FMPageScaffold
+      title="Weekly Lottery"
+      subtitle="Pick 7 numbers + 1 bonus for a chance to win big!"
+      backTo="/hub/world-social"
+      backLabel="Back to World & Social"
+      icon={Ticket}
+      className="max-w-3xl"
+      headerActions={
+        <div className="flex items-center gap-1.5">
+          <Badge className="bg-primary/10 text-primary text-[10px] font-bold">
+            🏆 ${jackpotAmount.toLocaleString()}
+          </Badge>
+          <Badge variant="outline" className="text-[10px]">
+            ${cash.toLocaleString()}
+          </Badge>
+        </div>
+      }
+    >
 
       <Countdown />
 
@@ -282,7 +281,7 @@ const Lottery = () => {
           <TicketHistory draws={drawHistory || []} />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

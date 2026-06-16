@@ -9,6 +9,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAddictions } from "@/hooks/useAddictions";
 import { Dices, Club, CircleDot, Cherry, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const GAMES = [
   {
@@ -79,15 +80,17 @@ export default function Casino() {
   });
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl">🎰</motion.div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
-          Casino
-        </h1>
-        <p className="text-muted-foreground">Try your luck — but know when to walk away.</p>
-      </div>
+    <FMPageScaffold
+      title="Casino"
+      subtitle="Try your luck — but know when to walk away."
+      icon={Dices}
+      backTo="/hub/world-social"
+      headerActions={
+        <Badge variant="outline" className="text-[10px]">
+          Balance: ${(profile?.cash ?? 0).toLocaleString()}
+        </Badge>
+      }
+    >
 
       {/* Addiction warning */}
       {gamblingAddiction && (
@@ -155,6 +158,6 @@ export default function Casino() {
       <p className="text-xs text-muted-foreground text-center">
         All gambling uses in-game currency only. Bets: $10–$10,000.
       </p>
-    </div>
+    </FMPageScaffold>
   );
 }

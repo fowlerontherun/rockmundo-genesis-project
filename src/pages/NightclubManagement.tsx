@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useOwnedNightclubs,
@@ -38,18 +37,17 @@ const NightclubManagement = () => {
 
   if (isLoading) {
     return (
-      <PageLayout>
+      <FMPageScaffold title="My Nightclubs" icon={Building2} backTo="/nightclubs" backLabel="Browse Clubs">
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   if (clubs.length === 0) {
     return (
-      <PageLayout>
-        <PageHeader title="My Nightclubs" subtitle="Club Management" icon={Building2} backTo="/nightclubs" backLabel="Browse Clubs" />
+      <FMPageScaffold title="My Nightclubs" subtitle="Club Management" icon={Building2} backTo="/nightclubs" backLabel="Browse Clubs">
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground" />
@@ -58,14 +56,12 @@ const NightclubManagement = () => {
             <Button variant="outline" onClick={() => window.location.href = "/nightclubs"}>Browse Clubs</Button>
           </CardContent>
         </Card>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <PageLayout>
-      <PageHeader title="My Nightclubs" subtitle={`${clubs.length} club${clubs.length !== 1 ? "s" : ""} owned`} icon={Building2} backTo="/nightclubs" backLabel="All Clubs" />
-
+    <FMPageScaffold title="My Nightclubs" subtitle={`${clubs.length} club${clubs.length !== 1 ? "s" : ""} owned`} icon={Building2} backTo="/nightclubs" backLabel="All Clubs">
       {clubs.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {clubs.map((c) => (
@@ -83,7 +79,7 @@ const NightclubManagement = () => {
       )}
 
       {selectedClub && <ClubDashboard club={selectedClub} />}
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

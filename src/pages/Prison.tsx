@@ -9,6 +9,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Link, Navigate } from "react-router-dom";
 import { Lock, Calendar, User, DollarSign, Music, AlertTriangle, Scale, Clock } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -54,11 +55,12 @@ export default function Prison() {
   if (communityService && !isImprisoned) {
     const deadline = new Date(communityService.deadline);
     return (
-      <div className="container mx-auto p-4 space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Scale className="h-6 w-6 text-yellow-500" />
-          <h1 className="text-2xl font-bold">{t('prison.communityService')}</h1>
-        </div>
+      <FMPageScaffold
+        title={t('prison.communityService')}
+        subtitle={t('prison.activeAssignment')}
+        icon={Scale}
+        backTo="/dashboard"
+      >
         <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>{t('prison.activeAssignment')}</AlertTitle><AlertDescription>{t('prison.completeSessionsBy').replace('{required}', communityService.required_busking_sessions.toString()).replace('{deadline}', deadline.toLocaleDateString())}</AlertDescription></Alert>
         <Card>
           <CardHeader><CardTitle>{t('prison.progress')}</CardTitle></CardHeader>
@@ -70,7 +72,7 @@ export default function Prison() {
             <Button asChild className="w-full"><Link to="/busking">{t('prison.goBusking')}</Link></Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -79,12 +81,13 @@ export default function Prison() {
   const releaseDate = imprisonment?.release_date ? new Date(imprisonment.release_date) : null;
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Lock className="h-6 w-6 text-destructive" />
-        <h1 className="text-2xl font-bold">{t('prison.title')}</h1>
-        <Badge variant="destructive">{t('prison.imprisoned')}</Badge>
-      </div>
+    <FMPageScaffold
+      title={t('prison.title')}
+      subtitle={prison?.name}
+      icon={Lock}
+      backTo="/dashboard"
+      headerActions={<Badge variant="destructive" className="text-[10px]">{t('prison.imprisoned')}</Badge>}
+    >
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Status Card */}
@@ -206,6 +209,6 @@ export default function Prison() {
           <DialogFooter><Button variant="ghost" onClick={() => setSelectedEvent(null)}>{t('common.cancel')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }

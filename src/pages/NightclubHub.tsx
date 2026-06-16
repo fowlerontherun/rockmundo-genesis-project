@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub } from "@/utils/worldEnvironment";
 import { useAllClubReputations, getTierLabel, getTierColor, type ClubReputation } from "@/hooks/useClubReputation";
@@ -89,14 +88,13 @@ const NightclubHub = () => {
   }, [clubs, search, qualityFilter, cityFilter]);
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Nightclubs"
-        subtitle={`${clubs.length} venues worldwide`}
-        icon={Disc3}
-        backTo="/hub/world-social"
-        backLabel="Back to World"
-      />
+    <FMPageScaffold
+      title="Nightclubs"
+      subtitle={`${clubs.length} venues worldwide`}
+      icon={Disc3}
+      backTo="/hub/world-social"
+      backLabel="Back to World"
+    >
 
       {/* My Clubs Banner */}
       {ownedClubs.length > 0 && (
@@ -241,7 +239,7 @@ const NightclubHub = () => {
           })}
         </div>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

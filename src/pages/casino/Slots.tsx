@@ -9,8 +9,9 @@ import { spinReels, calculateSlotPayout, getSymbolEmoji } from "@/lib/casino/slo
 import type { SlotSymbol } from "@/lib/casino/types";
 import { SLOT_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
-import { ArrowLeft, RotateCw } from "lucide-react";
+import { ArrowLeft, RotateCw, Cherry } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function Slots() {
   const navigate = useNavigate();
@@ -66,14 +67,17 @@ export default function Slots() {
   };
 
   return (
-    <div className="space-y-4 max-w-lg mx-auto">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/casino")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">🎰 Slots</h1>
-        <span className="ml-auto text-sm text-muted-foreground">${cash.toLocaleString()}</span>
-      </div>
+    <FMPageScaffold
+      title="Slots"
+      subtitle="Spin the music-themed reels and hit the jackpot!"
+      icon={Cherry}
+      backTo="/casino"
+      backLabel="Casino"
+      className="max-w-lg mx-auto"
+      headerActions={
+        <span className="text-xs text-muted-foreground">${cash.toLocaleString()}</span>
+      }
+    >
 
       {/* Slot Machine */}
       <Card className="overflow-hidden">
@@ -149,6 +153,6 @@ export default function Slots() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
