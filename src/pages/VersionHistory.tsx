@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.375",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "Automatic database maintenance: scheduled two pg_cron jobs. `vacuum-high-churn-hourly` (every hour at :05) runs lightweight VACUUM (ANALYZE) on the highest-churn log/telemetry tables — net._http_response, cron.job_run_details, cron_job_runs, activity_feed, notifications, player_inbox, experience_ledger, game_activity_logs, twaater_notifications, twaats, chart_entries, streaming_analytics_daily, song_plays — to reclaim dead-row space and refresh planner stats without taking exclusive locks. `vacuum-full-logs-weekly` (Sundays 04:00 UTC) runs VACUUM FULL on the pg_net + pg_cron log tables and cron_job_runs to physically return disk to the OS. pg_repack is not available on Supabase, so native VACUUM is used; each pg_cron statement runs in its own implicit transaction, which is why VACUUM FULL is permitted here but blocked from migrations." },
+    ],
+  },
+  {
     version: "1.1.374",
     date: "2026-06-16",
     changes: [
