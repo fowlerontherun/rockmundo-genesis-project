@@ -91,6 +91,7 @@ const Layout = () => {
   }
 
   return (
+    <DesktopOnlyGate>
     <FMShell>
       {profileError && (
         <Alert variant="destructive" className="mb-4 max-w-2xl">
