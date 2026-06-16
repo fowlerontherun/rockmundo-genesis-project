@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.388",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Dev-only guest bypass: in `vite dev` (`import.meta.env.DEV`) `Layout.tsx` no longer redirects unauthenticated visitors to `/auth` and `CharacterGate` skips the 'Create your artist' / profile-required screens when no profile is loaded, so pages can be inspected without logging in. Production builds keep the original auth + character gates intact." },
+    ],
+  },
+  {
     version: "1.1.387",
     date: "2026-06-16",
     changes: [
