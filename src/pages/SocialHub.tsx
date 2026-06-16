@@ -110,6 +110,6 @@ export default function SocialHub() {
           <InvitesInbox profileId={profileId} />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
