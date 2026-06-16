@@ -107,17 +107,13 @@ export default function FestivalBrowser() {
   const performedCount = participations.filter((p) => p.status === "performed").length;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Music className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Festivals</h1>
-          <p className="text-sm text-muted-foreground">Perform, explore & grow your fanbase</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Festivals"
+      subtitle="Perform, explore & grow your fanbase"
+      icon={Music}
+      backTo="/hub/band-live"
+    >
+
 
       {/* Compact Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
