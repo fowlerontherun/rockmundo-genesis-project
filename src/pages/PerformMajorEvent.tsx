@@ -204,16 +204,16 @@ export default function PerformMajorEvent() {
   // Show outcome report if completed
   if (performance.status === 'completed') {
     return (
-      <div className="container max-w-4xl py-8">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Trophy className="h-6 w-6 text-primary" />
-          {performance.instance?.event?.name} — Performance Complete!
-        </h1>
-        <MajorEventOutcomeReport 
-          performance={performance} 
-          songPerformances={songPerformances} 
+      <FMPageScaffold
+        title={`${performance.instance?.event?.name ?? 'Major Event'} — Complete!`}
+        icon={Trophy}
+        backTo="/major-events"
+      >
+        <MajorEventOutcomeReport
+          performance={performance}
+          songPerformances={songPerformances}
         />
-      </div>
+      </FMPageScaffold>
     );
   }
 
