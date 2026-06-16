@@ -79,15 +79,17 @@ export default function Casino() {
   });
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl">🎰</motion.div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
-          Casino
-        </h1>
-        <p className="text-muted-foreground">Try your luck — but know when to walk away.</p>
-      </div>
+    <FMPageScaffold
+      title="Casino"
+      subtitle="Try your luck — but know when to walk away."
+      icon={Dices}
+      backTo="/hub/world-social"
+      headerActions={
+        <Badge variant="outline" className="text-[10px]">
+          Balance: ${(profile?.cash ?? 0).toLocaleString()}
+        </Badge>
+      }
+    >
 
       {/* Addiction warning */}
       {gamblingAddiction && (
