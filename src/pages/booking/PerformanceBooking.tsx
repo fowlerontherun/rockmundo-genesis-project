@@ -658,6 +658,6 @@ export default function PerformanceBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
