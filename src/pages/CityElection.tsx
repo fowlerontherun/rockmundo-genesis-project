@@ -333,6 +333,6 @@ export default function CityElection() {
           cityName={city?.name || ""}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
