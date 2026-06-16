@@ -23,6 +23,7 @@ import {
   Ticket, ChevronRight, Flame, Eye
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const SLOT_TYPES = [
   { id: "opening", label: "Opening Act", fame: 0, payout: 500 },
