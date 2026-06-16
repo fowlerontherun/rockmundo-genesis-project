@@ -624,6 +624,6 @@ export default function MayorDashboard() {
         <MayorPoliticsSidebar politics={politics} />
       </aside>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
