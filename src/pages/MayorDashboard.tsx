@@ -138,25 +138,18 @@ export default function MayorDashboard() {
 
   if (mayorCheckLoading || lawsLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
+      <FMPageScaffold title="Mayor's Office" icon={Crown} backTo={`/cities/${cityId}`} backLabel="Back to City">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!isMayor) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to={`/cities/${cityId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to City
-          </Link>
-        </Button>
-        
+      <FMPageScaffold title="Mayor's Office" subtitle="Access denied" icon={Crown} backTo={`/cities/${cityId}`} backLabel="Back to City">
         <Card className="text-center py-12">
           <CardContent>
             <Crown className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-40" />
@@ -166,45 +159,34 @@ export default function MayorDashboard() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Button variant="ghost" asChild className="mb-2">
-            <Link to={`/cities/${cityId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to {city?.name || "City"}
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Crown className="h-6 w-6 text-yellow-500" />
-            Mayor's Office - {city?.name}
-          </h1>
-          <p className="text-muted-foreground">Manage city laws and regulations</p>
-        </div>
-        
-        {mayor && (
-          <div className="text-right space-y-2">
-            <Badge variant="outline" className="mb-1">
+    <FMPageScaffold
+      title={`Mayor's Office — ${city?.name ?? ""}`}
+      subtitle="Manage city laws and regulations"
+      icon={Crown}
+      backTo={`/cities/${cityId}`}
+      backLabel={`Back to ${city?.name || "City"}`}
+      className="max-w-6xl"
+      headerActions={
+        mayor ? (
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-[10px]">
               <TrendingUp className="h-3 w-3 mr-1" />
               {mayor.approval_rating || 50}% Approval
             </Badge>
-            <div className="text-xs text-muted-foreground">
-              {mayor.policies_enacted || 0} policies enacted
-            </div>
             <Button size="sm" variant="outline" asChild>
               <Link to="/world-parliament">
-                <Landmark className="h-3 w-3 mr-1" /> World Parliament
+                <Landmark className="h-3 w-3 mr-1" /> Parliament
               </Link>
             </Button>
           </div>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
 
       {/* Unsaved Changes Alert */}
       {hasChanges && (
