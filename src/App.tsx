@@ -30,6 +30,7 @@ import Sponsorships from "./pages/Sponsorships";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
+const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
