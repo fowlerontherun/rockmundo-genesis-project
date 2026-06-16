@@ -12,6 +12,7 @@ import { useTeaching, TIER_CONFIG, type TeachingSession } from "@/hooks/useTeach
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { useMergedSkillDefinitions } from "@/utils/skillDefinitions";
 import { toast } from "@/hooks/use-toast";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function TeachingInner() {
   const {
@@ -107,7 +108,7 @@ function TeachingInner() {
   // ---- UNLOCKED STATE ----
   if (!teachingTier) {
     return (
-      <div className="container mx-auto py-8 max-w-4xl">
+      <FMPageScaffold title="Teaching" subtitle="Teach your skills to friends and earn bonus XP." icon={GraduationCap} backTo="/hub/career">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -153,28 +154,22 @@ function TeachingInner() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   const profileId = progress.length > 0 ? progress[0]?.profile_id : undefined;
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <GraduationCap className="h-8 w-8" />
-            Teaching
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Teach your skills to friends — both of you earn XP!
-          </p>
-        </div>
-        <Badge variant="outline" className="text-sm capitalize">
-          {teachingTier} Tier
-        </Badge>
-      </div>
+    <FMPageScaffold
+      title="Teaching"
+      subtitle="Teach your skills to friends — both of you earn XP!"
+      icon={GraduationCap}
+      backTo="/hub/career"
+      headerActions={
+        <Badge variant="outline" className="text-xs capitalize">{teachingTier} Tier</Badge>
+      }
+    >
 
       {/* Tier stats card */}
       {tierConfig && (
@@ -494,7 +489,7 @@ function TeachingInner() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
 

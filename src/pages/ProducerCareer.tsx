@@ -14,6 +14,7 @@ import { useProducerProfile, useCreateProducerProfile, useUpdateProducerProfile,
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { calculateProducerQualityStats, MIN_PRODUCTION_SKILL, type ProducerSkillLevels } from "@/utils/producerQuality";
 import { MUSIC_GENRES } from "@/data/genres";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function getSkillLevel(progress: any[] | undefined, slug: string): number {
   if (!progress) return 0;
@@ -74,19 +75,24 @@ function ProducerCareerInner() {
   };
 
   if (profileLoading) {
-    return <div className="p-6 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <FMPageScaffold title="Producer Career" subtitle="Loading your producer profile…" icon={Headphones} backTo="/hub/career">
+        <div className="p-6 text-center text-muted-foreground">Loading...</div>
+      </FMPageScaffold>
+    );
   }
 
   // No profile yet — registration screen
   if (!profile) {
     return (
-      <div className="container max-w-2xl mx-auto p-6 space-y-6">
+      <FMPageScaffold
+        title="Become a Producer"
+        subtitle="Register as a record producer and earn cash + XP by producing for other artists."
+        icon={Headphones}
+        backTo="/hub/career"
+      >
         <div className="text-center space-y-2">
           <Headphones className="h-12 w-12 mx-auto text-primary" />
-          <h1 className="text-2xl font-bold">Become a Producer</h1>
-          <p className="text-muted-foreground">
-            Register as a record producer and earn cash + XP by producing for other artists.
-          </p>
         </div>
 
         {!hasMinSkill ? (
@@ -162,30 +168,28 @@ function ProducerCareerInner() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </FMPageScaffold>
     );
   }
 
   // Has profile — dashboard
   return (
-    <div className="container max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Headphones className="h-6 w-6 text-primary" />
-            Producer Career
-          </h1>
-          <p className="text-muted-foreground">{profile.display_name}</p>
-        </div>
+    <FMPageScaffold
+      title="Producer Career"
+      subtitle={profile.display_name}
+      icon={Headphones}
+      backTo="/hub/career"
+      headerActions={
         <div className="flex items-center gap-2">
-          <Label htmlFor="availability">Available</Label>
+          <Label htmlFor="availability" className="text-xs">Available</Label>
           <Switch
             id="availability"
             checked={profile.is_available}
             onCheckedChange={handleUpdateAvailability}
           />
         </div>
-      </div>
+      }
+    >
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -313,7 +317,7 @@ function ProducerCareerInner() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }
 

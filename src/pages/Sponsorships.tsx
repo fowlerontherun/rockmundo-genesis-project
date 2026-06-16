@@ -25,6 +25,7 @@ import {
   type SponsorshipContract,
   type SponsorshipPayment,
 } from "@/lib/api/sponsorships";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const valueLabel = (value: number) => `$${value.toLocaleString()}`;
 
@@ -114,9 +115,11 @@ const Sponsorships = () => {
 
   if (!activeBand) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Please select a band to view sponsorships.</p>
-      </div>
+      <FMPageScaffold title="Sponsorships" subtitle="Manage brand deals for your active band." icon={HandCoins} backTo="/hub/career-business">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Please select a band to view sponsorships.</p>
+        </div>
+      </FMPageScaffold>
     );
   }
 
@@ -126,15 +129,12 @@ const Sponsorships = () => {
   const totalPaidOut = activeContracts.reduce((sum, c) => sum + c.total_paid, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Sponsorship Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage sponsorship offers and track active contracts for {activeBand.name}.
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Sponsorship Dashboard"
+      subtitle={`Manage sponsorship offers and track active contracts for ${activeBand.name}.`}
+      icon={HandCoins}
+      backTo="/hub/career-business"
+    >
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -534,7 +534,7 @@ const Sponsorships = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 
