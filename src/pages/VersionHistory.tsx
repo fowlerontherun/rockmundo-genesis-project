@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.385",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7k (Magazine detail). Added a dedicated `MagazineDetail` page at `/media/magazines/:id` scaffolded via `FMPageScaffold` (icon `BookOpen`, `backTo=/media/magazines`, back label `Back to Magazines`, type + country badges in `headerActions`). Page renders readership / minimum fame / compensation / rewards KPI cards and a publication details block (quality level, publication frequency, genres, description) with the existing `MediaSubmissionDialog` flow + pending-request detection from `magazine_submissions`." },
+      { type: 'improvement', description: "Refactored `MagazinesBrowser` cards to wrap the title/info area in a `<Link to={'/media/magazines/:id'}>` (focus-visible ring) while keeping the Apply/Pending action button outside the link so submissions still open the dialog without triggering navigation. Removed the unused `Skeleton`/`MapPin` imports." },
+      { type: 'improvement', description: "Registered the lazy `MagazineDetail` import and `media/magazines/:id` route in `App.tsx` so the new page participates in the standard layout/Suspense pipeline." },
+    ],
+  },
+  {
     version: "1.1.384",
     date: "2026-06-16",
     changes: [
