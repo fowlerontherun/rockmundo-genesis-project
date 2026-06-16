@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.392",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Mobile/desktop scoping: `DesktopOnlyGate` moved from `main.tsx` (app-wide) into `Layout.tsx` so it now wraps only the authenticated game shell. Public routes — landing (`/`), `/auth`, `/about`, `/song/:id` — are fully mobile-friendly. The dev bypass on `DesktopOnlyGate` was removed; the main game enforces the 1440px minimum in dev and production alike." },
+    ],
+  },
+  {
     version: "1.1.391",
     date: "2026-06-16",
     changes: [
