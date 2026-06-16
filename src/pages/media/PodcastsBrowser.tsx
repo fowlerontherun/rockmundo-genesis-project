@@ -1,17 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
-import { 
-  Podcast, Mic, Headphones, Star, Search, Filter, Globe, MapPin,
+import {
+  Podcast, Mic, Headphones, Star, Search, Filter, Globe,
   TrendingUp, DollarSign, Send, CheckCircle
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -204,99 +204,103 @@ const PodcastsBrowser = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPodcasts.map(pod => (
-            <Card key={pod.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{pod.podcast_name}</CardTitle>
-                  <div className="flex gap-1">
-                    {pod.podcast_type && (
-                      <Badge variant="outline" className="capitalize">{pod.podcast_type.replace('_', ' ')}</Badge>
-                    )}
-                    {pod.country && (
-                      <Badge variant="secondary" className="text-xs">{pod.country}</Badge>
-                    )}
+            <Card key={pod.id} className="hover:shadow-lg transition-shadow flex flex-col">
+              <Link
+                to={`/media/podcasts/${pod.id}`}
+                className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{pod.podcast_name}</CardTitle>
+                    <div className="flex gap-1">
+                      {pod.podcast_type && (
+                        <Badge variant="outline" className="capitalize">{pod.podcast_type.replace('_', ' ')}</Badge>
+                      )}
+                      {pod.country && (
+                        <Badge variant="secondary" className="text-xs">{pod.country}</Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {pod.host_name && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Mic className="h-3 w-3" />
-                    {pod.host_name}
-                  </p>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Headphones className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatListenerBase(pod.listener_base)} listeners</span>
-                </div>
-                {pod.episodes_per_week && (
+                  {pod.host_name && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Mic className="h-3 w-3" />
+                      {pod.host_name}
+                    </p>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
-                    <Podcast className="h-4 w-4 text-muted-foreground" />
-                    <span>{pod.episodes_per_week} episodes/week</span>
+                    <Headphones className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatListenerBase(pod.listener_base)} listeners</span>
                   </div>
-                )}
-                {pod.min_fame_required !== null && pod.min_fame_required > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Star className={`h-4 w-4 ${isEligible(pod) ? 'text-warning' : 'text-destructive'}`} />
-                    <span>Min Fame: {pod.min_fame_required}</span>
-                    {userBand && (
-                      <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                  {pod.episodes_per_week && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Podcast className="h-4 w-4 text-muted-foreground" />
+                      <span>{pod.episodes_per_week} episodes/week</span>
+                    </div>
+                  )}
+                  {pod.min_fame_required !== null && pod.min_fame_required > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Star className={`h-4 w-4 ${isEligible(pod) ? 'text-warning' : 'text-destructive'}`} />
+                      <span>Min Fame: {pod.min_fame_required}</span>
+                      {userBand && (
+                        <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {pod.fame_boost_min != null && (
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />+{pod.fame_boost_min}-{pod.fame_boost_max} fame
+                      </span>
+                    )}
+                    {pod.compensation_min != null && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />${pod.compensation_min}-{pod.compensation_max}
+                      </span>
                     )}
                   </div>
-                )}
 
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  {pod.fame_boost_min != null && (
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />+{pod.fame_boost_min}-{pod.fame_boost_max} fame
-                    </span>
+                  {pod.genres && pod.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {pod.genres.slice(0, 3).map(genre => (
+                        <Badge key={genre} variant="secondary" className="text-xs">
+                          {genre}
+                        </Badge>
+                      ))}
+                      {pod.genres.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{pod.genres.length - 3}
+                        </Badge>
+                      )}
+                    </div>
                   )}
-                  {pod.compensation_min != null && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />${pod.compensation_min}-{pod.compensation_max}
-                    </span>
+                  {pod.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {pod.description}
+                    </p>
                   )}
-                </div>
-
-                {pod.genres && pod.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {pod.genres.slice(0, 3).map(genre => (
-                      <Badge key={genre} variant="secondary" className="text-xs">
-                        {genre}
-                      </Badge>
-                    ))}
-                    {pod.genres.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{pod.genres.length - 3}
-                      </Badge>
-                    )}
-                  </div>
+                </CardContent>
+              </Link>
+              <div className="px-6 pb-6 mt-auto">
+                {hasSubmission(pod.id) ? (
+                  <Button variant="outline" disabled className="w-full">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Request Pending
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isEligible(pod) ? "default" : "outline"}
+                    className="w-full"
+                    disabled={!userBand}
+                    onClick={() => setSelectedPodcast(pod)}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isEligible(pod) ? "Request Appearance" : "Not Eligible"}
+                  </Button>
                 )}
-                {pod.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {pod.description}
-                  </p>
-                )}
-
-                <div className="pt-2">
-                  {hasSubmission(pod.id) ? (
-                    <Button variant="outline" disabled className="w-full">
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Request Pending
-                    </Button>
-                  ) : (
-                    <Button
-                      variant={isEligible(pod) ? "default" : "outline"}
-                      className="w-full"
-                      disabled={!userBand}
-                      onClick={() => setSelectedPodcast(pod)}
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      {isEligible(pod) ? "Request Appearance" : "Not Eligible"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
