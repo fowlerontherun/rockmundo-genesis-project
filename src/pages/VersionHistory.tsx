@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.396",
+    date: "2026-06-16",
+    changes: [
+      { type: 'fix', description: "`DesktopOnlyGate` now bypasses automatically in dev builds (`import.meta.env.DEV`) and offers a one-click `Preview anyway (dev)` button on the gate screen that persists via `localStorage` (`rm-desktop-gate-bypass=1`). Also supports a `?desktop=off` query param to persist the bypass. Production users on <1440px still see the gate. Fixes inability to enter the game shell at sub-1440px viewports when using the Demo flow." },
+    ],
+  },
+  {
     version: "1.1.395",
     date: "2026-06-16",
     changes: [
