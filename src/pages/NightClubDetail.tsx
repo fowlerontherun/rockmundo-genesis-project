@@ -198,34 +198,32 @@ const NightClubDetail = () => {
 
   if (loading) {
     return (
-      <PageLayout>
+      <FMPageScaffold title="Loading…" icon={Disc3} backTo="/nightclubs">
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   if (!club) {
     return (
-      <PageLayout>
-        <PageHeader title="Club Not Found" backTo="/nightclubs" backLabel="Back to Clubs" />
+      <FMPageScaffold title="Club Not Found" icon={Disc3} backTo="/nightclubs" backLabel="Back to Clubs">
         <p className="text-muted-foreground">This nightclub doesn't exist or has been removed.</p>
-      </PageLayout>
+      </FMPageScaffold>
     );
   }
 
   const qualityLabel = QUALITY_LABELS[club.qualityLevel] ?? `Tier ${club.qualityLevel}`;
 
   return (
-    <PageLayout>
-      <PageHeader
-        title={club.name}
-        subtitle={`${qualityLabel} nightclub${cityName ? ` in ${cityName}` : ""}`}
-        icon={Disc3}
-        backTo={club.cityId ? `/cities/${club.cityId}` : "/nightclubs"}
-        backLabel={cityName ? `Back to ${cityName}` : "Back to Clubs"}
-      />
+    <FMPageScaffold
+      title={club.name}
+      subtitle={`${qualityLabel} nightclub${cityName ? ` in ${cityName}` : ""}`}
+      icon={Disc3}
+      backTo={club.cityId ? `/cities/${club.cityId}` : "/nightclubs"}
+      backLabel={cityName ? `Back to ${cityName}` : "Back to Clubs"}
+    >
 
       {/* Club Info */}
       <Card>
