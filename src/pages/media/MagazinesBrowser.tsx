@@ -200,96 +200,101 @@ const MagazinesBrowser = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMagazines.map(mag => (
-            <Card key={mag.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{mag.name}</CardTitle>
-                  <div className="flex gap-1">
-                    {mag.magazine_type && (
-                      <Badge variant="outline" className="capitalize">{mag.magazine_type.replace('_', ' ')}</Badge>
-                    )}
-                    {mag.country && (
-                      <Badge variant="secondary" className="text-xs">{mag.country}</Badge>
-                    )}
+            <Card key={mag.id} className="hover:shadow-lg transition-shadow flex flex-col">
+              <Link
+                to={`/media/magazines/${mag.id}`}
+                className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{mag.name}</CardTitle>
+                    <div className="flex gap-1">
+                      {mag.magazine_type && (
+                        <Badge variant="outline" className="capitalize">{mag.magazine_type.replace('_', ' ')}</Badge>
+                      )}
+                      {mag.country && (
+                        <Badge variant="secondary" className="text-xs">{mag.country}</Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatReadership(mag.readership)} readers</span>
-                </div>
-
-                {mag.publication_frequency && (
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="capitalize">{mag.publication_frequency}</span>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatReadership(mag.readership)} readers</span>
                   </div>
-                )}
-                
-                {mag.min_fame_required !== null && mag.min_fame_required > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Star className={`h-4 w-4 ${isEligible(mag) ? 'text-warning' : 'text-destructive'}`} />
-                    <span>Min Fame: {mag.min_fame_required}</span>
-                    {userBand && (
-                      <span className="text-muted-foreground">(you: {userBand.fame})</span>
+
+                  {mag.publication_frequency && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="capitalize">{mag.publication_frequency}</span>
+                    </div>
+                  )}
+
+                  {mag.min_fame_required !== null && mag.min_fame_required > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Star className={`h-4 w-4 ${isEligible(mag) ? 'text-warning' : 'text-destructive'}`} />
+                      <span>Min Fame: {mag.min_fame_required}</span>
+                      {userBand && (
+                        <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {mag.fame_boost_min != null && (
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />+{mag.fame_boost_min}-{mag.fame_boost_max} fame
+                      </span>
+                    )}
+                    {mag.compensation_min != null && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />${mag.compensation_min}-{mag.compensation_max}
+                      </span>
                     )}
                   </div>
-                )}
 
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  {mag.fame_boost_min != null && (
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />+{mag.fame_boost_min}-{mag.fame_boost_max} fame
-                    </span>
+                  {mag.genres && mag.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {mag.genres.slice(0, 3).map(genre => (
+                        <Badge key={genre} variant="secondary" className="text-xs">
+                          {genre}
+                        </Badge>
+                      ))}
+                      {mag.genres.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{mag.genres.length - 3}
+                        </Badge>
+                      )}
+                    </div>
                   )}
-                  {mag.compensation_min != null && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />${mag.compensation_min}-{mag.compensation_max}
-                    </span>
+
+                  {mag.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {mag.description}
+                    </p>
                   )}
-                </div>
+                </CardContent>
+              </Link>
 
-                {mag.genres && mag.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {mag.genres.slice(0, 3).map(genre => (
-                      <Badge key={genre} variant="secondary" className="text-xs">
-                        {genre}
-                      </Badge>
-                    ))}
-                    {mag.genres.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{mag.genres.length - 3}
-                      </Badge>
-                    )}
-                  </div>
+              <div className="px-6 pb-6">
+                {hasSubmission(mag.id) ? (
+                  <Button variant="outline" disabled className="w-full">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Request Pending
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isEligible(mag) ? "default" : "outline"}
+                    className="w-full"
+                    disabled={!userBand}
+                    onClick={() => setSelectedMagazine(mag)}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isEligible(mag) ? "Apply for Feature" : "Not Eligible"}
+                  </Button>
                 )}
-
-                {mag.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {mag.description}
-                  </p>
-                )}
-
-                <div className="pt-2">
-                  {hasSubmission(mag.id) ? (
-                    <Button variant="outline" disabled className="w-full">
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Request Pending
-                    </Button>
-                  ) : (
-                    <Button
-                      variant={isEligible(mag) ? "default" : "outline"}
-                      className="w-full"
-                      disabled={!userBand}
-                      onClick={() => setSelectedMagazine(mag)}
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      {isEligible(mag) ? "Apply for Feature" : "Not Eligible"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
