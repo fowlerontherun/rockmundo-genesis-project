@@ -138,18 +138,20 @@ export const CityContent = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading city insights...</span>
+      <FMPageScaffold title="City" icon={MapPin} backTo="/cities" backLabel="Cities">
+        <div className="flex min-h-[40vh] w-full items-center justify-center">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading city insights...</span>
+          </div>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (error || !city) {
     return (
-      <div className="container mx-auto px-4 py-10">
+      <FMPageScaffold title="City unavailable" icon={MapPin} backTo="/cities" backLabel="Cities">
         <div className="mx-auto flex max-w-xl flex-col gap-4">
           <Alert variant="destructive">
             <AlertTitle>City unavailable</AlertTitle>
@@ -162,12 +164,23 @@ export const CityContent = ({
             <Button onClick={onRetry}>Try again</Button>
           </div>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-8 px-4 py-10">
+    <FMPageScaffold
+      title={city.name}
+      subtitle={summary}
+      icon={MapPin}
+      backTo="/cities"
+      backLabel="Cities"
+      headerActions={
+        <Button size="sm" asChild>
+          <Link to={`/travel?destination=${city.id}`}>✈️ Travel here</Link>
+        </Button>
+      }
+    >
       <header className="relative rounded-xl border border-border/60 p-6 overflow-hidden">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between relative z-10">
           <div className="space-y-4">
