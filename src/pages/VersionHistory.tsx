@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.379",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7h (Detail & Performance tail). Migrated CompanyDetail, UniversityDetail, PerformMajorEvent, and PerformOpenMic to the unified `FMPageScaffold` shell, including their dynamic-title and multi-state return branches." },
+      { type: 'improvement', description: "CompanyDetail now renders inside FMPageScaffold with the company name as the dynamic title, `typeInfo.label` as the subtitle, `Building2` icon, `backTo=/my-companies`, and the Bankrupt badge + CompanySettingsDialog + Add Subsidiary CTA moved into the `headerActions` slot. Loading skeleton and not-found states render inside the same scaffold instead of bespoke wrappers, and the outer `container py-6` shell was removed in favor of the scaffold's own padding." },
+      { type: 'improvement', description: "UniversityDetail replaced the `min-h-screen bg-gradient-stage p-6` + `container mx-auto max-w-6xl` + manual back button with FMPageScaffold (title = `university.name`, subtitle = city, icon = `GraduationCap`, `backTo=/education`). The loading branch now uses the same scaffold shell." },
+      { type: 'improvement', description: "PerformMajorEvent and PerformOpenMic wrap every status branch (loading, not-found, accepted/scheduled pre-show, completed outcome, and live performance) in FMPageScaffold with dynamic titles per state (e.g. `Ready for {eventName}?`, `{eventName} — Live`, `Open Mic — Performance Complete!`). Major event live view back-links to `/major-events`, open-mic live view back-links to `/open-mic`, both surface a pulsing `🔴 LIVE` badge in the `headerActions` slot, and all legacy `container max-w-4xl py-8` wrappers + bespoke `<h1>` rows were removed." },
+    ],
+  },
+  {
     version: "1.1.378",
     date: "2026-06-16",
     changes: [

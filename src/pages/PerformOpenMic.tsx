@@ -27,6 +27,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { format, isPast, differenceInMinutes, differenceInHours } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface LiveCommentary {
   text: string;
@@ -280,38 +281,40 @@ export default function PerformOpenMic() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <FMPageScaffold title="Open Mic" icon={Mic} backTo="/open-mic">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!performance) {
     return (
-      <div className="container max-w-4xl py-8">
+      <FMPageScaffold title="Open Mic" icon={Mic} backTo="/open-mic">
         <Alert variant="destructive">
           <AlertDescription>Performance not found.</AlertDescription>
         </Alert>
         <Button onClick={() => navigate('/open-mic')} className="mt-4">
           Back to Open Mic
         </Button>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   // Show outcome report if completed
   if (performance.status === 'completed') {
     return (
-      <div className="container max-w-4xl py-8">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Mic className="h-6 w-6 text-primary" />
-          Open Mic Performance Complete!
-        </h1>
-        <OpenMicOutcomeReport 
-          performance={performance} 
-          songPerformances={songPerformances} 
+      <FMPageScaffold
+        title="Open Mic — Performance Complete!"
+        icon={Mic}
+        backTo="/open-mic"
+      >
+        <OpenMicOutcomeReport
+          performance={performance}
+          songPerformances={songPerformances}
         />
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -335,7 +338,7 @@ export default function PerformOpenMic() {
     };
 
     return (
-      <div className="container max-w-4xl py-8 space-y-6">
+      <FMPageScaffold title="Ready for Open Mic Night?" icon={Mic} backTo="/open-mic">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -402,7 +405,7 @@ export default function PerformOpenMic() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -410,7 +413,12 @@ export default function PerformOpenMic() {
   const hasAudio = !!(currentSong as any)?.audio_url;
   
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
+    <FMPageScaffold
+      title="Live Performance"
+      icon={Volume2}
+      backTo="/open-mic"
+      headerActions={<Badge variant="default" className="animate-pulse">🔴 LIVE</Badge>}
+    >
       <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -563,6 +571,6 @@ export default function PerformOpenMic() {
           <span>Processing performance...</span>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

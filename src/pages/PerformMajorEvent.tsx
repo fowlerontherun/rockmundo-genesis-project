@@ -24,6 +24,7 @@ import {
   Sparkles,
   DollarSign
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface LiveCommentary {
   text: string;
@@ -179,38 +180,40 @@ export default function PerformMajorEvent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <FMPageScaffold title="Major Event" icon={Trophy} backTo="/major-events">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   if (!performance) {
     return (
-      <div className="container max-w-4xl py-8">
+      <FMPageScaffold title="Major Event" icon={Trophy} backTo="/major-events">
         <Alert variant="destructive">
           <AlertDescription>Performance not found.</AlertDescription>
         </Alert>
         <Button onClick={() => navigate('/major-events')} className="mt-4">
           Back to Major Events
         </Button>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   // Show outcome report if completed
   if (performance.status === 'completed') {
     return (
-      <div className="container max-w-4xl py-8">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Trophy className="h-6 w-6 text-primary" />
-          {performance.instance?.event?.name} — Performance Complete!
-        </h1>
-        <MajorEventOutcomeReport 
-          performance={performance} 
-          songPerformances={songPerformances} 
+      <FMPageScaffold
+        title={`${performance.instance?.event?.name ?? 'Major Event'} — Complete!`}
+        icon={Trophy}
+        backTo="/major-events"
+      >
+        <MajorEventOutcomeReport
+          performance={performance}
+          songPerformances={songPerformances}
         />
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -221,7 +224,7 @@ export default function PerformMajorEvent() {
     const cashRange = `$${((performance.instance?.event?.base_cash_reward || 0) / 1000).toFixed(0)}K - $${((performance.instance?.event?.max_cash_reward || 0) / 1000).toFixed(0)}K`;
 
     return (
-      <div className="container max-w-4xl py-8 space-y-6">
+      <FMPageScaffold title={`Ready for ${eventName}?`} icon={Trophy} backTo="/major-events">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -276,7 +279,7 @@ export default function PerformMajorEvent() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
@@ -284,7 +287,12 @@ export default function PerformMajorEvent() {
   const eventName = performance.instance?.event?.name || 'Major Event';
   
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
+    <FMPageScaffold
+      title={`${eventName} — Live`}
+      icon={Volume2}
+      backTo="/major-events"
+      headerActions={<Badge variant="default" className="animate-pulse">🔴 LIVE</Badge>}
+    >
       <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -366,6 +374,6 @@ export default function PerformMajorEvent() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }

@@ -28,6 +28,7 @@ import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { COMPANY_TYPE_INFO } from "@/types/company";
 import type { Company } from "@/types/company";
 import { formatDistanceToNow, format } from "date-fns";
@@ -56,33 +57,37 @@ const CompanyDetailContent = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
+      <FMPageScaffold title="Company" icon={Building2} backTo="/my-companies">
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid gap-4 md:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-28" />
+            ))}
+          </div>
+          <Skeleton className="h-96" />
         </div>
-        <Skeleton className="h-96" />
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!company) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <AlertTriangle className="h-10 w-10 mx-auto text-destructive mb-4" />
-          <h3 className="text-lg font-semibold">Company Not Found</h3>
-          <p className="text-muted-foreground mb-4">
-            The company you're looking for doesn't exist or you don't have access.
-          </p>
-          <Button onClick={() => navigate("/my-companies")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Companies
-          </Button>
-        </CardContent>
-      </Card>
+      <FMPageScaffold title="Company Not Found" icon={Building2} backTo="/my-companies">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="h-10 w-10 mx-auto text-destructive mb-4" />
+            <h3 className="text-lg font-semibold">Company Not Found</h3>
+            <p className="text-muted-foreground mb-4">
+              The company you're looking for doesn't exist or you don't have access.
+            </p>
+            <Button onClick={() => navigate("/my-companies")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Companies
+            </Button>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
     );
   }
 
@@ -94,37 +99,22 @@ const CompanyDetailContent = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/my-companies")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg bg-muted ${typeInfo.color}`}>
-                <Building2 className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  {company.name}
-                  {company.is_bankrupt && (
-                    <Badge variant="destructive">Bankrupt</Badge>
-                  )}
-                </h1>
-                <p className="text-muted-foreground">{typeInfo.label}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <FMPageScaffold
+      title={company.name}
+      subtitle={typeInfo.label}
+      icon={Building2}
+      backTo="/my-companies"
+      headerActions={
         <div className="flex items-center gap-2">
+          {company.is_bankrupt && (
+            <Badge variant="destructive">Bankrupt</Badge>
+          )}
           <CompanySettingsDialog company={company} />
           {isHolding && (
             <CreateCompanyDialog
               parentCompanyId={company.id}
               trigger={
-                <Button>
+                <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Subsidiary
                 </Button>
@@ -132,7 +122,9 @@ const CompanyDetailContent = () => {
             />
           )}
         </div>
-      </div>
+      }
+    >
+
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -456,17 +448,15 @@ const CompanyDetailContent = () => {
           <MarketRankings companyId={company.id} companyType={company.company_type} />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 
 const CompanyDetail = () => {
   return (
-    <div className="container py-6">
-      <VipGate feature="Company management">
-        <CompanyDetailContent />
-      </VipGate>
-    </div>
+    <VipGate feature="Company management">
+      <CompanyDetailContent />
+    </VipGate>
   );
 };
 
