@@ -14,6 +14,8 @@ import {
   Newspaper, Users, Star, Search, Filter, Globe, MapPin, 
   TrendingUp, DollarSign, Send, CheckCircle 
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 
 interface NewspaperItem {
   id: string;
