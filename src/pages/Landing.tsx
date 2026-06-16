@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
+import brandWordmark from "@/assets/rockmundo-brand.png";
 import heroImage from "@/assets/landing-hero.jpg";
 
 const FEATURES = [
@@ -72,8 +73,8 @@ const Landing = () => {
         <div className="h-10 px-3 sm:px-4 flex items-center gap-3 max-w-[1400px] mx-auto">
           <div className="flex items-center gap-2 min-w-0">
             <img src={logo} alt="Rockmundo" className="h-7 w-7 object-contain shrink-0" width={28} height={28} />
-            <span className="font-bold tracking-wide uppercase text-sm">Rockmundo</span>
-            <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-fm-fg-muted border border-fm-border px-1.5 py-0.5 rounded-sm ml-1">
+            <span className="font-bebas text-xl tracking-[0.18em] leading-none pt-0.5">ROCKMUNDO</span>
+            <span className="hidden sm:inline font-oswald text-[10px] uppercase tracking-[0.2em] text-fm-fg-muted border border-fm-border px-1.5 py-0.5 rounded-sm ml-1">
               Career Edition
             </span>
           </div>
