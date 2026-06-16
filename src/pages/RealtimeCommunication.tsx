@@ -99,7 +99,7 @@ const RealtimeCommunication: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
