@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.372",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "World reset executed. Truncated every gameplay, player, band, finance, social, and content table not on the world_reset_preserve_list (extended to the current catalog schema). Catalogs (cities, districts, transport, equipment, jobs, mentors, achievements, etc.), auth, user_roles, profiles, and configuration tables were preserved." },
+      { type: 'fix', description: "Removed all existing songs and music videos as part of the reset: songs, song_releases, song_plays, song_covers, song_market_*, song_votes, song_sales_royalties, music_videos, music_video_configs, dikcok_videos, audio_generation_prompts/results, and all chart, streaming, and royalty rows derived from them." },
+    ],
+  },
+  {
     version: "1.1.371",
     date: "2026-06-16",
     changes: [
