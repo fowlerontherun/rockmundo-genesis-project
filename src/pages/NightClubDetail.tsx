@@ -637,7 +637,7 @@ const NightClubDetail = () => {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
