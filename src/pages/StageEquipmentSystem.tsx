@@ -498,31 +498,24 @@ const StageEquipmentSystem = () => {
       }
     >
       <div className="flex flex-col gap-6">
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-4 py-3 text-sm text-muted-foreground">
             <div>
-              <CardTitle className="text-2xl">Stage Equipment • {bandName}</CardTitle>
-              <CardDescription>
-                Track owned gear, curate your live stage setup, and expand your catalog with precision upgrades.
-              </CardDescription>
+              <span className="font-semibold text-foreground">{inventory.length}</span> pieces owned
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div>
-                <span className="font-semibold text-foreground">{inventory.length}</span> pieces owned
-              </div>
-              <div>
-                Live setup: <span className="font-semibold text-foreground">{liveSetup.length}</span>
-              </div>
-              <div>
-                Total value: <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
-              </div>
-              {inventory.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  Avg condition: <span className="font-semibold text-foreground">{labelMap[averageConditionTier]}</span>
-                </div>
-              )}
+            <div>
+              Live setup: <span className="font-semibold text-foreground">{liveSetup.length}</span>
             </div>
-          </CardHeader>
+            <div>
+              Total value: <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
+            </div>
+            {inventory.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Avg condition: <span className="font-semibold text-foreground">{labelMap[averageConditionTier]}</span>
+              </div>
+            )}
+          </CardContent>
         </Card>
 
         <Tabs defaultValue="recommended" className="space-y-4">
