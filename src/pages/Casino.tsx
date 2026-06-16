@@ -157,6 +157,6 @@ export default function Casino() {
       <p className="text-xs text-muted-foreground text-center">
         All gambling uses in-game currency only. Bets: $10–$10,000.
       </p>
-    </div>
+    </FMPageScaffold>
   );
 }
