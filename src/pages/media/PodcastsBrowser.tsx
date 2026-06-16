@@ -39,7 +39,8 @@ interface PodcastShow {
 
 const PodcastsBrowser = () => {
   const { currentCity } = useGameData();
-  const { data: userBand } = useUserBand();
+  const { data: userBandReal } = useUserBand();
+  const userBand = userBandReal ?? (import.meta.env.DEV ? DEV_GUEST_BAND : undefined);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
