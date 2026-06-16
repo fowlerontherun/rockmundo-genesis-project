@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.389",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Dev-only mobile bypass for `DesktopOnlyGate`: in `vite dev` (`import.meta.env.DEV`) the <1440px 'Desktop Only' interstitial is skipped so deep links like `/media/podcasts/:id` and the media submission flows can be inspected at mobile widths. Production builds keep the desktop-only gate intact." },
+    ],
+  },
+  {
     version: "1.1.388",
     date: "2026-06-16",
     changes: [
