@@ -649,8 +649,9 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
             })}
           </div>
         </section>
+        </div>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 };
 
