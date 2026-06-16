@@ -22,6 +22,7 @@ import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { FMShell } from "@/components/fm/FMShell";
+import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 
 const Layout = () => {
@@ -90,6 +91,7 @@ const Layout = () => {
   }
 
   return (
+    <DesktopOnlyGate>
     <FMShell>
       {profileError && (
         <Alert variant="destructive" className="mb-4 max-w-2xl">
@@ -118,6 +120,7 @@ const Layout = () => {
         />
       )}
     </FMShell>
+    </DesktopOnlyGate>
   );
 };
 

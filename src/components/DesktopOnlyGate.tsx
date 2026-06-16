@@ -12,10 +12,7 @@ export const DesktopOnlyGate = ({ children }: { children: React.ReactNode }) => 
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Dev-only bypass: allow mobile/responsive testing in `vite dev`.
-  const devBypass = import.meta.env.DEV;
-
-  if (width < MIN_WIDTH && !devBypass) {
+  if (width < MIN_WIDTH) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-fm-bg text-fm-fg p-8">
         <div className="max-w-md text-center space-y-5">
