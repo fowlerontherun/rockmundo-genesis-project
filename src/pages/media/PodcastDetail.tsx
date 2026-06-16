@@ -20,6 +20,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
+import { DEV_GUEST_BAND, getMockPodcastById, withDevPodcastFallback } from "@/dev/mockPodcasts";
 
 interface PodcastRow {
   id: string;
@@ -56,26 +57,31 @@ const formatRange = (min: number | null, max: number | null, prefix = "") => {
 
 const PodcastDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: userBand } = useUserBand();
+  const { data: userBandReal } = useUserBand();
+  const userBand = userBandReal ?? (import.meta.env.DEV ? DEV_GUEST_BAND : undefined);
   const [submitOpen, setSubmitOpen] = useState(false);
 
   const { data: pod, isLoading } = useQuery({
     queryKey: ["podcast-detail", id],
     enabled: !!id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("podcasts")
-        .select("*")
-        .eq("id", id!)
-        .maybeSingle();
-      if (error) throw error;
-      return data as unknown as PodcastRow | null;
-    },
+    queryFn: () =>
+      withDevPodcastFallback(
+        async () => {
+          const { data, error } = await supabase
+            .from("podcasts")
+            .select("*")
+            .eq("id", id!)
+            .maybeSingle();
+          if (error) throw error;
+          return data as unknown as PodcastRow | null;
+        },
+        () => getMockPodcastById(id) as PodcastRow | null,
+      ),
   });
 
   const { data: existingSubmission } = useQuery({
     queryKey: ["podcast-submission", id, userBand?.id],
-    enabled: !!id && !!userBand?.id,
+    enabled: !!id && !!userBand?.id && !!userBandReal,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("podcast_submissions")

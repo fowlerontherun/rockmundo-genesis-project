@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
+import { DEV_MOCK_PODCASTS, DEV_GUEST_BAND, withDevPodcastFallback } from "@/dev/mockPodcasts";
 import {
   Podcast, Mic, Headphones, Star, Search, Filter, Globe,
   TrendingUp, DollarSign, Send, CheckCircle
@@ -38,7 +39,8 @@ interface PodcastShow {
 
 const PodcastsBrowser = () => {
   const { currentCity } = useGameData();
-  const { data: userBand } = useUserBand();
+  const { data: userBandReal } = useUserBand();
+  const userBand = userBandReal ?? (import.meta.env.DEV ? DEV_GUEST_BAND : undefined);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
@@ -47,15 +49,18 @@ const PodcastsBrowser = () => {
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ['podcasts-browser'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('podcasts')
-        .select('*')
-        .order('listener_base', { ascending: false });
-      
-      if (error) throw error;
-      return data as unknown as PodcastShow[];
-    }
+    queryFn: () =>
+      withDevPodcastFallback(
+        async () => {
+          const { data, error } = await supabase
+            .from('podcasts')
+            .select('*')
+            .order('listener_base', { ascending: false });
+          if (error) throw error;
+          return data as unknown as PodcastShow[];
+        },
+        () => DEV_MOCK_PODCASTS as PodcastShow[],
+      ),
   });
 
   // Auto-set country filter only if podcasts exist in that country
@@ -80,7 +85,7 @@ const PodcastsBrowser = () => {
       if (error) throw error;
       return data.map(s => s.podcast_id);
     },
-    enabled: !!userBand?.id,
+    enabled: !!userBand?.id && !!userBandReal,
   });
 
   const filterOptions = useMemo(() => {

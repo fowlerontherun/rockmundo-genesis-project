@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.390",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Dev-only mock fallback for podcast queries: `PodcastsBrowser` and `PodcastDetail` now fall back to `src/dev/mockPodcasts.ts` (4 sample shows + a guest band) when running in `vite dev` and Supabase returns empty/errors. Lets deep links `/media/podcasts/:id` and the `MediaSubmissionDialog` flow be exercised without auth or live Supabase access. Production builds always hit Supabase." },
+    ],
+  },
+  {
     version: "1.1.389",
     date: "2026-06-16",
     changes: [
