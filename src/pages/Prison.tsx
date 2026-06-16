@@ -9,6 +9,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Link, Navigate } from "react-router-dom";
 import { Lock, Calendar, User, DollarSign, Music, AlertTriangle, Scale, Clock } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
