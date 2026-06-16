@@ -279,7 +279,7 @@ export default function PerformMajorEvent() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
