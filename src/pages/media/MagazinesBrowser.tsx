@@ -14,6 +14,8 @@ import {
   BookOpen, Users, Star, Search, Filter, Globe, MapPin, 
   TrendingUp, DollarSign, Send, CheckCircle, Calendar 
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 
 interface MagazineItem {
   id: string;
