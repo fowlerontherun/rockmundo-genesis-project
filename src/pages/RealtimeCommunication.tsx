@@ -53,15 +53,13 @@ const RealtimeCommunication: React.FC = () => {
   }, [destroyAudioMeter]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">RockMundo Live</h1>
-          <p className="text-muted-foreground">
-            Real-time communication and collaboration
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="RockMundo Live"
+      subtitle="Real-time communication and collaboration"
+      icon={MessageSquare}
+      backTo="/hub/social"
+      backLabel="Back to Social"
+    >
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
