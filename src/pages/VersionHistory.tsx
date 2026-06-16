@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.378",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7g (Companies, Festivals & Awards tail). Migrated MyCompanies, FestivalBrowser, and Awards to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container py-6` + bespoke `<h1>` header on MyCompanies, the `container mx-auto px-4 py-6` + custom icon-tile header on FestivalBrowser, and the `PageLayout`+`PageHeader` stack on Awards with scaffold props (`title`, `subtitle`, `icon`, `backTo`). MyCompanies back-links to `/hub/career-business`; FestivalBrowser back-links to `/hub/band-live`; Awards keeps its `Back to Band & Live` link to `/hub/band-live`." },
+    ],
+  },
+  {
     version: "1.1.377",
     date: "2026-06-16",
     changes: [

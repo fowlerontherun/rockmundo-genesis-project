@@ -13,8 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Star, Vote, Calendar, MapPin, Users, Sparkles, Crown, Medal, Shirt, Music, ThumbsUp, PartyPopper, Mail } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { format } from "date-fns";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { isLifetimeAchievementCategory, isLifetimeAchievementYear } from "@/lib/api/awards";
@@ -112,15 +111,14 @@ export default function Awards() {
   }
 
   return (
-    <PageLayout>
-      {/* Header */}
-      <PageHeader
-        title="Music Awards"
-        subtitle="Compete for glory at the world's biggest music ceremonies"
-        icon={Trophy}
-        backTo="/hub/band-live"
-        backLabel="Back to Band & Live"
-      />
+    <FMPageScaffold
+      title="Music Awards"
+      subtitle="Compete for glory at the world's biggest music ceremonies"
+      icon={Trophy}
+      backTo="/hub/band-live"
+      backLabel="Back to Band & Live"
+    >
+
 
       {/* Player wins summary */}
       {invites.length > 0 && (
@@ -495,7 +493,7 @@ export default function Awards() {
           )}
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
 

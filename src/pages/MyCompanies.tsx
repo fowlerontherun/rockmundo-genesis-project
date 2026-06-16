@@ -14,6 +14,7 @@ import { useAllCompanyTaxRecords } from "@/hooks/useCompanyFinance";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CORPORATE_TAX_RATES, type Company } from "@/types/company";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -296,26 +297,19 @@ const CompanyDashboardContent = () => {
 
 const MyCompanies = () => {
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
-            My Companies
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your business empire — revenue, expenses, taxes, and growth
-          </p>
-        </div>
-      </div>
-
+    <FMPageScaffold
+      title="My Companies"
+      subtitle="Manage your business empire — revenue, expenses, taxes, and growth"
+      icon={Building2}
+      backTo="/hub/career-business"
+    >
       <VipGate
         feature="Company ownership"
         description="Run labels, factories, studios, and more."
       >
         <CompanyDashboardContent />
       </VipGate>
-    </div>
+    </FMPageScaffold>
   );
 };
 
