@@ -68,7 +68,8 @@ export function RecentActivitySection({ userId: _userId }: RecentActivitySection
 
   return (
     <div className="space-y-2">
-      <FMFilterBar<EarningsFilter>
+      <FMFilterBar
+        // @ts-expect-error generic prop inferred
         label="Activity"
         search={search}
         onSearchChange={setSearch}
