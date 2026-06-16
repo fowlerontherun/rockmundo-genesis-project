@@ -299,34 +299,32 @@ export const UnderworldContent = ({ tokens, tokensLoading }: { tokens: CryptoTok
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-background via-slate-950 to-background text-foreground">
-      <img
-        src={underworldVeil}
-        alt="Abstract neon fog"
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40"
-        loading="lazy"
-      />
-      <div className="relative mx-auto max-w-7xl space-y-10 px-6 py-10">
-        {/* Breadcrumbs */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem><BreadcrumbLink href="/">Home</BreadcrumbLink></BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem><BreadcrumbLink href="/city">City</BreadcrumbLink></BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem><BreadcrumbPage>Underworld</BreadcrumbPage></BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-2 rounded-full bg-muted/70 px-3 py-1">
-              <Shield className="h-3.5 w-3.5" /> Secure relay
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-muted/70 px-3 py-1">
-              <Compass className="h-3.5 w-3.5" /> Prices update every 30s
-            </span>
-          </div>
+    <FMPageScaffold
+      title="Underworld"
+      subtitle="Shadow market for off-ledger deals"
+      icon={Skull}
+      backTo="/city"
+      backLabel="Back to City"
+      headerActions={
+        <div className="flex gap-1.5 text-[10px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <Shield className="h-3 w-3" /> Secure relay
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <Compass className="h-3 w-3" /> 30s ticks
+          </span>
         </div>
+      }
+    >
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-b from-background via-slate-950 to-background text-foreground">
+        <img
+          src={underworldVeil}
+          alt="Abstract neon fog"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40"
+          loading="lazy"
+        />
+        <div className="relative space-y-10 px-6 py-8">
+
 
         {/* Hero */}
         <section className="grid gap-8 rounded-3xl border border-primary/10 bg-background/70 p-8 shadow-xl backdrop-blur" id="hero">
