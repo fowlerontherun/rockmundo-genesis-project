@@ -281,7 +281,7 @@ const Lottery = () => {
           <TicketHistory draws={drawHistory || []} />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 
