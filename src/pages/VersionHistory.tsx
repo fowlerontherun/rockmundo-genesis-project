@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.393",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Landing header tightened for narrow mobile (≤375px): brand wordmark and the `Demo` / `Log in` button labels collapse to icons below the `sm` breakpoint so the header stays uncluttered at 320–375px. Verified at 320/375/390/414px — no horizontal overflow, login dialog stays inside the viewport, hero CTAs stack cleanly." },
+    ],
+  },
+  {
     version: "1.1.392",
     date: "2026-06-16",
     changes: [
