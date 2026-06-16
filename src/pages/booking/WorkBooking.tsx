@@ -158,6 +158,6 @@ export default function WorkBooking() {
           View Schedule
         </Button>
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
