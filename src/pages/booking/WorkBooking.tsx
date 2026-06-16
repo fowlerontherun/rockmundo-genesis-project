@@ -82,11 +82,12 @@ export default function WorkBooking() {
   }));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Book Life Activity</h1>
-        <p className="text-muted-foreground">Schedule work, travel, and personal time</p>
-      </div>
+    <FMPageScaffold
+      title="Book Life Activity"
+      subtitle="Schedule work, travel, and personal time"
+      icon={Briefcase}
+      backTo="/schedule"
+    >
 
       {conflictResult?.hasConflict && (
         <ScheduleConflictAlert result={conflictResult} onPickSlot={handlePickSlot} onDismiss={clearResult} />
