@@ -630,6 +630,6 @@ export default function UniversityDetail() {
           </div>
         )}
       </div>
-    </div>
+    </FMPageScaffold>
   );
 }
