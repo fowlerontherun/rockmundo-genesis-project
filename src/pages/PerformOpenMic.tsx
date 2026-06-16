@@ -571,6 +571,6 @@ export default function PerformOpenMic() {
           <span>Processing performance...</span>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
