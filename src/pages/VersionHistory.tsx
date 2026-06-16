@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.386",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7k (Podcast detail). Added a dedicated `PodcastDetail` page at `/media/podcasts/:id` scaffolded via `FMPageScaffold` (icon `Podcast`, `backTo=/media/podcasts`, back label `Back to Podcasts`, type + country badges in `headerActions`). Page renders listeners / minimum fame / compensation / rewards KPI cards and a show details block (episodes/week, genres, description) with the existing `MediaSubmissionDialog` flow + pending-request detection from `podcast_submissions`." },
+      { type: 'improvement', description: "Refactored `PodcastsBrowser` cards to wrap the title/info area in a `<Link to={'/media/podcasts/:id'}>` (focus-visible ring) while keeping the Request/Pending action button outside the link so submissions still open the dialog without triggering navigation." },
+      { type: 'improvement', description: "Registered the lazy `PodcastDetail` import and `media/podcasts/:id` route in `App.tsx` so the new page participates in the standard layout/Suspense pipeline." },
+    ],
+  },
+  {
     version: "1.1.385",
     date: "2026-06-16",
     changes: [
