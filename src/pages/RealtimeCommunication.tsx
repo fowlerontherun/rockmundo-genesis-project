@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ChatWindow from '@/components/realtime/ChatWindow';
 import { MessageSquare, Music } from 'lucide-react';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 
 interface AudioMeterHandle {
