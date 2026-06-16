@@ -12,6 +12,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function SongwritingBooking() {
   const navigate = useNavigate();
