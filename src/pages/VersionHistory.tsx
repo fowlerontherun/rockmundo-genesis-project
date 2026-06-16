@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.381",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Loading-state UX — introduced shared `FMPageSkeleton` and `FMLiveSkeleton` components in `components/fm/` that render a consistent ladder of action-button placeholders, KPI strip, optional tabs row, and body-block skeletons inside any FMPageScaffold." },
+      { type: 'improvement', description: "Replaced ad-hoc loading branches on CompanyDetail (custom Skeleton grid), UniversityDetail (`Loading…` text), PerformMajorEvent and PerformOpenMic (lone spinner) with the unified skeletons so every scaffolded detail page now shows action placeholders + structural skeletons during data fetch. Skeletons carry `aria-busy`/`aria-live` for assistive tech." },
+    ],
+  },
+  {
     version: "1.1.380",
     date: "2026-06-16",
     changes: [

@@ -29,6 +29,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 import { COMPANY_TYPE_INFO } from "@/types/company";
 import type { Company } from "@/types/company";
 import { formatDistanceToNow, format } from "date-fns";
@@ -58,15 +59,7 @@ const CompanyDetailContent = () => {
   if (isLoading) {
     return (
       <FMPageScaffold title="Company" icon={Building2} backTo="/my-companies">
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-28" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
-        </div>
+        <FMPageSkeleton kpiCount={4} actionCount={2} bodyBlocks={1} showTabs />
       </FMPageScaffold>
     );
   }

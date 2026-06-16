@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { format, isPast, differenceInMinutes, differenceInHours } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMLiveSkeleton } from "@/components/fm/FMPageSkeleton";
 
 interface LiveCommentary {
   text: string;
@@ -282,9 +283,7 @@ export default function PerformOpenMic() {
   if (isLoading) {
     return (
       <FMPageScaffold title="Open Mic" icon={Mic} backTo="/open-mic">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <FMLiveSkeleton />
       </FMPageScaffold>
     );
   }
