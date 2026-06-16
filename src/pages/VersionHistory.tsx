@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.395",
+    date: "2026-06-16",
+    changes: [
+      { type: 'improvement', description: "Landing page now uses the exact Rockmundo brand typography: `Bebas Neue` (`font-bebas`) on the wordmark and all H1/H2 display headings, `Oswald` (`font-oswald`, the project default sans) on body copy and tracked-out micro-labels. Header brand mark uses `rockmundo-new-logo.png` paired with a Bebas Neue ROCKMUNDO wordmark instead of the previous generic sans label." },
+    ],
+  },
+  {
     version: "1.1.394",
     date: "2026-06-16",
     changes: [
