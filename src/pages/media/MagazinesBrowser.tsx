@@ -305,7 +305,7 @@ const MagazinesBrowser = () => {
           bandFame={userBand.fame}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
