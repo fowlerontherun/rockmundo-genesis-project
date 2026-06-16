@@ -309,11 +309,12 @@ export default function PerformanceBooking() {
   }));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Book Performance Activity</h1>
-        <p className="text-muted-foreground">Schedule your music sessions in advance</p>
-      </div>
+    <FMPageScaffold
+      title="Book Performance Activity"
+      subtitle="Schedule your music sessions in advance"
+      icon={Music}
+      backTo="/schedule"
+    >
 
       {conflictResult?.hasConflict && (
         <ScheduleConflictAlert
