@@ -27,6 +27,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { format, isPast, differenceInMinutes, differenceInHours } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface LiveCommentary {
   text: string;
