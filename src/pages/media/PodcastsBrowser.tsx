@@ -14,6 +14,8 @@ import {
   Podcast, Mic, Headphones, Star, Search, Filter, Globe, MapPin,
   TrendingUp, DollarSign, Send, CheckCircle
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 
 interface PodcastShow {
   id: string;
