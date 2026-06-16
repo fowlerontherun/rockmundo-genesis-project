@@ -224,7 +224,7 @@ export default function PerformMajorEvent() {
     const cashRange = `$${((performance.instance?.event?.base_cash_reward || 0) / 1000).toFixed(0)}K - $${((performance.instance?.event?.max_cash_reward || 0) / 1000).toFixed(0)}K`;
 
     return (
-      <div className="container max-w-4xl py-8 space-y-6">
+      <FMPageScaffold title={`Ready for ${eventName}?`} icon={Trophy} backTo="/major-events">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
