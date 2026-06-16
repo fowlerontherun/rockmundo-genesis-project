@@ -88,14 +88,13 @@ const NightclubHub = () => {
   }, [clubs, search, qualityFilter, cityFilter]);
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Nightclubs"
-        subtitle={`${clubs.length} venues worldwide`}
-        icon={Disc3}
-        backTo="/hub/world-social"
-        backLabel="Back to World"
-      />
+    <FMPageScaffold
+      title="Nightclubs"
+      subtitle={`${clubs.length} venues worldwide`}
+      icon={Disc3}
+      backTo="/hub/world-social"
+      backLabel="Back to World"
+    >
 
       {/* My Clubs Banner */}
       {ownedClubs.length > 0 && (
