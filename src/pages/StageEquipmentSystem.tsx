@@ -956,6 +956,7 @@ const StageEquipmentSystem = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </FMPageScaffold>
   );
 };
