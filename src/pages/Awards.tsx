@@ -111,15 +111,14 @@ export default function Awards() {
   }
 
   return (
-    <PageLayout>
-      {/* Header */}
-      <PageHeader
-        title="Music Awards"
-        subtitle="Compete for glory at the world's biggest music ceremonies"
-        icon={Trophy}
-        backTo="/hub/band-live"
-        backLabel="Back to Band & Live"
-      />
+    <FMPageScaffold
+      title="Music Awards"
+      subtitle="Compete for glory at the world's biggest music ceremonies"
+      icon={Trophy}
+      backTo="/hub/band-live"
+      backLabel="Back to Band & Live"
+    >
+
 
       {/* Player wins summary */}
       {invites.length > 0 && (
