@@ -338,7 +338,7 @@ export default function PerformOpenMic() {
     };
 
     return (
-      <div className="container max-w-4xl py-8 space-y-6">
+      <FMPageScaffold title="Ready for Open Mic Night?" icon={Mic} backTo="/open-mic">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
