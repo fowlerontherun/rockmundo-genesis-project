@@ -230,6 +230,7 @@ const NewspapersBrowser = lazyWithRetry(() => import("./pages/media/NewspapersBr
 const MagazinesBrowser = lazyWithRetry(() => import("./pages/media/MagazinesBrowser"));
 const PodcastsBrowser = lazyWithRetry(() => import("./pages/media/PodcastsBrowser"));
 const FilmsBrowser = lazyWithRetry(() => import("./pages/media/FilmsBrowser"));
+const FilmDetail = lazyWithRetry(() => import("./pages/media/FilmDetail"));
 const ActingCareer = lazyWithRetry(() => import("./pages/ActingCareer"));
 const WebsitesBrowser = lazyWithRetry(() => import("./pages/media/WebsitesBrowser"));
 const SelfPromotionBrowser = lazyWithRetry(() => import("./pages/media/SelfPromotionBrowser"));
@@ -399,6 +400,7 @@ function App() {
                     <Route path="media/magazines" element={<MagazinesBrowser />} />
                     <Route path="media/podcasts" element={<PodcastsBrowser />} />
                     <Route path="media/films" element={<FilmsBrowser />} />
+                    <Route path="media/films/:id" element={<FilmDetail />} />
                     <Route path="acting" element={<ActingCareer />} />
                     <Route path="media/acting" element={<ActingCareer />} />
                     <Route path="media/websites" element={<WebsitesBrowser />} />
