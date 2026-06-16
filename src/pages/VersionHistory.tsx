@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.384",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7k (Newspaper detail). Added a dedicated `NewspaperDetail` page at `/media/newspapers/:id` scaffolded via `FMPageScaffold` (icon `Newspaper`, `backTo=/media/newspapers`, back label `Back to Newspapers`, type + country badges in `headerActions`). Page renders circulation / minimum fame / compensation / rewards as KPI cards and a publication details block (quality, genres, description) with the existing `MediaSubmissionDialog` flow + pending-request detection from `newspaper_submissions`." },
+      { type: 'improvement', description: "Refactored `NewspapersBrowser` cards to wrap the title/info area in a `<Link to={'/media/newspapers/:id'}>` (focus-visible ring) while keeping the Send/Pending action button outside the link so submissions still open the dialog without triggering navigation. Removed the unused `Skeleton`/`MapPin` imports." },
+      { type: 'improvement', description: "Registered the lazy `NewspaperDetail` import and `media/newspapers/:id` route in `App.tsx` so the new page participates in the standard layout/Suspense pipeline." },
+    ],
+  },
+  {
     version: "1.1.383",
     date: "2026-06-16",
     changes: [

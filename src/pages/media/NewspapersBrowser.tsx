@@ -1,18 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
-import { 
-  Newspaper, Users, Star, Search, Filter, Globe, MapPin, 
-  TrendingUp, DollarSign, Send, CheckCircle 
+import {
+  Newspaper, Users, Star, Search, Filter, Globe,
+  TrendingUp, DollarSign, Send, CheckCircle
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
@@ -199,89 +199,94 @@ const NewspapersBrowser = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNewspapers.map(paper => (
-            <Card key={paper.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{paper.name}</CardTitle>
-                  <div className="flex gap-1">
-                    {paper.newspaper_type && (
-                      <Badge variant="outline" className="capitalize">{paper.newspaper_type.replace('_', ' ')}</Badge>
-                    )}
-                    {paper.country && (
-                      <Badge variant="secondary" className="text-xs">{paper.country}</Badge>
-                    )}
+            <Card key={paper.id} className="hover:shadow-lg transition-shadow flex flex-col">
+              <Link
+                to={`/media/newspapers/${paper.id}`}
+                className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{paper.name}</CardTitle>
+                    <div className="flex gap-1">
+                      {paper.newspaper_type && (
+                        <Badge variant="outline" className="capitalize">{paper.newspaper_type.replace('_', ' ')}</Badge>
+                      )}
+                      {paper.country && (
+                        <Badge variant="secondary" className="text-xs">{paper.country}</Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatCirculation(paper.circulation)} circulation</span>
-                </div>
-                
-                {paper.min_fame_required !== null && paper.min_fame_required > 0 && (
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
-                    <Star className={`h-4 w-4 ${isEligible(paper) ? 'text-warning' : 'text-destructive'}`} />
-                    <span>Min Fame: {paper.min_fame_required}</span>
-                    {userBand && (
-                      <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatCirculation(paper.circulation)} circulation</span>
+                  </div>
+
+                  {paper.min_fame_required !== null && paper.min_fame_required > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Star className={`h-4 w-4 ${isEligible(paper) ? 'text-warning' : 'text-destructive'}`} />
+                      <span>Min Fame: {paper.min_fame_required}</span>
+                      {userBand && (
+                        <span className="text-muted-foreground">(you: {userBand.fame})</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {paper.fame_boost_min != null && (
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />+{paper.fame_boost_min}-{paper.fame_boost_max} fame
+                      </span>
+                    )}
+                    {paper.compensation_min != null && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />${paper.compensation_min}-{paper.compensation_max}
+                      </span>
                     )}
                   </div>
-                )}
 
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  {paper.fame_boost_min != null && (
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />+{paper.fame_boost_min}-{paper.fame_boost_max} fame
-                    </span>
+                  {paper.genres && paper.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {paper.genres.slice(0, 3).map(genre => (
+                        <Badge key={genre} variant="secondary" className="text-xs">
+                          {genre}
+                        </Badge>
+                      ))}
+                      {paper.genres.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{paper.genres.length - 3}
+                        </Badge>
+                      )}
+                    </div>
                   )}
-                  {paper.compensation_min != null && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />${paper.compensation_min}-{paper.compensation_max}
-                    </span>
+
+                  {paper.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {paper.description}
+                    </p>
                   )}
-                </div>
+                </CardContent>
+              </Link>
 
-                {paper.genres && paper.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {paper.genres.slice(0, 3).map(genre => (
-                      <Badge key={genre} variant="secondary" className="text-xs">
-                        {genre}
-                      </Badge>
-                    ))}
-                    {paper.genres.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{paper.genres.length - 3}
-                      </Badge>
-                    )}
-                  </div>
+              <div className="px-6 pb-6">
+                {hasSubmission(paper.id) ? (
+                  <Button variant="outline" disabled className="w-full">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Request Pending
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isEligible(paper) ? "default" : "outline"}
+                    className="w-full"
+                    disabled={!userBand}
+                    onClick={() => setSelectedNewspaper(paper)}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isEligible(paper) ? "Request Interview" : "Not Eligible"}
+                  </Button>
                 )}
-
-                {paper.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {paper.description}
-                  </p>
-                )}
-
-                <div className="pt-2">
-                  {hasSubmission(paper.id) ? (
-                    <Button variant="outline" disabled className="w-full">
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Request Pending
-                    </Button>
-                  ) : (
-                    <Button
-                      variant={isEligible(paper) ? "default" : "outline"}
-                      className="w-full"
-                      disabled={!userBand}
-                      onClick={() => setSelectedNewspaper(paper)}
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      {isEligible(paper) ? "Request Interview" : "Not Eligible"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
