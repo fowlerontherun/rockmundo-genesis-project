@@ -49,15 +49,18 @@ const PodcastsBrowser = () => {
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ['podcasts-browser'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('podcasts')
-        .select('*')
-        .order('listener_base', { ascending: false });
-      
-      if (error) throw error;
-      return data as unknown as PodcastShow[];
-    }
+    queryFn: () =>
+      withDevPodcastFallback(
+        async () => {
+          const { data, error } = await supabase
+            .from('podcasts')
+            .select('*')
+            .order('listener_base', { ascending: false });
+          if (error) throw error;
+          return data as unknown as PodcastShow[];
+        },
+        () => DEV_MOCK_PODCASTS as PodcastShow[],
+      ),
   });
 
   // Auto-set country filter only if podcasts exist in that country
