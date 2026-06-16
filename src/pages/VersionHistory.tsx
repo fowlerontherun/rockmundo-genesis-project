@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.391",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "New public landing page at `/`: marketing site with hero, feature grid, world stats, and CTAs. The `Login` button opens a Dialog with email/password sign-in (calls `supabase.auth.signInWithPassword` then routes to `/dashboard`). A `Demo` button — visible only in `vite dev` (`import.meta.env.DEV`) — jumps straight into the app as a guest using the dev bypass + mock data. Authenticated dashboard moved from `/` to `/home`; all other routes unchanged. `Auth.tsx` success redirects updated to `/home`." },
+    ],
+  },
+  {
     version: "1.1.390",
     date: "2026-06-16",
     changes: [
