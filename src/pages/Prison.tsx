@@ -81,12 +81,13 @@ export default function Prison() {
   const releaseDate = imprisonment?.release_date ? new Date(imprisonment.release_date) : null;
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Lock className="h-6 w-6 text-destructive" />
-        <h1 className="text-2xl font-bold">{t('prison.title')}</h1>
-        <Badge variant="destructive">{t('prison.imprisoned')}</Badge>
-      </div>
+    <FMPageScaffold
+      title={t('prison.title')}
+      subtitle={prison?.name}
+      icon={Lock}
+      backTo="/dashboard"
+      headerActions={<Badge variant="destructive" className="text-[10px]">{t('prison.imprisoned')}</Badge>}
+    >
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Status Card */}
