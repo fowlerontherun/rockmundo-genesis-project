@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function EducationBooking() {
   const navigate = useNavigate();
