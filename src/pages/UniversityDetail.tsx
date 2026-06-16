@@ -17,6 +17,7 @@ import { AttendanceCard } from "@/components/university/AttendanceCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
 import { format } from "date-fns";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const formatClassWindowLabel = (startHour: number, endHour: number) => {
   const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
