@@ -120,6 +120,7 @@ const Layout = () => {
         />
       )}
     </FMShell>
+    </DesktopOnlyGate>
   );
 };
 
