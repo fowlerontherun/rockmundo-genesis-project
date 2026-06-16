@@ -297,7 +297,7 @@ const NewspapersBrowser = () => {
           bandFame={userBand.fame}
         />
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
