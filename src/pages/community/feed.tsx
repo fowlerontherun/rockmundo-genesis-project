@@ -396,7 +396,7 @@ const CommunityFeedPage = () => {
           </Button>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
