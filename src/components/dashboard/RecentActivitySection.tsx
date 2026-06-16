@@ -69,14 +69,13 @@ export function RecentActivitySection({ userId: _userId }: RecentActivitySection
   return (
     <div className="space-y-2">
       <FMFilterBar
-        // @ts-expect-error generic prop inferred
         label="Activity"
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search activity…"
         pills={pills}
         activePill={filter}
-        onPillChange={setFilter}
+        onPillChange={(v) => setFilter(v as EarningsFilter)}
       />
       <ScrollArea className="h-[300px]">
         <div className="space-y-2">
