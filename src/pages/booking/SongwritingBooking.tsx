@@ -269,6 +269,6 @@ export default function SongwritingBooking() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 }
