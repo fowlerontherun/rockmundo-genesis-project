@@ -13,6 +13,8 @@ import type { PlayingCard, BlackjackState, BlackjackResult } from "@/lib/casino/
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Club } from "lucide-react";
 
 export default function Blackjack() {
   const navigate = useNavigate();
