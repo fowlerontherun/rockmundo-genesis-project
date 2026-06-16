@@ -15,6 +15,7 @@ import {
   AlertCircle,
   UserPlus
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useCityElection, useElectionCandidates, useUserVote, useCastVote } from "@/hooks/useCityElections";
 import { useCityMayor } from "@/hooks/useMayorDashboard";
 import { useQuery } from "@tanstack/react-query";
