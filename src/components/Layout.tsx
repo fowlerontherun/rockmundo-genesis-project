@@ -60,16 +60,21 @@ const Layout = () => {
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
 
+  // Dev-only guest bypass: in `vite dev` we skip the /auth redirect and the
+  // unauthenticated null-render so pages can be inspected without logging in.
+  // Production builds keep the original behavior.
+  const devGuestBypass = import.meta.env.DEV;
+
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !devGuestBypass) {
       navigate("/auth");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, devGuestBypass]);
 
   // Removed automatic redirect to /my-character
   // Users can access character creation page directly if needed
 
-  if (authLoading || dataLoading) {
+  if (authLoading || (dataLoading && user)) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-stage">
         <div className="text-center">
@@ -80,7 +85,7 @@ const Layout = () => {
     );
   }
 
-  if (!user) {
+  if (!user && !devGuestBypass) {
     return null;
   }
 
