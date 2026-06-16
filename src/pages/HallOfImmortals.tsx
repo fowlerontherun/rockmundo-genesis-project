@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Skull, Star, DollarSign, Music, Mic2, Calendar, Crown, Medal, Award } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -54,14 +53,13 @@ export default function HallOfImmortals() {
   };
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Hall of Immortals"
-        subtitle="Characters who fell — but will never be forgotten"
-        backTo="/hub/character"
-        backLabel="Back to Character"
-        icon={Skull}
-      />
+    <FMPageScaffold
+      title="Hall of Immortals"
+      subtitle="Characters who fell — but will never be forgotten"
+      icon={Skull}
+      backTo="/hub/character"
+    >
+
 
       {isLoading ? (
         <div className="space-y-4">
@@ -149,6 +147,6 @@ export default function HallOfImmortals() {
           ))}
         </div>
       )}
-    </PageLayout>
+    </FMPageScaffold>
   );
 }

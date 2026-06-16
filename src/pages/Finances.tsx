@@ -13,9 +13,8 @@ import { TransactionsList } from "@/components/finance/TransactionsList";
 import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
 import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPanel";
 import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
-import { Loader2 } from "lucide-react";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Loader2, DollarSign } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const Finances = () => {
   const [searchParams] = useSearchParams();
@@ -34,20 +33,22 @@ const Finances = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <FMPageScaffold title="Financial Command Center" icon={DollarSign} backTo="/hub/career-business">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Financial Command Center"
-        subtitle="Monitor personal and band finances, track investments, and explore funding pathways to keep your music dreams funded."
-        backTo="/hub/career-business"
-        backLabel="Back to Career & Business"
-      />
+    <FMPageScaffold
+      title="Financial Command Center"
+      subtitle="Monitor personal and band finances, track investments, and explore funding pathways."
+      icon={DollarSign}
+      backTo="/hub/career-business"
+    >
+
 
       {/* Summary Cards */}
       <FinanceSummaryCards summary={summary} />
@@ -119,7 +120,7 @@ const Finances = () => {
           <TransactionsList transactions={transactions} />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 };
 

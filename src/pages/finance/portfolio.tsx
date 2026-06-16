@@ -14,6 +14,8 @@ import {
   type InvestmentPosition,
   type PortfolioPerformanceSummary,
 } from "@/lib/api/finance";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { Briefcase } from "lucide-react";
 
 const DEMO_CHARACTER_ID = "demo-character";
 const LEDGER_MONTHS = 6;
@@ -89,13 +91,13 @@ const PortfolioPage = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Portfolio Intelligence</h1>
-        <p className="text-muted-foreground">
-          Visualize your income engines, expense commitments, and investment performance in one collaborative workspace.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Portfolio Intelligence"
+      subtitle="Visualize your income engines, expense commitments, and investment performance in one collaborative workspace."
+      icon={Briefcase}
+      backTo="/hub/career-business"
+    >
+
 
       <PortfolioSummary
         netWorth={summary.totalCurrentValue}
@@ -123,7 +125,7 @@ const PortfolioPage = () => {
       {isLoading && !transactions.length && (
         <p className="text-center text-sm text-muted-foreground">Loading portfolio insights…</p>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 

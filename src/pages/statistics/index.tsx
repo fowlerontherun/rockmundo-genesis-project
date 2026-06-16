@@ -6,6 +6,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerStatistics } from "@/hooks/usePlayerStatistics";
 import { Trophy, Music, TrendingUp, Star, Award, Target } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const PlayerStatistics = () => {
   const { profileId } = useActiveProfile();
@@ -22,21 +23,20 @@ const PlayerStatistics = () => {
 
   if (isLoadingAchievements || isLoadingStats) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Player Statistics" icon={Trophy} backTo="/hub/character">
         <p className="text-muted-foreground">Loading statistics...</p>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Trophy className="h-8 w-8" />
-          Player Statistics
-        </h1>
-        <p className="text-muted-foreground">Track your progress and achievements</p>
-      </div>
+    <FMPageScaffold
+      title="Player Statistics"
+      subtitle="Track your progress and achievements"
+      icon={Trophy}
+      backTo="/hub/character"
+    >
+
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -228,7 +228,7 @@ const PlayerStatistics = () => {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 };
 

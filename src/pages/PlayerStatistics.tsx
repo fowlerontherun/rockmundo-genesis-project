@@ -6,9 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useGameData } from '@/hooks/useGameData';
 import { usePlayerLevel } from '@/hooks/usePlayerLevel';
-import { TrendingUp, Award, Music, Users, Star, DollarSign } from 'lucide-react';
+import { TrendingUp, Award, Music, Users, Star, DollarSign, BarChart3 } from 'lucide-react';
 import { PlayerAchievements } from '@/components/player-stats/PlayerAchievements';
 import { PerformanceHistory } from '@/components/player-stats/PerformanceHistory';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 
 export default function PlayerStatistics() {
   const { profileId } = useActiveProfile();
@@ -23,35 +24,42 @@ export default function PlayerStatistics() {
 
   if (!profileId || !profile) {
     return (
-      <div className="container mx-auto p-6">
+      <FMPageScaffold title="Player Statistics" icon={BarChart3} backTo="/hub/character">
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Please log in to view your statistics.</p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Player Statistics</h1>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-lg px-4 py-2 bg-primary/10 text-primary border-primary/30">
-            <Star className="h-4 w-4 mr-1" />
-            Level {levelData.level}
-          </Badge>
-          {levelData.level < 100 && (
-            <div className="flex flex-col gap-1 min-w-[100px]">
-              <Progress value={levelData.levelProgress} className="h-2" />
-              <span className="text-[10px] text-muted-foreground text-right">
-                {levelData.xpToNextLevel.toLocaleString()} XP to next
-              </span>
-            </div>
-          )}
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
+        <Star className="h-3 w-3 mr-1" />
+        Lv {levelData.level}
+      </Badge>
+      {levelData.level < 100 && (
+        <div className="flex flex-col gap-0.5 min-w-[80px]">
+          <Progress value={levelData.levelProgress} className="h-1.5" />
+          <span className="text-[9px] text-muted-foreground text-right">
+            {levelData.xpToNextLevel.toLocaleString()} XP
+          </span>
         </div>
-      </div>
+      )}
+    </div>
+  );
+
+  return (
+    <FMPageScaffold
+      title="Player Statistics"
+      subtitle="Your level, skills, fans, and lifetime progression"
+      icon={BarChart3}
+      backTo="/hub/character"
+      headerActions={headerActions}
+    >
+
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
@@ -182,6 +190,6 @@ export default function PlayerStatistics() {
           <PerformanceHistory userId={profileId ?? undefined} />
         </TabsContent>
       </Tabs>
-    </div>
+    </FMPageScaffold>
   );
 }

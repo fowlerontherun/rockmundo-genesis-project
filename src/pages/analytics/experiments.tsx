@@ -33,6 +33,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const formatNumber = (value: number, options: Intl.NumberFormatOptions = {}) =>
   new Intl.NumberFormat("en-US", options).format(value);
@@ -126,30 +127,32 @@ const ExperimentsAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center py-24">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading campaign experiments…</span>
+      <FMPageScaffold title="Campaign Experiments Lab" icon={BarChart3} backTo="/hub/career-business">
+        <div className="flex h-full flex-1 items-center justify-center py-24">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading campaign experiments…</span>
+          </div>
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto max-w-3xl py-12">
+      <FMPageScaffold title="Campaign Experiments Lab" icon={BarChart3} backTo="/hub/career-business">
         <Alert variant="destructive">
           <AlertCircle className="h-5 w-5" />
           <AlertTitle>Analytics unavailable</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!selectedExperiment || !data) {
     return (
-      <div className="mx-auto max-w-3xl py-12">
+      <FMPageScaffold title="Campaign Experiments Lab" icon={BarChart3} backTo="/hub/career-business">
         <Alert>
           <Sparkles className="h-5 w-5" />
           <AlertTitle>No experiments yet</AlertTitle>
@@ -158,21 +161,20 @@ const ExperimentsAnalytics = () => {
             impact.
           </AlertDescription>
         </Alert>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   const summary = data.summary;
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Campaign Experiments Lab</h1>
-        <p className="text-muted-foreground">
-          Compare creative variants, measure lift in your most important metrics, and ship the messages that keep fans coming
-          back.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Campaign Experiments Lab"
+      subtitle="Compare creative variants, measure lift in your most important metrics, and ship the messages that keep fans coming back."
+      icon={BarChart3}
+      backTo="/hub/career-business"
+    >
+
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -535,7 +537,7 @@ const ExperimentsAnalytics = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 };
 

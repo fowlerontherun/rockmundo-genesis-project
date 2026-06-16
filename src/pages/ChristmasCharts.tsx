@@ -6,11 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Gift, Music, Star, Snowflake, Crown, TrendingUp, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Trophy, Gift, Music, Star, Snowflake, Crown, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ChristmasCharts = () => {
   const gameDate = useMemo(() => calculateInGameDate(), []);
@@ -118,32 +117,27 @@ const ChristmasCharts = () => {
   const topRelease = decemberRace[0];
   const maxUnits = topRelease?.totalUnits || 1;
 
+  const subtitle = isDecember
+    ? isChristmasDay
+      ? "🎄 It's Christmas Day! The Christmas Number One has been crowned!"
+      : isAfterChristmas
+        ? "Christmas Number One has been decided for this year!"
+        : `${daysUntilChristmas} game day${daysUntilChristmas !== 1 ? "s" : ""} until Christmas Day — who will be #1?`
+    : `The Christmas Charts race begins in ${getMonthName(12)}. Current month: ${getMonthName(gameDate.gameMonth)}.`;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/music/charts"><ArrowLeft className="h-4 w-4" /></Link>
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Gift className="h-6 w-6 text-red-500" />
-            <h1 className="text-2xl font-bold">Christmas Charts Race</h1>
-            <Badge variant="outline" className="border-red-500/40 text-red-400 text-xs">
-              Year {gameDate.gameYear}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isDecember
-              ? isChristmasDay
-                ? "🎄 It's Christmas Day! The Christmas Number One has been crowned!"
-                : isAfterChristmas
-                  ? "Christmas Number One has been decided for this year!"
-                  : `${daysUntilChristmas} game day${daysUntilChristmas !== 1 ? "s" : ""} until Christmas Day — who will be #1?`
-              : `The Christmas Charts race begins in ${getMonthName(12)}. Current month: ${getMonthName(gameDate.gameMonth)}.`}
-          </p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Christmas Charts Race"
+      subtitle={subtitle}
+      icon={Gift}
+      backTo="/music/charts"
+      headerActions={
+        <Badge variant="outline" className="border-red-500/40 text-red-400 text-xs">
+          Year {gameDate.gameYear}
+        </Badge>
+      }
+    >
+
 
       {!isDecember ? (
         /* Off-season message */
@@ -349,7 +343,7 @@ const ChristmasCharts = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 };
 

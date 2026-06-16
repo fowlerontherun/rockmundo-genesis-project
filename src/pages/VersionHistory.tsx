@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.377",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7f (Charts, Stats & Finance tail). Migrated CompetitiveCharts, CountryCharts, ChristmasCharts, PlayerStatistics (root + /statistics index), Finances, finance/portfolio, analytics/experiments, HallOfFame, and HallOfImmortals to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `container mx-auto`/`max-w-3xl py-12` wrappers, `PageLayout`+`PageHeader` stacks, bespoke `<h1>` + back-arrow rows, and ad-hoc loading divs with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). Chart pages back-link to `/music/charts` (Christmas, Competitive) and `/hub/music` (CountryCharts); stats pages back-link to `/hub/character`; finance pages (Finances, finance/portfolio, analytics/experiments) back-link to `/hub/career-business`; Hall of Fame and Hall of Immortals back-link to `/hub/character`." },
+      { type: 'improvement', description: "Header CTAs/status moved into the `headerActions` slot at compact size: ChristmasCharts year badge, PlayerStatistics level badge + XP progress. Loading/locked-out branches (PlayerStatistics auth gate, analytics/experiments loading/error/empty states, Finances loading) now render inside the unified FM scaffold instead of standalone full-page wrappers." },
+    ],
+  },
+  {
     version: "1.1.376",
     date: "2026-06-16",
     changes: [
