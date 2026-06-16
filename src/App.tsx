@@ -335,10 +335,10 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/song/:songId" element={<PublicSong />} />
-                  <Route path="/app" element={<Layout />}>
-                    <Route index element={<Index />} />
+                  <Route element={<Layout />}>
                     <Route path="home" element={<Index />} />
                     <Route path="inbox" element={<Inbox />} />
+
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="wellness" element={<WellnessPage />} />
