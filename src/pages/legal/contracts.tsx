@@ -35,6 +35,8 @@ import {
   parseNegotiationTerms,
   submitNegotiation,
 } from "@/lib/workflows/contracts";
+import { FileText } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const formatDate = (value: string | null) => {
   if (!value) return "TBD";
@@ -187,14 +189,12 @@ const ContractsPage = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Contract Command Center</h1>
-        <p className="text-muted-foreground">
-          Review active label agreements, understand clause expectations, and coordinate negotiation moves with your
-          team.
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Contract Command Center"
+      subtitle="Review active label agreements, understand clause expectations, and coordinate negotiation moves with your team."
+      icon={FileText}
+      backTo="/hub/career-business"
+    >
 
       {contractsError && (
         <Card className="border-destructive/50 bg-destructive/5">
@@ -434,7 +434,7 @@ const ContractsPage = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 };
 

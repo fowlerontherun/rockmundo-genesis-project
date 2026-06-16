@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ClipboardList } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const architectureLayers = [
   {
@@ -235,14 +237,15 @@ const backgroundJobs = [
 
 const StageEquipmentSystemPlan = () => {
   return (
-    <div className="container mx-auto space-y-8 p-6">
-      <div className="space-y-4 text-center">
-        <Badge variant="outline" className="text-sm uppercase tracking-widest">Deployment &amp; Development Plan</Badge>
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold">ROCKMUNDO STAGE EQUIPMENT SYSTEM</h1>
-          <p className="text-muted-foreground">Full Deployment &amp; Development Plan - Version 1.0 (November 2025)</p>
-        </div>
-      </div>
+    <FMPageScaffold
+      title="Stage Equipment System"
+      subtitle="Full Deployment & Development Plan — Version 1.0 (November 2025)"
+      icon={ClipboardList}
+      backTo="/hub/band-live"
+      headerActions={
+        <Badge variant="outline" className="text-[10px] uppercase tracking-widest">Deployment Plan</Badge>
+      }
+    >
 
       <Card>
         <CardHeader>
@@ -454,7 +457,7 @@ const StageEquipmentSystemPlan = () => {
       <p className="text-center text-sm text-muted-foreground">
         This roadmap anchors the November 2025 launch scope for the Rockmundo Stage Equipment System and guides iteration across backend, frontend, and live operations.
       </p>
-    </div>
+    </FMPageScaffold>
   );
 };
 
