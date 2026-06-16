@@ -46,12 +46,12 @@ export default function SocialHub() {
   }, [tab, setSearchParams]);
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Social"
-        subtitle="Friends, family, chat & invites — all in one place."
-        icon={Users}
-      />
+    <FMPageScaffold
+      title="Social"
+      subtitle="Friends, family, chat & invites — all in one place."
+      icon={Users}
+      backTo="/hub/social"
+    >
 
       <Tabs
         value={tab}
