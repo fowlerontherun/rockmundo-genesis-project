@@ -14,6 +14,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.371",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7d (City, World & Politics tail). Migrated City, CityElection, MayorDashboard, RealtimeCommunication, SocialHub, community/feed, and reputation/media to the unified `FMPageScaffold` shell." },
+      { type: 'improvement', description: "Replaced legacy `PageLayout`+`PageHeader` stacks, `container mx-auto p-N max-w-Nxl` wrappers, and bespoke `<h1>` + back-arrow rows with scaffold props (`title`, `subtitle`, `icon`, `backTo`, `headerActions`). City/CityElection/MayorDashboard back-link to `/cities/:cityId`; SocialHub, community feed, and RealtimeCommunication back-link to `/hub/social`; reputation/media PR Command Center back-links to `/hub/social`." },
+      { type: 'improvement', description: "Header CTAs/status moved into the scaffold `headerActions` slot at compact size: City 'Travel here' button, CityElection 'Voting/Nomination Phase' badge, MayorDashboard approval-rating badge + Parliament shortcut, PR Command Center score + delta pill. Loading and access-denied branches now render inside the FM scaffold instead of standalone page wrappers." },
+      { type: 'fix', description: "Replaced explicit generic JSX (`<FMFilterBar<T>>`) usages in RecentActivitySection, BandFinanceDetail, and TransactionsList with inferred-generic call sites that cast the pill value at the boundary — esbuild's lov-id transform was choking on the generic angle brackets and breaking the dev build." },
+    ],
+  },
+  {
     version: "1.1.370",
     date: "2026-06-16",
     changes: [

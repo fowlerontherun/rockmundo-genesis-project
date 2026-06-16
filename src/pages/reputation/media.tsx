@@ -57,6 +57,8 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { RadioTower as RadioTowerIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const statusOptions: Array<{ value: MediaPrTaskStatus | "all"; label: string }> = [
@@ -303,28 +305,23 @@ const MediaReputationPage = () => {
   );
 
   return (
-    <div className="space-y-8 pb-12">
-      <header className="space-y-3">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-          <RadioTower className="h-4 w-4" /> Media Reputation Control
+    <FMPageScaffold
+      title="PR Command Center"
+      subtitle="Track media activations, sentiment swings, and timeline commitments."
+      icon={RadioTowerIcon}
+      backTo="/hub/social"
+      backLabel="Back to Social"
+      headerActions={
+        <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[10px]">
+          <TrendingUp className="h-3 w-3 text-emerald-500" />
+          <span className="font-medium text-foreground">Score {currentScore}</span>
+          <span className={scoreDelta >= 0 ? "text-emerald-600" : "text-red-600"}>
+            {scoreDelta >= 0 ? "+" : ""}{scoreDelta.toFixed(1)}
+          </span>
         </div>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">PR Command Center</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Track priority media activations, sentiment swings, and timeline commitments to protect and grow the brand.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 px-4 py-2 text-sm">
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
-            <span className="font-medium text-foreground">Current score {currentScore}</span>
-            <span className={scoreDelta >= 0 ? "text-emerald-600" : "text-red-600"}>
-              {scoreDelta >= 0 ? "+" : ""}
-              {scoreDelta.toFixed(1)} vs last
-            </span>
-          </div>
-        </div>
-      </header>
+      }
+    >
+
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-background/70">
@@ -569,7 +566,7 @@ const MediaReputationPage = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </FMPageScaffold>
   );
 };
 

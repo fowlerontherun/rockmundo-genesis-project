@@ -93,14 +93,14 @@ export const BandFinanceDetail = ({ bands, transactions }: BandFinanceDetailProp
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <FMFilterBar<PnlFilter>
+        <FMFilterBar
           label="Bands"
           search={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search band name…"
           pills={pills}
           activePill={pnlFilter}
-          onPillChange={setPnlFilter}
+          onPillChange={(v) => setPnlFilter(v as PnlFilter)}
         />
         <Table>
           <TableHeader>

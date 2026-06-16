@@ -2,8 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageLayout } from "@/components/ui/PageLayout";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Loader2, Users, MessageSquare, Heart, Compass, Inbox } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
@@ -47,12 +46,12 @@ export default function SocialHub() {
   }, [tab, setSearchParams]);
 
   return (
-    <PageLayout>
-      <PageHeader
-        title="Social"
-        subtitle="Friends, family, chat & invites — all in one place."
-        icon={Users}
-      />
+    <FMPageScaffold
+      title="Social"
+      subtitle="Friends, family, chat & invites — all in one place."
+      icon={Users}
+      backTo="/hub/social"
+    >
 
       <Tabs
         value={tab}
@@ -111,6 +110,6 @@ export default function SocialHub() {
           <InvitesInbox profileId={profileId} />
         </TabsContent>
       </Tabs>
-    </PageLayout>
+    </FMPageScaffold>
   );
 }
