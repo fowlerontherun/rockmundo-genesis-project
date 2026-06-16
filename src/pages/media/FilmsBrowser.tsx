@@ -173,7 +173,7 @@ const FilmsBrowser = () => {
           <p>No film productions found matching your criteria</p>
         </div>
       )}
-    </div>
+    </FMPageScaffold>
   );
 };
 
