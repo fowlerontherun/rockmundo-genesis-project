@@ -18,6 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 
 const formatClassWindowLabel = (startHour: number, endHour: number) => {
   const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
@@ -531,7 +532,7 @@ export default function UniversityDetail() {
   if (!university) {
     return (
       <FMPageScaffold title="University" icon={GraduationCap} backTo="/education">
-        <div className="p-6">Loading...</div>
+        <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs />
       </FMPageScaffold>
     );
   }

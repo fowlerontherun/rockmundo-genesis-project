@@ -29,6 +29,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 import { COMPANY_TYPE_INFO } from "@/types/company";
 import type { Company } from "@/types/company";
 import { formatDistanceToNow, format } from "date-fns";
