@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
+import { DEV_MOCK_PODCASTS, DEV_GUEST_BAND, withDevPodcastFallback } from "@/dev/mockPodcasts";
 import {
   Podcast, Mic, Headphones, Star, Search, Filter, Globe,
   TrendingUp, DollarSign, Send, CheckCircle
