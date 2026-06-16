@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.373",
+    date: "2026-06-16",
+    changes: [
+      { type: 'fix', description: "Purged cron job history: cleared 243,241 rows from public.cron_job_runs (app-side log) and emptied pg_cron's internal cron.job_run_details. Schedule definitions in cron.job and cron_job_config remain intact and continue running." },
+    ],
+  },
+  {
     version: "1.1.372",
     date: "2026-06-16",
     changes: [
