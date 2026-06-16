@@ -123,33 +123,18 @@ const MagazinesBrowser = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-64" />
-          ))}
-        </div>
-      </div>
+      <FMPageScaffold title="Magazines" subtitle="Browse magazines for features and interviews" icon={BookOpen}>
+        <FMPageSkeleton kpiCount={0} actionCount={4} bodyBlocks={2} />
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <BookOpen className="h-8 w-8 text-primary" />
-          Magazines
-        </h1>
-        <p className="text-muted-foreground">
-          Browse magazines for features and interview opportunities
-          {currentCity && (
-            <span className="ml-2 text-xs">
-              <MapPin className="h-3 w-3 inline" /> Currently in {currentCity.name}, {currentCity.country}
-            </span>
-          )}
-        </p>
-      </div>
+    <FMPageScaffold
+      title="Magazines"
+      subtitle={currentCity ? `Browse magazines for features — currently in ${currentCity.name}, ${currentCity.country}` : "Browse magazines for features and interview opportunities"}
+      icon={BookOpen}
+    >
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
