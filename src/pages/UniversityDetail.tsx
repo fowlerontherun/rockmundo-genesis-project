@@ -529,16 +529,23 @@ export default function UniversityDetail() {
   );
 
   if (!university) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <FMPageScaffold title="University" icon={GraduationCap} backTo="/education">
+        <div className="p-6">Loading...</div>
+      </FMPageScaffold>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-stage p-6">
-      <div className="container mx-auto max-w-6xl space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/education")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Education
-        </Button>
+    <FMPageScaffold
+      title={university.name}
+      subtitle={university.city || undefined}
+      icon={GraduationCap}
+      backTo="/education"
+    >
+      <div className="space-y-6">
+
+
 
 
         {/* Show enrollment progress if user is enrolled */}
