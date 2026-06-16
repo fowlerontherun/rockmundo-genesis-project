@@ -11,7 +11,7 @@ import { CraftingProgress } from "@/components/crafting/CraftingProgress";
 import { SalvagePanel } from "@/components/crafting/SalvagePanel";
 import { CraftedItemReveal } from "@/components/crafting/CraftedItemReveal";
 import { EnchantmentPanel } from "@/components/crafting/EnchantmentPanel";
-import { Badge as _StatusBadge } from "@/components/ui/badge";
+
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const CraftingWorkshop = () => {
