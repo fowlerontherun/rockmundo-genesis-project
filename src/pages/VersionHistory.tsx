@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.383",
+    date: "2026-06-16",
+    changes: [
+      { type: 'feature', description: "FM24 standardization — Phase 7k (Film detail). Added a dedicated `FilmDetail` page at `/media/films/:id` scaffolded via `FMPageScaffold` (icon `Film`, `backTo=/media/films`, back label `Back to Films`, status badge in `headerActions`). Page renders compensation / minimum fame / filming duration / rewards as KPI-style cards plus a production details block (studio, genre/type chips, description) and reuses `FMPageSkeleton` for loading and a not-found fallback inside the same scaffold." },
+      { type: 'improvement', description: "Refactored `FilmsBrowser` cards to wrap each film in a `<Link to={'/media/films/:id'}>` (with focus-visible ring + full-height card) so the browser now deep-links into the new detail route. Removed the unused `Skeleton` import." },
+      { type: 'improvement', description: "Registered the lazy `FilmDetail` import and `media/films/:id` route in `App.tsx` so the new page participates in the standard layout/Suspense pipeline." },
+    ],
+  },
+  {
     version: "1.1.382",
     date: "2026-06-16",
     changes: [

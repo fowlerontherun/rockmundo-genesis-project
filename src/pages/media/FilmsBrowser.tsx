@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Film, DollarSign, Star, Search, Filter, Clapperboard } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
+
 
 interface FilmProduction {
   id: string;
@@ -122,49 +123,52 @@ const FilmsBrowser = () => {
       {/* Films Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredFilms?.map(film => (
-          <Card key={film.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{film.title}</CardTitle>
-                <Badge variant={film.is_available ? "default" : "secondary"}>
-                  {film.is_available ? 'Available' : 'Unavailable'}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {film.film_type?.replace('_', ' ')}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {film.genre && (
-                <Badge variant="outline">{film.genre}</Badge>
-              )}
-              <div className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span>{formatCompensation(film.compensation_min, film.compensation_max)}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Star className="h-4 w-4 text-muted-foreground" />
-                <span>Min Fame: {film.min_fame_required}</span>
-              </div>
-              {film.filming_duration_days && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Clapperboard className="h-4 w-4 text-muted-foreground" />
-                  <span>{film.filming_duration_days} filming days</span>
+          <Link key={film.id} to={`/media/films/${film.id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
+            <Card className="hover:shadow-lg transition-shadow h-full">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg">{film.title}</CardTitle>
+                  <Badge variant={film.is_available ? "default" : "secondary"}>
+                    {film.is_available ? 'Available' : 'Unavailable'}
+                  </Badge>
                 </div>
-              )}
-              {film.fame_boost && (
-                <div className="text-sm text-green-600">
-                  +{film.fame_boost} fame boost
-                </div>
-              )}
-              {film.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {film.description}
+                <p className="text-sm text-muted-foreground">
+                  {film.film_type?.replace('_', ' ')}
                 </p>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {film.genre && (
+                  <Badge variant="outline">{film.genre}</Badge>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span>{formatCompensation(film.compensation_min, film.compensation_max)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Star className="h-4 w-4 text-muted-foreground" />
+                  <span>Min Fame: {film.min_fame_required}</span>
+                </div>
+                {film.filming_duration_days && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clapperboard className="h-4 w-4 text-muted-foreground" />
+                    <span>{film.filming_duration_days} filming days</span>
+                  </div>
+                )}
+                {film.fame_boost && (
+                  <div className="text-sm text-green-600">
+                    +{film.fame_boost} fame boost
+                  </div>
+                )}
+                {film.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {film.description}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         ))}
+
       </div>
 
       {filteredFilms?.length === 0 && (
