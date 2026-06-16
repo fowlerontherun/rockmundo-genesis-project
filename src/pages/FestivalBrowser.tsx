@@ -520,6 +520,6 @@ export default function FestivalBrowser() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FMPageScaffold>
   );
 }
