@@ -214,6 +214,6 @@ export default function Roulette() {
           New Spin
         </Button>
       )}
-    </div>
+    </FMPageScaffold>
   );
 }
