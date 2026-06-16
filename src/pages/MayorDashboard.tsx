@@ -31,6 +31,7 @@ import {
   Hammer,
   Megaphone
 } from "lucide-react";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCityMayor, useIsCurrentMayor, useUpdateCityLaws } from "@/hooks/useMayorDashboard";
