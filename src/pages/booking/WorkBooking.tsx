@@ -11,6 +11,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ACTIVITY_TYPES = [
   { value: "work", label: "Work Shift", icon: Briefcase },
