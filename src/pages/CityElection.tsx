@@ -98,25 +98,18 @@ export default function CityElection() {
 
   if (electionLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
+      <FMPageScaffold title="Mayoral Election" icon={Vote} backTo={`/cities/${cityId}`} backLabel="Back to City">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="h-64 bg-muted rounded" />
         </div>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   if (!election) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to={`/cities/${cityId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to City
-          </Link>
-        </Button>
-        
+      <FMPageScaffold title="Mayoral Election" subtitle={city?.name} icon={Vote} backTo={`/cities/${cityId}`} backLabel="Back to City">
         <Card className="text-center py-12">
           <CardContent>
             <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-40" />
@@ -129,35 +122,24 @@ export default function CityElection() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </FMPageScaffold>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Button variant="ghost" asChild className="mb-2">
-            <Link to={`/cities/${cityId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to {city?.name || "City"}
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Vote className="h-6 w-6 text-primary" />
-            Mayoral Election - Year {election.election_year}
-          </h1>
-          <p className="text-muted-foreground">{city?.name}, {city?.country}</p>
-        </div>
-        
-        <Badge 
-          variant={isVotingPhase ? "default" : "secondary"} 
-          className="text-lg px-4 py-2"
-        >
+    <FMPageScaffold
+      title={`Mayoral Election — Year ${election.election_year}`}
+      subtitle={city ? `${city.name}, ${city.country}` : undefined}
+      icon={Vote}
+      backTo={`/cities/${cityId}`}
+      backLabel={`Back to ${city?.name || "City"}`}
+      className="max-w-4xl"
+      headerActions={
+        <Badge variant={isVotingPhase ? "default" : "secondary"} className="text-[10px]">
           {isVotingPhase ? "Voting Phase" : "Nomination Phase"}
         </Badge>
-      </div>
+      }
+    >
 
       {/* Election Status Card */}
       <Card>
