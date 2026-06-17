@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Bus, Building2, Home, Car, Disc3, Landmark } from "lucide-react";
+import { Globe, Plane, Building2, MapPin, Calendar, Hammer, Flag, BarChart3, Vote, Radio, Star } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldHub() {
@@ -9,17 +9,28 @@ export default function WorldHub() {
   return (
     <CategoryHub
       titleKey="nav.world"
-      description="Explore cities, travel, tour, and find housing."
-      tiles={[
-        { icon: Globe, labelKey: "nav.cities", path: "/cities", imagePrompt: "A world map with glowing city pins showing major music capitals like London, NYC, Tokyo" },
-        { icon: Plane, labelKey: "nav.travel", path: "/travel", imagePrompt: "An airplane flying over iconic landmarks with a passport and boarding pass" },
-        { icon: Bus, labelKey: "nav.tours", path: "/tour-manager", imagePrompt: "A tour bus route map with concert dates pinned across different cities" },
-        { icon: Building2, labelKey: "nav.currentCity", path: cityPath, imagePrompt: "A vibrant city skyline with neon signs, music venues, and nightlife" },
-        { icon: Disc3, labelKey: "Nightclubs", path: "/nightclubs", imagePrompt: "A dark neon-lit nightclub interior with DJ booth, turntables, laser lights and dancing crowd" },
-        { icon: Globe, labelKey: "nav.worldPulse", path: "/world-pulse", imagePrompt: "A pulse/heartbeat line overlaid on a globe showing trending music events worldwide" },
-        { icon: Landmark, labelKey: "World Parliament", path: "/world-parliament", imagePrompt: "A grand classical parliament chamber with rows of seats, glowing chandelier, and a speaker's podium" },
-        { icon: Home, labelKey: "Housing", path: "/housing", imagePrompt: "A cozy musician apartment with posters, instruments, and city view from the window" },
-        { icon: Car, labelKey: "Cars & Motorbikes", path: "/personal-vehicles", imagePrompt: "A stylish garage with a luxury car and a custom motorbike under neon lights" },
+      description="Explore places, travel between them, and shape politics."
+      groups={[
+        {
+          label: "Explore",
+          tiles: [
+            { icon: Globe, labelKey: "nav.cities", path: "/cities", imagePrompt: "A world map with glowing city pins showing major music capitals" },
+            { icon: Building2, labelKey: "nav.currentCity", path: cityPath, tileImageKey: "current-city", imagePrompt: "A vibrant city skyline with neon signs and music venues" },
+            { icon: Plane, labelKey: "nav.travel", path: "/travel", imagePrompt: "An airplane flying over iconic landmarks with a passport and boarding pass" },
+            { icon: Radio, labelKey: "nav.worldPulse", path: "/world-pulse", imagePrompt: "A pulse line overlaid on a globe showing trending music events" },
+            { icon: Star, labelKey: "City Landmarks", path: "/landmarks", imagePrompt: "Famous city landmarks lit up at night with crowds and music posters" },
+            { icon: Calendar, labelKey: "Seasonal Events", path: "/seasonal-events", imagePrompt: "A calendar showing seasonal music festivals and holiday events" },
+          ],
+        },
+        {
+          label: "Politics",
+          tiles: [
+            { icon: Hammer, labelKey: "World Parliament", path: "/world-parliament", imagePrompt: "A grand parliament chamber with delegates debating policy" },
+            { icon: Flag, labelKey: "Political Parties", path: "/political-party", tileImageKey: "political-party", imagePrompt: "A political party headquarters with flags and a podium" },
+            { icon: BarChart3, labelKey: "Party Standings", path: "/political-party/standings", tileImageKey: "party-standings", imagePrompt: "A leaderboard showing political party rankings and vote counts" },
+            { icon: Vote, labelKey: "Politics Career", path: "/politics-career", tileImageKey: "politics-career", imagePrompt: "A politician at a podium giving a campaign speech with cameras and a crowd" },
+          ],
+        },
       ]}
     />
   );

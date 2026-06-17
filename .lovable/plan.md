@@ -1,111 +1,96 @@
-## Goal
 
-Bring every page in RockMundo to a single Football Manager 2024 look & feel — same chrome, same density, same data/stats/analysis patterns — and guarantee that in-game chat (DMs + thread + presence) is reachable from every screen without leaving the current page.
+# Navigation & Page Grouping Restructure
 
-This plan is execution-only: no design exploration, no new visual direction. The FM24 token set, shell, and primitives already exist (`src/components/fm/*`, `src/index.css`, `fmNavigation.ts`); the work is auditing, migrating, and filling gaps.
+## Why this is needed
 
-## Current state (audit findings)
+Auditing `src/config/fmNavigation.ts`, the hub pages in `src/pages/hubs/`, and the ~180 routes in `src/App.tsx`, the current IA has clear problems:
 
-- **Shell** is in place (`FMShell` = TopStatusBar + ModuleTabs + SubTabs + FMSidebar + main + BottomActionBar) and wraps the authenticated app via `Layout.tsx`.
-- **FM primitives** exist: `PanelCard`, `DataTable`, `AttrCell`, `FMFilterBar`, `SubTabs`, `ModuleTabs`, `BottomActionBar`.
-- **Global shadcn primitives** (Card, Tabs, Table, Button, PageHeader) have already been re-skinned to FM tokens, so any page using shadcn inherits the look for free.
-- **~280 page files** in `src/pages/` (incl. subfolders). Of those, **~145** don't use `PageHeader`/`PageLayout`/`StandardPageLayout` — they roll their own headers, paddings, and stat blocks. They render correctly inside the FM shell but feel inconsistent (oversized titles, rounded cards, ad-hoc spacing, custom KPI tiles, non-dense tables).
-- **Chat**: `DirectMessageThread`, `MessagesTab`, and friend presence already exist under `src/features/social-hub/`, but chat is only reachable from `/social` and a few entry points. There is no global, persistent chat affordance.
-- **Stats/analysis**: each domain has bespoke KPI tiles, charts, and breakdowns (Finances, BandFinance, Charts, Twaater analytics, Streaming revenue, Awards, Statistics, etc.). Density, label casing, number formatting, and chart styling are not unified.
+- **Duplicated taxonomies** — every section is defined twice: once in `FM_MODULES` (top nav + sidebar) and once in a `CategoryHub` tile page. The two disagree (e.g. `MusicHubPage` lists Education, Music Videos, Country Charts; the `Music` module sidebar doesn't).
+- **Orphaned pages** — Music Videos, Acting, Radio, TV, Newspapers, Magazines, Podcasts, Films, Websites, Self-Promotion, Major Events, Eurovision, Busking, Open Mic, Jam Sessions, Housing, Personal Vehicles, Casino, Lottery, Family, Relationships, Producer/Modeling/Clothing Designer, Hall of Fame, Journal, Premium Store, Blind Boxes are reachable only from a hub tile or a deep link — they never appear in the sidebar of any module.
+- **Wrong module ownership** — Politics sits under `World` in the module bar but under `Career & Business` in the hub. Merchandise appears in both `Career` and `Store`. Statistics appears in `Overview` sidebar and in `Character` hub. Producer Career, Modeling, Clothing Designer are tile-only.
+- **Live vs Band split is arbitrary** — Rehearsals, Setlists, Stage Setup, Stage Equipment toggle between the two; Open Mic / Jam / Busking aren't in either sidebar.
+- **Hub layer is redundant** — `/hub/character`, `/hub/music`, `/hub/band-live`, `/hub/world-social`, `/hub/career-business` repeat what the sidebar already does, and use a different grouping.
 
-## Target FM24 standard (the "definition of done" each page is migrated to)
+## Target information architecture
 
-1. **Chrome**: page renders inside `FMShell` (already true) and uses `PageHeader` (40px FM strip) for its own header — no custom title blocks.
-2. **Layout**: content sits in `PanelCard`s on a 12px gutter grid; no rounded corners; no max-width clamps; full FM-shell width.
-3. **KPI strip**: every domain page exposes a top "KPI bar" of 4–8 compact `AttrCell`s (10px uppercase label + tabular-nums value + delta) — standard for at-a-glance stats.
-4. **Filters**: any list/table view sits behind a single `FMFilterBar` (search + pills + right-slot dropdown + reset).
-5. **Tables**: lists render through the FM `DataTable` (28px rows, sticky `fm-panel-2` header, zebra, hover wash, column sort, optional pin).
-6. **Analysis panel**: numeric/stat pages get an "Analysis" `PanelCard` containing one chart (Recharts, FM-tokened) + a 2-column comparison table. Standard layout — no bespoke chart wrappers.
-7. **Footer actions**: primary actions live in `BottomActionBar` (not floating Cards mid-page).
-8. **Color & type**: only FM tokens (`fm-bg`, `fm-panel`, `fm-panel-2`, `fm-border`, `fm-fg`, `fm-fg-muted`, `fm-accent`, `fm-good`, `fm-bad`, `fm-warn`). No `bg-white`, `text-white`, raw `purple/indigo`, or gradients.
-
-## Phased rollout
-
-### Phase 1 — Foundation primitives & shared widgets (1 PR, no page edits)
-Build the missing pieces so subsequent phases are mechanical migrations.
-
-- `FMKpiBar` — horizontal strip of `AttrCell`s with overflow scroll on narrow shells; props: `items: { label, value, delta?, tone? }[]`.
-- `FMSection` — replaces ad-hoc `<section>` blocks: title strip (uppercase 11px) + collapsible body + optional right-slot.
-- `FMStatChart` — Recharts wrapper preset to FM tokens (axis color, grid color, tooltip surface). Variants: `line`, `bar`, `area`, `stacked`.
-- `FMAnalysisPanel` — composes `FMStatChart` + a side `DataTable` for "compare / breakdown" views.
-- `FMPageScaffold` — wrapper enforcing `PageHeader` + KPI strip slot + content slot + bottom actions slot; replaces `StandardPageLayout` over time.
-- `FMEmpty`, `FMLoading`, `FMError` — three standardized states.
-- Lint guard: add a small ESLint rule (custom or `no-restricted-syntax`) that warns on `bg-white|text-white|from-purple|rounded-2xl` inside `src/pages/`.
-
-### Phase 2 — Always-on in-game chat (1 PR)
-Anchor chat in the shell so it follows the player everywhere.
-
-- New `FMChatDock` mounted inside `FMShell` (below `BottomActionBar`, fixed bottom-right, 320px wide collapsible rail).
-  - Collapsed state: 32px tab "Chat (n)" with unread badge.
-  - Expanded state: friends list (presence dots), unread DMs first, click → opens a stacked `FMChatWindow` (one or two side-by-side, max 360px each).
-- `FMChatWindow` wraps existing `DirectMessageThread` so we keep current send/receive logic and Supabase realtime.
-- Global hook `useChatDock()` exposes `openThread(profileId)`, `closeThread(id)`, `minimize()` — reused by any page that wants a "Message" button (Friends, BandRoster, PlayerProfile, etc.).
-- Reachability rule: dock renders on every authenticated route (inside `FMShell`), suppressed only on `/auth`, `/onboarding`, and modal-only flows like gig viewer fullscreen.
-- Push unread counts into `TopStatusBar` (small message icon + count) as a secondary entry point.
-- Voice (existing `DirectVoiceChat`) attaches to an open `FMChatWindow` via a header icon — no separate page needed.
-
-### Phase 3 — Module hubs (`src/pages/hubs/*`, 14 files)
-Hubs are the player's home for each module — they must be the visual reference for everything below them.
-
-- Migrate all 14 hubs (`CharacterHub`, `MusicHubPage`, `BandHub`, `LiveHub`, `BandLiveHub`, `CareerBusinessHub`, `CareerHub`, `WorldHub`, `WorldSocialHub`, `SocialHub`, `CommerceHub`, `MediaHub`, `EventsHub`, `PremiumStoreHub`) to `FMPageScaffold` + `FMKpiBar` + tile grid using `PanelCard`.
-- Standardize tile anatomy: 80×80 image, label, 1-line stat, status dot. No more 10-column custom layouts.
-
-### Phase 4 — Core gameplay loops (high-traffic pages)
-Hit the screens players see daily; each phase is a self-contained PR.
-
-- **4a Music loop**: `Dashboard`, `Songwriting`, `RecordingStudio`, `ReleaseManager`, `ReleaseDetail`, `Songs/SongManager`, `MusicVideos`, `SongMarket`, `SongRankings`, `music/charts`, `StagePractice`, `Streaming*` (6 files).
-- **4b Band loop**: `BandManager`, `EnhancedBandManager`, `SimpleBandManager`, `BandRepertoire`, `BandRiders`, `BandVehicles`, `BandCrewManagement`, `BandChemistry`, `BandRankings`, `BandFameMap`, `BandFinder`, `BandBrowser`, `BandSearch`, `BandProfile`, `bands/[bandId]/management`.
-- **4c Live loop**: `GigBooking`, `PerformGig`, `OpenMicNights`, `PerformOpenMic`, `MajorEvents`, `PerformMajorEvent`, `Festivals`, `FestivalsNew`, `FestivalBrowser`, `FestivalDetail`, `FestivalPerformance`, `TourManager`, `TouringSystem`, `Awards`, `AwardShows`, `HallOfFame`, `HallOfImmortals`, `StagePractice`, `StageSetup`, `StageEquipmentSystem`, `Eurovision`.
-- **4d Finance/Career**: `Finances`, `finance/portfolio`, `Sponsorships`, `Employment`, `Education`, `Teaching`, `RecordLabel`, `LabelManagement`, business management pages, `OffersDashboard`, `booking/*`.
-
-### Phase 5 — World, social & commerce
-- **5a World**: `WorldMap`, `WorldPulse`, `WorldParliament`, `PoliticalParty`, `PartyStandings`, `PoliticsCareer`, `MayorDashboard`, `City*`, `Travel`, `WorldEnvironment`.
-- **5b Social/Media**: `SocialHub` (page), `Relationships`, `Twaater*` (8 files), `DikCok`, `Gettit`, `Inbox`, `PublicRelations`, `Radio*`, `MediaNetworks`, `Journal`, `TodaysNews`.
-- **5c Commerce/Identity**: `Gear`, `MyGear`, `EnhancedEquipmentStore`, `ClothingShop`, `ClothingDesigner`, `SkinStore`, `BlindBox*`, `CraftingWorkshop`, `InventoryManager`, `Merchandise`, `commerce/merch`, `TattooParlour`, `AvatarDesigner`, `MyCharacterEdit`, `Characters`, `BuyCharacterSlot`.
-
-### Phase 6 — Stats & analysis standardization (cross-cutting)
-The user explicitly called out "details statistics and analysis." This phase rebuilds those surfaces on the new shared widgets.
-
-- `PlayerStatistics`, `statistics/*`, `analytics/*`, `TwaaterAnalytics`, `BlindBoxAnalytics`, `StreamingRevenueDashboard`, `CompetitiveCharts`, `CountryCharts`, `ChristmasCharts`, `Awards`, `music/charts`, `competitive/*`.
-- Every analytical page must use: `FMKpiBar` (snapshot), `FMAnalysisPanel` (chart + breakdown), `FMFilterBar` (timeframe/segment), `DataTable` (raw rows), and an export button in `BottomActionBar`.
-- Add a `useFmStats(scope)` hook that returns standard timeframes (7d / 30d / season / career) so every page exposes the same range selector.
-
-### Phase 7 — Admin & long-tail (~80 files)
-- `Admin*`, `admin/*` (20+ files), `legal/*`, `legacy/*`, `community/*`, `competitive/*`, `culture/*`, `family/*`, `talent/*`, `tours/*`, `side-hustles/*`, `skills/*`, `studio/*`, `wellness/*`, `casino/*`, `events/*`, `dashboard/*`, `media/*`, `business/*`.
-- Mostly mechanical — wrap in `FMPageScaffold`, swap KPI tiles for `FMKpiBar`, swap tables for `DataTable`.
-
-### Phase 8 — Cleanup & enforcement
-- Remove `PageLayout` / `StandardPageLayout` once unused; keep `PageHeader` as the canonical 40px strip.
-- Delete bespoke chart wrappers replaced by `FMStatChart`.
-- Promote the ESLint guard from Phase 1 from `warn` to `error`.
-- Snapshot pass: capture every top-level route at 1440px to confirm the same shell, KPI strip, panel grid, and chat dock.
-- Update `mem://style/*` notes so future work defaults to FM tokens and the FM scaffold.
-
-## Per-page migration checklist (used in every phase)
+Eight top-level modules. Every page in the app maps to exactly one module and appears in that module's sidebar. Hubs become the module's landing page (the tile grid IS the module home), so the duplication collapses.
 
 ```text
-[ ] Remove custom outer <div>/<section> wrappers
-[ ] Wrap in <FMPageScaffold title=... icon=... subtitle=...>
-[ ] Replace custom KPI tiles with <FMKpiBar items={...} />
-[ ] Replace ad-hoc filter rows with <FMFilterBar />
-[ ] Replace shadcn <Table> usage with <DataTable />
-[ ] Replace charts with <FMStatChart /> / <FMAnalysisPanel />
-[ ] Move primary CTAs to <BottomActionBar />
-[ ] Strip non-FM color classes; rely on tokens
-[ ] Add "Message" buttons that call useChatDock().openThread(profileId)
+1. OVERVIEW       Dashboard, Inbox, Schedule, Journal, Today's News, Statistics, Achievements
+2. CHARACTER      Characters roster, Edit, Avatar, Skin store, Tattoos, Wellness, Gear, Inventory,
+                   Housing, Personal Vehicles, Family, Relationships, Legacy, Hall of Immortals
+3. MUSIC          Songwriting, Stage Practice, Education, Recording Studio, Release Manager,
+                   Releases, Music Videos, Streaming Platforms, Charts, Country/Christmas Charts,
+                   Song Rankings, Song Market
+4. BAND & LIVE    Band Manager, Repertoire, Chemistry, Setlists, Rehearsals, Crew, Riders,
+                   Vehicles, Stage Setup, Stage Equipment, Browse/Finder/Rankings/Fame Map,
+                   Gig Booking, My Gigs, Open Mic, Jam Sessions, Busking, Tours, Festivals,
+                   Major Events, Eurovision, Awards
+5. CAREER         Finances, Sponsorships, Employment, Teaching, Offers, PR, Producer Career,
+                   Modeling, Acting, Clothing Designer, Companies (Label, Venues, Merch Factory,
+                   Logistics, Security, Studios), Merchandise
+6. MEDIA          Radio, TV Shows, Newspapers, Magazines, Podcasts, Films, Websites,
+                   Self-Promotion, PR History  (consumer-facing media browsing — distinct from PR)
+7. WORLD          World Map, Cities, Travel, World Pulse, World Parliament, Political Party,
+                   Party Standings, Politics Career, City Election/Mayor, Landmarks,
+                   Seasonal Events Calendar, Today's News (cross-link)
+8. SOCIAL         Social Hub, Friends, Twaater (+ messages/notifs/analytics), DikCok, Gettit,
+                   Casino, Lottery, Underworld, Nightclubs, Premium Store, Blind Boxes
 ```
 
-## Versioning
+Admin stays as a 9th module, visible only to admins.
 
-Each phase ships as one PR and bumps the patch version (1.1.361 → 1.1.36N), with a matching `VersionHistory` entry listing every page touched and every new/changed primitive. No business logic changes — UI/composition only.
+### Key reassignments (vs today)
 
-## Out of scope
+- **Politics** → moves out of `World` sidebar duplication and out of `Career` hub; lives in **World** only.
+- **Merchandise** → leaves `Store`; lives in **Career** (it's a business line).
+- **Gear / Inventory / Clothing Shop / Tattoo Parlour / Housing / Vehicles** → leave `Store`; live in **Character** (personal property).
+- **Producer / Modeling / Acting / Clothing Designer** → consolidated under **Career → Creative Industries**.
+- **Radio / TV / Newspapers / Magazines / Podcasts / Films / Websites** → new **Media** module (consumer side), separate from `Social` (peer platforms) and from `PR` (outbound career action).
+- **Casino / Lottery / Underworld / Nightclubs** → **Social** (nightlife & vice), removed from World/Commerce.
+- **Open Mic / Jam Sessions / Busking / Rehearsals / Setlists** → all under **Band & Live** (merged the two modules — the split was artificial).
+- **Statistics / Journal / Today's News / Achievements** → **Overview** (the "look back" surface).
+- **`Store` module is retired**; its content moves to Character/Career/Social as above. The Premium Store stays under Social as the cosmetic/monetisation entry point.
 
-- New gameplay mechanics, balance changes, or schema changes.
-- Mobile-specific FM layout (FM24 is desktop-first; mobile retains its existing 360px stack).
-- Visual redesign or palette changes — FM24 tokens are locked.
+## Implementation
+
+Pure presentation work — no route changes, no business logic, no DB. Only nav config and hub pages.
+
+### Files to edit
+
+1. **`src/config/fmNavigation.ts`** — rewrite `FM_MODULES` to the 8-module structure above. Each module gets:
+   - `subTabs` = 4–6 most-used pages in that module
+   - `sidebar` = 2–4 labelled groups covering every page that module owns
+   - `matchPaths` = every route prefix the module owns, so `findModuleForPath` resolves correctly and the active highlight is right.
+   Drop the `commerce` module entry.
+
+2. **`src/pages/hubs/`** — rewrite each hub's tile list so it mirrors the matching module's sidebar exactly (same groups, same order). Hubs become the visual landing page; the sidebar becomes the textual index of the same content. Specifically update:
+   - `CharacterHub.tsx` — add Housing, Personal Vehicles, Family, Relationships, Inventory, Clothing Shop; group as Identity / Property / Relationships / Legacy.
+   - `MusicHubPage.tsx` — add Music Videos, Christmas Charts; remove Education (Career owns it for the bookable course; Music keeps Stage Practice + Songwriting).
+   - Rename `BandLiveHub.tsx` → keep file, retitle to "Band & Live" and add Open Mic / Jam / Busking / Major Events / Eurovision groups.
+   - `CareerBusinessHub.tsx` — remove Politics group; add Acting, consolidate Creative Industries; keep Companies group.
+   - Rename `WorldSocialHub.tsx` → split into:
+     - `WorldHub.tsx` (World Map, Cities, Travel, Pulse, Parliament, Politics, Seasonal Events, Landmarks)
+     - `SocialHub.tsx` page (Social Hub, Twaater, DikCok, Gettit, Casino, Lottery, Underworld, Nightclubs, Premium Store, Blind Boxes)
+   - New `MediaHub.tsx` for the Media module.
+
+3. **`src/App.tsx`** — add routes for the two new hub pages (`/hub/world`, `/hub/social`, `/hub/media`) and update the legacy redirects so old `/hub/*` URLs resolve to the new hubs. No other route changes.
+
+4. **`src/components/fm/TopStatusBar.tsx`** — the "character" shortcut already points to `/hub/character`; no change needed beyond verifying it after the rename pass.
+
+5. **`src/components/VersionHeader.tsx`**, **`src/components/fm/BottomActionBar.tsx`**, **`src/pages/VersionHistory.tsx`** — bump to next patch version with a "Navigation IA restructure" entry per project rule.
+
+### Out of scope
+
+- No route URLs change (only redirects added). Existing bookmarks keep working.
+- No component logic, queries, or DB touched.
+- Mobile gate, landing page, auth: unchanged.
+
+### Verification
+
+- After edits, click each of the 8 module tabs and confirm: (a) the sidebar shows every page the module owns, (b) no page appears in two modules' sidebars, (c) `findModuleForPath` highlights the right tab when you deep-link to any of the orphaned pages above.
+- Spot-check with Playwright on `/dashboard`, `/hub/music`, `/hub/band-live`, `/hub/world`, `/hub/social`, `/hub/media`, `/hub/career-business`, `/hub/character` — screenshot each.
+
+## Open question
+
+Should **Education** sit under **Music** (skill-building feels musical) or **Career** (it's a bookable time-sink alongside Employment/Teaching)? Current plan puts it in **Career**; happy to move it if you'd rather it sit beside Songwriting.

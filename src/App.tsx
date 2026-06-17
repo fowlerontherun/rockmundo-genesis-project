@@ -296,6 +296,9 @@ const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
+const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
+const SocialHubLanding = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
+const MediaHub = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
 const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
 const CityLandmarks = lazyWithRetry(() => import("./pages/CityLandmarks"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
@@ -512,13 +515,15 @@ function App() {
                     <Route path="landmarks" element={<CityLandmarks />} />
                     {/* Bare /hub goes to dashboard (no hub index page exists) */}
                     <Route path="hub" element={<Navigate to="/dashboard" replace />} />
+                    {/* New split hubs */}
+                    <Route path="hub/world" element={<WorldHub />} />
+                    <Route path="hub/social" element={<SocialHubLanding />} />
+                    <Route path="hub/media" element={<MediaHub />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
-                    <Route path="hub/world" element={<Navigate to="/hub/world-social" replace />} />
-                    <Route path="hub/social" element={<Navigate to="/hub/world-social" replace />} />
-                    <Route path="hub/media" element={<Navigate to="/hub/world-social" replace />} />
+                    <Route path="hub/world-social" element={<Navigate to="/hub/world" replace />} />
                     <Route path="hub/career" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="hub/commerce" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="modeling" element={<Modeling />} />
