@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.397",
+    date: "2026-06-17",
+    changes: [
+      { type: 'improvement', description: "Navigation IA restructure: top nav reorganised from 8 overlapping modules into 8 clean ones — Overview, Character, Music, Band & Live (merged), Career, Media (new), World, Social — plus Admin. Every page now lives in exactly one module sidebar; previously orphaned pages (Music Videos, Acting, Radio/TV/Press/Podcasts/Films, Open Mic, Jam Sessions, Busking, Housing, Personal Vehicles, Casino, Lottery, Underworld, Nightclubs, Family, Producer Career, Modeling, Clothing Designer, Premium Store, Blind Boxes, Statistics, Journal, Today's News) are now reachable from the sidebar. Politics moved out of Career into World only. Merchandise moved into Career (Companies). Gear/Inventory/Housing/Vehicles moved into Character (Property). Nightlife & vice (Casino/Lottery/Underworld/Nightclubs) moved into Social. Hub pages (`/hub/character`, `/hub/music`, `/hub/band-live`, `/hub/career-business`) rewritten so their tile groups mirror the matching module sidebar 1:1. New `/hub/world`, `/hub/social`, `/hub/media` landing pages added; `/hub/world-social` redirects to `/hub/world`. Pure presentation change — no routes removed, no business logic touched." },
+    ],
+  },
+  {
     version: "1.1.396",
     date: "2026-06-16",
     changes: [
