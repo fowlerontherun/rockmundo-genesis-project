@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { FMSection } from "@/components/fm/FMSection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHubTileImage } from "@/hooks/useHubTileImage";
 import { cn } from "@/lib/utils";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, type LucideIcon } from "lucide-react";
 
 interface HubTile {
   icon: LucideIcon;
@@ -21,89 +20,242 @@ interface TileGroup {
   tiles: HubTile[];
 }
 
+export interface HubStat {
+  label: string;
+  value: string | number;
+  hint?: string;
+}
+
 interface CategoryHubProps {
   titleKey: string;
   description?: string;
   tiles?: HubTile[];
   groups?: TileGroup[];
+  /** Optional KPIs rendered in the magazine sidebar next to the hero tile. */
+  stats?: HubStat[];
+  /** Optional featured-tile metadata; defaults to the first tile in `tiles` or in the first group. */
+  featuredEyebrow?: string;
+  featuredHeadline?: string;
+  featuredCopy?: string;
 }
 
-/** FM-style dense tile: 56px thumbnail, label, optional 1-line description. */
-const HubTileCard = ({ tile }: { tile: HubTile }) => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-  const Icon = tile.icon;
+const tileKeyFor = (t: HubTile) =>
+  t.tileImageKey || t.path.replace(/\//g, "-").replace(/^-/, "");
 
-  const tileKey = tile.tileImageKey || tile.path.replace(/\//g, "-").replace(/^-/, "");
+/* ---------- Painterly tile thumbnail with skeleton/icon fallback ---------- */
+const TileImage = ({
+  tile,
+  className,
+}: {
+  tile: HubTile;
+  className?: string;
+}) => {
+  const { t } = useTranslation();
   const { data: imageUrl, isLoading } = useHubTileImage(
-    tileKey,
+    tileKeyFor(tile),
     tile.imagePrompt || t(tile.labelKey),
   );
+  const Icon = tile.icon;
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        loading="lazy"
+        className={cn(
+          "absolute inset-0 w-full h-full object-cover transition-transform duration-700",
+          className,
+        )}
+      />
+    );
+  }
+  if (isLoading) return <Skeleton className={cn("absolute inset-0", className)} />;
+  return (
+    <div className={cn("absolute inset-0 grid place-items-center bg-fm-panel-2", className)}>
+      <Icon className="h-10 w-10 text-fm-accent/70" />
+    </div>
+  );
+};
 
+/* ---------- Featured hero tile ---------- */
+const FeaturedTile = ({
+  tile,
+  eyebrow,
+  headline,
+  copy,
+}: {
+  tile: HubTile;
+  eyebrow?: string;
+  headline?: string;
+  copy?: string;
+}) => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
   const label = t(tile.labelKey);
-
   return (
     <button
       type="button"
       onClick={() => navigate(tile.path)}
-      className={cn(
-        "group flex items-center gap-3 p-2 bg-fm-panel border border-fm-border rounded-sm",
-        "hover:border-fm-accent hover:bg-fm-panel-2 transition-colors text-left w-full",
-      )}
+      className="group relative h-full w-full text-left overflow-hidden border border-fm-border bg-fm-panel rounded-sm aspect-[21/9] lg:aspect-auto lg:min-h-[260px]"
     >
-      <div className="relative h-14 w-14 flex-shrink-0 bg-fm-panel-2 border border-fm-border rounded-sm overflow-hidden">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={label}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : isLoading ? (
-          <Skeleton className="w-full h-full" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Icon className="h-6 w-6 text-fm-accent" />
-          </div>
+      <TileImage tile={tile} className="opacity-60 group-hover:opacity-80 group-hover:scale-[1.03]" />
+      {/* Dark bottom-up gradient to ground the text */}
+      <div className="absolute inset-0 bg-gradient-to-t from-fm-bg via-fm-bg/40 to-transparent" />
+      {/* Module accent left bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-fm-accent" />
+      <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7">
+        <span className="inline-block px-2 py-[3px] bg-fm-accent text-fm-bg font-bold text-[10px] uppercase tracking-[0.16em] mb-3 rounded-[2px]">
+          {eyebrow || "Featured"}
+        </span>
+        <h2 className="font-bebas text-3xl md:text-4xl text-fm-fg leading-none tracking-wide uppercase mb-2">
+          {headline || label}
+        </h2>
+        {(copy || tile.description) && (
+          <p className="text-fm-fg-muted text-[12px] md:text-xs max-w-xl uppercase tracking-[0.14em] font-light">
+            {copy || tile.description}
+          </p>
         )}
+        <span className="mt-3 inline-flex items-center gap-1 text-fm-accent text-[10px] uppercase tracking-[0.18em] font-semibold opacity-80 group-hover:opacity-100">
+          Open <ArrowUpRight className="h-3 w-3" />
+        </span>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-semibold text-fm-fg uppercase tracking-wide truncate">
-          {label}
-        </div>
-        {tile.description && (
-          <div className="text-[11px] text-fm-fg-muted truncate">{tile.description}</div>
-        )}
-      </div>
-      <ChevronRight className="h-3.5 w-3.5 text-fm-fg-muted group-hover:text-fm-accent flex-shrink-0" />
     </button>
   );
 };
 
+/* ---------- Stats sidebar matching hero height ---------- */
+const StatsSidebar = ({ stats }: { stats: HubStat[] }) => (
+  <aside className="hidden lg:flex flex-col border border-fm-border bg-fm-panel-2 p-4 rounded-sm">
+    <span className="text-fm-accent text-[10px] uppercase font-bold tracking-[0.18em] mb-3">
+      Trending Data
+    </span>
+    <div className="flex-1 flex flex-col divide-y divide-fm-border">
+      {stats.map((s, i) => (
+        <div key={i} className={cn("py-2.5", i === 0 && "pt-0")}>
+          <div className="text-xl font-bold tabular-nums text-fm-fg leading-none">
+            {s.value}
+          </div>
+          <div className="mt-1 text-[10px] text-fm-fg-muted uppercase tracking-wider">
+            {s.label}
+          </div>
+          {s.hint && (
+            <div className="mt-0.5 text-[10px] text-fm-fg-muted/70">{s.hint}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  </aside>
+);
+
+/* ---------- Painterly square tile in the sub-grid ---------- */
+const MagazineTile = ({ tile }: { tile: HubTile }) => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const label = t(tile.labelKey);
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(tile.path)}
+      className="group relative aspect-square overflow-hidden border border-fm-border hover:border-fm-accent bg-fm-panel rounded-sm text-left transition-colors"
+    >
+      <TileImage tile={tile} className="opacity-80 group-hover:opacity-100 group-hover:scale-[1.04]" />
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/15 transition-colors" />
+      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+        <div className="h-[2px] w-full bg-fm-accent mb-2" />
+        <h3 className="font-bebas text-base md:text-lg text-fm-fg tracking-wide uppercase leading-none">
+          {label}
+        </h3>
+        {tile.description && (
+          <p className="mt-1 text-[10px] text-fm-fg-muted/90 line-clamp-1 uppercase tracking-wide">
+            {tile.description}
+          </p>
+        )}
+      </div>
+    </button>
+  );
+};
+
+/* ---------- Section band ---------- */
+const SectionBand = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <section className="flex flex-col gap-3">
+    <header className="relative flex items-end justify-between border-b border-fm-border pb-2">
+      <div className="flex items-center gap-2">
+        <span className="w-1 h-5 bg-fm-accent" />
+        <h3 className="font-bebas text-xl md:text-2xl tracking-wide uppercase text-fm-fg leading-none">
+          {label}
+        </h3>
+      </div>
+      <span className="text-[10px] text-fm-fg-muted uppercase tracking-[0.18em] tabular-nums">
+        {Array.isArray((children as any)?.props?.tiles)
+          ? `${(children as any).props.tiles.length} ITEMS`
+          : ""}
+      </span>
+    </header>
+    {children}
+  </section>
+);
+
 const TileGrid = ({ tiles }: { tiles: HubTile[] }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
     {tiles.map((tile) => (
-      <HubTileCard key={tile.path} tile={tile} />
+      <MagazineTile key={tile.path} tile={tile} />
     ))}
   </div>
 );
 
-export const CategoryHub = ({ titleKey, description, tiles, groups }: CategoryHubProps) => {
+export const CategoryHub = ({
+  titleKey,
+  description,
+  tiles,
+  groups,
+  stats,
+  featuredEyebrow,
+  featuredHeadline,
+  featuredCopy,
+}: CategoryHubProps) => {
   const { t } = useTranslation();
   const title = t(titleKey);
 
+  // Pick the featured tile + flatten remaining tiles for the first section.
+  const allGroups: TileGroup[] = groups && groups.length > 0
+    ? groups
+    : tiles && tiles.length > 0
+      ? [{ label: "Categories", tiles }]
+      : [];
+
+  const featuredTile = allGroups[0]?.tiles[0];
+  const firstGroupRest = allGroups[0]?.tiles.slice(1) ?? [];
+  const restGroups = allGroups.slice(1);
+
   return (
-    <FMPageScaffold title={title} subtitle={description}>
-      {tiles && tiles.length > 0 && (
-        <FMSection title="Categories">
-          <TileGrid tiles={tiles} />
-        </FMSection>
+    <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
+      {featuredTile && (
+        <div
+          className={cn(
+            "grid gap-3",
+            stats && stats.length > 0 ? "lg:grid-cols-[1fr_280px]" : "lg:grid-cols-1",
+          )}
+        >
+          <FeaturedTile
+            tile={featuredTile}
+            eyebrow={featuredEyebrow || "Featured"}
+            headline={featuredHeadline}
+            copy={featuredCopy}
+          />
+          {stats && stats.length > 0 && <StatsSidebar stats={stats} />}
+        </div>
       )}
 
-      {groups?.map((group) => (
-        <FMSection key={group.label} title={group.label}>
+      {firstGroupRest.length > 0 && (
+        <SectionBand label={allGroups[0].label}>
+          <TileGrid tiles={firstGroupRest} />
+        </SectionBand>
+      )}
+
+      {restGroups.map((group) => (
+        <SectionBand key={group.label} label={group.label}>
           <TileGrid tiles={group.tiles} />
-        </FMSection>
+        </SectionBand>
       ))}
     </FMPageScaffold>
   );
