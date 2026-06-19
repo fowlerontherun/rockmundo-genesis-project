@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.402",
+    date: "2026-06-19",
+    changes: [
+      { type: 'feature', description: "FM-style **Quick Actions bar** added to every module header. Right-aligned inside the SubTabs row on every page: Back / Forward (browser history), Home (jumps to the current module's hub), a Search button (with a `⌘K` kbd hint) that opens a new global command palette, and a primary accent-tinted **New ▾** dropdown listing module-specific create/start shortcuts. Per-module `quickActions` now defined in `fmNavigation.ts` — Overview: Schedule, Inbox, News · Character: New Avatar, Wellness, Buy Gear, Switch Character · Music: Write Song, Record Track, Plan Release, Create Music Video · Band & Live: Book Gig, Start Tour, Open Mic, Find Bandmates, Rehearse · Career: Finances, Find Job, Review Offers, Companies, Sponsors · Media: Self-Promotion, Pitch Radio, Pitch TV, PR History · World: Travel, Cities, World Pulse, Politics · Social: Twaater Post, Nightclub, Messages, Premium Store. New `FMCommandPalette` (mounted in `FMShell`, opens via `⌘/Ctrl+K` or the Search button, also listens to a `fm:open-command` window event) indexes every module's quickActions + subTabs + sidebar items, grouped by module with the route shown in monospace on the right for power users. Admin entries are gated by `useUserRole().isAdmin()`. Pure additive UI — no routes or business logic changed." },
+    ],
+  },
+  {
     version: "1.1.401",
     date: "2026-06-19",
     changes: [
