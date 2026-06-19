@@ -1,96 +1,135 @@
+# Rockmundo on Steam — Phased Release Plan
 
-# Navigation & Page Grouping Restructure
+Rockmundo is a React/Vite web app backed by Lovable Cloud (Supabase). Steam ships native desktop binaries, so we wrap the existing web build in **Electron**, integrate **Steamworks** for identity/achievements/cloud, and submit through Steamworks Partner.
 
-## Why this is needed
+---
 
-Auditing `src/config/fmNavigation.ts`, the hub pages in `src/pages/hubs/`, and the ~180 routes in `src/App.tsx`, the current IA has clear problems:
+## Phase 0 — Business & Account Setup (1–2 weeks, mostly waiting)
+- Register a Steamworks Partner account ($100 Steam Direct fee, tax/banking forms).
+- Decide pricing, regions, age rating (IARC), and content descriptors (gambling minigames, alcohol, drugs in the addictions system — all must be declared).
+- Reserve the app name; receive AppID + depot IDs.
+- Confirm legal: privacy policy URL, EULA, third-party credits (MiniMax, Gemini, shadcn, etc.).
 
-- **Duplicated taxonomies** — every section is defined twice: once in `FM_MODULES` (top nav + sidebar) and once in a `CategoryHub` tile page. The two disagree (e.g. `MusicHubPage` lists Education, Music Videos, Country Charts; the `Music` module sidebar doesn't).
-- **Orphaned pages** — Music Videos, Acting, Radio, TV, Newspapers, Magazines, Podcasts, Films, Websites, Self-Promotion, Major Events, Eurovision, Busking, Open Mic, Jam Sessions, Housing, Personal Vehicles, Casino, Lottery, Family, Relationships, Producer/Modeling/Clothing Designer, Hall of Fame, Journal, Premium Store, Blind Boxes are reachable only from a hub tile or a deep link — they never appear in the sidebar of any module.
-- **Wrong module ownership** — Politics sits under `World` in the module bar but under `Career & Business` in the hub. Merchandise appears in both `Career` and `Store`. Statistics appears in `Overview` sidebar and in `Character` hub. Producer Career, Modeling, Clothing Designer are tile-only.
-- **Live vs Band split is arbitrary** — Rehearsals, Setlists, Stage Setup, Stage Equipment toggle between the two; Open Mic / Jam / Busking aren't in either sidebar.
-- **Hub layer is redundant** — `/hub/character`, `/hub/music`, `/hub/band-live`, `/hub/world-social`, `/hub/career-business` repeat what the sidebar already does, and use a different grouping.
+**Deliverable:** AppID provisioned, store page draft started.
 
-## Target information architecture
+---
 
-Eight top-level modules. Every page in the app maps to exactly one module and appears in that module's sidebar. Hubs become the module's landing page (the tile grid IS the module home), so the duplication collapses.
+## Phase 1 — Electron Desktop Wrapper (3–5 days)
+- Add `electron/main.cjs`, set `vite.config.ts` `base: './'`, install `electron` + `@electron/packager`.
+- Window chrome: custom title bar matching FM 2024 theme, fullscreen toggle, min size 1280×800.
+- Bundle production Vite build; verify all routes, Supabase calls, AI generation, audio playback work under `file://`.
+- Handle deep links (`rockmundo://`) for OAuth callbacks if needed.
+- Auto-updater strategy: rely on Steam's depot updates (no Squirrel needed).
 
-```text
-1. OVERVIEW       Dashboard, Inbox, Schedule, Journal, Today's News, Statistics, Achievements
-2. CHARACTER      Characters roster, Edit, Avatar, Skin store, Tattoos, Wellness, Gear, Inventory,
-                   Housing, Personal Vehicles, Family, Relationships, Legacy, Hall of Immortals
-3. MUSIC          Songwriting, Stage Practice, Education, Recording Studio, Release Manager,
-                   Releases, Music Videos, Streaming Platforms, Charts, Country/Christmas Charts,
-                   Song Rankings, Song Market
-4. BAND & LIVE    Band Manager, Repertoire, Chemistry, Setlists, Rehearsals, Crew, Riders,
-                   Vehicles, Stage Setup, Stage Equipment, Browse/Finder/Rankings/Fame Map,
-                   Gig Booking, My Gigs, Open Mic, Jam Sessions, Busking, Tours, Festivals,
-                   Major Events, Eurovision, Awards
-5. CAREER         Finances, Sponsorships, Employment, Teaching, Offers, PR, Producer Career,
-                   Modeling, Acting, Clothing Designer, Companies (Label, Venues, Merch Factory,
-                   Logistics, Security, Studios), Merchandise
-6. MEDIA          Radio, TV Shows, Newspapers, Magazines, Podcasts, Films, Websites,
-                   Self-Promotion, PR History  (consumer-facing media browsing — distinct from PR)
-7. WORLD          World Map, Cities, Travel, World Pulse, World Parliament, Political Party,
-                   Party Standings, Politics Career, City Election/Mayor, Landmarks,
-                   Seasonal Events Calendar, Today's News (cross-link)
-8. SOCIAL         Social Hub, Friends, Twaater (+ messages/notifs/analytics), DikCok, Gettit,
-                   Casino, Lottery, Underworld, Nightclubs, Premium Store, Blind Boxes
-```
+**Deliverable:** Local `MyApp-linux-x64` / `win32` / `darwin` builds launch and play.
 
-Admin stays as a 9th module, visible only to admins.
+**Exit criteria:** Full smoke test of core loops (gig → recording → release → chart) inside Electron.
 
-### Key reassignments (vs today)
+---
 
-- **Politics** → moves out of `World` sidebar duplication and out of `Career` hub; lives in **World** only.
-- **Merchandise** → leaves `Store`; lives in **Career** (it's a business line).
-- **Gear / Inventory / Clothing Shop / Tattoo Parlour / Housing / Vehicles** → leave `Store`; live in **Character** (personal property).
-- **Producer / Modeling / Acting / Clothing Designer** → consolidated under **Career → Creative Industries**.
-- **Radio / TV / Newspapers / Magazines / Podcasts / Films / Websites** → new **Media** module (consumer side), separate from `Social` (peer platforms) and from `PR` (outbound career action).
-- **Casino / Lottery / Underworld / Nightclubs** → **Social** (nightlife & vice), removed from World/Commerce.
-- **Open Mic / Jam Sessions / Busking / Rehearsals / Setlists** → all under **Band & Live** (merged the two modules — the split was artificial).
-- **Statistics / Journal / Today's News / Achievements** → **Overview** (the "look back" surface).
-- **`Store` module is retired**; its content moves to Character/Career/Social as above. The Premium Store stays under Social as the cosmetic/monetisation entry point.
+## Phase 2 — Steamworks SDK Integration (1 week)
+- Add `steamworks.js` (Greenworks alternative, maintained, prebuilt binaries).
+- Initialize SDK in `main.cjs` with AppID; expose IPC bridge to renderer via `contextBridge`.
+- Wire features:
+  - **Steam identity** → map `steamId` to a Supabase profile (new edge function `steam-auth` issues a Supabase JWT from a verified Steam session ticket).
+  - **Rich Presence** ("Playing a gig in Tokyo", "Recording in Studio").
+  - **Cloud saves** disabled — server is source of truth; document this.
+- Add `steam_appid.txt` to dev builds.
 
-## Implementation
+**Deliverable:** Launching from Steam signs the player in automatically; presence shows live.
 
-Pure presentation work — no route changes, no business logic, no DB. Only nav config and hub pages.
+---
 
-### Files to edit
+## Phase 3 — Achievements & Stats Mapping (3–4 days)
+- Mirror existing in-game achievements (mem://features/achievements) to Steam achievement IDs in Steamworks dashboard.
+- On unlock in DB, emit IPC → `SetAchievement` + `StoreStats`.
+- Backfill on launch: reconcile Supabase achievement rows vs Steam state.
+- Add 20–30 launch achievements covering: first gig, first #1, label signed, world tour, etc.
 
-1. **`src/config/fmNavigation.ts`** — rewrite `FM_MODULES` to the 8-module structure above. Each module gets:
-   - `subTabs` = 4–6 most-used pages in that module
-   - `sidebar` = 2–4 labelled groups covering every page that module owns
-   - `matchPaths` = every route prefix the module owns, so `findModuleForPath` resolves correctly and the active highlight is right.
-   Drop the `commerce` module entry.
+**Deliverable:** Achievements unlock live in the Steam overlay.
 
-2. **`src/pages/hubs/`** — rewrite each hub's tile list so it mirrors the matching module's sidebar exactly (same groups, same order). Hubs become the visual landing page; the sidebar becomes the textual index of the same content. Specifically update:
-   - `CharacterHub.tsx` — add Housing, Personal Vehicles, Family, Relationships, Inventory, Clothing Shop; group as Identity / Property / Relationships / Legacy.
-   - `MusicHubPage.tsx` — add Music Videos, Christmas Charts; remove Education (Career owns it for the bookable course; Music keeps Stage Practice + Songwriting).
-   - Rename `BandLiveHub.tsx` → keep file, retitle to "Band & Live" and add Open Mic / Jam / Busking / Major Events / Eurovision groups.
-   - `CareerBusinessHub.tsx` — remove Politics group; add Acting, consolidate Creative Industries; keep Companies group.
-   - Rename `WorldSocialHub.tsx` → split into:
-     - `WorldHub.tsx` (World Map, Cities, Travel, Pulse, Parliament, Politics, Seasonal Events, Landmarks)
-     - `SocialHub.tsx` page (Social Hub, Twaater, DikCok, Gettit, Casino, Lottery, Underworld, Nightclubs, Premium Store, Blind Boxes)
-   - New `MediaHub.tsx` for the Media module.
+---
 
-3. **`src/App.tsx`** — add routes for the two new hub pages (`/hub/world`, `/hub/social`, `/hub/media`) and update the legacy redirects so old `/hub/*` URLs resolve to the new hubs. No other route changes.
+## Phase 4 — Offline & Resilience Pass (3–5 days)
+- Currently 100% online. For Steam reviews this is acceptable but must be graceful:
+  - Detect offline at boot → branded screen ("Rockmundo requires an internet connection") instead of white screen.
+  - Retry/backoff on Supabase failures; queue non-critical writes (journal entries, twaater posts) in IndexedDB.
+  - Cache static hub images + audio assets locally (already partly done per static-asset memory).
+- Crash reporter: Sentry or electron-log shipped to a Supabase table.
 
-4. **`src/components/fm/TopStatusBar.tsx`** — the "character" shortcut already points to `/hub/character`; no change needed beyond verifying it after the rename pass.
+**Deliverable:** No silent failures; clear messaging on network loss.
 
-5. **`src/components/VersionHeader.tsx`**, **`src/components/fm/BottomActionBar.tsx`**, **`src/pages/VersionHistory.tsx`** — bump to next patch version with a "Navigation IA restructure" entry per project rule.
+---
 
-### Out of scope
+## Phase 5 — Platform Builds & Depots (3 days)
+- Cross-compile from CI:
+  - Windows x64 (primary — 95% of Steam).
+  - Linux x64 (Steam Deck compatibility — see Phase 7).
+  - macOS x64 + arm64 (requires macOS runner + notarization; optional for v1).
+- Configure Steamworks depots per platform; `steam_build.vdf` scripts.
+- Install `steamcmd` in CI; upload via `steamcmd +run_app_build`.
 
-- No route URLs change (only redirects added). Existing bookmarks keep working.
-- No component logic, queries, or DB touched.
-- Mobile gate, landing page, auth: unchanged.
+**Deliverable:** Push-button build pipeline to Steam's `default` branch.
 
-### Verification
+---
 
-- After edits, click each of the 8 module tabs and confirm: (a) the sidebar shows every page the module owns, (b) no page appears in two modules' sidebars, (c) `findModuleForPath` highlights the right tab when you deep-link to any of the orphaned pages above.
-- Spot-check with Playwright on `/dashboard`, `/hub/music`, `/hub/band-live`, `/hub/world`, `/hub/social`, `/hub/media`, `/hub/career-business`, `/hub/character` — screenshot each.
+## Phase 6 — Store Page & Marketing Assets (parallel, 1–2 weeks)
+- Capsule images (small/main/wide/library), header, page background.
+- 5–10 screenshots, 1 trailer (30–60s), animated GIFs.
+- Short + long description, feature list, system requirements.
+- Tags, categories, languages supported (English at launch).
+- Set up community hub, news posts, Discord link.
 
-## Open question
+**Deliverable:** Coming Soon page live; wishlist accumulating.
 
-Should **Education** sit under **Music** (skill-building feels musical) or **Career** (it's a bookable time-sink alongside Employment/Teaching)? Current plan puts it in **Career**; happy to move it if you'd rather it sit beside Songwriting.
+---
+
+## Phase 7 — Steam Deck Verification (1 week)
+- Test under Proton on a Deck (or via `steamos-devkit` / Holo VM).
+- Controller support: app is mouse/keyboard, so configure a default Steam Input layout (trackpad-as-mouse) and document.
+- Text legibility at 1280×800; ensure FM bottom bar buttons hit 40px+ touch targets.
+- Submit for **Deck Verified** rating.
+
+**Deliverable:** "Playable" or "Verified" badge.
+
+---
+
+## Phase 8 — Closed Beta on Steam (2 weeks)
+- Create `beta` branch with password; invite 20–50 testers via Steam keys.
+- Telemetry: track crashes, session length, funnel from launch → first gig.
+- Iterate on perf (Electron memory ceiling, Supabase query budgets).
+
+**Exit criteria:** <2% crash rate, P95 boot <8s, no P0/P1 bugs open.
+
+---
+
+## Phase 9 — Submission & Launch (1 week + Valve review)
+- Steam build review (1–5 business days).
+- Set release date, finalize price, configure launch discount (10–15% suggested).
+- Day-1 patch branch ready.
+- Press kit + Discord/Twaater announcement.
+
+**Deliverable:** Rockmundo live on Steam.
+
+---
+
+## Phase 10 — Post-Launch (ongoing)
+- Weekly patch cadence via Steam depots (auto-update).
+- Trading cards, seasonal sales, Workshop (future: custom venues/songs).
+- Localization roadmap (EFIGS first).
+
+---
+
+## Technical Notes
+- **Wrapper:** Electron + `@electron/packager` (NOT electron-builder — sandbox/CI 7zip issues per existing memory).
+- **Main process file:** `.cjs` extension; `package.json` is `"type": "module"`.
+- **Vite:** `base: './'` is mandatory or window renders blank.
+- **Supabase auth bridge:** new edge function `steam-auth` validates a Steam session ticket against `https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/` and mints a Supabase JWT — Steam Web API key stored as a secret.
+- **Code signing:** Windows EV cert ($200–400/yr) recommended to avoid SmartScreen warnings; Apple Developer ID ($99/yr) required for macOS notarization.
+- **Repo layout:** `electron/`, `build/steam/` (vdf scripts, icons), `.github/workflows/steam-release.yml`.
+
+## Open Questions
+1. Launch platforms — Windows-only for v1, or also Linux + macOS?
+2. Steam Deck Verified a launch goal, or post-launch?
+3. Do you have a Steamworks Partner account already, or start from scratch?
+4. Code-signing certs: existing, or budget for new ones?
