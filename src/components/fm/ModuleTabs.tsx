@@ -31,7 +31,7 @@ export const ModuleTabs = () => {
         return (
           <button
             key={mod.id}
-            onClick={() => navigate(mod.rootPath)}
+            onClick={() => openModule(mod.id, mod.rootPath)}
             className={cn(
               "relative px-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-bold transition-colors",
               isActive
