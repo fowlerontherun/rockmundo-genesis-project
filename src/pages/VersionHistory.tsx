@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.401",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "FM2024-inspired UI polish across all screens. `PageHeader` rebuilt with a 3px module-accent left bar, a tinted icon tile (accent/10 bg + accent/25 border), a `fm-eyebrow` kicker line (9px, 0.18em tracking) above a heavier 15px uppercase bold title, and an optional inline subtitle separated by a vertical divider on md+ so headers read like FM broadcast graphics. `FMSection` headers now show a 2px accent tick on the left edge, bold 11px uppercase 0.16em titles, and a new optional `count` pill (accent/15 bg, tabular-nums) for inline list sizes. `ModuleTabs` moved the active accent stripe from bottom to **top** (FM2024 chrome pattern), tinted the active icon to the module accent, and bumped weight to bold. `SubTabs` got uppercase 10.5px 0.12em tracking, 2px bottom border, faint panel tint on active, and a slim branded `fm-scrollbar-thin` horizontal scrollbar in the module accent. New `index.css` helpers — `.fm-eyebrow`, `.fm-section-title`, `.fm-stat-value`, `.fm-scrollbar-thin` — plus tighter 2px radii on `.card` / `[data-fm-panel]` inside the shell so every panel feels like part of one dense dashboard. Pure presentation — no logic, routes or data flow touched." },
+    ],
+  },
+  {
     version: "1.1.400",
     date: "2026-06-19",
     changes: [
