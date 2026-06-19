@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.399",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "Hub tiles — generated the 17 missing tile thumbnails referenced by the new module hubs but absent from `public/hub-tiles/`: `band-repertoire`, `bands-browse`, `gig-booking`, `teaching`, `acting`, `clothing-shop`, `family-timeline`, `media-self-promotion`, `media-pr-history`, `song-manager`, `music-charts`, `competitive-charts`, `social`, `twaater-messages`, `vip-subscribe`, `landmarks`, `seasonal-events`. All rendered at 512×512 in the same painterly dark rock-music style as the existing 87 tiles, so `useHubTileImage` now resolves an image (instead of falling back to the Lucide icon placeholder) for every tile across BandLiveHub, CareerBusinessHub, CharacterHub, MediaHub, MusicHubPage, SocialHub and WorldHub. Pure asset addition — no code changes." },
+    ],
+  },
+  {
     version: "1.1.398",
     date: "2026-06-19",
     changes: [
