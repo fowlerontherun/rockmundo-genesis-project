@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.400",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "FM shell — per-module visual theming and tighter, more consistent screen-space usage. `FMShell` now reads the active top-level module from the URL and stamps `data-fm-module=\"…\"` on the shell root, which overrides `--fm-accent` (so ModuleTabs underline, SubTabs active border, sidebar active row and KPI accents all re-tint per section) and paints a low-opacity dual-radial ambient gradient behind `<main>` in the module's signature hues — Overview cyan, Character violet, Music magenta, Band & Live amber, Career emerald, Media red/orange, World teal, Social blue, Admin orange. A 1px diagonal scanline overlay (mix-blend overlay, ~1% opacity) adds the dense FM2024 broadcast-graphic texture without hurting legibility. `<main>` content now sits inside a centred `max-w-[1800px]` column with consistent `px-4 py-3` padding across every page so KPI bars, panels and tables align uniformly edge-to-edge regardless of which module is active. Pure presentation — no logic or routes changed." },
+    ],
+  },
+  {
     version: "1.1.399",
     date: "2026-06-19",
     changes: [
