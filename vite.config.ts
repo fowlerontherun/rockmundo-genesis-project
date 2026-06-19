@@ -5,11 +5,15 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Use relative asset paths so the production build also works when loaded
+  // via file:// inside the Electron desktop shell (Phase 1 of Steam release).
+  base: './',
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

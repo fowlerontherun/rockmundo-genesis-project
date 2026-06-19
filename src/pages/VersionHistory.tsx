@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.398",
+    date: "2026-06-19",
+    changes: [
+      { type: 'feature', description: "Steam release Phase 1 — Electron desktop wrapper scaffolded. New `electron/main.cjs` (secure BrowserWindow: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, 1280×800 min, FM-dark `#0b1220` background, external links routed through `shell.openExternal`, `will-navigate` locked to `file://` in prod / dev server in dev) and `electron/preload.cjs` exposing a minimal `window.rockmundo` bridge (platform, version) — Steamworks IPC will land in Phase 2. `vite.config.ts` now sets `base: './'` so the production bundle loads correctly under `file://` inside Electron without breaking the web build. Ambient `src/types/electron.d.ts` types the preload bridge. `electron/README.md` documents local dev (`ELECTRON_START_URL=http://localhost:8080 npx electron electron/main.cjs`) and `@electron/packager` commands for Windows x64 and macOS universal targets. No runtime behaviour changes for the web app." },
+    ],
+  },
+  {
+
     version: "1.1.397",
     date: "2026-06-17",
     changes: [
