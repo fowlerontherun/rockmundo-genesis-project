@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 export type FMSubLink = { label: string; path: string; icon?: LucideIcon };
+export type FMQuickAction = { label: string; path: string; icon?: LucideIcon; description?: string };
 export type FMModule = {
   id: string;
   label: string;
@@ -17,6 +18,9 @@ export type FMModule = {
   matchPaths: string[];
   subTabs: FMSubLink[];
   sidebar: { label: string; items: FMSubLink[] }[];
+  /** Common "create / start something new" shortcuts surfaced in the FM-style
+   *  quick actions bar on every page in this module. */
+  quickActions?: FMQuickAction[];
 };
 
 export const FM_MODULES: FMModule[] = [
