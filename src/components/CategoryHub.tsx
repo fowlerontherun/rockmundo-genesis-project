@@ -227,22 +227,36 @@ export const CategoryHub = ({
   const firstGroupRest = allGroups[0]?.tiles.slice(1) ?? [];
   const restGroups = allGroups.slice(1);
 
+  // Auto-generate sidebar stats so every hub gets the magazine layout
+  // even when the caller hasn't supplied custom KPIs.
+  const totalTiles = allGroups.reduce((n, g) => n + g.tiles.length, 0);
+  const topSection = allGroups.reduce<TileGroup | undefined>(
+    (best, g) => (!best || g.tiles.length > best.tiles.length ? g : best),
+    undefined,
+  );
+  const featuredLabel = featuredTile ? t(featuredTile.labelKey) : "—";
+  const resolvedStats: HubStat[] =
+    stats && stats.length > 0
+      ? stats
+      : [
+          { label: "Tiles", value: totalTiles, hint: "Across this hub" },
+          { label: "Sections", value: allGroups.length, hint: "Grouped categories" },
+          { label: "Largest Section", value: topSection?.tiles.length ?? 0, hint: topSection?.label?.toUpperCase() },
+          { label: "Featured", value: featuredLabel.toUpperCase(), hint: "Top of the page" },
+          { label: "Status", value: "LIVE", hint: "Synced with your career" },
+        ];
+
   return (
     <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
       {featuredTile && (
-        <div
-          className={cn(
-            "grid gap-3",
-            stats && stats.length > 0 ? "lg:grid-cols-[1fr_280px]" : "lg:grid-cols-1",
-          )}
-        >
+        <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
           <FeaturedTile
             tile={featuredTile}
             eyebrow={featuredEyebrow || "Featured"}
             headline={featuredHeadline}
             copy={featuredCopy}
           />
-          {stats && stats.length > 0 && <StatsSidebar stats={stats} />}
+          <StatsSidebar stats={resolvedStats} />
         </div>
       )}
 
