@@ -128,8 +128,17 @@ Rockmundo is a React/Vite web app backed by Lovable Cloud (Supabase). Steam ship
 - **Code signing:** Windows EV cert ($200–400/yr) recommended to avoid SmartScreen warnings; Apple Developer ID ($99/yr) required for macOS notarization.
 - **Repo layout:** `electron/`, `build/steam/` (vdf scripts, icons), `.github/workflows/steam-release.yml`.
 
-## Open Questions
-1. Launch platforms — Windows-only for v1, or also Linux + macOS?
-2. Steam Deck Verified a launch goal, or post-launch?
-3. Do you have a Steamworks Partner account already, or start from scratch?
-4. Code-signing certs: existing, or budget for new ones?
+## Decisions Locked In
+1. **Launch platforms:** Windows x64 + macOS (x64 + arm64). Linux/Steam Deck deferred to post-launch.
+2. **Steam Deck Verified:** post-launch goal — Phase 7 moves after Phase 10.
+3. **Steamworks Partner account:** starting fresh. Phase 0 is a hard blocker (1–2 weeks) before AppID-dependent work (Phases 2, 5, 8, 9). Phase 1 (Electron wrapper), Phase 4 (offline resilience), and Phase 6 (store assets prep) can proceed in parallel with Phase 0 paperwork.
+4. **Code-signing certs:** budgeting for new.
+   - **Apple Developer ID — $99/yr — REQUIRED.** macOS Gatekeeper blocks unsigned/un-notarized apps on first launch even when delivered via Steam. Non-negotiable for the Mac build.
+   - **Windows EV cert — $300–600/yr — SKIP at launch.** Steam users launch via the Steam client, which bypasses SmartScreen warnings. Revisit only if we ship outside Steam (itch.io, direct download).
+
+## Revised Phase Order
+Week 1–2 (parallel): Phase 0 paperwork ∥ Phase 1 Electron wrapper ∥ Phase 4 offline resilience ∥ Phase 6 store assets draft.
+Once AppID arrives: Phase 2 Steamworks SDK → Phase 3 achievements → Phase 5 Win + Mac builds with Apple notarization → Phase 8 closed beta → Phase 9 submission & launch → Phase 10 post-launch ops → Phase 7 Steam Deck Verified.
+
+## Immediate Next Step
+Kick off **Phase 1 (Electron wrapper)** now — no AppID required. In parallel, register the Steamworks Partner account and the Apple Developer Program ($99) so notarization credentials are ready when Phase 5 lands.
