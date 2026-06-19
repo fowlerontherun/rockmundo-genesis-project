@@ -1,144 +1,96 @@
-# Rockmundo on Steam — Phased Release Plan
+# Wellness & Lifestyle — Expansion Plan
 
-Rockmundo is a React/Vite web app backed by Lovable Cloud (Supabase). Steam ships native desktop binaries, so we wrap the existing web build in **Electron**, integrate **Steamworks** for identity/achievements/cloud, and submit through Steamworks Partner.
+Today the Wellness page is a localStorage mock (habits, fake heart rate, fake appointments). It doesn't read the character, doesn't write back to the game, and has no cooldowns. This plan turns it into a real, vital game system.
 
----
+## Goals
+1. Wellness stats *gate* what the character can do (jobs, gigs, tours, nightlife).
+2. Wellness drives modifiers on performance, songwriting, social, and fame decay.
+3. Every lifestyle activity has a cooldown + daily cap + stamina cost (hybrid model).
+4. Neglect rolls ailments (vocal strain, burnout, flu, addiction relapse) that hard-block activities until treated.
+5. Blocked activities show a hard block + a clear "do this instead" suggestion.
 
-## Phase 0 — Business & Account Setup (1–2 weeks, mostly waiting)
-- Register a Steamworks Partner account ($100 Steam Direct fee, tax/banking forms).
-- Decide pricing, regions, age rating (IARC), and content descriptors (gambling minigames, alcohol, drugs in the addictions system — all must be declared).
-- Reserve the app name; receive AppID + depot IDs.
-- Confirm legal: privacy policy URL, EULA, third-party credits (MiniMax, Gemini, shadcn, etc.).
+## Design
 
-**Deliverable:** AppID provisioned, store page draft started.
+### Stats (live on existing `profile_health` / `profile_attributes`)
+Use existing columns where available, add what's missing:
+- `health` 0–100 — physical condition
+- `energy` 0–100 — daily stamina, regenerates with sleep
+- `mood` 0–100 — mental state
+- `stress` 0–100 — inverse pressure (lowered by recovery)
+- `addiction_risk` 0–100 — derived
 
----
+### Activity Catalog (4 categories, ~24 activities)
+| Category | Examples | Cooldown | Stamina | Stat changes |
+|---|---|---|---|---|
+| Recovery | Spa day, sauna, massage, sleep-in, meditation, yoga, therapy | 12h–3d | 10 | +health/+mood/−stress |
+| Fitness | Gym, personal trainer, vocal warm-ups, dance class, cardio | 16h–1d | 25 | +health/+energy cap |
+| Medical | Doctor, dentist, physio, vocal coach checkup, mental clinic | 3–14d | 5 | clears ailments, +max health |
+| Indulgence | Party, binge eating, gambling, drug use | 8h–2d | 30 | +mood NOW, −health/+addiction/+ailment roll |
 
-## Phase 1 — Electron Desktop Wrapper (3–5 days)
-- Add `electron/main.cjs`, set `vite.config.ts` `base: './'`, install `electron` + `@electron/packager`.
-- Window chrome: custom title bar matching FM 2024 theme, fullscreen toggle, min size 1280×800.
-- Bundle production Vite build; verify all routes, Supabase calls, AI generation, audio playback work under `file://`.
-- Handle deep links (`rockmundo://`) for OAuth callbacks if needed.
-- Auto-updater strategy: rely on Steam's depot updates (no Squirrel needed).
+### Cooldowns (Hybrid)
+- **Per-activity timer**: each catalog entry has its own `next_available_at`.
+- **Daily cap**: max 3 wellness actions / in-game day; max 1 Indulgence / evening.
+- **Stamina cost**: each action subtracts from `energy`. If `energy < cost` → blocked.
 
-**Deliverable:** Local `MyApp-linux-x64` / `win32` / `darwin` builds launch and play.
+### Hard Block + Suggestion
+When the player tries a blocked activity (cooldown OR low wellness OR active ailment), we **don't** let them push through. We:
+- Disable the action with reason + countdown.
+- Surface a `RecommendedAction` panel: "You're too exhausted to gig. Try **Sleep In** (free, +40 energy)."
 
-**Exit criteria:** Full smoke test of core loops (gig → recording → release → chart) inside Electron.
+### Vital-role wiring
+- **Performance quality**: gig/recording engines multiply by `wellnessMultiplier = clamp(0.5..1.15)` based on (health + energy + mood)/300.
+- **Activity availability**: scheduling guard checks `wellness_gate(activity_type)` before allowing schedule.
+- **Random ailments**: nightly cron rolls based on stress/addiction/indulgence streak. 12 conditions: vocal strain, sore throat, flu, sprained wrist, insomnia, burnout, panic attack, food poisoning, hangover, back pain, depression spell, withdrawal.
+- **Relationships & fame decay**: weekly cron — if `mood<30` for 7d → −5% friend warmth & −2% regional fame.
 
----
+## Technical Implementation
 
-## Phase 2 — Steamworks SDK Integration (1 week)
-- Add `steamworks.js` (Greenworks alternative, maintained, prebuilt binaries).
-- Initialize SDK in `main.cjs` with AppID; expose IPC bridge to renderer via `contextBridge`.
-- Wire features:
-  - **Steam identity** → map `steamId` to a Supabase profile (new edge function `steam-auth` issues a Supabase JWT from a verified Steam session ticket).
-  - **Rich Presence** ("Playing a gig in Tokyo", "Recording in Studio").
-  - **Cloud saves** disabled — server is source of truth; document this.
-- Add `steam_appid.txt` to dev builds.
+### Database (1 migration)
+- `wellness_activity_catalog` — id, slug, name, category, duration_min, cooldown_hours, stamina_cost, cost_cents, stat_effects jsonb, ailment_risk jsonb, unlock_min_fame, sort_order. Seed ~24 rows.
+- `wellness_activity_log` — id, user_id, profile_id, catalog_id, performed_at, completed_at, stat_snapshot jsonb. Indexed (profile_id, catalog_id, performed_at desc).
+- `wellness_cooldowns` — view: per profile × catalog, last performed + `next_available_at` = last + cooldown_hours.
+- `wellness_blocks` — id, profile_id, reason ('ailment'|'low_health'|'addiction'|'cooldown'), blocks text[] (activity_type tags blocked), expires_at, source_ailment_id. RLS by profile.
+- `player_ailments` — id, profile_id, slug, severity 1–3, contracted_at, resolved_at, treatment_required_slug. Seed list of 12.
+- Add `activity_type IN ('wellness_recovery','wellness_fitness','wellness_medical','wellness_indulgence')` to existing `player_scheduled_activities` check.
+- SECURITY DEFINER fn `public.evaluate_wellness_gate(_profile_id uuid, _activity_type text)` returns (allowed bool, reason text, suggestion_slug text).
+- Grants + RLS for each new table.
 
-**Deliverable:** Launching from Steam signs the player in automatically; presence shows live.
+### Edge functions
+- `wellness-perform-activity` — validates gate, deducts stamina/cost, writes log, applies stat effects, rolls ailments for Indulgence, returns updated state.
+- `wellness-treat-ailment` — pairs a Medical activity with an active ailment, resolves it.
+- `wellness-daily-rollover` — cron 03:00 game time: regen energy +60, decay mood/health by lifestyle, roll new ailments, expire stale blocks, decay addictions.
+- `wellness-weekly-decay` — cron Sunday: applies fame/friendship penalties for sustained low mood.
 
----
+### Frontend
+- `src/lib/api/wellness.ts` — replace localStorage layer with real Supabase queries (`fetchWellnessState`, `performActivity`, `listCatalog`, `listAilments`, `listCooldowns`).
+- `src/hooks/useWellnessState.ts` — subscribes to `profile_health` realtime + cooldown ticker.
+- `src/components/wellness/`:
+  - `WellnessVitals.tsx` — health/energy/mood/stress rings (replace fake heart-rate cards).
+  - `ActivityCatalog.tsx` — 4 category tabs, each card shows cooldown countdown, stamina cost, effects, lock state.
+  - `ActivityCard.tsx` — disabled-with-countdown + reason tooltip + "Do This Instead" CTA on block.
+  - `AilmentsPanel.tsx` — active conditions with required treatment slug deep-link.
+  - `RecommendedAction.tsx` — surfaces the suggestion returned by the gate.
+- `src/pages/wellness/index.tsx` — restructured around Vitals → Recommended → Catalog (tabs) → Ailments → Activity Log.
+- Hook `useWellnessGate(activityType)` exported for gig/recording/job/tour buttons to call. Returns `{ allowed, reason, suggestion }`. Wire into:
+  - `GigBooking` / `PerformGig`
+  - `Employment` clock-in
+  - `TourManager` rejoin
+  - `Casino` / `Nightclubs` / `Underworld` entry
+- Performance multiplier helper `getWellnessMultiplier(profileId)` used by gig + recording scoring.
 
-## Phase 3 — Achievements & Stats Mapping (3–4 days)
-- Mirror existing in-game achievements (mem://features/achievements) to Steam achievement IDs in Steamworks dashboard.
-- On unlock in DB, emit IPC → `SetAchievement` + `StoreStats`.
-- Backfill on launch: reconcile Supabase achievement rows vs Steam state.
-- Add 20–30 launch achievements covering: first gig, first #1, label signed, world tour, etc.
+### Scheduling integration
+- Activities >30 min get inserted into `player_scheduled_activities` so they block other actions like existing jobs.
+- Quick (<30 min) activities resolve instantly.
 
-**Deliverable:** Achievements unlock live in the Steam overlay.
+### Version
+- Bump `VersionHeader` to **1.1.407**.
+- Add entry to `VersionHistory.tsx` describing all of the above.
 
----
+## Out of Scope (this iteration)
+- Custom habit creator UI (existing HabitTracker stays as-is for now).
+- Family/child wellness.
+- Insurance / hospital billing simulation.
 
-## Phase 4 — Offline & Resilience Pass (3–5 days)
-- Currently 100% online. For Steam reviews this is acceptable but must be graceful:
-  - Detect offline at boot → branded screen ("Rockmundo requires an internet connection") instead of white screen.
-  - Retry/backoff on Supabase failures; queue non-critical writes (journal entries, twaater posts) in IndexedDB.
-  - Cache static hub images + audio assets locally (already partly done per static-asset memory).
-- Crash reporter: Sentry or electron-log shipped to a Supabase table.
-
-**Deliverable:** No silent failures; clear messaging on network loss.
-
----
-
-## Phase 5 — Platform Builds & Depots (3 days)
-- Cross-compile from CI:
-  - Windows x64 (primary — 95% of Steam).
-  - Linux x64 (Steam Deck compatibility — see Phase 7).
-  - macOS x64 + arm64 (requires macOS runner + notarization; optional for v1).
-- Configure Steamworks depots per platform; `steam_build.vdf` scripts.
-- Install `steamcmd` in CI; upload via `steamcmd +run_app_build`.
-
-**Deliverable:** Push-button build pipeline to Steam's `default` branch.
-
----
-
-## Phase 6 — Store Page & Marketing Assets (parallel, 1–2 weeks)
-- Capsule images (small/main/wide/library), header, page background.
-- 5–10 screenshots, 1 trailer (30–60s), animated GIFs.
-- Short + long description, feature list, system requirements.
-- Tags, categories, languages supported (English at launch).
-- Set up community hub, news posts, Discord link.
-
-**Deliverable:** Coming Soon page live; wishlist accumulating.
-
----
-
-## Phase 7 — Steam Deck Verification (1 week)
-- Test under Proton on a Deck (or via `steamos-devkit` / Holo VM).
-- Controller support: app is mouse/keyboard, so configure a default Steam Input layout (trackpad-as-mouse) and document.
-- Text legibility at 1280×800; ensure FM bottom bar buttons hit 40px+ touch targets.
-- Submit for **Deck Verified** rating.
-
-**Deliverable:** "Playable" or "Verified" badge.
-
----
-
-## Phase 8 — Closed Beta on Steam (2 weeks)
-- Create `beta` branch with password; invite 20–50 testers via Steam keys.
-- Telemetry: track crashes, session length, funnel from launch → first gig.
-- Iterate on perf (Electron memory ceiling, Supabase query budgets).
-
-**Exit criteria:** <2% crash rate, P95 boot <8s, no P0/P1 bugs open.
-
----
-
-## Phase 9 — Submission & Launch (1 week + Valve review)
-- Steam build review (1–5 business days).
-- Set release date, finalize price, configure launch discount (10–15% suggested).
-- Day-1 patch branch ready.
-- Press kit + Discord/Twaater announcement.
-
-**Deliverable:** Rockmundo live on Steam.
-
----
-
-## Phase 10 — Post-Launch (ongoing)
-- Weekly patch cadence via Steam depots (auto-update).
-- Trading cards, seasonal sales, Workshop (future: custom venues/songs).
-- Localization roadmap (EFIGS first).
-
----
-
-## Technical Notes
-- **Wrapper:** Electron + `@electron/packager` (NOT electron-builder — sandbox/CI 7zip issues per existing memory).
-- **Main process file:** `.cjs` extension; `package.json` is `"type": "module"`.
-- **Vite:** `base: './'` is mandatory or window renders blank.
-- **Supabase auth bridge:** new edge function `steam-auth` validates a Steam session ticket against `https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/` and mints a Supabase JWT — Steam Web API key stored as a secret.
-- **Code signing:** Windows EV cert ($200–400/yr) recommended to avoid SmartScreen warnings; Apple Developer ID ($99/yr) required for macOS notarization.
-- **Repo layout:** `electron/`, `build/steam/` (vdf scripts, icons), `.github/workflows/steam-release.yml`.
-
-## Decisions Locked In
-1. **Launch platforms:** Windows x64 + macOS (x64 + arm64). Linux/Steam Deck deferred to post-launch.
-2. **Steam Deck Verified:** post-launch goal — Phase 7 moves after Phase 10.
-3. **Steamworks Partner account:** starting fresh. Phase 0 is a hard blocker (1–2 weeks) before AppID-dependent work (Phases 2, 5, 8, 9). Phase 1 (Electron wrapper), Phase 4 (offline resilience), and Phase 6 (store assets prep) can proceed in parallel with Phase 0 paperwork.
-4. **Code-signing certs:** budgeting for new.
-   - **Apple Developer ID — $99/yr — REQUIRED.** macOS Gatekeeper blocks unsigned/un-notarized apps on first launch even when delivered via Steam. Non-negotiable for the Mac build.
-   - **Windows EV cert — $300–600/yr — SKIP at launch.** Steam users launch via the Steam client, which bypasses SmartScreen warnings. Revisit only if we ship outside Steam (itch.io, direct download).
-
-## Revised Phase Order
-Week 1–2 (parallel): Phase 0 paperwork ∥ Phase 1 Electron wrapper ∥ Phase 4 offline resilience ∥ Phase 6 store assets draft.
-Once AppID arrives: Phase 2 Steamworks SDK → Phase 3 achievements → Phase 5 Win + Mac builds with Apple notarization → Phase 8 closed beta → Phase 9 submission & launch → Phase 10 post-launch ops → Phase 7 Steam Deck Verified.
-
-## Immediate Next Step
-Kick off **Phase 1 (Electron wrapper)** now — no AppID required. In parallel, register the Steamworks Partner account and the Apple Developer Program ($99) so notarization credentials are ready when Phase 5 lands.
+## File Touch List
+- New: 1 migration, 4 edge functions, ~6 components, 1 hook.
+- Modified: `wellness.ts` API, `wellness/index.tsx` page, gig/job/tour entry buttons, `VersionHeader`, `VersionHistory`.
