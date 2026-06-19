@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.404",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "Hub tile pages redesigned to **magazine grid + stats sidebar** layout (FM2024 module-cover treatment). `CategoryHub` now picks the first tile of the first group as a 21:9 featured hero — painterly tile art bleeds full-bleed under a bottom-anchored text block with an emerald accent left bar, an `eyebrow` badge in the module accent, a large Bebas headline, an uppercase Oswald description, and an Open → CTA. An optional `stats` prop renders a right-rail KPI sidebar (`Trending Data` header, tabular-nums values, divider rows) that matches the hero height on `lg+`. Below the hero, the remaining tiles render as a denser **2 → 6 column** painterly square grid (`MagazineTile`): full-bleed thumbnail with bottom dark gradient, 2px emerald top accent line, Bebas label, and a 1-line uppercase meta caption. Group section bands now use a left accent tick + Bebas section title + auto `n ITEMS` tabular-nums count on the right. New optional `featuredEyebrow / featuredHeadline / featuredCopy` props let individual hubs override the hero copy. `FMPageScaffold` + `PageHeader` extended with an `eyebrow` prop so hubs can pass kicker text through. All 13 hub pages (`CareerBusinessHub`, `MusicHubPage`, `CharacterHub`, `BandLiveHub`, `MediaHub`, `WorldHub`, `SocialHub`, `CommerceHub`, `EventsHub`, `LiveHub`, `BandHub`, `CareerHub`, `PremiumStoreHub`) inherit the new layout for free via `CategoryHub`. Pure presentation — no routes or business logic touched." },
+    ],
+  },
+  {
     version: "1.1.403",
     date: "2026-06-19",
     changes: [

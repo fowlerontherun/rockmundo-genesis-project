@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 export const FMPageScaffold = ({
   title,
   subtitle,
+  eyebrow,
   icon,
   backTo,
   backLabel,
@@ -17,6 +18,7 @@ export const FMPageScaffold = ({
 }: {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
   icon?: LucideIcon;
   backTo?: string;
   backLabel?: string;
@@ -29,6 +31,7 @@ export const FMPageScaffold = ({
     <PageHeader
       title={title}
       subtitle={subtitle}
+      eyebrow={eyebrow}
       icon={icon}
       backTo={backTo}
       backLabel={backLabel}
