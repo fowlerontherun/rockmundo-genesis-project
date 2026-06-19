@@ -20,16 +20,19 @@ export const ModuleTabs = () => {
             key={mod.id}
             onClick={() => navigate(mod.rootPath)}
             className={cn(
-              "relative px-4 flex items-center gap-2 text-xs uppercase tracking-wider font-semibold transition-colors",
+              "relative px-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-bold transition-colors",
               isActive
-                ? "text-fm-accent bg-fm-panel-2"
+                ? "text-fm-fg bg-fm-panel-2"
                 : "text-fm-fg-muted hover:text-fm-fg hover:bg-fm-panel-2/60"
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
+            {isActive && (
+              <span className="absolute top-0 left-0 right-0 h-[2px] bg-fm-accent" />
+            )}
+            <Icon className={cn("h-3.5 w-3.5", isActive && "text-fm-accent")} />
             <span>{mod.label}</span>
             {isActive && (
-              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-fm-accent" />
+              <span className="absolute bottom-0 left-0 right-0 h-px bg-fm-panel-2" />
             )}
           </button>
         );

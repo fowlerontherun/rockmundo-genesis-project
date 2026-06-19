@@ -684,3 +684,41 @@
    active module — matches ModuleTabs underline accent. */
 .fm-module-themed .fm-shell-accent-strip,
 .fm-module-themed nav + div + div > div[role="tablist"] { border-top-color: hsl(var(--fm-accent) / 0.6); }
+
+/* ============================================================
+   FM2024-style typography & density helpers
+   ============================================================ */
+.fm-eyebrow {
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: hsl(var(--fm-fg-muted) / 0.85);
+  font-weight: 600;
+}
+.fm-section-title {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: hsl(var(--fm-fg));
+}
+.fm-stat-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Slim, branded scrollbar for horizontal tab strips */
+.fm-scrollbar-thin::-webkit-scrollbar { height: 3px; }
+.fm-scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.fm-scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--fm-accent) / 0.35);
+  border-radius: 2px;
+}
+.fm-scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--fm-accent) / 0.6); }
+
+/* Tighten default vertical rhythm inside the FM main column */
+.fm-shell main h2 { letter-spacing: 0.06em; }
+.fm-shell main .card,
+.fm-shell main [data-fm-panel] { border-radius: 2px; }
