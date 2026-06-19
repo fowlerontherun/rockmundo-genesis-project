@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.406",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "Refactored tile page layout into reusable components under `src/components/hub/`. The previously inline `TileImage`, `FeaturedTile`, `StatsSidebar`, `MagazineTile`, `SectionBand`, and `TileGrid` blocks (plus the `HubTile` / `TileGroup` / `HubStat` types and the `tileKeyFor()` helper) have been extracted into individual files (`TileImage.tsx`, `FeaturedTile.tsx`, `StatsSidebar.tsx`, `MagazineTile.tsx`, `SectionBand.tsx`, `TileGrid.tsx`, `types.ts`) and re-exported from `src/components/hub/index.ts`. `CategoryHub.tsx` was rewritten as a thin composition layer (~95 lines, down from 278) that imports and arranges these pieces — eliminating duplicated markup and making the magazine-grid + stats-sidebar pattern reusable by any future tile page outside the hub system. `SectionBand` now takes an explicit `count` prop instead of inspecting children via reflection. Types continue to be re-exported from `CategoryHub` so existing imports keep working. Pure refactor — visual output is byte-identical, no routes, queries, or business logic touched." },
+    ],
+  },
+  {
     version: "1.1.405",
     date: "2026-06-19",
     changes: [
