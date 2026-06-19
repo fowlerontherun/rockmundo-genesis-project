@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.403",
+    date: "2026-06-19",
+    changes: [
+      { type: 'feature', description: "Persistent per-module navigation memory. New `src/lib/fmHistory.ts` keeps `{ [moduleId]: lastPath }` in `localStorage` under `rm-fm-last-path-by-module`; `FMShell` writes the current pathname to the active module's slot on every navigation, so the player's most recent context inside Music, Band & Live, Career etc. survives reloads and Electron restarts. `ModuleTabs` now restores that last context when you click into a *different* module — e.g. jumping from Music → Career returns you to `/finances` if that's where you were last, instead of dumping you on the Career hub. Clicking the *currently active* module still goes to its hub. The Quick Actions **Home** button is now context-aware: when you're on a sub-page it goes to the module hub (label \"<Module> Hub\"), and when you're already on the hub it resumes the last visited sub-page in that module (label \"Resume last page\"). Pure additive client-side state — no schema or routes touched." },
+    ],
+  },
+  {
     version: "1.1.402",
     date: "2026-06-19",
     changes: [

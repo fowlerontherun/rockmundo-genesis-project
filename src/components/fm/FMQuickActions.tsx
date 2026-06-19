@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Home, Search, Plus, ChevronDown } from "lucide-react";
 import { findModuleForPath } from "@/config/fmNavigation";
+import { getLastModulePath } from "@/lib/fmHistory";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +56,18 @@ export const FMQuickActions = () => {
     <div className="flex items-center gap-1.5 pl-2 ml-auto flex-shrink-0">
       <IconBtn icon={ArrowLeft} label="Back" onClick={() => window.history.back()} />
       <IconBtn icon={ArrowRight} label="Forward" onClick={() => window.history.forward()} />
-      <IconBtn icon={Home} label={`${mod.label} Hub`} onClick={() => navigate(mod.rootPath)} />
+      <IconBtn
+        icon={Home}
+        label={pathname === mod.rootPath ? "Resume last page" : `${mod.label} Hub`}
+        onClick={() => {
+          if (pathname === mod.rootPath) {
+            const last = getLastModulePath(mod.id);
+            if (last && last !== mod.rootPath) navigate(last);
+          } else {
+            navigate(mod.rootPath);
+          }
+        }}
+      />
       <span className="w-px h-4 bg-fm-border mx-0.5" />
       <button
         type="button"

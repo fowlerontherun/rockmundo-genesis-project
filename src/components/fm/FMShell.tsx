@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { TopStatusBar } from "./TopStatusBar";
 import { ModuleTabs } from "./ModuleTabs";
@@ -9,10 +9,17 @@ import { ChatDockProvider } from "./chat/ChatDockContext";
 import { FMChatDock } from "./chat/FMChatDock";
 import { FMCommandPalette } from "./FMCommandPalette";
 import { findModuleForPath } from "@/config/fmNavigation";
+import { recordModulePath } from "@/lib/fmHistory";
 
 export const FMShell = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
   const mod = findModuleForPath(pathname);
+
+  // Persist the most recent path inside each module so ModuleTabs and
+  // the Quick Actions Home button can restore the player's last context.
+  useEffect(() => {
+    recordModulePath(mod.id, pathname);
+  }, [mod.id, pathname]);
 
   return (
     <ChatDockProvider>
