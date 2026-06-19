@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.405",
+    date: "2026-06-19",
+    changes: [
+      { type: 'improvement', description: "Magazine grid + stats sidebar layout now applied to **every** hub tile page — not just hubs that explicitly opted in. `CategoryHub` auto-generates a default `Trending Data` sidebar (Tiles total, Sections count, Largest Section with its name as hint, Featured tile name, and a LIVE status row) whenever the caller hasn't supplied custom `stats`, so all 14 hubs (`BandHub`, `BandLiveHub`, `CareerHub`, `CareerBusinessHub`, `CharacterHub`, `CommerceHub`, `EventsHub`, `LiveHub`, `MediaHub`, `MusicHubPage`, `PremiumStoreHub`, `SocialHub`, `WorldHub`, `WorldSocialHub`) now render the same 21:9 featured hero + 280px right-rail KPI panel + dense 2→6 column painterly sub-grid. Grid column template hard-pinned to `lg:grid-cols-[1fr_280px]` so the sidebar is always present on lg+ for visual consistency across modules. Pure presentation — no routes, queries, or business logic touched." },
+    ],
+  },
+  {
     version: "1.1.404",
     date: "2026-06-19",
     changes: [
