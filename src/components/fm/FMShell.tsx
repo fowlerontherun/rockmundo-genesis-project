@@ -7,6 +7,7 @@ import { FMSidebar } from "./FMSidebar";
 import { BottomActionBar } from "./BottomActionBar";
 import { ChatDockProvider } from "./chat/ChatDockContext";
 import { FMChatDock } from "./chat/FMChatDock";
+import { FMCommandPalette } from "./FMCommandPalette";
 import { findModuleForPath } from "@/config/fmNavigation";
 
 export const FMShell = ({ children }: { children: ReactNode }) => {
@@ -32,6 +33,7 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
         </div>
         <BottomActionBar />
         <FMChatDock />
+        <FMCommandPalette />
       </div>
     </ChatDockProvider>
   );
