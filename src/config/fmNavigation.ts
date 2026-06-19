@@ -57,10 +57,12 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Open Schedule", path: "/schedule", icon: Calendar, description: "Plan today" },
+      { label: "Read Inbox", path: "/inbox", icon: InboxIcon, description: "Unread messages" },
+      { label: "Today's News", path: "/todays-news", icon: Newspaper },
+    ],
   },
-
-  // 2. CHARACTER — identity, body, property
-  {
     id: "character",
     label: "Character",
     icon: Users,
@@ -109,10 +111,13 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "New Avatar", path: "/avatar-designer", icon: Sparkles, description: "Design a look" },
+      { label: "Visit Wellness", path: "/wellness", icon: Heart },
+      { label: "Buy Gear", path: "/gear-shop", icon: ShoppingBag },
+      { label: "Switch Character", path: "/characters", icon: Users },
+    ],
   },
-
-  // 3. MUSIC — create, release, chart
-  {
     id: "music",
     label: "Music",
     icon: Music,
@@ -163,10 +168,13 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Write Song", path: "/songwriting", icon: ListMusic, description: "Start a new project" },
+      { label: "Record Track", path: "/recording-studio", icon: Disc3 },
+      { label: "Plan Release", path: "/release-manager", icon: Disc3 },
+      { label: "Create Music Video", path: "/music-videos", icon: Video },
+    ],
   },
-
-  // 4. BAND & LIVE — merged
-  {
     id: "band-live",
     label: "Band & Live",
     icon: Mic2,
@@ -234,10 +242,14 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Book a Gig", path: "/gig-booking", icon: Calendar, description: "Find a venue" },
+      { label: "Start a Tour", path: "/tour-manager", icon: Plane },
+      { label: "Hit Open Mic", path: "/open-mic", icon: Mic },
+      { label: "Find Bandmates", path: "/bands/finder", icon: Users },
+      { label: "Rehearse", path: "/rehearsals", icon: Guitar },
+    ],
   },
-
-  // 5. CAREER — money, work, companies, creative side-careers
-  {
     id: "career",
     label: "Career",
     icon: Briefcase,
@@ -300,10 +312,14 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "View Finances", path: "/finances", icon: DollarSign, description: "Cash flow & ledger" },
+      { label: "Find a Job", path: "/employment", icon: Briefcase },
+      { label: "Review Offers", path: "/offers-dashboard", icon: Handshake },
+      { label: "Manage Companies", path: "/my-companies", icon: Building2 },
+      { label: "Sign Sponsors", path: "/sponsorships", icon: Handshake },
+    ],
   },
-
-  // 6. MEDIA — consumer media browsing
-  {
     id: "media",
     label: "Media",
     icon: Newspaper,
@@ -359,10 +375,13 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Plan Self-Promotion", path: "/media/self-promotion", icon: Megaphone, description: "Push a campaign" },
+      { label: "Pitch to Radio", path: "/media/radio", icon: Radio },
+      { label: "Pitch to TV", path: "/media/tv-shows", icon: Tv },
+      { label: "Read PR History", path: "/media/pr-history", icon: BookOpen },
+    ],
   },
-
-  // 7. WORLD — places, travel, politics
-  {
     id: "world",
     label: "World",
     icon: Globe,
@@ -401,10 +420,13 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Travel Somewhere", path: "/travel", icon: Plane, description: "Move between cities" },
+      { label: "Explore Cities", path: "/cities", icon: MapPin },
+      { label: "Check World Pulse", path: "/world-pulse", icon: Radio },
+      { label: "View Politics", path: "/political-party", icon: Vote },
+    ],
   },
-
-  // 8. SOCIAL — people, peer platforms, nightlife
-  {
     id: "social",
     label: "Social",
     icon: MessageSquare,
@@ -458,10 +480,13 @@ export const FM_MODULES: FMModule[] = [
         ],
       },
     ],
+    quickActions: [
+      { label: "Post on Twaater", path: "/twaater", icon: Newspaper, description: "Share with fans" },
+      { label: "Hit a Nightclub", path: "/nightclubs", icon: Sparkles },
+      { label: "Open Messages", path: "/twaater/messages", icon: MessageSquare },
+      { label: "Browse Premium Store", path: "/premium-store", icon: Crown },
+    ],
   },
-
-  // 9. ADMIN — gated
-  {
     id: "admin",
     label: "Admin",
     icon: Shield,
