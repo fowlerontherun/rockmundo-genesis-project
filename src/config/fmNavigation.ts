@@ -63,6 +63,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Today's News", path: "/todays-news", icon: Newspaper },
     ],
   },
+  // 2. CHARACTER — identity, body, property
+  {
     id: "character",
     label: "Character",
     icon: Users,
@@ -118,6 +120,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Switch Character", path: "/characters", icon: Users },
     ],
   },
+  // 3. MUSIC — create, release, chart
+  {
     id: "music",
     label: "Music",
     icon: Music,
@@ -175,6 +179,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Create Music Video", path: "/music-videos", icon: Video },
     ],
   },
+  // 4. BAND & LIVE — merged
+  {
     id: "band-live",
     label: "Band & Live",
     icon: Mic2,
@@ -250,6 +256,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Rehearse", path: "/rehearsals", icon: Guitar },
     ],
   },
+  // 5. CAREER — money, work, companies, creative side-careers
+  {
     id: "career",
     label: "Career",
     icon: Briefcase,
@@ -320,6 +328,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Sign Sponsors", path: "/sponsorships", icon: Handshake },
     ],
   },
+  // 6. MEDIA — consumer media browsing
+  {
     id: "media",
     label: "Media",
     icon: Newspaper,
@@ -382,6 +392,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Read PR History", path: "/media/pr-history", icon: BookOpen },
     ],
   },
+  // 7. WORLD — places, travel, politics
+  {
     id: "world",
     label: "World",
     icon: Globe,
@@ -427,6 +439,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "View Politics", path: "/political-party", icon: Vote },
     ],
   },
+  // 8. SOCIAL — people, peer platforms, nightlife
+  {
     id: "social",
     label: "Social",
     icon: MessageSquare,
@@ -487,6 +501,8 @@ export const FM_MODULES: FMModule[] = [
       { label: "Browse Premium Store", path: "/premium-store", icon: Crown },
     ],
   },
+  // 9. ADMIN — gated
+  {
     id: "admin",
     label: "Admin",
     icon: Shield,
