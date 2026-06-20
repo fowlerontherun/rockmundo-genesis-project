@@ -1,302 +1,163 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  ArrowDownRight,
-  ArrowUpRight,
-  CalendarClock,
-  HeartPulse,
-  ShieldCheck,
-  Stethoscope,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Activity, AlertTriangle, Dumbbell, Heart, Sparkles, Wine } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import HabitList, { HabitWithStatus } from "@/components/wellness/HabitList";
-import HabitSummary from "@/components/wellness/HabitSummary";
-import {
-  fetchWellnessOverview,
-  getDateKey,
-  getHabitCompletionRate,
-  setHabitCompletion,
-  type HealthStat,
-  type WellnessAppointment,
-  type WellnessOverviewData,
-} from "@/lib/api/wellness";
-import { useTranslation } from "@/hooks/useTranslation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
-const statIcons: Record<string, JSX.Element> = {
-  "resting-heart-rate": <HeartPulse className="h-5 w-5 text-rose-500" />,
-  "sleep-quality": <ShieldCheck className="h-5 w-5 text-indigo-500" />,
-  hydration: <Stethoscope className="h-5 w-5 text-cyan-500" />,
-  "stress-index": <Activity className="h-5 w-5 text-amber-500" />,
-};
+import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
+import ActivityCard from "@/components/wellness/ActivityCard";
+import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 
-const getStatIcon = (stat: HealthStat) => statIcons[stat.id] ?? <HeartPulse className="h-5 w-5" />;
+import { useGameData } from "@/hooks/useGameData";
+import { useWellnessState } from "@/hooks/useWellnessState";
+import type { WellnessCategory } from "@/lib/api/wellnessActivities";
 
-const formatAppointmentDate = (date: string) => {
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) {
-    return "TBD";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(parsed);
-};
+const CATEGORIES: { key: WellnessCategory; label: string; icon: JSX.Element; blurb: string }[] = [
+  { key: "recovery", label: "Recovery", icon: <Heart className="h-4 w-4" />, blurb: "Restore mood, lower stress" },
+  { key: "fitness", label: "Fitness", icon: <Dumbbell className="h-4 w-4" />, blurb: "Build long-term health" },
+  { key: "medical", label: "Medical", icon: <Sparkles className="h-4 w-4" />, blurb: "Clear ailments, prevent injury" },
+  { key: "indulgence", label: "Indulgence", icon: <Wine className="h-4 w-4" />, blurb: "Mood up — but with consequences" },
+];
 
 const WellnessPage = () => {
-  const { t } = useTranslation();
-  const [data, setData] = useState<WellnessOverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const todayKey = useMemo(() => getDateKey(new Date()), []);
+  const { profile } = useGameData();
+  const profileId = profile?.id ?? null;
+  const { catalog, cooldowns, ailments, blocks, vitals, loading, error, perform } = useWellnessState(profileId);
+  const [performing, setPerforming] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<WellnessCategory>("recovery");
 
-  const formatAppointmentStatus = (status: WellnessAppointment["status"]) => {
-    switch (status) {
-      case "confirmed":
-        return { label: t("wellness.confirmed"), variant: "default" as const };
-      case "completed":
-        return { label: t("wellness.completed"), variant: "secondary" as const };
-      case "cancelled":
-        return { label: t("wellness.cancelled"), variant: "destructive" as const };
-      default:
-        return { label: t("wellness.pending"), variant: "outline" as const };
+  const cooldownMap = useMemo(() => new Map(cooldowns.map(c => [c.catalog_slug, c])), [cooldowns]);
+  const grouped = useMemo(() => {
+    const g: Record<WellnessCategory, typeof catalog> = { recovery: [], fitness: [], medical: [], indulgence: [] };
+    catalog.forEach(e => g[e.category]?.push(e));
+    return g;
+  }, [catalog]);
+
+  const handlePerform = async (slug: string) => {
+    setPerforming(slug);
+    try {
+      const res = await perform(slug);
+      const entry = catalog.find(c => c.slug === slug);
+      toast.success(`${entry?.name ?? "Activity"} complete`, {
+        description: res.ailments.length
+          ? `Side effect: ${res.ailments.join(", ")}`
+          : "Stats updated.",
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't perform activity");
+    } finally {
+      setPerforming(null);
     }
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const overview = await fetchWellnessOverview();
-      setData(overview);
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      setError(t("wellness.loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
-
-  const handleToggleHabit = useCallback(
-    async (habitId: string, completed: boolean) => {
-      try {
-        const updated = await setHabitCompletion(habitId, todayKey, completed);
-        setData(updated);
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError(t("wellness.updateError"));
-      }
-    },
-    [todayKey, t]
-  );
-
-  const habitsWithStatus: HabitWithStatus[] = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    const referenceDate = new Date();
-    const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(referenceDate);
-      date.setDate(referenceDate.getDate() - index);
-      return getDateKey(date);
-    });
-
-    return data.habits.map(habit => {
-      const completionSet = new Set(habit.completedDates);
-      const weeklyCompletions = lastSevenDays.filter(dateKey => completionSet.has(dateKey)).length;
-      const completionRate = getHabitCompletionRate(habit, referenceDate);
-
-      return {
-        ...habit,
-        completedToday: completionSet.has(todayKey),
-        completionRate,
-        weeklyCompletions,
-      } satisfies HabitWithStatus;
-    });
-  }, [data, todayKey]);
-
-  const summaryMetrics = useMemo(() => {
-    if (!habitsWithStatus.length) {
-      return {
-        totalHabits: 0,
-        averageCompletionRate: 0,
-        longestStreak: 0,
-        weeklyCompletions: 0,
-      };
-    }
-
-    const totalHabits = habitsWithStatus.length;
-    const weeklyCompletions = habitsWithStatus.reduce(
-      (sum, habit) => sum + habit.weeklyCompletions,
-      0
-    );
-    const longestStreak = habitsWithStatus.reduce(
-      (max, habit) => Math.max(max, habit.streak),
-      0
-    );
-    const averageCompletionRate = Math.round(
-      habitsWithStatus.reduce((sum, habit) => sum + habit.completionRate, 0) /
-        totalHabits
-    );
-
-    return {
-      totalHabits,
-      averageCompletionRate,
-      longestStreak,
-      weeklyCompletions,
-    };
-  }, [habitsWithStatus]);
-
-  if (loading) {
+  if (!profileId) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-80" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-32 w-full" />
-          ))}
-        </div>
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6 p-6">
-        <Alert variant="destructive">
-          <AlertTitle>{t("wellness.unavailable")}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+      <div className="space-y-4 p-6">
+        <Alert>
+          <AlertTitle>No active character</AlertTitle>
+          <AlertDescription>Create or select a character to manage wellness.</AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  if (!data) {
-    return null;
+  if (loading) {
+    return (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+        <Skeleton className="h-64" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <header className="space-y-2">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("wellness.title")}</h1>
-            <p className="text-muted-foreground">
-              {t("wellness.subtitle")}
-            </p>
-          </div>
-          <Badge variant="outline">{t("wellness.lastUpdated")} {formatAppointmentDate(data.lastUpdated)}</Badge>
+    <div className="space-y-6 p-4 lg:p-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">Lifestyle</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Wellness & Lifestyle</h1>
+          <p className="text-sm text-muted-foreground">Your health gates what you can do on stage, in studio, and on tour.</p>
         </div>
+        {blocks.length > 0 && (
+          <Badge variant="destructive" className="gap-1">
+            <AlertTriangle className="h-3 w-3" /> {blocks.length} active block{blocks.length > 1 ? "s" : ""}
+          </Badge>
+        )}
       </header>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <HeartPulse className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">{t("wellness.healthStats")}</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {data.healthStats.map(stat => {
-            const direction = stat.changeDirection === "down" ? "down" : "up";
-            const Icon = direction === "down" ? ArrowDownRight : ArrowUpRight;
-            const changeColor = direction === "down" ? "text-emerald-500" : "text-rose-500";
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn't load wellness</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-            return (
-              <Card key={stat.id}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {stat.label}
-                    </CardTitle>
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="text-3xl font-semibold">
-                        {stat.value}
-                        {stat.unit ? <span className="ml-1 text-base font-normal">{stat.unit}</span> : null}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-muted p-2">{getStatIcon(stat)}</div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {typeof stat.change === "number" ? (
-                    <div className={`flex items-center gap-1 text-xs font-medium ${changeColor}`}>
-                      <Icon className="h-3.5 w-3.5" />
-                      <span>
-                        {direction === "down" ? t("wellness.improved") : t("wellness.changed")} {Math.abs(stat.change)}
-                        {stat.unit ? stat.unit : ""}
-                      </span>
-                    </div>
-                  ) : null}
-                  {stat.description ? (
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
-                  ) : null}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+      <WellnessVitalsPanel vitals={vitals} />
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">{t("wellness.upcomingAppointments")}</h2>
-        </div>
-        <Card>
-          <CardContent className="divide-y px-0">
-            {data.appointments.length ? (
-              data.appointments.map(appointment => {
-                const status = formatAppointmentStatus(appointment.status);
-                return (
-                  <div
-                    key={appointment.id}
-                    className="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{appointment.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatAppointmentDate(appointment.date)} · {appointment.time} · {appointment.location}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{appointment.notes}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{appointment.type}</Badge>
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="px-6 py-8 text-center text-sm text-muted-foreground">
-                {t("wellness.noAppointments")}
+      {blocks.length > 0 && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" /> Active Blocks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {blocks.map(b => (
+              <div key={b.id} className="flex items-center justify-between gap-3">
+                <span>{b.reason}</span>
+                <span className="text-xs text-muted-foreground">
+                  until {new Date(b.expires_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
               </div>
-            )}
+            ))}
           </CardContent>
         </Card>
-      </section>
+      )}
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Stethoscope className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">{t("wellness.habitTracking")}</h2>
-        </div>
-        <HabitSummary {...summaryMetrics} />
-        <HabitList habits={habitsWithStatus} onToggleHabit={handleToggleHabit} />
-      </section>
+      <AilmentsPanel ailments={ailments} catalog={catalog} onTreat={handlePerform} />
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4 text-primary" /> Activities
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Daily cap: 3 actions · max 1 indulgence per day.</p>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={v => setActiveTab(v as WellnessCategory)}>
+            <TabsList className="grid w-full grid-cols-4">
+              {CATEGORIES.map(c => (
+                <TabsTrigger key={c.key} value={c.key} className="gap-1.5 text-xs">
+                  {c.icon}<span className="hidden sm:inline">{c.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {CATEGORIES.map(c => (
+              <TabsContent key={c.key} value={c.key} className="mt-4">
+                <p className="mb-3 text-xs text-muted-foreground">{c.blurb}</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {grouped[c.key].map(entry => (
+                    <ActivityCard
+                      key={entry.id}
+                      entry={entry}
+                      cooldown={cooldownMap.get(entry.slug)}
+                      vitals={vitals}
+                      fame={profile?.fame ?? 0}
+                      performing={performing === entry.slug}
+                      onPerform={handlePerform}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };
