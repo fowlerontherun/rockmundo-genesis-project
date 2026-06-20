@@ -36,7 +36,7 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
 
   const loadVitals = useCallback(async () => {
     if (!profileId) return;
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("profiles")
       .select("health, energy, mood, stress")
       .eq("id", profileId)
