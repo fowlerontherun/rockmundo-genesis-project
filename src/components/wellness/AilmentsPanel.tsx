@@ -11,7 +11,7 @@ interface Props {
 }
 
 const sevLabel = (s: number) => (s >= 3 ? "Critical" : s === 2 ? "Moderate" : "Mild");
-const sevColor = (s: number) => (s >= 3 ? "destructive" : s === 2 ? "default" : "secondary") as const;
+const sevColor = (s: number): "destructive" | "default" | "secondary" => (s >= 3 ? "destructive" : s === 2 ? "default" : "secondary");
 
 export const AilmentsPanel = ({ ailments, catalog, onTreat }: Props) => {
   if (!ailments.length) {
