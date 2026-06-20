@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.407",
+    date: "2026-06-20",
+    changes: [
+      { type: 'feature', description: "**Wellness & Lifestyle expansion.** Replaced the localStorage Wellness mock with a full character-scoped system that gates real game activities. New tables: `wellness_activity_catalog` (24 seeded activities across Recovery, Fitness, Medical, Indulgence), `wellness_activity_log` (per-character history powering cooldowns), `player_ailments` (12 condition templates — vocal strain, burnout, flu, sprained wrist, insomnia, panic attack, food poisoning, hangover, back pain, depression spell, withdrawal, sore throat), and `wellness_blocks` (time-bound activity locks). Added `mood`, `stress`, and `wellness_streak_low_mood_days` columns to `profiles`. SECURITY DEFINER function `evaluate_wellness_gate(profile_id, activity_type)` returns `{allowed, reason, suggestion_slug}` and is the single source of truth for whether a player can gig, tour, record, jam, work, train, or party right now. Hybrid cooldown model: every activity has its own per-character cooldown timer + a daily cap of 3 wellness actions and 1 indulgence per 24h + a stamina cost subtracted from `energy`. Hard-block UX — disabled actions show a clear reason and the `AilmentsPanel` deep-links the exact treatment activity that resolves the condition. New edge function `wellness-perform-activity` validates ownership, gate, cooldown, daily caps, stamina, and cash; mutates `profiles` vitals; logs the action; rolls indulgence ailment risks; auto-creates a `player_scheduled_activities` entry for any activity ≥60 minutes so it blocks other commitments. New components under `src/components/wellness/` (`WellnessVitalsPanel`, `ActivityCard`, `AilmentsPanel`) and a new hook `useWellnessState` that loads catalog + cooldowns + ailments + blocks + vitals in a single read. The Wellness page (`src/pages/wellness/index.tsx`) was rebuilt around Vitals → Active Blocks → Ailments → 4-tab Activity Catalog. Performance helper `getWellnessMultiplier()` exported from `src/lib/api/wellnessActivities.ts` for gig/recording engines to clamp output to 0.5×–1.15× based on (health + energy + mood). The four new activity types (`wellness_recovery`, `wellness_fitness`, `wellness_medical`, `wellness_indulgence`) were added to the `player_scheduled_activities` check constraint so they integrate with the existing schedule conflict layer." },
+    ],
+  },
+  {
     version: "1.1.406",
     date: "2026-06-19",
     changes: [
