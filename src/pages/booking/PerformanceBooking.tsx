@@ -282,6 +282,16 @@ export default function PerformanceBooking() {
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
     if (conflict.hasConflict) return;
 
+    // Wellness gate
+    try {
+      await assertWellnessAllows(profileId, activityType as any);
+    } catch (e: any) {
+      toast({ title: "Blocked by Wellness", description: e.message, variant: "destructive" });
+      return;
+    }
+
+
+
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;
 
