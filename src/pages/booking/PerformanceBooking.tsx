@@ -16,6 +16,7 @@ import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels"
 import { Badge } from "@/components/ui/badge";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function PerformanceBooking() {
@@ -175,6 +176,15 @@ export default function PerformanceBooking() {
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
     if (conflict.hasConflict) return;
 
+    // Wellness gate
+    try {
+      await assertWellnessAllows(profileId, "rehearsal");
+    } catch (e: any) {
+      toast({ title: "Blocked by Wellness", description: e.message, variant: "destructive" });
+      return;
+    }
+
+
     try {
       // Create band_rehearsals record
       const { data: rehearsal, error: rehearsalError } = await supabase
@@ -271,6 +281,16 @@ export default function PerformanceBooking() {
     // Check for conflicts
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
     if (conflict.hasConflict) return;
+
+    // Wellness gate
+    try {
+      await assertWellnessAllows(profileId, activityType as any);
+    } catch (e: any) {
+      toast({ title: "Blocked by Wellness", description: e.message, variant: "destructive" });
+      return;
+    }
+
+
 
     const metadata: any = {};
     if (activityType === "gig") metadata.venue_id = selectedVenue;

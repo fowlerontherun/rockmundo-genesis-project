@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 
 export interface TourBookingData {
   name: string;
@@ -77,6 +78,10 @@ export function useTourBooking() {
       const costs = await calculateTourCosts(tourData);
 
       if (!profileId) throw new Error("No active profile");
+
+      // Wellness gate: a touring artist must be fit enough to hit the road.
+      await assertWellnessAllows(profileId, "travel");
+      await assertWellnessAllows(profileId, "gig");
 
       // Create the tour with correct column names
       const { data: tour, error: tourError } = await supabase

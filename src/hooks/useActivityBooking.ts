@@ -1,6 +1,48 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { evaluateGate } from "@/lib/api/wellnessActivities";
 import type { ActivityType } from "./useScheduledActivities";
+
+// Map our ActivityType union → the wellness gate's activity_type vocabulary.
+// Anything not in this map skips the wellness gate.
+const WELLNESS_GATE_MAP: Partial<Record<ActivityType, string>> = {
+  gig: "gig",
+  recording: "recording",
+  rehearsal: "rehearsal",
+  songwriting: "songwriting",
+  busking: "busking",
+  work: "work",
+  travel: "travel",
+  skill_practice: "training",
+  open_mic: "gig",
+  festival_performance: "gig",
+  pr_appearance: "work",
+};
+
+/**
+ * Throw if the active character is wellness-blocked from this activity type.
+ * Fail-open on transport errors so a flaky network never blocks gameplay.
+ */
+export async function assertWellnessAllows(
+  profileId: string,
+  activityType: ActivityType,
+): Promise<void> {
+  const gateType = WELLNESS_GATE_MAP[activityType];
+  if (!gateType) return;
+  let res: { allowed: boolean; reason: string | null; suggestion_slug: string | null };
+  try {
+    res = await evaluateGate(profileId, gateType);
+  } catch (e) {
+    console.warn("[assertWellnessAllows] gate RPC failed, allowing:", e);
+    return;
+  }
+  if (!res.allowed) {
+    const hint = res.suggestion_slug
+      ? ` Try: ${res.suggestion_slug.replace(/_/g, " ")}.`
+      : " Visit /wellness to recover.";
+    throw new Error(`${res.reason ?? "Your wellness blocks this activity."}${hint}`);
+  }
+}
 
 export interface BookingParams {
   userId?: string;
@@ -95,6 +137,9 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
   if (!profileId) {
     throw new Error('Player profile not found. Please complete onboarding first.');
   }
+
+  // Wellness gate: hard-block when the active character isn't fit for this activity.
+  await assertWellnessAllows(profileId, params.activityType);
 
   // Check for conflicts
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
