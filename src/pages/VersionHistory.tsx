@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.408",
+    date: "2026-06-21",
+    changes: [
+      { type: 'feature', description: "Added `useWellnessGate()` hook (`src/hooks/useWellnessGate.ts`) — the reusable client-side bridge between the Wellness system and every game-activity entry button. Exposes `check(activityType)` which calls the `evaluate_wellness_gate` SECURITY DEFINER RPC and, on a block, surfaces a Sonner error toast with the server-provided reason, the `suggestion_slug` deep-link as a 'Try: …' description, and a 'Wellness' action button that routes the player to `/wellness`. Also exposes `vitals` (live `health`/`energy`/`mood`/`stress` from `profiles`) and a memoised `multiplier` (0.5×–1.15×) via `getWellnessMultiplier()` so gig, recording, tour, rehearsal, songwriting, jam, work, training, busking, and travel handlers can clamp XP/payout/quality outcomes in one line. Fail-open by design — if the RPC errors, gameplay is not blocked. Accepts a narrowed `WellnessActivityType` union matching the activity types `evaluate_wellness_gate` understands." },
+    ],
+  },
+  {
     version: "1.1.407",
     date: "2026-06-20",
     changes: [
