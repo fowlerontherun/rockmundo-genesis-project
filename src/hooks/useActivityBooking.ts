@@ -138,6 +138,9 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     throw new Error('Player profile not found. Please complete onboarding first.');
   }
 
+  // Wellness gate: hard-block when the active character isn't fit for this activity.
+  await assertWellnessAllows(profileId, params.activityType);
+
   // Check for conflicts
   const { available, conflictingActivity } = await checkTimeSlotAvailable(
     userId,
