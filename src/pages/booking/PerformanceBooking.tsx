@@ -176,6 +176,15 @@ export default function PerformanceBooking() {
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
     if (conflict.hasConflict) return;
 
+    // Wellness gate
+    try {
+      await assertWellnessAllows(profileId, "rehearsal");
+    } catch (e: any) {
+      toast({ title: "Blocked by Wellness", description: e.message, variant: "destructive" });
+      return;
+    }
+
+
     try {
       // Create band_rehearsals record
       const { data: rehearsal, error: rehearsalError } = await supabase
