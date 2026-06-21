@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.409",
+    date: "2026-06-21",
+    changes: [
+      { type: 'feature', description: "Wired the Wellness gate into every gig, recording, tour, rehearsal, songwriting, busking, work, travel, training, open-mic, festival-performance, and PR-appearance booking path. Added `assertWellnessAllows(profileId, activityType)` in `src/hooks/useActivityBooking.ts` which maps our `ActivityType` union to the `evaluate_wellness_gate` vocabulary and throws a human-readable error (with the server's `suggestion_slug` as a 'Try: …' hint) when the active character is blocked. Called from `createScheduledActivity` so every booking flow that funnels through it (RecordingScheduleDialog, WorkBooking, BuskingScheduleDialog, SongwritingScheduleDialog, jam sessions, festival ticket holds, modeling offers, promo tours, etc.) is hard-blocked when the gate denies. Also wired the gate into `PerformanceBooking.handleBookRehearsal` and `PerformanceBooking.handleBookActivity` (gig/busking/songwriting) which bypass the helper and do direct `player_scheduled_activities` inserts, and into `useTourBooking.createTour` which double-checks the `travel` and `gig` gates before inserting tours, gigs, and travel legs. Fail-open on transport errors so a flaky RPC never blocks gameplay." },
+    ],
+  },
+  {
     version: "1.1.408",
     date: "2026-06-21",
     changes: [
