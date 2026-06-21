@@ -16,6 +16,7 @@ import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels"
 import { Badge } from "@/components/ui/badge";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function PerformanceBooking() {
