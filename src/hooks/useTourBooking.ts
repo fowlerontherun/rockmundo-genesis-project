@@ -79,6 +79,10 @@ export function useTourBooking() {
 
       if (!profileId) throw new Error("No active profile");
 
+      // Wellness gate: a touring artist must be fit enough to hit the road.
+      await assertWellnessAllows(profileId, "travel");
+      await assertWellnessAllows(profileId, "gig");
+
       // Create the tour with correct column names
       const { data: tour, error: tourError } = await supabase
         .from('tours')
