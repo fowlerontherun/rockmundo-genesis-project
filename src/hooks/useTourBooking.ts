@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 
 export interface TourBookingData {
   name: string;
