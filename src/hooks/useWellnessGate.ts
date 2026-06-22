@@ -77,6 +77,8 @@ export function useWellnessGate(): UseWellnessGateResult {
   const check = useCallback(
     async (activityType: WellnessActivityType) => {
       if (!profileId) return true;
+      // Wellness/recovery actions must never be gated by wellness itself.
+      if (BYPASS_GATE.has(activityType)) return true;
       try {
         const res = await evaluateGate(profileId, activityType);
         if (res.allowed) return true;
