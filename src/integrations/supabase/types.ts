@@ -5320,6 +5320,50 @@ export type Database = {
           },
         ]
       }
+      city_population_history: {
+        Row: {
+          city_id: string
+          created_at: string
+          delta: number
+          id: string
+          new_population: number
+          previous_population: number
+          reason: string
+          source_id: string | null
+          source_table: string | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          delta: number
+          id?: string
+          new_population: number
+          previous_population: number
+          reason: string
+          source_id?: string | null
+          source_table?: string | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          delta?: number
+          id?: string
+          new_population?: number
+          previous_population?: number
+          reason?: string
+          source_id?: string | null
+          source_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_population_history_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       city_project_types: {
         Row: {
           approval_change: number
@@ -35602,6 +35646,16 @@ export type Database = {
           p_song_id?: string
         }
         Returns: string
+      }
+      adjust_city_population: {
+        Args: {
+          p_city_id: string
+          p_delta: number
+          p_reason: string
+          p_source_id?: string
+          p_source_table?: string
+        }
+        Returns: number
       }
       admin_disable_maintenance: {
         Args: never

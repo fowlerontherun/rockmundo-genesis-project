@@ -77,6 +77,7 @@ const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/Performan
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const SongwritingBooking = lazyWithRetry(() => import("./pages/booking/SongwritingBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
+const CitiesTreasury = lazyWithRetry(() => import("./pages/CitiesTreasury"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
@@ -421,6 +422,7 @@ function App() {
                     <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
+                    <Route path="cities/treasury" element={<CitiesTreasury />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="cities/:cityId/election" element={<CityElection />} />
                     <Route path="cities/:cityId/mayor-dashboard" element={<MayorDashboard />} />

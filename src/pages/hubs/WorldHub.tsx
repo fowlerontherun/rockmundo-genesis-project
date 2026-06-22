@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Building2, MapPin, Calendar, Hammer, Flag, BarChart3, Vote, Radio, Star } from "lucide-react";
+import { Globe, Plane, Building2, MapPin, Calendar, Hammer, Flag, BarChart3, Vote, Radio, Star, Landmark } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldHub() {
@@ -20,6 +20,7 @@ export default function WorldHub() {
             { icon: Radio, labelKey: "nav.worldPulse", path: "/world-pulse", imagePrompt: "A pulse line overlaid on a globe showing trending music events" },
             { icon: Star, labelKey: "City Landmarks", path: "/landmarks", imagePrompt: "Famous city landmarks lit up at night with crowds and music posters" },
             { icon: Calendar, labelKey: "Seasonal Events", path: "/seasonal-events", imagePrompt: "A calendar showing seasonal music festivals and holiday events" },
+            { icon: Landmark, labelKey: "World Treasuries", path: "/cities/treasury", imagePrompt: "A stack of gold coins beside a city skyline at dawn representing municipal wealth" },
           ],
         },
         {
