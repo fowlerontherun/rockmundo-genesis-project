@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Globe, Plane, Building2, MapPin, Calendar, Hammer, Flag, BarChart3, Vote, Radio, Star } from "lucide-react";
+import { Globe, Plane, Building2, MapPin, Calendar, Hammer, Flag, BarChart3, Vote, Radio, Star, Landmark } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 
 export default function WorldHub() {
