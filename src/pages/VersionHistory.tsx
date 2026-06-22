@@ -14,6 +14,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.411",
+    date: "2026-06-22",
+    changes: [
+      { type: 'feature', description: "New **World Treasuries** page at `/cities/treasury` — lists every city with its population, tax rate, treasury balance, lifetime tax collected, total spent, and a 7-day population delta badge. Searchable by city or country, with totals across all visible cities. Linked from the World hub." },
+      { type: 'feature', description: "City populations are now dynamic. New `city_population_history` table + `adjust_city_population(city_id, delta, reason)` SECURITY DEFINER RPC log every change. AFTER INSERT trigger on `player_travel_history` shifts one resident from origin to destination on each travel. AFTER INSERT trigger on `gig_outcomes` grows the host city by `new_followers/50 + actual_attendance/500` residents, attributing it to `gig_drew_residents`. Population is floored at 1,000 so a city can never depopulate." },
+    ],
+  },
+  {
     version: "1.1.410",
     date: "2026-06-22",
     changes: [
