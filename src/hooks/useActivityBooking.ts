@@ -4,8 +4,11 @@ import { evaluateGate } from "@/lib/api/wellnessActivities";
 import type { ActivityType } from "./useScheduledActivities";
 
 // Map our ActivityType union → the wellness gate's activity_type vocabulary.
-// Anything not in this map skips the wellness gate.
-const WELLNESS_GATE_MAP: Partial<Record<ActivityType, string>> = {
+// `null` = intentionally bypass the gate (wellness/recovery actions themselves,
+// or passive/admin entries that shouldn't be blocked). Every ActivityType must
+// be listed explicitly so new values surface a TypeScript error rather than
+// silently skipping the gate.
+const WELLNESS_GATE_MAP: Record<ActivityType, string | null> = {
   gig: "gig",
   recording: "recording",
   rehearsal: "rehearsal",
@@ -14,9 +17,21 @@ const WELLNESS_GATE_MAP: Partial<Record<ActivityType, string>> = {
   work: "work",
   travel: "travel",
   skill_practice: "training",
-  open_mic: "gig",
-  festival_performance: "gig",
-  pr_appearance: "work",
+  open_mic: "open_mic",
+  festival_performance: "festival_performance",
+  pr_appearance: "pr_appearance",
+  // Wellness / recovery & passive activities — never gated by wellness itself.
+  health: null,
+  university: null,
+  reading: null,
+  mentorship: null,
+  youtube_video: null,
+  film_production: null,
+  festival_attendance: null,
+  release_manufacturing: null,
+  release_promo: null,
+  teaching: null,
+  other: null,
 };
 
 /**
@@ -27,8 +42,16 @@ export async function assertWellnessAllows(
   profileId: string,
   activityType: ActivityType,
 ): Promise<void> {
+  // Use `in` so unknown values (e.g. cast from `any`) log a warning instead of
+  // silently bypassing the gate.
+  if (!(activityType in WELLNESS_GATE_MAP)) {
+    console.warn(
+      `[assertWellnessAllows] unmapped activityType "${activityType}" — skipping wellness gate. Add it to WELLNESS_GATE_MAP.`,
+    );
+    return;
+  }
   const gateType = WELLNESS_GATE_MAP[activityType];
-  if (!gateType) return;
+  if (gateType === null) return;
   let res: { allowed: boolean; reason: string | null; suggestion_slug: string | null };
   try {
     res = await evaluateGate(profileId, gateType);
