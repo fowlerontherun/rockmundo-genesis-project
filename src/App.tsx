@@ -77,6 +77,7 @@ const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/Performan
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const SongwritingBooking = lazyWithRetry(() => import("./pages/booking/SongwritingBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
+const CitiesTreasury = lazyWithRetry(() => import("./pages/CitiesTreasury"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
