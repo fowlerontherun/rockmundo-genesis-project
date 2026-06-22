@@ -18,7 +18,24 @@ export type WellnessActivityType =
   | "work"
   | "training"
   | "busking"
-  | "travel";
+  | "travel"
+  | "open_mic"
+  | "festival_performance"
+  | "pr_appearance"
+  // Wellness/recovery actions — always allowed, never gated by wellness itself.
+  | "health"
+  | "wellness"
+  | "rest"
+  | "medical";
+
+// Activity types that are wellness/recovery themselves and must never be
+// blocked by the wellness gate (otherwise the player can't recover).
+const BYPASS_GATE: ReadonlySet<WellnessActivityType> = new Set([
+  "health",
+  "wellness",
+  "rest",
+  "medical",
+]);
 
 export interface UseWellnessGateResult {
   vitals: WellnessVitals | null;
