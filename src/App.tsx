@@ -421,6 +421,7 @@ function App() {
                     <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
+                    <Route path="cities/treasury" element={<CitiesTreasury />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="cities/:cityId/election" element={<CityElection />} />
                     <Route path="cities/:cityId/mayor-dashboard" element={<MayorDashboard />} />
