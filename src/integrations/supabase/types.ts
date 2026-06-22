@@ -19933,6 +19933,72 @@ export type Database = {
           },
         ]
       }
+      player_ailments: {
+        Row: {
+          blocks_activity_types: string[]
+          contracted_at: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          profile_id: string
+          resolved_at: string | null
+          severity: number
+          slug: string
+          source: string | null
+          stat_penalty: Json
+          treatment_required_slug: string | null
+          user_id: string
+        }
+        Insert: {
+          blocks_activity_types?: string[]
+          contracted_at?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          profile_id: string
+          resolved_at?: string | null
+          severity?: number
+          slug: string
+          source?: string | null
+          stat_penalty?: Json
+          treatment_required_slug?: string | null
+          user_id: string
+        }
+        Update: {
+          blocks_activity_types?: string[]
+          contracted_at?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          profile_id?: string
+          resolved_at?: string | null
+          severity?: number
+          slug?: string
+          source?: string | null
+          stat_penalty?: Json
+          treatment_required_slug?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_ailments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_ailments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_attributes: {
         Row: {
           attribute_points: number | null
@@ -25511,12 +25577,14 @@ export type Database = {
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
           level: number
+          mood: number
           parent_profile_id: string | null
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null
           slot_number: number | null
+          stress: number
           terms_accepted_at: string | null
           terms_version: string | null
           total_hours_played: number | null
@@ -25530,6 +25598,7 @@ export type Database = {
           username: string
           weekly_bonus_metadata: Json | null
           weekly_bonus_streak: number | null
+          wellness_streak_low_mood_days: number
         }
         Insert: {
           age?: number
@@ -25567,12 +25636,14 @@ export type Database = {
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           level?: number
+          mood?: number
           parent_profile_id?: string | null
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
           slot_number?: number | null
+          stress?: number
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
@@ -25586,6 +25657,7 @@ export type Database = {
           username: string
           weekly_bonus_metadata?: Json | null
           weekly_bonus_streak?: number | null
+          wellness_streak_low_mood_days?: number
         }
         Update: {
           age?: number
@@ -25623,12 +25695,14 @@ export type Database = {
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           level?: number
+          mood?: number
           parent_profile_id?: string | null
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
           slot_number?: number | null
+          stress?: number
           terms_accepted_at?: string | null
           terms_version?: string | null
           total_hours_played?: number | null
@@ -25642,6 +25716,7 @@ export type Database = {
           username?: string
           weekly_bonus_metadata?: Json | null
           weekly_bonus_streak?: number | null
+          wellness_streak_low_mood_days?: number
         }
         Relationships: [
           {
@@ -34899,6 +34974,194 @@ export type Database = {
           },
         ]
       }
+      wellness_activity_catalog: {
+        Row: {
+          ailment_risk: Json
+          blocks_activity_types: string[]
+          category: string
+          cooldown_hours: number
+          cost_cents: number
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          stamina_cost: number
+          stat_effects: Json
+          treats_ailment_slug: string | null
+          unlock_min_fame: number
+          updated_at: string
+        }
+        Insert: {
+          ailment_risk?: Json
+          blocks_activity_types?: string[]
+          category: string
+          cooldown_hours?: number
+          cost_cents?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          stamina_cost?: number
+          stat_effects?: Json
+          treats_ailment_slug?: string | null
+          unlock_min_fame?: number
+          updated_at?: string
+        }
+        Update: {
+          ailment_risk?: Json
+          blocks_activity_types?: string[]
+          category?: string
+          cooldown_hours?: number
+          cost_cents?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          stamina_cost?: number
+          stat_effects?: Json
+          treats_ailment_slug?: string | null
+          unlock_min_fame?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wellness_activity_log: {
+        Row: {
+          catalog_id: string
+          catalog_slug: string
+          category: string
+          completed_at: string | null
+          cooldown_until: string
+          cost_cents: number
+          created_at: string
+          id: string
+          performed_at: string
+          profile_id: string
+          stat_delta: Json
+          user_id: string
+        }
+        Insert: {
+          catalog_id: string
+          catalog_slug: string
+          category: string
+          completed_at?: string | null
+          cooldown_until: string
+          cost_cents?: number
+          created_at?: string
+          id?: string
+          performed_at?: string
+          profile_id: string
+          stat_delta?: Json
+          user_id: string
+        }
+        Update: {
+          catalog_id?: string
+          catalog_slug?: string
+          category?: string
+          completed_at?: string | null
+          cooldown_until?: string
+          cost_cents?: number
+          created_at?: string
+          id?: string
+          performed_at?: string
+          profile_id?: string
+          stat_delta?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_activity_log_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_activity_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_activity_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_activity_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wellness_blocks: {
+        Row: {
+          blocks_activity_types: string[]
+          created_at: string
+          expires_at: string
+          id: string
+          profile_id: string
+          reason: string
+          source_ailment_id: string | null
+          suggestion_slug: string | null
+          user_id: string
+        }
+        Insert: {
+          blocks_activity_types?: string[]
+          created_at?: string
+          expires_at: string
+          id?: string
+          profile_id: string
+          reason: string
+          source_ailment_id?: string | null
+          suggestion_slug?: string | null
+          user_id: string
+        }
+        Update: {
+          blocks_activity_types?: string[]
+          created_at?: string
+          expires_at?: string
+          id?: string
+          profile_id?: string
+          reason?: string
+          source_ailment_id?: string | null
+          suggestion_slug?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_blocks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_blocks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_blocks_source_ailment_id_fkey"
+            columns: ["source_ailment_id"]
+            isOneToOne: false
+            referencedRelation: "player_ailments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       world_parliament_motions: {
         Row: {
           abstain_votes: number
@@ -35283,6 +35546,30 @@ export type Database = {
           },
         ]
       }
+      wellness_cooldowns_view: {
+        Row: {
+          catalog_slug: string | null
+          cooldown_until: string | null
+          performed_at: string | null
+          profile_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_activity_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_activity_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_band_country_fame:
@@ -35595,12 +35882,14 @@ export type Database = {
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
           level: number
+          mood: number
           parent_profile_id: string | null
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null
           slot_number: number | null
+          stress: number
           terms_accepted_at: string | null
           terms_version: string | null
           total_hours_played: number | null
@@ -35614,6 +35903,7 @@ export type Database = {
           username: string
           weekly_bonus_metadata: Json | null
           weekly_bonus_streak: number | null
+          wellness_streak_low_mood_days: number
         }[]
         SetofOptions: {
           from: "*"
@@ -35682,6 +35972,14 @@ export type Database = {
           p_statement?: string
         }
         Returns: string
+      }
+      evaluate_wellness_gate: {
+        Args: { _activity_type: string; _profile_id: string }
+        Returns: {
+          allowed: boolean
+          reason: string
+          suggestion_slug: string
+        }[]
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       fix_null_manufacturing_dates: { Args: never; Returns: number }

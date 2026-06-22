@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.410",
+    date: "2026-06-22",
+    changes: [
+      { type: 'fix', description: "Hardened wellness activity-type mapping so values like `health`, `university`, `reading`, `mentorship`, `youtube_video`, `film_production`, `festival_attendance`, `release_manufacturing`, `release_promo`, `teaching`, and `other` are handled explicitly instead of silently bypassing the wellness gate. `WELLNESS_GATE_MAP` in `useActivityBooking.ts` is now a full `Record<ActivityType, string | null>` (TypeScript errors if a new ActivityType is added without a decision), and `assertWellnessAllows` warns when an unmapped string is passed via `any`. Open-mic, festival performances, and PR appearances now map to their dedicated gate types instead of being collapsed into `gig`/`work`, so wellness rules can target each one. `useWellnessGate` also accepts `health`/`wellness`/`rest`/`medical` and short-circuits them through a `BYPASS_GATE` set so recovery actions are never blocked by the gate they're meant to clear." },
+    ],
+  },
+  {
     version: "1.1.409",
     date: "2026-06-21",
     changes: [

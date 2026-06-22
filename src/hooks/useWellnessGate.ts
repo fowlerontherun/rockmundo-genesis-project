@@ -18,7 +18,24 @@ export type WellnessActivityType =
   | "work"
   | "training"
   | "busking"
-  | "travel";
+  | "travel"
+  | "open_mic"
+  | "festival_performance"
+  | "pr_appearance"
+  // Wellness/recovery actions — always allowed, never gated by wellness itself.
+  | "health"
+  | "wellness"
+  | "rest"
+  | "medical";
+
+// Activity types that are wellness/recovery themselves and must never be
+// blocked by the wellness gate (otherwise the player can't recover).
+const BYPASS_GATE: ReadonlySet<WellnessActivityType> = new Set([
+  "health",
+  "wellness",
+  "rest",
+  "medical",
+]);
 
 export interface UseWellnessGateResult {
   vitals: WellnessVitals | null;
@@ -60,6 +77,8 @@ export function useWellnessGate(): UseWellnessGateResult {
   const check = useCallback(
     async (activityType: WellnessActivityType) => {
       if (!profileId) return true;
+      // Wellness/recovery actions must never be gated by wellness itself.
+      if (BYPASS_GATE.has(activityType)) return true;
       try {
         const res = await evaluateGate(profileId, activityType);
         if (res.allowed) return true;
