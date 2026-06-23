@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.412",
+    date: "2026-06-23",
+    changes: [
+      { type: 'feature', description: "Added a **Population trend** line chart to the World Treasuries page showing how the top 6 cities' populations have changed over the last 30 days. Reconstructed daily from `city_population_history` deltas back from current population, rendered with recharts." },
+    ],
+  },
+  {
     version: "1.1.411",
     date: "2026-06-22",
     changes: [
