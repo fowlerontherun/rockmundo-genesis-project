@@ -50,16 +50,17 @@ export default function CitiesTreasury() {
     staleTime: 60_000,
   });
 
-  // Recent population deltas (last 7 days) per city
-  const { data: popDeltas = [] } = useQuery({
-    queryKey: ["city-pop-deltas-7d"],
+  // Population history (last 30 days) for trend chart + 7-day deltas
+  const { data: popHistory = [] } = useQuery({
+    queryKey: ["city-pop-history-30d"],
     queryFn: async () => {
-      const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       const { data, error } = await (supabase as any)
         .from("city_population_history")
         .select("city_id,delta,created_at")
         .gte("created_at", since)
-        .limit(5000);
+        .order("created_at", { ascending: true })
+        .limit(20000);
       if (error) throw error;
       return (data ?? []) as PopHistoryRow[];
     },
@@ -67,10 +68,15 @@ export default function CitiesTreasury() {
   });
 
   const deltaByCity = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
     const m = new Map<string, number>();
-    for (const r of popDeltas) m.set(r.city_id, (m.get(r.city_id) ?? 0) + (r.delta ?? 0));
+    for (const r of popHistory) {
+      if (new Date(r.created_at).getTime() >= cutoff) {
+        m.set(r.city_id, (m.get(r.city_id) ?? 0) + (r.delta ?? 0));
+      }
+    }
     return m;
-  }, [popDeltas]);
+  }, [popHistory]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
