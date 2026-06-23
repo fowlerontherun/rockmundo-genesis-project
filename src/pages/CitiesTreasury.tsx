@@ -109,6 +109,63 @@ export default function CitiesTreasury() {
     );
   }, [filtered]);
 
+  // Build 30-day population trend for top 6 cities by current population
+  const trendData = useMemo(() => {
+    if (!cities.length) return { rows: [] as Array<Record<string, any>>, series: [] as { id: string; name: string }[] };
+    const top = [...cities].slice(0, 6);
+    const topIds = new Set(top.map((c) => c.id));
+    const series = top.map((c) => ({ id: c.id, name: c.name }));
+
+    const totalDeltaByCity = new Map<string, number>();
+    for (const r of popHistory) {
+      if (!topIds.has(r.city_id)) continue;
+      totalDeltaByCity.set(r.city_id, (totalDeltaByCity.get(r.city_id) ?? 0) + (r.delta ?? 0));
+    }
+
+    const startPop = new Map<string, number>();
+    for (const c of top) {
+      startPop.set(c.id, (c.population ?? 0) - (totalDeltaByCity.get(c.id) ?? 0));
+    }
+
+    const days = 30;
+    const dayMs = 24 * 3600 * 1000;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const rows: Record<string, any>[] = [];
+    const running = new Map<string, number>(startPop);
+
+    const byDay = new Map<string, PopHistoryRow[]>();
+    for (const r of popHistory) {
+      if (!topIds.has(r.city_id)) continue;
+      const key = format(new Date(r.created_at), "yyyy-MM-dd");
+      const bucket = byDay.get(key) ?? [];
+      bucket.push(r);
+      byDay.set(key, bucket);
+    }
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * dayMs);
+      const key = format(d, "yyyy-MM-dd");
+      for (const r of byDay.get(key) ?? []) {
+        running.set(r.city_id, (running.get(r.city_id) ?? 0) + (r.delta ?? 0));
+      }
+      const row: Record<string, any> = { date: format(d, "MMM d") };
+      for (const s of series) row[s.name] = running.get(s.id) ?? 0;
+      rows.push(row);
+    }
+
+    return { rows, series };
+  }, [cities, popHistory]);
+
+  const trendColors = [
+    "hsl(var(--primary))",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#06b6d4",
+  ];
+
   return (
     <FMPageScaffold
       title="World Treasuries"
@@ -123,6 +180,63 @@ export default function CitiesTreasury() {
           <Stat icon={TrendingUp} label="Tax collected" value={fmt.format(totals.collected)} accent="text-primary" />
           <Stat icon={TrendingDown} label="Total spent" value={fmt.format(totals.spent)} accent="text-warning" />
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <LineIcon className="h-4 w-4 text-primary" />
+              Population trend — top 6 cities (30 days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-1 pb-3">
+            {trendData.rows.length === 0 ? (
+              <div className="text-center text-xs text-muted-foreground py-8">
+                No population changes recorded yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={trendData.rows} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 3" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => num.format(v as number)}
+                    width={64}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: 6,
+                      fontSize: 11,
+                    }}
+                    formatter={(v: number) => num.format(v)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {trendData.series.map((s, i) => (
+                    <Line
+                      key={s.id}
+                      type="monotone"
+                      dataKey={s.name}
+                      stroke={trendColors[i % trendColors.length]}
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
