@@ -3,21 +3,23 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Music, Mic2, Globe, TrendingUp, Users, Radio, Trophy, Zap,
-  PlayCircle, LogIn, AlertCircle, Sparkles, ChevronRight, Activity,
+  Music, Mic2, Globe, TrendingUp, Users, Radio, Trophy, Sparkles,
+  PlayCircle, LogIn, AlertCircle, ChevronRight, Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
-import brandWordmark from "@/assets/rockmundo-brand.png";
 import heroImage from "@/assets/landing-hero.jpg";
+import { version } from "@/components/VersionHeader";
 
 const FEATURES = [
   { icon: Music, title: "Write & Record", body: "Compose songs, book studios, release singles, EPs and albums across 180 cities." },
-  { icon: Mic2, title: "Live Performance", body: "Book gigs, open mics and stadium tours. Tune your setlist, hire crew, and read the crowd." },
+  { icon: Mic2, title: "Live Performance", body: "Book gigs, open mics and arena tours. Tune your setlist, hire crew, and read the crowd." },
   { icon: Users, title: "Form a Band", body: "Recruit members, manage chemistry, split royalties and handle the drama on the road." },
   { icon: Radio, title: "Media & PR", body: "Pitch to 235 radio stations, podcasts, magazines, newspapers and streaming playlists." },
   { icon: Globe, title: "Global Career", body: "Build regional fame across 20 tiers per country, with 20% spillover into neighbours." },
@@ -31,13 +33,6 @@ const STATS = [
   { label: "Radio Stations", value: "235" },
   { label: "Jobs", value: "1,700+" },
   { label: "Genres", value: "52" },
-];
-
-const TICKER = [
-  "WK 24 · Charts roll over Monday 00:00 UTC",
-  "LIVE · 1,284 careers active worldwide",
-  "NEWS · Q3 Awards season opens in 14 in-game days",
-  "TRANSFER · Indie label Vox Nova signs 3 new artists",
 ];
 
 const isDev = import.meta.env.DEV;
@@ -67,251 +62,207 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fm-bg text-fm-fg font-sans">
-      {/* Top status bar — FM chrome */}
-      <header className="sticky top-0 z-30 bg-fm-panel border-b border-fm-border">
-        <div className="h-10 px-3 sm:px-4 flex items-center gap-3 max-w-[1400px] mx-auto">
-          <div className="flex items-center gap-2 min-w-0">
-            <img src={logo} alt="Rockmundo" className="h-7 w-7 object-contain shrink-0" width={28} height={28} />
-            <span className="font-bebas text-xl tracking-[0.18em] leading-none pt-0.5">ROCKMUNDO</span>
-            <span className="hidden sm:inline font-oswald text-[10px] uppercase tracking-[0.2em] text-fm-fg-muted border border-fm-border px-1.5 py-0.5 rounded-sm ml-1">
-              Career Edition
-            </span>
-          </div>
-          <nav className="hidden md:flex items-center gap-1 text-xs uppercase tracking-wide text-fm-fg-muted ml-4">
-            <a href="#overview" className="px-2 py-1 hover:text-fm-fg hover:bg-fm-panel-2 rounded-sm">Overview</a>
-            <a href="#features" className="px-2 py-1 hover:text-fm-fg hover:bg-fm-panel-2 rounded-sm">Modules</a>
-            <a href="#world" className="px-2 py-1 hover:text-fm-fg hover:bg-fm-panel-2 rounded-sm">The World</a>
-            <Link to="/about" className="px-2 py-1 hover:text-fm-fg hover:bg-fm-panel-2 rounded-sm">About</Link>
-          </nav>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-sm border-b border-border/40">
+        <div className="h-14 px-3 sm:px-6 flex items-center gap-3 max-w-6xl mx-auto">
+          <Link to="/" className="flex items-center gap-2 min-w-0">
+            <img src={logo} alt="RockMundo" className="h-8 w-8 object-contain shrink-0" width={32} height={32} />
+            <span className="font-bebas text-xl tracking-wide leading-none pt-0.5">ROCKMUNDO</span>
+          </Link>
+          <Badge variant="outline" className="hidden sm:inline-flex bg-warning/10 text-warning border-warning/30 text-[10px] px-1.5 py-0 font-oswald uppercase tracking-widest">
+            Beta V1
+          </Badge>
           <div className="flex-1" />
-          <div className="hidden md:flex items-center gap-2 text-[10px] uppercase tracking-widest text-fm-fg-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-fm-good animate-pulse" />
-            Servers · Live
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isDev && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs uppercase tracking-wide hover:bg-fm-panel-2"
-                onClick={() => navigate("/dashboard")}
-                title="Dev-only: enters the app as a guest with mock data"
-              >
-                <PlayCircle className="h-3.5 w-3.5 sm:mr-1.5" />
-                <span className="hidden sm:inline">Demo</span>
-              </Button>
-            )}
+          <Link to="/about" className="hidden sm:inline-block text-xs font-oswald uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1">
+            About
+          </Link>
+          {isDev && (
             <Button
+              variant="ghost"
               size="sm"
-              className="h-7 px-3 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold uppercase tracking-wide text-xs"
-              onClick={() => setOpen(true)}
+              className="h-9 px-2 text-xs font-oswald uppercase tracking-wide"
+              onClick={() => navigate("/dashboard")}
+              title="Dev-only: enters the app as a guest with mock data"
             >
-              <LogIn className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="hidden sm:inline">Log in</span>
+              <PlayCircle className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Demo</span>
             </Button>
-          </div>
-        </div>
-        {/* Ticker */}
-        <div className="h-6 bg-fm-bg border-t border-fm-border overflow-hidden">
-          <div className="h-full max-w-[1400px] mx-auto px-3 sm:px-4 flex items-center gap-6 text-[10px] uppercase tracking-widest text-fm-fg-muted whitespace-nowrap overflow-x-auto scrollbar-none">
-            {TICKER.map((t, i) => (
-              <span key={i} className="flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-fm-accent" />
-                {t}
-              </span>
-            ))}
-          </div>
+          )}
+          <Button
+            size="sm"
+            className="h-9 px-3 sm:px-4 font-oswald uppercase tracking-wide text-xs"
+            onClick={() => setOpen(true)}
+          >
+            <LogIn className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Log in</span>
+          </Button>
         </div>
       </header>
 
-      {/* Hero — FM dashboard slab */}
-      <section id="overview" className="relative border-b border-fm-border">
+      {/* Hero */}
+      <section id="overview" className="relative border-b border-border/40 overflow-hidden">
         <img
           src={heroImage}
           alt="Concert stage with crowd and stage lights"
           width={1920}
           height={1080}
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          className="absolute inset-0 w-full h-full object-cover opacity-25"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-fm-bg/70 via-fm-bg/85 to-fm-bg" />
-        <div className="relative max-w-[1400px] mx-auto px-3 sm:px-4 py-10 md:py-16 grid md:grid-cols-[1.4fr_1fr] gap-6 items-stretch">
-          {/* Left: brief */}
-          <div className="bg-fm-panel/80 border border-fm-border rounded-sm p-5 md:p-8 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-fm-accent mb-3">
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
+          <div className="text-center mb-8 sm:mb-10">
+            <img src={logo} alt="RockMundo" className="h-24 sm:h-32 md:h-40 w-auto mx-auto object-contain drop-shadow-2xl mb-5" />
+            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs font-oswald uppercase tracking-[0.2em] text-primary mb-4">
               <Activity className="h-3 w-3" />
-              Season 2026 · Open Beta · v1.1.394
+              Season 2026 · Open Beta · v{version}
             </div>
-            <h1 className="font-bebas text-5xl md:text-7xl tracking-[0.04em] leading-[0.95] mb-3">
-              The music career simulator,
+            <h1 className="font-bebas text-4xl sm:text-6xl md:text-7xl tracking-wide leading-[0.95] mb-4">
+              Live the dream.
               <br />
-              <span className="text-fm-accent">managed like a sport.</span>
+              <span className="text-primary">Build a music career.</span>
             </h1>
-            <p className="text-sm md:text-base text-fm-fg-muted mb-6 max-w-xl">
-              Rockmundo is a deep, persistent simulation of a musician's life — from busking on a
-              street corner to selling out stadiums, running a label and shaping the global charts.
-              Built with the density and discipline of a top-tier sports manager.
+            <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto font-oswald">
+              RockMundo is a deep, persistent simulation of a musician's life — from busking on a
+              street corner to selling out arenas, running a label and shaping the global charts.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2">
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto sm:max-w-none">
+            <Button
+              size="lg"
+              className="font-oswald uppercase tracking-wide w-full sm:w-auto"
+              onClick={() => setOpen(true)}
+            >
+              <LogIn className="h-4 w-4 mr-2" />
+              Continue Career
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+            {isDev ? (
               <Button
                 size="lg"
-                className="bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold uppercase tracking-wide"
-                onClick={() => setOpen(true)}
+                variant="outline"
+                className="font-oswald uppercase tracking-wide w-full sm:w-auto"
+                onClick={() => navigate("/dashboard")}
               >
-                <LogIn className="h-4 w-4 mr-2" />
-                Continue Career
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Demo (Dev)
               </Button>
-              {isDev ? (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-fm-border bg-fm-panel-2 hover:bg-fm-panel text-fm-fg uppercase tracking-wide font-semibold"
-                  onClick={() => navigate("/dashboard")}
-                >
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  Demo (Dev)
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-fm-border bg-fm-panel-2 hover:bg-fm-panel text-fm-fg uppercase tracking-wide font-semibold"
-                >
-                  <Link to="/auth">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    New Career
-                  </Link>
-                </Button>
-              )}
-            </div>
-            {isDev && (
-              <p className="text-[10px] uppercase tracking-widest text-fm-fg-muted mt-4">
-                Demo bypasses auth and runs against mock data · dev builds only
-              </p>
+            ) : (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="font-oswald uppercase tracking-wide w-full sm:w-auto"
+              >
+                <Link to="/auth">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  New Career
+                </Link>
+              </Button>
             )}
           </div>
 
-          {/* Right: KPI panel */}
-          <div className="bg-fm-panel/80 border border-fm-border rounded-sm p-4 backdrop-blur-sm flex flex-col">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-fm-border">
-              <span className="text-[10px] uppercase tracking-widest text-fm-fg-muted">World Snapshot</span>
-              <span className="text-[10px] uppercase tracking-widest text-fm-good">● Live</span>
-            </div>
-            <div className="grid grid-cols-2 gap-px bg-fm-border flex-1">
-              {STATS.map(s => (
-                <div key={s.label} className="bg-fm-panel p-4 flex flex-col justify-between">
-                  <div className="text-[10px] uppercase tracking-widest text-fm-fg-muted">{s.label}</div>
-                  <div className="text-3xl font-bold text-fm-fg tabular-nums">{s.value}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t border-fm-border grid grid-cols-3 gap-2 text-center text-[10px] uppercase tracking-widest">
-              <div>
-                <div className="text-fm-good font-bold text-sm">+12%</div>
-                <div className="text-fm-fg-muted">Sign-ups</div>
-              </div>
-              <div>
-                <div className="text-fm-accent font-bold text-sm">WK 24</div>
-                <div className="text-fm-fg-muted">Chart cycle</div>
-              </div>
-              <div>
-                <div className="text-fm-warn font-bold text-sm">1:4</div>
-                <div className="text-fm-fg-muted">Time scale</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Modules grid — FM tile pattern */}
-      <section id="features" className="border-b border-fm-border">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-10 md:py-16">
-          <div className="flex items-end justify-between mb-6 pb-3 border-b border-fm-border">
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-fm-accent mb-1">Module 01</div>
-              <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em]">Career, Fully Simulated</h2>
-            </div>
-            <div className="hidden md:block text-xs text-fm-fg-muted max-w-md text-right">
-              Every system feeds the next. Songs feed charts, charts feed tours, tours feed your label,
-              your label feeds your empire.
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-fm-border border border-fm-border rounded-sm overflow-hidden">
-            {FEATURES.map((f, i) => (
-              <div key={f.title} className="bg-fm-panel p-4 hover:bg-fm-panel-2 transition-colors group">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] uppercase tracking-widest text-fm-fg-muted">
-                    M01·{String(i + 1).padStart(2, "0")}
-                  </span>
-                  <f.icon className="h-4 w-4 text-fm-accent" />
-                </div>
-                <h3 className="font-bold text-sm uppercase tracking-wide mb-1.5">{f.title}</h3>
-                <p className="text-xs text-fm-fg-muted leading-relaxed">{f.body}</p>
-              </div>
+          {/* World snapshot stats */}
+          <div className="mt-10 sm:mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
+            {STATS.map(s => (
+              <Card key={s.label} className="bg-card/80 backdrop-blur-sm border-border/40">
+                <CardContent className="p-4 text-center">
+                  <div className="text-[10px] sm:text-xs font-oswald uppercase tracking-widest text-muted-foreground mb-1">
+                    {s.label}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bebas tracking-wide text-foreground tabular-nums">
+                    {s.value}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* World panel */}
-      <section id="world" className="border-b border-fm-border bg-fm-panel/40">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-10 md:py-16 grid md:grid-cols-2 gap-6 items-stretch">
-          <div className="bg-fm-panel border border-fm-border rounded-sm p-5 md:p-8">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-fm-accent mb-3">
-              <Zap className="h-3 w-3" /> Module 02 · Living World
+      {/* Features */}
+      <section id="features" className="border-b border-border/40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="text-[10px] sm:text-xs font-oswald uppercase tracking-[0.2em] text-primary mb-2">
+              What you can do
             </div>
-            <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em] mb-3">
-              A world that doesn't wait for you
+            <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide">
+              A career, fully simulated
             </h2>
-            <p className="text-sm text-fm-fg-muted mb-5">
-              NPC artists release songs, fans get older, mayors get elected, festivals happen on a
-              fixed calendar, and the charts roll over every week — whether you're playing or not.
+            <p className="text-sm text-muted-foreground max-w-xl mx-auto mt-3 font-oswald">
+              Every system feeds the next. Songs feed charts, charts feed tours,
+              tours feed your label, your label feeds your empire.
             </p>
-            <ul className="divide-y divide-fm-border border-y border-fm-border text-xs">
-              {[
-                ["TIME", "1 in-game year = 120 real days, shared global clock"],
-                ["ECON", "Weekly charts, monthly tax cycles, yearly mayoral elections"],
-                ["SOCIAL", "Multiplayer band recruitment, jam sessions, song trading"],
-                ["LIFE", "Permadeath with limited resurrections, children, inheritance"],
-              ].map(([k, v]) => (
-                <li key={k} className="flex items-center gap-3 py-2">
-                  <span className="text-[10px] uppercase tracking-widest text-fm-accent w-14 shrink-0">{k}</span>
-                  <span className="text-fm-fg-muted">{v}</span>
-                </li>
-              ))}
-            </ul>
           </div>
-          <div className="bg-fm-panel border border-fm-border rounded-sm overflow-hidden flex flex-col">
-            <div className="px-4 h-9 flex items-center justify-between border-b border-fm-border bg-fm-panel-2">
-              <span className="text-[10px] uppercase tracking-widest text-fm-fg-muted">Match Day · Stadium View</span>
-              <span className="text-[10px] uppercase tracking-widest text-fm-good">● Recording</span>
-            </div>
-            <img
-              src={heroImage}
-              alt="Rockmundo gameplay snapshot"
-              width={1280}
-              height={720}
-              loading="lazy"
-              className="w-full h-full object-cover flex-1"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {FEATURES.map(f => (
+              <Card key={f.title} className="bg-card/80 backdrop-blur-sm border-border/40 hover:border-primary/40 transition-colors">
+                <CardContent className="p-4">
+                  <f.icon className="h-5 w-5 text-primary mb-3" />
+                  <h3 className="font-bebas text-lg tracking-wide mb-1.5">{f.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed font-oswald">{f.body}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA slab */}
-      <section className="border-b border-fm-border">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-12 md:py-16 text-center">
-          <div className="text-[10px] uppercase tracking-widest text-fm-accent mb-2">Next Cycle</div>
-          <h2 className="font-bebas text-3xl md:text-5xl tracking-[0.04em] mb-3">Ready to plug in?</h2>
-          <p className="text-sm text-fm-fg-muted mb-6 max-w-xl mx-auto">
+      {/* Living world */}
+      <section id="world" className="border-b border-border/40 bg-card/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="text-center mb-8">
+            <div className="text-[10px] sm:text-xs font-oswald uppercase tracking-[0.2em] text-primary mb-2">
+              The world
+            </div>
+            <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide mb-3">
+              A world that doesn't wait for you
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-xl mx-auto font-oswald">
+              NPC artists release songs, fans get older, mayors get elected, festivals happen on a
+              fixed calendar, and the charts roll over every week — whether you're playing or not.
+            </p>
+          </div>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/40 max-w-3xl mx-auto">
+            <CardContent className="p-0">
+              <ul className="divide-y divide-border/40">
+                {[
+                  ["TIME", "1 in-game year = 120 real days, shared global clock"],
+                  ["ECONOMY", "Weekly charts, monthly tax cycles, yearly mayoral elections"],
+                  ["SOCIAL", "Multiplayer band recruitment, jam sessions, song trading"],
+                  ["LIFE", "Permadeath with limited resurrections, children, inheritance"],
+                ].map(([k, v]) => (
+                  <li key={k} className="flex items-center gap-3 sm:gap-4 px-4 py-3">
+                    <span className="text-[10px] sm:text-xs font-oswald uppercase tracking-widest text-primary w-16 sm:w-20 shrink-0">
+                      {k}
+                    </span>
+                    <span className="text-sm text-muted-foreground font-oswald">{v}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="border-b border-border/40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
+          <div className="text-[10px] sm:text-xs font-oswald uppercase tracking-[0.2em] text-primary mb-2">
+            Next cycle
+          </div>
+          <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide mb-3">
+            Ready to plug in?
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-6 font-oswald">
             The next chart cycle starts soon. Sign in and write your first song.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto sm:max-w-none">
             <Button
               size="lg"
-              className="bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold uppercase tracking-wide"
+              className="font-oswald uppercase tracking-wide w-full sm:w-auto"
               onClick={() => setOpen(true)}
             >
               <LogIn className="h-4 w-4 mr-2" /> Log in
@@ -320,7 +271,7 @@ const Landing = () => {
               asChild
               size="lg"
               variant="outline"
-              className="border-fm-border bg-fm-panel-2 hover:bg-fm-panel text-fm-fg uppercase tracking-wide font-semibold"
+              className="font-oswald uppercase tracking-wide w-full sm:w-auto"
             >
               <Link to="/auth">Create account</Link>
             </Button>
@@ -328,27 +279,27 @@ const Landing = () => {
         </div>
       </section>
 
-      <footer className="bg-fm-panel border-t border-fm-border">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-fm-fg-muted">
+      <footer className="bg-card/50 border-t border-border/40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-xs font-oswald uppercase tracking-widest text-muted-foreground">
           <div className="flex items-center gap-2">
             <img src={logo} alt="" className="h-4 w-4 object-contain" />
-            © {new Date().getFullYear()} Rockmundo · v1.1.394
+            © {new Date().getFullYear()} RockMundo · v{version}
           </div>
-          <Link to="/about" className="hover:text-fm-fg">About · Press · Contact</Link>
+          <Link to="/about" className="hover:text-foreground">About · Press · Contact</Link>
         </div>
       </footer>
 
       {/* Login dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-fm-panel border-fm-border text-fm-fg">
+        <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-sm border-border/40">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 uppercase tracking-wide text-base">
-              <LogIn className="h-5 w-5 text-fm-accent" />
+            <DialogTitle className="flex items-center gap-2 font-bebas tracking-wide text-xl">
+              <LogIn className="h-5 w-5 text-primary" />
               Continue Career
             </DialogTitle>
-            <DialogDescription className="text-fm-fg-muted">
-              Enter your manager credentials. New here?{" "}
-              <Link to="/auth" className="underline text-fm-fg" onClick={() => setOpen(false)}>
+            <DialogDescription className="font-oswald">
+              Enter your credentials. New here?{" "}
+              <Link to="/auth" className="underline text-foreground" onClick={() => setOpen(false)}>
                 Start a new career
               </Link>
               .
@@ -363,7 +314,7 @@ const Landing = () => {
               </Alert>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="landing-email" className="text-[10px] uppercase tracking-widest text-fm-fg-muted">Email</Label>
+              <Label htmlFor="landing-email" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Email</Label>
               <Input
                 id="landing-email"
                 type="email"
@@ -371,15 +322,14 @@ const Landing = () => {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="bg-fm-bg border-fm-border"
               />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="landing-password" className="text-[10px] uppercase tracking-widest text-fm-fg-muted">Password</Label>
+                <Label htmlFor="landing-password" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Password</Label>
                 <Link
                   to="/auth"
-                  className="text-[10px] uppercase tracking-widest text-fm-fg-muted hover:text-fm-fg"
+                  className="text-xs font-oswald uppercase tracking-widest text-muted-foreground hover:text-foreground"
                   onClick={() => setOpen(false)}
                 >
                   Forgot?
@@ -392,7 +342,6 @@ const Landing = () => {
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="bg-fm-bg border-fm-border"
               />
             </div>
 
@@ -401,7 +350,7 @@ const Landing = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="hover:bg-fm-panel-2 uppercase tracking-wide text-xs"
+                  className="font-oswald uppercase tracking-wide text-xs"
                   onClick={() => {
                     setOpen(false);
                     navigate("/dashboard");
@@ -414,7 +363,7 @@ const Landing = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold uppercase tracking-wide"
+                className="font-oswald uppercase tracking-wide"
               >
                 {loading ? "Signing in…" : "Continue"}
                 <ChevronRight className="h-4 w-4 ml-1" />
