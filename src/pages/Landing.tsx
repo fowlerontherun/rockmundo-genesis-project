@@ -137,6 +137,51 @@ const Landing = () => {
         </div>
       </header>
 
+      {/* Server status + Beta V2 announcement banners */}
+      {SERVER_STATUS === "down" && (
+        <div className="bg-destructive/15 border-b border-destructive/40 text-destructive">
+          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-start sm:items-center gap-2.5 text-xs sm:text-sm font-oswald">
+            <ServerCrash className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0" />
+            <div className="flex-1 leading-snug">
+              <span className="uppercase tracking-widest font-semibold mr-1.5">Server status · Down</span>
+              <span className="opacity-90">RockMundo is currently offline for maintenance. Logins and gameplay are unavailable.</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="bg-primary/10 border-b border-primary/30">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm font-oswald">
+          <div className="flex items-start sm:items-center gap-2 flex-1 leading-snug">
+            <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
+            <span>
+              <span className="uppercase tracking-widest font-semibold text-primary mr-1.5">Beta V1 has finished</span>
+              <span className="text-foreground/90">Beta V2 launches in August. Check Discord for more info.</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 sm:shrink-0">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 font-oswald uppercase tracking-wide text-[10px]"
+            >
+              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-3.5 w-3.5 mr-1" /> Discord
+              </a>
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 px-2.5 font-oswald uppercase tracking-wide text-[10px]"
+              onClick={() => { setBetaDone(false); setBetaError(""); setBetaOpen(true); }}
+            >
+              <Mail className="h-3.5 w-3.5 mr-1" /> Register for Beta V2
+            </Button>
+          </div>
+        </div>
+      </div>
+
+
+
       {/* Hero */}
       <section id="overview" className="relative border-b border-border/40 overflow-hidden">
         <img
