@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Music, Mic2, Globe, TrendingUp, Users, Radio, Trophy, Sparkles,
   PlayCircle, LogIn, AlertCircle, ChevronRight, Activity,
+  ServerCrash, MessageCircle, Mail, CheckCircle2, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
