@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Music, Mic2, Globe, TrendingUp, Users, Radio, Trophy, Sparkles,
   PlayCircle, LogIn, AlertCircle, ChevronRight, Activity,
+  ServerCrash, MessageCircle, Mail, CheckCircle2, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -36,6 +37,8 @@ const STATS = [
 ];
 
 const isDev = import.meta.env.DEV;
+const DISCORD_URL = "https://discord.gg/lovable-dev";
+const SERVER_STATUS: "up" | "degraded" | "down" = "down";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -45,6 +48,40 @@ const Landing = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Beta V2 registration
+  const [betaOpen, setBetaOpen] = useState(false);
+  const [betaEmail, setBetaEmail] = useState("");
+  const [betaName, setBetaName] = useState("");
+  const [betaDiscord, setBetaDiscord] = useState("");
+  const [betaLoading, setBetaLoading] = useState(false);
+  const [betaError, setBetaError] = useState("");
+  const [betaDone, setBetaDone] = useState(false);
+
+  const handleBetaRegister = async (e: FormEvent) => {
+    e.preventDefault();
+    setBetaError("");
+    setBetaLoading(true);
+    const { error: insertError } = await (supabase as any)
+      .from("beta_v2_signups")
+      .insert({
+        email: betaEmail.trim().toLowerCase(),
+        display_name: betaName.trim() || null,
+        discord_handle: betaDiscord.trim() || null,
+        source: "landing",
+      });
+    setBetaLoading(false);
+    if (insertError) {
+      if (insertError.code === "23505") {
+        setBetaError("That email is already registered for Beta V2.");
+      } else {
+        setBetaError(insertError.message);
+      }
+      return;
+    }
+    setBetaDone(true);
+    toast({ title: "You're on the list", description: "We'll send your Beta V2 code before launch." });
+  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,6 +136,51 @@ const Landing = () => {
           </Button>
         </div>
       </header>
+
+      {/* Server status + Beta V2 announcement banners */}
+      {SERVER_STATUS === "down" && (
+        <div className="bg-destructive/15 border-b border-destructive/40 text-destructive">
+          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-start sm:items-center gap-2.5 text-xs sm:text-sm font-oswald">
+            <ServerCrash className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0" />
+            <div className="flex-1 leading-snug">
+              <span className="uppercase tracking-widest font-semibold mr-1.5">Server status · Down</span>
+              <span className="opacity-90">RockMundo is currently offline for maintenance. Logins and gameplay are unavailable.</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="bg-primary/10 border-b border-primary/30">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm font-oswald">
+          <div className="flex items-start sm:items-center gap-2 flex-1 leading-snug">
+            <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
+            <span>
+              <span className="uppercase tracking-widest font-semibold text-primary mr-1.5">Beta V1 has finished</span>
+              <span className="text-foreground/90">Beta V2 launches in August. Check Discord for more info.</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 sm:shrink-0">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 font-oswald uppercase tracking-wide text-[10px]"
+            >
+              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-3.5 w-3.5 mr-1" /> Discord
+              </a>
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 px-2.5 font-oswald uppercase tracking-wide text-[10px]"
+              onClick={() => { setBetaDone(false); setBetaError(""); setBetaOpen(true); }}
+            >
+              <Mail className="h-3.5 w-3.5 mr-1" /> Register for Beta V2
+            </Button>
+          </div>
+        </div>
+      </div>
+
+
 
       {/* Hero */}
       <section id="overview" className="relative border-b border-border/40 overflow-hidden">
@@ -372,7 +454,97 @@ const Landing = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Beta V2 registration dialog */}
+      <Dialog open={betaOpen} onOpenChange={setBetaOpen}>
+        <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-sm border-border/40">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-bebas tracking-wide text-xl">
+              <Rocket className="h-5 w-5 text-primary" />
+              Register for Beta V2
+            </DialogTitle>
+            <DialogDescription className="font-oswald">
+              Beta V1 has finished. Beta V2 launches in August — drop your email and we'll send your access code before launch. Join the{" "}
+              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+                Discord
+              </a>{" "}
+              for live updates.
+            </DialogDescription>
+          </DialogHeader>
+
+          {betaDone ? (
+            <div className="space-y-3 py-2 text-center">
+              <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
+              <div className="font-bebas text-xl tracking-wide">You're on the list</div>
+              <p className="text-sm text-muted-foreground font-oswald">
+                We'll email your Beta V2 access code to <span className="text-foreground">{betaEmail}</span> before launch.
+              </p>
+              <DialogFooter>
+                <Button
+                  className="font-oswald uppercase tracking-wide w-full"
+                  onClick={() => setBetaOpen(false)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <form onSubmit={handleBetaRegister} className="space-y-3">
+              {betaError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{betaError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-email" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Email</Label>
+                <Input
+                  id="beta-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={betaEmail}
+                  onChange={e => setBetaEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-name" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Display name (optional)</Label>
+                <Input
+                  id="beta-name"
+                  type="text"
+                  value={betaName}
+                  onChange={e => setBetaName(e.target.value)}
+                  placeholder="Stage name or handle"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-discord" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Discord handle (optional)</Label>
+                <Input
+                  id="beta-discord"
+                  type="text"
+                  value={betaDiscord}
+                  onChange={e => setBetaDiscord(e.target.value)}
+                  placeholder="username"
+                />
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                <Button
+                  type="submit"
+                  disabled={betaLoading}
+                  className="font-oswald uppercase tracking-wide w-full sm:w-auto"
+                >
+                  {betaLoading ? "Registering…" : "Get my Beta V2 code"}
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 };
 

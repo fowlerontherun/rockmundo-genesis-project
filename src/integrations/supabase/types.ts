@@ -3062,6 +3062,33 @@ export type Database = {
           },
         ]
       }
+      beta_v2_signups: {
+        Row: {
+          created_at: string
+          discord_handle: string | null
+          display_name: string | null
+          email: string
+          id: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          discord_handle?: string | null
+          display_name?: string | null
+          email: string
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          discord_handle?: string | null
+          display_name?: string | null
+          email?: string
+          id?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       blind_box_openings: {
         Row: {
           ap_awarded: number
