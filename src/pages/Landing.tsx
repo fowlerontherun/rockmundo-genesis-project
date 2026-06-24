@@ -37,6 +37,8 @@ const STATS = [
 ];
 
 const isDev = import.meta.env.DEV;
+const DISCORD_URL = "https://discord.gg/lovable-dev";
+const SERVER_STATUS: "up" | "degraded" | "down" = "down";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -46,6 +48,40 @@ const Landing = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Beta V2 registration
+  const [betaOpen, setBetaOpen] = useState(false);
+  const [betaEmail, setBetaEmail] = useState("");
+  const [betaName, setBetaName] = useState("");
+  const [betaDiscord, setBetaDiscord] = useState("");
+  const [betaLoading, setBetaLoading] = useState(false);
+  const [betaError, setBetaError] = useState("");
+  const [betaDone, setBetaDone] = useState(false);
+
+  const handleBetaRegister = async (e: FormEvent) => {
+    e.preventDefault();
+    setBetaError("");
+    setBetaLoading(true);
+    const { error: insertError } = await (supabase as any)
+      .from("beta_v2_signups")
+      .insert({
+        email: betaEmail.trim().toLowerCase(),
+        display_name: betaName.trim() || null,
+        discord_handle: betaDiscord.trim() || null,
+        source: "landing",
+      });
+    setBetaLoading(false);
+    if (insertError) {
+      if (insertError.code === "23505") {
+        setBetaError("That email is already registered for Beta V2.");
+      } else {
+        setBetaError(insertError.message);
+      }
+      return;
+    }
+    setBetaDone(true);
+    toast({ title: "You're on the list", description: "We'll send your Beta V2 code before launch." });
+  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
