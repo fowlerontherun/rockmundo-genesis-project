@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.414",
+    date: "2026-06-24",
+    changes: [
+      { type: 'feature', description: "Added a **Server status** warning banner to the landing page, currently set to **Down**, explaining that RockMundo is offline for maintenance and logins/gameplay are unavailable. Driven by a single `SERVER_STATUS` constant in `src/pages/Landing.tsx` so it can be flipped to `up`/`degraded`/`down` without further code changes." },
+      { type: 'feature', description: "Added a **Beta V1 has finished / Beta V2 launches in August** announcement banner on the landing page, with a direct Discord link for live updates and a 'Register for Beta V2' button that opens a registration dialog." },
+      { type: 'feature', description: "Added a Beta V2 registration flow — collects email (required), optional display name, and optional Discord handle, and writes to a new `beta_v2_signups` table. Anyone (including signed-out visitors) can register; emails are unique; only admins can view the signup list. Duplicate emails surface a friendly 'already registered' message." },
+    ],
+  },
+  {
     version: "1.1.413",
     date: "2026-06-24",
     changes: [
