@@ -454,7 +454,97 @@ const Landing = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Beta V2 registration dialog */}
+      <Dialog open={betaOpen} onOpenChange={setBetaOpen}>
+        <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-sm border-border/40">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-bebas tracking-wide text-xl">
+              <Rocket className="h-5 w-5 text-primary" />
+              Register for Beta V2
+            </DialogTitle>
+            <DialogDescription className="font-oswald">
+              Beta V1 has finished. Beta V2 launches in August — drop your email and we'll send your access code before launch. Join the{" "}
+              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+                Discord
+              </a>{" "}
+              for live updates.
+            </DialogDescription>
+          </DialogHeader>
+
+          {betaDone ? (
+            <div className="space-y-3 py-2 text-center">
+              <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
+              <div className="font-bebas text-xl tracking-wide">You're on the list</div>
+              <p className="text-sm text-muted-foreground font-oswald">
+                We'll email your Beta V2 access code to <span className="text-foreground">{betaEmail}</span> before launch.
+              </p>
+              <DialogFooter>
+                <Button
+                  className="font-oswald uppercase tracking-wide w-full"
+                  onClick={() => setBetaOpen(false)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <form onSubmit={handleBetaRegister} className="space-y-3">
+              {betaError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{betaError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-email" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Email</Label>
+                <Input
+                  id="beta-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={betaEmail}
+                  onChange={e => setBetaEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-name" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Display name (optional)</Label>
+                <Input
+                  id="beta-name"
+                  type="text"
+                  value={betaName}
+                  onChange={e => setBetaName(e.target.value)}
+                  placeholder="Stage name or handle"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="beta-discord" className="text-xs font-oswald uppercase tracking-widest text-muted-foreground">Discord handle (optional)</Label>
+                <Input
+                  id="beta-discord"
+                  type="text"
+                  value={betaDiscord}
+                  onChange={e => setBetaDiscord(e.target.value)}
+                  placeholder="username"
+                />
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                <Button
+                  type="submit"
+                  disabled={betaLoading}
+                  className="font-oswald uppercase tracking-wide w-full sm:w-auto"
+                >
+                  {betaLoading ? "Registering…" : "Get my Beta V2 code"}
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 };
 
