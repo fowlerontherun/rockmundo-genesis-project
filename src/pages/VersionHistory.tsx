@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.413",
+    date: "2026-06-24",
+    changes: [
+      { type: 'improvement', description: "Rebuilt the public landing page (`/`) to match the login page's visual language — swapped the FM `fm-*` theme tokens for the standard `background`/`card`/`primary`/`muted-foreground` semantic tokens, unified on the `font-bebas` (headings) + `font-oswald` (uppercase labels/body) pairing, and used the shadcn `Card`/`Button`/`Badge` primitives so the landing page now reads as the same product as `/auth`." },
+      { type: 'improvement', description: "Made the homepage mobile-first: single-column hero with the RockMundo logo centered above the headline, full-width stacked CTAs on small screens, a 2-column stat grid that expands to 4 on desktop, mobile-friendly feature cards, and a sticky top bar that hides the About link / Beta badge on narrow viewports while keeping Log in and Demo always reachable." },
+      { type: 'fix', description: "Removed all sports / football manager framing from the homepage — dropped the 'managed like a sport' tagline, the 'Match Day · Stadium View' panel header, the 'manager credentials' login copy, 'Career Edition' chrome badge, the live-servers/transfer/match-day ticker, and the 'stadium tours' wording (now 'arena tours'). The page now describes RockMundo purely as a music career simulator." },
+    ],
+  },
+  {
     version: "1.1.412",
     date: "2026-06-23",
     changes: [
