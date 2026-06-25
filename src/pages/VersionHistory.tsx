@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.415",
+    date: "2026-06-25",
+    changes: [
+      { type: 'feature', description: "Added a **bug report system**. A floating red bug button now appears at the bottom-right of every in-game page; clicking it opens a dialog where players can submit a title, description, optional reproduction steps, category (UI, gameplay, performance, crash, data, audio, other), and severity (low → critical). Reports are saved to a new `bug_reports` table along with the page URL, viewport, and user-agent. Anyone can submit; players can view their own submissions; admins can view and triage all reports." },
+    ],
+  },
+  {
     version: "1.1.414",
     date: "2026-06-24",
     changes: [
