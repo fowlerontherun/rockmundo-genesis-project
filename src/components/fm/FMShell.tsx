@@ -42,6 +42,7 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
         <BottomActionBar />
         <FMChatDock />
         <FMCommandPalette />
+        <BugReportButton />
       </div>
     </ChatDockProvider>
   );
