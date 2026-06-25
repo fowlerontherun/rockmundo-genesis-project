@@ -8,6 +8,7 @@ import { BottomActionBar } from "./BottomActionBar";
 import { ChatDockProvider } from "./chat/ChatDockContext";
 import { FMChatDock } from "./chat/FMChatDock";
 import { FMCommandPalette } from "./FMCommandPalette";
+import { BugReportButton } from "@/components/bug-report/BugReportButton";
 import { findModuleForPath } from "@/config/fmNavigation";
 import { recordModulePath } from "@/lib/fmHistory";
 
