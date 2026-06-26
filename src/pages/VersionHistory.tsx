@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.416",
+    date: "2026-06-26",
+    changes: [
+      { type: 'fix', description: "**Broken-link sweep.** Audited every `<Link>`, `<a href>` and `navigate(...)` call in the app against the router. Fixed 11 stale paths: `/avatar` → `/avatar-designer`, `/band-manager` → `/band`, `/bands` → `/bands/browse`, `/media` → `/hub/media`, `/perform-gig` → `/gigs`, `/recording` → `/recording-studio`, `/songs` → `/song-manager`, `/tours` → `/tour-manager`, `/in-game-market` → `/song-market`, `/music-studio` link target corrected, `/library` → `/education`, and the player-facing `/random-events` link now points to `/dashboard` (the page is admin-only)." },
+      { type: 'fix', description: "Mounted three orphaned page components that had no route: `/prison` (Prison page), `/music-studio` (MusicStudio page), and `/skills` (SkillsPage)." },
+      { type: 'feature', description: "Added a `/jobs` route that redirects to `/booking/work`, so the Debt Warning banner's 'Find a Job' CTA now resolves." },
+    ],
+  },
+  {
     version: "1.1.415",
     date: "2026-06-25",
     changes: [

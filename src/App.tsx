@@ -275,6 +275,9 @@ const BandVehicles = lazyWithRetry(() => import("./pages/BandVehicles"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
 const PublicSong = lazyWithRetry(() => import("./pages/PublicSong"));
 const Prison = lazyWithRetry(() => import("./pages/Prison"));
+const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
+const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const Jobs = lazyWithRetry(() => import("./pages/Jobs"));
 const VersionHistory = lazyWithRetry(() => import("./pages/VersionHistory"));
 const Journal = lazyWithRetry(() => import("./pages/Journal"));
 const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
@@ -466,6 +469,10 @@ function App() {
                     <Route path="release-manager" element={<ReleaseManager />} />
                     <Route path="music-hub" element={<MusicHub />} />
                     <Route path="music" element={<MusicHub />} />
+                    <Route path="music-studio" element={<MusicStudio />} />
+                    <Route path="skills" element={<SkillsPage />} />
+                    <Route path="prison" element={<Prison />} />
+                    <Route path="jobs" element={<Jobs />} />
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
