@@ -1,19 +1,13 @@
-export const version = "1.1.415";
+export const version = "1.1.416";
 
+interface VersionHeaderProps {
+  className?: string;
+}
 
-import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "@/hooks/useTranslation";
-import { VipBadge } from "@/components/VipBadge";
-
-export const VersionHeader = () => {
-  const { t } = useTranslation();
+export const VersionHeader = ({ className = "" }: VersionHeaderProps) => {
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card/50">
-      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px] px-1.5 py-0">
-        {t('nav.beta')}
-      </Badge>
-      <span className="text-xs text-muted-foreground">v{version}</span>
-      <VipBadge size="sm" />
+    <div className={`text-xs text-muted-foreground ${className}`}>
+      v{version}
     </div>
   );
 };

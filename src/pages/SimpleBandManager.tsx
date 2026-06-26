@@ -45,7 +45,7 @@ const SimpleBandManager = () => {
             <CardDescription>Create or join a band to get started</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/bands">
+            <Link to="/bands/browse">
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Go to Bands Page
@@ -64,7 +64,7 @@ const SimpleBandManager = () => {
       icon={Users}
       backTo="/hub/band-live"
       headerActions={
-        <Link to="/bands">
+        <Link to="/bands/browse">
           <Button variant="outline" size="sm">
             <Settings className="h-4 w-4 mr-2" />
             Advanced Settings

@@ -35,7 +35,7 @@ const MusicStudio = () => {
       title: "Song Manager",
       description: "Organize your song catalog, track royalties, manage releases, and view performance analytics.",
       icon: Music,
-      path: "/songs",
+      path: "/song-manager",
       color: "bg-green-500/10 text-green-500",
       highlights: ["Catalog Management", "Royalty Tracking", "Analytics"],
     },

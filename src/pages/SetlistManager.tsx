@@ -80,7 +80,7 @@ const SetlistManager = () => {
     return (
       <div className="text-center py-12">
         <p className="mb-4">You need to be in a band to manage setlists.</p>
-        <Button onClick={() => navigate("/band-manager")}>Create or Join a Band</Button>
+        <Button onClick={() => navigate("/band")}>Create or Join a Band</Button>
       </div>
     );
   }

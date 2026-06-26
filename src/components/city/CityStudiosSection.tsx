@@ -81,7 +81,7 @@ export const CityStudiosSection = ({ studios }: CityStudiosSectionProps) => {
                 <span>Available slots: {studio.available_slots}</span>
               </div>
               <Button size="sm" variant="outline" asChild>
-                <Link to="/music-studio">Book Session</Link>
+                <Link to="/recording-studio">Book Session</Link>
               </Button>
             </div>
           </div>
