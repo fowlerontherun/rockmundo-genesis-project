@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const SPACES = [
   { key: "jam-lobby", label: "Jam Lobby", icon: Music, path: "/jam-sessions" },
-  { key: "studio-lobby", label: "Studio", icon: Disc3, path: "/recording" },
+  { key: "studio-lobby", label: "Studio", icon: Disc3, path: "/recording-studio" },
   { key: "nightclub-floor", label: "Nightclubs", icon: PartyPopper, path: "/nightclubs" },
   { key: "festival-backstage", label: "Festival Backstage", icon: Mic2, path: "/festivals" },
 ] as const;

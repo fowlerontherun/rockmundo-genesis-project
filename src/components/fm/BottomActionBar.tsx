@@ -34,7 +34,7 @@ export const BottomActionBar = () => {
       <Button
         size="sm"
         className="h-8 gap-2 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold tracking-wide uppercase text-xs"
-        onClick={() => navigate("/perform-gig")}
+        onClick={() => navigate("/gigs")}
       >
         Continue
         <ChevronRight className="h-4 w-4" />

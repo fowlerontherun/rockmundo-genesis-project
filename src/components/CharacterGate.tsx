@@ -35,7 +35,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   // Paths allowed while traveling (limited activities)
   const allowedWhileTraveling = [
     "/songwriting", 
-    "/library", 
+    "/education", 
     "/twaater", 
     "/dikcok",
     "/my-character",

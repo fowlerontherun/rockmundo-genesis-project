@@ -237,7 +237,7 @@ export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) 
       if (onBandCreated) {
         onBandCreated();
       } else {
-        navigate('/band-manager');
+        navigate('/band');
       }
     } catch (error: any) {
       const errorContext = getErrorContext(error);

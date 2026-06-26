@@ -658,7 +658,7 @@ const MyCharacterEdit = () => {
                   Design your personalized punk character with our sprite-based creator.
                 </p>
                 <Button 
-                  onClick={() => navigate('/avatar')}
+                  onClick={() => navigate('/avatar-designer')}
                   className="w-full"
                 >
                   <User className="mr-2 h-4 w-4" />

@@ -161,7 +161,7 @@ export const LinkedContentEmbed = ({ linkedType, linkedId }: LinkedContentEmbedP
         <div 
           className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-[hsl(var(--twaater-hover))]"
           style={{ borderColor: "hsl(var(--twaater-border))", backgroundColor: "hsl(var(--twaater-bg))" }}
-          onClick={() => navigate("/tours")}
+          onClick={() => navigate("/tour-manager")}
         >
           <div className="w-12 h-12 rounded bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center shrink-0">
             <Route className="h-6 w-6 text-white" />

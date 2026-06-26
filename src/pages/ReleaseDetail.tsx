@@ -331,7 +331,7 @@ export default function ReleaseDetail() {
                 <Button
                   variant="outline"
                   className="h-auto py-4 flex flex-col items-center gap-2"
-                  onClick={() => navigate("/media")}
+                  onClick={() => navigate("/hub/media")}
                 >
                   <Newspaper className="h-5 w-5 text-amber-500" />
                   <span className="text-sm font-medium">Submit to Media</span>

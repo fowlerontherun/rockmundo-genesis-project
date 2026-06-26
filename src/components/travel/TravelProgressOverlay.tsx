@@ -79,7 +79,7 @@ export function TravelProgressOverlay({
 
   const allowedActivities = [
     { icon: PenTool, label: "Write Songs", path: "/songwriting", description: "Work on lyrics and melodies" },
-    { icon: BookOpen, label: "Read Books", path: "/library", description: "Study music theory" },
+    { icon: BookOpen, label: "Read Books", path: "/education", description: "Study music theory" },
     { icon: MessageSquare, label: "Twaater", path: "/twaater", description: "Post updates to fans" },
   ];
 

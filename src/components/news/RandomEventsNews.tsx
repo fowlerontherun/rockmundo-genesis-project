@@ -75,7 +75,7 @@ export const RandomEventsNews = () => {
               </p>
             </div>
             <Button size="sm" variant="secondary" asChild>
-              <Link to="/random-events">Respond</Link>
+              <Link to="/dashboard">Respond</Link>
             </Button>
           </div>
         ))}
