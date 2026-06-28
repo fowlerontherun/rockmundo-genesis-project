@@ -113,14 +113,18 @@
     --twaater-purple: 270 80% 65%;
     --twaater-purple-hover: 270 80% 70%;
 
-    /* Football Manager 2024 inspired chrome tokens */
-    --fm-bg: 220 25% 8%;
-    --fm-panel: 220 22% 12%;
-    --fm-panel-2: 220 20% 15%;
-    --fm-border: 220 15% 22%;
-    --fm-fg: 210 20% 92%;
-    --fm-fg-muted: 215 12% 62%;
-    --fm-accent: 195 90% 55%;
+    /* RockMundo AAA management chrome — FM2025-inspired
+       BG #111317 · Panel #20242D · Panel-2 #262B36 · Border #2E3340
+       Brand accent #7D4DFF (violet). Per-module hues still override
+       --fm-accent for wayfinding, but --fm-brand stays violet everywhere. */
+    --fm-bg: 222 13% 8%;
+    --fm-panel: 222 14% 15%;
+    --fm-panel-2: 222 14% 19%;
+    --fm-border: 222 12% 24%;
+    --fm-fg: 220 14% 96%;
+    --fm-fg-muted: 220 9% 62%;
+    --fm-brand: 257 100% 65%;
+    --fm-accent: 257 100% 65%;
     --fm-good: 142 65% 48%;
     --fm-warn: 42 95% 55%;
     --fm-bad: 0 75% 58%;
