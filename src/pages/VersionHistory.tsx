@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.418",
+    date: "2026-06-28",
+    changes: [
+      { type: 'improvement', description: "**Album-cover & concert-poster hub tiles.** Magazine tiles are now rendered as 12\" LP sleeves: cardboard frame with a spine shadow (`.rm-sleeve`), a vinyl disc that peeks from behind the sleeve and slides out on hover (`.rm-vinyl-peek`), an accent-coloured catalog-number sticker (`RM-XXX`, deterministic per tile), and an album-style title band with a waveform strip. Featured hero tiles read as silk-screened gig posters: halftone dot screen (`.rm-halftone`) layered over the painterly art, a stamped 'NOW SHOWING' month/day plaque top-left, a spinning vinyl brand mark top-right, a black-on-accent star eyebrow, oversized uppercase Bebas headline, and a perforated ticket tear-off strip (`.rm-tear`) along the bottom edge." },
+    ],
+  },
+  {
     version: "1.1.417",
     date: "2026-06-28",
     changes: [
