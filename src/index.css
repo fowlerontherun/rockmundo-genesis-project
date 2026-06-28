@@ -849,3 +849,66 @@
   border-color: hsl(var(--fm-accent) / 0.6);
   box-shadow: 0 6px 22px hsl(0 0% 0% / 0.5), 0 0 0 1px hsl(var(--fm-accent) / 0.18);
 }
+
+/* ---------- Album sleeve + concert poster motifs ---------- */
+
+/* Album-sleeve frame: inner cardboard bevel + spine shadow on the
+   left edge, mimicking a 12" LP jacket. */
+.rm-sleeve {
+  box-shadow:
+    inset 0 0 0 1px hsl(0 0% 100% / 0.06),
+    inset 6px 0 12px -6px hsl(0 0% 0% / 0.7),
+    inset 0 -40px 60px -30px hsl(0 0% 0% / 0.55);
+}
+.rm-sleeve::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 8%; bottom: 8%;
+  width: 3px;
+  background: linear-gradient(180deg,
+    hsl(0 0% 0% / 0) 0%,
+    hsl(0 0% 0% / 0.55) 20%,
+    hsl(0 0% 0% / 0.55) 80%,
+    hsl(0 0% 0% / 0) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Vinyl disc that slides out from behind the sleeve on hover. */
+.rm-vinyl-peek {
+  transform: translateX(-30%);
+  transition: transform 360ms cubic-bezier(.2,.7,.2,1), opacity 240ms ease;
+  opacity: 0.75;
+}
+.group:hover .rm-vinyl-peek {
+  transform: translateX(32%);
+  opacity: 1;
+}
+
+/* Halftone dot screen — newsprint poster feel for hero tiles. */
+.rm-halftone {
+  background-image: radial-gradient(hsl(0 0% 0% / 0.55) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+  mix-blend-mode: multiply;
+}
+
+/* Perforated ticket tear-off strip. */
+.rm-tear {
+  background-image: radial-gradient(circle, hsl(var(--fm-bg)) 2.5px, transparent 3px);
+  background-size: 10px 10px;
+  background-position: center;
+  background-repeat: repeat-x;
+}
+
+/* Round sticker badge used for "NEW" / catalog numbers on sleeves. */
+.rm-sticker {
+  background: hsl(var(--fm-accent));
+  color: hsl(var(--fm-bg));
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  border-radius: 9999px;
+  box-shadow:
+    0 2px 6px hsl(0 0% 0% / 0.55),
+    inset 0 0 0 2px hsl(var(--fm-bg) / 0.25);
+  transform: rotate(-8deg);
+}
