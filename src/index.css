@@ -113,14 +113,18 @@
     --twaater-purple: 270 80% 65%;
     --twaater-purple-hover: 270 80% 70%;
 
-    /* Football Manager 2024 inspired chrome tokens */
-    --fm-bg: 220 25% 8%;
-    --fm-panel: 220 22% 12%;
-    --fm-panel-2: 220 20% 15%;
-    --fm-border: 220 15% 22%;
-    --fm-fg: 210 20% 92%;
-    --fm-fg-muted: 215 12% 62%;
-    --fm-accent: 195 90% 55%;
+    /* RockMundo AAA management chrome — FM2025-inspired
+       BG #111317 · Panel #20242D · Panel-2 #262B36 · Border #2E3340
+       Brand accent #7D4DFF (violet). Per-module hues still override
+       --fm-accent for wayfinding, but --fm-brand stays violet everywhere. */
+    --fm-bg: 222 13% 8%;
+    --fm-panel: 222 14% 15%;
+    --fm-panel-2: 222 14% 19%;
+    --fm-border: 222 12% 24%;
+    --fm-fg: 220 14% 96%;
+    --fm-fg-muted: 220 9% 62%;
+    --fm-brand: 257 100% 65%;
+    --fm-accent: 257 100% 65%;
     --fm-good: 142 65% 48%;
     --fm-warn: 42 95% 55%;
     --fm-bad: 0 75% 58%;
@@ -373,9 +377,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Oswald', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', sans-serif;
-    line-height: 1.5;
+    font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+      'Helvetica Neue', sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    line-height: 1.45;
     font-weight: 400;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -718,7 +723,129 @@
 }
 .fm-scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--fm-accent) / 0.6); }
 
-/* Tighten default vertical rhythm inside the FM main column */
-.fm-shell main h2 { letter-spacing: 0.06em; }
-.fm-shell main .card,
-.fm-shell main [data-fm-panel] { border-radius: 2px; }
+/* Tighten default vertical rhythm inside the FM main column.
+   Cards get 12px corners (--radius-lg) to match the AAA spec while
+   panels stay near-square to preserve dashboard density. */
+.fm-shell main h2 { letter-spacing: -0.01em; }
+.fm-shell main .card { border-radius: var(--radius-lg); }
+.fm-shell main [data-fm-panel] { border-radius: 4px; }
+
+/* ============================================================
+   RockMundo signature music motifs
+   Distinctive visual primitives used across hubs, cards and
+   progress surfaces so the game reads as a music sim, not a
+   football reskin.
+   ============================================================ */
+
+/* Vinyl-record progress ring. Black disc, concentric grooves and
+   a coloured label centre. Used for XP, mastery, release readiness. */
+.rm-vinyl {
+  position: relative;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 50% 50%, hsl(var(--fm-brand)) 0 18%, transparent 18.5%),
+    repeating-radial-gradient(circle at 50% 50%,
+      hsl(0 0% 100% / 0.04) 0 1px,
+      transparent 1px 3px),
+    radial-gradient(circle at 35% 30%, hsl(0 0% 22%) 0%, hsl(0 0% 6%) 70%);
+  box-shadow:
+    inset 0 0 0 1px hsl(0 0% 100% / 0.08),
+    0 4px 14px hsl(0 0% 0% / 0.6);
+}
+.rm-vinyl::after {
+  content: "";
+  position: absolute;
+  inset: 46%;
+  border-radius: 9999px;
+  background: hsl(var(--fm-bg));
+  box-shadow: 0 0 0 1px hsl(0 0% 100% / 0.1);
+}
+.rm-vinyl-spin { animation: rm-vinyl-spin 14s linear infinite; }
+@keyframes rm-vinyl-spin { to { transform: rotate(360deg); } }
+
+/* Concert poster paper texture — a torn, photocopied feel for hero tiles. */
+.rm-poster {
+  background-image:
+    radial-gradient(120% 80% at 0% 0%, hsl(var(--fm-brand) / 0.18), transparent 55%),
+    radial-gradient(100% 80% at 100% 100%, hsl(var(--fm-accent) / 0.22), transparent 60%),
+    repeating-linear-gradient(45deg,
+      hsl(0 0% 100% / 0.02) 0 2px,
+      transparent 2px 5px);
+}
+
+/* Ticket-stub silhouette — perforated edge + corner notches. Used
+   on magazine tiles and gig/event cards. */
+.rm-ticket {
+  --notch: 8px;
+  mask:
+    radial-gradient(var(--notch) at 0 50%, transparent 98%, #000 100%) 0 0/100% 100% no-repeat,
+    radial-gradient(var(--notch) at 100% 50%, transparent 98%, #000 100%) 0 0/100% 100% no-repeat;
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
+}
+.rm-ticket-perf {
+  background-image:
+    radial-gradient(circle, hsl(var(--fm-border)) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+  background-position: center;
+  background-repeat: repeat-y;
+}
+
+/* Static waveform strip rendered with CSS gradients. The mask cuts
+   bars of varied height for an audio-clip feel without canvas/JS. */
+.rm-waveform {
+  --bar: hsl(var(--fm-accent) / 0.75);
+  background-image: repeating-linear-gradient(90deg,
+    var(--bar) 0 2px, transparent 2px 4px);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 16' preserveAspectRatio='none'><g fill='black'>\
+<rect x='0' y='6' width='1' height='4'/><rect x='2' y='4' width='1' height='8'/><rect x='4' y='2' width='1' height='12'/><rect x='6' y='5' width='1' height='6'/>\
+<rect x='8' y='1' width='1' height='14'/><rect x='10' y='6' width='1' height='4'/><rect x='12' y='3' width='1' height='10'/><rect x='14' y='5' width='1' height='6'/>\
+<rect x='16' y='2' width='1' height='12'/><rect x='18' y='7' width='1' height='2'/><rect x='20' y='4' width='1' height='8'/><rect x='22' y='1' width='1' height='14'/>\
+<rect x='24' y='5' width='1' height='6'/><rect x='26' y='3' width='1' height='10'/><rect x='28' y='6' width='1' height='4'/><rect x='30' y='2' width='1' height='12'/>\
+<rect x='32' y='4' width='1' height='8'/><rect x='34' y='1' width='1' height='14'/><rect x='36' y='5' width='1' height='6'/><rect x='38' y='7' width='1' height='2'/>\
+<rect x='40' y='3' width='1' height='10'/><rect x='42' y='5' width='1' height='6'/><rect x='44' y='2' width='1' height='12'/><rect x='46' y='6' width='1' height='4'/>\
+<rect x='48' y='4' width='1' height='8'/><rect x='50' y='1' width='1' height='14'/><rect x='52' y='5' width='1' height='6'/><rect x='54' y='3' width='1' height='10'/>\
+<rect x='56' y='6' width='1' height='4'/><rect x='58' y='2' width='1' height='12'/><rect x='60' y='5' width='1' height='6'/><rect x='62' y='7' width='1' height='2'/>\
+</g></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 16' preserveAspectRatio='none'><g fill='black'>\
+<rect x='0' y='6' width='1' height='4'/><rect x='2' y='4' width='1' height='8'/><rect x='4' y='2' width='1' height='12'/><rect x='6' y='5' width='1' height='6'/>\
+<rect x='8' y='1' width='1' height='14'/><rect x='10' y='6' width='1' height='4'/><rect x='12' y='3' width='1' height='10'/><rect x='14' y='5' width='1' height='6'/>\
+<rect x='16' y='2' width='1' height='12'/><rect x='18' y='7' width='1' height='2'/><rect x='20' y='4' width='1' height='8'/><rect x='22' y='1' width='1' height='14'/>\
+<rect x='24' y='5' width='1' height='6'/><rect x='26' y='3' width='1' height='10'/><rect x='28' y='6' width='1' height='4'/><rect x='30' y='2' width='1' height='12'/>\
+<rect x='32' y='4' width='1' height='8'/><rect x='34' y='1' width='1' height='14'/><rect x='36' y='5' width='1' height='6'/><rect x='38' y='7' width='1' height='2'/>\
+<rect x='40' y='3' width='1' height='10'/><rect x='42' y='5' width='1' height='6'/><rect x='44' y='2' width='1' height='12'/><rect x='46' y='6' width='1' height='4'/>\
+<rect x='48' y='4' width='1' height='8'/><rect x='50' y='1' width='1' height='14'/><rect x='52' y='5' width='1' height='6'/><rect x='54' y='3' width='1' height='10'/>\
+<rect x='56' y='6' width='1' height='4'/><rect x='58' y='2' width='1' height='12'/><rect x='60' y='5' width='1' height='6'/><rect x='62' y='7' width='1' height='2'/>\
+</g></svg>");
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
+
+/* Backstage pass — diagonal stripe used as a corner ribbon on premium
+   or restricted-access cards. */
+.rm-backstage::before {
+  content: "BACKSTAGE";
+  position: absolute;
+  top: 10px; right: -28px;
+  background: hsl(var(--fm-brand));
+  color: hsl(var(--fm-bg));
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  padding: 2px 32px;
+  transform: rotate(35deg);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Subtle hover lift used across cards for a fast AAA feel. */
+.rm-card-hover {
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+.rm-card-hover:hover {
+  transform: translateY(-1px);
+  border-color: hsl(var(--fm-accent) / 0.6);
+  box-shadow: 0 6px 22px hsl(0 0% 0% / 0.5), 0 0 0 1px hsl(var(--fm-accent) / 0.18);
+}

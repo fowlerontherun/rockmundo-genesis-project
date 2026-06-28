@@ -14,6 +14,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.417",
+    date: "2026-06-28",
+    changes: [
+      { type: 'improvement', description: "**AAA UI overhaul — RockMundo identity pass.** Reworked the FM chrome around a Football-Manager-2025 dark palette (#111317 background, #20242D panels, #7D4DFF brand accent) and switched the entire app to **Inter Variable** as the system font. Per-module accent hues are preserved for wayfinding while the global brand stays violet, giving a consistent AAA management-sim feel without losing the section colour-coding." },
+      { type: 'improvement', description: "**Music-first signature motifs.** Added reusable `VinylRing`, `Waveform`, and `TicketStub` primitives plus CSS utilities (`.rm-vinyl`, `.rm-waveform`, `.rm-poster`, `.rm-ticket`, `.rm-backstage`). Hero hub tiles now render a spinning vinyl in the corner and a waveform strip along the bottom; magazine tiles show a waveform underline; the stats sidebar finishes with a waveform footer. Hubs read instantly as a music sim, not a football reskin." },
+      { type: 'improvement', description: "Bumped card border-radius to 12px to match the AAA spec, tightened typography to Inter's tracking, and added a subtle `rm-card-hover` lift across hub tiles and ticket stubs for fast, polished interactions." },
+    ],
+  },
+  {
     version: "1.1.416",
     date: "2026-06-26",
     changes: [

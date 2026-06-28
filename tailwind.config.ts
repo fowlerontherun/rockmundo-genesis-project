@@ -16,9 +16,10 @@ export default {
     extend: {
       fontFamily: {
         'rock': ['Rock Salt', 'cursive'],
-        'bebas': ['Bebas Neue', 'sans-serif'], 
+        'bebas': ['Bebas Neue', 'sans-serif'],
         'oswald': ['Oswald', 'sans-serif'],
-        'sans': ['Oswald', 'system-ui', 'sans-serif'],
+        'sans': ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        'display': ['"Inter Variable"', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
