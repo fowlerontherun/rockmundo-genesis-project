@@ -37,7 +37,7 @@ export const TATTOO_FONTS: TattooFontStyle[] = [
  label:'🔠 Bold Caps',
  description:'Blocky',
  priceMultiplier: 1.0,
- css: { fontFamily:'Impact,"Arial Black", sans-serif', textTransform:''as const, fontWeight: 900 },
+ css: { fontFamily: 'Impact, "Arial Black", sans-serif', textTransform: 'uppercase' as const, fontWeight: 900 },
  },
  {
  id:'minimal',
