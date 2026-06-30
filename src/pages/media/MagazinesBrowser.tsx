@@ -213,6 +213,17 @@ const MagazinesBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredMagazines.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="magazines"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredMagazines.length} of {magazines?.length || 0} magazines
       </p>
@@ -225,8 +236,8 @@ const MagazinesBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMagazines.map(mag => (
-            <Card key={mag.id} className="hover:shadow-lg transition-shadow flex flex-col">
+          {filteredMagazines.map(({ mag, gate }) => (
+            <Card key={mag.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!gate.inReach ? 'opacity-60' : ''}`}>
               <Link
                 to={`/media/magazines/${mag.id}`}
                 className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
@@ -234,7 +245,17 @@ const MagazinesBrowser = () => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{mag.name}</CardTitle>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      <Badge
+                        variant="outline"
+                        className={
+                          gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                          : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                          : 'border-amber-500/40 text-amber-400 text-xs'
+                        }
+                      >
+                        {gate.outletScope}
+                      </Badge>
                       {mag.magazine_type && (
                         <Badge variant="outline" className="capitalize">{mag.magazine_type.replace('_', ' ')}</Badge>
                       )}
@@ -309,6 +330,10 @@ const MagazinesBrowser = () => {
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Request Pending
                   </Button>
+                ) : !gate.inReach ? (
+                  <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                    Out of reach — {gate.reason}
+                  </Button>
                 ) : (
                   <Button
                     variant={isEligible(mag) ? "default" : "outline"}
@@ -325,6 +350,7 @@ const MagazinesBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedMagazine && userBand && (
         <MediaSubmissionDialog
