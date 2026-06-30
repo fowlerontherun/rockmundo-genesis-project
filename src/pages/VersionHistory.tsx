@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.434",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Media Outlets admin panel** at `/admin/media-outlets` lets admins review, edit and disable every seeded outlet across all six media tables (magazines, newspapers, podcasts, websites, radio stations and TV shows) without ever touching the database. Each tab loads up to 2,000 outlets with search-by-name, country filter (auto-populated from the data), reach-tier filter (hyper-local / local / regional / national / international, derived from `min_fame_required` using the same breakpoints as the player-facing reach gate), and active/disabled status filter. Each row shows the outlet name, type, country, city (where applicable), audience size, current min-fame requirement and a colour-coded tier badge, plus an inline Active switch for one-click disable/enable. The Edit dialog exposes name, country (with datalist autocomplete from existing values), city (full searchable city picker for newspapers/radio), audience size, `min_fame_required` (with a live tier preview and the next career-rung fame value displayed inline so balancing decisions stay grounded in the canonical BAND_FAME_THRESHOLDS ladder), and the active flag. Linked from the Admin Dashboard under Media & Streaming with a Newspaper icon." },
+    ],
+  },
+  {
     version: "1.1.433",
     date: "2026-06-30",
     changes: [
