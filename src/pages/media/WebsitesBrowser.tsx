@@ -238,6 +238,17 @@ const WebsitesBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredWebsites.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="websites"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredWebsites.length} of {websites?.length || 0} websites
       </p>
@@ -250,8 +261,8 @@ const WebsitesBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredWebsites.map(web => (
-            <Card key={web.id} className="hover:shadow-lg transition-shadow">
+          {filteredWebsites.map(({ web, gate }) => (
+            <Card key={web.id} className={`hover:shadow-lg transition-shadow ${!gate.inReach ? 'opacity-60' : ''}`}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -268,7 +279,17 @@ const WebsitesBrowser = () => {
                       </a>
                     )}
                   </CardTitle>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    <Badge
+                      variant="outline"
+                      className={
+                        gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                        : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                        : 'border-amber-500/40 text-amber-400 text-xs'
+                      }
+                    >
+                      {gate.outletScope}
+                    </Badge>
                     <Badge className={getRankColor(web.traffic_rank)}>
                       {formatTrafficRank(web.traffic_rank)}
                     </Badge>
@@ -334,6 +355,10 @@ const WebsitesBrowser = () => {
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Request Pending
                     </Button>
+                  ) : !gate.inReach ? (
+                    <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                      Out of reach — {gate.reason}
+                    </Button>
                   ) : (
                     <Button
                       variant={isEligible(web) ? "default" : "outline"}
@@ -351,6 +376,7 @@ const WebsitesBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedWebsite && userBand && (
         <MediaSubmissionDialog
