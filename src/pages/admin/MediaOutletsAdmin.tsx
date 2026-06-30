@@ -366,8 +366,8 @@ function EditDialog({
             <Input type="number" value={minFame} onChange={(e) => setMinFame(Number(e.target.value))} />
             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
               Tier: <Badge variant="outline" className={tierBadgeColor[tier]}>{tier}</Badge>
-              {nextTierIndex >= 0 && (
-                <span>· Next career rung at {BAND_FAME_THRESHOLDS[nextTierIndex].minFame.toLocaleString()} fame</span>
+              {nextRung != null && (
+                <span>· Next career rung at {nextRung.toLocaleString()} fame</span>
               )}
             </div>
           </div>
