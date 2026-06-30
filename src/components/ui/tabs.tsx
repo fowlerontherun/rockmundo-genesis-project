@@ -15,7 +15,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-9 w-full items-center justify-start gap-0 overflow-x-auto flex-nowrap border-b border-fm-border bg-fm-panel-2 px-1 text-fm-fg-muted scrollbar-hide",
+      "inline-flex h-9 w-full items-center justify-start gap-1 overflow-x-auto flex-nowrap border-b border-fm-border px-1 text-fm-fg-muted scrollbar-hide",
       className,
     )}
     {...props}
@@ -30,10 +30,9 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 h-9 text-xs font-medium uppercase tracking-wide transition-colors",
+      "relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 h-7 my-1 text-[12px] font-medium tracking-tight rounded-[7px] transition-colors",
       "text-fm-fg-muted hover:text-fm-fg",
-      "data-[state=active]:text-fm-accent",
-      "data-[state=active]:after:absolute data-[state=active]:after:left-2 data-[state=active]:after:right-2 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-fm-accent",
+      "data-[state=active]:text-fm-accent data-[state=active]:bg-fm-accent/15",
       "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-fm-accent",
       "disabled:pointer-events-none disabled:opacity-50",
       className,
