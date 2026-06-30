@@ -11,8 +11,8 @@ export const SubTabs = () => {
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
 
   return (
-    <div className="h-9 flex items-stretch bg-fm-panel-2 border-b border-fm-border pl-2 pr-2">
-      <div className="flex items-stretch overflow-x-auto fm-scrollbar-thin min-w-0 flex-1">
+    <div className="h-10 flex items-stretch bg-fm-panel border-b border-fm-border pl-2 pr-2 gap-1">
+      <div className="flex items-center overflow-x-auto fm-scrollbar-thin min-w-0 flex-1 gap-1">
         {mod.subTabs.map((tab) => {
           const Icon = tab.icon;
           const active = isActive(tab.path);
@@ -21,13 +21,14 @@ export const SubTabs = () => {
               key={tab.path}
               onClick={() => navigate(tab.path)}
               className={cn(
-                "px-3 flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.12em] font-semibold whitespace-nowrap transition-colors border-b-[2px]",
+                "px-3 h-7 flex items-center gap-1.5 text-[12px] font-medium tracking-tight whitespace-nowrap transition-colors rounded-[7px]",
                 active
-                  ? "text-fm-fg border-fm-accent bg-fm-panel/40"
-                  : "text-fm-fg-muted border-transparent hover:text-fm-fg hover:border-fm-border"
+                  ? "text-fm-accent"
+                  : "text-fm-fg-muted hover:text-fm-fg",
               )}
+              style={active ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
             >
-              {Icon && <Icon className={cn("h-3 w-3", active && "text-fm-accent")} />}
+              {Icon && <Icon className="h-3 w-3" />}
               {tab.label}
             </button>
           );

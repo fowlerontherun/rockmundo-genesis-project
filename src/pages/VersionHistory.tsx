@@ -14,6 +14,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.419",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Global UI redesign — `docs/ui-redesign-spec.md` applied.** Re-tokenised the design system to the spec palette (page `#0E0D12`, surface `#17151D`, raised `#1F1C28`, border `#2A2733`, text `#F5F3F7` / `#9B96A8`) and remapped every top-level section to one accent (Overview/Music/Character `#8B7CF6`, Band & Live `#F2A33D`, Career `#4C9E3F`, Media/World `#3578DD`, Social `#D4537E`, Admin `#9B96A8`). Sub-pages now inherit their parent tab's accent — no per-sub-page colour drift." },
+      { type: 'improvement', description: "**Page header rebuilt to spec §2.1.** Two-row layout: a breadcrumb row (back · section accent · muted one-line description) sits above a title row with a 34×34 accent-tinted icon chip, a 20px/500 display-font H1, and a single optional primary action on the right. Removed the all-caps treatment and the left accent bar — sentence case throughout (spec rule §4.7)." },
+      { type: 'improvement', description: "**Tabs switched to pill style.** `ModuleTabs` and `SubTabs` now render as 7px-radius pills with an accent-tinted background on the active tab and sentence-case labels — replacing the previous uppercase, tracking-widest, underlined treatment. Two font weights only (400/500)." },
+      { type: 'improvement', description: "**Card primitive aligned with spec §1.5.** Bumped to 12px radius and dropped the all-caps muted card titles in favour of 13px/500 sentence-case headings. `PanelCard` follows the same rules." },
+      { type: 'feature', description: "**New shared atoms: `StatStrip` and `EmptyState`.** `StatStrip` enforces the §2.2 rule (3 or 4 equal-width metric cards, no icons, muted label above a 20px/500 value, or nothing at all). `EmptyState` ships the §2.6 dashed container with a 48px accent icon chip, headline, reason line, and one action — ready to replace bare 'No results' messages and leaked config errors across the app." },
+    ],
+  },
+  {
     version: "1.1.418",
     date: "2026-06-28",
     changes: [
