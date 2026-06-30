@@ -71,7 +71,7 @@ export function DataTable<T extends Record<string, any>>({
                     style={{ width: col.width }}
                     onClick={() => handleHeader(col)}
                     className={cn(
-                      "px-2.5 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-fm-fg-muted",
+                      "px-2.5 py-1.5 text-[10px] tracking-tight font-medium text-fm-fg-muted",
                       alignCls,
                       col.sortable !== false && "cursor-pointer select-none hover:text-fm-fg"
                     )}

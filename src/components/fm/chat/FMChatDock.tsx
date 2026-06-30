@@ -35,7 +35,7 @@ export function FMChatDock() {
           className="pointer-events-auto w-[320px] h-[420px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col"
         >
           <div className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border">
-            <span className="text-[11px] uppercase tracking-widest text-fm-fg font-semibold truncate">
+            <span className="text-[11px] tracking-tight text-fm-fg font-medium truncate">
               {t.displayName}
             </span>
             <button
@@ -61,7 +61,7 @@ export function FMChatDock() {
           onClick={() => setOpen(!open)}
           className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border hover:bg-fm-panel-2/80"
         >
-          <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-fm-fg font-semibold">
+          <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
             <MessageSquare className="h-3.5 w-3.5 text-fm-accent" />
             Chat
             <span className="text-fm-fg-muted">({accepted.length})</span>
