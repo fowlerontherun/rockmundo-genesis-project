@@ -6165,6 +6165,7 @@ export type Database = {
           headquarters_city_id: string | null
           id: string
           is_bankrupt: boolean
+          is_publicly_traded: boolean
           logo_url: string | null
           market_influence: number
           name: string
@@ -6173,6 +6174,8 @@ export type Database = {
           owner_id: string
           parent_company_id: string | null
           reputation_score: number
+          share_price: number
+          shares_outstanding: number
           status: string
           total_contracts_won: number
           updated_at: string
@@ -6188,6 +6191,7 @@ export type Database = {
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean
+          is_publicly_traded?: boolean
           logo_url?: string | null
           market_influence?: number
           name: string
@@ -6196,6 +6200,8 @@ export type Database = {
           owner_id: string
           parent_company_id?: string | null
           reputation_score?: number
+          share_price?: number
+          shares_outstanding?: number
           status?: string
           total_contracts_won?: number
           updated_at?: string
@@ -6211,6 +6217,7 @@ export type Database = {
           headquarters_city_id?: string | null
           id?: string
           is_bankrupt?: boolean
+          is_publicly_traded?: boolean
           logo_url?: string | null
           market_influence?: number
           name?: string
@@ -6219,6 +6226,8 @@ export type Database = {
           owner_id?: string
           parent_company_id?: string | null
           reputation_score?: number
+          share_price?: number
+          shares_outstanding?: number
           status?: string
           total_contracts_won?: number
           updated_at?: string
@@ -6320,6 +6329,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_demand_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_dividends: {
+        Row: {
+          company_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          per_share: number
+          total_amount: number
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          per_share: number
+          total_amount: number
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          per_share?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_dividends_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -6618,6 +6662,65 @@ export type Database = {
           },
         ]
       }
+      company_inventory: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          name: string
+          restock_level: number
+          sku: string | null
+          stock: number
+          unit_cost: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          name: string
+          restock_level?: number
+          sku?: string | null
+          stock?: number
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          name?: string
+          restock_level?: number
+          sku?: string | null
+          stock?: number
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_inventory_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_kpis: {
         Row: {
           company_id: string
@@ -6711,6 +6814,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_market_rankings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_news_events: {
+        Row: {
+          body: string | null
+          company_id: string
+          created_at: string
+          event_type: string
+          headline: string
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          body?: string | null
+          company_id: string
+          created_at?: string
+          event_type: string
+          headline: string
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          body?: string | null
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          headline?: string
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_news_events_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -6916,6 +7057,56 @@ export type Database = {
           },
         ]
       }
+      company_services: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          quality_tier: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          quality_tier?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          quality_tier?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_services_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_settings: {
         Row: {
           allow_subsidiary_creation: boolean | null
@@ -6961,6 +7152,44 @@ export type Database = {
             foreignKeyName: "company_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_shares: {
+        Row: {
+          acquired_at: string
+          avg_buy_price: number
+          company_id: string
+          holder_profile_id: string
+          id: string
+          shares: number
+          updated_at: string
+        }
+        Insert: {
+          acquired_at?: string
+          avg_buy_price?: number
+          company_id: string
+          holder_profile_id: string
+          id?: string
+          shares: number
+          updated_at?: string
+        }
+        Update: {
+          acquired_at?: string
+          avg_buy_price?: number
+          company_id?: string
+          holder_profile_id?: string
+          id?: string
+          shares?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_shares_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
@@ -36669,8 +36898,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
       notify_blind_box_live: { Args: never; Returns: number }
       owns_rehearsal_room: { Args: { _room_id: string }; Returns: boolean }
+      pay_company_dividends: {
+        Args: { p_company_id: string; p_total: number }
+        Returns: Json
+      }
       place_song_bid: {
         Args: {
           p_bid_amount: number
