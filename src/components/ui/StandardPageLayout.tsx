@@ -99,7 +99,7 @@ export const StandardPageLayout = ({
           className="rounded-lg border border-dashed bg-muted/30 p-3 sm:p-4 space-y-2"
         >
           {secondaryTitle && (
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <h2 className="text-xs tracking-tight text-muted-foreground font-medium">
               {secondaryTitle}
             </h2>
           )}

@@ -73,7 +73,7 @@ export const FMQuickActions = () => {
         type="button"
         onClick={openSearch}
         title="Search (⌘K)"
-        className="h-6 px-2 flex items-center gap-1.5 rounded-sm border border-fm-border bg-fm-panel hover:bg-fm-panel-2 hover:border-fm-accent/60 text-[10px] uppercase tracking-[0.12em] font-semibold text-fm-fg-muted hover:text-fm-fg transition-colors"
+        className="h-6 px-2 flex items-center gap-1.5 rounded-sm border border-fm-border bg-fm-panel hover:bg-fm-panel-2 hover:border-fm-accent/60 text-[10px] tracking-tight font-medium text-fm-fg-muted hover:text-fm-fg transition-colors"
       >
         <Search className="h-3 w-3" />
         <span className="hidden sm:inline">Search</span>
@@ -84,7 +84,7 @@ export const FMQuickActions = () => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="h-6 pl-1.5 pr-1 flex items-center gap-1 rounded-sm border border-fm-accent/50 bg-fm-accent/15 hover:bg-fm-accent/25 text-fm-accent text-[10px] uppercase tracking-[0.14em] font-bold transition-colors"
+              className="h-6 pl-1.5 pr-1 flex items-center gap-1 rounded-sm border border-fm-accent/50 bg-fm-accent/15 hover:bg-fm-accent/25 text-fm-accent text-[10px] tracking-tight font-medium transition-colors"
               title="Create / quick action"
             >
               <Plus className="h-3 w-3" />
@@ -93,7 +93,7 @@ export const FMQuickActions = () => {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-fm-panel border-fm-border">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.16em] text-fm-fg-muted font-semibold">
+            <DropdownMenuLabel className="text-[10px] tracking-tight text-fm-fg-muted font-medium">
               {mod.label} · Quick Actions
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-fm-border" />
@@ -111,7 +111,7 @@ export const FMQuickActions = () => {
                     </span>
                   )}
                   <span className="flex-1 min-w-0">
-                    <span className="block text-xs font-semibold text-fm-fg truncate">{a.label}</span>
+                    <span className="block text-xs font-medium text-fm-fg truncate">{a.label}</span>
                     {a.description && (
                       <span className="block text-[10px] text-fm-fg-muted truncate">{a.description}</span>
                     )}

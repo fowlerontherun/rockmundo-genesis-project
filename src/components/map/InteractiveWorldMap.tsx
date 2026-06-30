@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { getCoordinatesForCity } from '@/utils/worldTravel';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface City {
   id: string;
@@ -253,22 +254,13 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
   }, []);
 
   if (mapError) {
+    // Spec §2.6 — never leak a config error to players.
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
-        <MapPin className="h-8 w-8 text-destructive" />
-        <p className="font-semibold text-destructive">{mapError}</p>
-        <p className="text-sm text-muted-foreground">
-          Get your free token at{' '}
-          <a 
-            href="https://mapbox.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-primary underline hover:no-underline"
-          >
-            mapbox.com
-          </a>
-        </p>
-      </div>
+      <EmptyState
+        icon={MapPin}
+        title="Map unavailable right now"
+        description="We can't load the interactive world map at the moment. You can still travel between cities from the World hub."
+      />
     );
   }
 

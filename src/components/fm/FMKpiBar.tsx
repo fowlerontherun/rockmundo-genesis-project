@@ -19,25 +19,26 @@ const toneClass = {
 export const FMKpiBar = ({ items, className }: { items: KpiItem[]; className?: string }) => (
   <div
     className={cn(
-      "flex items-stretch gap-[1px] bg-fm-border border border-fm-border rounded-sm overflow-x-auto",
+      "grid gap-3",
       className,
     )}
+    style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(items.length, 1), 4)}, minmax(0, 1fr))` }}
   >
     {items.map((it, i) => {
       const Icon = it.icon;
       return (
         <div
           key={i}
-          className="flex-1 min-w-[120px] bg-fm-panel px-3 py-2 flex flex-col justify-center"
+          className="rounded-[10px] border border-fm-border bg-fm-panel px-3.5 py-3 flex flex-col justify-center"
         >
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-fm-fg-muted">
+          <div className="flex items-center gap-1.5 text-[11px] text-fm-fg-muted">
             {Icon && <Icon className="h-3 w-3" />}
             <span className="truncate">{it.label}</span>
           </div>
-          <div className="flex items-baseline gap-1.5 mt-0.5">
+          <div className="flex items-baseline gap-1.5 mt-1">
             <span
               className={cn(
-                "text-base font-semibold tabular-nums leading-none",
+                "text-[20px] font-medium tabular-nums leading-none tracking-tight",
                 toneClass[it.tone ?? "neutral"],
               )}
             >
@@ -46,7 +47,7 @@ export const FMKpiBar = ({ items, className }: { items: KpiItem[]; className?: s
             {it.delta !== undefined && it.delta !== "" && (
               <span
                 className={cn(
-                  "text-[10px] tabular-nums",
+                  "text-[11px] tabular-nums",
                   String(it.delta).startsWith("-") ? "text-fm-bad" : "text-fm-good",
                 )}
               >

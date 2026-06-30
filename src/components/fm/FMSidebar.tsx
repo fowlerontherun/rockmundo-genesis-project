@@ -36,28 +36,28 @@ export const FMSidebar = () => {
         collapsed ? "w-12" : "w-56"
       )}
     >
-      <div className="h-9 flex items-center justify-between px-2 border-b border-fm-border">
+      <div className="h-9 flex items-center justify-between px-3 border-b border-fm-border">
         {!collapsed && (
-          <span className="text-[10px] uppercase tracking-widest text-fm-fg-muted truncate">
+          <span className="text-[12px] font-medium tracking-tight text-fm-fg truncate">
             {mod.label}
           </span>
         )}
         <button
           onClick={toggleCollapsed}
-          className="ml-auto p-1 rounded hover:bg-fm-panel-2 text-fm-fg-muted"
+          className="ml-auto p-1 rounded-[6px] hover:bg-fm-panel-2 text-fm-fg-muted"
           title={collapsed ? "Expand" : "Collapse"}
         >
           {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto py-2">
         {mod.sidebar.map((group) => (
-          <div key={group.label} className="mb-1">
+          <div key={group.label} className="mb-2">
             {!collapsed && (
               <button
                 onClick={() => toggleGroup(group.label)}
-                className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] uppercase tracking-wider text-fm-fg-muted hover:text-fm-fg"
+                className="w-full flex items-center justify-between px-3 py-1 text-[11px] text-fm-fg-muted hover:text-fm-fg"
               >
                 <span>{group.label}</span>
                 {openGroups[group.label] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -74,10 +74,10 @@ export const FMSidebar = () => {
                       onClick={() => navigate(item.path)}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors",
+                        "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
                         active
-                          ? "bg-fm-accent/15 text-fm-accent border-l-2 border-fm-accent"
-                          : "text-fm-fg-muted hover:text-fm-fg hover:bg-fm-panel-2"
+                          ? "bg-fm-accent/15 text-fm-accent"
+                          : "text-fm-fg-muted hover:text-fm-fg hover:bg-fm-panel-2",
                       )}
                     >
                       {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}

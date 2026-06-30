@@ -25,10 +25,10 @@ const StatPip = ({ icon: Icon, label, value, tone = "neutral" }: {
     neutral: "text-fm-accent",
   }[tone];
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-fm-border bg-fm-panel-2">
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-fm-border bg-fm-panel-2">
       <Icon className={`h-3.5 w-3.5 ${toneClass}`} />
-      <span className="text-[10px] uppercase tracking-wider text-fm-fg-muted">{label}</span>
-      <span className="text-xs font-semibold tabular-nums text-fm-fg">{value}</span>
+      <span className="text-[11px] text-fm-fg-muted">{label}</span>
+      <span className="text-[12px] font-medium tabular-nums text-fm-fg">{value}</span>
     </div>
   );
 };
@@ -69,8 +69,8 @@ export const TopStatusBar = () => {
 
       <div className="h-6 w-px bg-fm-border" />
 
-      <div className="text-xs text-fm-fg-muted">
-        <span className="uppercase tracking-wider mr-2">Game Date</span>
+      <div className="text-[12px] text-fm-fg-muted flex items-center gap-2">
+        <span>Game date</span>
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
 

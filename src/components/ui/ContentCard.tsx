@@ -151,14 +151,14 @@ export const ContentCard = ({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="text-sm sm:text-base font-semibold leading-tight truncate min-w-0">
+            <h3 className="text-sm sm:text-base font-medium leading-tight truncate min-w-0">
               {title}
             </h3>
             {badges?.map((b) => (
               <span
                 key={b.label}
                 className={cn(
-                  "rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                  "rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-tight",
                   toneClasses[b.tone ?? "default"]
                 )}
               >

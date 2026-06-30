@@ -14,6 +14,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.420",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Spec sweep across shared chrome.** Stripped every `uppercase` / `tracking-widest` / `font-bold` ALL-CAPS treatment from the global components — `Tabs`, `FMKpiBar`, `FMSection`, `FMSidebar`, `TopStatusBar`, `FMFilterBar`, `FMQuickActions`, `FMCommandPalette`, `FMChatDock`, `DataTable`, `StandardPageLayout`, `ContentCard`, `HorizontalNavigation`, `table`, `StatsSidebar`, `SectionBand`, `FeaturedTile`, `MagazineTile`. Everything is now sentence case at 11–13px with two weights (400/500), matching the Underworld / Busking / Release-manager target screenshots. This propagates across every page that uses these components, not just the three examples." },
+      { type: 'improvement', description: "**KPI bar = spec stat strip.** `FMKpiBar` now renders 3 or 4 equal-width 10px-radius cards with an 11px muted label and a 20px/500 tabular value — no icons, no divider hairlines, no 'min-width 120px' overflow row. Pages using `FMPageScaffold` (Release Manager, Busking, Underworld, Avatar Designer, and dozens more) inherit the new stat-strip look automatically." },
+      { type: 'improvement', description: "**Filter bar redesigned to spec §2.4.** `FMFilterBar` is now a 10px-radius container holding 8px-tall pill controls in one wrapping row, with a search input that flexes to fill the remaining width. Drops the cramped 24px text-input and the all-caps pill labels." },
+      { type: 'improvement', description: "**Sidebar polish.** `FMSidebar` group labels and item rows are sentence-case 11–12px with 7px-radius hover/active pills (active state uses the section's accent tint). Top label is no longer all-caps." },
+      { type: 'improvement', description: "**Tab primitive switched to pills.** The Radix `Tabs` primitive now renders 7px-radius pill triggers with an accent-tinted active background, matching the spec and the My releases / Sales and revenue tabs in the target screenshot." },
+      { type: 'fix', description: "**No more leaked Mapbox token errors (spec §2.6, hard rule §4.5).** Replaced the raw 'Mapbox token not configured. Please add VITE_MAPBOX_PUBLIC_TOKEN…' destructive panel on the World Map with a clean `EmptyState`: 'Map unavailable right now — we can't load the interactive world map at the moment. You can still travel between cities from the World hub.'" },
+    ],
+  },
+  {
     version: "1.1.419",
     date: "2026-06-30",
     changes: [

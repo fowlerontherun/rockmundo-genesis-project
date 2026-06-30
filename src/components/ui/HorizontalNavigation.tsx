@@ -100,7 +100,7 @@ const HorizontalNavigation = () => {
           {allLinks.map((link) => (
             <button
               key={link.path}
-              className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 text-xs font-medium tracking-tight rounded-md transition-colors whitespace-nowrap ${
                 link.path === "/dashboard"
                   ? `text-yellow-400 ${isActive(link.path) ? "bg-primary/10" : "hover:bg-accent"}`
                   : isActive(link.path)

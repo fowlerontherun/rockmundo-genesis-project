@@ -84,7 +84,7 @@ export const FMCommandPalette = () => {
                 <CommandItem key={`q-${e.path}-${e.label}`} value={`${e.label} ${e.group} action create`} onSelect={() => go(e.path)}>
                   {e.Icon && <e.Icon className="mr-2 h-3.5 w-3.5 text-fm-accent" />}
                   <span>{e.label}</span>
-                  <span className="ml-auto text-[10px] uppercase tracking-wider text-fm-fg-muted">{e.group}</span>
+                  <span className="ml-auto text-[10px] tracking-tight text-fm-fg-muted">{e.group}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
