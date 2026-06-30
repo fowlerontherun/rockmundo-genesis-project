@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.424",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Full sentence-case sweep at source.** Codemodded 100 page and component files to physically strip every remaining `uppercase`, `tracking-wider`, `tracking-widest`, and `tracking-[…]` utility class — the shell-scoped CSS override from v1.1.421 was hiding them but they're now gone from the source itself. Also rewrote the `.text-label`, `.fm-eyebrow`, and `.fm-section-title` global utilities in `index.css` to drop their `text-transform: uppercase` and wide letter-spacing, switching to sentence case at 11–13px with weight 500/600. Shadcn primitives (`menubar`, `dropdown-menu`, `context-menu`, `command`) and the one intentional tattoo-font preset (`Bold Caps`) are preserved." },
+    ],
+  },
+  {
     version: "1.1.423",
     date: "2026-06-30",
     changes: [
