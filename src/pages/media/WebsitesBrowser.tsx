@@ -95,22 +95,55 @@ const WebsitesBrowser = () => {
     };
   }, [websites]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  // Estimate audience inversely from traffic_rank (smaller rank → bigger site).
+  const estimateAudience = (rank: number | null | undefined) => {
+    if (!rank || rank <= 0) return 10_000;
+    if (rank <= 1_000) return 5_000_000;
+    if (rank <= 10_000) return 500_000;
+    if (rank <= 50_000) return 80_000;
+    if (rank <= 100_000) return 30_000;
+    return 5_000;
+  };
+
+  const decoratedWebsites = useMemo(() => {
+    return (websites ?? []).map(web => ({
+      web,
+      gate: evaluateReachGate({
+        country: web.country,
+        audience: estimateAudience(web.traffic_rank),
+        min_fame_required: web.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [websites, playerLocale]);
+
   const filteredWebsites = useMemo(() => {
-    return websites?.filter(web => {
+    return decoratedWebsites.filter(({ web, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = web.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         web.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCountry = countryFilter === "all" || web.country === countryFilter;
-      
+
       let matchesRank = true;
       if (rankFilter !== "all" && web.traffic_rank) {
         if (rankFilter === "top10k") matchesRank = web.traffic_rank <= 10000;
         else if (rankFilter === "top50k") matchesRank = web.traffic_rank <= 50000;
         else if (rankFilter === "top100k") matchesRank = web.traffic_rank <= 100000;
       }
-      
+
       return matchesSearch && matchesCountry && matchesRank;
-    }) || [];
-  }, [websites, searchTerm, countryFilter, rankFilter]);
+    });
+  }, [decoratedWebsites, showOutOfReach, searchTerm, countryFilter, rankFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedWebsites.filter(d => !d.gate.inReach).length,
+    [decoratedWebsites],
+  );
 
   const formatTrafficRank = (rank: number | null) => {
     if (!rank) return 'N/A';
