@@ -111,7 +111,8 @@ export default function FamilyTimeline() {
  // Smart default scope:
  // 1) An adoption request currently in progress (pending/accepted, not yet completed)
  // 2) Else the most recently updated child
- // 3) Else"all"const defaultScope: Scope = useMemo(() => {
+  // 3) Else "all"
+  const defaultScope: Scope = useMemo(() => {
  const linkedRequestIds = new Set(
  children.map(c => c.child_request_id).filter((x): x is string => !!x),
  );
