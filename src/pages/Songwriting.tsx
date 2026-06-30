@@ -855,7 +855,8 @@ const Songwriting = () => {
  return projectsList.filter((project) => {
  const status = (project.status ||"").toLowerCase();
  
- // Filter out completed by default when statusFilter is"active"if (statusFilter ==="active"&& (status ==="completed"|| status ==="complete")) {
+  // Filter out completed by default when statusFilter is "active"
+  if (statusFilter === "active" && (status === "completed" || status === "complete")) {
  return false;
  }
  
