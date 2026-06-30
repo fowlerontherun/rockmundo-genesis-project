@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.429",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Companies start shaping the world — Phase 1 foundation.** Up to now Rockmundo's 8 company types were private money sinks: owners paid weekly costs, generated internal revenue, and the world barely noticed. This release lays the Popmundo-style backbone so every company becomes a visible, public-facing business. New `company_type_definitions` catalogue makes the 8 types data-driven (so future types — bar, restaurant, hotel, clothing store, hospital, gym, taxi co., real-estate agency, casino, etc. — can be added without code enum changes). New `company_storefront` table auto-creates a public card per company with price tier (1–5), quality score (0–100), capacity, star rating, weekly customers and weekly revenue. New `company_reviews` lets any player rate any company 1–5 stars; ratings aggregate onto the storefront automatically via trigger. New `company_shifts` + `company_shift_claims` lets owners post paid shift work (wage/hour, duration, required skill) that any player can claim — bridging the previously separate employment and company systems. New `company_demand_log` and `resolve_company_demand(date)` RPC simulate one day of customer demand per company using `population × (reputation + quality) × price multiplier`, write revenue to the company balance, log customers, and pipe 5% as corporate tax into `city_treasury` + `city_treasury_ledger` (companies now actively fund city budgets). New **World Companies** directory at `/world-companies` lists every public company with rating, quality, pricing, weekly traffic and 'Hiring' badge, plus an Open Shifts tab showing wage/hour and slots. Phases 2–5 will deepen each existing type, add the new Popmundo-style company catalogue, wire mayor laws → company P&L, and add the storefront/shareholder UI." },
+    ],
+  },
+  {
     version: "1.1.428",
     date: "2026-06-30",
     changes: [
