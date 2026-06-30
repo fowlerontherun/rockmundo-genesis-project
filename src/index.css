@@ -117,17 +117,24 @@
        BG #111317 · Panel #20242D · Panel-2 #262B36 · Border #2E3340
        Brand accent #7D4DFF (violet). Per-module hues still override
        --fm-accent for wayfinding, but --fm-brand stays violet everywhere. */
-    --fm-bg: 222 13% 8%;
-    --fm-panel: 222 14% 15%;
-    --fm-panel-2: 222 14% 19%;
-    --fm-border: 222 12% 24%;
-    --fm-fg: 220 14% 96%;
-    --fm-fg-muted: 220 9% 62%;
-    --fm-brand: 257 100% 65%;
-    --fm-accent: 257 100% 65%;
-    --fm-good: 142 65% 48%;
-    --fm-warn: 42 95% 55%;
-    --fm-bad: 0 75% 58%;
+    /* Spec tokens (docs/ui-redesign-spec.md §1.1) */
+    --fm-bg: 257 14% 6%;         /* #0E0D12 */
+    --fm-panel: 260 14% 10%;     /* #17151D */
+    --fm-panel-2: 257 18% 13%;   /* #1F1C28 */
+    --fm-border: 257 14% 18%;    /* #2A2733 */
+    --fm-fg: 270 18% 96%;        /* #F5F3F7 */
+    --fm-fg-muted: 257 11% 63%;  /* #9B96A8 */
+    --fm-fg-subtle: 257 8% 50%;  /* #7A7588 */
+    --fm-brand: 250 86% 73%;     /* #8B7CF6 */
+    --fm-accent: 250 86% 73%;
+    --fm-good: 142 71% 58%;      /* #4ADE80 */
+    --fm-warn: 32 87% 60%;       /* #F2A33D */
+    --fm-bad: 357 87% 64%;       /* #F2555A */
+
+    /* Spec radii (§1.5) */
+    --fm-radius-sm: 7px;
+    --fm-radius-md: 10px;
+    --fm-radius-lg: 12px;
   }
 
   .dark {
