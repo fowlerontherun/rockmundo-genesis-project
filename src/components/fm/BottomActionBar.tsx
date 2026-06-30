@@ -46,6 +46,13 @@ export const BottomActionBar = () => {
 
       <div className="flex-1" />
 
+      <div className="hidden md:flex items-center gap-1.5 pr-2 select-none">
+        <span className="font-bebas text-[14px] tracking-[0.18em] text-fm-fg-muted leading-none">
+          ROCKMUNDO
+        </span>
+        <span className="text-[10px] text-fm-fg-muted/70">© 2026</span>
+      </div>
+
       <Button
         size="sm"
         className="h-8 gap-2 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold tracking-wide text-xs"

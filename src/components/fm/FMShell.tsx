@@ -36,6 +36,14 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
           <main className="relative flex-1 overflow-auto bg-fm-bg">
             {/* Themed background layer — module-specific, low opacity */}
             <div aria-hidden className="fm-module-bg pointer-events-none absolute inset-0" />
+            {/* Brand watermark — barely-there Rockmundo wordmark */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute bottom-4 right-6 font-bebas tracking-[0.25em] text-fm-fg/[0.04] select-none"
+              style={{ fontSize: "min(14vw, 220px)", lineHeight: 1 }}
+            >
+              ROCKMUNDO
+            </div>
             <div className="relative px-4 py-3 max-w-[1800px] mx-auto w-full">{children}</div>
           </main>
         </div>
