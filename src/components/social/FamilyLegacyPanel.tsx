@@ -27,7 +27,8 @@ import {
 interface FamilyMember {
   id: string;
   name: string;
-  relationship: string; //"self","partner","child","parent","sibling"fame: number;
+  relationship: string; // "self", "partner", "child", "parent", "sibling"
+  fame: number;
   level: number;
   traits: string[];
   isActive: boolean;
