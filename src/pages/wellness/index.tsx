@@ -1,165 +1,248 @@
-import { useMemo, useState } from"react";
-import { Activity, AlertTriangle, Dumbbell, Heart, Sparkles, Wine } from"lucide-react";
-import { toast } from"sonner";
+import { useMemo, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  Dumbbell,
+  Heart,
+  Sparkles,
+  Wine,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Alert, AlertDescription, AlertTitle } from"@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from"@/components/ui/card";
-import { Skeleton } from"@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from"@/components/ui/tabs";
-import { Badge } from"@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
-import WellnessVitalsPanel from"@/components/wellness/WellnessVitalsPanel";
-import ActivityCard from"@/components/wellness/ActivityCard";
-import AilmentsPanel from"@/components/wellness/AilmentsPanel";
+import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
+import ActivityCard from "@/components/wellness/ActivityCard";
+import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 
-import { useGameData } from"@/hooks/useGameData";
-import { useWellnessState } from"@/hooks/useWellnessState";
-import type { WellnessCategory } from"@/lib/api/wellnessActivities";
+import { useGameData } from "@/hooks/useGameData";
+import { useWellnessState } from "@/hooks/useWellnessState";
+import type { WellnessCategory } from "@/lib/api/wellnessActivities";
 
-const CATEGORIES: { key: WellnessCategory; label: string; icon: JSX.Element; blurb: string }[] = [
- { key:"recovery", label:"Recovery", icon: <Heart className="h-4 w-4"/>, blurb:"Restore mood, lower stress"},
- { key:"fitness", label:"Fitness", icon: <Dumbbell className="h-4 w-4"/>, blurb:"Build long-term health"},
- { key:"medical", label:"Medical", icon: <Sparkles className="h-4 w-4"/>, blurb:"Clear ailments, prevent injury"},
- { key:"indulgence", label:"Indulgence", icon: <Wine className="h-4 w-4"/>, blurb:"Mood up — but with consequences"},
+const CATEGORIES: {
+  key: WellnessCategory;
+  label: string;
+  icon: JSX.Element;
+  blurb: string;
+}[] = [
+  {
+    key: "recovery",
+    label: "Recovery",
+    icon: <Heart className="h-4 w-4" />,
+    blurb: "Restore mood, lower stress",
+  },
+  {
+    key: "fitness",
+    label: "Fitness",
+    icon: <Dumbbell className="h-4 w-4" />,
+    blurb: "Build long-term health",
+  },
+  {
+    key: "medical",
+    label: "Medical",
+    icon: <Sparkles className="h-4 w-4" />,
+    blurb: "Clear ailments, prevent injury",
+  },
+  {
+    key: "indulgence",
+    label: "Indulgence",
+    icon: <Wine className="h-4 w-4" />,
+    blurb: "Mood up — but with consequences",
+  },
 ];
 
 const WellnessPage = () => {
- const { profile } = useGameData();
- const profileId = profile?.id ?? null;
- const { catalog, cooldowns, ailments, blocks, vitals, loading, error, perform } = useWellnessState(profileId);
- const [performing, setPerforming] = useState<string | null>(null);
- const [activeTab, setActiveTab] = useState<WellnessCategory>("recovery");
+  const { profile } = useGameData();
+  const profileId = profile?.id ?? null;
+  const {
+    catalog,
+    cooldowns,
+    ailments,
+    blocks,
+    vitals,
+    loading,
+    error,
+    perform,
+  } = useWellnessState(profileId);
+  const [performing, setPerforming] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<WellnessCategory>("recovery");
 
- const cooldownMap = useMemo(() => new Map(cooldowns.map(c => [c.catalog_slug, c])), [cooldowns]);
- const grouped = useMemo(() => {
- const g: Record<WellnessCategory, typeof catalog> = { recovery: [], fitness: [], medical: [], indulgence: [] };
- catalog.forEach(e => g[e.category]?.push(e));
- return g;
- }, [catalog]);
+  const cooldownMap = useMemo(
+    () => new Map(cooldowns.map((c) => [c.catalog_slug, c])),
+    [cooldowns],
+  );
+  const grouped = useMemo(() => {
+    const g: Record<WellnessCategory, typeof catalog> = {
+      recovery: [],
+      fitness: [],
+      medical: [],
+      indulgence: [],
+    };
+    catalog.forEach((e) => g[e.category]?.push(e));
+    return g;
+  }, [catalog]);
 
- const handlePerform = async (slug: string) => {
- setPerforming(slug);
- try {
- const res = await perform(slug);
- const entry = catalog.find(c => c.slug === slug);
- toast.success(`${entry?.name ??"Activity"} complete`, {
- description: res.ailments.length
- ? `Side effect: ${res.ailments.join(",")}`
- :"Stats updated.",
- });
- } catch (e: any) {
- toast.error(e?.message ??"Couldn't perform activity");
- } finally {
- setPerforming(null);
- }
- };
+  const handlePerform = async (slug: string) => {
+    setPerforming(slug);
+    try {
+      const res = await perform(slug);
+      const entry = catalog.find((c) => c.slug === slug);
+      toast.success(`${entry?.name ?? "Activity"} complete`, {
+        description: res.ailments.length
+          ? `Side effect: ${res.ailments.join(",")}`
+          : "Stats updated.",
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't perform activity");
+    } finally {
+      setPerforming(null);
+    }
+  };
 
- if (!profileId) {
- return (
- <div className="space-y-4 p-6">
- <Alert>
- <AlertTitle>No active character</AlertTitle>
- <AlertDescription>Create or select a character to manage wellness.</AlertDescription>
- </Alert>
- </div>
- );
- }
+  if (!profileId) {
+    return (
+      <div className="space-y-4 p-6">
+        <Alert>
+          <AlertTitle>No active character</AlertTitle>
+          <AlertDescription>
+            Create or select a character to manage wellness.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
- if (loading) {
- return (
- <div className="space-y-4 p-6">
- <Skeleton className="h-8 w-64"/>
- <div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24"/>)}</div>
- <Skeleton className="h-64"/>
- </div>
- );
- }
+  if (loading) {
+    return (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
 
- return (
- <div className="space-y-6 p-4 lg:p-6">
- <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
- <div>
- <p className="font-display text-xs text-muted-foreground">Lifestyle</p>
- <h1 className="font-display text-3xl font-bold tracking-tight">Wellness & Lifestyle</h1>
- <p className="text-sm text-muted-foreground">Your health gates what you can do on stage, in studio, and on tour.</p>
- </div>
- {blocks.length > 0 && (
- <Badge variant="destructive"className="gap-1">
- <AlertTriangle className="h-3 w-3"/> {blocks.length} active block{blocks.length > 1 ?"s":""}
- </Badge>
- )}
- </header>
+  return (
+    <div className="space-y-6 p-4 lg:p-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="font-display text-xs text-muted-foreground">
+            Lifestyle
+          </p>
+          <h1 className="font-display text-3xl font-bold tracking-tight">
+            Wellness & Lifestyle
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Your health gates what you can do on stage, in studio, and on tour.
+          </p>
+        </div>
+        {blocks.length > 0 && (
+          <Badge variant="destructive" className="gap-1">
+            <AlertTriangle className="h-3 w-3" /> {blocks.length} active block
+            {blocks.length > 1 ? "s" : ""}
+          </Badge>
+        )}
+      </header>
 
- {error && (
- <Alert variant="destructive">
- <AlertTitle>Couldn't load wellness</AlertTitle>
- <AlertDescription>{error}</AlertDescription>
- </Alert>
- )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn't load wellness</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
- <WellnessVitalsPanel vitals={vitals} />
+      <WellnessVitalsPanel vitals={vitals} />
 
- {blocks.length > 0 && (
- <Card className="border-amber-500/40 bg-amber-500/5">
- <CardHeader className="pb-2">
- <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
- <AlertTriangle className="h-4 w-4"/> Active Blocks
- </CardTitle>
- </CardHeader>
- <CardContent className="space-y-2 text-sm">
- {blocks.map(b => (
- <div key={b.id} className="flex items-center justify-between gap-3">
- <span>{b.reason}</span>
- <span className="text-xs text-muted-foreground">
- until {new Date(b.expires_at).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit"})}
- </span>
- </div>
- ))}
- </CardContent>
- </Card>
- )}
+      {blocks.length > 0 && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" /> Active Blocks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {blocks.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between gap-3"
+              >
+                <span>{b.reason}</span>
+                <span className="text-xs text-muted-foreground">
+                  until{" "}
+                  {new Date(b.expires_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
- <AilmentsPanel ailments={ailments} catalog={catalog} onTreat={handlePerform} />
+      <AilmentsPanel
+        ailments={ailments}
+        catalog={catalog}
+        onTreat={handlePerform}
+      />
 
- <Card>
- <CardHeader className="pb-2">
- <CardTitle className="flex items-center gap-2 text-base">
- <Activity className="h-4 w-4 text-primary"/> Activities
- </CardTitle>
- <p className="text-xs text-muted-foreground">Daily cap: 3 actions · max 1 indulgence per day.</p>
- </CardHeader>
- <CardContent>
- <Tabs value={activeTab} onValueChange={v => setActiveTab(v as WellnessCategory)}>
- <TabsList className="grid w-full grid-cols-4">
- {CATEGORIES.map(c => (
- <TabsTrigger key={c.key} value={c.key} className="gap-1.5 text-xs">
- {c.icon}<span className="hidden sm:inline">{c.label}</span>
- </TabsTrigger>
- ))}
- </TabsList>
- {CATEGORIES.map(c => (
- <TabsContent key={c.key} value={c.key} className="mt-4">
- <p className="mb-3 text-xs text-muted-foreground">{c.blurb}</p>
- <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
- {grouped[c.key].map(entry => (
- <ActivityCard
- key={entry.id}
- entry={entry}
- cooldown={cooldownMap.get(entry.slug)}
- vitals={vitals}
- fame={profile?.fame ?? 0}
- performing={performing === entry.slug}
- onPerform={handlePerform}
- />
- ))}
- </div>
- </TabsContent>
- ))}
- </Tabs>
- </CardContent>
- </Card>
- </div>
- );
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4 text-primary" /> Activities
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Daily cap: 3 actions · max 1 indulgence per day.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as WellnessCategory)}
+          >
+            <TabsList className="grid w-full grid-cols-4">
+              {CATEGORIES.map((c) => (
+                <TabsTrigger
+                  key={c.key}
+                  value={c.key}
+                  className="gap-1.5 text-xs"
+                >
+                  {c.icon}
+                  <span className="hidden sm:inline">{c.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {CATEGORIES.map((c) => (
+              <TabsContent key={c.key} value={c.key} className="mt-4">
+                <p className="mb-3 text-xs text-muted-foreground">{c.blurb}</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {grouped[c.key].map((entry) => (
+                    <ActivityCard
+                      key={entry.id}
+                      entry={entry}
+                      cooldown={cooldownMap.get(entry.slug)}
+                      vitals={vitals}
+                      fame={profile?.fame ?? 0}
+                      performing={performing === entry.slug}
+                      onPerform={handlePerform}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default WellnessPage;

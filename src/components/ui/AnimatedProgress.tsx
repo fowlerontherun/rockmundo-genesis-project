@@ -38,13 +38,20 @@ export const AnimatedProgress = ({
       {(label || showValue) && (
         <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
           {label && <span>{label}</span>}
-          {showValue && <span className="tabular-nums">{value} / {max}</span>}
+          {showValue && (
+            <span className="tabular-nums">
+              {value} / {max}
+            </span>
+          )}
         </div>
       )}
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
           key={value}
-          className={cn("rmd-progress-fill h-full rounded-full bg-gradient-to-r from-primary to-accent", barClassName)}
+          className={cn(
+            "rmd-progress-fill h-full rounded-full bg-gradient-to-r from-primary to-accent",
+            barClassName,
+          )}
           style={{
             ["--rmd-progress-from" as any]: `${fromPct}%`,
             ["--rmd-progress-to" as any]: `${pct}%`,

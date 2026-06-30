@@ -1,599 +1,747 @@
-import { useState } from"react";
-import { useQuery, useMutation, useQueryClient } from"@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card";
-import { Button } from"@/components/ui/button";
-import { Badge } from"@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from"@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from"@/components/ui/dialog";
-import { ScrollArea } from"@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from"@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from"@/components/ui/alert-dialog";
-import { MapPin, Calendar, Users, DollarSign, Plus, Map, Music, Ticket, ChevronRight, Loader2, ChevronLeft, Star, History, Sparkles, XCircle, ListMusic, TrendingUp } from"lucide-react";
-import { Link } from"react-router-dom";
-import { supabase } from"@/integrations/supabase/client";
-import { useActiveProfile } from"@/hooks/useActiveProfile";
-import { usePrimaryBand } from"@/hooks/usePrimaryBand";
-import { format } from"date-fns";
-import { TourWizard } from"@/components/tours/TourWizard";
-import { TourDetailPanel } from"@/components/tours/TourDetailPanel";
-import { MUSIC_GENRES } from"@/data/genres";
-import { getBandFameTitle } from"@/utils/bandFame";
-import { toast } from"sonner";
-import { cn } from"@/lib/utils";
-import { TourRouteMap, type RoutePoint } from"@/components/tours/TourRouteMap";
-import { useBandTourTotals } from"@/hooks/useTourStats";
-import { FMPageScaffold } from"@/components/fm/FMPageScaffold";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  MapPin,
+  Calendar,
+  Users,
+  DollarSign,
+  Plus,
+  Map,
+  Music,
+  Ticket,
+  ChevronRight,
+  Loader2,
+  ChevronLeft,
+  Star,
+  History,
+  Sparkles,
+  XCircle,
+  ListMusic,
+  TrendingUp,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { format } from "date-fns";
+import { TourWizard } from "@/components/tours/TourWizard";
+import { TourDetailPanel } from "@/components/tours/TourDetailPanel";
+import { MUSIC_GENRES } from "@/data/genres";
+import { getBandFameTitle } from "@/utils/bandFame";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
+import { useBandTourTotals } from "@/hooks/useTourStats";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 interface Tour {
- id: string;
- name: string;
- band_id: string;
- user_id: string;
- status: string;
- start_date: string;
- end_date: string;
- total_revenue: number;
- description: string | null;
- created_at: string;
- total_upfront_cost?: number;
- scope?: string | null;
- travel_mode?: string | null;
- stage_setup_tier?: string | null;
- sponsor_cash_value?: number | null;
- merch_boost_multiplier?: number | null;
- support_revenue_share?: number | null;
- cancelled?: boolean | null;
- cancellation_date?: string | null;
- rescheduled_at?: string | null;
- reschedule_count?: number | null;
- original_start_date?: string | null;
- original_end_date?: string | null;
- band: {
- id: string;
- name: string;
- fame: number | null;
- genre: string | null;
- total_fans: number | null;
- } | null;
+  id: string;
+  name: string;
+  band_id: string;
+  user_id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  total_revenue: number;
+  description: string | null;
+  created_at: string;
+  total_upfront_cost?: number;
+  scope?: string | null;
+  travel_mode?: string | null;
+  stage_setup_tier?: string | null;
+  sponsor_cash_value?: number | null;
+  merch_boost_multiplier?: number | null;
+  support_revenue_share?: number | null;
+  cancelled?: boolean | null;
+  cancellation_date?: string | null;
+  rescheduled_at?: string | null;
+  reschedule_count?: number | null;
+  original_start_date?: string | null;
+  original_end_date?: string | null;
+  band: {
+    id: string;
+    name: string;
+    fame: number | null;
+    genre: string | null;
+    total_fans: number | null;
+  } | null;
 }
 
 interface TourVenue {
- id: string;
- tour_id: string;
- venue_id: string;
- date: string;
- ticket_price: number | null;
- tickets_sold: number;
- revenue: number;
- status: string;
- venue: {
- name: string;
- capacity: number;
- city: {
- name: string;
- country: string;
- latitude?: number | null;
- longitude?: number | null;
- } | null;
- } | null;
- // Gig-specific data
- gig_id: string | null;
- gig_status: string | null;
- gig_tickets_sold: number | null;
- gig_revenue: number | null;
- overall_rating: number | null;
- performance_grade: string | null;
- setlist_id: string | null;
- setlist_name: string | null;
- setlist_song_count: number | null;
+  id: string;
+  tour_id: string;
+  venue_id: string;
+  date: string;
+  ticket_price: number | null;
+  tickets_sold: number;
+  revenue: number;
+  status: string;
+  venue: {
+    name: string;
+    capacity: number;
+    city: {
+      name: string;
+      country: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    } | null;
+  } | null;
+  // Gig-specific data
+  gig_id: string | null;
+  gig_status: string | null;
+  gig_tickets_sold: number | null;
+  gig_revenue: number | null;
+  overall_rating: number | null;
+  performance_grade: string | null;
+  setlist_id: string | null;
+  setlist_name: string | null;
+  setlist_song_count: number | null;
 }
 
 const OTHER_TOURS_PER_PAGE = 10;
 
 const TourManager = () => {
- const { profileId } = useActiveProfile();
- const { data: primaryBand } = usePrimaryBand();
- const currentBandId = primaryBand?.bands?.id;
- const { data: bandTotals } = useBandTourTotals(currentBandId);
- const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
- const [detailsOpen, setDetailsOpen] = useState(false);
- const [wizardOpen, setWizardOpen] = useState(false);
+  const { profileId } = useActiveProfile();
+  const { data: primaryBand } = usePrimaryBand();
+  const currentBandId = primaryBand?.bands?.id;
+  const { data: bandTotals } = useBandTourTotals(currentBandId);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
- // Other tours filters
- const [fameFilter, setFameFilter] = useState<string>("all");
- const [genreFilter, setGenreFilter] = useState<string>("all");
- const [otherToursPage, setOtherToursPage] = useState(1);
+  // Other tours filters
+  const [fameFilter, setFameFilter] = useState<string>("all");
+  const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [otherToursPage, setOtherToursPage] = useState(1);
 
- // Fetch user's band tours - split by status
- const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
- queryKey: ['my-tours', currentBandId],
- queryFn: async () => {
- if (!currentBandId) return [];
- const { data, error } = await supabase
- .from('tours')
- .select(`
+  // Fetch user's band tours - split by status
+  const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
+    queryKey: ["my-tours", currentBandId],
+    queryFn: async () => {
+      if (!currentBandId) return [];
+      const { data, error } = await supabase
+        .from("tours")
+        .select(
+          `
  *,
  band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans)
- `)
- .eq('band_id', currentBandId)
- .order('start_date', { ascending: false });
- 
- if (error) throw error;
- return data as Tour[];
- },
- enabled: !!currentBandId,
- });
+ `,
+        )
+        .eq("band_id", currentBandId)
+        .order("start_date", { ascending: false });
 
- const queryClient = useQueryClient();
- 
- // Current tour: status is active OR (scheduled and start_date <= now and end_date >= now)
- const now = new Date();
- const currentTours = myTours.filter(t => {
- if (t.status ==='active') return true;
- if (t.status ==='scheduled') {
- const startDate = new Date(t.start_date);
- const endDate = new Date(t.end_date);
- return startDate <= now && endDate >= now;
- }
- return false;
- });
- const upcomingTours = myTours.filter(t => {
- if (t.status !=='scheduled') return false;
- const startDate = new Date(t.start_date);
- return startDate > now;
- });
- const historicTours = myTours.filter(t => t.status ==='completed'|| t.status ==='cancelled');
- 
- // Cancel tour mutation
- const cancelTourMutation = useMutation({
- mutationFn: async (tourId: string) => {
- const { data: tour, error: fetchError } = await supabase
- .from("tours")
- .select("*, bands!tours_band_id_fkey(band_balance)")
- .eq("id", tourId)
- .single();
+      if (error) throw error;
+      return data as Tour[];
+    },
+    enabled: !!currentBandId,
+  });
 
- if (fetchError || !tour) throw new Error("Tour not found");
+  const queryClient = useQueryClient();
 
- const createdAt = new Date(tour.created_at);
- const isSameDay = createdAt.toDateString() === now.toDateString();
- const refundAmount = isSameDay ? (tour.total_upfront_cost || 0) : 0;
+  // Current tour: status is active OR (scheduled and start_date <= now and end_date >= now)
+  const now = new Date();
+  const currentTours = myTours.filter((t) => {
+    if (t.status === "active") return true;
+    if (t.status === "scheduled") {
+      const startDate = new Date(t.start_date);
+      const endDate = new Date(t.end_date);
+      return startDate <= now && endDate >= now;
+    }
+    return false;
+  });
+  const upcomingTours = myTours.filter((t) => {
+    if (t.status !== "scheduled") return false;
+    const startDate = new Date(t.start_date);
+    return startDate > now;
+  });
+  const historicTours = myTours.filter(
+    (t) => t.status === "completed" || t.status === "cancelled",
+  );
 
- // Cancel future gigs (don't delete — keep history)
- await supabase
- .from("gigs")
- .update({ status:"cancelled"})
- .eq("tour_id", tourId)
- .in("status", ["scheduled","in_progress"]);
+  // Cancel tour mutation
+  const cancelTourMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      const { data: tour, error: fetchError } = await supabase
+        .from("tours")
+        .select("*, bands!tours_band_id_fkey(band_balance)")
+        .eq("id", tourId)
+        .single();
 
- if (refundAmount > 0 && tour.band_id) {
- const currentBalance = tour.bands?.band_balance || 0;
- await supabase
- .from("bands")
- .update({ band_balance: currentBalance + refundAmount })
- .eq("id", tour.band_id);
- }
+      if (fetchError || !tour) throw new Error("Tour not found");
 
- // Mark the tour as cancelled — DB trigger cascades to legs + future travel/activities
- const { error: updateError } = await supabase
- .from("tours")
- .update({
- status:"cancelled",
- cancelled: true,
- cancellation_date: now.toISOString(),
- cancellation_refund_amount: refundAmount,
- } as any)
- .eq("id", tourId);
- if (updateError) throw updateError;
+      const createdAt = new Date(tour.created_at);
+      const isSameDay = createdAt.toDateString() === now.toDateString();
+      const refundAmount = isSameDay ? tour.total_upfront_cost || 0 : 0;
 
- return { refundAmount, isSameDay };
- },
- onSuccess: (result) => {
- queryClient.invalidateQueries({ queryKey: ["my-tours"] });
- queryClient.invalidateQueries({ queryKey: ["tour-venues"] });
- setDetailsOpen(false);
- setSelectedTour(null);
- toast.success(
- result.refundAmount > 0 
- ? `Tour cancelled! Full refund of $${result.refundAmount.toLocaleString()} applied.`
- :"Tour cancelled. No refund available after booking day.");
- },
- onError: (error: Error) => {
- toast.error(`Failed to cancel tour: ${error.message}`);
- },
- });
+      // Cancel future gigs (don't delete — keep history)
+      await supabase
+        .from("gigs")
+        .update({ status: "cancelled" })
+        .eq("tour_id", tourId)
+        .in("status", ["scheduled", "in_progress"]);
 
- // Regenerate missing travel legs mutation
- const regenerateTravelLegsMutation = useMutation({
- mutationFn: async (tourId: string) => {
- // Get tour venues ordered by date
- const { data: tourVenuesData, error: venuesError } = await supabase
- .from('tour_venues')
- .select('venue_id, city_id, date')
- .eq('tour_id', tourId)
- .order('date', { ascending: true });
- 
- if (venuesError) throw venuesError;
- if (!tourVenuesData || tourVenuesData.length < 2) {
- return { count: 0, message:'Tour needs at least 2 venues to create travel legs'};
- }
+      if (refundAmount > 0 && tour.band_id) {
+        const currentBalance = tour.bands?.band_balance || 0;
+        await supabase
+          .from("bands")
+          .update({ band_balance: currentBalance + refundAmount })
+          .eq("id", tour.band_id);
+      }
 
- // Check if travel legs already exist
- const { data: existingLegs } = await supabase
- .from('tour_travel_legs')
- .select('id')
- .eq('tour_id', tourId);
- 
- if (existingLegs && existingLegs.length > 0) {
- return { count: existingLegs.length, message:'Travel legs already exist'};
- }
+      // Mark the tour as cancelled — DB trigger cascades to legs + future travel/activities
+      const { error: updateError } = await supabase
+        .from("tours")
+        .update({
+          status: "cancelled",
+          cancelled: true,
+          cancellation_date: now.toISOString(),
+          cancellation_refund_amount: refundAmount,
+        } as any)
+        .eq("id", tourId);
+      if (updateError) throw updateError;
 
- // Get tour travel mode
- const { data: tour } = await supabase
- .from('tours')
- .select('travel_mode')
- .eq('id', tourId)
- .single();
+      return { refundAmount, isSameDay };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["my-tours"] });
+      queryClient.invalidateQueries({ queryKey: ["tour-venues"] });
+      setDetailsOpen(false);
+      setSelectedTour(null);
+      toast.success(
+        result.refundAmount > 0
+          ? `Tour cancelled! Full refund of $${result.refundAmount.toLocaleString()} applied.`
+          : "Tour cancelled. No refund available after booking day.",
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to cancel tour: ${error.message}`);
+    },
+  });
 
- // Fetch city coordinates for real duration calculation
- const cityIds = [...new Set(tourVenuesData.flatMap(v => v.city_id ? [v.city_id] : []))];
- const { data: citiesData } = await supabase
- .from('cities')
- .select('id, latitude, longitude')
- .in('id', cityIds);
- const cityCoordMap: Record<string, { lat: number | null; lon: number | null }> = {};
- (citiesData || []).forEach(c => { cityCoordMap[c.id] = { lat: c.latitude, lon: c.longitude }; });
+  // Regenerate missing travel legs mutation
+  const regenerateTravelLegsMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      // Get tour venues ordered by date
+      const { data: tourVenuesData, error: venuesError } = await supabase
+        .from("tour_venues")
+        .select("venue_id, city_id, date")
+        .eq("tour_id", tourId)
+        .order("date", { ascending: true });
 
- // Create travel legs between consecutive venues
- const travelLegs = [];
- for (let i = 0; i < tourVenuesData.length - 1; i++) {
- const fromVenue = tourVenuesData[i];
- const toVenue = tourVenuesData[i + 1];
- 
- const departureDate = new Date(fromVenue.date);
- departureDate.setDate(departureDate.getDate() + 1);
- departureDate.setHours(8, 0, 0, 0);
- 
- let travelMode = tour?.travel_mode ||'bus';
- if (!['bus','train','plane','ship','tour_bus'].includes(travelMode)) {
- travelMode ='bus';
- }
+      if (venuesError) throw venuesError;
+      if (!tourVenuesData || tourVenuesData.length < 2) {
+        return {
+          count: 0,
+          message: "Tour needs at least 2 venues to create travel legs",
+        };
+      }
 
- // Calculate real duration from city coordinates
- const from = cityCoordMap[fromVenue.city_id];
- const to = cityCoordMap[toVenue.city_id];
- let durationHours = 6;
- if (from?.lat && from?.lon && to?.lat && to?.lon) {
- const R = 6371;
- const dLat = (to.lat - from.lat) * Math.PI / 180;
- const dLon = (to.lon - from.lon) * Math.PI / 180;
- const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180)*Math.cos(to.lat*Math.PI/180)*Math.sin(dLon/2)**2;
- const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
- const speeds: Record<string, number> = { bus: 95, train: 320, plane: 1250, ship: 65, tour_bus: 115 };
- const buffers: Record<string, number> = { bus: 0.1, train: 0.15, plane: 0.75, ship: 0.3, tour_bus: 0.1 };
- durationHours = Math.max(1, Math.round((distanceKm / (speeds[travelMode] || 56) + (buffers[travelMode] || 0.3)) * 10) / 10);
- }
- const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
- 
- travelLegs.push({
- tour_id: tourId,
- from_city_id: fromVenue.city_id,
- to_city_id: toVenue.city_id,
- travel_mode: travelMode,
- travel_cost: 0,
- departure_date: departureDate.toISOString(),
- arrival_date: arrivalDate.toISOString(),
- travel_duration_hours: Math.ceil(durationHours),
- sequence_order: i,
- });
- }
+      // Check if travel legs already exist
+      const { data: existingLegs } = await supabase
+        .from("tour_travel_legs")
+        .select("id")
+        .eq("tour_id", tourId);
 
- if (travelLegs.length > 0) {
- const { error: insertError } = await supabase
- .from('tour_travel_legs')
- .insert(travelLegs);
- if (insertError) throw insertError;
- }
+      if (existingLegs && existingLegs.length > 0) {
+        return {
+          count: existingLegs.length,
+          message: "Travel legs already exist",
+        };
+      }
 
- return { count: travelLegs.length, message: `Created ${travelLegs.length} travel legs` };
- },
- onSuccess: (result) => {
- queryClient.invalidateQueries({ queryKey: ['tour-travel-legs'] });
- queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
- toast.success(result.message);
- },
- onError: (error: Error) => {
- toast.error(`Failed to regenerate travel legs: ${error.message}`);
- },
- });
+      // Get tour travel mode
+      const { data: tour } = await supabase
+        .from("tours")
+        .select("travel_mode")
+        .eq("id", tourId)
+        .single();
 
- // Add remaining tour travel for members who joined after booking
- const addNewMemberTravelMutation = useMutation({
- mutationFn: async (tourId: string) => {
- const nowIso = new Date().toISOString();
+      // Fetch city coordinates for real duration calculation
+      const cityIds = [
+        ...new Set(
+          tourVenuesData.flatMap((v) => (v.city_id ? [v.city_id] : [])),
+        ),
+      ];
+      const { data: citiesData } = await supabase
+        .from("cities")
+        .select("id, latitude, longitude")
+        .in("id", cityIds);
+      const cityCoordMap: Record<
+        string,
+        { lat: number | null; lon: number | null }
+      > = {};
+      (citiesData || []).forEach((c) => {
+        cityCoordMap[c.id] = { lat: c.latitude, lon: c.longitude };
+      });
 
- const { data: tour, error: tourError } = await supabase
- .from('tours')
- .select('id, name, band_id')
- .eq('id', tourId)
- .single();
- if (tourError || !tour) throw new Error('Tour not found');
+      // Create travel legs between consecutive venues
+      const travelLegs = [];
+      for (let i = 0; i < tourVenuesData.length - 1; i++) {
+        const fromVenue = tourVenuesData[i];
+        const toVenue = tourVenuesData[i + 1];
 
- const { data: members, error: membersError } = await supabase
- .from('band_members')
- .select('user_id, profile_id')
- .eq('band_id', tour.band_id)
- .eq('member_status','active')
- .eq('travels_with_band', true)
- .not('user_id','is', null)
- .not('profile_id','is', null);
- if (membersError) throw membersError;
+        const departureDate = new Date(fromVenue.date);
+        departureDate.setDate(departureDate.getDate() + 1);
+        departureDate.setHours(8, 0, 0, 0);
 
- const { data: remainingLegs, error: legsError } = await supabase
- .from('tour_travel_legs')
- .select('id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours')
- .eq('tour_id', tourId)
- .gte('departure_date', nowIso)
- .order('departure_date', { ascending: true });
- if (legsError) throw legsError;
+        let travelMode = tour?.travel_mode || "bus";
+        if (
+          !["bus", "train", "plane", "ship", "tour_bus"].includes(travelMode)
+        ) {
+          travelMode = "bus";
+        }
 
- if (!remainingLegs || remainingLegs.length === 0) {
- return { created: 0, skippedExisting: 0, tourName: tour.name };
- }
+        // Calculate real duration from city coordinates
+        const from = cityCoordMap[fromVenue.city_id];
+        const to = cityCoordMap[toVenue.city_id];
+        let durationHours = 6;
+        if (from?.lat && from?.lon && to?.lat && to?.lon) {
+          const R = 6371;
+          const dLat = ((to.lat - from.lat) * Math.PI) / 180;
+          const dLon = ((to.lon - from.lon) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((from.lat * Math.PI) / 180) *
+              Math.cos((to.lat * Math.PI) / 180) *
+              Math.sin(dLon / 2) ** 2;
+          const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const speeds: Record<string, number> = {
+            bus: 95,
+            train: 320,
+            plane: 1250,
+            ship: 65,
+            tour_bus: 115,
+          };
+          const buffers: Record<string, number> = {
+            bus: 0.1,
+            train: 0.15,
+            plane: 0.75,
+            ship: 0.3,
+            tour_bus: 0.1,
+          };
+          durationHours = Math.max(
+            1,
+            Math.round(
+              (distanceKm / (speeds[travelMode] || 56) +
+                (buffers[travelMode] || 0.3)) *
+                10,
+            ) / 10,
+          );
+        }
+        const arrivalDate = new Date(
+          departureDate.getTime() + durationHours * 60 * 60 * 1000,
+        );
 
- const memberProfileIds = (members || []).map((member) => member.profile_id).filter(Boolean) as string[];
+        travelLegs.push({
+          tour_id: tourId,
+          from_city_id: fromVenue.city_id,
+          to_city_id: toVenue.city_id,
+          travel_mode: travelMode,
+          travel_cost: 0,
+          departure_date: departureDate.toISOString(),
+          arrival_date: arrivalDate.toISOString(),
+          travel_duration_hours: Math.ceil(durationHours),
+          sequence_order: i,
+        });
+      }
 
- if (memberProfileIds.length === 0) {
- return { created: 0, skippedExisting: 0, tourName: tour.name };
- }
+      if (travelLegs.length > 0) {
+        const { error: insertError } = await supabase
+          .from("tour_travel_legs")
+          .insert(travelLegs);
+        if (insertError) throw insertError;
+      }
 
- const legIds = remainingLegs.map((leg) => leg.id);
- const { data: existingTravel, error: existingError } = await supabase
- .from('player_travel_history')
- .select('tour_leg_id, profile_id')
- .in('tour_leg_id', legIds)
- .in('profile_id', memberProfileIds);
- if (existingError) throw existingError;
+      return {
+        count: travelLegs.length,
+        message: `Created ${travelLegs.length} travel legs`,
+      };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tour-travel-legs"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      toast.success(result.message);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to regenerate travel legs: ${error.message}`);
+    },
+  });
 
- const existingKeys = new Set((existingTravel || []).map((row) => `${row.tour_leg_id}:${row.profile_id}`));
+  // Add remaining tour travel for members who joined after booking
+  const addNewMemberTravelMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      const nowIso = new Date().toISOString();
 
- const cityIds = [...new Set(remainingLegs.flatMap((leg) => [leg.from_city_id, leg.to_city_id]).filter(Boolean))] as string[];
- const { data: citiesData, error: cityError } = await supabase
- .from('cities')
- .select('id, name, country')
- .in('id', cityIds);
- if (cityError) throw cityError;
- // @ts-ignore - Supabase type inference issue
- const cityNameMap = new Map((citiesData || []).map((city: any) => [city.id, `${city.name}, ${city.country}`]));
+      const { data: tour, error: tourError } = await supabase
+        .from("tours")
+        .select("id, name, band_id")
+        .eq("id", tourId)
+        .single();
+      if (tourError || !tour) throw new Error("Tour not found");
 
- let created = 0;
- let skippedExisting = 0;
+      const { data: members, error: membersError } = await supabase
+        .from("band_members")
+        .select("user_id, profile_id")
+        .eq("band_id", tour.band_id)
+        .eq("member_status", "active")
+        .eq("travels_with_band", true)
+        .not("user_id", "is", null)
+        .not("profile_id", "is", null);
+      if (membersError) throw membersError;
 
- for (const leg of remainingLegs) {
- for (const member of members || []) {
- if (!member.user_id || !member.profile_id) continue;
+      const { data: remainingLegs, error: legsError } = await supabase
+        .from("tour_travel_legs")
+        .select(
+          "id, tour_id, from_city_id, to_city_id, travel_mode, departure_date, arrival_date, travel_duration_hours",
+        )
+        .eq("tour_id", tourId)
+        .gte("departure_date", nowIso)
+        .order("departure_date", { ascending: true });
+      if (legsError) throw legsError;
 
- const existingKey = `${leg.id}:${member.profile_id}`;
- if (existingKeys.has(existingKey)) {
- skippedExisting += 1;
- continue;
- }
+      if (!remainingLegs || remainingLegs.length === 0) {
+        return { created: 0, skippedExisting: 0, tourName: tour.name };
+      }
 
- const fromCityName = cityNameMap.get(leg.from_city_id) ||'Unknown';
- const toCityName = cityNameMap.get(leg.to_city_id) ||'Unknown';
+      const memberProfileIds = (members || [])
+        .map((member) => member.profile_id)
+        .filter(Boolean) as string[];
 
- const { data: travelRecord, error: travelError } = await (supabase as any)
- .from('player_travel_history')
- .insert({
- user_id: member.user_id,
- profile_id: member.profile_id,
- from_city_id: leg.from_city_id,
- to_city_id: leg.to_city_id,
- transport_type: leg.travel_mode ||'bus',
- cost_paid: 0,
- departure_time: leg.departure_date,
- scheduled_departure_time: leg.departure_date,
- arrival_time: leg.arrival_date,
- travel_duration_hours: Math.max(1, leg.travel_duration_hours || 1),
- status:'scheduled',
- tour_leg_id: leg.id,
- })
- .select('id')
- .single();
+      if (memberProfileIds.length === 0) {
+        return { created: 0, skippedExisting: 0, tourName: tour.name };
+      }
 
- if (travelError) throw travelError;
+      const legIds = remainingLegs.map((leg) => leg.id);
+      const { data: existingTravel, error: existingError } = await supabase
+        .from("player_travel_history")
+        .select("tour_leg_id, profile_id")
+        .in("tour_leg_id", legIds)
+        .in("profile_id", memberProfileIds);
+      if (existingError) throw existingError;
 
- const { error: activityError } = await (supabase as any)
- .from('player_scheduled_activities')
- .insert({
- user_id: member.user_id,
- profile_id: member.profile_id,
- activity_type:'travel',
- status:'scheduled',
- scheduled_start: leg.departure_date,
- scheduled_end: leg.arrival_date,
- title: `Tour Travel: ${fromCityName} → ${toCityName}`,
- description: `${leg.travel_mode ||'bus'} journey (${Math.max(1, leg.travel_duration_hours || 1)}h) — Tour`,
- location: toCityName,
- metadata: {
- travel_history_id: travelRecord?.id,
- tour_leg_id: leg.id,
- tour_id: leg.tour_id,
- from_city_id: leg.from_city_id,
- to_city_id: leg.to_city_id,
- transport_type: leg.travel_mode,
- },
- });
+      const existingKeys = new Set(
+        (existingTravel || []).map(
+          (row) => `${row.tour_leg_id}:${row.profile_id}`,
+        ),
+      );
 
- if (activityError) {
- console.warn('Failed to create scheduled activity for tour travel:', activityError);
- }
+      const cityIds = [
+        ...new Set(
+          remainingLegs
+            .flatMap((leg) => [leg.from_city_id, leg.to_city_id])
+            .filter(Boolean),
+        ),
+      ] as string[];
+      const { data: citiesData, error: cityError } = await supabase
+        .from("cities")
+        .select("id, name, country")
+        .in("id", cityIds);
+      if (cityError) throw cityError;
+      // @ts-ignore - Supabase type inference issue
+      const cityNameMap = new Map(
+        (citiesData || []).map((city: any) => [
+          city.id,
+          `${city.name}, ${city.country}`,
+        ]),
+      );
 
- created += 1;
- existingKeys.add(existingKey);
- }
- }
+      let created = 0;
+      let skippedExisting = 0;
 
- return { created, skippedExisting, tourName: tour.name };
- },
- onSuccess: (result) => {
- queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
- queryClient.invalidateQueries({ queryKey: ['travel-status'] });
- queryClient.invalidateQueries({ queryKey: ['travel-plans'] });
- queryClient.invalidateQueries({ queryKey: ['my-tours'] });
+      for (const leg of remainingLegs) {
+        for (const member of members || []) {
+          if (!member.user_id || !member.profile_id) continue;
 
- if (result.created > 0) {
- toast.success(`Booked ${result.created} remaining tour travel legs for active band members.`);
- } else {
- toast.info(`No new travel bookings were needed for ${result.tourName}.`);
- }
- },
- onError: (error: Error) => {
- toast.error(`Failed to add travel for new members: ${error.message}`);
- },
- });
+          const existingKey = `${leg.id}:${member.profile_id}`;
+          if (existingKeys.has(existingKey)) {
+            skippedExisting += 1;
+            continue;
+          }
 
- // Catch-up: jet the player to the next venue city if they fell behind the tour transport
- const catchUpToTourMutation = useMutation({
- mutationFn: async (tourId: string) => {
- if (!profileId) throw new Error('No active profile');
- const nowIso = new Date().toISOString();
+          const fromCityName = cityNameMap.get(leg.from_city_id) || "Unknown";
+          const toCityName = cityNameMap.get(leg.to_city_id) || "Unknown";
 
- // Find next upcoming leg for this tour
- const { data: nextLeg, error: legErr } = await supabase
- .from('tour_travel_legs')
- .select('id, from_city_id, to_city_id, departure_date, arrival_date, travel_mode')
- .eq('tour_id', tourId)
- .gte('departure_date', nowIso)
- .order('departure_date', { ascending: true })
- .limit(1)
- .maybeSingle();
- if (legErr) throw legErr;
+          const { data: travelRecord, error: travelError } = await (
+            supabase as any
+          )
+            .from("player_travel_history")
+            .insert({
+              user_id: member.user_id,
+              profile_id: member.profile_id,
+              from_city_id: leg.from_city_id,
+              to_city_id: leg.to_city_id,
+              transport_type: leg.travel_mode || "bus",
+              cost_paid: 0,
+              departure_time: leg.departure_date,
+              scheduled_departure_time: leg.departure_date,
+              arrival_time: leg.arrival_date,
+              travel_duration_hours: Math.max(
+                1,
+                leg.travel_duration_hours || 1,
+              ),
+              status: "scheduled",
+              tour_leg_id: leg.id,
+            })
+            .select("id")
+            .single();
 
- // Get current profile location
- const { data: profile } = await supabase
- .from('profiles')
- .select('current_city_id, cash, user_id')
- .eq('id', profileId)
- .single();
+          if (travelError) throw travelError;
 
- // Determine target city: next leg's from_city (catch the bus) or to_city if already departed
- let targetCityId: string | null = null;
- if (nextLeg) {
- targetCityId = nextLeg.from_city_id;
- } else {
- // No upcoming leg — catch up to the next gig venue city
- const { data: nextGig } = await supabase
- .from('gigs')
- .select('venue_id, scheduled_date, venues(city_id)')
- .eq('tour_id', tourId)
- .gte('scheduled_date', nowIso)
- .order('scheduled_date', { ascending: true })
- .limit(1)
- .maybeSingle();
- targetCityId = (nextGig as any)?.venues?.city_id || null;
- }
- if (!targetCityId) throw new Error('No upcoming tour stops to catch up to');
- if (profile?.current_city_id === targetCityId) {
- return { skipped: true, message:'You are already in the right city'};
- }
+          const { error: activityError } = await (supabase as any)
+            .from("player_scheduled_activities")
+            .insert({
+              user_id: member.user_id,
+              profile_id: member.profile_id,
+              activity_type: "travel",
+              status: "scheduled",
+              scheduled_start: leg.departure_date,
+              scheduled_end: leg.arrival_date,
+              title: `Tour Travel: ${fromCityName} → ${toCityName}`,
+              description: `${leg.travel_mode || "bus"} journey (${Math.max(1, leg.travel_duration_hours || 1)}h) — Tour`,
+              location: toCityName,
+              metadata: {
+                travel_history_id: travelRecord?.id,
+                tour_leg_id: leg.id,
+                tour_id: leg.tour_id,
+                from_city_id: leg.from_city_id,
+                to_city_id: leg.to_city_id,
+                transport_type: leg.travel_mode,
+              },
+            });
 
- // Charge a catch-up jet fee ($1500)
- const fee = 1500;
- if ((profile?.cash || 0) < fee) throw new Error(`Need $${fee.toLocaleString()} to charter a catch-up flight`);
+          if (activityError) {
+            console.warn(
+              "Failed to create scheduled activity for tour travel:",
+              activityError,
+            );
+          }
 
- const departure = new Date();
- const durationHours = 2;
- const arrival = new Date(departure.getTime() + durationHours * 3600_000);
+          created += 1;
+          existingKeys.add(existingKey);
+        }
+      }
 
- await (supabase as any).from('player_travel_history').insert({
- user_id: profile?.user_id,
- profile_id: profileId,
- from_city_id: profile?.current_city_id,
- to_city_id: targetCityId,
- transport_type:'plane',
- cost_paid: fee,
- departure_time: departure.toISOString(),
- scheduled_departure_time: departure.toISOString(),
- arrival_time: arrival.toISOString(),
- travel_duration_hours: durationHours,
- status:'in_progress',
- });
+      return { created, skippedExisting, tourName: tour.name };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+      queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["my-tours"] });
 
- await supabase
- .from('profiles')
- .update({
- cash: (profile?.cash || 0) - fee,
- is_traveling: true,
- travel_arrives_at: arrival.toISOString(),
- })
- .eq('id', profileId);
+      if (result.created > 0) {
+        toast.success(
+          `Booked ${result.created} remaining tour travel legs for active band members.`,
+        );
+      } else {
+        toast.info(
+          `No new travel bookings were needed for ${result.tourName}.`,
+        );
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to add travel for new members: ${error.message}`);
+    },
+  });
 
- return { skipped: false, message: `Chartered catch-up flight ($${fee.toLocaleString()}). Arrives in ${durationHours}h.` };
- },
- onSuccess: (res) => {
- queryClient.invalidateQueries({ queryKey: ['travel-status'] });
- queryClient.invalidateQueries({ queryKey: ['upcoming-travel'] });
- queryClient.invalidateQueries({ queryKey: ['profile'] });
- toast.success(res.message);
- },
- onError: (e: Error) => toast.error(e.message),
- });
+  // Catch-up: jet the player to the next venue city if they fell behind the tour transport
+  const catchUpToTourMutation = useMutation({
+    mutationFn: async (tourId: string) => {
+      if (!profileId) throw new Error("No active profile");
+      const nowIso = new Date().toISOString();
 
- const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
- queryKey: ['other-tours', currentBandId, fameFilter, genreFilter, otherToursPage],
- queryFn: async () => {
- let query = supabase
- .from('tours')
- .select(`
+      // Find next upcoming leg for this tour
+      const { data: nextLeg, error: legErr } = await supabase
+        .from("tour_travel_legs")
+        .select(
+          "id, from_city_id, to_city_id, departure_date, arrival_date, travel_mode",
+        )
+        .eq("tour_id", tourId)
+        .gte("departure_date", nowIso)
+        .order("departure_date", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (legErr) throw legErr;
+
+      // Get current profile location
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("current_city_id, cash, user_id")
+        .eq("id", profileId)
+        .single();
+
+      // Determine target city: next leg's from_city (catch the bus) or to_city if already departed
+      let targetCityId: string | null = null;
+      if (nextLeg) {
+        targetCityId = nextLeg.from_city_id;
+      } else {
+        // No upcoming leg — catch up to the next gig venue city
+        const { data: nextGig } = await supabase
+          .from("gigs")
+          .select("venue_id, scheduled_date, venues(city_id)")
+          .eq("tour_id", tourId)
+          .gte("scheduled_date", nowIso)
+          .order("scheduled_date", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        targetCityId = (nextGig as any)?.venues?.city_id || null;
+      }
+      if (!targetCityId)
+        throw new Error("No upcoming tour stops to catch up to");
+      if (profile?.current_city_id === targetCityId) {
+        return { skipped: true, message: "You are already in the right city" };
+      }
+
+      // Charge a catch-up jet fee ($1500)
+      const fee = 1500;
+      if ((profile?.cash || 0) < fee)
+        throw new Error(
+          `Need $${fee.toLocaleString()} to charter a catch-up flight`,
+        );
+
+      const departure = new Date();
+      const durationHours = 2;
+      const arrival = new Date(departure.getTime() + durationHours * 3600_000);
+
+      await (supabase as any).from("player_travel_history").insert({
+        user_id: profile?.user_id,
+        profile_id: profileId,
+        from_city_id: profile?.current_city_id,
+        to_city_id: targetCityId,
+        transport_type: "plane",
+        cost_paid: fee,
+        departure_time: departure.toISOString(),
+        scheduled_departure_time: departure.toISOString(),
+        arrival_time: arrival.toISOString(),
+        travel_duration_hours: durationHours,
+        status: "in_progress",
+      });
+
+      await supabase
+        .from("profiles")
+        .update({
+          cash: (profile?.cash || 0) - fee,
+          is_traveling: true,
+          travel_arrives_at: arrival.toISOString(),
+        })
+        .eq("id", profileId);
+
+      return {
+        skipped: false,
+        message: `Chartered catch-up flight ($${fee.toLocaleString()}). Arrives in ${durationHours}h.`,
+      };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(res.message);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
+    queryKey: [
+      "other-tours",
+      currentBandId,
+      fameFilter,
+      genreFilter,
+      otherToursPage,
+    ],
+    queryFn: async () => {
+      let query = supabase
+        .from("tours")
+        .select(
+          `
  *,
  band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans)
- `, { count:'exact'})
- .eq('status','active')
- .order('start_date', { ascending: true });
- 
- if (currentBandId) {
- query = query.neq('band_id', currentBandId);
- }
+ `,
+          { count: "exact" },
+        )
+        .eq("status", "active")
+        .order("start_date", { ascending: true });
 
- const from = (otherToursPage - 1) * OTHER_TOURS_PER_PAGE;
- query = query.range(from, from + OTHER_TOURS_PER_PAGE - 1);
- 
- const { data, count, error } = await query;
- if (error) throw error;
- 
- let tours = data as Tour[];
+      if (currentBandId) {
+        query = query.neq("band_id", currentBandId);
+      }
 
- // Client-side filtering for fame and genre
- if (fameFilter !=='all') {
- tours = tours.filter(t => {
- const fame = t.band?.fame ?? 0;
- if (fameFilter ==='local') return fame < 1000;
- if (fameFilter ==='regional') return fame >= 1000 && fame < 5000;
- if (fameFilter ==='national') return fame >= 5000 && fame < 20000;
- if (fameFilter ==='international') return fame >= 20000;
- return true;
- });
- }
+      const from = (otherToursPage - 1) * OTHER_TOURS_PER_PAGE;
+      query = query.range(from, from + OTHER_TOURS_PER_PAGE - 1);
 
- if (genreFilter !=='all') {
- tours = tours.filter(t => t.band?.genre === genreFilter);
- }
+      const { data, count, error } = await query;
+      if (error) throw error;
 
- return { tours, totalCount: count ?? 0 };
- },
- });
+      let tours = data as Tour[];
 
- const otherToursTotalPages = Math.ceil((otherToursData?.totalCount ?? 0) / OTHER_TOURS_PER_PAGE);
+      // Client-side filtering for fame and genre
+      if (fameFilter !== "all") {
+        tours = tours.filter((t) => {
+          const fame = t.band?.fame ?? 0;
+          if (fameFilter === "local") return fame < 1000;
+          if (fameFilter === "regional") return fame >= 1000 && fame < 5000;
+          if (fameFilter === "national") return fame >= 5000 && fame < 20000;
+          if (fameFilter === "international") return fame >= 20000;
+          return true;
+        });
+      }
 
- // Fetch tour venues/dates for selected tour with associated gig setlists
- const { data: tourVenues = [], isLoading: loadingVenues } = useQuery({
- queryKey: ['tour-venues', selectedTour?.id],
- queryFn: async () => {
- if (!selectedTour?.id) return [];
- const { data, error } = await supabase
- .from('tour_venues')
- .select(`
+      if (genreFilter !== "all") {
+        tours = tours.filter((t) => t.band?.genre === genreFilter);
+      }
+
+      return { tours, totalCount: count ?? 0 };
+    },
+  });
+
+  const otherToursTotalPages = Math.ceil(
+    (otherToursData?.totalCount ?? 0) / OTHER_TOURS_PER_PAGE,
+  );
+
+  // Fetch tour venues/dates for selected tour with associated gig setlists
+  const { data: tourVenues = [], isLoading: loadingVenues } = useQuery({
+    queryKey: ["tour-venues", selectedTour?.id],
+    queryFn: async () => {
+      if (!selectedTour?.id) return [];
+      const { data, error } = await supabase
+        .from("tour_venues")
+        .select(
+          `
  id,
  tour_id,
  venue_id,
@@ -603,31 +751,41 @@ const TourManager = () => {
  revenue,
  status,
  city_id
- `)
- .eq('tour_id', selectedTour.id)
- .order('date', { ascending: true });
- 
- if (error) throw error;
- 
- // Fetch venue details and gigs separately
- const venueIdSet = new Set<string>();
- const cityIdSet = new Set<string>();
- (data || []).forEach(tv => {
- if (tv.venue_id) venueIdSet.add(tv.venue_id);
- if (tv.city_id) cityIdSet.add(tv.city_id);
- });
- const venueIds = Array.from(venueIdSet);
- const cityIds = Array.from(cityIdSet);
- 
- const [venuesResult, citiesResult, gigsResult] = await Promise.all([
- venueIds.length > 0 
- ? supabase.from('venues').select('id, name, capacity, city_id').in('id', venueIds)
- : Promise.resolve({ data: [], error: null }),
- cityIds.length > 0
- ? supabase.from('cities').select('id, name, country, latitude, longitude').in('id', cityIds)
- : Promise.resolve({ data: [], error: null }),
- // Fetch gigs for this tour (no relational join so metrics never fail due FK/join ambiguity)
- supabase.from('gigs').select(`
+ `,
+        )
+        .eq("tour_id", selectedTour.id)
+        .order("date", { ascending: true });
+
+      if (error) throw error;
+
+      // Fetch venue details and gigs separately
+      const venueIdSet = new Set<string>();
+      const cityIdSet = new Set<string>();
+      (data || []).forEach((tv) => {
+        if (tv.venue_id) venueIdSet.add(tv.venue_id);
+        if (tv.city_id) cityIdSet.add(tv.city_id);
+      });
+      const venueIds = Array.from(venueIdSet);
+      const cityIds = Array.from(cityIdSet);
+
+      const [venuesResult, citiesResult, gigsResult] = await Promise.all([
+        venueIds.length > 0
+          ? supabase
+              .from("venues")
+              .select("id, name, capacity, city_id")
+              .in("id", venueIds)
+          : Promise.resolve({ data: [], error: null }),
+        cityIds.length > 0
+          ? supabase
+              .from("cities")
+              .select("id, name, country, latitude, longitude")
+              .in("id", cityIds)
+          : Promise.resolve({ data: [], error: null }),
+        // Fetch gigs for this tour (no relational join so metrics never fail due FK/join ambiguity)
+        supabase
+          .from("gigs")
+          .select(
+            `
  id,
  venue_id,
  scheduled_date,
@@ -635,750 +793,984 @@ const TourManager = () => {
  tickets_sold,
  payment,
  status
- `).eq('tour_id', selectedTour.id)
- ]);
+ `,
+          )
+          .eq("tour_id", selectedTour.id),
+      ]);
 
- if (venuesResult.error) throw venuesResult.error;
- if (citiesResult.error) throw citiesResult.error;
- if (gigsResult.error) throw gigsResult.error;
- 
- // Fetch gig outcomes for ratings/revenue and setlist names independently
- const gigIds = (gigsResult.data || []).map((g: any) => g.id);
- const setlistIds = Array.from(new Set((gigsResult.data || [])
- .map((g: any) => g.setlist_id)
- .filter((id: string | null) => !!id))) as string[];
+      if (venuesResult.error) throw venuesResult.error;
+      if (citiesResult.error) throw citiesResult.error;
+      if (gigsResult.error) throw gigsResult.error;
 
- const [outcomesResult, setlistsResult] = await Promise.all([
- gigIds.length > 0
- ? supabase.from('gig_outcomes').select('gig_id, overall_rating, performance_grade, ticket_revenue, net_profit').in('gig_id', gigIds)
- : Promise.resolve({ data: [], error: null }),
- setlistIds.length > 0
- ? supabase.from('setlists').select('id, name').in('id', setlistIds)
- : Promise.resolve({ data: [], error: null }),
- ]);
+      // Fetch gig outcomes for ratings/revenue and setlist names independently
+      const gigIds = (gigsResult.data || []).map((g: any) => g.id);
+      const setlistIds = Array.from(
+        new Set(
+          (gigsResult.data || [])
+            .map((g: any) => g.setlist_id)
+            .filter((id: string | null) => !!id),
+        ),
+      ) as string[];
 
- if (outcomesResult.error) throw outcomesResult.error;
+      const [outcomesResult, setlistsResult] = await Promise.all([
+        gigIds.length > 0
+          ? supabase
+              .from("gig_outcomes")
+              .select(
+                "gig_id, overall_rating, performance_grade, ticket_revenue, net_profit",
+              )
+              .in("gig_id", gigIds)
+          : Promise.resolve({ data: [], error: null }),
+        setlistIds.length > 0
+          ? supabase.from("setlists").select("id, name").in("id", setlistIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
- const venuesMap: Record<string, { id: string; name: string; capacity: number; city_id: string | null }> = {};
- const citiesMap: Record<string, { id: string; name: string; country: string; latitude: number | null; longitude: number | null }> = {};
- const setlistsMap: Record<string, { id: string; name: string }> = {};
- // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
- const gigsMap: Record<string, {
- id: string;
- setlist_id: string | null;
- setlist_name: string | null;
- setlist_song_count: number | null;
- tickets_sold: number | null;
- payment: number | null;
- status: string | null;
- }> = {};
- const outcomesMap: Record<string, { overall_rating: number | null; performance_grade: string | null; ticket_revenue: number | null; net_profit: number | null }> = {};
+      if (outcomesResult.error) throw outcomesResult.error;
 
- const dayKey = (iso: string | null | undefined) => {
- if (!iso) return"";
- // Use substring to avoid timezone-related date shifts
- // Both tour_venues.date and gigs.scheduled_date store YYYY-MM-DD at the start
- return typeof iso ==='string'? iso.substring(0, 10) :"";
- };
- 
- (venuesResult.data || []).forEach(v => { venuesMap[v.id] = v; });
- (citiesResult.data || []).forEach(c => { citiesMap[c.id] = c; });
- (setlistsResult.data || []).forEach((s: any) => {
- setlistsMap[s.id] = s;
- });
- (gigsResult.data || []).forEach((g: any) => {
- if (g.venue_id) {
- const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
- gigsMap[key] = {
- id: g.id,
- setlist_id: g.setlist_id,
- setlist_name: g.setlist_id ? (setlistsMap[g.setlist_id]?.name ?? null) : null,
- setlist_song_count: null,
- tickets_sold: g.tickets_sold ?? null,
- payment: g.payment ?? null,
- status: g.status ?? null,
- };
- }
- });
- (outcomesResult.data || []).forEach((o: any) => {
- outcomesMap[o.gig_id] = {
- overall_rating: o.overall_rating,
- performance_grade: o.performance_grade,
- ticket_revenue: o.ticket_revenue,
- net_profit: o.net_profit,
- };
- });
- 
- return (data || []).map(tv => {
- const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
- const city = venue?.city_id ? citiesMap[venue.city_id] : (tv.city_id ? citiesMap[tv.city_id] : null);
- const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` :"";
- const gig = gigKey ? gigsMap[gigKey] : null;
- const outcome = gig?.id ? outcomesMap[gig.id] : null;
- return {
- ...tv,
- venue: venue ? {
- name: venue.name,
- capacity: venue.capacity,
- city: city ? { name: city.name, country: city.country, latitude: city.latitude, longitude: city.longitude } : null
- } : null,
- gig_id: gig?.id || null,
- gig_status: gig?.status || null,
- gig_tickets_sold: gig?.tickets_sold || null,
- gig_revenue: outcome?.ticket_revenue || gig?.payment || null,
- overall_rating: outcome?.overall_rating || null,
- performance_grade: outcome?.performance_grade || null,
- setlist_id: gig?.setlist_id || null,
- setlist_name: gig?.setlist_name || null,
- setlist_song_count: gig?.setlist_song_count || null,
- };
- }) as TourVenue[];
- },
- enabled: !!selectedTour?.id,
- });
+      const venuesMap: Record<
+        string,
+        { id: string; name: string; capacity: number; city_id: string | null }
+      > = {};
+      const citiesMap: Record<
+        string,
+        {
+          id: string;
+          name: string;
+          country: string;
+          latitude: number | null;
+          longitude: number | null;
+        }
+      > = {};
+      const setlistsMap: Record<string, { id: string; name: string }> = {};
+      // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
+      const gigsMap: Record<
+        string,
+        {
+          id: string;
+          setlist_id: string | null;
+          setlist_name: string | null;
+          setlist_song_count: number | null;
+          tickets_sold: number | null;
+          payment: number | null;
+          status: string | null;
+        }
+      > = {};
+      const outcomesMap: Record<
+        string,
+        {
+          overall_rating: number | null;
+          performance_grade: string | null;
+          ticket_revenue: number | null;
+          net_profit: number | null;
+        }
+      > = {};
 
- const activeTourCount = myTours.filter(t => t.status ==='active'|| t.status ==='scheduled').length;
- const totalRevenue = bandTotals?.totalRevenue ?? myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
- const totalFame = bandTotals?.totalFame ?? 0;
- const upcomingShows = myTours.filter(t => new Date(t.start_date) > new Date()).length;
+      const dayKey = (iso: string | null | undefined) => {
+        if (!iso) return "";
+        // Use substring to avoid timezone-related date shifts
+        // Both tour_venues.date and gigs.scheduled_date store YYYY-MM-DD at the start
+        return typeof iso === "string" ? iso.substring(0, 10) : "";
+      };
 
- const getStatusBadge = (status: string) => {
- if (status ==='cancelled') {
- return <Badge variant="destructive"className="gap-1"><XCircle className="h-3 w-3"/>Cancelled</Badge>;
- }
- const variants: Record<string,"default"|"secondary"|"destructive"|"outline"> = {
- active:"default",
- scheduled:"secondary",
- completed:"outline",
- };
- return <Badge variant={variants[status] ||"outline"} className="capitalize">{status}</Badge>;
- };
+      (venuesResult.data || []).forEach((v) => {
+        venuesMap[v.id] = v;
+      });
+      (citiesResult.data || []).forEach((c) => {
+        citiesMap[c.id] = c;
+      });
+      (setlistsResult.data || []).forEach((s: any) => {
+        setlistsMap[s.id] = s;
+      });
+      (gigsResult.data || []).forEach((g: any) => {
+        if (g.venue_id) {
+          const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
+          gigsMap[key] = {
+            id: g.id,
+            setlist_id: g.setlist_id,
+            setlist_name: g.setlist_id
+              ? (setlistsMap[g.setlist_id]?.name ?? null)
+              : null,
+            setlist_song_count: null,
+            tickets_sold: g.tickets_sold ?? null,
+            payment: g.payment ?? null,
+            status: g.status ?? null,
+          };
+        }
+      });
+      (outcomesResult.data || []).forEach((o: any) => {
+        outcomesMap[o.gig_id] = {
+          overall_rating: o.overall_rating,
+          performance_grade: o.performance_grade,
+          ticket_revenue: o.ticket_revenue,
+          net_profit: o.net_profit,
+        };
+      });
 
- const getRescheduleBadge = (tour: Tour) => {
- if (!tour.rescheduled_at || tour.status ==='cancelled') return null;
- return (
- <Badge variant="outline"className="gap-1 text-amber-500 border-amber-500/40 bg-amber-500/5">
- <History className="h-3 w-3"/>
- Rescheduled{(tour.reschedule_count ?? 0) > 1 ? ` ×${tour.reschedule_count}` :''}
- </Badge>
- );
- };
+      return (data || []).map((tv) => {
+        const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
+        const city = venue?.city_id
+          ? citiesMap[venue.city_id]
+          : tv.city_id
+            ? citiesMap[tv.city_id]
+            : null;
+        const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
+        const gig = gigKey ? gigsMap[gigKey] : null;
+        const outcome = gig?.id ? outcomesMap[gig.id] : null;
+        return {
+          ...tv,
+          venue: venue
+            ? {
+                name: venue.name,
+                capacity: venue.capacity,
+                city: city
+                  ? {
+                      name: city.name,
+                      country: city.country,
+                      latitude: city.latitude,
+                      longitude: city.longitude,
+                    }
+                  : null,
+              }
+            : null,
+          gig_id: gig?.id || null,
+          gig_status: gig?.status || null,
+          gig_tickets_sold: gig?.tickets_sold || null,
+          gig_revenue: outcome?.ticket_revenue || gig?.payment || null,
+          overall_rating: outcome?.overall_rating || null,
+          performance_grade: outcome?.performance_grade || null,
+          setlist_id: gig?.setlist_id || null,
+          setlist_name: gig?.setlist_name || null,
+          setlist_song_count: gig?.setlist_song_count || null,
+        };
+      }) as TourVenue[];
+    },
+    enabled: !!selectedTour?.id,
+  });
 
- const openTourDetails = (tour: Tour) => {
- setSelectedTour(tour);
- setDetailsOpen(true);
- };
+  const activeTourCount = myTours.filter(
+    (t) => t.status === "active" || t.status === "scheduled",
+  ).length;
+  const totalRevenue =
+    bandTotals?.totalRevenue ??
+    myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
+  const totalFame = bandTotals?.totalFame ?? 0;
+  const upcomingShows = myTours.filter(
+    (t) => new Date(t.start_date) > new Date(),
+  ).length;
 
- const TourCard = ({ tour, showBandInfo = false }: { tour: Tour; showBandInfo?: boolean }) => {
- const isCancelled = tour.status ==='cancelled';
- return (
- <Card className={cn("hover:border-primary/50 transition-colors",
- isCancelled &&"opacity-70 border-destructive/40 bg-destructive/[0.02]",
- )}>
- <CardHeader className="pb-2">
- <div className="flex items-start justify-between gap-2">
- <div className="min-w-0 flex-1">
- <CardTitle className={cn("text-lg flex items-center gap-2", isCancelled &&"line-through text-muted-foreground")}>
- {tour.name}
- </CardTitle>
- <CardDescription className="flex items-center gap-1 mt-1 flex-wrap">
- <Music className="h-3 w-3"/>
- {tour.band?.name ||'Unknown Band'}
- {showBandInfo && tour.band?.fame !== null && tour.band?.fame !== undefined && (
- <Badge variant="outline"className="ml-2 text-xs">
- <TrendingUp className="h-3 w-3 mr-1"/>
- {getBandFameTitle(tour.band.fame)}
- </Badge>
- )}
- </CardDescription>
- </div>
- <div className="flex flex-col items-end gap-1 shrink-0">
- {getStatusBadge(tour.status)}
- {getRescheduleBadge(tour)}
- </div>
- </div>
- </CardHeader>
- <CardContent className="space-y-3">
- {isCancelled && (
- <div className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive flex items-center gap-1.5">
- <XCircle className="h-3.5 w-3.5"/>
- Cancelled{tour.cancellation_date ? ` on ${format(new Date(tour.cancellation_date),'MMM d, yyyy')}` :''}
- — all remaining shows and travel were cancelled.
- </div>
- )}
- {tour.rescheduled_at && !isCancelled && tour.original_start_date && (
- <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
- <History className="h-3.5 w-3.5"/>
- Rescheduled — was {format(new Date(tour.original_start_date),'MMM d')}
- {tour.original_end_date ? ` – ${format(new Date(tour.original_end_date),'MMM d, yyyy')}` :''}.
- </div>
- )}
- <div className="flex items-center gap-4 text-sm text-muted-foreground">
- <span className="flex items-center gap-1">
- <Calendar className="h-4 w-4"/>
- {format(new Date(tour.start_date),'MMM d')} – {format(new Date(tour.end_date),'MMM d, yyyy')}
- </span>
- </div>
- <div className="flex items-center gap-3 flex-wrap">
- {showBandInfo && tour.band?.genre && (
- <Badge variant="secondary">{tour.band.genre}</Badge>
- )}
- {tour.scope && (
- <Badge variant="outline"className="capitalize text-xs">{tour.scope}</Badge>
- )}
- {tour.stage_setup_tier && tour.stage_setup_tier !=='basic'&& (
- <Badge variant="outline"className="capitalize text-xs">
- <Sparkles className="h-3 w-3 mr-0.5"/>{tour.stage_setup_tier}
- </Badge>
- )}
- </div>
- <div className="flex items-center gap-1 text-sm">
- <DollarSign className="h-4 w-4 text-green-500"/>
- <span className="font-bold tabular-nums text-green-500">
- ${(tour.total_revenue || 0).toLocaleString()}
- </span>
- </div>
- {tour.description && (
- <p className="text-sm text-muted-foreground line-clamp-2">{tour.description}</p>
- )}
- <Button 
- variant="outline"size="sm"className="w-full"onClick={() => openTourDetails(tour)}
- >
- View Details
- <ChevronRight className="h-4 w-4 ml-1"/>
- </Button>
- </CardContent>
- </Card>
- );
- };
+  const getStatusBadge = (status: string) => {
+    if (status === "cancelled") {
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          Cancelled
+        </Badge>
+      );
+    }
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
+      active: "default",
+      scheduled: "secondary",
+      completed: "outline",
+    };
+    return (
+      <Badge variant={variants[status] || "outline"} className="capitalize">
+        {status}
+      </Badge>
+    );
+  };
 
- const EmptyState = ({ icon: Icon, title, description, action }: { 
- icon: any; 
- title: string; 
- description: string;
- action?: React.ReactNode;
- }) => (
- <Card>
- <CardContent className="py-12 text-center">
- <Icon className="h-12 w-12 mx-auto text-muted-foreground mb-4"/>
- <h3 className="text-lg font-semibold mb-2">{title}</h3>
- <p className="text-muted-foreground mb-4">{description}</p>
- {action}
- </CardContent>
- </Card>
- );
+  const getRescheduleBadge = (tour: Tour) => {
+    if (!tour.rescheduled_at || tour.status === "cancelled") return null;
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 text-amber-500 border-amber-500/40 bg-amber-500/5"
+      >
+        <History className="h-3 w-3" />
+        Rescheduled
+        {(tour.reschedule_count ?? 0) > 1 ? ` ×${tour.reschedule_count}` : ""}
+      </Badge>
+    );
+  };
 
- return (
- <FMPageScaffold
- title="Tour Manager"subtitle="Plan and manage your band's tours"icon={Map}
- backTo="/hub/band-live"headerActions={
- <Button onClick={() => setWizardOpen(true)} size="sm">
- <Plus className="h-4 w-4 mr-2"/>
- Create Tour
- </Button>
- }
- >
+  const openTourDetails = (tour: Tour) => {
+    setSelectedTour(tour);
+    setDetailsOpen(true);
+  };
 
- <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
- <Card>
- <CardHeader className="pb-3">
- <CardTitle className="text-sm font-medium flex items-center gap-2">
- <MapPin className="h-4 w-4"/>
- Active Tours
- </CardTitle>
- </CardHeader>
- <CardContent>
- <div className="text-2xl font-bold">{activeTourCount}</div>
- <p className="text-xs text-muted-foreground">
- {activeTourCount === 0 ?'No tours scheduled':'In progress or planned'}
- </p>
- </CardContent>
- </Card>
+  const TourCard = ({
+    tour,
+    showBandInfo = false,
+  }: {
+    tour: Tour;
+    showBandInfo?: boolean;
+  }) => {
+    const isCancelled = tour.status === "cancelled";
+    return (
+      <Card
+        className={cn(
+          "hover:border-primary/50 transition-colors",
+          isCancelled &&
+            "opacity-70 border-destructive/40 bg-destructive/[0.02]",
+        )}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <CardTitle
+                className={cn(
+                  "text-lg flex items-center gap-2",
+                  isCancelled && "line-through text-muted-foreground",
+                )}
+              >
+                {tour.name}
+              </CardTitle>
+              <CardDescription className="flex items-center gap-1 mt-1 flex-wrap">
+                <Music className="h-3 w-3" />
+                {tour.band?.name || "Unknown Band"}
+                {showBandInfo &&
+                  tour.band?.fame !== null &&
+                  tour.band?.fame !== undefined && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                      {getBandFameTitle(tour.band.fame)}
+                    </Badge>
+                  )}
+              </CardDescription>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {getStatusBadge(tour.status)}
+              {getRescheduleBadge(tour)}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isCancelled && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive flex items-center gap-1.5">
+              <XCircle className="h-3.5 w-3.5" />
+              Cancelled
+              {tour.cancellation_date
+                ? ` on ${format(new Date(tour.cancellation_date), "MMM d, yyyy")}`
+                : ""}
+              — all remaining shows and travel were cancelled.
+            </div>
+          )}
+          {tour.rescheduled_at && !isCancelled && tour.original_start_date && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <History className="h-3.5 w-3.5" />
+              Rescheduled — was{" "}
+              {format(new Date(tour.original_start_date), "MMM d")}
+              {tour.original_end_date
+                ? ` – ${format(new Date(tour.original_end_date), "MMM d, yyyy")}`
+                : ""}
+              .
+            </div>
+          )}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              {format(new Date(tour.start_date), "MMM d")} –{" "}
+              {format(new Date(tour.end_date), "MMM d, yyyy")}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {showBandInfo && tour.band?.genre && (
+              <Badge variant="secondary">{tour.band.genre}</Badge>
+            )}
+            {tour.scope && (
+              <Badge variant="outline" className="capitalize text-xs">
+                {tour.scope}
+              </Badge>
+            )}
+            {tour.stage_setup_tier && tour.stage_setup_tier !== "basic" && (
+              <Badge variant="outline" className="capitalize text-xs">
+                <Sparkles className="h-3 w-3 mr-0.5" />
+                {tour.stage_setup_tier}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1 text-sm">
+            <DollarSign className="h-4 w-4 text-green-500" />
+            <span className="font-bold tabular-nums text-green-500">
+              ${(tour.total_revenue || 0).toLocaleString()}
+            </span>
+          </div>
+          {tour.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {tour.description}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => openTourDetails(tour)}
+          >
+            View Details
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
 
- <Card>
- <CardHeader className="pb-3">
- <CardTitle className="text-sm font-medium flex items-center gap-2">
- <Calendar className="h-4 w-4"/>
- Upcoming
- </CardTitle>
- </CardHeader>
- <CardContent>
- <div className="text-2xl font-bold">{upcomingShows}</div>
- <p className="text-xs text-muted-foreground">
- {upcomingShows === 0 ?'Plan your first tour':'Tours starting soon'}
- </p>
- </CardContent>
- </Card>
+  const EmptyState = ({
+    icon: Icon,
+    title,
+    description,
+    action,
+  }: {
+    icon: any;
+    title: string;
+    description: string;
+    action?: React.ReactNode;
+  }) => (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <Icon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground mb-4">{description}</p>
+        {action}
+      </CardContent>
+    </Card>
+  );
 
- <Card>
- <CardHeader className="pb-3">
- <CardTitle className="text-sm font-medium flex items-center gap-2">
- <DollarSign className="h-4 w-4"/>
- Tour Revenue
- </CardTitle>
- </CardHeader>
- <CardContent>
- <div className="text-2xl font-black tabular-nums tracking-tight text-green-500">${totalRevenue.toLocaleString()}</div>
- <p className="text-xs text-muted-foreground">Lifetime earnings</p>
- </CardContent>
- </Card>
+  return (
+    <FMPageScaffold
+      title="Tour Manager"
+      subtitle="Plan and manage your band's tours"
+      icon={Map}
+      backTo="/hub/band-live"
+      headerActions={
+        <Button onClick={() => setWizardOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Tour
+        </Button>
+      }
+    >
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Active Tours
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeTourCount}</div>
+            <p className="text-xs text-muted-foreground">
+              {activeTourCount === 0
+                ? "No tours scheduled"
+                : "In progress or planned"}
+            </p>
+          </CardContent>
+        </Card>
 
- <Card>
- <CardHeader className="pb-3">
- <CardTitle className="text-sm font-medium flex items-center gap-2">
- <TrendingUp className="h-4 w-4"/>
- Fame Earned
- </CardTitle>
- </CardHeader>
- <CardContent>
- <div className="text-2xl font-black tabular-nums tracking-tight text-primary">+{totalFame.toLocaleString()}</div>
- <p className="text-xs text-muted-foreground">From all tours</p>
- </CardContent>
- </Card>
- </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Upcoming
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{upcomingShows}</div>
+            <p className="text-xs text-muted-foreground">
+              {upcomingShows === 0
+                ? "Plan your first tour"
+                : "Tours starting soon"}
+            </p>
+          </CardContent>
+        </Card>
 
- <Tabs defaultValue="current"className="space-y-4">
- <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
- <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-5">
- <TabsTrigger value="current"className="whitespace-nowrap">Current</TabsTrigger>
- <TabsTrigger value="upcoming"className="whitespace-nowrap">Upcoming</TabsTrigger>
- <TabsTrigger value="historic"className="whitespace-nowrap">History</TabsTrigger>
- <TabsTrigger value="getting-started"className="whitespace-nowrap">Getting Started</TabsTrigger>
- <TabsTrigger value="other-tours"className="whitespace-nowrap">Other Bands</TabsTrigger>
- </TabsList>
- </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Tour Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-green-500">
+              ${totalRevenue.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+          </CardContent>
+        </Card>
 
- {/* My Current Tour */}
- <TabsContent value="current"className="space-y-4">
- {loadingMyTours ? (
- <div className="flex items-center justify-center py-12">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
- </div>
- ) : currentTours.length === 0 ? (
- <EmptyState
- icon={MapPin}
- title="No Active Tour"description="No active tour. Create one to start."action={
- <Button onClick={() => setWizardOpen(true)}>
- <Plus className="h-4 w-4 mr-2"/>
- Create New Tour
- </Button>
- }
- />
- ) : (
- <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
- {currentTours.map((tour) => (
- <TourCard key={tour.id} tour={tour} />
- ))}
- </div>
- )}
- </TabsContent>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Fame Earned
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-primary">
+              +{totalFame.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">From all tours</p>
+          </CardContent>
+        </Card>
+      </div>
 
- {/* Upcoming Tours */}
- <TabsContent value="upcoming"className="space-y-4">
- {loadingMyTours ? (
- <div className="flex items-center justify-center py-12">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
- </div>
- ) : upcomingTours.length === 0 ? (
- <EmptyState
- icon={Calendar}
- title="No Upcoming Tours"description="No upcoming tours scheduled."action={
- <Button onClick={() => setWizardOpen(true)}>
- <Plus className="h-4 w-4 mr-2"/>
- Schedule a Tour
- </Button>
- }
- />
- ) : (
- <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
- {upcomingTours.map((tour) => (
- <TourCard key={tour.id} tour={tour} />
- ))}
- </div>
- )}
- </TabsContent>
+      <Tabs defaultValue="current" className="space-y-4">
+        <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+          <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-5">
+            <TabsTrigger value="current" className="whitespace-nowrap">
+              Current
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="whitespace-nowrap">
+              Upcoming
+            </TabsTrigger>
+            <TabsTrigger value="historic" className="whitespace-nowrap">
+              History
+            </TabsTrigger>
+            <TabsTrigger value="getting-started" className="whitespace-nowrap">
+              Getting Started
+            </TabsTrigger>
+            <TabsTrigger value="other-tours" className="whitespace-nowrap">
+              Other Bands
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
- {/* Historic Tours */}
- <TabsContent value="historic"className="space-y-4">
- {loadingMyTours ? (
- <div className="flex items-center justify-center py-12">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
- </div>
- ) : historicTours.length === 0 ? (
- <EmptyState
- icon={History}
- title="No Tour History"description="Your completed tours will appear here."/>
- ) : (
- <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
- {historicTours.map((tour) => (
- <TourCard key={tour.id} tour={tour} />
- ))}
- </div>
- )}
- </TabsContent>
+        {/* My Current Tour */}
+        <TabsContent value="current" className="space-y-4">
+          {loadingMyTours ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : currentTours.length === 0 ? (
+            <EmptyState
+              icon={MapPin}
+              title="No Active Tour"
+              description="No active tour. Create one to start."
+              action={
+                <Button onClick={() => setWizardOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Tour
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {currentTours.map((tour) => (
+                <TourCard key={tour.id} tour={tour} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
- {/* Getting Started */}
- <TabsContent value="getting-started">
- <Card>
- <CardHeader>
- <CardTitle className="flex items-center gap-2">
- <Sparkles className="h-5 w-5"/>
- Getting Started with Tours
- </CardTitle>
- <CardDescription>Build your touring empire step by step</CardDescription>
- </CardHeader>
- <CardContent className="space-y-4">
- <div className="flex items-start gap-4 p-4 border rounded-lg">
- <Map className="h-6 w-6 text-primary mt-1"/>
- <div className="flex-1">
- <h3 className="font-semibold mb-1">Plan Your Route</h3>
- <p className="text-sm text-muted-foreground mb-3">
- Select cities and venues for your tour stops
- </p>
- <Link to="/travel">
- <Button variant="outline"size="sm">View Travel System</Button>
- </Link>
- </div>
- </div>
+        {/* Upcoming Tours */}
+        <TabsContent value="upcoming" className="space-y-4">
+          {loadingMyTours ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : upcomingTours.length === 0 ? (
+            <EmptyState
+              icon={Calendar}
+              title="No Upcoming Tours"
+              description="No upcoming tours scheduled."
+              action={
+                <Button onClick={() => setWizardOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Schedule a Tour
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {upcomingTours.map((tour) => (
+                <TourCard key={tour.id} tour={tour} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
- <div className="flex items-start gap-4 p-4 border rounded-lg">
- <Calendar className="h-6 w-6 text-primary mt-1"/>
- <div className="flex-1">
- <h3 className="font-semibold mb-1">Book Venues</h3>
- <p className="text-sm text-muted-foreground mb-3">
- Schedule gigs at venues along your route
- </p>
- <Link to="/gigs">
- <Button variant="outline"size="sm">Book Gigs</Button>
- </Link>
- </div>
- </div>
+        {/* Historic Tours */}
+        <TabsContent value="historic" className="space-y-4">
+          {loadingMyTours ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : historicTours.length === 0 ? (
+            <EmptyState
+              icon={History}
+              title="No Tour History"
+              description="Your completed tours will appear here."
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {historicTours.map((tour) => (
+                <TourCard key={tour.id} tour={tour} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
- <div className="flex items-start gap-4 p-4 border rounded-lg">
- <Users className="h-6 w-6 text-primary mt-1"/>
- <div className="flex-1">
- <h3 className="font-semibold mb-1">Assemble Your Crew</h3>
- <p className="text-sm text-muted-foreground mb-3">
- Hire road crew and touring support staff
- </p>
- <Link to="/band-crew">
- <Button variant="outline"size="sm">Manage Crew</Button>
- </Link>
- </div>
- </div>
- </CardContent>
- </Card>
- </TabsContent>
+        {/* Getting Started */}
+        <TabsContent value="getting-started">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Getting Started with Tours
+              </CardTitle>
+              <CardDescription>
+                Build your touring empire step by step
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-4 p-4 border rounded-lg">
+                <Map className="h-6 w-6 text-primary mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">Plan Your Route</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Select cities and venues for your tour stops
+                  </p>
+                  <Link to="/travel">
+                    <Button variant="outline" size="sm">
+                      View Travel System
+                    </Button>
+                  </Link>
+                </div>
+              </div>
 
- {/* Other Bands Tours */}
- <TabsContent value="other-tours"className="space-y-4">
- {/* Filters */}
- <Card>
- <CardContent className="pt-4">
- <div className="flex flex-wrap gap-4">
- <div className="space-y-1">
- <label className="text-sm text-muted-foreground">Fame Level</label>
- <Select value={fameFilter} onValueChange={(v) => { setFameFilter(v); setOtherToursPage(1); }}>
- <SelectTrigger className="w-[150px]">
- <SelectValue />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="all">All Levels</SelectItem>
- <SelectItem value="local">Local (&lt;1K)</SelectItem>
- <SelectItem value="regional">Regional (1K-5K)</SelectItem>
- <SelectItem value="national">National (5K-20K)</SelectItem>
- <SelectItem value="international">International (20K+)</SelectItem>
- </SelectContent>
- </Select>
- </div>
+              <div className="flex items-start gap-4 p-4 border rounded-lg">
+                <Calendar className="h-6 w-6 text-primary mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">Book Venues</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Schedule gigs at venues along your route
+                  </p>
+                  <Link to="/gigs">
+                    <Button variant="outline" size="sm">
+                      Book Gigs
+                    </Button>
+                  </Link>
+                </div>
+              </div>
 
- <div className="space-y-1">
- <label className="text-sm text-muted-foreground">Genre</label>
- <Select value={genreFilter} onValueChange={(v) => { setGenreFilter(v); setOtherToursPage(1); }}>
- <SelectTrigger className="w-[150px]">
- <SelectValue />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="all">All Genres</SelectItem>
- {MUSIC_GENRES.map((g) => (
- <SelectItem key={g} value={g}>{g}</SelectItem>
- ))}
- </SelectContent>
- </Select>
- </div>
- </div>
- </CardContent>
- </Card>
+              <div className="flex items-start gap-4 p-4 border rounded-lg">
+                <Users className="h-6 w-6 text-primary mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">Assemble Your Crew</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Hire road crew and touring support staff
+                  </p>
+                  <Link to="/band-crew">
+                    <Button variant="outline" size="sm">
+                      Manage Crew
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
- {loadingOtherTours ? (
- <div className="flex items-center justify-center py-12">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
- </div>
- ) : otherToursData?.tours.length === 0 ? (
- <EmptyState
- icon={Music}
- title="No Other Tours"description="No bands touring right now."/>
- ) : (
- <>
- <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
- {otherToursData?.tours.map((tour) => (
- <TourCard key={tour.id} tour={tour} showBandInfo />
- ))}
- </div>
+        {/* Other Bands Tours */}
+        <TabsContent value="other-tours" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex flex-wrap gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">
+                    Fame Level
+                  </label>
+                  <Select
+                    value={fameFilter}
+                    onValueChange={(v) => {
+                      setFameFilter(v);
+                      setOtherToursPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Levels</SelectItem>
+                      <SelectItem value="local">Local (&lt;1K)</SelectItem>
+                      <SelectItem value="regional">Regional (1K-5K)</SelectItem>
+                      <SelectItem value="national">
+                        National (5K-20K)
+                      </SelectItem>
+                      <SelectItem value="international">
+                        International (20K+)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
- {/* Pagination */}
- {otherToursTotalPages > 1 && (
- <div className="flex items-center justify-center gap-2 pt-4">
- <Button
- variant="outline"size="sm"onClick={() => setOtherToursPage((p) => Math.max(1, p - 1))}
- disabled={otherToursPage === 1}
- >
- <ChevronLeft className="h-4 w-4"/>
- </Button>
- <span className="text-sm text-muted-foreground px-4">
- Page {otherToursPage} of {otherToursTotalPages}
- </span>
- <Button
- variant="outline"size="sm"onClick={() => setOtherToursPage((p) => Math.min(otherToursTotalPages, p + 1))}
- disabled={otherToursPage === otherToursTotalPages}
- >
- <ChevronRight className="h-4 w-4"/>
- </Button>
- </div>
- )}
- </>
- )}
- </TabsContent>
- </Tabs>
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">Genre</label>
+                  <Select
+                    value={genreFilter}
+                    onValueChange={(v) => {
+                      setGenreFilter(v);
+                      setOtherToursPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Genres</SelectItem>
+                      {MUSIC_GENRES.map((g) => (
+                        <SelectItem key={g} value={g}>
+                          {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
- {/* Tour Details Dialog */}
- <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
- <DialogContent className="max-w-2xl max-h-[80vh]">
- <DialogHeader>
- <DialogTitle className="flex items-center gap-2">
- <MapPin className="h-5 w-5"/>
- {selectedTour?.name}
- {selectedTour && getStatusBadge(selectedTour.status)}
- </DialogTitle>
- </DialogHeader>
- 
- {selectedTour && (
- <ScrollArea className="max-h-[60vh]">
- <div className="space-y-6 pr-4">
- {/* New Detail Panel with real stats */}
- <TourDetailPanel tour={selectedTour} />
+          {loadingOtherTours ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : otherToursData?.tours.length === 0 ? (
+            <EmptyState
+              icon={Music}
+              title="No Other Tours"
+              description="No bands touring right now."
+            />
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {otherToursData?.tours.map((tour) => (
+                  <TourCard key={tour.id} tour={tour} showBandInfo />
+                ))}
+              </div>
 
- {selectedTour.description && (
- <div className="space-y-1">
- <p className="text-sm text-muted-foreground">Description</p>
- <p className="text-sm">{selectedTour.description}</p>
- </div>
- )}
+              {/* Pagination */}
+              {otherToursTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOtherToursPage((p) => Math.max(1, p - 1))}
+                    disabled={otherToursPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-4">
+                    Page {otherToursPage} of {otherToursTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setOtherToursPage((p) =>
+                        Math.min(otherToursTotalPages, p + 1),
+                      )
+                    }
+                    disabled={otherToursPage === otherToursTotalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
- {/* Route Map */}
- {(() => {
- const routePoints: RoutePoint[] = tourVenues
- .filter((tv) => tv.venue?.city?.latitude != null && tv.venue?.city?.longitude != null)
- .map((tv, i) => ({
- cityName: tv.venue!.city!.name,
- country: tv.venue!.city!.country,
- lat: tv.venue!.city!.latitude!,
- lng: tv.venue!.city!.longitude!,
- index: i,
- status: tv.gig_status || tv.status ||"scheduled",
- }));
- return routePoints.length >= 2 ? (
- <Card>
- <CardHeader className="pb-2">
- <CardTitle className="text-sm flex items-center gap-2">
- <Map className="h-4 w-4"/>
- Route Map
- </CardTitle>
- </CardHeader>
- <CardContent>
- <TourRouteMap points={routePoints} />
- </CardContent>
- </Card>
- ) : null;
- })()}
+      {/* Tour Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              {selectedTour?.name}
+              {selectedTour && getStatusBadge(selectedTour.status)}
+            </DialogTitle>
+          </DialogHeader>
 
- {/* Tour Dates & Venues */}
- <div className="space-y-3">
- <h3 className="font-semibold flex items-center gap-2">
- <Calendar className="h-4 w-4"/>
- Tour Dates & Venues ({tourVenues.length} stops)
- </h3>
- 
- {loadingVenues ? (
- <div className="flex items-center justify-center py-8">
- <Loader2 className="h-6 w-6 animate-spin text-primary"/>
- </div>
- ) : tourVenues.length === 0 ? (
- <p className="text-sm text-muted-foreground py-4 text-center">
- No venue dates scheduled for this tour yet.
- </p>
- ) : (
- <div className="space-y-2">
- {tourVenues.map((tv: TourVenue, index: number) => {
- const ticketsSold = tv.gig_tickets_sold ?? tv.tickets_sold ?? 0;
- const revenue = tv.gig_revenue ?? tv.revenue ?? 0;
- const isCompleted = tv.gig_status ==='completed';
- 
- return (
- <div 
- key={tv.id} 
- className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
- <div className="flex items-center gap-3 min-w-0">
- <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
- {index + 1}
- </div>
- <div className="min-w-0">
- <div className="flex items-center gap-2 flex-wrap">
- <p className="font-medium text-sm truncate">{tv.venue?.name ||'Unknown Venue'}</p>
- {isCompleted && tv.overall_rating !== null && (
- <Badge variant="outline"className="text-[10px] flex items-center gap-0.5 shrink-0">
- <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500"/>
- {tv.overall_rating.toFixed(1)}
- </Badge>
- )}
- {tv.gig_status && (
- <Badge variant={
- tv.gig_status ==='completed'?'default':
- tv.gig_status ==='scheduled'?'secondary':
- tv.gig_status ==='in_progress'?'default':'outline'} className="text-[10px] shrink-0">
- {tv.gig_status}
- </Badge>
- )}
- </div>
- <p className="text-xs text-muted-foreground">
- {tv.venue?.city?.name}, {tv.venue?.city?.country} • {format(new Date(tv.date),'MMM d, yyyy')}
- </p>
- {tv.setlist_name && (
- <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
- <ListMusic className="h-3 w-3"/>
- {tv.setlist_name}
- </p>
- )}
- {isCompleted && tv.performance_grade && (
- <p className="text-xs text-muted-foreground mt-0.5">
- Grade: {tv.performance_grade}
- </p>
- )}
- </div>
- </div>
- <div className="text-right shrink-0 ml-2">
- <div className="flex items-center gap-1 text-xs">
- <Ticket className="h-3 w-3"/>
- <span>{ticketsSold.toLocaleString()}/{tv.venue?.capacity?.toLocaleString() ||'?'}</span>
- </div>
- <p className="text-sm font-bold tabular-nums text-green-500">
- ${revenue.toLocaleString()}
- </p>
- </div>
- </div>
- );
- })}
- </div>
- )}
- </div>
+          {selectedTour && (
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-6 pr-4">
+                {/* New Detail Panel with real stats */}
+                <TourDetailPanel tour={selectedTour} />
 
- {/* Management actions */}
- {selectedTour.band_id === currentBandId && selectedTour.status !=='completed'&& selectedTour.status !=='cancelled'&& (
- <div className="space-y-2 pt-2">
- <p className="text-xs font-medium text-muted-foreground">Tour Management</p>
- <Button
- variant="outline"size="sm"className="w-full"onClick={() => addNewMemberTravelMutation.mutate(selectedTour.id)}
- disabled={addNewMemberTravelMutation.isPending}
- >
- {addNewMemberTravelMutation.isPending ? (
- <Loader2 className="h-4 w-4 animate-spin mr-2"/>
- ) : (
- <Users className="h-4 w-4 mr-2"/>
- )}
- Add Travel for New Members
- </Button>
+                {selectedTour.description && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Description</p>
+                    <p className="text-sm">{selectedTour.description}</p>
+                  </div>
+                )}
 
- <Button 
- variant="outline"size="sm"className="w-full"onClick={() => regenerateTravelLegsMutation.mutate(selectedTour.id)}
- disabled={regenerateTravelLegsMutation.isPending}
- >
- {regenerateTravelLegsMutation.isPending ? (
- <Loader2 className="h-4 w-4 animate-spin mr-2"/>
- ) : (
- <Map className="h-4 w-4 mr-2"/>
- )}
- Regenerate Travel Schedule
- </Button>
+                {/* Route Map */}
+                {(() => {
+                  const routePoints: RoutePoint[] = tourVenues
+                    .filter(
+                      (tv) =>
+                        tv.venue?.city?.latitude != null &&
+                        tv.venue?.city?.longitude != null,
+                    )
+                    .map((tv, i) => ({
+                      cityName: tv.venue!.city!.name,
+                      country: tv.venue!.city!.country,
+                      lat: tv.venue!.city!.latitude!,
+                      lng: tv.venue!.city!.longitude!,
+                      index: i,
+                      status: tv.gig_status || tv.status || "scheduled",
+                    }));
+                  return routePoints.length >= 2 ? (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Map className="h-4 w-4" />
+                          Route Map
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <TourRouteMap points={routePoints} />
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
 
- <Button
- variant="outline"size="sm"className="w-full"onClick={() => catchUpToTourMutation.mutate(selectedTour.id)}
- disabled={catchUpToTourMutation.isPending}
- >
- {catchUpToTourMutation.isPending ? (
- <Loader2 className="h-4 w-4 animate-spin mr-2"/>
- ) : (
- <Plus className="h-4 w-4 mr-2"/>
- )}
- Catch Up to Tour ($1,500 charter)
- </Button>
+                {/* Tour Dates & Venues */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Tour Dates & Venues ({tourVenues.length} stops)
+                  </h3>
 
- <AlertDialog>
- <AlertDialogTrigger asChild>
- <Button variant="destructive"size="sm"className="w-full">
- <XCircle className="h-4 w-4 mr-2"/>
- Cancel Tour
- </Button>
- </AlertDialogTrigger>
- <AlertDialogContent>
- <AlertDialogHeader>
- <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
- <AlertDialogDescription>
- This will permanently cancel"{selectedTour.name}"and delete all associated gigs and travel legs.
- {new Date(selectedTour.created_at).toDateString() === new Date().toDateString() 
- ?"Since this tour was booked today, you'll receive a full refund.":"No refund is available after the booking day."}
- </AlertDialogDescription>
- </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel>Keep Tour</AlertDialogCancel>
- <AlertDialogAction 
- onClick={() => cancelTourMutation.mutate(selectedTour.id)}
- disabled={cancelTourMutation.isPending}
- className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
- {cancelTourMutation.isPending ? (
- <Loader2 className="h-4 w-4 animate-spin mr-2"/>
- ) : (
- <XCircle className="h-4 w-4 mr-2"/>
- )}
- Yes, Cancel Tour
- </AlertDialogAction>
- </AlertDialogFooter>
- </AlertDialogContent>
- </AlertDialog>
- </div>
- )}
- </div>
- </ScrollArea>
- )}
- </DialogContent>
- </Dialog>
+                  {loadingVenues ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : tourVenues.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No venue dates scheduled for this tour yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {tourVenues.map((tv: TourVenue, index: number) => {
+                        const ticketsSold =
+                          tv.gig_tickets_sold ?? tv.tickets_sold ?? 0;
+                        const revenue = tv.gig_revenue ?? tv.revenue ?? 0;
+                        const isCompleted = tv.gig_status === "completed";
 
- {/* Tour Creation Wizard */}
- <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
- <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
- <DialogHeader>
- <DialogTitle>Create New Tour - {primaryBand?.bands?.name}</DialogTitle>
- </DialogHeader>
- {currentBandId && (
- <TourWizard
- bandId={currentBandId}
- onComplete={() => setWizardOpen(false)}
- onCancel={() => setWizardOpen(false)}
- />
- )}
- </DialogContent>
- </Dialog>
- </FMPageScaffold>
- );
+                        return (
+                          <div
+                            key={tv.id}
+                            className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium text-sm truncate">
+                                    {tv.venue?.name || "Unknown Venue"}
+                                  </p>
+                                  {isCompleted &&
+                                    tv.overall_rating !== null && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] flex items-center gap-0.5 shrink-0"
+                                      >
+                                        <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+                                        {tv.overall_rating.toFixed(1)}
+                                      </Badge>
+                                    )}
+                                  {tv.gig_status && (
+                                    <Badge
+                                      variant={
+                                        tv.gig_status === "completed"
+                                          ? "default"
+                                          : tv.gig_status === "scheduled"
+                                            ? "secondary"
+                                            : tv.gig_status === "in_progress"
+                                              ? "default"
+                                              : "outline"
+                                      }
+                                      className="text-[10px] shrink-0"
+                                    >
+                                      {tv.gig_status}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {tv.venue?.city?.name},{" "}
+                                  {tv.venue?.city?.country} •{" "}
+                                  {format(new Date(tv.date), "MMM d, yyyy")}
+                                </p>
+                                {tv.setlist_name && (
+                                  <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                                    <ListMusic className="h-3 w-3" />
+                                    {tv.setlist_name}
+                                  </p>
+                                )}
+                                {isCompleted && tv.performance_grade && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Grade: {tv.performance_grade}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              <div className="flex items-center gap-1 text-xs">
+                                <Ticket className="h-3 w-3" />
+                                <span>
+                                  {ticketsSold.toLocaleString()}/
+                                  {tv.venue?.capacity?.toLocaleString() || "?"}
+                                </span>
+                              </div>
+                              <p className="text-sm font-bold tabular-nums text-green-500">
+                                ${revenue.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Management actions */}
+                {selectedTour.band_id === currentBandId &&
+                  selectedTour.status !== "completed" &&
+                  selectedTour.status !== "cancelled" && (
+                    <div className="space-y-2 pt-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Tour Management
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          addNewMemberTravelMutation.mutate(selectedTour.id)
+                        }
+                        disabled={addNewMemberTravelMutation.isPending}
+                      >
+                        {addNewMemberTravelMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Users className="h-4 w-4 mr-2" />
+                        )}
+                        Add Travel for New Members
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          regenerateTravelLegsMutation.mutate(selectedTour.id)
+                        }
+                        disabled={regenerateTravelLegsMutation.isPending}
+                      >
+                        {regenerateTravelLegsMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Map className="h-4 w-4 mr-2" />
+                        )}
+                        Regenerate Travel Schedule
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          catchUpToTourMutation.mutate(selectedTour.id)
+                        }
+                        disabled={catchUpToTourMutation.isPending}
+                      >
+                        {catchUpToTourMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        Catch Up to Tour ($1,500 charter)
+                      </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="w-full"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Cancel Tour
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently cancel"{selectedTour.name}
+                              "and delete all associated gigs and travel legs.
+                              {new Date(
+                                selectedTour.created_at,
+                              ).toDateString() === new Date().toDateString()
+                                ? "Since this tour was booked today, you'll receive a full refund."
+                                : "No refund is available after the booking day."}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep Tour</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() =>
+                                cancelTourMutation.mutate(selectedTour.id)
+                              }
+                              disabled={cancelTourMutation.isPending}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {cancelTourMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <XCircle className="h-4 w-4 mr-2" />
+                              )}
+                              Yes, Cancel Tour
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Tour Creation Wizard */}
+      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Create New Tour - {primaryBand?.bands?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {currentBandId && (
+            <TourWizard
+              bandId={currentBandId}
+              onComplete={() => setWizardOpen(false)}
+              onCancel={() => setWizardOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </FMPageScaffold>
+  );
 };
 
 export default TourManager;
