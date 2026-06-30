@@ -101,15 +101,39 @@ const NewspapersBrowser = () => {
     };
   }, [newspapers]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  const decoratedNewspapers = useMemo(() => {
+    return (newspapers ?? []).map(paper => ({
+      paper,
+      gate: evaluateReachGate({
+        city_id: paper.city_id,
+        country: paper.country,
+        audience: paper.circulation,
+        min_fame_required: paper.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [newspapers, playerLocale]);
+
   const filteredNewspapers = useMemo(() => {
-    return newspapers?.filter(paper => {
+    return decoratedNewspapers.filter(({ paper, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = paper.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || paper.newspaper_type === typeFilter;
       const matchesCountry = countryFilter === "all" || paper.country === countryFilter;
       const matchesGenre = genreFilter === "all" || paper.genres?.includes(genreFilter);
       return matchesSearch && matchesType && matchesCountry && matchesGenre;
-    }) || [];
-  }, [newspapers, searchTerm, typeFilter, countryFilter, genreFilter]);
+    });
+  }, [decoratedNewspapers, showOutOfReach, searchTerm, typeFilter, countryFilter, genreFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedNewspapers.filter(d => !d.gate.inReach).length,
+    [decoratedNewspapers],
+  );
 
   const formatCirculation = (circ: number) => {
     if (circ >= 1000000) return `${(circ / 1000000).toFixed(1)}M`;
