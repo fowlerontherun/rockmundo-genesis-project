@@ -18,9 +18,9 @@ interface CategoryHubProps {
   description?: string;
   tiles?: HubTile[];
   groups?: TileGroup[];
-  /** Optional KPIs rendered in the magazine sidebar next to the hero tile. */
+  /** Optional KPIs. If omitted, the sidebar is hidden entirely (no more
+   *  auto-generated "Tiles: 12 / Status: LIVE" filler). */
   stats?: HubStat[];
-  /** Optional featured-tile metadata; defaults to the first tile in `tiles` or in the first group. */
   featuredEyebrow?: string;
   featuredHeadline?: string;
   featuredCopy?: string;
@@ -50,34 +50,19 @@ export const CategoryHub = ({
   const firstGroupRest = allGroups[0]?.tiles.slice(1) ?? [];
   const restGroups = allGroups.slice(1);
 
-  const totalTiles = allGroups.reduce((n, g) => n + g.tiles.length, 0);
-  const topSection = allGroups.reduce<TileGroup | undefined>(
-    (best, g) => (!best || g.tiles.length > best.tiles.length ? g : best),
-    undefined,
-  );
-  const featuredLabel = featuredTile ? t(featuredTile.labelKey) : "—";
-  const resolvedStats: HubStat[] =
-    stats && stats.length > 0
-      ? stats
-      : [
-          { label: "Tiles", value: totalTiles, hint: "Across this hub" },
-          { label: "Sections", value: allGroups.length, hint: "Grouped categories" },
-          { label: "Largest Section", value: topSection?.tiles.length ?? 0, hint: topSection?.label?.toUpperCase() },
-          { label: "Featured", value: featuredLabel.toUpperCase(), hint: "Top of the page" },
-          { label: "Status", value: "LIVE", hint: "Synced with your career" },
-        ];
+  const hasRealStats = stats && stats.length > 0;
 
   return (
     <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
       {featuredTile && (
-        <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
+        <div className={hasRealStats ? "grid gap-3 lg:grid-cols-[1fr_280px]" : ""}>
           <FeaturedTile
             tile={featuredTile}
             eyebrow={featuredEyebrow || "Featured"}
             headline={featuredHeadline}
             copy={featuredCopy}
           />
-          <StatsSidebar stats={resolvedStats} />
+          {hasRealStats && <StatsSidebar stats={stats!} />}
         </div>
       )}
 

@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.427",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Hub redesign — quieter, denser, no filler data.** Removed the auto-generated 'Trending Data' sidebar that was padding every hub with meaningless rows like 'Tiles: 12 / Sections: 3 / Status: LIVE'. Sidebars now only render when a page actually passes real KPIs; otherwise the hero tile stretches full width. Stripped the over-decorated MagazineTile (halftone screens, paper grain, vinyl peeks, catalog stickers, waveform strips, ticket tear strips) down to a clean card: square painterly art, 3px accent stripe, small icon chip top-right, single title + one-line description, hover 'Open ↗' hint. FeaturedTile loses the spinning vinyl, tour-date stamp, and ticket tear in favour of a single accent stripe and headline block. Result reads as a polished management hub rather than a noisy concert flyer." },
+    ],
+  },
+  {
     version: "1.1.426",
     date: "2026-06-30",
     changes: [
