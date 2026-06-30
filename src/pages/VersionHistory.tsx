@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.432",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**New Progression panel at `/progression` explains the reach ladder.** Pulls the 20 fame tiers from `BAND_FAME_THRESHOLDS`, groups them into six reach bands — hyper-local (0–299), local (300–1,999), regional (2,000–11,999), national (12,000–99,999), international (100,000–499,999) and legendary (500,000+) — and shows the player exactly where they sit. Headline card displays the current tier, fame total, a progress bar to the next tier with the exact fame still required, and the previous tier for context. Each reach band has its own card with a one-line blurb, an itemised list of what it unlocks (open-mic + community FM at hyper-local, bridge-tier Metro Music magazine at ~400 fame, arena bookings + label scouting at national, 20% neighbor-country spillover at international, Hall of Immortals at legendary) and chips for every tier inside it; locked bands dim, unlocked bands tick, the active band gets a primary border. A final 'Regional fame breakdown' card pulls the top 10 countries from `band_country_fans` so the player can see where their cap is still 100 (spillover only) versus where they've performed." },
+    ],
+  },
+  {
     version: "1.1.431",
     date: "2026-06-30",
     changes: [

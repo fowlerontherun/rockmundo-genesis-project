@@ -19,16 +19,15 @@ interface TierDef {
 }
 
 const TIERS: TierDef[] = (Object.entries(BAND_FAME_THRESHOLDS) as [keyof typeof BAND_FAME_THRESHOLDS, number][])
-  .map(([key, fame]) => ({
+  .map(([key, fame]): TierDef => ({
     key,
     fame,
     label: getBandFameTitle(fame),
-    reach:
-      fame < 300 ? "hyperlocal" :
+    reach: (fame < 300 ? "hyperlocal" :
       fame < 2000 ? "local" :
       fame < 12000 ? "regional" :
       fame < 100000 ? "national" :
-      fame < 500000 ? "international" : "legendary",
+      fame < 500000 ? "international" : "legendary") as Reach,
   }))
   .sort((a, b) => a.fame - b.fame);
 
