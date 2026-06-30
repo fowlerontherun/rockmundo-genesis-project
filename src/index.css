@@ -655,15 +655,16 @@
    give each game section a distinct atmosphere — without
    compromising readability or the FM2024 chrome.
    ============================================================ */
-.fm-module-themed[data-fm-module="overview"]   { --fm-accent: 195 90% 55%; --fm-mod-1: 195 90% 55%; --fm-mod-2: 220 80% 50%; }
-.fm-module-themed[data-fm-module="character"]  { --fm-accent: 270 85% 68%; --fm-mod-1: 270 85% 65%; --fm-mod-2: 300 70% 55%; }
-.fm-module-themed[data-fm-module="music"]      { --fm-accent: 325 85% 62%; --fm-mod-1: 325 85% 62%; --fm-mod-2: 280 75% 55%; }
-.fm-module-themed[data-fm-module="band-live"]  { --fm-accent: 35 95% 58%;  --fm-mod-1: 35 95% 58%;  --fm-mod-2: 15 85% 52%;  }
-.fm-module-themed[data-fm-module="career"]     { --fm-accent: 150 70% 50%; --fm-mod-1: 150 70% 50%; --fm-mod-2: 180 65% 45%; }
-.fm-module-themed[data-fm-module="media"]      { --fm-accent: 0 78% 60%;   --fm-mod-1: 0 78% 60%;   --fm-mod-2: 25 85% 55%;  }
-.fm-module-themed[data-fm-module="world"]      { --fm-accent: 175 80% 50%; --fm-mod-1: 175 80% 50%; --fm-mod-2: 205 75% 50%; }
-.fm-module-themed[data-fm-module="social"]     { --fm-accent: 220 90% 68%; --fm-mod-1: 220 90% 68%; --fm-mod-2: 260 80% 60%; }
-.fm-module-themed[data-fm-module="admin"]      { --fm-accent: 25 90% 55%;  --fm-mod-1: 25 90% 55%;  --fm-mod-2: 0 75% 55%;   }
+/* Spec §1.3 — one accent per top-level tab. Sub-pages inherit. */
+.fm-module-themed[data-fm-module="overview"]   { --fm-accent: 250 86% 73%; --fm-mod-1: 250 86% 73%; --fm-mod-2: 260 70% 60%; }
+.fm-module-themed[data-fm-module="character"]  { --fm-accent: 250 86% 73%; --fm-mod-1: 250 86% 73%; --fm-mod-2: 280 70% 60%; }
+.fm-module-themed[data-fm-module="music"]      { --fm-accent: 250 86% 73%; --fm-mod-1: 250 86% 73%; --fm-mod-2: 280 75% 60%; }
+.fm-module-themed[data-fm-module="band-live"]  { --fm-accent: 32 87% 60%;  --fm-mod-1: 32 87% 60%;  --fm-mod-2: 18 80% 55%;  }
+.fm-module-themed[data-fm-module="career"]     { --fm-accent: 115 44% 50%; --fm-mod-1: 115 44% 50%; --fm-mod-2: 145 50% 45%; }
+.fm-module-themed[data-fm-module="media"]      { --fm-accent: 215 71% 54%; --fm-mod-1: 215 71% 54%; --fm-mod-2: 200 70% 50%; }
+.fm-module-themed[data-fm-module="world"]      { --fm-accent: 215 71% 54%; --fm-mod-1: 215 71% 54%; --fm-mod-2: 195 70% 50%; }
+.fm-module-themed[data-fm-module="social"]     { --fm-accent: 339 60% 58%; --fm-mod-1: 339 60% 58%; --fm-mod-2: 320 60% 55%; }
+.fm-module-themed[data-fm-module="admin"]      { --fm-accent: 257 11% 63%; --fm-mod-1: 257 11% 63%; --fm-mod-2: 257 8% 50%;   }
 
 /* Ambient themed background layer painted behind <main>. Two soft
    radial pools in the module's accent hues plus a faint vignette
