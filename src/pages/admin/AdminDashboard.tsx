@@ -100,6 +100,7 @@ const AdminDashboard = () => {
     { label: "Producers", path: "/admin/producers", icon: Disc3 },
     // Media & Streaming
     { label: "Radio Stations", path: "/admin/radio-stations", icon: Radio },
+    { label: "Media Outlets", path: "/admin/media-outlets", icon: Newspaper },
     { label: "Streaming Platforms", path: "/admin/streaming-platforms", icon: Headphones },
     { label: "YouTube Videos", path: "/admin/youtube-videos", icon: Video },
     // Events & Customization
