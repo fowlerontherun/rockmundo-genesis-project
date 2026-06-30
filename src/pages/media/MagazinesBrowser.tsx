@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
+import { ReachGateBanner } from "@/components/media/ReachGateBanner";
+import { evaluateReachGate } from "@/utils/mediaReachGate";
 
 interface MagazineItem {
   id: string;
@@ -44,6 +46,7 @@ const MagazinesBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedMagazine, setSelectedMagazine] = useState<MagazineItem | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   useEffect(() => {
     if (currentCity?.country && countryFilter === "all") {
@@ -98,15 +101,38 @@ const MagazinesBrowser = () => {
     };
   }, [magazines]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  const decoratedMagazines = useMemo(() => {
+    return (magazines ?? []).map(mag => ({
+      mag,
+      gate: evaluateReachGate({
+        country: mag.country,
+        audience: mag.readership,
+        min_fame_required: mag.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [magazines, playerLocale]);
+
   const filteredMagazines = useMemo(() => {
-    return magazines?.filter(mag => {
+    return decoratedMagazines.filter(({ mag, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = mag.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || mag.magazine_type === typeFilter;
       const matchesCountry = countryFilter === "all" || mag.country === countryFilter;
       const matchesGenre = genreFilter === "all" || mag.genres?.includes(genreFilter);
       return matchesSearch && matchesType && matchesCountry && matchesGenre;
-    }) || [];
-  }, [magazines, searchTerm, typeFilter, countryFilter, genreFilter]);
+    });
+  }, [decoratedMagazines, showOutOfReach, searchTerm, typeFilter, countryFilter, genreFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedMagazines.filter(d => !d.gate.inReach).length,
+    [decoratedMagazines],
+  );
 
   const formatReadership = (readers: number) => {
     if (readers >= 1000000) return `${(readers / 1000000).toFixed(1)}M`;
@@ -187,6 +213,17 @@ const MagazinesBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredMagazines.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="magazines"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredMagazines.length} of {magazines?.length || 0} magazines
       </p>
@@ -199,8 +236,8 @@ const MagazinesBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMagazines.map(mag => (
-            <Card key={mag.id} className="hover:shadow-lg transition-shadow flex flex-col">
+          {filteredMagazines.map(({ mag, gate }) => (
+            <Card key={mag.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!gate.inReach ? 'opacity-60' : ''}`}>
               <Link
                 to={`/media/magazines/${mag.id}`}
                 className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
@@ -208,7 +245,17 @@ const MagazinesBrowser = () => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{mag.name}</CardTitle>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      <Badge
+                        variant="outline"
+                        className={
+                          gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                          : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                          : 'border-amber-500/40 text-amber-400 text-xs'
+                        }
+                      >
+                        {gate.outletScope}
+                      </Badge>
                       {mag.magazine_type && (
                         <Badge variant="outline" className="capitalize">{mag.magazine_type.replace('_', ' ')}</Badge>
                       )}
@@ -283,6 +330,10 @@ const MagazinesBrowser = () => {
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Request Pending
                   </Button>
+                ) : !gate.inReach ? (
+                  <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                    Out of reach — {gate.reason}
+                  </Button>
                 ) : (
                   <Button
                     variant={isEligible(mag) ? "default" : "outline"}
@@ -299,6 +350,7 @@ const MagazinesBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedMagazine && userBand && (
         <MediaSubmissionDialog

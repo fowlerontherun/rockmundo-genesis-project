@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useUserBand } from "@/hooks/useUserBand";
 import { MediaSubmissionDialog } from "@/components/media/MediaSubmissionDialog";
+import { ReachGateBanner } from "@/components/media/ReachGateBanner";
+import { evaluateReachGate } from "@/utils/mediaReachGate";
 import { 
   Globe, Search, Filter, MapPin,
   TrendingUp, DollarSign, Send, CheckCircle, ExternalLink, Users, Star
@@ -40,6 +42,7 @@ const WebsitesBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [rankFilter, setRankFilter] = useState<string>("all");
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   const { data: websites, isLoading } = useQuery({
     queryKey: ['websites-browser'],
@@ -92,22 +95,55 @@ const WebsitesBrowser = () => {
     };
   }, [websites]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  // Estimate audience inversely from traffic_rank (smaller rank → bigger site).
+  const estimateAudience = (rank: number | null | undefined) => {
+    if (!rank || rank <= 0) return 10_000;
+    if (rank <= 1_000) return 5_000_000;
+    if (rank <= 10_000) return 500_000;
+    if (rank <= 50_000) return 80_000;
+    if (rank <= 100_000) return 30_000;
+    return 5_000;
+  };
+
+  const decoratedWebsites = useMemo(() => {
+    return (websites ?? []).map(web => ({
+      web,
+      gate: evaluateReachGate({
+        country: web.country,
+        audience: estimateAudience(web.traffic_rank),
+        min_fame_required: web.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [websites, playerLocale]);
+
   const filteredWebsites = useMemo(() => {
-    return websites?.filter(web => {
+    return decoratedWebsites.filter(({ web, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = web.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         web.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCountry = countryFilter === "all" || web.country === countryFilter;
-      
+
       let matchesRank = true;
       if (rankFilter !== "all" && web.traffic_rank) {
         if (rankFilter === "top10k") matchesRank = web.traffic_rank <= 10000;
         else if (rankFilter === "top50k") matchesRank = web.traffic_rank <= 50000;
         else if (rankFilter === "top100k") matchesRank = web.traffic_rank <= 100000;
       }
-      
+
       return matchesSearch && matchesCountry && matchesRank;
-    }) || [];
-  }, [websites, searchTerm, countryFilter, rankFilter]);
+    });
+  }, [decoratedWebsites, showOutOfReach, searchTerm, countryFilter, rankFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedWebsites.filter(d => !d.gate.inReach).length,
+    [decoratedWebsites],
+  );
 
   const formatTrafficRank = (rank: number | null) => {
     if (!rank) return 'N/A';
@@ -202,6 +238,17 @@ const WebsitesBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredWebsites.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="websites"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredWebsites.length} of {websites?.length || 0} websites
       </p>
@@ -214,8 +261,8 @@ const WebsitesBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredWebsites.map(web => (
-            <Card key={web.id} className="hover:shadow-lg transition-shadow">
+          {filteredWebsites.map(({ web, gate }) => (
+            <Card key={web.id} className={`hover:shadow-lg transition-shadow ${!gate.inReach ? 'opacity-60' : ''}`}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -232,7 +279,17 @@ const WebsitesBrowser = () => {
                       </a>
                     )}
                   </CardTitle>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    <Badge
+                      variant="outline"
+                      className={
+                        gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                        : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                        : 'border-amber-500/40 text-amber-400 text-xs'
+                      }
+                    >
+                      {gate.outletScope}
+                    </Badge>
                     <Badge className={getRankColor(web.traffic_rank)}>
                       {formatTrafficRank(web.traffic_rank)}
                     </Badge>
@@ -298,6 +355,10 @@ const WebsitesBrowser = () => {
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Request Pending
                     </Button>
+                  ) : !gate.inReach ? (
+                    <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                      Out of reach — {gate.reason}
+                    </Button>
                   ) : (
                     <Button
                       variant={isEligible(web) ? "default" : "outline"}
@@ -315,6 +376,7 @@ const WebsitesBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedWebsite && userBand && (
         <MediaSubmissionDialog

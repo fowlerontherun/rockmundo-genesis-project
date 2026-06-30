@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.433",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Region- and locale-based reach gating on every media browser.** New `evaluateReachGate()` util classifies the player into one of four reach tiers (local / regional / national / international) based on band fame and the BAND_FAME_THRESHOLDS ladder, then scores every outlet as `local` (same city), `national` (same country) or `international`. Magazines, Newspapers, Podcasts and Websites browsers now hide outlets the player can't reach by default and show a clear blue 'Reach gate' banner up top: current tier badge, fame still needed to unlock the next tier, count of in-reach outlets, and a `Show locked` switch to peek at what's still ahead. Each outlet card gets a colour-coded scope chip (emerald = local, sky = national, amber = international) and the apply CTA on locked outlets becomes a disabled `Out of reach — <reason>` button explaining the gate (e.g. 'Too big for a local act — grow fame above 1,000' or 'International outlet — start with local press'). Early-game bands now correctly see only hyper-local press in their starting city until they pass 1,000 fame, then their entire country opens up, and at 18,000+ fame international outlets become reachable." },
+    ],
+  },
+  {
     version: "1.1.432",
     date: "2026-06-30",
     changes: [

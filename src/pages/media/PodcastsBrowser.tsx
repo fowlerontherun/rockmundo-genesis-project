@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
+import { ReachGateBanner } from "@/components/media/ReachGateBanner";
+import { evaluateReachGate } from "@/utils/mediaReachGate";
 
 interface PodcastShow {
   id: string;
@@ -46,6 +48,7 @@ const PodcastsBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ['podcasts-browser'],
@@ -106,16 +109,39 @@ const PodcastsBrowser = () => {
     };
   }, [podcasts]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  const decoratedPodcasts = useMemo(() => {
+    return (podcasts ?? []).map(pod => ({
+      pod,
+      gate: evaluateReachGate({
+        country: pod.country,
+        audience: pod.listener_base,
+        min_fame_required: pod.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [podcasts, playerLocale]);
+
   const filteredPodcasts = useMemo(() => {
-    return podcasts?.filter(pod => {
+    return decoratedPodcasts.filter(({ pod, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = pod.podcast_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         pod.host_name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || pod.podcast_type === typeFilter;
       const matchesCountry = countryFilter === "all" || pod.country === countryFilter;
       const matchesGenre = genreFilter === "all" || pod.genres?.includes(genreFilter);
       return matchesSearch && matchesType && matchesCountry && matchesGenre;
-    }) || [];
-  }, [podcasts, searchTerm, typeFilter, countryFilter, genreFilter]);
+    });
+  }, [decoratedPodcasts, showOutOfReach, searchTerm, typeFilter, countryFilter, genreFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedPodcasts.filter(d => !d.gate.inReach).length,
+    [decoratedPodcasts],
+  );
 
   const formatListenerBase = (listeners: number) => {
     if (listeners >= 1000000) return `${(listeners / 1000000).toFixed(1)}M`;
@@ -196,6 +222,17 @@ const PodcastsBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredPodcasts.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="podcasts"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredPodcasts.length} of {podcasts?.length || 0} podcasts
       </p>
@@ -208,8 +245,8 @@ const PodcastsBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPodcasts.map(pod => (
-            <Card key={pod.id} className="group hover:shadow-lg hover:border-primary/40 transition-all flex flex-col overflow-hidden">
+          {filteredPodcasts.map(({ pod, gate }) => (
+            <Card key={pod.id} className={`group hover:shadow-lg hover:border-primary/40 transition-all flex flex-col overflow-hidden ${!gate.inReach ? 'opacity-60' : ''}`}>
               <Link
                 to={`/media/podcasts/${pod.id}`}
                 aria-label={`View details for ${pod.podcast_name}`}
@@ -218,7 +255,17 @@ const PodcastsBrowser = () => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{pod.podcast_name}</CardTitle>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      <Badge
+                        variant="outline"
+                        className={
+                          gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                          : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                          : 'border-amber-500/40 text-amber-400 text-xs'
+                        }
+                      >
+                        {gate.outletScope}
+                      </Badge>
                       {pod.podcast_type && (
                         <Badge variant="outline" className="capitalize">{pod.podcast_type.replace('_', ' ')}</Badge>
                       )}
@@ -295,6 +342,10 @@ const PodcastsBrowser = () => {
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Request Pending
                   </Button>
+                ) : !gate.inReach ? (
+                  <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                    Out of reach — {gate.reason}
+                  </Button>
                 ) : (
                   <Button
                     variant={isEligible(pod) ? "default" : "outline"}
@@ -311,6 +362,7 @@ const PodcastsBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedPodcast && userBand && (
         <MediaSubmissionDialog
