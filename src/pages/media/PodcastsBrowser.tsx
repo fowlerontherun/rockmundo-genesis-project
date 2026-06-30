@@ -48,6 +48,7 @@ const PodcastsBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ['podcasts-browser'],
