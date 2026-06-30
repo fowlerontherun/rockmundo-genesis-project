@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.426",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Stronger Rockmundo branding across the shell.** Top status bar now leads with a larger glowing Rockmundo mark plus a Bebas Neue 'ROCKMUNDO' wordmark and 'Live the dream' tagline, all clickable as a home button. Sidebar gains a dedicated brand strip above the module label (logo + wordmark when expanded, mark-only when collapsed). Bottom action bar shows a Rockmundo © 2026 lockup beside the Continue button. Main canvas now carries a barely-there Bebas wordmark watermark in the bottom-right so the brand is felt on every content page without competing with data." },
+    ],
+  },
+  {
     version: "1.1.425",
     date: "2026-06-30",
     changes: [
