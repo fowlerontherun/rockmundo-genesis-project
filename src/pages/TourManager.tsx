@@ -474,10 +474,10 @@ const TourManager = () => {
         .in("id", cityIds);
       if (cityError) throw cityError;
       // @ts-ignore - Supabase type inference issue
-      const cityNameMap = new Map(
+      const cityNameMap = new Map<string, string>(
         (citiesData || []).map((city: any) => [
-          city.id,
-          `${city.name}, ${city.country}`,
+          city.id as string,
+          `${city.name}, ${city.country}` as string,
         ]),
       );
 
