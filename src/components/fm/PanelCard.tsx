@@ -14,10 +14,10 @@ export const PanelCard = ({
   className?: string;
   bodyClassName?: string;
 }) => (
-  <section className={cn("bg-fm-panel border border-fm-border rounded-sm flex flex-col", className)}>
+  <section className={cn("bg-fm-panel border border-fm-border rounded-[12px] flex flex-col", className)}>
     {(title || actions) && (
-      <header className="h-8 flex items-center justify-between px-3 bg-fm-panel-2 border-b border-fm-border">
-        <h2 className="text-[11px] uppercase tracking-widest font-semibold text-fm-fg-muted">
+      <header className="h-9 flex items-center justify-between px-3.5 border-b border-fm-border">
+        <h2 className="text-[12px] font-medium tracking-tight text-fm-fg">
           {title}
         </h2>
         {actions && <div className="flex items-center gap-1">{actions}</div>}
