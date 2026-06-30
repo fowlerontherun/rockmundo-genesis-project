@@ -42,6 +42,7 @@ const WebsitesBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [rankFilter, setRankFilter] = useState<string>("all");
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   const { data: websites, isLoading } = useQuery({
     queryKey: ['websites-browser'],
