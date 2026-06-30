@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.428",
+    date: "2026-06-30",
+    changes: [
+      { type: 'fix', description: "**World Pulse now reads from real game data.** Previously the Genre Trends tab and City Economies tab were entirely synthetic — both computed from a deterministic PRNG seeded on city name + game day, with no connection to anything players actually did, and the Charts tab hard-filtered to today's date so it almost never returned rows. Rewrote the page: Genre Trends now aggregates real `songs` released in the last 14 days and shows current 7-day vs prior 7-day momentum per genre; the old 'City Economies' synthetic tab is replaced with a real **City Treasuries** view joining `city_treasury` to `cities` (balance, tax collected, total spent, population); Global Charts queries the latest published `chart_date` instead of today; Trending Artists adds a secondary `fame desc` sort; every tab gets an honest empty state explaining what's needed for data to appear (instead of showing fake rows)." },
+    ],
+  },
+  {
     version: "1.1.427",
     date: "2026-06-30",
     changes: [
