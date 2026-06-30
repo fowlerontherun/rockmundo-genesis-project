@@ -7298,14 +7298,18 @@ export type Database = {
       company_storefront: {
         Row: {
           capacity: number
+          close_hour: number
           company_id: string
           is_public: boolean
           market_share: number
           now_hiring: boolean
+          open_days: string[]
+          open_hour: number
           price_tier: number
           quality_score: number
           rating_avg: number
           rating_count: number
+          sold_out_behavior: string
           tagline: string | null
           total_customers_week: number
           total_revenue_week: number
@@ -7313,14 +7317,18 @@ export type Database = {
         }
         Insert: {
           capacity?: number
+          close_hour?: number
           company_id: string
           is_public?: boolean
           market_share?: number
           now_hiring?: boolean
+          open_days?: string[]
+          open_hour?: number
           price_tier?: number
           quality_score?: number
           rating_avg?: number
           rating_count?: number
+          sold_out_behavior?: string
           tagline?: string | null
           total_customers_week?: number
           total_revenue_week?: number
@@ -7328,14 +7336,18 @@ export type Database = {
         }
         Update: {
           capacity?: number
+          close_hour?: number
           company_id?: string
           is_public?: boolean
           market_share?: number
           now_hiring?: boolean
+          open_days?: string[]
+          open_hour?: number
           price_tier?: number
           quality_score?: number
           rating_avg?: number
           rating_count?: number
+          sold_out_behavior?: string
           tagline?: string | null
           total_customers_week?: number
           total_revenue_week?: number
