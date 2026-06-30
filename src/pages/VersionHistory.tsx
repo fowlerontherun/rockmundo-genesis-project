@@ -17,10 +17,10 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.422",
+    version: "1.1.423",
     date: "2026-06-30",
     changes: [
-      { type: 'feature', description: "Added search and filtering to the Version History page. A search input filters versions by version number, release date, or keywords in change descriptions. Type toggle chips (All / Features / Fixes / Improvements) filter entries, and a live result count shows matching releases and changes. Empty state includes a one-click clear filter action." },
+      { type: 'feature', description: "**Hyper-local media seeding for early-game progression.** Added hundreds of small, city-tied media outlets so new players have realistic local press to chase before they qualify for national coverage. Per city now seeds: a Community FM and College Radio station (listener base 500–6,000, no fame required), a neighborhood Gazette and alternative Weekly newspaper (circulation 1.5k–15k, no fame required), a DIY Scene Zine and free local Sound magazine (readership 800–10k), an indie Basement Tapes podcast and After Hours interview show (200–4,000 listeners), and a Local Sound Blog website. A regional tier — Metro Music magazine and On Record podcast — bridges the gap from local scenes (min fame 400–500) up to the existing national outlets, replacing the old hard cliff where the smallest podcast required 25,000 fame." },
     ],
   },
   {
