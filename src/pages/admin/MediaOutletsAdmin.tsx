@@ -304,7 +304,8 @@ function EditDialog({
   const [audience, setAudience] = useState<number>(config.audienceField ? row[config.audienceField] ?? 0 : 0);
 
   const tier = tierForFame(minFame);
-  const nextTierIndex = BAND_FAME_THRESHOLDS.findIndex((t) => t.minFame > minFame);
+  const fameTiers = Object.values(BAND_FAME_THRESHOLDS).sort((a, b) => a - b);
+  const nextRung = fameTiers.find((t) => t > minFame);
 
   const handleSave = () => {
     const patch: Record<string, any> = {
