@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Briefcase, Plus, Trash2, MapPin, DollarSign, Power, PowerOff } from "lucide-react";
+import { Briefcase, Plus, Trash2, MapPin, DollarSign, Power, PowerOff, Megaphone, Users, Sparkles } from "lucide-react";
 
 interface CompanyJobListingsProps {
   companyId: string;
@@ -228,9 +228,23 @@ export function CompanyJobListings({ companyId, companyName, headquartersCityId 
                     <span>
                       {job.current_employees ?? 0}/{job.max_employees ?? "∞"} hired
                     </span>
+                    {job.advertised_until && new Date(job.advertised_until) > new Date() && (
+                      <Badge className="text-[10px] bg-amber-500/20 text-amber-600 border-amber-500/40">
+                        <Sparkles className="h-3 w-3 mr-1" />Boosted
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => boostJob.mutate(job.id)}
+                    disabled={boostJob.isPending}
+                    title="Advertise this job for 7 days ($3,500)"
+                  >
+                    <Megaphone className="h-4 w-4 text-amber-500" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
