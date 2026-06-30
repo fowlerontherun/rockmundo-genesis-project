@@ -242,6 +242,7 @@ const WebsitesBrowser = lazyWithRetry(() => import("./pages/media/WebsitesBrowse
 const SelfPromotionBrowser = lazyWithRetry(() => import("./pages/media/SelfPromotionBrowser"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
+const ProgressionPanel = lazyWithRetry(() => import("./pages/ProgressionPanel"));
 const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./components/jam-sessions/JamSessionsEnhanced"));
@@ -651,6 +652,7 @@ function App() {
                     <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
+                    <Route path="progression" element={<ProgressionPanel />} />
                     <Route path="hall-of-immortals" element={<HallOfImmortals />} />
                     <Route path="my-character" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
