@@ -70,6 +70,7 @@ const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAd
 const EurovisionAdminPage = lazyWithRetry(() => import("./pages/admin/EurovisionAdmin"));
 const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
 const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
+const MediaOutletsAdmin = lazyWithRetry(() => import("./pages/admin/MediaOutletsAdmin"));
 const UnderworldAdmin = lazyWithRetry(() => import("./pages/admin/UnderworldAdmin"));
 const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
