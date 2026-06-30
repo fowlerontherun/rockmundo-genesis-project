@@ -21,6 +21,7 @@ import { CompanySettingsDialog } from "@/components/company/CompanySettingsDialo
 import { TransferLabelDialog } from "@/components/company/TransferLabelDialog";
 import { CompanyFinanceDialog } from "@/components/company/CompanyFinanceDialog";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
+import { PlayerStaffBonusCard } from "@/components/company/PlayerStaffBonusCard";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { CompanyJobListings } from "@/components/company/CompanyJobListings";
