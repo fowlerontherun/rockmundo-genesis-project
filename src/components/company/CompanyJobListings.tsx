@@ -168,6 +168,19 @@ export function CompanyJobListings({ companyId, companyName, headquartersCityId 
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const boostJob = useMutation({
+    mutationFn: async (jobId: string) => {
+      const { data, error } = await (supabase as any).rpc("advertise_job", { p_job_id: jobId, p_days: 7 });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Job boosted", description: `Featured for 7 days · $${data?.cost ?? 3500} from company balance` });
+      qc.invalidateQueries({ queryKey: ["company-jobs", companyId] });
+    },
+    onError: (e: Error) => toast({ title: "Could not boost", description: e.message, variant: "destructive" }),
+  });
+
   const toggleDay = (day: string) => {
     setWorkDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   };
