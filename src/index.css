@@ -739,6 +739,32 @@
 .fm-shell main [data-fm-panel] { border-radius: 4px; }
 
 /* ============================================================
+   Modernization sweep — spec §4.7 sentence-case rule
+   Neutralize aggressive ALL-CAPS and wide tracking inside the
+   app shell without touching shadcn primitives (menus, command,
+   context) that legitimately need micro-caps.
+   ============================================================ */
+.fm-shell main .uppercase:not([role="menuitem"]):not([cmdk-item]):not([data-fm-keep-caps]) {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.fm-shell main .tracking-wider:not([data-fm-keep-caps]),
+.fm-shell main .tracking-widest:not([data-fm-keep-caps]) {
+  letter-spacing: 0.01em;
+}
+.fm-shell main .text-\[10px\].uppercase,
+.fm-shell main .text-\[11px\].uppercase,
+.fm-shell main .text-xs.uppercase {
+  font-weight: 500;
+  color: hsl(var(--fm-fg-muted));
+}
+.fm-shell main h1,
+.fm-shell main h2,
+.fm-shell main h3 {
+  font-weight: 600;
+}
+
+/* ============================================================
    RockMundo signature music motifs
    Distinctive visual primitives used across hubs, cards and
    progress surfaces so the game reads as a music sim, not a
