@@ -578,6 +578,7 @@ function App() {
                     <Route path="admin/awards" element={<AwardsAdmin />} />
                     <Route path="admin/advisor" element={<AdvisorAdmin />} />
                     <Route path="admin/pr" element={<PublicRelationsAdmin />} />
+                    <Route path="admin/media-outlets" element={<MediaOutletsAdmin />} />
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/stage-templates" element={<StageTemplatesAdmin />} />
