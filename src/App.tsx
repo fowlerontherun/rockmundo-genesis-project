@@ -141,6 +141,7 @@ const SlotPurchaseSuccess = lazyWithRetry(() => import("./pages/SlotPurchaseSucc
 const CreateCharacter = lazyWithRetry(() => import("./pages/CreateCharacter"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
+const WorldCompanies = lazyWithRetry(() => import("./pages/WorldCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
 const SecurityFirmManagement = lazyWithRetry(() => import("./pages/SecurityFirmManagement"));
 const MerchFactoryManagement = lazyWithRetry(() => import("./pages/MerchFactoryManagement"));
@@ -498,6 +499,8 @@ function App() {
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="labels/:labelId/manage" element={<LabelManagement />} />
                     <Route path="my-companies" element={<MyCompanies />} />
+                    <Route path="world-companies" element={<WorldCompanies />} />
+                    <Route path="companies/directory" element={<WorldCompanies />} />
                     <Route path="company/:companyId" element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
                     <Route path="merch-factory/:companyId" element={<MerchFactoryManagement />} />

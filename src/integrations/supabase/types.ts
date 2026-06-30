@@ -6238,6 +6238,92 @@ export type Database = {
           },
         ]
       }
+      company_city_tax_payments: {
+        Row: {
+          amount: number
+          city_id: string | null
+          company_id: string
+          id: string
+          paid_at: string
+          period_end: string
+          period_start: string
+          tax_rate: number
+        }
+        Insert: {
+          amount: number
+          city_id?: string | null
+          company_id: string
+          id?: string
+          paid_at?: string
+          period_end: string
+          period_start: string
+          tax_rate: number
+        }
+        Update: {
+          amount?: number
+          city_id?: string | null
+          company_id?: string
+          id?: string
+          paid_at?: string
+          period_end?: string
+          period_start?: string
+          tax_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_city_tax_payments_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_city_tax_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_demand_log: {
+        Row: {
+          company_id: string
+          created_at: string
+          customers: number
+          demand_score: number
+          id: string
+          resolved_for: string
+          revenue: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          customers?: number
+          demand_score?: number
+          id?: string
+          resolved_for: string
+          revenue?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          customers?: number
+          demand_score?: number
+          id?: string
+          resolved_for?: string
+          revenue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_demand_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_employees: {
         Row: {
           company_id: string
@@ -6682,6 +6768,41 @@ export type Database = {
           },
         ]
       }
+      company_reviews: {
+        Row: {
+          comment: string | null
+          company_id: string
+          created_at: string
+          id: string
+          rating: number
+          reviewer_profile_id: string
+        }
+        Insert: {
+          comment?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          rating: number
+          reviewer_profile_id: string
+        }
+        Update: {
+          comment?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          reviewer_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_rivalries: {
         Row: {
           company_a_id: string
@@ -6842,6 +6963,162 @@ export type Database = {
           },
         ]
       }
+      company_shift_claims: {
+        Row: {
+          claimed_at: string
+          completed_at: string | null
+          id: string
+          paid_amount: number | null
+          profile_id: string
+          shift_id: string
+          status: string
+        }
+        Insert: {
+          claimed_at?: string
+          completed_at?: string | null
+          id?: string
+          paid_amount?: number | null
+          profile_id: string
+          shift_id: string
+          status?: string
+        }
+        Update: {
+          claimed_at?: string
+          completed_at?: string | null
+          id?: string
+          paid_amount?: number | null
+          profile_id?: string
+          shift_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_shift_claims_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "company_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_shifts: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          duration_hours: number
+          expires_at: string | null
+          id: string
+          min_skill_level: number
+          required_skill: string | null
+          role: string
+          slots_filled: number
+          slots_total: number
+          starts_at: string | null
+          status: string
+          updated_at: string
+          wage_per_hour: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          duration_hours?: number
+          expires_at?: string | null
+          id?: string
+          min_skill_level?: number
+          required_skill?: string | null
+          role?: string
+          slots_filled?: number
+          slots_total?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          wage_per_hour?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          duration_hours?: number
+          expires_at?: string | null
+          id?: string
+          min_skill_level?: number
+          required_skill?: string | null
+          role?: string
+          slots_filled?: number
+          slots_total?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          wage_per_hour?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_shifts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_storefront: {
+        Row: {
+          capacity: number
+          company_id: string
+          is_public: boolean
+          market_share: number
+          now_hiring: boolean
+          price_tier: number
+          quality_score: number
+          rating_avg: number
+          rating_count: number
+          tagline: string | null
+          total_customers_week: number
+          total_revenue_week: number
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          company_id: string
+          is_public?: boolean
+          market_share?: number
+          now_hiring?: boolean
+          price_tier?: number
+          quality_score?: number
+          rating_avg?: number
+          rating_count?: number
+          tagline?: string | null
+          total_customers_week?: number
+          total_revenue_week?: number
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          company_id?: string
+          is_public?: boolean
+          market_share?: number
+          now_hiring?: boolean
+          price_tier?: number
+          quality_score?: number
+          rating_avg?: number
+          rating_count?: number
+          tagline?: string | null
+          total_customers_week?: number
+          total_revenue_week?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_storefront_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_synergies: {
         Row: {
           activated_at: string | null
@@ -6985,6 +7262,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_type_definitions: {
+        Row: {
+          base_tax_rate: number
+          category: string
+          color: string | null
+          created_at: string
+          creation_cost: number
+          demand_weight: number
+          description: string | null
+          icon: string | null
+          is_active: boolean
+          label: string
+          serves_public: boolean
+          starting_balance: number
+          supports_shifts: boolean
+          type_key: string
+          updated_at: string
+          weekly_operating_costs: number
+        }
+        Insert: {
+          base_tax_rate?: number
+          category?: string
+          color?: string | null
+          created_at?: string
+          creation_cost?: number
+          demand_weight?: number
+          description?: string | null
+          icon?: string | null
+          is_active?: boolean
+          label: string
+          serves_public?: boolean
+          starting_balance?: number
+          supports_shifts?: boolean
+          type_key: string
+          updated_at?: string
+          weekly_operating_costs?: number
+        }
+        Update: {
+          base_tax_rate?: number
+          category?: string
+          color?: string | null
+          created_at?: string
+          creation_cost?: number
+          demand_weight?: number
+          description?: string | null
+          icon?: string | null
+          is_active?: boolean
+          label?: string
+          serves_public?: boolean
+          starting_balance?: number
+          supports_shifts?: boolean
+          type_key?: string
+          updated_at?: string
+          weekly_operating_costs?: number
+        }
+        Relationships: []
       }
       contract_clauses: {
         Row: {
@@ -36355,6 +36689,10 @@ export type Database = {
         Returns: undefined
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
+      resolve_company_demand: {
+        Args: { target_date?: string }
+        Returns: number
+      }
       resurrect_character: {
         Args: { p_profile_id: string }
         Returns: undefined
