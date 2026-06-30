@@ -28,49 +28,47 @@ export const PageHeader = ({
   const navigate = useNavigate();
 
   return (
-    <div
-      className={cn(
-        "relative flex items-center justify-between gap-3 pl-4 pr-3 py-2.5 bg-fm-panel-2 border border-fm-border rounded-sm overflow-hidden",
-        className,
-      )}
-    >
-      {/* FM-style left accent bar tinted by current module */}
-      <span
-        aria-hidden
-        className="absolute left-0 top-0 bottom-0 w-[3px] bg-fm-accent"
-      />
-      <div className="flex items-center gap-2.5 min-w-0">
+    <div className={cn("flex flex-col gap-2", className)}>
+      {/* Breadcrumb row (spec §2.1) — back · section · description */}
+      <div className="flex items-center gap-2 text-[12px] text-fm-fg-muted">
         {backTo && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(backTo)}
-            className="h-7 px-2 gap-1 text-fm-fg-muted hover:text-fm-fg -ml-1"
+            className="h-6 px-1.5 gap-1 text-fm-fg-muted hover:text-fm-fg -ml-1.5"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="text-xs">{backLabel || "Back"}</span>
           </Button>
         )}
-        {Icon && (
-          <div className="h-7 w-7 grid place-items-center rounded-sm bg-fm-accent/10 border border-fm-accent/25 flex-shrink-0">
-            <Icon className="h-4 w-4 text-fm-accent" />
-          </div>
+        {eyebrow && (
+          <span className="text-fm-accent font-medium">{eyebrow}</span>
         )}
-        <div className="min-w-0">
-          <div className="text-[9px] uppercase tracking-[0.18em] text-fm-fg-muted/80 leading-none mb-1">
-            {eyebrow || subtitle || "\u00A0"}
-          </div>
-          <h1 className="text-[15px] font-bold uppercase tracking-wide text-fm-fg truncate leading-none">
+        {eyebrow && subtitle && <span className="text-fm-fg-subtle">·</span>}
+        {subtitle && <span className="truncate">{subtitle}</span>}
+      </div>
+
+      {/* Title row — icon chip + h1 left, single primary action right */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {Icon && (
+            <div
+              className="h-[34px] w-[34px] grid place-items-center rounded-[10px] shrink-0"
+              style={{
+                background: "hsl(var(--fm-accent) / 0.15)",
+                color: "hsl(var(--fm-accent))",
+              }}
+            >
+              <Icon className="h-[18px] w-[18px]" />
+            </div>
+          )}
+          <h1 className="text-[20px] font-medium tracking-tight text-fm-fg truncate leading-tight font-display">
             {title}
           </h1>
         </div>
-        {eyebrow && subtitle && (
-          <div className="hidden md:block pl-3 ml-1 border-l border-fm-border/70 text-[11px] text-fm-fg-muted truncate max-w-[420px]">
-            {subtitle}
-          </div>
-        )}
+        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
-      {actions && <div className="flex items-center gap-1.5 flex-shrink-0">{actions}</div>}
     </div>
   );
 };
