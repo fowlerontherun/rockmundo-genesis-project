@@ -24,6 +24,7 @@ interface NewspaperItem {
   name: string;
   newspaper_type: string | null;
   country: string | null;
+  city_id: string | null;
   circulation: number;
   quality_level: number | null;
   min_fame_required: number | null;
