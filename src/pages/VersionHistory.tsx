@@ -24,6 +24,13 @@ const versionHistory: VersionEntry[] = [
     ],
   },
   {
+    version: "1.1.422",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "Added search and filtering to the Version History page. A search input filters versions by version number, release date, or keywords in change descriptions. Type toggle chips (All / Features / Fixes / Improvements) filter entries, and a live result count shows matching releases and changes. Empty state includes a one-click clear filter action." },
+    ],
+  },
+  {
     version: "1.1.421",
     date: "2026-06-30",
     changes: [
