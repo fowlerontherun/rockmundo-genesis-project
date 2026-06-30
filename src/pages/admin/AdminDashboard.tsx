@@ -9,7 +9,7 @@ import {
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
   Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard,
-  Landmark, Crown
+  Landmark, Crown, Newspaper
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
