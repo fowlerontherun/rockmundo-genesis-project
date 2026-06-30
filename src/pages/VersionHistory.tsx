@@ -1,7 +1,10 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, Wrench, Plus, Sparkles, Bug } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { History, Wrench, Plus, Sparkles, Bug, Search, X } from "lucide-react";
 
 interface VersionEntry {
   version: string;
@@ -13,6 +16,13 @@ interface VersionEntry {
 }
 
 const versionHistory: VersionEntry[] = [
+  {
+    version: "1.1.422",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "Added search and filtering to the Version History page. A search input filters versions by version number, release date, or keywords in change descriptions. Type toggle chips (All / Features / Fixes / Improvements) filter entries, and a live result count shows matching releases and changes. Empty state includes a one-click clear filter action." },
+    ],
+  },
   {
     version: "1.1.421",
     date: "2026-06-30",
@@ -10433,48 +10443,156 @@ const getTypeBadgeVariant = (type: string) => {
 };
 
 export default function VersionHistory() {
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const filteredHistory = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return versionHistory.filter((entry) => {
+      const matchesQuery =
+        !q ||
+        entry.version.toLowerCase().includes(q) ||
+        entry.date.toLowerCase().includes(q) ||
+        entry.changes.some((c) => c.description.toLowerCase().includes(q));
+      const matchesType =
+        typeFilter === "all" ||
+        entry.changes.some((c) => c.type === typeFilter);
+      return matchesQuery && matchesType;
+    });
+  }, [query, typeFilter]);
+
+  const filteredChangeCount = filteredHistory.reduce(
+    (sum, entry) =>
+      sum +
+      entry.changes.filter(
+        (c) => typeFilter === "all" || c.type === typeFilter
+      ).length,
+    0
+  );
+
+  const clearFilters = () => {
+    setQuery("");
+    setTypeFilter("all");
+  };
+
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
       <div className="flex items-center gap-3 mb-6">
         <History className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">Version History</h1>
-          <p className="text-muted-foreground">Track all updates and changes to Rockmundo</p>
+          <p className="text-muted-foreground">
+            Track all updates and changes to Rockmundo
+          </p>
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      <div className="space-y-4 mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search versions, dates, or keywords..."
+            className="pl-9 pr-9"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <ToggleGroup
+            type="single"
+            value={typeFilter}
+            onValueChange={(value) => value && setTypeFilter(value)}
+            className="flex-wrap justify-start"
+          >
+            <ToggleGroupItem value="all" aria-label="All changes">
+              All
+            </ToggleGroupItem>
+            <ToggleGroupItem value="feature" aria-label="Features">
+              Features
+            </ToggleGroupItem>
+            <ToggleGroupItem value="fix" aria-label="Fixes">
+              Fixes
+            </ToggleGroupItem>
+            <ToggleGroupItem value="improvement" aria-label="Improvements">
+              Improvements
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-sm text-muted-foreground">
+            {filteredHistory.length} release
+            {filteredHistory.length !== 1 ? "s" : ""} · {filteredChangeCount}{" "}
+            change{filteredChangeCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-300px)]">
         <div className="space-y-4">
-          {versionHistory.map((entry) => (
-            <Card key={entry.version} className="border-border/50">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                      v{entry.version}
-                    </Badge>
-                  </CardTitle>
-                  <span className="text-sm text-muted-foreground">{entry.date}</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {entry.changes.map((change, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <Badge 
-                        variant={getTypeBadgeVariant(change.type) as any}
-                        className="mt-0.5 flex items-center gap-1 text-xs capitalize"
+          {filteredHistory.length === 0 ? (
+            <div className="text-center py-12 border border-dashed border-border rounded-lg">
+              <p className="text-muted-foreground">
+                No versions match your search.
+              </p>
+              <button
+                onClick={clearFilters}
+                className="text-sm text-primary hover:underline mt-2"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            filteredHistory.map((entry) => (
+              <Card key={entry.version} className="border-border/50">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/10 text-primary border-primary/30"
                       >
-                        {getTypeIcon(change.type)}
-                        {change.type}
+                        v{entry.version}
                       </Badge>
-                      <span className="text-sm text-foreground">{change.description}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
+                    </CardTitle>
+                    <span className="text-sm text-muted-foreground">
+                      {entry.date}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {entry.changes
+                      .filter(
+                        (change) =>
+                          typeFilter === "all" || change.type === typeFilter
+                      )
+                      .map((change, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <Badge
+                            variant={getTypeBadgeVariant(change.type) as any}
+                            className="mt-0.5 flex items-center gap-1 text-xs capitalize"
+                          >
+                            {getTypeIcon(change.type)}
+                            {change.type}
+                          </Badge>
+                          <span className="text-sm text-foreground">
+                            {change.description}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </ScrollArea>
     </div>
