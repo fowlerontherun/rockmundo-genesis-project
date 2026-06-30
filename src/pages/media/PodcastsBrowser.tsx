@@ -109,16 +109,39 @@ const PodcastsBrowser = () => {
     };
   }, [podcasts]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  const decoratedPodcasts = useMemo(() => {
+    return (podcasts ?? []).map(pod => ({
+      pod,
+      gate: evaluateReachGate({
+        country: pod.country,
+        audience: pod.listener_base,
+        min_fame_required: pod.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [podcasts, playerLocale]);
+
   const filteredPodcasts = useMemo(() => {
-    return podcasts?.filter(pod => {
+    return decoratedPodcasts.filter(({ pod, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = pod.podcast_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         pod.host_name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || pod.podcast_type === typeFilter;
       const matchesCountry = countryFilter === "all" || pod.country === countryFilter;
       const matchesGenre = genreFilter === "all" || pod.genres?.includes(genreFilter);
       return matchesSearch && matchesType && matchesCountry && matchesGenre;
-    }) || [];
-  }, [podcasts, searchTerm, typeFilter, countryFilter, genreFilter]);
+    });
+  }, [decoratedPodcasts, showOutOfReach, searchTerm, typeFilter, countryFilter, genreFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedPodcasts.filter(d => !d.gate.inReach).length,
+    [decoratedPodcasts],
+  );
 
   const formatListenerBase = (listeners: number) => {
     if (listeners >= 1000000) return `${(listeners / 1000000).toFixed(1)}M`;
