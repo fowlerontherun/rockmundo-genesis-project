@@ -46,6 +46,7 @@ const MagazinesBrowser = () => {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedMagazine, setSelectedMagazine] = useState<MagazineItem | null>(null);
+  const [showOutOfReach, setShowOutOfReach] = useState(false);
 
   useEffect(() => {
     if (currentCity?.country && countryFilter === "all") {
