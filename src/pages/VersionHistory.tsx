@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.435",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Storefront inventory & operations panel on every company.** The owner-facing Storefront tab on CompanyDetail gains live stock controls and a new Storefront settings tab. Inventory rows now show low-stock (amber) and sold-out (red) badges driven by `stock` vs `restock_level`, with inline −/+/+10/+100 steppers, a direct stock input that saves on blur, an editable restock-alert threshold, and a one-click Active switch to hide a SKU without deleting it. A red banner at the top of the Inventory tab counts active SKUs that are currently sold out and surfaces the company's current sold-out policy. The new **Storefront settings** tab adds three owner-only controls persisted on `company_storefront`: service hours (open hour + close hour via 24-slot dropdowns with a derived h/day readout), operating days (mon–sun toggle group), and sold-out behavior (radio cards: hide, show unavailable, accept backorders, suggest substitutes). A visibility switch lets owners hide the company from the World Companies directory. Schema: added `open_hour`, `close_hour`, `open_days text[]` and `sold_out_behavior` (with CHECK) to `company_storefront`, plus `restock_level` is now editable from the UI." },
+    ],
+  },
+  {
     version: "1.1.434",
     date: "2026-06-30",
     changes: [
