@@ -54,7 +54,7 @@ export const MagazineTile = ({ tile }: { tile: HubTile }) => {
 
         {/* Catalog sticker */}
         <span
-          className="rm-sticker absolute top-2 left-2 z-[2] px-2 py-0.5 text-[9px] uppercase tabular-nums"
+          className="rm-sticker absolute top-2 left-2 z-[2] px-2 py-0.5 text-[9px] tabular-nums"
           aria-hidden
         >
           {catNo}
@@ -64,7 +64,7 @@ export const MagazineTile = ({ tile }: { tile: HubTile }) => {
         <div className="absolute bottom-0 inset-x-0 z-[2] p-3 bg-gradient-to-t from-black/95 via-black/70 to-transparent">
           <Waveform className="mb-2 opacity-80" height={10} />
           <div className="border-l-2 border-fm-accent pl-2">
-            <h3 className="font-display text-[13px] md:text-sm text-fm-fg tracking-tight leading-tight font-bold uppercase">
+            <h3 className="font-display text-[13px] md:text-sm text-fm-fg tracking-tight leading-tight font-medium ">
               {label}
             </h3>
             {tile.description && (

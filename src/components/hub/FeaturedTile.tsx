@@ -58,13 +58,13 @@ export const FeaturedTile = ({
 
       {/* Tour-date stamp — top left */}
       <div className="absolute top-4 left-4 z-[2] flex flex-col items-center px-3 py-1.5 bg-fm-bg/85 border border-fm-accent rounded-sm shadow-lg backdrop-blur-sm">
-        <span className="font-display text-[10px] tracking-[0.18em] text-fm-accent font-bold leading-none">
+        <span className="font-display text-[10px] tracking-tight text-fm-accent font-medium leading-none">
           {month}
         </span>
         <span className="font-display text-2xl tabular-nums text-fm-fg leading-none font-extrabold">
           {day}
         </span>
-        <span className="text-[8px] uppercase tracking-[0.22em] text-fm-fg-muted leading-none mt-0.5">
+        <span className="text-[8px] tracking-tight text-fm-fg-muted leading-none mt-0.5">
           Now Showing
         </span>
       </div>
@@ -76,10 +76,10 @@ export const FeaturedTile = ({
 
       {/* Headline block — bottom of poster */}
       <div className="absolute bottom-0 left-0 right-0 z-[2] p-5 md:p-7">
-        <span className="inline-flex items-center gap-1 px-2 py-[3px] bg-fm-accent text-fm-bg font-bold text-[10px] uppercase tracking-[0.18em] mb-3 rounded-[3px]">
+        <span className="inline-flex items-center gap-1 px-2 py-[3px] bg-fm-accent text-fm-bg font-medium text-[10px] tracking-tight mb-3 rounded-[3px]">
           <Star className="h-2.5 w-2.5 fill-current" /> {eyebrow || "Featured"}
         </span>
-        <h2 className="font-display text-2xl md:text-4xl text-fm-fg leading-[0.95] tracking-tight mb-2 font-black uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+        <h2 className="font-display text-2xl md:text-4xl text-fm-fg leading-[0.95] tracking-tight mb-2 font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
           {headline || label}
         </h2>
         {(copy || tile.description) && (
@@ -88,7 +88,7 @@ export const FeaturedTile = ({
           </p>
         )}
         <div className="mt-3 flex items-center gap-3">
-          <span className="inline-flex items-center gap-1 text-fm-accent text-[10px] uppercase tracking-[0.18em] font-bold">
+          <span className="inline-flex items-center gap-1 text-fm-accent text-[10px] tracking-tight font-medium">
             Open <ArrowUpRight className="h-3 w-3" />
           </span>
           <Waveform className="flex-1 opacity-70" height={14} />
