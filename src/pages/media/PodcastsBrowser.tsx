@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
+import { ReachGateBanner } from "@/components/media/ReachGateBanner";
+import { evaluateReachGate } from "@/utils/mediaReachGate";
 
 interface PodcastShow {
   id: string;
