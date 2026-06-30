@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.430",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Companies can now advertise jobs, and hiring real players outperforms NPCs.** Added `advertised_until`, `advertise_priority`, and `advertise_total_spent` columns to the `jobs` table plus a new `advertise_job(job_id, days)` RPC: company owners can boost any of their listings for 1–30 days at $500/day from the company balance — boosted jobs surface higher in the Employment marketplace and show a 'Boosted' badge in the company's Jobs tab. A new Megaphone button on each listing triggers a 7-day boost ($3,500). Added `npc_staff_count` to `companies` so owners can fill empty roles with NPC staff. New `apply_player_staff_bonus(company_id)` helper computes the company-wide output multiplier: **+4% per active player employee (capped at +40%), and a −10% penalty when the company runs on NPC staff only**. The daily `resolve_company_demand` resolver now scales customers, revenue and the 5% city tax by that multiplier, so hiring real players visibly out-earns a fully-NPC roster. New trigger keeps `company_storefront.now_hiring` (the green 'Hiring' badge in the World Companies directory) in sync with active job listings automatically. CompanyDetail's Employees tab now shows a live 'Staff output multiplier' card with player/NPC counts." },
+    ],
+  },
+  {
     version: "1.1.429",
     date: "2026-06-30",
     changes: [

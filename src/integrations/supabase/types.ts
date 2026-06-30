@@ -6169,6 +6169,7 @@ export type Database = {
           market_influence: number
           name: string
           negative_balance_since: string | null
+          npc_staff_count: number
           owner_id: string
           parent_company_id: string | null
           reputation_score: number
@@ -6191,6 +6192,7 @@ export type Database = {
           market_influence?: number
           name: string
           negative_balance_since?: string | null
+          npc_staff_count?: number
           owner_id: string
           parent_company_id?: string | null
           reputation_score?: number
@@ -6213,6 +6215,7 @@ export type Database = {
           market_influence?: number
           name?: string
           negative_balance_since?: string | null
+          npc_staff_count?: number
           owner_id?: string
           parent_company_id?: string | null
           reputation_score?: number
@@ -14069,6 +14072,9 @@ export type Database = {
       }
       jobs: {
         Row: {
+          advertise_priority: number
+          advertise_total_spent: number
+          advertised_until: string | null
           base_fame_impact: number | null
           category: string
           city_id: string | null
@@ -14095,6 +14101,9 @@ export type Database = {
           work_days: Json
         }
         Insert: {
+          advertise_priority?: number
+          advertise_total_spent?: number
+          advertised_until?: string | null
           base_fame_impact?: number | null
           category: string
           city_id?: string | null
@@ -14121,6 +14130,9 @@ export type Database = {
           work_days: Json
         }
         Update: {
+          advertise_priority?: number
+          advertise_total_spent?: number
+          advertised_until?: string | null
           base_fame_impact?: number | null
           category?: string
           city_id?: string | null
@@ -36175,6 +36187,10 @@ export type Database = {
         }[]
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
+      advertise_job: {
+        Args: { p_days?: number; p_job_id: string }
+        Returns: Json
+      }
       apply_child_interaction: {
         Args: {
           p_child_id: string
@@ -36200,6 +36216,10 @@ export type Database = {
       apply_missed_gig_consequences: {
         Args: { p_gig_id: string; p_reason?: string }
         Returns: Json
+      }
+      apply_player_staff_bonus: {
+        Args: { p_company_id: string }
+        Returns: number
       }
       auto_build_release_hype: { Args: never; Returns: undefined }
       auto_complete_manufacturing: { Args: never; Returns: number }
