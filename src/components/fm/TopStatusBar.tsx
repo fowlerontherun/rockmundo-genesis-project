@@ -55,9 +55,29 @@ export const TopStatusBar = () => {
   };
 
   return (
-    <header className="h-12 flex items-center gap-3 px-3 bg-fm-panel border-b border-fm-border">
-      <img src={logo} alt="RockMundo" className="h-7 w-auto object-contain" />
-      <div className="h-6 w-px bg-fm-border" />
+    <header className="h-14 flex items-center gap-3 px-3 bg-fm-panel border-b border-fm-border relative">
+      {/* Brand block */}
+      <button
+        onClick={() => navigate("/")}
+        className="group flex items-center gap-2.5 pr-1 -ml-1 pl-1 py-1 rounded-md hover:bg-fm-panel-2 transition-colors"
+        title="Rockmundo home"
+      >
+        <img
+          src={logo}
+          alt="Rockmundo"
+          className="h-9 w-auto object-contain drop-shadow-[0_0_8px_hsl(var(--fm-accent)/0.35)]"
+        />
+        <div className="hidden sm:flex flex-col leading-none text-left">
+          <span className="font-bebas text-[22px] tracking-[0.08em] text-fm-fg group-hover:text-fm-accent transition-colors">
+            ROCKMUNDO
+          </span>
+          <span className="text-[9px] tracking-[0.25em] text-fm-fg-muted uppercase mt-0.5" data-fm-keep-caps>
+            Live the dream
+          </span>
+        </div>
+      </button>
+
+      <div className="h-7 w-px bg-fm-border" />
 
       <button
         className="flex items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
@@ -73,6 +93,7 @@ export const TopStatusBar = () => {
         <span>Game date</span>
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
+
 
       <div className="flex-1" />
 

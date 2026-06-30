@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { findModuleForPath } from "@/config/fmNavigation";
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/rockmundo-new-logo.png";
+
 
 const COLLAPSED_KEY = "fm-sidebar-collapsed";
 
@@ -36,6 +38,20 @@ export const FMSidebar = () => {
         collapsed ? "w-12" : "w-56"
       )}
     >
+      {/* Brand strip */}
+      <button
+        onClick={() => navigate("/")}
+        className="h-11 flex items-center gap-2 px-2.5 border-b border-fm-border hover:bg-fm-panel-2 transition-colors"
+        title="Rockmundo home"
+      >
+        <img src={logo} alt="Rockmundo" className="h-7 w-7 object-contain shrink-0" />
+        {!collapsed && (
+          <span className="font-bebas text-[18px] tracking-[0.1em] text-fm-fg leading-none">
+            ROCKMUNDO
+          </span>
+        )}
+      </button>
+
       <div className="h-9 flex items-center justify-between px-3 border-b border-fm-border">
         {!collapsed && (
           <span className="text-[12px] font-medium tracking-tight text-fm-fg truncate">
@@ -50,6 +66,7 @@ export const FMSidebar = () => {
           {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
         </button>
       </div>
+
 
       <div className="flex-1 overflow-y-auto py-2">
         {mod.sidebar.map((group) => (
