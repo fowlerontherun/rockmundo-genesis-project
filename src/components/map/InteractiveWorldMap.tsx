@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { getCoordinatesForCity } from '@/utils/worldTravel';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface City {
   id: string;
