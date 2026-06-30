@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.425",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**How to play guide — full content refresh + AAA redesign.** Rewrote the in-game guide dialog to cover every current v2 system: wellness gate and 20 ailments, 1:4 game time with the January 2026 epoch, regional fame (20 tiers, 20% spillover), tour Haversine routing and transit blocking, 6-phase awards ceremonies, city treasuries with the 30-day population chart, weather and seasons, territory-based release distribution, AI music + music videos, corporate empires and subsidiaries, sponsorships with weekly cron payouts, Twaater 8.3h trending decay, DikCok virality, marriage/children/permadeath, casino addictions and cravings, hyper-local → bridge → national media progression, and the bug report button. Restyled the dialog to the new design spec: 3px primary accent header, sentence-case pill tabs, accent-bar section cards with icon chips, dot-bullet lists, three footer callouts (skills, balance, first-7-days checklist), and removed every uppercase/wide-tracking utility." },
+    ],
+  },
+  {
     version: "1.1.424",
     date: "2026-06-30",
     changes: [
