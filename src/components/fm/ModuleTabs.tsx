@@ -24,7 +24,7 @@ export const ModuleTabs = () => {
   };
 
   return (
-    <nav className="h-10 flex items-stretch bg-fm-panel border-b border-fm-border px-1">
+    <nav className="h-11 flex items-stretch bg-fm-panel border-b border-fm-border px-2 gap-1">
       {modules.map((mod) => {
         const Icon = mod.icon;
         const isActive = mod.id === active.id;
@@ -33,20 +33,15 @@ export const ModuleTabs = () => {
             key={mod.id}
             onClick={() => openModule(mod.id, mod.rootPath)}
             className={cn(
-              "relative px-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-bold transition-colors",
+              "relative my-1.5 px-3 flex items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
               isActive
-                ? "text-fm-fg bg-fm-panel-2"
-                : "text-fm-fg-muted hover:text-fm-fg hover:bg-fm-panel-2/60"
+                ? "text-fm-accent"
+                : "text-fm-fg-muted hover:text-fm-fg",
             )}
+            style={isActive ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
           >
-            {isActive && (
-              <span className="absolute top-0 left-0 right-0 h-[2px] bg-fm-accent" />
-            )}
-            <Icon className={cn("h-3.5 w-3.5", isActive && "text-fm-accent")} />
+            <Icon className="h-3.5 w-3.5" />
             <span>{mod.label}</span>
-            {isActive && (
-              <span className="absolute bottom-0 left-0 right-0 h-px bg-fm-panel-2" />
-            )}
           </button>
         );
       })}
