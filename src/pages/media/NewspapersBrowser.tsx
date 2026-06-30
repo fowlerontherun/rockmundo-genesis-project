@@ -214,6 +214,17 @@ const NewspapersBrowser = () => {
         </Select>
       </div>
 
+      <ReachGateBanner
+        fame={userBand?.fame ?? 0}
+        cityName={currentCity?.name}
+        country={currentCity?.country}
+        visibleCount={filteredNewspapers.filter(d => d.gate.inReach).length}
+        hiddenCount={hiddenByReachCount}
+        showOutOfReach={showOutOfReach}
+        onToggleOutOfReach={setShowOutOfReach}
+        outletNoun="newspapers"
+      />
+
       <p className="text-sm text-muted-foreground">
         Showing {filteredNewspapers.length} of {newspapers?.length || 0} newspapers
       </p>
@@ -226,8 +237,8 @@ const NewspapersBrowser = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredNewspapers.map(paper => (
-            <Card key={paper.id} className="hover:shadow-lg transition-shadow flex flex-col">
+          {filteredNewspapers.map(({ paper, gate }) => (
+            <Card key={paper.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!gate.inReach ? 'opacity-60' : ''}`}>
               <Link
                 to={`/media/newspapers/${paper.id}`}
                 className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
@@ -235,7 +246,17 @@ const NewspapersBrowser = () => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{paper.name}</CardTitle>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      <Badge
+                        variant="outline"
+                        className={
+                          gate.outletScope === 'local' ? 'border-emerald-500/40 text-emerald-400 text-xs'
+                          : gate.outletScope === 'national' ? 'border-sky-500/40 text-sky-400 text-xs'
+                          : 'border-amber-500/40 text-amber-400 text-xs'
+                        }
+                      >
+                        {gate.outletScope}
+                      </Badge>
                       {paper.newspaper_type && (
                         <Badge variant="outline" className="capitalize">{paper.newspaper_type.replace('_', ' ')}</Badge>
                       )}
@@ -303,6 +324,10 @@ const NewspapersBrowser = () => {
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Request Pending
                   </Button>
+                ) : !gate.inReach ? (
+                  <Button variant="outline" disabled className="w-full" title={gate.reason}>
+                    Out of reach — {gate.reason}
+                  </Button>
                 ) : (
                   <Button
                     variant={isEligible(paper) ? "default" : "outline"}
@@ -319,6 +344,7 @@ const NewspapersBrowser = () => {
           ))}
         </div>
       )}
+
 
       {selectedNewspaper && userBand && (
         <MediaSubmissionDialog
