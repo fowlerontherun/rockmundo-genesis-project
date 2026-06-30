@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.431",
+    date: "2026-06-30",
+    changes: [
+      { type: 'feature', description: "**Company expansion phases 2–5 — 20 new ownable business types, public storefronts, shareholder dividends, and mayor-law-driven P&L.** Phase 2/3 catalogues 20 new company types in `company_type_definitions` so they can be created today without a code change: bar, restaurant, clothing store, hotel, hair salon, tattoo parlour, gym, clinic, newspaper, radio station, magazine publisher, podcast network, instrument shop, taxi company, real-estate agency, modelling agency, music school, casino, crypto exchange, PR agency, talent agency. Each ships with cost, starting balance, weekly upkeep, base tax rate and a demand weight that feeds the daily resolver. New generic `company_inventory` (sku/stock/price/cost/featured) and `company_services` (price/duration/quality tier) tables give every company a real storefront menu — owners now have a **Storefront** tab on CompanyDetail with add-item and add-service dialogs and one-click remove. Phase 4 adds shareholder mechanics: `company_shares` with avg buy price and unique (company, holder) constraint, `company_dividends` ledger, and a `pay_company_dividends(company_id, total)` RPC that debits the company balance and pays each shareholder pro-rata (with profile.cash credit if the column exists). Phase 4 also wires city policy into corporate revenue via a new `mayor_company_modifier(city_id)`: the daily `resolve_company_demand` now visibly cuts revenue when sales tax is high and lifts it when the mayor funds community events, clamped to 0.4×–1.4×. Companies that go bankrupt or recover now auto-publish to the new public `company_news_events` feed via trigger. The Storefront tab also exposes a 'Pay dividend' form for owners that calls the RPC directly." },
+    ],
+  },
+  {
     version: "1.1.430",
     date: "2026-06-30",
     changes: [
