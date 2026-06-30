@@ -14,6 +14,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.421",
+    date: "2026-06-30",
+    changes: [
+      { type: 'improvement', description: "**Global sentence-case sweep via shell-scoped CSS.** Added `.fm-shell main` overrides that neutralize stray `uppercase`, `tracking-wider`, and `tracking-widest` styling across the 109 page/component files still using them — without touching shadcn primitives (menus, command palette, context) that legitimately need micro-caps. Eyebrow rows (`text-xs uppercase`, `text-[10px] uppercase`, `text-[11px] uppercase`) now render in muted sentence case at weight 500, and all in-shell `h1/h2/h3` clamp to 600 to match spec §4.7's two-weight rule. Opt-out via `data-fm-keep-caps` for the rare intentional all-caps badge." },
+    ],
+  },
+  {
     version: "1.1.420",
     date: "2026-06-30",
     changes: [
