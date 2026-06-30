@@ -25,6 +25,7 @@ import { PlayerStaffBonusCard } from "@/components/company/PlayerStaffBonusCard"
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { CompanyJobListings } from "@/components/company/CompanyJobListings";
+import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
@@ -189,6 +190,7 @@ const CompanyDetailContent = () => {
             <Briefcase className="h-3.5 w-3.5 mr-1" />
             Jobs
           </TabsTrigger>
+          <TabsTrigger value="storefront">Storefront</TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
           <TabsTrigger value="contracts">
@@ -378,6 +380,10 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="shares" className="space-y-4">
           <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === userId} />
+        </TabsContent>
+
+        <TabsContent value="storefront" className="space-y-4">
+          <CompanyStorefrontManager companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-4">
