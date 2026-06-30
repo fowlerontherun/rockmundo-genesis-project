@@ -10,7 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Music, Sparkles, Star, Wrench, Zap, Play, Pause, RotateCw, Repeat, Hammer, Share2 } from "lucide-react";
+import {
+  Music,
+  Sparkles,
+  Star,
+  Wrench,
+  Zap,
+  Play,
+  Pause,
+  RotateCw,
+  Repeat,
+  Hammer,
+  Share2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RevealResult } from "@/pages/BlindBoxStore";
 import { BlindBoxShareSheet } from "./BlindBoxShareSheet";
@@ -92,7 +104,11 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
   }, [reveal]);
 
   const xpVal = useCountUp(reveal?.xp ?? 0, phase !== "rolling" && !!reveal);
-  const apVal = useCountUp(reveal?.ap ?? 0, phase !== "rolling" && !!reveal, 700);
+  const apVal = useCountUp(
+    reveal?.ap ?? 0,
+    phase !== "rolling" && !!reveal,
+    700,
+  );
 
   if (!reveal) return null;
 
@@ -125,9 +141,16 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
                 phase === "rolling" && "animate-spin",
               )}
             />
-            {phase === "rolling" ? "Rolling…" : reveal.duplicate ? "Duplicate converted!" : "Box opened!"}
+            {phase === "rolling"
+              ? "Rolling…"
+              : reveal.duplicate
+                ? "Duplicate converted!"
+                : "Box opened!"}
             {reveal.duplicate && phase !== "rolling" && (
-              <Badge variant="outline" className="ml-1 gap-1 text-[10px] border-amber-400/60 text-amber-200">
+              <Badge
+                variant="outline"
+                className="ml-1 gap-1 text-[10px] border-amber-400/60 text-amber-200"
+              >
                 <Repeat className="h-3 w-3" /> ×{(reveal.dupe_count ?? 0) + 1}
               </Badge>
             )}
@@ -144,7 +167,7 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
               phase === "rolling" && "animate-pulse",
             )}
           >
-            <p className="text-xs uppercase tracking-wider opacity-80">Tier</p>
+            <p className="text-xs opacity-80">Tier</p>
             <p
               className={cn(
                 "text-2xl font-bold capitalize transition-all",
@@ -159,7 +182,9 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
           <div
             className={cn(
               "grid grid-cols-2 gap-2 transition-all duration-500",
-              phase === "rolling" ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0",
+              phase === "rolling"
+                ? "opacity-0 translate-y-2"
+                : "opacity-100 translate-y-0",
             )}
           >
             <Stat
@@ -191,27 +216,39 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
             >
               <div className="flex items-center gap-2 text-xs">
                 <Repeat className="h-3.5 w-3.5 text-amber-300" />
-                <span className="font-semibold text-amber-200">Duplicate detected</span>
+                <span className="font-semibold text-amber-200">
+                  Duplicate detected
+                </span>
                 <span className="text-muted-foreground">
-                  You already own <span className="text-foreground">{reveal.instrument.name}</span>
+                  You already own{" "}
+                  <span className="text-foreground">
+                    {reveal.instrument.name}
+                  </span>
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                No new instrument or song was added. Your pull was converted into shards and partial XP/AP.
+                No new instrument or song was added. Your pull was converted
+                into shards and partial XP/AP.
               </p>
               <div className="rounded-md border bg-background/50 p-2 text-xs">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                <div className="text-[10px] text-muted-foreground mb-1">
                   Conversion breakdown
                 </div>
                 <BreakdownRow
                   label="XP rebate"
                   value={`+${reveal.xp.toLocaleString()}`}
-                  note={reveal.base_xp ? `50% of ${reveal.base_xp.toLocaleString()} base` : undefined}
+                  note={
+                    reveal.base_xp
+                      ? `50% of ${reveal.base_xp.toLocaleString()} base`
+                      : undefined
+                  }
                 />
                 <BreakdownRow
                   label="AP rebate"
                   value={`+${reveal.ap}`}
-                  note={reveal.base_ap ? `½ of ${reveal.base_ap} base` : undefined}
+                  note={
+                    reveal.base_ap ? `½ of ${reveal.base_ap} base` : undefined
+                  }
                 />
                 {(reveal.materials ?? []).map((m) => (
                   <BreakdownRow
@@ -270,12 +307,20 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
                   </div>
                   <div
                     className="absolute inset-0 rounded-lg border bg-muted/30 p-3 flex flex-col justify-center"
-                    style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                    style={{
+                      backfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)",
+                    }}
                   >
                     <p className="font-semibold">{reveal.instrument.name}</p>
-                    <p className="text-xs text-muted-foreground mb-1">{reveal.instrument.type}</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {reveal.instrument.type}
+                    </p>
                     <div className="flex items-center gap-2">
-                      <Progress value={reveal.instrument.quality} className="h-1.5 flex-1" />
+                      <Progress
+                        value={reveal.instrument.quality}
+                        className="h-1.5 flex-1"
+                      />
                       <span className="text-[10px] tabular-nums text-muted-foreground">
                         {reveal.instrument.quality}/100
                       </span>
@@ -303,12 +348,20 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
                     className="flex-shrink-0 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform"
                     aria-label={songPlaying ? "Pause preview" : "Play preview"}
                   >
-                    {songPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                    {songPlaying ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4 ml-0.5" />
+                    )}
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold truncate">{reveal.song.title}</p>
+                    <p className="font-semibold truncate">
+                      {reveal.song.title}
+                    </p>
                     <div className="flex gap-1 flex-wrap">
-                      <Badge variant="outline" className="text-[10px]">{reveal.song.genre}</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {reveal.song.genre}
+                      </Badge>
                       <QualityBadge quality={reveal.song.quality} />
                     </div>
                   </div>
@@ -319,7 +372,9 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
                     className={cn(
                       "h-1.5 flex-1",
                       reveal.song.quality >= 80 && "[&>div]:bg-amber-400",
-                      reveal.song.quality >= 60 && reveal.song.quality < 80 && "[&>div]:bg-purple-400",
+                      reveal.song.quality >= 60 &&
+                        reveal.song.quality < 80 &&
+                        "[&>div]:bg-purple-400",
                     )}
                   />
                   <span className="text-[10px] tabular-nums text-muted-foreground">
@@ -346,7 +401,7 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
           )}
 
           <p className="text-center text-xs text-muted-foreground">
-            New balance:{" "}
+            New balance:{""}
             {reveal.currency === "premium"
               ? `${reveal.new_balance} tokens`
               : `$${reveal.new_balance.toLocaleString()}`}
@@ -355,7 +410,12 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
 
         <DialogFooter className="gap-2">
           {phase !== "done" ? (
-            <Button variant="ghost" size="sm" onClick={skipToEnd} className="w-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={skipToEnd}
+              className="w-full"
+            >
               Skip animation
             </Button>
           ) : (
@@ -374,7 +434,11 @@ export function BlindBoxRevealDialog({ reveal, onClose }: Props) {
           )}
         </DialogFooter>
       </DialogContent>
-      <BlindBoxShareSheet reveal={reveal} open={shareOpen} onOpenChange={setShareOpen} />
+      <BlindBoxShareSheet
+        reveal={reveal}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+      />
     </Dialog>
   );
 }
@@ -395,9 +459,11 @@ function Stat({
   return (
     <div className="rounded-lg border bg-muted/30 p-3 text-center">
       <Icon className="mx-auto h-4 w-4 text-primary" />
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className="text-lg font-bold tabular-nums">{value}</p>
-      {hint && <p className="text-[10px] text-muted-foreground truncate">{hint}</p>}
+      {hint && (
+        <p className="text-[10px] text-muted-foreground truncate">{hint}</p>
+      )}
       {typeof progress === "number" && (
         <Progress value={progress} className="h-1 mt-1" />
       )}
@@ -407,15 +473,21 @@ function Stat({
 
 function QualityBadge({ quality }: { quality: number }) {
   const tier =
-    quality >= 80 ? "Legendary" : quality >= 60 ? "Great" : quality >= 40 ? "Solid" : "Rough";
+    quality >= 80
+      ? "Legendary"
+      : quality >= 60
+        ? "Great"
+        : quality >= 40
+          ? "Solid"
+          : "Rough";
   const cls =
     quality >= 80
       ? "border-amber-400/60 text-amber-200"
       : quality >= 60
-      ? "border-purple-400/60 text-purple-200"
-      : quality >= 40
-      ? "border-blue-400/60 text-blue-200"
-      : "border-slate-400/60 text-slate-200";
+        ? "border-purple-400/60 text-purple-200"
+        : quality >= 40
+          ? "border-blue-400/60 text-blue-200"
+          : "border-slate-400/60 text-slate-200";
   return (
     <Badge variant="outline" className={cn("text-[10px]", cls)}>
       {tier} · {quality}
@@ -424,8 +496,16 @@ function QualityBadge({ quality }: { quality: number }) {
 }
 
 function BreakdownRow({
-  label, value, note, icon,
-}: { label: string; value: string; note?: string; icon?: React.ReactNode }) {
+  label,
+  value,
+  note,
+  icon,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  icon?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-2 py-0.5">
       <span className="flex items-center gap-1.5 text-foreground">
@@ -433,7 +513,9 @@ function BreakdownRow({
         {label}
       </span>
       <span className="flex items-center gap-2">
-        {note && <span className="text-[10px] text-muted-foreground">{note}</span>}
+        {note && (
+          <span className="text-[10px] text-muted-foreground">{note}</span>
+        )}
         <span className="font-semibold tabular-nums">{value}</span>
       </span>
     </div>

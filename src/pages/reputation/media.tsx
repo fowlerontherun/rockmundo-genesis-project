@@ -18,12 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -40,14 +35,7 @@ import {
 } from "@/components/ui/chart";
 import ReputationTimeline from "@/components/reputation/ReputationTimeline";
 import type { ReputationTimelineEvent } from "@/components/reputation/ReputationTimeline";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from "recharts";
 import {
   AlertTriangle,
   CalendarDays,
@@ -61,7 +49,10 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { RadioTower as RadioTowerIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const statusOptions: Array<{ value: MediaPrTaskStatus | "all"; label: string }> = [
+const statusOptions: Array<{
+  value: MediaPrTaskStatus | "all";
+  label: string;
+}> = [
   { value: "all", label: "All" },
   { value: "planning", label: "Planning" },
   { value: "production", label: "In Production" },
@@ -123,7 +114,8 @@ const TaskTableView = ({ tasks }: { tasks: MediaPrTask[] }) => {
   if (!tasks.length) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No tasks in this view yet. Add a new activation or adjust filters to see more workstreams.
+        No tasks in this view yet. Add a new activation or adjust filters to see
+        more workstreams.
       </div>
     );
   }
@@ -149,12 +141,23 @@ const TaskTableView = ({ tasks }: { tasks: MediaPrTask[] }) => {
               <TableCell>
                 <div className="space-y-2">
                   <div>
-                    <p className="font-semibold text-foreground">{task.title}</p>
-                    <p className="text-sm text-muted-foreground">{task.summary}</p>
+                    <p className="font-semibold text-foreground">
+                      {task.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {task.summary}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline" className={statusBadgeStyles[task.status]}>
-                      {task.status === "production" ? "In production" : task.status === "live" ? "Live" : task.status}
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeStyles[task.status]}
+                    >
+                      {task.status === "production"
+                        ? "In production"
+                        : task.status === "live"
+                          ? "Live"
+                          : task.status}
                     </Badge>
                     {task.tags.map((tag) => (
                       <Badge key={tag} variant="secondary">
@@ -169,31 +172,53 @@ const TaskTableView = ({ tasks }: { tasks: MediaPrTask[] }) => {
                 <div className="text-xs text-muted-foreground">Lead</div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="border-border/60 bg-background/60">
+                <Badge
+                  variant="outline"
+                  className="border-border/60 bg-background/60"
+                >
                   {task.channel}
                 </Badge>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className={priorityStyles[task.priority]}>
-                  {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                <Badge
+                  variant="outline"
+                  className={priorityStyles[task.priority]}
+                >
+                  {task.priority.charAt(0).toUpperCase() +
+                    task.priority.slice(1)}
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="font-medium text-foreground">{task.reputationImpact >= 0 ? "+" : ""}{task.reputationImpact}</div>
-                <div className="text-xs text-muted-foreground">Projected delta</div>
+                <div className="font-medium text-foreground">
+                  {task.reputationImpact >= 0 ? "+" : ""}
+                  {task.reputationImpact}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Projected delta
+                </div>
               </TableCell>
               <TableCell>
-                <div className="font-medium text-foreground">{formatReach(task.reachEstimate)}</div>
-                <div className="text-xs text-muted-foreground">Earned media</div>
+                <div className="font-medium text-foreground">
+                  {formatReach(task.reachEstimate)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Earned media
+                </div>
               </TableCell>
               <TableCell>
-                <div className="font-medium text-foreground">{formatDueDate(task.dueDate)}</div>
-                <div className="text-xs text-muted-foreground">{formatRelativeDueDate(task.dueDate)}</div>
+                <div className="font-medium text-foreground">
+                  {formatDueDate(task.dueDate)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {formatRelativeDueDate(task.dueDate)}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="space-y-2">
                   <Progress value={task.completion} className="h-2" />
-                  <p className="text-xs text-muted-foreground">{task.completion}% ready</p>
+                  <p className="text-xs text-muted-foreground">
+                    {task.completion}% ready
+                  </p>
                 </div>
               </TableCell>
             </TableRow>
@@ -223,7 +248,9 @@ const MediaReputationPage = () => {
   const [tasks, setTasks] = useState<MediaPrTask[]>([]);
   const [trend, setTrend] = useState<MediaReputationTrendPoint[]>([]);
   const [events, setEvents] = useState<MediaReputationEvent[]>([]);
-  const [statusFilter, setStatusFilter] = useState<MediaPrTaskStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<MediaPrTaskStatus | "all">(
+    "all",
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -281,18 +308,27 @@ const MediaReputationPage = () => {
 
   const completionRate = tasks.length
     ? Math.round(
-        (tasks.filter((task) => task.status === "completed").length / tasks.length) * 100,
+        (tasks.filter((task) => task.status === "completed").length /
+          tasks.length) *
+          100,
       )
     : 0;
 
   const activeTasks = tasks.filter((task) => task.status !== "completed");
-  const highImpactInitiatives = activeTasks.filter((task) => task.reputationImpact >= 4).length;
-  const activeChannels = useMemo(() => new Set(tasks.map((task) => task.channel)).size, [tasks]);
+  const highImpactInitiatives = activeTasks.filter(
+    (task) => task.reputationImpact >= 4,
+  ).length;
+  const activeChannels = useMemo(
+    () => new Set(tasks.map((task) => task.channel)).size,
+    [tasks],
+  );
 
   const upcomingTasks = useMemo(() => {
     return activeTasks
       .slice()
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .sort(
+        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+      )
       .slice(0, 4);
   }, [activeTasks]);
 
@@ -300,7 +336,9 @@ const MediaReputationPage = () => {
     () =>
       events
         .slice()
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        ),
     [events],
   );
 
@@ -314,49 +352,64 @@ const MediaReputationPage = () => {
       headerActions={
         <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[10px]">
           <TrendingUp className="h-3 w-3 text-emerald-500" />
-          <span className="font-medium text-foreground">Score {currentScore}</span>
-          <span className={scoreDelta >= 0 ? "text-emerald-600" : "text-red-600"}>
-            {scoreDelta >= 0 ? "+" : ""}{scoreDelta.toFixed(1)}
+          <span className="font-medium text-foreground">
+            Score {currentScore}
+          </span>
+          <span
+            className={scoreDelta >= 0 ? "text-emerald-600" : "text-red-600"}
+          >
+            {scoreDelta >= 0 ? "+" : ""}
+            {scoreDelta.toFixed(1)}
           </span>
         </div>
       }
     >
-
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-background/70">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs tracking-wide text-muted-foreground">
               <Gauge className="h-4 w-4" /> Reputation momentum
             </div>
-            <CardTitle className="text-2xl font-semibold text-foreground">{currentScore}</CardTitle>
-            <CardDescription>Rolling media score across all channels</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {currentScore}
+            </CardTitle>
+            <CardDescription>
+              Rolling media score across all channels
+            </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {scoreDelta >= 0 ? "Up" : "Down"} {Math.abs(scoreDelta).toFixed(1)} points vs last update
+            {scoreDelta >= 0 ? "Up" : "Down"} {Math.abs(scoreDelta).toFixed(1)}{" "}
+            points vs last update
           </CardContent>
         </Card>
 
         <Card className="border-border/60 bg-background/70">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs tracking-wide text-muted-foreground">
               <CheckCircle2 className="h-4 w-4" /> Delivery health
             </div>
-            <CardTitle className="text-2xl font-semibold text-foreground">{completionRate}%</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {completionRate}%
+            </CardTitle>
             <CardDescription>PR programs delivered or on-track</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {tasks.length - activeTasks.length} of {tasks.length} initiatives complete
+            {tasks.length - activeTasks.length} of {tasks.length} initiatives
+            complete
           </CardContent>
         </Card>
 
         <Card className="border-border/60 bg-background/70">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs tracking-wide text-muted-foreground">
               <Target className="h-4 w-4" /> High impact
             </div>
-            <CardTitle className="text-2xl font-semibold text-foreground">{highImpactInitiatives}</CardTitle>
-            <CardDescription>Active stories driving ≥4pt reputation lift</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {highImpactInitiatives}
+            </CardTitle>
+            <CardDescription>
+              Active stories driving ≥4pt reputation lift
+            </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             Operating across {activeChannels} core media channels
@@ -365,11 +418,15 @@ const MediaReputationPage = () => {
 
         <Card className="border-border/60 bg-background/70">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs tracking-wide text-muted-foreground">
               <AlertTriangle className="h-4 w-4" /> Sentiment watch
             </div>
-            <CardTitle className="text-2xl font-semibold text-foreground">{sentimentPercent}%</CardTitle>
-            <CardDescription>Average audience sentiment this cycle</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {sentimentPercent}%
+            </CardTitle>
+            <CardDescription>
+              Average audience sentiment this cycle
+            </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             Monitoring {events.length} tracked reputation events
@@ -380,8 +437,12 @@ const MediaReputationPage = () => {
       <section className="rounded-lg border border-border/60 bg-background/70 p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Trendline</p>
-            <h2 className="text-lg font-semibold text-foreground">Reputation and earned media trajectory</h2>
+            <p className="text-xs tracking-wide text-muted-foreground">
+              Trendline
+            </p>
+            <h2 className="text-lg font-semibold text-foreground">
+              Reputation and earned media trajectory
+            </h2>
           </div>
           <div className="text-xs text-muted-foreground">
             <div>Sentiment shown as dashed line</div>
@@ -390,11 +451,28 @@ const MediaReputationPage = () => {
         </div>
         <div className="mt-4 h-[320px] w-full">
           <ChartContainer config={chartConfig} className="h-full w-full">
-            <AreaChart data={trendWithSentiment} margin={{ left: 12, right: 16, top: 10, bottom: 0 }}>
+            <AreaChart
+              data={trendWithSentiment}
+              margin={{ left: 12, right: 16, top: 10, bottom: 0 }}
+            >
               <defs>
-                <linearGradient id="media-reputation" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-score)" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="var(--color-score)" stopOpacity={0.05} />
+                <linearGradient
+                  id="media-reputation"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-score)"
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-score)"
+                    stopOpacity={0.05}
+                  />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -428,7 +506,10 @@ const MediaReputationPage = () => {
                   <ChartTooltipContent
                     formatter={(value, name) => {
                       if (name === "earnedMedia") {
-                        return [`${Number(value).toFixed(1)}M`, "Earned media reach"];
+                        return [
+                          `${Number(value).toFixed(1)}M`,
+                          "Earned media reach",
+                        ];
                       }
 
                       if (name === "sentimentPercent") {
@@ -475,15 +556,28 @@ const MediaReputationPage = () => {
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card className="border-border/60 bg-background/70">
           <CardContent className="pt-6">
-            <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as MediaPrTaskStatus | "all")}> 
+            <Tabs
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as MediaPrTaskStatus | "all")
+              }
+            >
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">PR workload</p>
-                  <h2 className="text-lg font-semibold text-foreground">Campaign execution board</h2>
+                  <p className="text-xs tracking-wide text-muted-foreground">
+                    PR workload
+                  </p>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Campaign execution board
+                  </h2>
                 </div>
                 <TabsList className="grid w-full gap-1 sm:grid-cols-3 lg:max-w-[560px] lg:grid-cols-5">
                   {statusOptions.map((option) => (
-                    <TabsTrigger key={option.value} value={option.value} className="text-xs">
+                    <TabsTrigger
+                      key={option.value}
+                      value={option.value}
+                      className="text-xs"
+                    >
                       {option.label}
                       {option.value === "all"
                         ? ` (${tasks.length})`
@@ -493,7 +587,11 @@ const MediaReputationPage = () => {
                 </TabsList>
               </div>
               {statusOptions.map((option) => (
-                <TabsContent key={option.value} value={option.value} className="mt-6 space-y-4">
+                <TabsContent
+                  key={option.value}
+                  value={option.value}
+                  className="mt-6 space-y-4"
+                >
                   {isLoading ? (
                     <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                       Syncing latest task data...
@@ -516,24 +614,38 @@ const MediaReputationPage = () => {
         <Card className="border-border/60 bg-background/70">
           <CardHeader>
             <CardTitle className="text-lg">Upcoming commitments</CardTitle>
-            <CardDescription>Deadlines and coordination beats to monitor closely.</CardDescription>
+            <CardDescription>
+              Deadlines and coordination beats to monitor closely.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {upcomingTasks.length ? (
               upcomingTasks.map((task) => (
-                <div key={task.id} className="rounded-lg border border-border/50 bg-muted/10 p-4">
+                <div
+                  key={task.id}
+                  className="rounded-lg border border-border/50 bg-muted/10 p-4"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="font-medium text-foreground">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">{task.summary}</p>
+                      <p className="font-medium text-foreground">
+                        {task.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.summary}
+                      </p>
                     </div>
-                    <Badge variant="outline" className={priorityStyles[task.priority]}>
-                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    <Badge
+                      variant="outline"
+                      className={priorityStyles[task.priority]}
+                    >
+                      {task.priority.charAt(0).toUpperCase() +
+                        task.priority.slice(1)}
                     </Badge>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <CalendarDays className="h-3.5 w-3.5" /> {formatDueDate(task.dueDate)}
+                      <CalendarDays className="h-3.5 w-3.5" />{" "}
+                      {formatDueDate(task.dueDate)}
                     </span>
                     <span>({formatRelativeDueDate(task.dueDate)})</span>
                     <span className="flex items-center gap-1">
@@ -544,7 +656,8 @@ const MediaReputationPage = () => {
               ))
             ) : (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                All commitments are delivered—reallocate resources to future storytelling opportunities.
+                All commitments are delivered—reallocate resources to future
+                storytelling opportunities.
               </div>
             )}
           </CardContent>
@@ -554,7 +667,9 @@ const MediaReputationPage = () => {
       <Card className="border-border/60 bg-background/70">
         <CardHeader>
           <CardTitle className="text-lg">Reputation timeline</CardTitle>
-          <CardDescription>Signature wins, pivots, and reputation events across PR channels.</CardDescription>
+          <CardDescription>
+            Signature wins, pivots, and reputation events across PR channels.
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {isLoading && !timelineEvents.length ? (

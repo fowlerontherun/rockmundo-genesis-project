@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { BookOpen, RefreshCw, Loader2, Sparkles, Check, User } from "lucide-react";
+import {
+  BookOpen,
+  RefreshCw,
+  Loader2,
+  Sparkles,
+  Check,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,7 +73,7 @@ export const BackstoryStep = ({
             musicalStyle: data.musicalStyle,
             careerGoal: data.careerGoal,
           },
-        }
+        },
       );
 
       if (error) throw error;
@@ -89,7 +96,9 @@ export const BackstoryStep = ({
     const name = data.artistName || data.displayName;
     const origin = selectedOrigin?.name || "humble beginnings";
     const style = data.musicalStyle || "eclectic sound";
-    const traitList = selectedTraits.map((t) => t.name.toLowerCase()).join(" and ");
+    const traitList = selectedTraits
+      .map((t) => t.name.toLowerCase())
+      .join("and");
 
     return `${name} emerged from ${origin.toLowerCase()}, carrying the raw passion of someone who discovered music as both escape and salvation. Known for a ${traitList} approach to the craft, they developed a distinctive ${style} that refuses to fit neatly into any single genre.
 
@@ -129,7 +138,7 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Profile</p>
+            <p className="text-xs text-muted-foreground">Profile</p>
             <p className="truncate text-lg font-semibold">{displayName}</p>
             <p className="text-xs text-muted-foreground">
               {avatarProfile?.avatar_url
@@ -145,14 +154,18 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Origin</p>
-            <p className="font-medium">{selectedOrigin?.name ?? "Not selected"}</p>
+            <p className="font-medium">
+              {selectedOrigin?.name ?? "Not selected"}
+            </p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Style</p>
             <p className="font-medium">{data.musicalStyle || "Not defined"}</p>
           </div>
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Traits</p>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">
+              Traits
+            </p>
             <div className="flex flex-wrap gap-1">
               {selectedTraits.map((trait) => (
                 <Badge key={trait.id} variant="secondary" className="text-xs">
@@ -242,7 +255,7 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
       {hasBackstory && !isEditing && (
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
-            Your journey is ready to begin. Click{" "}
+            Your journey is ready to begin. Click{""}
             <span className="font-medium text-primary">Begin Journey</span> to
             start your career.
           </p>

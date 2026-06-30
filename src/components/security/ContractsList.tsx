@@ -3,13 +3,18 @@ import { FileText, Calendar, Users, DollarSign } from "lucide-react";
 import { useSecurityContracts } from "@/hooks/useSecurityFirm";
 import type { SecurityContract } from "@/types/security";
 import { format } from "date-fns";
-import { ContentCard, type ContentCardBadge } from "@/components/ui/ContentCard";
+import {
+  ContentCard,
+  type ContentCardBadge,
+} from "@/components/ui/ContentCard";
 
 interface ContractsListProps {
   firmId: string;
 }
 
-const statusTone = (status: SecurityContract["status"]): ContentCardBadge["tone"] => {
+const statusTone = (
+  status: SecurityContract["status"],
+): ContentCardBadge["tone"] => {
   switch (status) {
     case "active":
       return "success";
@@ -35,10 +40,12 @@ const ContractCard = ({ contract }: { contract: SecurityContract }) => (
     trailing={
       contract.total_fee ? (
         <div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="text-[11px] tracking-wide text-muted-foreground">
             Total
           </div>
-          <div className="font-semibold">${contract.total_fee.toLocaleString()}</div>
+          <div className="font-semibold">
+            ${contract.total_fee.toLocaleString()}
+          </div>
         </div>
       ) : undefined
     }
@@ -66,9 +73,11 @@ const ContractCard = ({ contract }: { contract: SecurityContract }) => (
 export const ContractsList = ({ firmId }: ContractsListProps) => {
   const { data: contracts = [], isLoading } = useSecurityContracts(firmId);
 
-  const activeContracts = contracts.filter(c => c.status === 'active' || c.status === 'accepted');
-  const pendingContracts = contracts.filter(c => c.status === 'pending');
-  const completedContracts = contracts.filter(c => c.status === 'completed');
+  const activeContracts = contracts.filter(
+    (c) => c.status === "active" || c.status === "accepted",
+  );
+  const pendingContracts = contracts.filter((c) => c.status === "pending");
+  const completedContracts = contracts.filter((c) => c.status === "completed");
 
   return (
     <Card>
@@ -77,7 +86,9 @@ export const ContractsList = ({ firmId }: ContractsListProps) => {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-center text-muted-foreground py-4">Loading contracts...</p>
+          <p className="text-center text-muted-foreground py-4">
+            Loading contracts...
+          </p>
         ) : contracts.length === 0 ? (
           <div className="text-center py-8">
             <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
@@ -94,7 +105,7 @@ export const ContractsList = ({ firmId }: ContractsListProps) => {
                   Active ({activeContracts.length})
                 </h4>
                 <div className="space-y-2">
-                  {activeContracts.map(contract => (
+                  {activeContracts.map((contract) => (
                     <ContractCard key={contract.id} contract={contract} />
                   ))}
                 </div>
@@ -107,7 +118,7 @@ export const ContractsList = ({ firmId }: ContractsListProps) => {
                   Pending ({pendingContracts.length})
                 </h4>
                 <div className="space-y-2">
-                  {pendingContracts.map(contract => (
+                  {pendingContracts.map((contract) => (
                     <ContractCard key={contract.id} contract={contract} />
                   ))}
                 </div>
@@ -120,7 +131,7 @@ export const ContractsList = ({ firmId }: ContractsListProps) => {
                   Completed ({completedContracts.length})
                 </h4>
                 <div className="space-y-2">
-                  {completedContracts.slice(0, 5).map(contract => (
+                  {completedContracts.slice(0, 5).map((contract) => (
                     <ContractCard key={contract.id} contract={contract} />
                   ))}
                 </div>

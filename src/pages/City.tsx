@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { MapPin, Building2, Train, Plane, Music, Sparkles, Loader2, Globe, Users } from "lucide-react";
+import {
+  MapPin,
+  Building2,
+  Train,
+  Plane,
+  Music,
+  Sparkles,
+  Loader2,
+  Globe,
+  Users,
+} from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +34,6 @@ import { CityTransportSection } from "@/components/city/CityTransportSection";
 import { CityMusicSceneCard } from "@/components/city/CityMusicSceneCard";
 import { CityCostBreakdown } from "@/components/city/CityCostBreakdown";
 import { CityGovernanceSection } from "@/components/city/CityGovernanceSection";
-
 
 type CityRouteParams = {
   cityId?: string;
@@ -65,7 +74,9 @@ export interface CityPageLoadResult {
 
 export const CITY_NOT_FOUND_ERROR = "CITY_NOT_FOUND";
 
-export const loadCityPageData = async (cityId: string): Promise<CityPageLoadResult> => {
+export const loadCityPageData = async (
+  cityId: string,
+): Promise<CityPageLoadResult> => {
   const snapshot = await fetchWorldEnvironmentSnapshot();
   const matchedCity = snapshot.cities.find((entry) => entry.id === cityId);
 
@@ -82,7 +93,10 @@ export const loadCityPageData = async (cityId: string): Promise<CityPageLoadResu
       country: matchedCity.country,
     });
   } catch (error) {
-    console.error(`Failed to load city environment details for ${matchedCity.name}`, error);
+    console.error(
+      `Failed to load city environment details for ${matchedCity.name}`,
+      error,
+    );
     // Only show error for critical failures, not optional metadata
     detailsError = null;
   }
@@ -111,7 +125,10 @@ export const CityContent = ({
   rehearsalRooms = [],
 }: CityContentProps & { rehearsalRooms?: any[] }) => {
   const culturalEvents = useMemo(
-    () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
+    () =>
+      (city?.cultural_events ?? []).filter(
+        (event) => typeof event === "string" && event.trim().length > 0,
+      ),
     [city?.cultural_events],
   );
 
@@ -130,15 +147,27 @@ export const CityContent = ({
       return city.description;
     }
 
-    return `Welcome to ${city?.name ?? 'this city'} - a vibrant destination for musicians with ${city?.music_scene ?? 0}% music scene rating.`;
-  }, [metadata?.summary, city?.profileDescription, city?.description, city?.name, city?.music_scene]);
+    return `Welcome to ${city?.name ?? "this city"} - a vibrant destination for musicians with ${city?.music_scene ?? 0}% music scene rating.`;
+  }, [
+    metadata?.summary,
+    city?.profileDescription,
+    city?.description,
+    city?.name,
+    city?.music_scene,
+  ]);
 
-  const famousResident = metadata?.famousResident ?? city?.famousResident ?? null;
+  const famousResident =
+    metadata?.famousResident ?? city?.famousResident ?? null;
   const signatureSound = metadata?.signatureSound ?? null;
 
   if (loading) {
     return (
-      <FMPageScaffold title="City" icon={MapPin} backTo="/cities" backLabel="Cities">
+      <FMPageScaffold
+        title="City"
+        icon={MapPin}
+        backTo="/cities"
+        backLabel="Cities"
+      >
         <div className="flex min-h-[40vh] w-full items-center justify-center">
           <div className="flex items-center gap-3 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -151,11 +180,18 @@ export const CityContent = ({
 
   if (error || !city) {
     return (
-      <FMPageScaffold title="City unavailable" icon={MapPin} backTo="/cities" backLabel="Cities">
+      <FMPageScaffold
+        title="City unavailable"
+        icon={MapPin}
+        backTo="/cities"
+        backLabel="Cities"
+      >
         <div className="mx-auto flex max-w-xl flex-col gap-4">
           <Alert variant="destructive">
             <AlertTitle>City unavailable</AlertTitle>
-            <AlertDescription>{error ?? "We couldn't find the requested city."}</AlertDescription>
+            <AlertDescription>
+              {error ?? "We couldn't find the requested city."}
+            </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
@@ -186,41 +222,54 @@ export const CityContent = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-sm uppercase tracking-wide">
+                <Badge variant="secondary" className="text-sm tracking-wide">
                   City Overview
                 </Badge>
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{city.name}</h1>
-                <p className="text-muted-foreground md:text-base max-w-2xl">{summary}</p>
+                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                  {city.name}
+                </h1>
+                <p className="text-muted-foreground md:text-base max-w-2xl">
+                  {summary}
+                </p>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="flex items-center gap-1">
                 <Globe className="h-3 w-3" />
                 {city.country}
               </Badge>
               {playerCount > 0 && (
-                <Badge variant="outline" className="bg-primary/10 text-primary flex items-center gap-1">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary flex items-center gap-1"
+                >
                   <Users className="h-3 w-3" />
                   {playerCount} {playerCount === 1 ? "player" : "players"} here
                 </Badge>
               )}
               {signatureSound && (
-                <Badge variant="outline" className="bg-primary/5 text-primary flex items-center gap-1">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/5 text-primary flex items-center gap-1"
+                >
                   <Music className="h-3 w-3" />
                   {signatureSound}
                 </Badge>
               )}
             </div>
-            
+
             {famousResident && (
               <p className="text-sm text-muted-foreground">
-                Famous resident: <span className="font-medium text-foreground">{famousResident}</span>
+                Famous resident:{" "}
+                <span className="font-medium text-foreground">
+                  {famousResident}
+                </span>
               </p>
             )}
-            
+
             {detailsLoading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -228,7 +277,7 @@ export const CityContent = ({
               </div>
             )}
           </div>
-          
+
           <div className="flex flex-col items-stretch gap-3 min-w-[200px]">
             <Button asChild>
               <Link to={`/travel?destination=${city.id}`}>✈️ Travel here</Link>
@@ -237,24 +286,40 @@ export const CityContent = ({
               <Link to="/cities">Back to cities</Link>
             </Button>
             <div className="rounded-md border border-border/60 bg-background/80 p-3 text-sm">
-              <div className="font-medium text-foreground mb-2">Quick Stats</div>
+              <div className="font-medium text-foreground mb-2">
+                Quick Stats
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Population</div>
-                  <div className="font-semibold">{(city.population / 1_000_000).toFixed(1)}M</div>
+                  <div className="text-xs tracking-wide text-muted-foreground">
+                    Population
+                  </div>
+                  <div className="font-semibold">
+                    {(city.population / 1_000_000).toFixed(1)}M
+                  </div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Music Scene</div>
-                  <div className="font-semibold text-primary">{city.music_scene}%</div>
+                  <div className="text-xs tracking-wide text-muted-foreground">
+                    Music Scene
+                  </div>
+                  <div className="font-semibold text-primary">
+                    {city.music_scene}%
+                  </div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Cost of Living</div>
+                  <div className="text-xs tracking-wide text-muted-foreground">
+                    Cost of Living
+                  </div>
                   <div className="font-semibold">{city.cost_of_living}%</div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Local Bonus</div>
+                  <div className="text-xs tracking-wide text-muted-foreground">
+                    Local Bonus
+                  </div>
                   <div className="font-semibold text-green-600">
-                    {Number.isFinite(city.local_bonus) ? `+${city.local_bonus}%` : "—"}
+                    {Number.isFinite(city.local_bonus)
+                      ? `+${city.local_bonus}%`
+                      : "—"}
                   </div>
                 </div>
               </div>
@@ -276,10 +341,7 @@ export const CityContent = ({
           costOfLiving={city.cost_of_living}
           cityName={city.name}
         />
-        <CityTransportSection
-          routes={transportRoutes}
-          cityName={city.name}
-        />
+        <CityTransportSection routes={transportRoutes} cityName={city.name} />
       </div>
 
       {/* City Governance - Mayor & Elections */}
@@ -304,22 +366,30 @@ export const CityContent = ({
             {culturalEvents.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {culturalEvents.map((event) => (
-                  <div key={`${city.id}-event-${event}`} className="flex flex-col justify-between rounded-lg border border-border/60 p-4 hover:border-primary/50 transition-colors">
+                  <div
+                    key={`${city.id}-event-${event}`}
+                    className="flex flex-col justify-between rounded-lg border border-border/60 p-4 hover:border-primary/50 transition-colors"
+                  >
                     <div className="space-y-2">
-                      <h3 className="text-base font-semibold leading-snug">{event}</h3>
+                      <h3 className="text-base font-semibold leading-snug">
+                        {event}
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        Plan your tour routing to align with this signature moment in {city.name}.
+                        Plan your tour routing to align with this signature
+                        moment in {city.name}.
                       </p>
                     </div>
                     <div className="pt-4 text-xs text-muted-foreground">
-                      Opportunity index: {city.music_scene}% | Local bonus +{city.local_bonus}%
+                      Opportunity index: {city.music_scene}% | Local bonus +
+                      {city.local_bonus}%
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                No festivals or cultural events have been cataloged for this city yet.
+                No festivals or cultural events have been cataloged for this
+                city yet.
               </div>
             )}
           </CardContent>
@@ -366,7 +436,9 @@ export default function City() {
           return;
         }
 
-        const matchedCity = snapshot.cities.find((entry) => entry.id === cityId);
+        const matchedCity = snapshot.cities.find(
+          (entry) => entry.id === cityId,
+        );
         if (!matchedCity) {
           if (!options.signal?.cancelled) {
             setError("We couldn't find that city.");
@@ -393,73 +465,126 @@ export default function City() {
           playerCountResult,
           transportResult,
           venueCountResult,
-          cityDetails
+          cityDetails,
         ] = await Promise.allSettled([
-          supabase.from("city_districts").select("*").eq("city_id", matchedCity.id).order("name"),
-          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
-          supabase.from("city_night_clubs").select("*").eq("city_id", matchedCity.id).order("quality_level", { ascending: false }),
-          supabase.from("rehearsal_rooms").select("*, city:cities(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
-          supabase.from("profiles").select("id", { count: "exact", head: true }).eq("current_city_id", matchedCity.id),
+          supabase
+            .from("city_districts")
+            .select("*")
+            .eq("city_id", matchedCity.id)
+            .order("name"),
+          supabase
+            .from("city_studios")
+            .select("*, district:city_districts(name)")
+            .eq("city_id", matchedCity.id)
+            .order("quality_rating", { ascending: false }),
+          supabase
+            .from("city_night_clubs")
+            .select("*")
+            .eq("city_id", matchedCity.id)
+            .order("quality_level", { ascending: false }),
+          supabase
+            .from("rehearsal_rooms")
+            .select("*, city:cities(name)")
+            .eq("city_id", matchedCity.id)
+            .order("quality_rating", { ascending: false }),
+          supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("current_city_id", matchedCity.id),
           supabase
             .from("city_transport_routes")
-            .select("*, from_city:cities!city_transport_routes_from_city_id_fkey(name, country), to_city:cities!city_transport_routes_to_city_id_fkey(name, country)")
+            .select(
+              "*, from_city:cities!city_transport_routes_from_city_id_fkey(name, country), to_city:cities!city_transport_routes_to_city_id_fkey(name, country)",
+            )
             .eq("from_city_id", matchedCity.id)
             .order("duration_hours", { ascending: true }),
-          supabase.from("venues").select("id", { count: "exact", head: true }).eq("city_id", matchedCity.id),
+          supabase
+            .from("venues")
+            .select("id", { count: "exact", head: true })
+            .eq("city_id", matchedCity.id),
           fetchCityEnvironmentDetails(matchedCity.id, {
             cityName: matchedCity.name,
             country: matchedCity.country,
-          })
+          }),
         ]);
 
         if (!options.signal?.cancelled) {
-          if (districtsResult.status === "fulfilled" && districtsResult.value.data) {
+          if (
+            districtsResult.status === "fulfilled" &&
+            districtsResult.value.data
+          ) {
             setDistricts(districtsResult.value.data);
           }
-          
-          if (studiosResult.status === "fulfilled" && studiosResult.value.data) {
+
+          if (
+            studiosResult.status === "fulfilled" &&
+            studiosResult.value.data
+          ) {
             setStudios(studiosResult.value.data);
           }
 
-          if (nightClubsResult.status === "fulfilled" && nightClubsResult.value.data) {
+          if (
+            nightClubsResult.status === "fulfilled" &&
+            nightClubsResult.value.data
+          ) {
             setNightClubs(
               nightClubsResult.value.data.map((row) =>
-                normalizeNightClubRecord(row as unknown as Record<string, unknown>)
-              )
+                normalizeNightClubRecord(
+                  row as unknown as Record<string, unknown>,
+                ),
+              ),
             );
           }
 
-          if (rehearsalRoomsResult.status === "fulfilled" && rehearsalRoomsResult.value.data) {
+          if (
+            rehearsalRoomsResult.status === "fulfilled" &&
+            rehearsalRoomsResult.value.data
+          ) {
             setRehearsalRooms(rehearsalRoomsResult.value.data);
           }
-          
-          if (playerCountResult.status === "fulfilled" && playerCountResult.value.count !== null) {
+
+          if (
+            playerCountResult.status === "fulfilled" &&
+            playerCountResult.value.count !== null
+          ) {
             setPlayerCount(playerCountResult.value.count);
           }
 
-          if (transportResult.status === "fulfilled" && transportResult.value.data) {
+          if (
+            transportResult.status === "fulfilled" &&
+            transportResult.value.data
+          ) {
             setTransportRoutes(transportResult.value.data as TransportRoute[]);
           }
 
-          if (venueCountResult.status === "fulfilled" && venueCountResult.value.count !== null) {
+          if (
+            venueCountResult.status === "fulfilled" &&
+            venueCountResult.value.count !== null
+          ) {
             setVenueCount(venueCountResult.value.count);
           }
-          
+
           if (cityDetails.status === "fulfilled") {
             setDetails(cityDetails.value);
             // Only override night clubs if we didn't get them from DB
-            if (nightClubsResult.status === "rejected" && cityDetails.value.nightClubs) {
+            if (
+              nightClubsResult.status === "rejected" &&
+              cityDetails.value.nightClubs
+            ) {
               setNightClubs(cityDetails.value.nightClubs ?? []);
             }
           } else if (cityDetails.status === "rejected") {
-            console.error(`Failed to load city environment details for ${matchedCity.name}`, cityDetails.reason);
+            console.error(
+              `Failed to load city environment details for ${matchedCity.name}`,
+              cityDetails.reason,
+            );
             // Don't show error banner for optional metadata failures
             setDetailsError(null);
             if (nightClubsResult.status === "rejected") {
               setNightClubs([]);
             }
           }
-          
+
           setDetailsLoading(false);
         }
       } catch (snapshotError) {

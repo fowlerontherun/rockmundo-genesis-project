@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { DecoratedFriendship } from "../types";
@@ -15,7 +21,7 @@ interface FriendshipListProps {
   onAccept: (friendshipId: string) => void;
   onDecline: (friendshipId: string) => void;
   onRemove: (friendshipId: string) => void;
-  filter?: 'accepted' | 'pending' | 'all';
+  filter?: "accepted" | "pending" | "all";
 }
 
 export function FriendshipList({
@@ -26,7 +32,7 @@ export function FriendshipList({
   onAccept,
   onDecline,
   onRemove,
-  filter = 'all',
+  filter = "all",
 }: FriendshipListProps) {
   const { incoming, outgoing, accepted } = useMemo(() => {
     const grouped = {
@@ -60,7 +66,9 @@ export function FriendshipList({
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Relationships</CardTitle>
-        <CardDescription>Manage requests and choose a friend to review in-depth.</CardDescription>
+        <CardDescription>
+          Manage requests and choose a friend to review in-depth.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex h-full flex-col gap-4">
         {loading ? (
@@ -72,7 +80,7 @@ export function FriendshipList({
             <div className="space-y-6">
               {incoming.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
                     Incoming requests
                   </p>
                   <div className="space-y-3">
@@ -81,13 +89,24 @@ export function FriendshipList({
                         key={friendship.friendship.id}
                         friendship={friendship}
                         onSelect={onSelect}
-                        selected={selectedFriendshipId === friendship.friendship.id}
+                        selected={
+                          selectedFriendshipId === friendship.friendship.id
+                        }
                         actions={
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => onAccept(friendship.friendship.id)}>
+                            <Button
+                              size="sm"
+                              onClick={() => onAccept(friendship.friendship.id)}
+                            >
                               <UserPlus className="mr-1 h-4 w-4" /> Accept
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => onDecline(friendship.friendship.id)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                onDecline(friendship.friendship.id)
+                              }
+                            >
                               <UserX className="mr-1 h-4 w-4" /> Decline
                             </Button>
                           </div>
@@ -100,7 +119,7 @@ export function FriendshipList({
 
               {outgoing.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
                     Pending approvals
                   </p>
                   <div className="space-y-3">
@@ -109,9 +128,15 @@ export function FriendshipList({
                         key={friendship.friendship.id}
                         friendship={friendship}
                         onSelect={onSelect}
-                        selected={selectedFriendshipId === friendship.friendship.id}
+                        selected={
+                          selectedFriendshipId === friendship.friendship.id
+                        }
                         actions={
-                          <Button size="sm" variant="outline" onClick={() => onRemove(friendship.friendship.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onRemove(friendship.friendship.id)}
+                          >
                             Cancel request
                           </Button>
                         }
@@ -122,11 +147,13 @@ export function FriendshipList({
               )}
 
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
                   Friends
                 </p>
                 {accepted.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No active friendships yet.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No active friendships yet.
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {accepted.map((friendship) => (
@@ -134,9 +161,15 @@ export function FriendshipList({
                         key={friendship.friendship.id}
                         friendship={friendship}
                         onSelect={onSelect}
-                        selected={selectedFriendshipId === friendship.friendship.id}
+                        selected={
+                          selectedFriendshipId === friendship.friendship.id
+                        }
                         actions={
-                          <Button size="sm" variant="outline" onClick={() => onRemove(friendship.friendship.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onRemove(friendship.friendship.id)}
+                          >
                             Remove
                           </Button>
                         }
@@ -160,7 +193,12 @@ interface FriendRowProps {
   actions?: React.ReactNode;
 }
 
-function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) {
+function FriendRow({
+  friendship,
+  selected,
+  onSelect,
+  actions,
+}: FriendRowProps) {
   const profile = friendship.otherProfile;
 
   return (
@@ -172,7 +210,7 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
       }`}
       onClick={() => onSelect(friendship)}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter" || e.key === "") {
           e.preventDefault();
           onSelect(friendship);
         }
@@ -180,17 +218,28 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
     >
       <div className="flex flex-1 items-center gap-3">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.display_name ?? profile?.username} />
-          <AvatarFallback>{profile?.display_name?.[0] ?? profile?.username?.[0] ?? "?"}</AvatarFallback>
+          <AvatarImage
+            src={profile?.avatar_url ?? undefined}
+            alt={profile?.display_name ?? profile?.username}
+          />
+          <AvatarFallback>
+            {profile?.display_name?.[0] ?? profile?.username?.[0] ?? "?"}
+          </AvatarFallback>
         </Avatar>
         <div>
-          <p className="text-sm font-semibold">{profile?.display_name ?? profile?.username ?? "Unknown artist"}</p>
+          <p className="text-sm font-semibold">
+            {profile?.display_name ?? profile?.username ?? "Unknown artist"}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Level {profile?.level ?? 1} • Fame {profile?.fame?.toLocaleString() ?? 0}
+            Level {profile?.level ?? 1} • Fame{" "}
+            {profile?.fame?.toLocaleString() ?? 0}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex items-center gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
         <Badge variant="outline" className="text-xs capitalize">
           {friendship.friendship.status}
         </Badge>
@@ -199,4 +248,3 @@ function FriendRow({ friendship, selected, onSelect, actions }: FriendRowProps) 
     </div>
   );
 }
-

@@ -2,18 +2,42 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { differenceInCalendarDays, format, isAfter, isBefore, parseISO } from "date-fns";
-import { z } from "zod";
 import {
-  Badge,
-} from "@/components/ui/badge";
+  differenceInCalendarDays,
+  format,
+  isAfter,
+  isBefore,
+  parseISO,
+} from "date-fns";
+import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,19 +56,39 @@ import {
   submitCastingReview,
   submitCastingSubmission,
 } from "@/lib/api/talent";
-import { AlertCircle, Briefcase, Calendar, CheckCircle2, ClipboardList, Filter, Layers, MapPin, Search, Sparkles, Users, Video, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
+  Filter,
+  Layers,
+  MapPin,
+  Search,
+  Sparkles,
+  Users,
+  Video,
+  XCircle,
+} from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const submissionSchema = z.object({
   castingCallRoleId: z.string().optional(),
   coverLetter: z
     .string()
-    .min(50, "Share at least a short pitch or introduction (50 characters minimum).")
+    .min(
+      50,
+      "Share at least a short pitch or introduction (50 characters minimum).",
+    )
     .max(2000, "Keep your cover letter under 2000 characters."),
   experienceSummary: z
     .string()
     .min(25, "Highlight a few experience details so casting can evaluate you.")
-    .max(2000, "Keep your experience summary focused and under 2000 characters."),
+    .max(
+      2000,
+      "Keep your experience summary focused and under 2000 characters.",
+    ),
   portfolioUrl: z
     .string()
     .url("Enter a valid URL or leave blank.")
@@ -94,7 +138,10 @@ const statusBadgeStyles: Record<string, string> = {
   under_review: "bg-yellow-100 text-yellow-800 border-yellow-200",
 };
 
-const reviewDecisionToStatus: Record<ReviewDraft["decision"], SubmitCastingSubmissionInput["status"]> = {
+const reviewDecisionToStatus: Record<
+  ReviewDraft["decision"],
+  SubmitCastingSubmissionInput["status"]
+> = {
   pending: "under_review",
   shortlist: "shortlisted",
   callback: "callback",
@@ -120,7 +167,9 @@ const TalentDiscoveryPage = () => {
     remoteOnly: false,
   });
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
-  const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>(
+    {},
+  );
 
   const submissionForm = useForm<SubmissionFormValues>({
     resolver: zodResolver(submissionSchema),
@@ -160,13 +209,15 @@ const TalentDiscoveryPage = () => {
       filters.status === "all"
         ? undefined
         : filters.status === "closing"
-        ? ["open"]
-        : [filters.status];
+          ? ["open"]
+          : [filters.status];
 
     return {
       searchTerm: filters.searchTerm || undefined,
-      projectTypes: filters.projectType === "all" ? undefined : [filters.projectType],
-      unionStatuses: filters.unionStatus === "all" ? undefined : [filters.unionStatus],
+      projectTypes:
+        filters.projectType === "all" ? undefined : [filters.projectType],
+      unionStatuses:
+        filters.unionStatus === "all" ? undefined : [filters.unionStatus],
       statuses,
       location: filters.location || undefined,
       remoteOnly: filters.remoteOnly ? true : undefined,
@@ -204,7 +255,9 @@ const TalentDiscoveryPage = () => {
       return;
     }
 
-    const stillVisible = filteredCalls.some((call) => call.id === selectedCallId);
+    const stillVisible = filteredCalls.some(
+      (call) => call.id === selectedCallId,
+    );
     if (!stillVisible) {
       setSelectedCallId(filteredCalls[0].id);
     }
@@ -217,17 +270,24 @@ const TalentDiscoveryPage = () => {
 
   const projectTypes = useMemo(() => {
     if (!castingCalls) return [] as string[];
-    return Array.from(new Set(castingCalls.map((call) => call.project_type).filter(Boolean)));
+    return Array.from(
+      new Set(castingCalls.map((call) => call.project_type).filter(Boolean)),
+    );
   }, [castingCalls]);
 
   const unionStatuses = useMemo(() => {
     if (!castingCalls) return [] as string[];
-    return Array.from(new Set(castingCalls.map((call) => call.union_status).filter(Boolean))) as string[];
+    return Array.from(
+      new Set(castingCalls.map((call) => call.union_status).filter(Boolean)),
+    ) as string[];
   }, [castingCalls]);
 
   const { data: submissions, isLoading: isLoadingSubmissions } = useQuery({
     queryKey: ["casting-submissions", profile?.id],
-    queryFn: () => (profile?.id ? listCastingSubmissionsByProfile(profile.id) : Promise.resolve([])),
+    queryFn: () =>
+      profile?.id
+        ? listCastingSubmissionsByProfile(profile.id)
+        : Promise.resolve([]),
     enabled: Boolean(profile?.id),
   });
 
@@ -239,7 +299,9 @@ const TalentDiscoveryPage = () => {
   const submissionMutation = useMutation({
     mutationFn: async (values: SubmissionFormValues) => {
       if (!profile?.id) {
-        throw new Error("Sign in and complete your talent profile before submitting.");
+        throw new Error(
+          "Sign in and complete your talent profile before submitting.",
+        );
       }
       if (!selectedCall) {
         throw new Error("Select a casting call before submitting.");
@@ -264,39 +326,58 @@ const TalentDiscoveryPage = () => {
       return submitCastingSubmission(payload);
     },
     onSuccess: () => {
-      toast({ title: "Submission sent", description: "Your materials were delivered to the casting team." });
+      toast({
+        title: "Submission sent",
+        description: "Your materials were delivered to the casting team.",
+      });
       submissionForm.reset();
-      queryClient.invalidateQueries({ queryKey: ["casting-submissions", profile?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["casting-submissions", profile?.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["casting-calls"] });
     },
     onError: (error: unknown) => {
       toast({
         title: "Unable to submit",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
     },
   });
 
   const withdrawMutation = useMutation({
-    mutationFn: async (submissionId: string) => deleteCastingSubmission(submissionId),
+    mutationFn: async (submissionId: string) =>
+      deleteCastingSubmission(submissionId),
     onSuccess: () => {
-      toast({ title: "Submission withdrawn", description: "We've removed your materials from review." });
-      queryClient.invalidateQueries({ queryKey: ["casting-submissions", profile?.id] });
+      toast({
+        title: "Submission withdrawn",
+        description: "We've removed your materials from review.",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["casting-submissions", profile?.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["casting-review-queue"] });
       queryClient.invalidateQueries({ queryKey: ["casting-calls"] });
     },
     onError: (error: unknown) => {
       toast({
         title: "Unable to withdraw",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
     },
   });
 
   const reviewMutation = useMutation({
-    mutationFn: async ({ submissionId, draft }: { submissionId: string; draft: ReviewDraft }) => {
+    mutationFn: async ({
+      submissionId,
+      draft,
+    }: {
+      submissionId: string;
+      draft: ReviewDraft;
+    }) => {
       const payload: SubmitCastingReviewInput = {
         submissionId,
         reviewerProfileId: profile?.id ?? null,
@@ -309,20 +390,26 @@ const TalentDiscoveryPage = () => {
       return submitCastingReview(payload);
     },
     onSuccess: (_, variables) => {
-      toast({ title: "Review recorded", description: "Your decision is now reflected in the queue." });
+      toast({
+        title: "Review recorded",
+        description: "Your decision is now reflected in the queue.",
+      });
       setReviewDrafts((prev) => {
         const updated = { ...prev };
         delete updated[variables.submissionId];
         return updated;
       });
       queryClient.invalidateQueries({ queryKey: ["casting-review-queue"] });
-      queryClient.invalidateQueries({ queryKey: ["casting-submissions", profile?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["casting-submissions", profile?.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["casting-calls"] });
     },
     onError: (error: unknown) => {
       toast({
         title: "Unable to record review",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
     },
@@ -330,7 +417,10 @@ const TalentDiscoveryPage = () => {
 
   const selectedRoleOptions = selectedCall?.roles ?? [];
 
-  const handleReviewDraftChange = (submissionId: string, partial: Partial<ReviewDraft>) => {
+  const handleReviewDraftChange = (
+    submissionId: string,
+    partial: Partial<ReviewDraft>,
+  ) => {
     setReviewDrafts((prev) => ({
       ...prev,
       [submissionId]: {
@@ -353,7 +443,11 @@ const TalentDiscoveryPage = () => {
 
   const renderDeadlineBadge = (deadline: string | null) => {
     if (!deadline) {
-      return <Badge variant="outline" className="border-dashed">Rolling</Badge>;
+      return (
+        <Badge variant="outline" className="border-dashed">
+          Rolling
+        </Badge>
+      );
     }
 
     const deadlineDate = parseISO(deadline);
@@ -379,10 +473,12 @@ const TalentDiscoveryPage = () => {
 
   const renderStatusBadge = (status?: string | null, label?: string) => {
     if (!status) return null;
-    const className = statusBadgeStyles[status] ?? "bg-muted text-muted-foreground border-muted";
+    const className =
+      statusBadgeStyles[status] ??
+      "bg-muted text-muted-foreground border-muted";
     return (
       <Badge variant="outline" className={cn("border", className)}>
-        {label ?? status.replace("_", " ")}
+        {label ?? status.replace("_", "")}
       </Badge>
     );
   };
@@ -398,16 +494,19 @@ const TalentDiscoveryPage = () => {
           <Card className="w-full max-w-xs border-dashed">
             <CardContent className="flex items-center gap-3 py-2 text-xs text-muted-foreground">
               <Briefcase className="h-3.5 w-3.5" />
-              <span className="truncate">{(profile as any).primary_role ?? "Role not set"}</span>
+              <span className="truncate">
+                {(profile as any).primary_role ?? "Role not set"}
+              </span>
               <span>•</span>
               <MapPin className="h-3.5 w-3.5" />
-              <span className="truncate">{(profile as any).location ?? "Location unknown"}</span>
+              <span className="truncate">
+                {(profile as any).location ?? "Location unknown"}
+              </span>
             </CardContent>
           </Card>
         ) : null
       }
     >
-
       <Tabs defaultValue="discover" className="space-y-6">
         <TabsList>
           <TabsTrigger value="discover">Discover</TabsTrigger>
@@ -422,7 +521,8 @@ const TalentDiscoveryPage = () => {
                 <Filter className="h-4 w-4" /> Refine casting calls
               </CardTitle>
               <CardDescription>
-                Search across active auditions, filter by project type, and find the best fit for your talents.
+                Search across active auditions, filter by project type, and find
+                the best fit for your talents.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -435,7 +535,12 @@ const TalentDiscoveryPage = () => {
                       id="search"
                       placeholder="Vocals, sci-fi series, LA..."
                       value={filters.searchTerm}
-                      onChange={(event) => setFilters((prev) => ({ ...prev, searchTerm: event.target.value }))}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          searchTerm: event.target.value,
+                        }))
+                      }
                       className="pl-9"
                     />
                   </div>
@@ -444,7 +549,9 @@ const TalentDiscoveryPage = () => {
                   <Label htmlFor="projectType">Project type</Label>
                   <Select
                     value={filters.projectType}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, projectType: value }))}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({ ...prev, projectType: value }))
+                    }
                   >
                     <SelectTrigger id="projectType">
                       <SelectValue placeholder="Any" />
@@ -482,7 +589,9 @@ const TalentDiscoveryPage = () => {
                   <Label htmlFor="unionStatus">Union status</Label>
                   <Select
                     value={filters.unionStatus}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, unionStatus: value }))}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({ ...prev, unionStatus: value }))
+                    }
                   >
                     <SelectTrigger id="unionStatus">
                       <SelectValue placeholder="Any" />
@@ -503,19 +612,27 @@ const TalentDiscoveryPage = () => {
                     id="location"
                     placeholder="City, country, or region"
                     value={filters.location}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, location: event.target.value }))}
+                    onChange={(event) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        location: event.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Switch
                       checked={filters.remoteOnly}
-                      onCheckedChange={(checked) => setFilters((prev) => ({ ...prev, remoteOnly: checked }))}
+                      onCheckedChange={(checked) =>
+                        setFilters((prev) => ({ ...prev, remoteOnly: checked }))
+                      }
                     />
                     Remote friendly only
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Filter to calls that explicitly support remote or hybrid auditions.
+                    Filter to calls that explicitly support remote or hybrid
+                    auditions.
                   </p>
                 </div>
               </div>
@@ -525,9 +642,13 @@ const TalentDiscoveryPage = () => {
           <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
             <Card className="h-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold">Casting calls</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Casting calls
+                </CardTitle>
                 <CardDescription>
-                  {isLoadingCalls ? "Loading open calls..." : `${filteredCalls.length} opportunities available`}
+                  {isLoadingCalls
+                    ? "Loading open calls..."
+                    : `${filteredCalls.length} opportunities available`}
                 </CardDescription>
               </CardHeader>
               <Separator />
@@ -538,14 +659,20 @@ const TalentDiscoveryPage = () => {
                       <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
                         <AlertCircle className="h-6 w-6" />
                         <div>
-                          <p className="font-semibold text-foreground">No casting calls match your filters</p>
-                          <p>Try broadening your search or clearing some filters.</p>
+                          <p className="font-semibold text-foreground">
+                            No casting calls match your filters
+                          </p>
+                          <p>
+                            Try broadening your search or clearing some filters.
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
                   )}
                   {filteredCalls.map((call) => {
-                    const deadlineBadge = renderDeadlineBadge(call.application_deadline ?? null);
+                    const deadlineBadge = renderDeadlineBadge(
+                      call.application_deadline ?? null,
+                    );
                     const isActive = selectedCallId === call.id;
                     return (
                       <button
@@ -559,10 +686,15 @@ const TalentDiscoveryPage = () => {
                       >
                         <div className="flex flex-col gap-3 p-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-semibold text-foreground">{call.title}</h3>
+                            <h3 className="text-base font-semibold text-foreground">
+                              {call.title}
+                            </h3>
                             {renderStatusBadge(call.status)}
                             {call.is_remote_friendly && (
-                              <Badge variant="outline" className="border-sky-200 bg-sky-100 text-sky-800">
+                              <Badge
+                                variant="outline"
+                                className="border-sky-200 bg-sky-100 text-sky-800"
+                              >
                                 Remote friendly
                               </Badge>
                             )}
@@ -583,10 +715,14 @@ const TalentDiscoveryPage = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <ClipboardList className="h-4 w-4" />
-                              <span>{call.submissionStats.total} submissions</span>
+                              <span>
+                                {call.submissionStats.total} submissions
+                              </span>
                             </div>
                           </div>
-                          <p className="line-clamp-2 text-sm text-muted-foreground">{call.description}</p>
+                          <p className="line-clamp-2 text-sm text-muted-foreground">
+                            {call.description}
+                          </p>
                         </div>
                       </button>
                     );
@@ -597,9 +733,13 @@ const TalentDiscoveryPage = () => {
 
             <Card className="h-full">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Audition details</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Audition details
+                </CardTitle>
                 <CardDescription>
-                  {selectedCall ? "Review project expectations and craft your submission." : "Select a casting call to view details."}
+                  {selectedCall
+                    ? "Review project expectations and craft your submission."
+                    : "Select a casting call to view details."}
                 </CardDescription>
               </CardHeader>
               {selectedCall ? (
@@ -607,24 +747,46 @@ const TalentDiscoveryPage = () => {
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {renderStatusBadge(selectedCall.status)}
-                      {renderDeadlineBadge(selectedCall.application_deadline ?? null)}
-                      {selectedCall.union_status && renderStatusBadge(selectedCall.union_status, selectedCall.union_status)}
+                      {renderDeadlineBadge(
+                        selectedCall.application_deadline ?? null,
+                      )}
+                      {selectedCall.union_status &&
+                        renderStatusBadge(
+                          selectedCall.union_status,
+                          selectedCall.union_status,
+                        )}
                     </div>
-                    <h2 className="text-2xl font-semibold text-foreground">{selectedCall.title}</h2>
-                    <p className="text-muted-foreground">{selectedCall.description ?? "No description provided."}</p>
+                    <h2 className="text-2xl font-semibold text-foreground">
+                      {selectedCall.title}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {selectedCall.description ?? "No description provided."}
+                    </p>
                     <div className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">Production company</span>
-                        <span className="text-muted-foreground">{(selectedCall as any).production_company ?? "Not listed"}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">Location</span>
-                        <span className="text-muted-foreground">{selectedCall.location ?? "Varies"}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">Compensation</span>
+                        <span className="font-medium text-foreground">
+                          Production company
+                        </span>
                         <span className="text-muted-foreground">
-                          {(selectedCall as any).compensation_min || (selectedCall as any).compensation_max
+                          {(selectedCall as any).production_company ??
+                            "Not listed"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">
+                          Location
+                        </span>
+                        <span className="text-muted-foreground">
+                          {selectedCall.location ?? "Varies"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">
+                          Compensation
+                        </span>
+                        <span className="text-muted-foreground">
+                          {(selectedCall as any).compensation_min ||
+                          (selectedCall as any).compensation_max
                             ? `${(selectedCall as any).compensation_min ?? "?"} - ${(selectedCall as any).compensation_max ?? "?"} ${
                                 (selectedCall as any).currency ?? "USD"
                               }`
@@ -640,29 +802,52 @@ const TalentDiscoveryPage = () => {
                     </h3>
                     {selectedCall.roles.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        This casting call accepts general submissions. Highlight how you can contribute to the production.
+                        This casting call accepts general submissions. Highlight
+                        how you can contribute to the production.
                       </p>
                     ) : (
                       <div className="grid gap-3">
                         {selectedCall.roles.map((role) => (
-                          <div key={role.id} className="rounded-lg border bg-muted/50 p-3 text-sm">
+                          <div
+                            key={role.id}
+                            className="rounded-lg border bg-muted/50 p-3 text-sm"
+                          >
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="font-medium text-foreground">{role.name}</div>
+                              <div className="font-medium text-foreground">
+                                {role.name}
+                              </div>
                               <div className="flex flex-wrap gap-2">
-                                {role.role_type && <Badge variant="outline">{role.role_type}</Badge>}
-                                {role.age_range && <Badge variant="outline">Age: {role.age_range}</Badge>}
-                                {role.gender && <Badge variant="outline">{role.gender}</Badge>}
+                                {role.role_type && (
+                                  <Badge variant="outline">
+                                    {role.role_type}
+                                  </Badge>
+                                )}
+                                {role.age_range && (
+                                  <Badge variant="outline">
+                                    Age: {role.age_range}
+                                  </Badge>
+                                )}
+                                {role.gender && (
+                                  <Badge variant="outline">{role.gender}</Badge>
+                                )}
                               </div>
                             </div>
-                            {role.description && <p className="mt-2 text-muted-foreground">{role.description}</p>}
-                            {((role as any).required_skills?.length ?? 0) > 0 && (
+                            {role.description && (
+                              <p className="mt-2 text-muted-foreground">
+                                {role.description}
+                              </p>
+                            )}
+                            {((role as any).required_skills?.length ?? 0) >
+                              0 && (
                               <p className="mt-2 text-xs text-muted-foreground">
-                                Required skills: {(role as any).required_skills?.join(", ")}
+                                Required skills:{" "}
+                                {(role as any).required_skills?.join(",")}
                               </p>
                             )}
                             {(role as any).availability_requirements && (
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Availability: {(role as any).availability_requirements}
+                                Availability:{" "}
+                                {(role as any).availability_requirements}
                               </p>
                             )}
                           </div>
@@ -679,12 +864,15 @@ const TalentDiscoveryPage = () => {
                         <Sparkles className="h-4 w-4" /> Submit materials
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Customize your pitch, include highlight reels, and track the status of each audition.
+                        Customize your pitch, include highlight reels, and track
+                        the status of each audition.
                       </p>
                     </div>
                     <Form {...submissionForm}>
                       <form
-                        onSubmit={submissionForm.handleSubmit((values) => submissionMutation.mutate(values))}
+                        onSubmit={submissionForm.handleSubmit((values) =>
+                          submissionMutation.mutate(values),
+                        )}
                         className="space-y-4"
                       >
                         {selectedRoleOptions.length > 0 && (
@@ -694,7 +882,10 @@ const TalentDiscoveryPage = () => {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Select role</FormLabel>
-                                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                                <Select
+                                  value={field.value ?? ""}
+                                  onValueChange={field.onChange}
+                                >
                                   <FormControl>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Choose the role you want to audition for" />
@@ -794,10 +985,16 @@ const TalentDiscoveryPage = () => {
 
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-xs text-muted-foreground">
-                            Submitting binds this audition to your profile so you can track reviews in real time.
+                            Submitting binds this audition to your profile so
+                            you can track reviews in real time.
                           </p>
-                          <Button type="submit" disabled={submissionMutation.isPending}>
-                            {submissionMutation.isPending ? "Submitting..." : "Submit audition"}
+                          <Button
+                            type="submit"
+                            disabled={submissionMutation.isPending}
+                          >
+                            {submissionMutation.isPending
+                              ? "Submitting..."
+                              : "Submit audition"}
                           </Button>
                         </div>
                       </form>
@@ -806,7 +1003,8 @@ const TalentDiscoveryPage = () => {
                 </CardContent>
               ) : (
                 <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                  Select a casting call from the left panel to see requirements and send your audition materials.
+                  Select a casting call from the left panel to see requirements
+                  and send your audition materials.
                 </CardContent>
               )}
             </Card>
@@ -816,23 +1014,32 @@ const TalentDiscoveryPage = () => {
         <TabsContent value="submissions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Your audition submissions</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Your audition submissions
+              </CardTitle>
               <CardDescription>
-                Monitor decisions, review director feedback, and withdraw materials if needed.
+                Monitor decisions, review director feedback, and withdraw
+                materials if needed.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingSubmissions ? (
-                <div className="py-10 text-center text-muted-foreground">Loading your submissions...</div>
+                <div className="py-10 text-center text-muted-foreground">
+                  Loading your submissions...
+                </div>
               ) : (submissions?.length ?? 0) === 0 ? (
                 <div className="py-10 text-center text-muted-foreground">
-                  You haven't submitted to any casting calls yet. Visit the Discover tab to find your next audition.
+                  You haven't submitted to any casting calls yet. Visit the
+                  Discover tab to find your next audition.
                 </div>
               ) : (
                 <div className="space-y-4">
                   {submissions?.map((submission) => {
-                    const deadline = submission.casting_call?.application_deadline;
-                    const isClosed = deadline ? isAfter(new Date(), parseISO(deadline)) : false;
+                    const deadline =
+                      submission.casting_call?.application_deadline;
+                    const isClosed = deadline
+                      ? isAfter(new Date(), parseISO(deadline))
+                      : false;
                     return (
                       <Card key={submission.id} className="border">
                         <CardHeader className="pb-3">
@@ -842,26 +1049,35 @@ const TalentDiscoveryPage = () => {
                             </CardTitle>
                             {renderStatusBadge(submission.status)}
                             {submission.role && (
-                              <Badge variant="outline" className="border-indigo-200 bg-indigo-100 text-indigo-800">
+                              <Badge
+                                variant="outline"
+                                className="border-indigo-200 bg-indigo-100 text-indigo-800"
+                              >
                                 {submission.role.name}
                               </Badge>
                             )}
                             {deadline && renderDeadlineBadge(deadline)}
                           </div>
                           <CardDescription>
-                            Submitted {format(parseISO(submission.created_at), "PPP p")} • {submission.casting_call?.project_type}
+                            Submitted{" "}
+                            {format(parseISO(submission.created_at), "PPP p")} •{" "}
+                            {submission.casting_call?.project_type}
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm text-muted-foreground">
                           {submission.cover_letter && (
                             <div>
-                              <p className="font-medium text-foreground">Cover letter</p>
+                              <p className="font-medium text-foreground">
+                                Cover letter
+                              </p>
                               <p>{submission.cover_letter}</p>
                             </div>
                           )}
                           {submission.experience_summary && (
                             <div>
-                              <p className="font-medium text-foreground">Experience summary</p>
+                              <p className="font-medium text-foreground">
+                                Experience summary
+                              </p>
                               <p>{submission.experience_summary}</p>
                             </div>
                           )}
@@ -899,22 +1115,42 @@ const TalentDiscoveryPage = () => {
                           </div>
                           {(submission.casting_reviews?.length ?? 0) > 0 && (
                             <div className="space-y-2 rounded-md border bg-muted/40 p-3">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              <p className="text-xs font-semibold tracking-wide text-muted-foreground">
                                 Casting feedback
                               </p>
                               {submission.casting_reviews?.map((review) => (
-                                <div key={review.id} className="space-y-1 text-sm">
+                                <div
+                                  key={review.id}
+                                  className="space-y-1 text-sm"
+                                >
                                   <div className="flex items-center gap-2 text-foreground">
-                                    {review.decision === "hire" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                                    {review.decision === "decline" && <XCircle className="h-4 w-4 text-rose-500" />}
-                                    <span className="font-medium capitalize">{review.decision.replace("_", " ")}</span>
-                                    {review.score !== null && review.score !== undefined && (
-                                      <Badge variant="outline">Score: {review.score}</Badge>
+                                    {review.decision === "hire" && (
+                                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                     )}
+                                    {review.decision === "decline" && (
+                                      <XCircle className="h-4 w-4 text-rose-500" />
+                                    )}
+                                    <span className="font-medium capitalize">
+                                      {review.decision.replace("_", "")}
+                                    </span>
+                                    {review.score !== null &&
+                                      review.score !== undefined && (
+                                        <Badge variant="outline">
+                                          Score: {review.score}
+                                        </Badge>
+                                      )}
                                   </div>
-                                  {review.feedback && <p className="text-muted-foreground">{review.feedback}</p>}
+                                  {review.feedback && (
+                                    <p className="text-muted-foreground">
+                                      {review.feedback}
+                                    </p>
+                                  )}
                                   <p className="text-xs text-muted-foreground">
-                                    Reviewed {format(parseISO(review.created_at), "PPP p")}
+                                    Reviewed{" "}
+                                    {format(
+                                      parseISO(review.created_at),
+                                      "PPP p",
+                                    )}
                                   </p>
                                 </div>
                               ))}
@@ -931,7 +1167,9 @@ const TalentDiscoveryPage = () => {
                             variant="outline"
                             size="sm"
                             disabled={withdrawMutation.isPending || isClosed}
-                            onClick={() => withdrawMutation.mutate(submission.id)}
+                            onClick={() =>
+                              withdrawMutation.mutate(submission.id)
+                            }
                           >
                             Withdraw submission
                           </Button>
@@ -948,17 +1186,23 @@ const TalentDiscoveryPage = () => {
         <TabsContent value="reviews" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Casting review workflow</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Casting review workflow
+              </CardTitle>
               <CardDescription>
-                Collaborate with your casting team, score auditions, and move promising talent forward.
+                Collaborate with your casting team, score auditions, and move
+                promising talent forward.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingReviewQueue ? (
-                <div className="py-10 text-center text-muted-foreground">Loading review queue...</div>
+                <div className="py-10 text-center text-muted-foreground">
+                  Loading review queue...
+                </div>
               ) : (reviewQueue?.length ?? 0) === 0 ? (
                 <div className="py-10 text-center text-muted-foreground">
-                  All caught up! New submissions will appear here as talent applies.
+                  All caught up! New submissions will appear here as talent
+                  applies.
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -972,15 +1216,22 @@ const TalentDiscoveryPage = () => {
                               {submission.casting_call?.title ?? "Casting call"}
                             </CardTitle>
                             {renderStatusBadge(submission.status)}
-                            {submission.role && <Badge variant="outline">{submission.role.name}</Badge>}
+                            {submission.role && (
+                              <Badge variant="outline">
+                                {submission.role.name}
+                              </Badge>
+                            )}
                           </div>
                           <CardDescription className="flex flex-wrap items-center gap-3 text-xs">
                             <span>
-                              Submitted {format(parseISO(submission.created_at), "PPP p")} • {submission.casting_call?.project_type}
+                              Submitted{" "}
+                              {format(parseISO(submission.created_at), "PPP p")}{" "}
+                              • {submission.casting_call?.project_type}
                             </span>
                             {submission.casting_call?.location && (
                               <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" /> {submission.casting_call.location}
+                                <MapPin className="h-3 w-3" />{" "}
+                                {submission.casting_call.location}
                               </span>
                             )}
                           </CardDescription>
@@ -988,13 +1239,17 @@ const TalentDiscoveryPage = () => {
                         <CardContent className="space-y-3 text-sm text-muted-foreground">
                           {submission.cover_letter && (
                             <div>
-                              <p className="font-medium text-foreground">Cover letter</p>
+                              <p className="font-medium text-foreground">
+                                Cover letter
+                              </p>
                               <p>{submission.cover_letter}</p>
                             </div>
                           )}
                           {submission.experience_summary && (
                             <div>
-                              <p className="font-medium text-foreground">Experience summary</p>
+                              <p className="font-medium text-foreground">
+                                Experience summary
+                              </p>
                               <p>{submission.experience_summary}</p>
                             </div>
                           )}
@@ -1033,27 +1288,45 @@ const TalentDiscoveryPage = () => {
                           <Separator />
                           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                             <div className="space-y-2">
-                              <Label htmlFor={`decision-${submission.id}`}>Decision</Label>
+                              <Label htmlFor={`decision-${submission.id}`}>
+                                Decision
+                              </Label>
                               <Select
                                 value={draft.decision}
-                                onValueChange={(value: ReviewDraft["decision"]) =>
-                                  handleReviewDraftChange(submission.id, { decision: value })
+                                onValueChange={(
+                                  value: ReviewDraft["decision"],
+                                ) =>
+                                  handleReviewDraftChange(submission.id, {
+                                    decision: value,
+                                  })
                                 }
                               >
                                 <SelectTrigger id={`decision-${submission.id}`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="pending">Keep in review</SelectItem>
-                                  <SelectItem value="shortlist">Shortlist</SelectItem>
-                                  <SelectItem value="callback">Invite to callback</SelectItem>
-                                  <SelectItem value="hire">Offer role</SelectItem>
-                                  <SelectItem value="decline">Decline</SelectItem>
+                                  <SelectItem value="pending">
+                                    Keep in review
+                                  </SelectItem>
+                                  <SelectItem value="shortlist">
+                                    Shortlist
+                                  </SelectItem>
+                                  <SelectItem value="callback">
+                                    Invite to callback
+                                  </SelectItem>
+                                  <SelectItem value="hire">
+                                    Offer role
+                                  </SelectItem>
+                                  <SelectItem value="decline">
+                                    Decline
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`score-${submission.id}`}>Score (0-100)</Label>
+                              <Label htmlFor={`score-${submission.id}`}>
+                                Score (0-100)
+                              </Label>
                               <Input
                                 id={`score-${submission.id}`}
                                 type="number"
@@ -1062,18 +1335,25 @@ const TalentDiscoveryPage = () => {
                                 value={draft.score ?? ""}
                                 onChange={(event) =>
                                   handleReviewDraftChange(submission.id, {
-                                    score: event.target.value === "" ? undefined : Number(event.target.value),
+                                    score:
+                                      event.target.value === ""
+                                        ? undefined
+                                        : Number(event.target.value),
                                   })
                                 }
                               />
                             </div>
                             <div className="md:col-span-2 space-y-2">
-                              <Label htmlFor={`feedback-${submission.id}`}>Feedback for talent</Label>
+                              <Label htmlFor={`feedback-${submission.id}`}>
+                                Feedback for talent
+                              </Label>
                               <Textarea
                                 id={`feedback-${submission.id}`}
                                 value={draft.feedback}
                                 onChange={(event) =>
-                                  handleReviewDraftChange(submission.id, { feedback: event.target.value })
+                                  handleReviewDraftChange(submission.id, {
+                                    feedback: event.target.value,
+                                  })
                                 }
                                 placeholder="Share context for your decision. Talent sees this when the review is published."
                                 rows={3}
@@ -1095,10 +1375,17 @@ const TalentDiscoveryPage = () => {
                             Reset
                           </Button>
                           <Button
-                            onClick={() => reviewMutation.mutate({ submissionId: submission.id, draft })}
+                            onClick={() =>
+                              reviewMutation.mutate({
+                                submissionId: submission.id,
+                                draft,
+                              })
+                            }
                             disabled={reviewMutation.isPending}
                           >
-                            {reviewMutation.isPending ? "Saving..." : "Save review"}
+                            {reviewMutation.isPending
+                              ? "Saving..."
+                              : "Save review"}
                           </Button>
                         </CardFooter>
                       </Card>

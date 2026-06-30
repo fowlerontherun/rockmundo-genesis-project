@@ -8,10 +8,33 @@ import { usePlayerChildren, useChildRequests } from "@/hooks/useChildPlanning";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Baby, Heart, BookOpen, Utensils, Moon, Smile, FileText, Clock, ArrowLeft, Filter, Users, GraduationCap, Star } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Baby,
+  Heart,
+  BookOpen,
+  Utensils,
+  Moon,
+  Smile,
+  FileText,
+  Clock,
+  ArrowLeft,
+  Filter,
+  Users,
+  GraduationCap,
+  Star,
+} from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-import { useChildrenSchoolEvents, useAutoGenerateMilestones } from "@/hooks/useChildSchoolEvents";
+import {
+  useChildrenSchoolEvents,
+  useAutoGenerateMilestones,
+} from "@/hooks/useChildSchoolEvents";
 
 type TimelineItem = {
   id: string;
@@ -31,25 +54,33 @@ type TimelineItem = {
 
 const interactionIcon = (type: string) => {
   switch (type) {
-    case "feed": return Utensils;
-    case "play": return Smile;
+    case "feed":
+      return Utensils;
+    case "play":
+      return Smile;
     case "teach_skill":
-    case "teach": return BookOpen;
+    case "teach":
+      return BookOpen;
     case "nap":
-    case "sleep": return Moon;
+    case "sleep":
+      return Moon;
     case "affection":
-    case "hug": return Heart;
-    default: return FileText;
+    case "hug":
+      return Heart;
+    default:
+      return FileText;
   }
 };
 
 const requestColor = (type: string) => {
-  if (type.includes("accepted") || type === "child_arrived") return "text-social-loyalty";
-  if (type.includes("denied") || type.includes("rejected")) return "text-destructive";
+  if (type.includes("accepted") || type === "child_arrived")
+    return "text-social-loyalty";
+  if (type.includes("denied") || type.includes("rejected"))
+    return "text-destructive";
   return "text-muted-foreground";
 };
 
-// Scope is "all" | child:<id> | request:<id>
+// Scope is"all"| child:<id> | request:<id>
 type Scope = string;
 
 export default function FamilyTimeline() {
@@ -58,7 +89,7 @@ export default function FamilyTimeline() {
   const { data: children = [] } = usePlayerChildren(profileId);
   const { data: activeRequests = [] } = useChildRequests(profileId);
 
-  const childIds = useMemo(() => children.map(c => c.id), [children]);
+  const childIds = useMemo(() => children.map((c) => c.id), [children]);
 
   // Pull all child_request_events for any request connected to this player
   const { data: requestEvents = [] } = useQuery({
@@ -72,8 +103,8 @@ export default function FamilyTimeline() {
         .or(`parent_a_id.eq.${profileId},parent_b_id.eq.${profileId}`);
       const reqRows = (requests ?? []) as any[];
       if (reqRows.length === 0) return [];
-      const ids = reqRows.map(r => r.id);
-      const pathwayById = new Map(reqRows.map(r => [r.id, r.pathway]));
+      const ids = reqRows.map((r) => r.id);
+      const pathwayById = new Map(reqRows.map((r) => [r.id, r.pathway]));
 
       const { data: events } = await supabase
         .from(asAny("child_request_events"))
@@ -81,7 +112,10 @@ export default function FamilyTimeline() {
         .in("request_id", ids)
         .order("created_at", { ascending: false });
 
-      return ((events ?? []) as any[]).map(ev => ({ ...ev, pathway: pathwayById.get(ev.request_id) }));
+      return ((events ?? []) as any[]).map((ev) => ({
+        ...ev,
+        pathway: pathwayById.get(ev.request_id),
+      }));
     },
   });
 
@@ -114,13 +148,15 @@ export default function FamilyTimeline() {
   // 3) Else "all"
   const defaultScope: Scope = useMemo(() => {
     const linkedRequestIds = new Set(
-      children.map(c => c.child_request_id).filter((x): x is string => !!x),
+      children.map((c) => c.child_request_id).filter((x): x is string => !!x),
     );
     const inProgressAdoption = activeRequests.find(
-      r => r.pathway === "adoption" && !linkedRequestIds.has(r.id),
+      (r) => r.pathway === "adoption" && !linkedRequestIds.has(r.id),
     );
     if (inProgressAdoption) return `request:${inProgressAdoption.id}`;
-    const inProgressBio = activeRequests.find(r => !linkedRequestIds.has(r.id));
+    const inProgressBio = activeRequests.find(
+      (r) => !linkedRequestIds.has(r.id),
+    );
     if (inProgressBio) return `request:${inProgressBio.id}`;
     if (children[0]) return `child:${children[0].id}`;
     return "all";
@@ -132,7 +168,9 @@ export default function FamilyTimeline() {
     if (!scopeTouched) setScope(defaultScope);
   }, [defaultScope, scopeTouched]);
 
-  const [filter, setFilter] = useState<"all" | "adoption" | "interactions" | "milestones" | "school">("all");
+  const [filter, setFilter] = useState<
+    "all" | "adoption" | "interactions" | "milestones" | "school"
+  >("all");
 
   const items: TimelineItem[] = useMemo(() => {
     const reqItems: TimelineItem[] = requestEvents.map((ev: any) => ({
@@ -172,28 +210,47 @@ export default function FamilyTimeline() {
         teacherName: ev.teacher_name,
       };
     });
-    let merged = [...reqItems, ...intItems, ...schoolItems].sort((a, b) => b.at.localeCompare(a.at));
+    let merged = [...reqItems, ...intItems, ...schoolItems].sort((a, b) =>
+      b.at.localeCompare(a.at),
+    );
 
     // Apply scope filter
     if (scope.startsWith("child:")) {
       const cid = scope.slice("child:".length);
-      const child = children.find(c => c.id === cid);
+      const child = children.find((c) => c.id === cid);
       const linkedReq = child?.child_request_id ?? null;
-      merged = merged.filter(i =>
-        ((i.kind === "interaction" || i.kind === "school") && i.childId === cid) ||
-        (i.kind === "request" && linkedReq && i.requestId === linkedReq),
+      merged = merged.filter(
+        (i) =>
+          ((i.kind === "interaction" || i.kind === "school") &&
+            i.childId === cid) ||
+          (i.kind === "request" && linkedReq && i.requestId === linkedReq),
       );
     } else if (scope.startsWith("request:")) {
       const rid = scope.slice("request:".length);
-      merged = merged.filter(i => i.kind === "request" && i.requestId === rid);
+      merged = merged.filter(
+        (i) => i.kind === "request" && i.requestId === rid,
+      );
     }
 
-    if (filter === "adoption") merged = merged.filter(i => i.kind === "request" && i.pathway === "adoption");
-    if (filter === "milestones") merged = merged.filter(i => i.kind === "request");
-    if (filter === "interactions") merged = merged.filter(i => i.kind === "interaction");
-    if (filter === "school") merged = merged.filter(i => i.kind === "school");
+    if (filter === "adoption")
+      merged = merged.filter(
+        (i) => i.kind === "request" && i.pathway === "adoption",
+      );
+    if (filter === "milestones")
+      merged = merged.filter((i) => i.kind === "request");
+    if (filter === "interactions")
+      merged = merged.filter((i) => i.kind === "interaction");
+    if (filter === "school") merged = merged.filter((i) => i.kind === "school");
     return merged;
-  }, [requestEvents, interactions, schoolEvents, childById, filter, scope, children]);
+  }, [
+    requestEvents,
+    interactions,
+    schoolEvents,
+    childById,
+    filter,
+    scope,
+    children,
+  ]);
 
   // Group items by day for nicer headings
   const grouped = useMemo(() => {
@@ -207,23 +264,28 @@ export default function FamilyTimeline() {
   }, [items]);
 
   const linkedRequestIds = useMemo(
-    () => new Set(children.map(c => c.child_request_id).filter((x): x is string => !!x)),
+    () =>
+      new Set(
+        children.map((c) => c.child_request_id).filter((x): x is string => !!x),
+      ),
     [children],
   );
   const pendingScopeRequests = useMemo(
-    () => activeRequests.filter(r => !linkedRequestIds.has(r.id)),
+    () => activeRequests.filter((r) => !linkedRequestIds.has(r.id)),
     [activeRequests, linkedRequestIds],
   );
 
   const scopeLabel = useMemo(() => {
     if (scope === "all") return "All family activity";
     if (scope.startsWith("child:")) {
-      const c = children.find(x => x.id === scope.slice(6));
+      const c = children.find((x) => x.id === scope.slice(6));
       return c ? `${c.name} ${c.surname}` : "Child";
     }
     if (scope.startsWith("request:")) {
-      const r = activeRequests.find(x => x.id === scope.slice(8));
-      return r ? `${r.pathway === "adoption" ? "Adoption" : "Pregnancy"} in progress` : "Request";
+      const r = activeRequests.find((x) => x.id === scope.slice(8));
+      return r
+        ? `${r.pathway === "adoption" ? "Adoption" : "Pregnancy"} in progress`
+        : "Request";
     }
     return "All";
   }, [scope, children, activeRequests]);
@@ -232,13 +294,18 @@ export default function FamilyTimeline() {
     <div className="container mx-auto max-w-3xl p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Button asChild size="sm" variant="ghost">
-          <Link to="/dashboard"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
+          <Link to="/dashboard">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Link>
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Clock className="h-5 w-5 text-social-loyalty" /> Family Timeline
           </h1>
-          <p className="text-xs text-muted-foreground">Adoption milestones and parenting interactions in chronological order.</p>
+          <p className="text-xs text-muted-foreground">
+            Adoption milestones and parenting interactions in chronological
+            order.
+          </p>
         </div>
       </div>
 
@@ -246,27 +313,35 @@ export default function FamilyTimeline() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Users className="h-3.5 w-3.5" /> Scope
-            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">{scopeLabel}</Badge>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">
+              {scopeLabel}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex items-center gap-2">
             <Select
               value={scope}
-              onValueChange={(v) => { setScope(v); setScopeTouched(true); }}
+              onValueChange={(v) => {
+                setScope(v);
+                setScopeTouched(true);
+              }}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Select scope" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All family activity</SelectItem>
-                {pendingScopeRequests.length > 0 && pendingScopeRequests.map(r => (
-                  <SelectItem key={r.id} value={`request:${r.id}`}>
-                    {r.pathway === "adoption" ? "Adoption in progress" : "Pregnancy in progress"}
-                    {r.agency ? ` · ${r.agency}` : ""}
-                  </SelectItem>
-                ))}
-                {children.map(c => (
+                {pendingScopeRequests.length > 0 &&
+                  pendingScopeRequests.map((r) => (
+                    <SelectItem key={r.id} value={`request:${r.id}`}>
+                      {r.pathway === "adoption"
+                        ? "Adoption in progress"
+                        : "Pregnancy in progress"}
+                      {r.agency ? ` · ${r.agency}` : ""}
+                    </SelectItem>
+                  ))}
+                {children.map((c) => (
                   <SelectItem key={c.id} value={`child:${c.id}`}>
                     {c.name} {c.surname} · age {c.current_age}
                   </SelectItem>
@@ -278,7 +353,10 @@ export default function FamilyTimeline() {
                 size="sm"
                 variant="ghost"
                 className="h-7 text-[11px]"
-                onClick={() => { setScope(defaultScope); setScopeTouched(false); }}
+                onClick={() => {
+                  setScope(defaultScope);
+                  setScopeTouched(false);
+                }}
               >
                 Reset
               </Button>
@@ -290,28 +368,37 @@ export default function FamilyTimeline() {
                 size="sm"
                 variant={scope === "all" ? "default" : "outline"}
                 className="h-6 text-[10px] px-2"
-                onClick={() => { setScope("all"); setScopeTouched(true); }}
+                onClick={() => {
+                  setScope("all");
+                  setScopeTouched(true);
+                }}
               >
                 All
               </Button>
-              {pendingScopeRequests.slice(0, 3).map(r => (
+              {pendingScopeRequests.slice(0, 3).map((r) => (
                 <Button
                   key={r.id}
                   size="sm"
                   variant={scope === `request:${r.id}` ? "default" : "outline"}
                   className="h-6 text-[10px] px-2"
-                  onClick={() => { setScope(`request:${r.id}`); setScopeTouched(true); }}
+                  onClick={() => {
+                    setScope(`request:${r.id}`);
+                    setScopeTouched(true);
+                  }}
                 >
                   {r.pathway === "adoption" ? "Adoption" : "Pregnancy"} ●
                 </Button>
               ))}
-              {children.slice(0, 4).map(c => (
+              {children.slice(0, 4).map((c) => (
                 <Button
                   key={c.id}
                   size="sm"
                   variant={scope === `child:${c.id}` ? "default" : "outline"}
                   className="h-6 text-[10px] px-2"
-                  onClick={() => { setScope(`child:${c.id}`); setScopeTouched(true); }}
+                  onClick={() => {
+                    setScope(`child:${c.id}`);
+                    setScopeTouched(true);
+                  }}
                 >
                   {c.name}
                 </Button>
@@ -328,7 +415,9 @@ export default function FamilyTimeline() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-1.5">
-          {(["all", "milestones", "adoption", "interactions", "school"] as const).map(f => (
+          {(
+            ["all", "milestones", "adoption", "interactions", "school"] as const
+          ).map((f) => (
             <Button
               key={f}
               size="sm"
@@ -347,7 +436,9 @@ export default function FamilyTimeline() {
           <CardContent className="py-10 text-center text-muted-foreground">
             <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No events yet</p>
-            <p className="text-xs mt-1">Adoption milestones and child care actions will appear here.</p>
+            <p className="text-xs mt-1">
+              Adoption milestones and child care actions will appear here.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -355,22 +446,24 @@ export default function FamilyTimeline() {
       {grouped.map(([day, dayItems]) => (
         <div key={day} className="space-y-2">
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[11px] font-semibold text-muted-foreground">
               {format(new Date(day), "EEEE, MMM d, yyyy")}
             </p>
           </div>
           <div className="relative space-y-2 border-l-2 border-border/50 ml-2 pl-4">
-            {dayItems.map(item => {
-              const Icon = item.kind === "interaction"
-                ? interactionIcon(item.eventType)
-                : item.kind === "school"
-                ? GraduationCap
-                : Baby;
-              const colorClass = item.kind === "request"
-                ? requestColor(item.eventType)
-                : item.kind === "school"
-                ? "text-social-chemistry"
-                : "text-social-chemistry";
+            {dayItems.map((item) => {
+              const Icon =
+                item.kind === "interaction"
+                  ? interactionIcon(item.eventType)
+                  : item.kind === "school"
+                    ? GraduationCap
+                    : Baby;
+              const colorClass =
+                item.kind === "request"
+                  ? requestColor(item.eventType)
+                  : item.kind === "school"
+                    ? "text-social-chemistry"
+                    : "text-social-chemistry";
               return (
                 <div key={item.id} className="relative">
                   <div className="absolute -left-[22px] top-1 h-3 w-3 rounded-full bg-background border-2 border-border" />
@@ -382,58 +475,102 @@ export default function FamilyTimeline() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-semibold capitalize">
                               {item.kind === "school"
-                                ? (item.eventType === "parent_teacher_day" ? "Parent-Teacher Day"
-                                    : item.eventType === "stage_started" ? "Stage Started"
-                                    : item.eventType === "report_card" ? "Report Card"
-                                    : item.eventType === "graduation" ? "Graduation 🎓"
-                                    : item.eventType.replace(/_/g, " "))
-                                : item.eventType.replace(/_/g, " ")}
+                                ? item.eventType === "parent_teacher_day"
+                                  ? "Parent-Teacher Day"
+                                  : item.eventType === "stage_started"
+                                    ? "Stage Started"
+                                    : item.eventType === "report_card"
+                                      ? "Report Card"
+                                      : item.eventType === "graduation"
+                                        ? "Graduation 🎓"
+                                        : item.eventType.replace(/_/g, "")
+                                : item.eventType.replace(/_/g, "")}
                             </p>
-                            {item.kind === "school" && (item.eventType === "stage_started" || item.eventType === "graduation") && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1 border-social-chemistry/40 text-social-chemistry">
-                                Milestone
-                              </Badge>
-                            )}
+                            {item.kind === "school" &&
+                              (item.eventType === "stage_started" ||
+                                item.eventType === "graduation") && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] h-4 px-1 border-social-chemistry/40 text-social-chemistry"
+                                >
+                                  Milestone
+                                </Badge>
+                              )}
                             {item.kind === "request" && item.pathway && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1 capitalize">
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] h-4 px-1 capitalize"
+                              >
                                 {item.pathway}
                               </Badge>
                             )}
-                            {(item.kind === "interaction" || item.kind === "school") && item.childName && (
-                              <Badge variant="secondary" className="text-[9px] h-4 px-1">
-                                {item.childName}
+                            {(item.kind === "interaction" ||
+                              item.kind === "school") &&
+                              item.childName && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] h-4 px-1"
+                                >
+                                  {item.childName}
+                                </Badge>
+                              )}
+                            {item.kind === "school" && item.subject && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] h-4 px-1"
+                              >
+                                {item.subject}
                               </Badge>
                             )}
-                            {item.kind === "school" && item.subject && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1">{item.subject}</Badge>
-                            )}
-                            {item.kind === "school" && typeof item.rating === "number" && item.rating > 0 && item.eventType !== "stage_started" && item.eventType !== "graduation" && (
-                              <span className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <Star
-                                    key={n}
-                                    className={`h-2.5 w-2.5 ${n <= (item.rating ?? 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
-                                  />
-                                ))}
-                              </span>
-                            )}
+                            {item.kind === "school" &&
+                              typeof item.rating === "number" &&
+                              item.rating > 0 &&
+                              item.eventType !== "stage_started" &&
+                              item.eventType !== "graduation" && (
+                                <span className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <Star
+                                      key={n}
+                                      className={`h-2.5 w-2.5 ${n <= (item.rating ?? 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                                    />
+                                  ))}
+                                </span>
+                              )}
                             {item.resultingStatus && (
-                              <span className="text-[10px] text-muted-foreground">→ {item.resultingStatus}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                → {item.resultingStatus}
+                              </span>
                             )}
                           </div>
                           {item.kind === "school" && item.teacherName && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Teacher: {item.teacherName}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              Teacher: {item.teacherName}
+                            </p>
                           )}
                           {item.note && (
-                            <p className="text-[11px] text-muted-foreground italic mt-1">{item.kind === "school" ? `"${item.note}"` : item.note}</p>
+                            <p className="text-[11px] text-muted-foreground italic mt-1">
+                              {item.kind === "school"
+                                ? `"${item.note}"`
+                                : item.note}
+                            </p>
                           )}
                           <p className="text-[10px] text-muted-foreground/70 mt-1">
-                            {format(new Date(item.at), "h:mm a")} · {formatDistanceToNow(new Date(item.at), { addSuffix: true })}
+                            {format(new Date(item.at), "h:mm a")} ·{" "}
+                            {formatDistanceToNow(new Date(item.at), {
+                              addSuffix: true,
+                            })}
                           </p>
                         </div>
                         {item.childId && (
-                          <Button asChild size="sm" variant="ghost" className="h-6 text-[10px] px-2">
-                            <Link to={`/family/child/${item.childId}`}>View</Link>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                          >
+                            <Link to={`/family/child/${item.childId}`}>
+                              View
+                            </Link>
                           </Button>
                         )}
                       </div>

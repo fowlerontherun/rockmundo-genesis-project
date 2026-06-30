@@ -474,7 +474,7 @@
 .text-card-title { @apply text-lg font-semibold leading-snug text-foreground; }
 .text-body { @apply text-sm leading-relaxed text-foreground; }
 .text-body-sm { @apply text-xs leading-relaxed text-muted-foreground; }
-.text-label { @apply text-xs font-medium uppercase tracking-wide text-muted-foreground; }
+.text-label { @apply text-xs font-medium text-muted-foreground; }
 .text-caption { @apply text-[11px] text-muted-foreground; }
 
 /* ============ Unified Elevation Utilities ============ */
@@ -702,18 +702,14 @@
    FM2024-style typography & density helpers
    ============================================================ */
 .fm-eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
   color: hsl(var(--fm-fg-muted) / 0.85);
-  font-weight: 600;
+  font-weight: 500;
 }
 .fm-section-title {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: hsl(var(--fm-fg));
 }
 .fm-stat-value {

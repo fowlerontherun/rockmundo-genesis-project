@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { MessageSquare, HelpCircle, Sparkles, MapPin, Crown, Search } from "lucide-react";
+import {
+  MessageSquare,
+  HelpCircle,
+  Sparkles,
+  MapPin,
+  Crown,
+  Search,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +44,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
         .from("cities")
         .select("id, name, country")
         .order("name");
-      
+
       if (data) {
         setCities(data);
       }
@@ -56,7 +63,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
     baseChannels.push({ key: "vip", label: "VIP", icon: Crown, type: "vip" });
   }
 
-  const cityChannels: Channel[] = cities.map(city => ({
+  const cityChannels: Channel[] = cities.map((city) => ({
     key: `city:${city.id}`,
     label: `${city.name}`,
     icon: MapPin,
@@ -66,8 +73,16 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
   const allChannels = [...baseChannels, ...cityChannels];
 
   const lowerFilter = filter.toLowerCase();
-  const filteredBase = useMemo(() => baseChannels.filter(c => c.label.toLowerCase().includes(lowerFilter)), [baseChannels, lowerFilter]);
-  const filteredCities = useMemo(() => cityChannels.filter(c => c.label.toLowerCase().includes(lowerFilter)), [cityChannels, lowerFilter]);
+  const filteredBase = useMemo(
+    () =>
+      baseChannels.filter((c) => c.label.toLowerCase().includes(lowerFilter)),
+    [baseChannels, lowerFilter],
+  );
+  const filteredCities = useMemo(
+    () =>
+      cityChannels.filter((c) => c.label.toLowerCase().includes(lowerFilter)),
+    [cityChannels, lowerFilter],
+  );
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-hidden flex flex-col gap-2 sm:flex-row sm:gap-4 h-[calc(100vh-14rem)] min-h-[280px]">
@@ -79,7 +94,7 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               value={filter}
-              onChange={e => setFilter(e.target.value)}
+              onChange={(e) => setFilter(e.target.value)}
               placeholder="Search channels..."
               className="h-8 pl-7 text-xs"
             />
@@ -89,15 +104,17 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
         {/* Mobile: horizontal scroll strip */}
         <div className="sm:hidden overflow-x-auto scrollbar-hide">
           <div className="flex gap-1 p-1.5 w-max">
-            {baseChannels.map(channel => {
+            {baseChannels.map((channel) => {
               const Icon = channel.icon;
               return (
                 <Button
                   key={channel.key}
-                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  variant={
+                    selectedChannel === channel.key ? "secondary" : "ghost"
+                  }
                   className={cn(
                     "gap-1.5 shrink-0 h-8 px-2.5 text-xs",
-                    selectedChannel === channel.key && "bg-accent"
+                    selectedChannel === channel.key && "bg-accent",
                   )}
                   size="sm"
                   onClick={() => setSelectedChannel(channel.key)}
@@ -110,15 +127,17 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
             {cityChannels.length > 0 && (
               <div className="w-px bg-border mx-0.5 self-stretch" />
             )}
-            {cityChannels.map(channel => {
+            {cityChannels.map((channel) => {
               const Icon = channel.icon;
               return (
                 <Button
                   key={channel.key}
-                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  variant={
+                    selectedChannel === channel.key ? "secondary" : "ghost"
+                  }
                   className={cn(
                     "gap-1.5 shrink-0 h-8 px-2.5 text-xs",
-                    selectedChannel === channel.key && "bg-accent"
+                    selectedChannel === channel.key && "bg-accent",
                   )}
                   size="sm"
                   onClick={() => setSelectedChannel(channel.key)}
@@ -135,19 +154,21 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
         <ScrollArea className="flex-1 hidden sm:block">
           <div className="p-2 flex flex-col space-y-1">
             {filteredBase.length > 0 && (
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                 Main Channels
               </div>
             )}
-            {filteredBase.map(channel => {
+            {filteredBase.map((channel) => {
               const Icon = channel.icon;
               return (
                 <Button
                   key={channel.key}
-                  variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                  variant={
+                    selectedChannel === channel.key ? "secondary" : "ghost"
+                  }
                   className={cn(
                     "justify-start gap-2 w-full",
-                    selectedChannel === channel.key && "bg-accent"
+                    selectedChannel === channel.key && "bg-accent",
                   )}
                   size="sm"
                   onClick={() => setSelectedChannel(channel.key)}
@@ -157,21 +178,23 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
                 </Button>
               );
             })}
-            
+
             {filteredCities.length > 0 && (
               <>
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase mt-4">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-4">
                   Cities
                 </div>
-                {filteredCities.map(channel => {
+                {filteredCities.map((channel) => {
                   const Icon = channel.icon;
                   return (
                     <Button
                       key={channel.key}
-                      variant={selectedChannel === channel.key ? "secondary" : "ghost"}
+                      variant={
+                        selectedChannel === channel.key ? "secondary" : "ghost"
+                      }
                       className={cn(
                         "justify-start gap-2 w-full",
-                        selectedChannel === channel.key && "bg-accent"
+                        selectedChannel === channel.key && "bg-accent",
                       )}
                       size="sm"
                       onClick={() => setSelectedChannel(channel.key)}
@@ -190,7 +213,9 @@ export function ChatChannelSelector({ isVip }: ChatChannelSelectorProps) {
       <div className="flex-1 min-h-0 min-w-0">
         <RealtimeChatPanel
           channelKey={selectedChannel}
-          title={allChannels.find(c => c.key === selectedChannel)?.label || "Chat"}
+          title={
+            allChannels.find((c) => c.key === selectedChannel)?.label || "Chat"
+          }
           className="h-full"
         />
       </div>

@@ -17,8 +17,14 @@ const initialBypass = () => {
   return false;
 };
 
-export const DesktopOnlyGate = ({ children }: { children: React.ReactNode }) => {
-  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1920);
+export const DesktopOnlyGate = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const [width, setWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1920,
+  );
   const [bypass, setBypass] = useState(initialBypass);
 
   useEffect(() => {
@@ -28,7 +34,9 @@ export const DesktopOnlyGate = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const enableBypass = () => {
-    try { window.localStorage.setItem(BYPASS_KEY, "1"); } catch {}
+    try {
+      window.localStorage.setItem(BYPASS_KEY, "1");
+    } catch {}
     setBypass(true);
   };
 
@@ -37,17 +45,18 @@ export const DesktopOnlyGate = ({ children }: { children: React.ReactNode }) => 
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-fm-bg text-fm-fg p-8">
         <div className="max-w-md text-center space-y-5">
           <Monitor className="h-16 w-16 mx-auto text-fm-accent" />
-          <h1 className="font-bebas text-3xl tracking-[0.04em]">Desktop Only</h1>
+          <h1 className="font-bebas text-3xl">Desktop Only</h1>
           <p className="text-sm text-fm-fg-muted leading-relaxed">
             RockMundo is built for the full desktop experience. Please open this
-            site on a computer with a browser window at least <strong>1440&nbsp;×&nbsp;900</strong> pixels wide.
+            site on a computer with a browser window at least{" "}
+            <strong>1440&nbsp;×&nbsp;900</strong> pixels wide.
           </p>
           <p className="text-xs text-fm-fg-muted/70">
             Current width: {width}px · Required: {MIN_WIDTH}px
           </p>
           <button
             onClick={enableBypass}
-            className="text-[10px] uppercase tracking-[0.2em] text-fm-accent border border-fm-border px-3 py-1.5 rounded-sm hover:bg-fm-panel"
+            className="text-[10px] text-fm-accent border border-fm-border px-3 py-1.5 rounded-sm hover:bg-fm-panel"
           >
             Preview anyway (dev)
           </button>
@@ -60,4 +69,3 @@ export const DesktopOnlyGate = ({ children }: { children: React.ReactNode }) => 
 };
 
 export default DesktopOnlyGate;
-

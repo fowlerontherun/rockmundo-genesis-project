@@ -1,12 +1,27 @@
 // Family & Legacy Interface — Family tree and generational gameplay
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScoreGauge } from "./ScoreGauge";
 import { motion } from "framer-motion";
 import {
-  Users, Crown, Heart, Baby, TrendingUp, Star, Shield,
-  Sparkles, AlertTriangle, Music, Activity,
+  Users,
+  Crown,
+  Heart,
+  Baby,
+  TrendingUp,
+  Star,
+  Shield,
+  Sparkles,
+  AlertTriangle,
+  Music,
+  Activity,
 } from "lucide-react";
 
 interface FamilyMember {
@@ -22,8 +37,8 @@ interface FamilyMember {
 
 interface FamilyLegacyProps {
   familyMembers?: FamilyMember[];
-  legacyPressure?: number;    // 0-100
-  fameInheritance?: number;   // percentage modifier
+  legacyPressure?: number; // 0-100
+  fameInheritance?: number; // percentage modifier
   className?: string;
 }
 
@@ -44,7 +59,8 @@ const RELATIONSHIP_ICONS: Record<string, React.ReactNode> = {
 };
 
 function FamilyMemberCard({ member }: { member: FamilyMember }) {
-  const colorClass = RELATIONSHIP_COLORS[member.relationship] ?? "border-border/50";
+  const colorClass =
+    RELATIONSHIP_COLORS[member.relationship] ?? "border-border/50";
   const icon = RELATIONSHIP_ICONS[member.relationship];
 
   return (
@@ -62,10 +78,14 @@ function FamilyMemberCard({ member }: { member: FamilyMember }) {
           {icon}
           <div>
             <p className="text-sm font-bold">{member.name}</p>
-            <p className="text-[10px] text-muted-foreground capitalize">{member.relationship}</p>
+            <p className="text-[10px] text-muted-foreground capitalize">
+              {member.relationship}
+            </p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px]">Lv.{member.level}</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          Lv.{member.level}
+        </Badge>
       </div>
 
       <div className="flex items-center gap-2 text-[10px]">
@@ -76,7 +96,11 @@ function FamilyMemberCard({ member }: { member: FamilyMember }) {
         <ScoreGauge
           value={member.emotionalStability}
           label=""
-          color={member.emotionalStability >= 50 ? "social-loyalty" : "social-tension"}
+          color={
+            member.emotionalStability >= 50
+              ? "social-loyalty"
+              : "social-tension"
+          }
           size="sm"
           showValue={false}
           className="flex-1"
@@ -86,7 +110,13 @@ function FamilyMemberCard({ member }: { member: FamilyMember }) {
       {member.traits.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {member.traits.slice(0, 3).map((trait) => (
-            <Badge key={trait} variant="secondary" className="text-[9px] px-1 py-0">{trait}</Badge>
+            <Badge
+              key={trait}
+              variant="secondary"
+              className="text-[9px] px-1 py-0"
+            >
+              {trait}
+            </Badge>
           ))}
         </div>
       )}
@@ -101,11 +131,11 @@ export function FamilyLegacyPanel({
   className,
 }: FamilyLegacyProps) {
   // Group by relationship type
-  const self = familyMembers.find(m => m.relationship === "self");
-  const partner = familyMembers.filter(m => m.relationship === "partner");
-  const children = familyMembers.filter(m => m.relationship === "child");
-  const parents = familyMembers.filter(m => m.relationship === "parent");
-  const siblings = familyMembers.filter(m => m.relationship === "sibling");
+  const self = familyMembers.find((m) => m.relationship === "self");
+  const partner = familyMembers.filter((m) => m.relationship === "partner");
+  const children = familyMembers.filter((m) => m.relationship === "child");
+  const parents = familyMembers.filter((m) => m.relationship === "parent");
+  const siblings = familyMembers.filter((m) => m.relationship === "sibling");
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -124,8 +154,12 @@ export function FamilyLegacyPanel({
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border border-border/50 p-3 bg-muted/20 text-center space-y-1">
               <Crown className="h-5 w-5 mx-auto text-social-warm" />
-              <p className="text-lg font-oswald font-bold">{fameInheritance}%</p>
-              <p className="text-[10px] text-muted-foreground">Fame Inheritance</p>
+              <p className="text-lg font-oswald font-bold">
+                {fameInheritance}%
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Fame Inheritance
+              </p>
             </div>
             <div className="rounded-lg border border-border/50 p-3 bg-muted/20 text-center space-y-1">
               <Activity className="h-5 w-5 mx-auto text-social-chemistry" />
@@ -137,11 +171,15 @@ export function FamilyLegacyPanel({
                 showValue={false}
               />
               <p className="font-oswald font-bold">{legacyPressure}</p>
-              <p className="text-[10px] text-muted-foreground">Legacy Pressure</p>
+              <p className="text-[10px] text-muted-foreground">
+                Legacy Pressure
+              </p>
             </div>
             <div className="rounded-lg border border-border/50 p-3 bg-muted/20 text-center space-y-1">
               <Users className="h-5 w-5 mx-auto text-social-trust" />
-              <p className="text-lg font-oswald font-bold">{familyMembers.length}</p>
+              <p className="text-lg font-oswald font-bold">
+                {familyMembers.length}
+              </p>
               <p className="text-[10px] text-muted-foreground">Family Size</p>
             </div>
           </div>
@@ -151,19 +189,27 @@ export function FamilyLegacyPanel({
             {/* Parents Row */}
             {parents.length > 0 && (
               <div className="space-y-1">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Parents</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground">
+                  Parents
+                </h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {parents.map(m => <FamilyMemberCard key={m.id} member={m} />)}
+                  {parents.map((m) => (
+                    <FamilyMemberCard key={m.id} member={m} />
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Self + Partner Row */}
             <div className="space-y-1">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">You & Partner</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground">
+                You & Partner
+              </h4>
               <div className="grid grid-cols-2 gap-2">
                 {self && <FamilyMemberCard member={self} />}
-                {partner.map(m => <FamilyMemberCard key={m.id} member={m} />)}
+                {partner.map((m) => (
+                  <FamilyMemberCard key={m.id} member={m} />
+                ))}
                 {!self && partner.length === 0 && (
                   <div className="col-span-2 rounded-lg border border-dashed border-border/50 p-6 text-center text-xs text-muted-foreground">
                     No family data yet
@@ -175,9 +221,13 @@ export function FamilyLegacyPanel({
             {/* Children Row */}
             {children.length > 0 && (
               <div className="space-y-1">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Children</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground">
+                  Children
+                </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {children.map(m => <FamilyMemberCard key={m.id} member={m} />)}
+                  {children.map((m) => (
+                    <FamilyMemberCard key={m.id} member={m} />
+                  ))}
                 </div>
               </div>
             )}
@@ -185,9 +235,13 @@ export function FamilyLegacyPanel({
             {/* Siblings */}
             {siblings.length > 0 && (
               <div className="space-y-1">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Siblings</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground">
+                  Siblings
+                </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {siblings.map(m => <FamilyMemberCard key={m.id} member={m} />)}
+                  {siblings.map((m) => (
+                    <FamilyMemberCard key={m.id} member={m} />
+                  ))}
                 </div>
               </div>
             )}

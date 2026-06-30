@@ -1,4 +1,4 @@
-export const version = "1.1.423";
+export const version = "1.1.424";
 
 interface VersionHeaderProps {
   className?: string;

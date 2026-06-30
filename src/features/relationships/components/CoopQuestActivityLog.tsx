@@ -1,13 +1,40 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollText, Flag, TrendingUp, Trophy, CheckCircle2, Filter, ChevronRight, Search, X, Users, CalendarRange } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ScrollText,
+  Flag,
+  TrendingUp,
+  Trophy,
+  CheckCircle2,
+  Filter,
+  ChevronRight,
+  Search,
+  X,
+  Users,
+  CalendarRange,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useCoopQuestEvents, type CoopQuestEvent } from "@/hooks/useCoopQuestEvents";
+import {
+  useCoopQuestEvents,
+  type CoopQuestEvent,
+} from "@/hooks/useCoopQuestEvents";
 import { useCoopQuestRealtime } from "@/hooks/useCoopQuestRealtime";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
@@ -63,19 +90,27 @@ function rangeCutoffMs(range: RangeFilter): number | null {
 
 function eventIcon(type: CoopQuestEvent["event_type"]) {
   switch (type) {
-    case "started":   return <Flag className="h-3.5 w-3.5 text-primary" />;
-    case "progress":  return <TrendingUp className="h-3.5 w-3.5 text-blue-500" />;
-    case "completed": return <Trophy className="h-3.5 w-3.5 text-amber-500" />;
-    case "claimed":   return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+    case "started":
+      return <Flag className="h-3.5 w-3.5 text-primary" />;
+    case "progress":
+      return <TrendingUp className="h-3.5 w-3.5 text-blue-500" />;
+    case "completed":
+      return <Trophy className="h-3.5 w-3.5 text-amber-500" />;
+    case "claimed":
+      return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
   }
 }
 
 function eventLabel(type: CoopQuestEvent["event_type"]) {
   switch (type) {
-    case "started":   return "Started";
-    case "progress":  return "Progress";
-    case "completed": return "Completed";
-    case "claimed":   return "Claimed";
+    case "started":
+      return "Started";
+    case "progress":
+      return "Progress";
+    case "completed":
+      return "Completed";
+    case "claimed":
+      return "Claimed";
   }
 }
 
@@ -89,7 +124,10 @@ export function CoopQuestActivityLog({
   // Subscribe to realtime quest + event changes so the feed updates live.
   useCoopQuestRealtime();
   // Fetch a wider window so client-side filters still have plenty to show.
-  const { data: events = [], isLoading } = useCoopQuestEvents(otherProfileId, Math.max(limit * 3, 60));
+  const { data: events = [], isLoading } = useCoopQuestEvents(
+    otherProfileId,
+    Math.max(limit * 3, 60),
+  );
 
   const [cadence, setCadence] = useState<CadenceFilter>("all");
   const [eventType, setEventType] = useState<EventTypeFilter>("all");
@@ -125,10 +163,20 @@ export function CoopQuestActivityLog({
     const q = search.trim().toLowerCase();
     const cutoff = rangeCutoffMs(range);
     return events
-      .filter((e) => (cadence === "all" ? true : (e.quest_cadence ?? "").toLowerCase() === cadence))
+      .filter((e) =>
+        cadence === "all"
+          ? true
+          : (e.quest_cadence ?? "").toLowerCase() === cadence,
+      )
       .filter((e) => (eventType === "all" ? true : e.event_type === eventType))
-      .filter((e) => (friendId === FRIEND_FILTER_ALL ? true : e.friend_profile_id === friendId))
-      .filter((e) => (cutoff === null ? true : new Date(e.created_at).getTime() >= cutoff))
+      .filter((e) =>
+        friendId === FRIEND_FILTER_ALL
+          ? true
+          : e.friend_profile_id === friendId,
+      )
+      .filter((e) =>
+        cutoff === null ? true : new Date(e.created_at).getTime() >= cutoff,
+      )
       .filter((e) => {
         if (!q) return true;
         const youActed = e.actor_profile_id === profileId;
@@ -141,7 +189,7 @@ export function CoopQuestActivityLog({
           e.note,
         ]
           .filter(Boolean)
-          .join(" ")
+          .join("")
           .toLowerCase();
         return haystack.includes(q);
       })
@@ -170,7 +218,7 @@ export function CoopQuestActivityLog({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by friend, quest, or note… (try 'you' for your own actions)"
+              placeholder="Search by friend, quest, or note… (try'you'for your own actions)"
               className="h-7 pl-7 pr-7 text-xs"
             />
             {search && (
@@ -187,7 +235,7 @@ export function CoopQuestActivityLog({
 
           {showFriendFilter && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <span className="text-[10px] tracking-wide text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" /> Friend
               </span>
               <Select value={friendId} onValueChange={setFriendId}>
@@ -214,7 +262,7 @@ export function CoopQuestActivityLog({
           )}
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <span className="text-[10px] tracking-wide text-muted-foreground flex items-center gap-1">
               <CalendarRange className="h-3 w-3" /> Range
             </span>
             {RANGE_OPTIONS.map((opt) => (
@@ -231,7 +279,7 @@ export function CoopQuestActivityLog({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <span className="text-[10px] tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Cadence
             </span>
             {CADENCE_OPTIONS.map((opt) => (
@@ -247,7 +295,7 @@ export function CoopQuestActivityLog({
             ))}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <span className="text-[10px] tracking-wide text-muted-foreground flex items-center gap-1">
               <Filter className="h-3 w-3" /> Event
             </span>
             {EVENT_OPTIONS.map((opt) => (
@@ -281,10 +329,13 @@ export function CoopQuestActivityLog({
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading && <p className="text-xs text-muted-foreground">Loading activity…</p>}
+        {isLoading && (
+          <p className="text-xs text-muted-foreground">Loading activity…</p>
+        )}
         {!isLoading && events.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            No co-op quest activity yet. Start a quest to see entries appear here.
+            No co-op quest activity yet. Start a quest to see entries appear
+            here.
           </p>
         )}
         {!isLoading && events.length > 0 && filtered.length === 0 && (
@@ -305,33 +356,47 @@ export function CoopQuestActivityLog({
                       className={cn(
                         "w-full text-left flex items-start gap-2 rounded-md border p-2 text-xs",
                         "hover:bg-accent/40 hover:border-accent transition-colors cursor-pointer",
-                        e.event_type === "claimed" && "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10",
-                        e.event_type === "completed" && "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
+                        e.event_type === "claimed" &&
+                          "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10",
+                        e.event_type === "completed" &&
+                          "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
                       )}
                     >
                       <div className="mt-0.5">{eventIcon(e.event_type)}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0"
+                          >
                             {eventLabel(e.event_type)}
                           </Badge>
                           {e.quest_cadence && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0"
+                            >
                               {e.quest_cadence}
                             </Badge>
                           )}
                           {e.quest_title && (
-                            <span className="font-medium truncate">{e.quest_title}</span>
+                            <span className="font-medium truncate">
+                              {e.quest_title}
+                            </span>
                           )}
                         </div>
                         <p className="text-muted-foreground mt-0.5 break-words">
                           <span className="font-medium text-foreground">
-                            {youActed ? "You" : e.actor_display_name ?? "Friend"}
+                            {youActed
+                              ? "You"
+                              : (e.actor_display_name ?? "Friend")}
                           </span>
                           {e.note ? ` — ${e.note}` : ""}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(e.created_at), {
+                            addSuffix: true,
+                          })}
                         </p>
                       </div>
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />

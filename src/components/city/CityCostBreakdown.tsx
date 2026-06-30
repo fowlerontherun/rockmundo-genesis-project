@@ -1,4 +1,11 @@
-import { DollarSign, Home, Utensils, Car, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  DollarSign,
+  Home,
+  Utensils,
+  Car,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -35,7 +42,10 @@ const getBreakdown = (cost: number) => {
   };
 };
 
-export const CityCostBreakdown = ({ costOfLiving, cityName }: CityCostBreakdownProps) => {
+export const CityCostBreakdown = ({
+  costOfLiving,
+  cityName,
+}: CityCostBreakdownProps) => {
   const breakdown = getBreakdown(costOfLiving);
   const TrendIcon = costOfLiving >= 50 ? TrendingUp : TrendingDown;
 
@@ -53,17 +63,21 @@ export const CityCostBreakdown = ({ costOfLiving, cityName }: CityCostBreakdownP
             <span className="text-sm text-muted-foreground">Overall Index</span>
             <div className="flex items-center gap-1">
               <TrendIcon className={`h-4 w-4 ${getCostColor(costOfLiving)}`} />
-              <span className={`font-bold text-lg ${getCostColor(costOfLiving)}`}>
+              <span
+                className={`font-bold text-lg ${getCostColor(costOfLiving)}`}
+              >
                 {costOfLiving}%
               </span>
             </div>
           </div>
           <Progress value={costOfLiving} className="h-2" />
-          <p className="text-xs text-muted-foreground">{getCostLabel(costOfLiving)}</p>
+          <p className="text-xs text-muted-foreground">
+            {getCostLabel(costOfLiving)}
+          </p>
         </div>
 
         <div className="space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <p className="text-xs font-medium text-muted-foreground tracking-wide">
             Estimated Monthly Costs
           </p>
 
@@ -73,7 +87,9 @@ export const CityCostBreakdown = ({ costOfLiving, cityName }: CityCostBreakdownP
                 <Home className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Rent (studio apt)</span>
               </div>
-              <span className="font-medium">${breakdown.rent.toLocaleString()}</span>
+              <span className="font-medium">
+                ${breakdown.rent.toLocaleString()}
+              </span>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-border/60 p-2">
@@ -81,7 +97,9 @@ export const CityCostBreakdown = ({ costOfLiving, cityName }: CityCostBreakdownP
                 <Utensils className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Food & Dining</span>
               </div>
-              <span className="font-medium">${breakdown.food.toLocaleString()}</span>
+              <span className="font-medium">
+                ${breakdown.food.toLocaleString()}
+              </span>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-border/60 p-2">
@@ -89,14 +107,22 @@ export const CityCostBreakdown = ({ costOfLiving, cityName }: CityCostBreakdownP
                 <Car className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Transport</span>
               </div>
-              <span className="font-medium">${breakdown.transport.toLocaleString()}</span>
+              <span className="font-medium">
+                ${breakdown.transport.toLocaleString()}
+              </span>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-border/60">
             <span className="text-sm font-medium">Total Estimate</span>
             <span className="font-bold text-primary">
-              ${(breakdown.rent + breakdown.food + breakdown.transport).toLocaleString()}/mo
+              $
+              {(
+                breakdown.rent +
+                breakdown.food +
+                breakdown.transport
+              ).toLocaleString()}
+              /mo
             </span>
           </div>
         </div>

@@ -1,14 +1,37 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useFestivals, Festival, FestivalParticipant } from "@/hooks/useFestivals";
+import {
+  useFestivals,
+  Festival,
+  FestivalParticipant,
+} from "@/hooks/useFestivals";
 import { useFestivalHistory } from "@/hooks/useFestivalHistory";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
@@ -17,10 +40,25 @@ import { FestivalSlotOffers } from "@/components/festivals/FestivalSlotOffers";
 import { FestivalHistoryCard } from "@/components/festivals/history/FestivalHistoryCard";
 import { FestivalHistoryStats } from "@/components/festivals/history/FestivalHistoryStats";
 import { FestivalMapView } from "@/components/festivals/discovery/FestivalMapView";
-import { 
-  Calendar, MapPin, Users, Music, Star, Clock, 
-  DollarSign, Trophy, CheckCircle, XCircle, Loader2, Mail, History, Map,
-  Ticket, ChevronRight, Flame, Eye
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Music,
+  Star,
+  Clock,
+  DollarSign,
+  Trophy,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Mail,
+  History,
+  Map,
+  Ticket,
+  ChevronRight,
+  Flame,
+  Eye,
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -37,25 +75,33 @@ export default function FestivalBrowser() {
   const { profileId } = useActiveProfile();
   const { data: primaryBandRecord } = usePrimaryBand();
   const band = primaryBandRecord?.bands;
-  
-  const { 
-    festivals, 
-    festivalsLoading, 
-    participations, 
+
+  const {
+    festivals,
+    festivalsLoading,
+    participations,
     participationsLoading,
     applyToFestival,
     withdrawFromFestival,
     performAtFestival,
     isApplying,
     isWithdrawing,
-    isPerforming
+    isPerforming,
   } = useFestivals(profileId ?? undefined, band?.id);
-  
-  const { data: setlists } = useSetlists(band?.id);
-  const { performances, stats, isLoading: historyLoading } = useFestivalHistory(band?.id);
 
-  const [activeTab, setActiveTab] = useState<"browse" | "map" | "my-festivals" | "offers" | "history">("browse");
-  const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
+  const { data: setlists } = useSetlists(band?.id);
+  const {
+    performances,
+    stats,
+    isLoading: historyLoading,
+  } = useFestivalHistory(band?.id);
+
+  const [activeTab, setActiveTab] = useState<
+    "browse" | "map" | "my-festivals" | "offers" | "history"
+  >("browse");
+  const [selectedFestival, setSelectedFestival] = useState<Festival | null>(
+    null,
+  );
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState("");
   const [selectedSetlist, setSelectedSetlist] = useState("");
@@ -67,18 +113,42 @@ export default function FestivalBrowser() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+        return (
+          <Badge variant="secondary" className="text-xs">
+            Pending
+          </Badge>
+        );
       case "confirmed":
       case "invited":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs">✓ Confirmed</Badge>;
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs">
+            ✓ Confirmed
+          </Badge>
+        );
       case "performed":
-        return <Badge className="bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs">Performed</Badge>;
+        return (
+          <Badge className="bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs">
+            Performed
+          </Badge>
+        );
       case "withdrawn":
-        return <Badge variant="destructive" className="text-xs">Withdrawn</Badge>;
+        return (
+          <Badge variant="destructive" className="text-xs">
+            Withdrawn
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive" className="text-xs">Rejected</Badge>;
+        return (
+          <Badge variant="destructive" className="text-xs">
+            Rejected
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -100,11 +170,15 @@ export default function FestivalBrowser() {
   };
 
   const availableSlots = SLOT_TYPES.filter(
-    (slot) => (band?.fame || 0) >= slot.fame
+    (slot) => (band?.fame || 0) >= slot.fame,
   );
 
-  const confirmedCount = participations.filter((p) => p.status === "confirmed" || p.status === "invited").length;
-  const performedCount = participations.filter((p) => p.status === "performed").length;
+  const confirmedCount = participations.filter(
+    (p) => p.status === "confirmed" || p.status === "invited",
+  ).length;
+  const performedCount = participations.filter(
+    (p) => p.status === "performed",
+  ).length;
 
   return (
     <FMPageScaffold
@@ -113,22 +187,42 @@ export default function FestivalBrowser() {
       icon={Music}
       backTo="/hub/band-live"
     >
-
-
       {/* Compact Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Upcoming", value: festivals.length, icon: Calendar, color: "text-primary" },
-          { label: "Applications", value: participations.length, icon: Music, color: "text-amber-400" },
-          { label: "Confirmed", value: confirmedCount, icon: CheckCircle, color: "text-emerald-400" },
-          { label: "Performed", value: performedCount, icon: Trophy, color: "text-sky-400" },
+          {
+            label: "Upcoming",
+            value: festivals.length,
+            icon: Calendar,
+            color: "text-primary",
+          },
+          {
+            label: "Applications",
+            value: participations.length,
+            icon: Music,
+            color: "text-amber-400",
+          },
+          {
+            label: "Confirmed",
+            value: confirmedCount,
+            icon: CheckCircle,
+            color: "text-emerald-400",
+          },
+          {
+            label: "Performed",
+            value: performedCount,
+            icon: Trophy,
+            color: "text-sky-400",
+          },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="bg-card/50 border-border/50">
             <CardContent className="p-3 flex items-center gap-3">
               <Icon className={`h-4 w-4 ${color} shrink-0`} />
               <div>
                 <p className="text-lg font-bold leading-none">{value}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {label}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -145,7 +239,9 @@ export default function FestivalBrowser() {
             <Map className="h-3 w-3" />
             <span className="hidden sm:inline">Map</span>
           </TabsTrigger>
-          <TabsTrigger value="my-festivals" className="text-xs">My Fests</TabsTrigger>
+          <TabsTrigger value="my-festivals" className="text-xs">
+            My Fests
+          </TabsTrigger>
           <TabsTrigger value="offers" className="text-xs gap-1">
             <Mail className="h-3 w-3" />
             <span className="hidden sm:inline">Offers</span>
@@ -176,20 +272,23 @@ export default function FestivalBrowser() {
                 const participation = getParticipationStatus(festival.id);
                 const isUpcoming = isFuture(new Date(festival.start_date));
                 const daysAway = isUpcoming
-                  ? Math.ceil((new Date(festival.start_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  ? Math.ceil(
+                      (new Date(festival.start_date).getTime() - Date.now()) /
+                        (1000 * 60 * 60 * 24),
+                    )
                   : 0;
 
                 return (
-                  <Card 
-                    key={festival.id} 
+                  <Card
+                    key={festival.id}
                     className="group hover:border-primary/40 transition-all duration-200 cursor-pointer overflow-hidden"
                     onClick={() => navigate(`/festivals/${festival.id}`)}
                   >
                     {/* Poster header or gradient */}
                     {(festival as any).poster_url ? (
                       <div className="h-32 overflow-hidden">
-                        <img 
-                          src={(festival as any).poster_url} 
+                        <img
+                          src={(festival as any).poster_url}
                           alt={festival.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -208,7 +307,9 @@ export default function FestivalBrowser() {
                           </h3>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <MapPin className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{festival.location}</span>
+                            <span className="truncate">
+                              {festival.location}
+                            </span>
                           </p>
                         </div>
                         {participation && getStatusBadge(participation.status)}
@@ -223,11 +324,15 @@ export default function FestivalBrowser() {
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(festival.start_date), "MMM d")} – {format(new Date(festival.end_date), "MMM d")}
+                          {format(
+                            new Date(festival.start_date),
+                            "MMM d",
+                          )} – {format(new Date(festival.end_date), "MMM d")}
                         </span>
                         <span className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          {festival.current_participants}/{festival.max_participants}
+                          {festival.current_participants}/
+                          {festival.max_participants}
                         </span>
                       </div>
 
@@ -235,14 +340,21 @@ export default function FestivalBrowser() {
                         <div className="flex items-center gap-1.5">
                           <Flame className="h-3 w-3 text-amber-400" />
                           <span className="text-[11px] text-amber-400 font-medium">
-                            {daysAway === 0 ? "Starts today!" : daysAway === 1 ? "Starts tomorrow" : `${daysAway} days away`}
+                            {daysAway === 0
+                              ? "Starts today!"
+                              : daysAway === 1
+                                ? "Starts tomorrow"
+                                : `${daysAway} days away`}
                           </span>
                         </div>
                       )}
 
                       <Separator className="opacity-50" />
 
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {!participation && band && (
                           <Button
                             size="sm"
@@ -251,28 +363,37 @@ export default function FestivalBrowser() {
                               setSelectedFestival(festival);
                               setShowApplyDialog(true);
                             }}
-                            disabled={!isUpcoming || festival.current_participants >= festival.max_participants}
+                            disabled={
+                              !isUpcoming ||
+                              festival.current_participants >=
+                                festival.max_participants
+                            }
                           >
                             Apply to Perform
                           </Button>
                         )}
-                        {participation && participation.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={() => withdrawFromFestival.mutate(participation.id)}
-                            disabled={isWithdrawing}
-                          >
-                            Withdraw
-                          </Button>
-                        )}
-                        {participation && (participation.status === "confirmed" || participation.status === "invited") && (
-                          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 text-xs flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Scheduled
-                          </Badge>
-                        )}
+                        {participation &&
+                          participation.status === "pending" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 h-8 text-xs"
+                              onClick={() =>
+                                withdrawFromFestival.mutate(participation.id)
+                              }
+                              disabled={isWithdrawing}
+                            >
+                              Withdraw
+                            </Button>
+                          )}
+                        {participation &&
+                          (participation.status === "confirmed" ||
+                            participation.status === "invited") && (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 text-xs flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Scheduled
+                            </Badge>
+                          )}
                         {!band && (
                           <Button
                             variant="outline"
@@ -283,9 +404,9 @@ export default function FestivalBrowser() {
                             Join a Band First
                           </Button>
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-8 w-8 p-0 shrink-0"
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -301,8 +422,8 @@ export default function FestivalBrowser() {
 
         {/* Map Tab */}
         <TabsContent value="map" className="mt-4">
-          <FestivalMapView 
-            festivals={festivals} 
+          <FestivalMapView
+            festivals={festivals}
             onApply={(festival) => {
               setSelectedFestival(festival);
               setShowApplyDialog(true);
@@ -336,11 +457,12 @@ export default function FestivalBrowser() {
               {participations.map((participation: any) => {
                 const festTitle = participation.festivals?.title || "Festival";
                 return (
-                  <Card 
+                  <Card
                     key={participation.id}
                     className="hover:border-primary/40 transition-colors cursor-pointer"
                     onClick={() => {
-                      if (participation.event_id) navigate(`/festivals/${participation.event_id}`);
+                      if (participation.event_id)
+                        navigate(`/festivals/${participation.event_id}`);
                     }}
                   >
                     <CardContent className="p-4">
@@ -350,9 +472,13 @@ export default function FestivalBrowser() {
                             <Ticket className="h-4 w-4 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm truncate">{festTitle}</h3>
+                            <h3 className="font-semibold text-sm truncate">
+                              {festTitle}
+                            </h3>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-muted-foreground capitalize">{participation.slot_type}</span>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {participation.slot_type}
+                              </span>
                               {participation.payout_amount > 0 && (
                                 <span className="text-xs text-emerald-400 flex items-center gap-0.5">
                                   <DollarSign className="h-3 w-3" />
@@ -378,7 +504,8 @@ export default function FestivalBrowser() {
                               Withdraw
                             </Button>
                           )}
-                          {(participation.status === "confirmed" || participation.status === "invited") && (
+                          {(participation.status === "confirmed" ||
+                            participation.status === "invited") && (
                             <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-1 text-[10px] flex items-center gap-1">
                               <Clock className="h-2.5 w-2.5" />
                               Scheduled
@@ -403,7 +530,9 @@ export default function FestivalBrowser() {
             <Card className="border-dashed">
               <CardContent className="p-12 text-center text-muted-foreground">
                 <Music className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Join a band to receive festival offers</p>
+                <p className="font-medium">
+                  Join a band to receive festival offers
+                </p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -428,7 +557,9 @@ export default function FestivalBrowser() {
               <CardContent className="p-12 text-center text-muted-foreground">
                 <History className="h-10 w-10 mx-auto mb-3 opacity-40" />
                 <p className="font-medium">No performance history yet</p>
-                <p className="text-sm mt-1">Perform at festivals to build your track record!</p>
+                <p className="text-sm mt-1">
+                  Perform at festivals to build your track record!
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -437,7 +568,10 @@ export default function FestivalBrowser() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Past Performances</h3>
                 {performances.map((performance) => (
-                  <FestivalHistoryCard key={performance.id} performance={performance} />
+                  <FestivalHistoryCard
+                    key={performance.id}
+                    performance={performance}
+                  />
                 ))}
               </div>
             </div>
@@ -484,7 +618,10 @@ export default function FestivalBrowser() {
 
             <div className="space-y-2">
               <Label>Setlist (Optional)</Label>
-              <Select value={selectedSetlist} onValueChange={setSelectedSetlist}>
+              <Select
+                value={selectedSetlist}
+                onValueChange={setSelectedSetlist}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a setlist" />
                 </SelectTrigger>
@@ -504,8 +641,8 @@ export default function FestivalBrowser() {
             <Button variant="outline" onClick={() => setShowApplyDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleApply} 
+            <Button
+              onClick={handleApply}
               disabled={!selectedSlot || isApplying}
             >
               {isApplying ? (

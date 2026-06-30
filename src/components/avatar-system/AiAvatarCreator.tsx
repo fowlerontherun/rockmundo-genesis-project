@@ -1,9 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Camera, Upload, Sparkles, RefreshCw, Save, Palette, ImageIcon } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  Sparkles,
+  RefreshCw,
+  Save,
+  Palette,
+  ImageIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Progress } from "@/components/ui/progress";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -76,11 +90,12 @@ function compressImage(dataUrl: string, maxSize = 1024): Promise<string> {
       // Compress to JPEG at 0.8 quality — keeps base64 small
       const compressed = canvas.toDataURL("image/jpeg", 0.8);
       console.log(
-        `[AiAvatar] Compressed image: ${Math.round(dataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB (${width}x${height})`
+        `[AiAvatar] Compressed image: ${Math.round(dataUrl.length / 1024)}KB → ${Math.round(compressed.length / 1024)}KB (${width}x${height})`,
       );
       resolve(compressed);
     };
-    img.onerror = () => reject(new Error("Failed to load image for compression"));
+    img.onerror = () =>
+      reject(new Error("Failed to load image for compression"));
     img.src = dataUrl;
   });
 }
@@ -100,7 +115,8 @@ export function AiAvatarCreator() {
   const [generationProgress, setGenerationProgress] = useState(0);
 
   const activeGenre = selectedGenre || band?.genre || "Rock";
-  const styleDescription = GENRE_STYLE_DESCRIPTIONS[activeGenre] || "Stylish musician outfit";
+  const styleDescription =
+    GENRE_STYLE_DESCRIPTIONS[activeGenre] || "Stylish musician outfit";
 
   // Fetch profile for generation count and current avatar
   const { data: profile } = useQuery({
@@ -129,7 +145,10 @@ export function AiAvatarCreator() {
   const canAfford = cost === 0 || (profile?.cash ?? 0) >= cost;
 
   const processFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/") && !file.name.match(/\.(heic|heif)$/i)) {
+    if (
+      !file.type.startsWith("image/") &&
+      !file.name.match(/\.(heic|heif)$/i)
+    ) {
       toast.error("Please select an image file");
       return;
     }
@@ -160,13 +179,16 @@ export function AiAvatarCreator() {
     reader.readAsDataURL(file);
   }, []);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    processFile(file);
-    // Reset input so same file can be re-selected
-    e.target.value = "";
-  }, [processFile]);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      processFile(file);
+      // Reset input so same file can be re-selected
+      e.target.value = "";
+    },
+    [processFile],
+  );
 
   const handleSaveAvatar = async () => {
     if (!generatedAvatar || !profileId) return;
@@ -181,7 +203,9 @@ export function AiAvatarCreator() {
 
       queryClient.invalidateQueries({ queryKey: ["profile-avatar"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["onboarding-avatar-preview"] });
+      queryClient.invalidateQueries({
+        queryKey: ["onboarding-avatar-preview"],
+      });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       toast.success("Avatar saved to your profile!");
     } catch (err) {
@@ -211,13 +235,16 @@ export function AiAvatarCreator() {
     }, 1000);
 
     try {
-      const response = await supabase.functions.invoke("generate-photo-avatar", {
-        body: {
-          photoBase64: uploadedPhoto,
-          genre: activeGenre,
-          userId: profileId,
+      const response = await supabase.functions.invoke(
+        "generate-photo-avatar",
+        {
+          body: {
+            photoBase64: uploadedPhoto,
+            genre: activeGenre,
+            userId: profileId,
+          },
         },
-      });
+      );
 
       clearInterval(progressInterval);
 
@@ -228,7 +255,8 @@ export function AiAvatarCreator() {
         } else if (status === 402) {
           toast.error("AI credits exhausted. Please contact support.");
         } else {
-          const errorMessage = response.error.message || "Failed to generate avatar";
+          const errorMessage =
+            response.error.message || "Failed to generate avatar";
           toast.error(errorMessage);
         }
         return;
@@ -271,7 +299,9 @@ export function AiAvatarCreator() {
         <Card className="border-border bg-card/50">
           <CardContent className="p-6">
             <div className="flex flex-col items-center gap-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Current Avatar</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Your Current Avatar
+              </p>
               <div className="w-40 h-52 overflow-hidden rounded-lg border border-border bg-muted">
                 <img
                   src={generatedAvatar}
@@ -279,7 +309,9 @@ export function AiAvatarCreator() {
                   className="h-full w-full object-cover"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">Upload a new photo to regenerate</p>
+              <p className="text-sm text-muted-foreground">
+                Upload a new photo to regenerate
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -341,8 +373,13 @@ export function AiAvatarCreator() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Uploaded Photo */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Photo</p>
-                  <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg border border-border bg-muted">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Your Photo
+                  </p>
+                  <AspectRatio
+                    ratio={3 / 4}
+                    className="overflow-hidden rounded-lg border border-border bg-muted"
+                  >
                     <img
                       src={uploadedPhoto}
                       alt="Uploaded photo"
@@ -353,8 +390,13 @@ export function AiAvatarCreator() {
 
                 {/* Generated Avatar */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Avatar</p>
-                  <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg border border-border bg-muted">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    AI Avatar
+                  </p>
+                  <AspectRatio
+                    ratio={3 / 4}
+                    className="overflow-hidden rounded-lg border border-border bg-muted"
+                  >
                     {generatedAvatar ? (
                       <img
                         src={generatedAvatar}
@@ -364,14 +406,23 @@ export function AiAvatarCreator() {
                     ) : isGenerating ? (
                       <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4">
                         <Sparkles className="h-10 w-10 text-primary animate-pulse" />
-                        <p className="text-sm font-medium text-foreground">Creating your avatar...</p>
-                        <Progress value={generationProgress} className="w-3/4" />
-                        <p className="text-xs text-muted-foreground">This takes 10-20 seconds</p>
+                        <p className="text-sm font-medium text-foreground">
+                          Creating your avatar...
+                        </p>
+                        <Progress
+                          value={generationProgress}
+                          className="w-3/4"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This takes 10-20 seconds
+                        </p>
                       </div>
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
                         <ImageIcon className="h-10 w-10" />
-                        <p className="text-sm">Hit Generate to see your avatar</p>
+                        <p className="text-sm">
+                          Hit Generate to see your avatar
+                        </p>
                       </div>
                     )}
                   </AspectRatio>
@@ -402,8 +453,12 @@ export function AiAvatarCreator() {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">Outfit Style</p>
-                <p className="text-xs text-muted-foreground">{styleDescription}</p>
+                <p className="text-sm font-medium text-foreground">
+                  Outfit Style
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {styleDescription}
+                </p>
               </div>
               {band?.genre && (
                 <Badge variant="secondary" className="text-xs">
@@ -426,7 +481,10 @@ export function AiAvatarCreator() {
                       <Palette className="h-3 w-3 text-muted-foreground" />
                       <span>{genre}</span>
                       {genre === band?.genre && (
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1 py-0 ml-1"
+                        >
                           Band
                         </Badge>
                       )}

@@ -5,8 +5,20 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,8 +31,16 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Radio, Trash2, Plus, Edit2, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
-
+import {
+  Radio,
+  Trash2,
+  Plus,
+  Edit2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 
 type StationFormState = {
   name: string;
@@ -39,7 +59,9 @@ type StationValidationErrors = {
   location?: string;
 };
 
-const validateStationForm = (station: StationFormState): StationValidationErrors => {
+const validateStationForm = (
+  station: StationFormState,
+): StationValidationErrors => {
   const errors: StationValidationErrors = {};
 
   if (!station.name.trim()) {
@@ -59,7 +81,9 @@ const validateStationForm = (station: StationFormState): StationValidationErrors
   return errors;
 };
 
-const formatStationForPersistence = (station: StationFormState): StationFormState => ({
+const formatStationForPersistence = (
+  station: StationFormState,
+): StationFormState => ({
   ...station,
   country: station.station_type === "national" ? station.country.trim() : "",
   city_id:
@@ -74,13 +98,13 @@ import { MUSIC_GENRES } from "@/data/genres";
 const GENRES = [...MUSIC_GENRES];
 
 const TIME_SLOTS = [
-  { value: 'morning_drive', label: 'Morning Drive (6-10 AM)' },
-  { value: 'midday', label: 'Midday (10 AM-2 PM)' },
-  { value: 'afternoon_drive', label: 'Afternoon Drive (2-6 PM)' },
-  { value: 'evening', label: 'Evening (6-10 PM)' },
-  { value: 'late_night', label: 'Late Night (10 PM-2 AM)' },
-  { value: 'overnight', label: 'Overnight (2-6 AM)' },
-  { value: 'weekend', label: 'Weekend Special' },
+  { value: "morning_drive", label: "Morning Drive (6-10 AM)" },
+  { value: "midday", label: "Midday (10 AM-2 PM)" },
+  { value: "afternoon_drive", label: "Afternoon Drive (2-6 PM)" },
+  { value: "evening", label: "Evening (6-10 PM)" },
+  { value: "late_night", label: "Late Night (10 PM-2 AM)" },
+  { value: "overnight", label: "Overnight (2-6 AM)" },
+  { value: "weekend", label: "Weekend Special" },
 ];
 
 const MIN_LISTENER_MULTIPLIER = 0.5;
@@ -101,7 +125,8 @@ export default function RadioStations() {
     description: "",
     frequency: "",
   });
-  const [editStationForm, setEditStationForm] = useState<StationFormState | null>(null);
+  const [editStationForm, setEditStationForm] =
+    useState<StationFormState | null>(null);
   const createStationErrors: StationValidationErrors = useMemo(
     () => validateStationForm(newStation),
     [newStation],
@@ -114,7 +139,9 @@ export default function RadioStations() {
     () => (editStationForm ? validateStationForm(editStationForm) : {}),
     [editStationForm],
   );
-  const isEditStationValid = editStationForm ? Object.keys(editStationErrors).length === 0 : false;
+  const isEditStationValid = editStationForm
+    ? Object.keys(editStationErrors).length === 0
+    : false;
 
   useEffect(() => {
     if (editingStation) {
@@ -134,64 +161,64 @@ export default function RadioStations() {
     }
   }, [editingStation]);
   const [newShow, setNewShow] = useState({
-    station_id: '',
-    show_name: '',
-    host_name: '',
-    time_slot: 'morning_drive',
+    station_id: "",
+    show_name: "",
+    host_name: "",
+    time_slot: "morning_drive",
     day_of_week: null as number | null,
     listener_multiplier: 1.0,
     show_genres: [] as string[],
-    description: '',
+    description: "",
   });
   const [submissionToReview, setSubmissionToReview] = useState<any>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const { data: stations, isLoading: stationsLoading } = useQuery({
-    queryKey: ['admin-radio-stations'],
+    queryKey: ["admin-radio-stations"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('radio_stations')
-        .select('*, cities(name)')
-        .order('created_at', { ascending: false });
+        .from("radio_stations")
+        .select("*, cities(name)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
   const { data: shows } = useQuery({
-    queryKey: ['admin-radio-shows'],
+    queryKey: ["admin-radio-shows"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('radio_shows')
-        .select('*, radio_stations(name)')
-        .order('created_at', { ascending: false });
+        .from("radio_shows")
+        .select("*, radio_stations(name)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
   const { data: submissions, isLoading: submissionsLoading } = useQuery({
-    queryKey: ['admin-radio-submissions'],
+    queryKey: ["admin-radio-submissions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('radio_submissions')
+        .from("radio_submissions")
         .select(
-          '*, songs(title, genre, band_id, hype, total_radio_plays, streams, revenue), radio_stations(name, listener_base), profiles(display_name)'
+          "*, songs(title, genre, band_id, hype, total_radio_plays, streams, revenue), radio_stations(name, listener_base), profiles(display_name)",
         )
-        .order('submitted_at', { ascending: false });
+        .order("submitted_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
   const { data: cities } = useQuery({
-    queryKey: ['cities'],
+    queryKey: ["cities"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('cities')
-        .select('id, name, country')
-        .order('name');
+        .from("cities")
+        .select("id, name, country")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -199,11 +226,11 @@ export default function RadioStations() {
 
   // Computed submissions
   const pendingSubmissions = useMemo(() => {
-    return submissions?.filter((s: any) => s.status === 'pending') || [];
+    return submissions?.filter((s: any) => s.status === "pending") || [];
   }, [submissions]);
 
   const reviewedSubmissions = useMemo(() => {
-    return submissions?.filter((s: any) => s.status !== 'pending') || [];
+    return submissions?.filter((s: any) => s.status !== "pending") || [];
   }, [submissions]);
 
   // Handler for creating show
@@ -215,7 +242,7 @@ export default function RadioStations() {
     mutationFn: async (station: StationFormState) => {
       const payload = formatStationForPersistence(station);
       const { data, error } = await supabase
-        .from('radio_stations')
+        .from("radio_stations")
         .insert([payload])
         .select()
         .single();
@@ -223,8 +250,8 @@ export default function RadioStations() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-stations'] });
-      toast.success('Radio station created successfully');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+      toast.success("Radio station created successfully");
       setNewStation({
         name: "",
         station_type: "national",
@@ -238,47 +265,46 @@ export default function RadioStations() {
       });
     },
     onError: (error: any) => {
-      toast.error('Failed to create station: ' + error.message);
+      toast.error("Failed to create station:" + error.message);
     },
   });
 
   const updateStation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
       const { error } = await supabase
-        .from('radio_stations')
+        .from("radio_stations")
         .update(updates)
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-stations'] });
-      toast.success('Station updated');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+      toast.success("Station updated");
       setEditingStation(null);
     },
     onError: (error: any) => {
-      toast.error('Failed to update station: ' + error.message);
+      toast.error("Failed to update station:" + error.message);
     },
   });
-
 
   const deleteStation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('radio_stations')
+        .from("radio_stations")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-stations'] });
-      toast.success('Station deleted');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+      toast.success("Station deleted");
     },
   });
 
   const createShow = useMutation({
     mutationFn: async (show: typeof newShow) => {
       const { data, error } = await supabase
-        .from('radio_shows')
+        .from("radio_shows")
         .insert([show])
         .select()
         .single();
@@ -286,53 +312,59 @@ export default function RadioStations() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-shows'] });
-      toast.success('Radio show created successfully');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-shows"] });
+      toast.success("Radio show created successfully");
       setNewShow({
-        station_id: '',
-        show_name: '',
-        host_name: '',
-        time_slot: 'morning_drive',
+        station_id: "",
+        show_name: "",
+        host_name: "",
+        time_slot: "morning_drive",
         day_of_week: null,
         listener_multiplier: 1.0,
         show_genres: [],
-        description: '',
+        description: "",
       });
     },
     onError: (error: any) => {
-      toast.error('Failed to create show: ' + error.message);
+      toast.error("Failed to create show:" + error.message);
     },
   });
 
   const updateShow = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: typeof newShow }) => {
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: typeof newShow;
+    }) => {
       const { error } = await supabase
-        .from('radio_shows')
+        .from("radio_shows")
         .update(updates)
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-shows'] });
-      toast.success('Radio show updated successfully');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-shows"] });
+      toast.success("Radio show updated successfully");
       setEditingShow(null);
     },
     onError: (error: any) => {
-      toast.error('Failed to update show: ' + error.message);
+      toast.error("Failed to update show:" + error.message);
     },
   });
 
   const deleteShow = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('radio_shows')
+        .from("radio_shows")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-shows'] });
-      toast.success('Show deleted');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-shows"] });
+      toast.success("Show deleted");
     },
   });
 
@@ -342,37 +374,37 @@ export default function RadioStations() {
       const nowIso = now.toISOString();
 
       const { data: songData, error: songError } = await supabase
-        .from('songs')
-        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
-        .eq('id', submission.song_id)
+        .from("songs")
+        .select("id, title, hype, band_id, total_radio_plays, streams, revenue")
+        .eq("id", submission.song_id)
         .single();
       if (songError) throw songError;
 
       const { data: stationData, error: stationError } = await supabase
-        .from('radio_stations')
-        .select('id, name, listener_base')
-        .eq('id', submission.station_id)
+        .from("radio_stations")
+        .select("id, name, listener_base")
+        .eq("id", submission.station_id)
         .single();
       if (stationError) throw stationError;
 
       const { data: showData, error: showError } = await supabase
-        .from('radio_shows')
-        .select('id, name')
-        .eq('station_id', submission.station_id)
-        .eq('is_active', true)
-        .order('time_slot', { ascending: true })
+        .from("radio_shows")
+        .select("id, name")
+        .eq("station_id", submission.station_id)
+        .eq("is_active", true)
+        .order("time_slot", { ascending: true })
         .limit(1)
         .maybeSingle();
       if (showError) throw showError;
 
       const { error: updateError } = await supabase
-        .from('radio_submissions')
+        .from("radio_submissions")
         .update({
-          status: 'accepted',
+          status: "accepted",
           reviewed_at: nowIso,
           rejection_reason: null,
         })
-        .eq('id', submission.id);
+        .eq("id", submission.id);
       if (updateError) throw updateError;
 
       if (!songData || !stationData) {
@@ -388,34 +420,34 @@ export default function RadioStations() {
         (() => {
           const weekStart = new Date(now);
           weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-          return weekStart.toISOString().split('T')[0];
+          return weekStart.toISOString().split("T")[0];
         })();
 
       let playlistId: string | null = null;
 
       const { data: existingPlaylist } = await supabase
-        .from('radio_playlists')
-        .select('*')
-        .eq('show_id', (showData as any).id)
-        .eq('song_id', submission.song_id)
-        .eq('week_start_date', weekStartDate)
+        .from("radio_playlists")
+        .select("*")
+        .eq("show_id", (showData as any).id)
+        .eq("song_id", submission.song_id)
+        .eq("week_start_date", weekStartDate)
         .maybeSingle();
 
       if (existingPlaylist) {
         const { error: playlistUpdateError } = await supabase
-          .from('radio_playlists')
+          .from("radio_playlists")
           .update({
             times_played: (existingPlaylist.times_played || 0) + 1,
             added_at: nowIso,
             is_active: true,
           })
-          .eq('id', existingPlaylist.id);
+          .eq("id", existingPlaylist.id);
         if (playlistUpdateError) throw playlistUpdateError;
 
         playlistId = existingPlaylist.id;
       } else {
         const { data: newPlaylist, error: playlistInsertError } = await supabase
-          .from('radio_playlists')
+          .from("radio_playlists")
           .insert({
             show_id: (showData as any).id,
             song_id: submission.song_id,
@@ -437,14 +469,16 @@ export default function RadioStations() {
 
       const listeners = Math.max(
         100,
-        Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
+        Math.round(
+          (stationData.listener_base || 0) * (0.55 + Math.random() * 0.35),
+        ),
       );
       const hypeGain = Math.max(1, Math.round(listeners * 0.002));
       const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
       const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
 
       const { data: playRecord, error: playError } = await supabase
-        .from('radio_plays')
+        .from("radio_plays")
         .insert({
           playlist_id: playlistId,
           show_id: (showData as any).id,
@@ -461,7 +495,7 @@ export default function RadioStations() {
       if (playError) throw playError;
 
       const { error: songUpdateError } = await supabase
-        .from('songs')
+        .from("songs")
         .update({
           hype: (songData.hype || 0) + hypeGain,
           total_radio_plays: (songData.total_radio_plays || 0) + 1,
@@ -469,50 +503,54 @@ export default function RadioStations() {
           streams: (songData.streams || 0) + streamsBoost,
           revenue: (songData.revenue || 0) + radioRevenue,
         })
-        .eq('id', submission.song_id);
+        .eq("id", submission.song_id);
       if (songUpdateError) throw songUpdateError;
 
       if (songData.band_id) {
         const { data: band, error: bandError } = await supabase
-          .from('bands')
-          .select('fame')
-          .eq('id', songData.band_id)
+          .from("bands")
+          .select("fame")
+          .eq("id", songData.band_id)
           .single();
 
         if (!bandError && band) {
           const fameGain = 0.1;
 
           const { error: bandUpdateError } = await supabase
-            .from('bands')
+            .from("bands")
             .update({ fame: (band.fame || 0) + fameGain })
-            .eq('id', songData.band_id);
+            .eq("id", songData.band_id);
           if (bandUpdateError) throw bandUpdateError;
 
-          const { error: fameEventError } = await supabase.from('band_fame_events').insert({
-            band_id: songData.band_id,
-            fame_gained: fameGain,
-            event_type: 'radio_play',
-            event_data: {
-              station_id: submission.station_id,
-              station_name: stationData.name,
-              play_id: playRecord?.id,
-            },
-          });
-          if (fameEventError) throw fameEventError;
-
-          if (radioRevenue > 0) {
-            const { error: bandEarningsError } = await supabase.from('band_earnings').insert({
+          const { error: fameEventError } = await supabase
+            .from("band_fame_events")
+            .insert({
               band_id: songData.band_id,
-              amount: radioRevenue,
-              source: 'radio_play',
-              description: `Radio play on ${stationData.name}`,
-              metadata: {
+              fame_gained: fameGain,
+              event_type: "radio_play",
+              event_data: {
                 station_id: submission.station_id,
                 station_name: stationData.name,
-                song_id: songData.id,
                 play_id: playRecord?.id,
               },
             });
+          if (fameEventError) throw fameEventError;
+
+          if (radioRevenue > 0) {
+            const { error: bandEarningsError } = await supabase
+              .from("band_earnings")
+              .insert({
+                band_id: songData.band_id,
+                amount: radioRevenue,
+                source: "radio_play",
+                description: `Radio play on ${stationData.name}`,
+                metadata: {
+                  station_id: submission.station_id,
+                  station_name: stationData.name,
+                  song_id: songData.id,
+                  play_id: playRecord?.id,
+                },
+              });
             if (bandEarningsError) throw bandEarningsError;
           }
         }
@@ -521,58 +559,68 @@ export default function RadioStations() {
       return { showMissing: false };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
-      queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
-      queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
-      queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["station-now-playing"] });
+      queryClient.invalidateQueries({ queryKey: ["band-radio-earnings"] });
+      queryClient.invalidateQueries({ queryKey: ["station-play-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["station-play-timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["top-radio-songs"] });
 
       if (result?.showMissing) {
-        toast.success('Submission approved. No active show found, so scheduling was skipped.');
+        toast.success(
+          "Submission approved. No active show found, so scheduling was skipped.",
+        );
       } else {
-        toast.success('Submission approved and scheduled for airplay.');
+        toast.success("Submission approved and scheduled for airplay.");
       }
     },
     onError: (error: any) => {
-      toast.error('Failed to approve submission: ' + error.message);
+      toast.error("Failed to approve submission:" + error.message);
     },
   });
 
-  const rejectSubmission = useMutation<any, any, { submissionId: string; reason: string }>({
+  const rejectSubmission = useMutation<
+    any,
+    any,
+    { submissionId: string; reason: string }
+  >({
     mutationFn: async ({ submissionId, reason }) => {
       const nowIso = new Date().toISOString();
       const { error } = await supabase
-        .from('radio_submissions')
+        .from("radio_submissions")
         .update({
-          status: 'rejected',
+          status: "rejected",
           rejection_reason: reason,
           reviewed_at: nowIso,
         })
-        .eq('id', submissionId);
+        .eq("id", submissionId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-radio-submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
-      toast.success('Submission rejected.');
+      queryClient.invalidateQueries({ queryKey: ["admin-radio-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
+      toast.success("Submission rejected.");
       setIsRejectDialogOpen(false);
       setSubmissionToReview(null);
-      setRejectionReason('');
+      setRejectionReason("");
     },
     onError: (error: any) => {
-      toast.error('Failed to reject submission: ' + error.message);
+      toast.error("Failed to reject submission:" + error.message);
     },
   });
 
-  const toggleGenre = (genre: string, list: string[], setter: (list: string[]) => void) => {
+  const toggleGenre = (
+    genre: string,
+    list: string[],
+    setter: (list: string[]) => void,
+  ) => {
     if (list.includes(genre)) {
-      setter(list.filter(g => g !== genre));
+      setter(list.filter((g) => g !== genre));
     } else if (list.length < 4) {
       setter([...list, genre]);
     } else {
-      toast.error('Maximum 4 genres allowed');
+      toast.error("Maximum 4 genres allowed");
     }
   };
 
@@ -612,7 +660,9 @@ export default function RadioStations() {
           <Radio className="h-8 w-8" />
           <div>
             <h1 className="text-4xl font-oswald">Radio Management</h1>
-            <p className="text-muted-foreground">Manage radio stations and shows</p>
+            <p className="text-muted-foreground">
+              Manage radio stations and shows
+            </p>
           </div>
         </div>
 
@@ -628,7 +678,9 @@ export default function RadioStations() {
             <Card>
               <CardHeader>
                 <CardTitle>Create Radio Station</CardTitle>
-                <CardDescription>Add a new national or local radio station</CardDescription>
+                <CardDescription>
+                  Add a new national or local radio station
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -636,19 +688,28 @@ export default function RadioStations() {
                     <Label>Station Name</Label>
                     <Input
                       value={newStation.name}
-                      onChange={(e) => setNewStation({ ...newStation, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewStation({ ...newStation, name: e.target.value })
+                      }
                       placeholder="ROCK FM"
                       aria-invalid={!!createStationErrors.name}
                     />
                     {createStationErrors.name && (
-                      <p className="text-sm text-destructive mt-1">{createStationErrors.name}</p>
+                      <p className="text-sm text-destructive mt-1">
+                        {createStationErrors.name}
+                      </p>
                     )}
                   </div>
                   <div>
                     <Label>Frequency (FM/AM)</Label>
                     <Input
                       value={newStation.frequency}
-                      onChange={(e) => setNewStation({ ...newStation, frequency: e.target.value })}
+                      onChange={(e) =>
+                        setNewStation({
+                          ...newStation,
+                          frequency: e.target.value,
+                        })
+                      }
                       placeholder="98.5 FM"
                     />
                   </div>
@@ -656,12 +717,14 @@ export default function RadioStations() {
                     <Label>Type</Label>
                     <Select
                       value={newStation.station_type}
-                      onValueChange={(value: 'national' | 'local') =>
+                      onValueChange={(value: "national" | "local") =>
                         setNewStation({
                           ...newStation,
                           station_type: value,
-                          country: value === 'national' ? newStation.country : '',
-                          city_id: value === 'local' ? newStation.city_id : null,
+                          country:
+                            value === "national" ? newStation.country : "",
+                          city_id:
+                            value === "local" ? newStation.city_id : null,
                         })
                       }
                     >
@@ -674,27 +737,39 @@ export default function RadioStations() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {newStation.station_type === 'national' ? (
+                  {newStation.station_type === "national" ? (
                     <div>
                       <Label>Country</Label>
                       <Input
                         value={newStation.country}
-                        onChange={(e) => setNewStation({ ...newStation, country: e.target.value })}
+                        onChange={(e) =>
+                          setNewStation({
+                            ...newStation,
+                            country: e.target.value,
+                          })
+                        }
                         placeholder="USA"
                         aria-invalid={!!createStationErrors.location}
                       />
-                      {newStation.station_type === 'national' && createStationErrors.location && (
-                        <p className="text-sm text-destructive mt-1">{createStationErrors.location}</p>
-                      )}
+                      {newStation.station_type === "national" &&
+                        createStationErrors.location && (
+                          <p className="text-sm text-destructive mt-1">
+                            {createStationErrors.location}
+                          </p>
+                        )}
                     </div>
                   ) : (
                     <div>
                       <Label>City</Label>
                       <Select
-                        value={newStation.city_id || ''}
-                        onValueChange={(value) => setNewStation({ ...newStation, city_id: value })}
+                        value={newStation.city_id || ""}
+                        onValueChange={(value) =>
+                          setNewStation({ ...newStation, city_id: value })
+                        }
                       >
-                        <SelectTrigger aria-invalid={!!createStationErrors.location}>
+                        <SelectTrigger
+                          aria-invalid={!!createStationErrors.location}
+                        >
                           <SelectValue placeholder="Select city" />
                         </SelectTrigger>
                         <SelectContent>
@@ -705,9 +780,12 @@ export default function RadioStations() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {newStation.station_type === 'local' && createStationErrors.location && (
-                        <p className="text-sm text-destructive mt-1">{createStationErrors.location}</p>
-                      )}
+                      {newStation.station_type === "local" &&
+                        createStationErrors.location && (
+                          <p className="text-sm text-destructive mt-1">
+                            {createStationErrors.location}
+                          </p>
+                        )}
                     </div>
                   )}
                   <div>
@@ -718,7 +796,10 @@ export default function RadioStations() {
                       max="5"
                       value={newStation.quality_level}
                       onChange={(e) =>
-                        setNewStation({ ...newStation, quality_level: parseInt(e.target.value) })
+                        setNewStation({
+                          ...newStation,
+                          quality_level: parseInt(e.target.value),
+                        })
                       }
                     />
                   </div>
@@ -728,7 +809,10 @@ export default function RadioStations() {
                       type="number"
                       value={newStation.listener_base}
                       onChange={(e) =>
-                        setNewStation({ ...newStation, listener_base: parseInt(e.target.value) })
+                        setNewStation({
+                          ...newStation,
+                          listener_base: parseInt(e.target.value),
+                        })
                       }
                     />
                   </div>
@@ -737,7 +821,12 @@ export default function RadioStations() {
                   <Label>Description</Label>
                   <Textarea
                     value={newStation.description}
-                    onChange={(e) => setNewStation({ ...newStation, description: e.target.value })}
+                    onChange={(e) =>
+                      setNewStation({
+                        ...newStation,
+                        description: e.target.value,
+                      })
+                    }
                     placeholder="Station description..."
                   />
                 </div>
@@ -747,11 +836,21 @@ export default function RadioStations() {
                     {GENRES.map((genre) => (
                       <Badge
                         key={genre}
-                        variant={newStation.accepted_genres.includes(genre) ? "default" : "outline"}
+                        variant={
+                          newStation.accepted_genres.includes(genre)
+                            ? "default"
+                            : "outline"
+                        }
                         className="cursor-pointer"
                         onClick={() =>
-                          toggleGenre(genre, newStation.accepted_genres, (genres) =>
-                            setNewStation({ ...newStation, accepted_genres: genres })
+                          toggleGenre(
+                            genre,
+                            newStation.accepted_genres,
+                            (genres) =>
+                              setNewStation({
+                                ...newStation,
+                                accepted_genres: genres,
+                              }),
                           )
                         }
                       >
@@ -777,7 +876,9 @@ export default function RadioStations() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-lg">{station.name}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {station.name}
+                        </CardTitle>
                         <CardDescription>{station.frequency}</CardDescription>
                       </div>
                       <div className="flex gap-1">
@@ -806,7 +907,7 @@ export default function RadioStations() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Location:</span>
                       <span>
-                        {station.station_type === 'national'
+                        {station.station_type === "national"
                           ? station.country
                           : station.cities?.name}
                       </span>
@@ -821,10 +922,16 @@ export default function RadioStations() {
                     </div>
                     {station.accepted_genres?.length > 0 && (
                       <div className="pt-2">
-                        <p className="text-sm text-muted-foreground mb-1">Genres:</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Genres:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {station.accepted_genres.map((genre: string) => (
-                            <Badge key={genre} variant="secondary" className="text-xs">
+                            <Badge
+                              key={genre}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {genre}
                             </Badge>
                           ))}
@@ -864,11 +971,11 @@ export default function RadioStations() {
                       accepted_genres: editStationForm.accepted_genres,
                       description: editStationForm.description,
                       country:
-                        editStationForm.station_type === 'national'
+                        editStationForm.station_type === "national"
                           ? editStationForm.country
                           : null,
                       city_id:
-                        editStationForm.station_type === 'local'
+                        editStationForm.station_type === "local"
                           ? editStationForm.city_id
                           : null,
                     };
@@ -883,9 +990,10 @@ export default function RadioStations() {
                     <div>
                       <Label>Station Name</Label>
                       <Input
-                        value={editStationForm?.name || ''}
+                        value={editStationForm?.name || ""}
                         onChange={(e) =>
-                          editStationForm && setEditStationForm({
+                          editStationForm &&
+                          setEditStationForm({
                             ...editStationForm,
                             name: e.target.value,
                           })
@@ -896,9 +1004,10 @@ export default function RadioStations() {
                     <div>
                       <Label>Frequency (FM/AM)</Label>
                       <Input
-                        value={editStationForm?.frequency || ''}
+                        value={editStationForm?.frequency || ""}
                         onChange={(e) =>
-                          editStationForm && setEditStationForm({
+                          editStationForm &&
+                          setEditStationForm({
                             ...editStationForm,
                             frequency: e.target.value,
                           })
@@ -909,12 +1018,16 @@ export default function RadioStations() {
                     <div>
                       <Label>Type</Label>
                       <Select
-                        value={editStationForm?.station_type || 'national'}
-                        onValueChange={(value: 'national' | 'local') =>
-                          editStationForm && setEditStationForm({
+                        value={editStationForm?.station_type || "national"}
+                        onValueChange={(value: "national" | "local") =>
+                          editStationForm &&
+                          setEditStationForm({
                             ...editStationForm,
                             station_type: value,
-                            city_id: value === 'local' ? editStationForm.city_id : null,
+                            city_id:
+                              value === "local"
+                                ? editStationForm.city_id
+                                : null,
                           })
                         }
                       >
@@ -927,13 +1040,14 @@ export default function RadioStations() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {editStationForm?.station_type === 'national' ? (
+                    {editStationForm?.station_type === "national" ? (
                       <div>
                         <Label>Country</Label>
                         <Input
-                          value={editStationForm?.country || ''}
+                          value={editStationForm?.country || ""}
                           onChange={(e) =>
-                            editStationForm && setEditStationForm({
+                            editStationForm &&
+                            setEditStationForm({
                               ...editStationForm,
                               country: e.target.value,
                             })
@@ -945,9 +1059,10 @@ export default function RadioStations() {
                       <div>
                         <Label>City</Label>
                         <Select
-                          value={editStationForm?.city_id || ''}
+                          value={editStationForm?.city_id || ""}
                           onValueChange={(value) =>
-                            editStationForm && setEditStationForm({
+                            editStationForm &&
+                            setEditStationForm({
                               ...editStationForm,
                               city_id: value,
                             })
@@ -974,7 +1089,8 @@ export default function RadioStations() {
                         max="5"
                         value={editStationForm?.quality_level || 3}
                         onChange={(e) =>
-                          editStationForm && setEditStationForm({
+                          editStationForm &&
+                          setEditStationForm({
                             ...editStationForm,
                             quality_level: parseInt(e.target.value) || 1,
                           })
@@ -987,7 +1103,8 @@ export default function RadioStations() {
                         type="number"
                         value={editStationForm?.listener_base || 0}
                         onChange={(e) =>
-                          editStationForm && setEditStationForm({
+                          editStationForm &&
+                          setEditStationForm({
                             ...editStationForm,
                             listener_base: parseInt(e.target.value) || 0,
                           })
@@ -998,9 +1115,10 @@ export default function RadioStations() {
                   <div>
                     <Label>Description</Label>
                     <Textarea
-                      value={editStationForm?.description || ''}
+                      value={editStationForm?.description || ""}
                       onChange={(e) =>
-                        editStationForm && setEditStationForm({
+                        editStationForm &&
+                        setEditStationForm({
                           ...editStationForm,
                           description: e.target.value,
                         })
@@ -1014,14 +1132,22 @@ export default function RadioStations() {
                       {GENRES.map((genre) => (
                         <Badge
                           key={genre}
-                          variant={editStationForm?.accepted_genres.includes(genre) ? "default" : "outline"}
+                          variant={
+                            editStationForm?.accepted_genres.includes(genre)
+                              ? "default"
+                              : "outline"
+                          }
                           className="cursor-pointer"
                           onClick={() =>
-                            editStationForm && toggleGenre(genre, editStationForm.accepted_genres, (genres) =>
-                              setEditStationForm({
-                                ...editStationForm,
-                                accepted_genres: genres,
-                              })
+                            editStationForm &&
+                            toggleGenre(
+                              genre,
+                              editStationForm.accepted_genres,
+                              (genres) =>
+                                setEditStationForm({
+                                  ...editStationForm,
+                                  accepted_genres: genres,
+                                }),
                             )
                           }
                         >
@@ -1038,7 +1164,12 @@ export default function RadioStations() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={!editStationForm?.name || updateStation.isPending}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        !editStationForm?.name || updateStation.isPending
+                      }
+                    >
                       Save Changes
                     </Button>
                   </DialogFooter>
@@ -1057,34 +1188,48 @@ export default function RadioStations() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {submissionsLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading submissions...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading submissions...
+                  </p>
                 ) : pendingSubmissions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No pending submissions right now.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No pending submissions right now.
+                  </p>
                 ) : (
                   pendingSubmissions.map((submission: any) => {
                     const isApproving =
                       approveSubmission.isPending &&
-                      (approveSubmission.variables as any)?.id === submission.id;
+                      (approveSubmission.variables as any)?.id ===
+                        submission.id;
 
                     return (
-                      <div key={submission.id} className="border rounded-lg p-4 space-y-3">
+                      <div
+                        key={submission.id}
+                        className="border rounded-lg p-4 space-y-3"
+                      >
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                           <div>
-                            <h3 className="font-semibold">{submission.songs?.title}</h3>
+                            <h3 className="font-semibold">
+                              {submission.songs?.title}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
-                              {submission.profiles?.display_name} • {submission.radio_stations?.name}
+                              {submission.profiles?.display_name} •{" "}
+                              {submission.radio_stations?.name}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="h-4 w-4" />
                             <span>
-                              Submitted {new Date(submission.submitted_at).toLocaleString()}
+                              Submitted{" "}
+                              {new Date(
+                                submission.submitted_at,
+                              ).toLocaleString()}
                             </span>
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <Badge variant="outline" className="uppercase">
-                            {submission.songs?.genre || 'Unknown Genre'}
+                          <Badge variant="outline" className="">
+                            {submission.songs?.genre || "Unknown Genre"}
                           </Badge>
                           <div className="flex gap-2">
                             <Button
@@ -1092,22 +1237,29 @@ export default function RadioStations() {
                               variant="outline"
                               onClick={() => {
                                 setSubmissionToReview(submission);
-                                setRejectionReason('');
+                                setRejectionReason("");
                                 setIsRejectDialogOpen(true);
                               }}
-                              disabled={approveSubmission.isPending || rejectSubmission.isPending}
+                              disabled={
+                                approveSubmission.isPending ||
+                                rejectSubmission.isPending
+                              }
                             >
                               Reject
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => approveSubmission.mutate(submission)}
-                              disabled={isApproving || rejectSubmission.isPending}
+                              onClick={() =>
+                                approveSubmission.mutate(submission)
+                              }
+                              disabled={
+                                isApproving || rejectSubmission.isPending
+                              }
                             >
                               {isApproving ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                'Approve & Schedule'
+                                "Approve & Schedule"
                               )}
                             </Button>
                           </div>
@@ -1128,9 +1280,13 @@ export default function RadioStations() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {submissionsLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading submissions...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading submissions...
+                  </p>
                 ) : reviewedSubmissions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No reviewed submissions yet.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No reviewed submissions yet.
+                  </p>
                 ) : (
                   reviewedSubmissions.slice(0, 10).map((submission: any) => (
                     <div
@@ -1139,27 +1295,31 @@ export default function RadioStations() {
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          {submission.status === 'accepted' ? (
+                          {submission.status === "accepted" ? (
                             <CheckCircle className="h-4 w-4 text-green-500" />
                           ) : (
                             <XCircle className="h-4 w-4 text-red-500" />
                           )}
-                          <h3 className="font-semibold">{submission.songs?.title}</h3>
+                          <h3 className="font-semibold">
+                            {submission.songs?.title}
+                          </h3>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {submission.profiles?.display_name} • {submission.radio_stations?.name}
+                          {submission.profiles?.display_name} •{" "}
+                          {submission.radio_stations?.name}
                         </p>
-                        {submission.status === 'rejected' && submission.rejection_reason && (
-                          <p className="text-xs text-red-500">
-                            Reason: {submission.rejection_reason}
-                          </p>
-                        )}
+                        {submission.status === "rejected" &&
+                          submission.rejection_reason && (
+                            <p className="text-xs text-red-500">
+                              Reason: {submission.rejection_reason}
+                            </p>
+                          )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Reviewed{' '}
+                        Reviewed{""}
                         {submission.reviewed_at
                           ? new Date(submission.reviewed_at).toLocaleString()
-                          : '—'}
+                          : "—"}
                       </div>
                     </div>
                   ))
@@ -1173,7 +1333,9 @@ export default function RadioStations() {
             <Card>
               <CardHeader>
                 <CardTitle>Create Radio Show</CardTitle>
-                <CardDescription>Add a new show to a radio station</CardDescription>
+                <CardDescription>
+                  Add a new show to a radio station
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1181,7 +1343,9 @@ export default function RadioStations() {
                     <Label>Radio Station</Label>
                     <Select
                       value={newShow.station_id}
-                      onValueChange={(value) => setNewShow({ ...newShow, station_id: value })}
+                      onValueChange={(value) =>
+                        setNewShow({ ...newShow, station_id: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select station" />
@@ -1199,7 +1363,9 @@ export default function RadioStations() {
                     <Label>Show Name</Label>
                     <Input
                       value={newShow.show_name}
-                      onChange={(e) => setNewShow({ ...newShow, show_name: e.target.value })}
+                      onChange={(e) =>
+                        setNewShow({ ...newShow, show_name: e.target.value })
+                      }
                       placeholder="Morning Rock Show"
                     />
                   </div>
@@ -1207,7 +1373,9 @@ export default function RadioStations() {
                     <Label>Host Name</Label>
                     <Input
                       value={newShow.host_name}
-                      onChange={(e) => setNewShow({ ...newShow, host_name: e.target.value })}
+                      onChange={(e) =>
+                        setNewShow({ ...newShow, host_name: e.target.value })
+                      }
                       placeholder="DJ Johnny"
                     />
                   </div>
@@ -1215,7 +1383,9 @@ export default function RadioStations() {
                     <Label>Time Slot</Label>
                     <Select
                       value={newShow.time_slot}
-                      onValueChange={(value) => setNewShow({ ...newShow, time_slot: value })}
+                      onValueChange={(value) =>
+                        setNewShow({ ...newShow, time_slot: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1238,7 +1408,10 @@ export default function RadioStations() {
                       max={MAX_LISTENER_MULTIPLIER}
                       value={newShow.listener_multiplier}
                       onChange={(e) =>
-                        setNewShow({ ...newShow, listener_multiplier: parseFloat(e.target.value) })
+                        setNewShow({
+                          ...newShow,
+                          listener_multiplier: parseFloat(e.target.value),
+                        })
                       }
                     />
                   </div>
@@ -1247,7 +1420,9 @@ export default function RadioStations() {
                   <Label>Description</Label>
                   <Textarea
                     value={newShow.description}
-                    onChange={(e) => setNewShow({ ...newShow, description: e.target.value })}
+                    onChange={(e) =>
+                      setNewShow({ ...newShow, description: e.target.value })
+                    }
                     placeholder="Show description..."
                   />
                 </div>
@@ -1257,11 +1432,15 @@ export default function RadioStations() {
                     {GENRES.map((genre) => (
                       <Badge
                         key={genre}
-                        variant={newShow.show_genres.includes(genre) ? "default" : "outline"}
+                        variant={
+                          newShow.show_genres.includes(genre)
+                            ? "default"
+                            : "outline"
+                        }
                         className="cursor-pointer"
                         onClick={() =>
                           toggleGenre(genre, newShow.show_genres, (genres) =>
-                            setNewShow({ ...newShow, show_genres: genres })
+                            setNewShow({ ...newShow, show_genres: genres }),
                           )
                         }
                       >
@@ -1287,8 +1466,12 @@ export default function RadioStations() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-lg">{show.show_name}</CardTitle>
-                        <CardDescription>{show.radio_stations?.name}</CardDescription>
+                        <CardTitle className="text-lg">
+                          {show.show_name}
+                        </CardTitle>
+                        <CardDescription>
+                          {show.radio_stations?.name}
+                        </CardDescription>
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -1316,7 +1499,10 @@ export default function RadioStations() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Time Slot:</span>
                       <Badge variant="outline">
-                        {TIME_SLOTS.find((s) => s.value === show.time_slot)?.label}
+                        {
+                          TIME_SLOTS.find((s) => s.value === show.time_slot)
+                            ?.label
+                        }
                       </Badge>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -1325,10 +1511,16 @@ export default function RadioStations() {
                     </div>
                     {show.show_genres?.length > 0 && (
                       <div className="pt-2">
-                        <p className="text-sm text-muted-foreground mb-1">Genres:</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Genres:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {show.show_genres.map((genre: string) => (
-                            <Badge key={genre} variant="secondary" className="text-xs">
+                            <Badge
+                              key={genre}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {genre}
                             </Badge>
                           ))}
@@ -1352,7 +1544,9 @@ export default function RadioStations() {
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Edit Radio Station</DialogTitle>
-              <DialogDescription>Update the radio station details.</DialogDescription>
+              <DialogDescription>
+                Update the radio station details.
+              </DialogDescription>
             </DialogHeader>
             {editStationForm && (
               <>
@@ -1363,13 +1557,18 @@ export default function RadioStations() {
                       <Input
                         value={editStationForm.name}
                         onChange={(e) =>
-                          setEditStationForm({ ...editStationForm, name: e.target.value })
+                          setEditStationForm({
+                            ...editStationForm,
+                            name: e.target.value,
+                          })
                         }
                         placeholder="ROCK FM"
                         aria-invalid={!!editStationErrors.name}
                       />
                       {editStationErrors.name && (
-                        <p className="text-sm text-destructive mt-1">{editStationErrors.name}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {editStationErrors.name}
+                        </p>
                       )}
                     </div>
                     <div>
@@ -1377,7 +1576,10 @@ export default function RadioStations() {
                       <Input
                         value={editStationForm.frequency}
                         onChange={(e) =>
-                          setEditStationForm({ ...editStationForm, frequency: e.target.value })
+                          setEditStationForm({
+                            ...editStationForm,
+                            frequency: e.target.value,
+                          })
                         }
                         placeholder="98.5 FM"
                       />
@@ -1386,12 +1588,18 @@ export default function RadioStations() {
                       <Label>Type</Label>
                       <Select
                         value={editStationForm.station_type}
-                        onValueChange={(value: 'national' | 'local') =>
+                        onValueChange={(value: "national" | "local") =>
                           setEditStationForm({
                             ...editStationForm,
                             station_type: value,
-                            country: value === 'national' ? editStationForm.country : '',
-                            city_id: value === 'local' ? editStationForm.city_id : null,
+                            country:
+                              value === "national"
+                                ? editStationForm.country
+                                : "",
+                            city_id:
+                              value === "local"
+                                ? editStationForm.city_id
+                                : null,
                           })
                         }
                       >
@@ -1404,31 +1612,42 @@ export default function RadioStations() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {editStationForm.station_type === 'national' ? (
+                    {editStationForm.station_type === "national" ? (
                       <div>
                         <Label>Country</Label>
                         <Input
                           value={editStationForm.country}
                           onChange={(e) =>
-                            setEditStationForm({ ...editStationForm, country: e.target.value })
+                            setEditStationForm({
+                              ...editStationForm,
+                              country: e.target.value,
+                            })
                           }
                           placeholder="USA"
                           aria-invalid={!!editStationErrors.location}
                         />
-                        {editStationForm.station_type === 'national' && editStationErrors.location && (
-                          <p className="text-sm text-destructive mt-1">{editStationErrors.location}</p>
-                        )}
+                        {editStationForm.station_type === "national" &&
+                          editStationErrors.location && (
+                            <p className="text-sm text-destructive mt-1">
+                              {editStationErrors.location}
+                            </p>
+                          )}
                       </div>
                     ) : (
                       <div>
                         <Label>City</Label>
                         <Select
-                          value={editStationForm.city_id || ''}
+                          value={editStationForm.city_id || ""}
                           onValueChange={(value) =>
-                            setEditStationForm({ ...editStationForm, city_id: value })
+                            setEditStationForm({
+                              ...editStationForm,
+                              city_id: value,
+                            })
                           }
                         >
-                          <SelectTrigger aria-invalid={!!editStationErrors.location}>
+                          <SelectTrigger
+                            aria-invalid={!!editStationErrors.location}
+                          >
                             <SelectValue placeholder="Select city" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1439,9 +1658,12 @@ export default function RadioStations() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {editStationForm.station_type === 'local' && editStationErrors.location && (
-                          <p className="text-sm text-destructive mt-1">{editStationErrors.location}</p>
-                        )}
+                        {editStationForm.station_type === "local" &&
+                          editStationErrors.location && (
+                            <p className="text-sm text-destructive mt-1">
+                              {editStationErrors.location}
+                            </p>
+                          )}
                       </div>
                     )}
                     <div>
@@ -1478,7 +1700,10 @@ export default function RadioStations() {
                     <Textarea
                       value={editStationForm.description}
                       onChange={(e) =>
-                        setEditStationForm({ ...editStationForm, description: e.target.value })
+                        setEditStationForm({
+                          ...editStationForm,
+                          description: e.target.value,
+                        })
                       }
                       placeholder="Station description..."
                     />
@@ -1489,11 +1714,21 @@ export default function RadioStations() {
                       {GENRES.map((genre) => (
                         <Badge
                           key={genre}
-                          variant={editStationForm.accepted_genres.includes(genre) ? 'default' : 'outline'}
+                          variant={
+                            editStationForm.accepted_genres.includes(genre)
+                              ? "default"
+                              : "outline"
+                          }
                           className="cursor-pointer"
                           onClick={() =>
-                            toggleGenre(genre, editStationForm.accepted_genres, (genres) =>
-                              setEditStationForm({ ...editStationForm, accepted_genres: genres })
+                            toggleGenre(
+                              genre,
+                              editStationForm.accepted_genres,
+                              (genres) =>
+                                setEditStationForm({
+                                  ...editStationForm,
+                                  accepted_genres: genres,
+                                }),
                             )
                           }
                         >
@@ -1504,14 +1739,17 @@ export default function RadioStations() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setEditingStation(null)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingStation(null)}
+                  >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleUpdateStation}
                     disabled={!isEditStationValid || updateStation.isPending}
                   >
-                    {updateStation.isPending ? 'Saving...' : 'Save Changes'}
+                    {updateStation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
                 </DialogFooter>
               </>

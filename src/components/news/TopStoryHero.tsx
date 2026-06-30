@@ -20,7 +20,7 @@ export function TopStoryHero() {
       if (movers && movers.length > 0) {
         const m = movers[0] as any;
         return {
-          headline: `"${m.songs.title}" by ${m.songs.bands?.name || "Unknown"} Surges to #${m.rank}`,
+          headline: `"${m.songs.title}"by ${m.songs.bands?.name || "Unknown"} Surges to #${m.rank}`,
           subheadline: `The track climbed ${m.trend_change} spots on the Top 40 chart in a dramatic move that has the industry buzzing.`,
           category: "CHARTS",
         };
@@ -37,8 +37,9 @@ export function TopStoryHero() {
       if (fameEvents && fameEvents.length > 0) {
         const f = fameEvents[0] as any;
         return {
-          headline: `${f.bands?.name || "A Band"} Gains ${f.fame_gained} Fame in Explosive ${f.event_type.replace(/_/g, " ")}`,
-          subheadline: "The music world watches as another act rises through the ranks of Rockmundo's competitive scene.",
+          headline: `${f.bands?.name || "A Band"} Gains ${f.fame_gained} Fame in Explosive ${f.event_type.replace(/_/g, "")}`,
+          subheadline:
+            "The music world watches as another act rises through the ranks of Rockmundo's competitive scene.",
           category: "FAME",
         };
       }
@@ -55,15 +56,17 @@ export function TopStoryHero() {
       if (releases && releases.length > 0) {
         const r = releases[0] as any;
         return {
-          headline: `${r.bands?.name || "Unknown Artist"} Drops New Release: "${r.title}"`,
-          subheadline: "Fresh music hits the airwaves today as fans eagerly await their verdict.",
+          headline: `${r.bands?.name || "Unknown Artist"} Drops New Release:"${r.title}"`,
+          subheadline:
+            "Fresh music hits the airwaves today as fans eagerly await their verdict.",
           category: "RELEASES",
         };
       }
 
       return {
         headline: "Another Day in the World of Rockmundo",
-        subheadline: "The stages are set, the instruments are tuned, and the music plays on.",
+        subheadline:
+          "The stages are set, the instruments are tuned, and the music plays on.",
         category: "EDITORIAL",
       };
     },
@@ -76,7 +79,9 @@ export function TopStoryHero() {
     <div className="border-b-2 border-border pb-6 mb-6">
       <div className="flex items-center gap-2 mb-2">
         <Flame className="h-4 w-4 text-destructive" />
-        <span className="text-xs font-bold uppercase tracking-widest text-destructive">{story.category}</span>
+        <span className="text-xs font-bold text-destructive">
+          {story.category}
+        </span>
       </div>
       <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black leading-tight mb-3">
         {story.headline}

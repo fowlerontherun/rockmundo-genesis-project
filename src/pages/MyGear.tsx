@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2, Wrench, Guitar } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  Plus,
+  RefreshCcw,
+  Trash2,
+  Wrench,
+  Guitar,
+} from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { EquipmentConditionBadge } from "@/components/gear/EquipmentConditionWidget";
 import { calculateRepairCost } from "@/utils/equipmentDegradation";
@@ -10,8 +18,20 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,15 +46,30 @@ import {
   type LoadoutPedalSlot,
   type LoadoutState,
 } from "@/data/personal-loadout";
-import { usePlayerEquipment, type PlayerEquipmentWithItem } from "@/hooks/usePlayerEquipment";
-import { getQualityLabel, qualityTierStyles, deriveQualityTier } from "@/utils/gearQuality";
-import { GearRarityKey, getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
+import {
+  usePlayerEquipment,
+  type PlayerEquipmentWithItem,
+} from "@/hooks/usePlayerEquipment";
+import {
+  getQualityLabel,
+  qualityTierStyles,
+  deriveQualityTier,
+} from "@/utils/gearQuality";
+import {
+  GearRarityKey,
+  getRarityLabel,
+  parseRarityKey,
+  rarityStyles,
+} from "@/utils/gearRarity";
 import { normalizeEquipmentStatBoosts } from "@/types/gear";
 
 const UNASSIGNED_VALUE = "unassigned";
 const PEDAL_SLOT_LIMIT = initialLoadoutState.pedalBoard.length;
 
-const mapCategoryToSections = (category: string, subcategory?: string | null) => {
+const mapCategoryToSections = (
+  category: string,
+  subcategory?: string | null,
+) => {
   const normalizedCategory = category.toLowerCase();
   const normalizedSubcategory = subcategory?.toLowerCase() ?? "";
 
@@ -42,15 +77,27 @@ const mapCategoryToSections = (category: string, subcategory?: string | null) =>
     return ["vocal", "other"] as const;
   }
 
-  if (normalizedCategory.includes("pedal") || normalizedCategory.includes("effect") || normalizedSubcategory.includes("pedal")) {
+  if (
+    normalizedCategory.includes("pedal") ||
+    normalizedCategory.includes("effect") ||
+    normalizedSubcategory.includes("pedal")
+  ) {
     return ["pedal", "other"] as const;
   }
 
-  if (normalizedCategory.includes("amp") || normalizedCategory.includes("guitar") || normalizedCategory.includes("instrument")) {
+  if (
+    normalizedCategory.includes("amp") ||
+    normalizedCategory.includes("guitar") ||
+    normalizedCategory.includes("instrument")
+  ) {
     return ["other"] as const;
   }
 
-  if (normalizedCategory.includes("audio") || normalizedCategory.includes("monitor") || normalizedCategory.includes("interface")) {
+  if (
+    normalizedCategory.includes("audio") ||
+    normalizedCategory.includes("monitor") ||
+    normalizedCategory.includes("interface")
+  ) {
     return ["other"] as const;
   }
 
@@ -58,25 +105,33 @@ const mapCategoryToSections = (category: string, subcategory?: string | null) =>
 };
 
 const getQualityBadgeClass = (gear: GearDefinition) =>
-  gear.qualityTierKey ? qualityTierStyles[gear.qualityTierKey] : "border-muted bg-muted/40 text-muted-foreground";
+  gear.qualityTierKey
+    ? qualityTierStyles[gear.qualityTierKey]
+    : "border-muted bg-muted/40 text-muted-foreground";
 
 const getRarityBadgeClass = (gear: GearDefinition) =>
-  gear.rarityKey ? rarityStyles[gear.rarityKey as GearRarityKey] : "border-muted bg-muted/40 text-muted-foreground";
+  gear.rarityKey
+    ? rarityStyles[gear.rarityKey as GearRarityKey]
+    : "border-muted bg-muted/40 text-muted-foreground";
 
 const getStatBoostEntries = (boosts?: Record<string, number>) => {
   if (!boosts) {
     return [];
   }
 
-  return Object.entries(boosts).filter(([, value]) => typeof value === "number");
+  return Object.entries(boosts).filter(
+    ([, value]) => typeof value === "number",
+  );
 };
 
 const formatSectionList = (sections: GearDefinition["sections"]) =>
   sections
     .map((section) => `${section.charAt(0).toUpperCase()}${section.slice(1)}`)
-    .join(" • ");
+    .join("•");
 
-const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefinition | null => {
+const buildInventoryGearDefinition = (
+  entry: PlayerEquipmentWithItem,
+): GearDefinition | null => {
   if (!entry.equipment) {
     return null;
   }
@@ -84,7 +139,10 @@ const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefin
   const { equipment } = entry;
   const statBoosts = normalizeEquipmentStatBoosts(equipment.stat_boosts);
   const qualityTier = deriveQualityTier(equipment.price, statBoosts);
-  const sections = mapCategoryToSections(equipment.category, equipment.subcategory);
+  const sections = mapCategoryToSections(
+    equipment.category,
+    equipment.subcategory,
+  );
   const rarityKey = parseRarityKey(equipment.rarity);
 
   return {
@@ -123,9 +181,15 @@ interface PrefillNoticeState {
 const MyGear: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const [loadout, setLoadout] = useState<LoadoutState>(() => createFreshLoadout());
-  const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
-  const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
+  const [loadout, setLoadout] = useState<LoadoutState>(() =>
+    createFreshLoadout(),
+  );
+  const [pedalValidation, setPedalValidation] = useState<
+    Record<number, string | null>
+  >({});
+  const [otherValidation, setOtherValidation] = useState<
+    Record<string, string | null>
+  >({});
   const [repairingId, setRepairingId] = useState<string | null>(null);
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
@@ -143,38 +207,58 @@ const MyGear: React.FC = () => {
       : String(inventoryError)
     : null;
 
-  const handleRepair = useCallback(async (itemId: string, condition: number, price: number) => {
-    if (!profileId || repairingId) return;
-    setRepairingId(itemId);
-    try {
-      const { cost } = calculateRepairCost(condition, price, 100);
+  const handleRepair = useCallback(
+    async (itemId: string, condition: number, price: number) => {
+      if (!profileId || repairingId) return;
+      setRepairingId(itemId);
+      try {
+        const { cost } = calculateRepairCost(condition, price, 100);
 
-      // Check player balance
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('balance')
-        .eq('id', profileId)
-        .single();
+        // Check player balance
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("id", profileId)
+          .single();
 
-      const balance = (profile as any)?.balance ?? 0;
-      if (balance < cost) {
-        toast({ title: "Not enough funds", description: `Repair costs $${cost.toLocaleString()} but you only have $${balance.toLocaleString()}`, variant: "destructive" });
-        return;
+        const balance = (profile as any)?.balance ?? 0;
+        if (balance < cost) {
+          toast({
+            title: "Not enough funds",
+            description: `Repair costs $${cost.toLocaleString()} but you only have $${balance.toLocaleString()}`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Deduct and repair
+        await supabase
+          .from("profiles")
+          .update({ balance: balance - cost } as any)
+          .eq("id", profileId);
+        await supabase
+          .from("player_equipment")
+          .update({ condition: 100 })
+          .eq("id", itemId);
+
+        toast({
+          title: "Equipment Repaired!",
+          description: `Restored to pristine condition for $${cost.toLocaleString()}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["player-equipment"] });
+      } catch (err) {
+        console.error("Repair failed:", err);
+        toast({
+          title: "Repair Failed",
+          description: "Something went wrong.",
+          variant: "destructive",
+        });
+      } finally {
+        setRepairingId(null);
       }
-
-      // Deduct and repair
-      await supabase.from('profiles').update({ balance: balance - cost } as any).eq('id', profileId);
-      await supabase.from('player_equipment').update({ condition: 100 }).eq('id', itemId);
-
-      toast({ title: "Equipment Repaired!", description: `Restored to pristine condition for $${cost.toLocaleString()}` });
-      queryClient.invalidateQueries({ queryKey: ['player-equipment'] });
-    } catch (err) {
-      console.error('Repair failed:', err);
-      toast({ title: "Repair Failed", description: "Something went wrong.", variant: "destructive" });
-    } finally {
-      setRepairingId(null);
-    }
-  }, [profileId, repairingId, toast, queryClient]);
+    },
+    [profileId, repairingId, toast, queryClient],
+  );
 
   const presetGear = useMemo(
     () =>
@@ -183,7 +267,7 @@ const MyGear: React.FC = () => {
         source: gear.source ?? "preset",
         rarityKey: gear.rarityKey ?? parseRarityKey(gear.rarity),
       })),
-    []
+    [],
   );
 
   const inventoryGear = useMemo(() => {
@@ -196,19 +280,31 @@ const MyGear: React.FC = () => {
       .filter((gear): gear is GearDefinition => Boolean(gear));
   }, [inventory]);
 
-  const allGearOptions = useMemo(() => [...presetGear, ...inventoryGear], [presetGear, inventoryGear]);
+  const allGearOptions = useMemo(
+    () => [...presetGear, ...inventoryGear],
+    [presetGear, inventoryGear],
+  );
 
   const gearById = useMemo(
-    () => new Map<string, GearDefinition>(allGearOptions.map((gear) => [gear.id, gear])),
-    [allGearOptions]
+    () =>
+      new Map<string, GearDefinition>(
+        allGearOptions.map((gear) => [gear.id, gear]),
+      ),
+    [allGearOptions],
   );
 
   const [activeTab, setActiveTab] = useState<LoadoutTabKey>("vocal");
-  const [prefillNotice, setPrefillNotice] = useState<PrefillNoticeState | null>(null);
-  const [pendingPreselectId, setPendingPreselectId] = useState<string | null>(() => {
-    const state = location.state as { preselectGearId?: string | null } | null;
-    return state?.preselectGearId ?? searchParams.get("gearId");
-  });
+  const [prefillNotice, setPrefillNotice] = useState<PrefillNoticeState | null>(
+    null,
+  );
+  const [pendingPreselectId, setPendingPreselectId] = useState<string | null>(
+    () => {
+      const state = location.state as {
+        preselectGearId?: string | null;
+      } | null;
+      return state?.preselectGearId ?? searchParams.get("gearId");
+    },
+  );
 
   useEffect(() => {
     const state = location.state as { preselectGearId?: string | null } | null;
@@ -230,8 +326,8 @@ const MyGear: React.FC = () => {
     let targetTab: LoadoutTabKey = gear.sections.includes("vocal")
       ? "vocal"
       : gear.sections.includes("pedal")
-      ? "pedal"
-      : "other";
+        ? "pedal"
+        : "other";
     let assigned = false;
 
     setLoadout((prev) => {
@@ -243,7 +339,9 @@ const MyGear: React.FC = () => {
           return {
             ...prev,
             vocalSetup: prev.vocalSetup.map((slot) =>
-              slot.id === openSlot.id ? { ...slot, gearId: gear.id, equipped: true } : slot
+              slot.id === openSlot.id
+                ? { ...slot, gearId: gear.id, equipped: true }
+                : slot,
             ),
           };
         }
@@ -257,7 +355,9 @@ const MyGear: React.FC = () => {
           return {
             ...prev,
             pedalBoard: prev.pedalBoard.map((slot) =>
-              slot.slotNumber === openSlot.slotNumber ? { ...slot, gearId: gear.id, equipped: true } : slot
+              slot.slotNumber === openSlot.slotNumber
+                ? { ...slot, gearId: gear.id, equipped: true }
+                : slot,
             ),
           };
         }
@@ -271,7 +371,9 @@ const MyGear: React.FC = () => {
           return {
             ...prev,
             otherGear: prev.otherGear.map((item) =>
-              item.id === openItem.id ? { ...item, gearId: gear.id, equipped: true } : item
+              item.id === openItem.id
+                ? { ...item, gearId: gear.id, equipped: true }
+                : item,
             ),
           };
         }
@@ -287,15 +389,15 @@ const MyGear: React.FC = () => {
 
   const vocalGearOptions = useMemo(
     () => allGearOptions.filter((gear) => gear.sections.includes("vocal")),
-    [allGearOptions]
+    [allGearOptions],
   );
   const pedalGearOptions = useMemo(
     () => allGearOptions.filter((gear) => gear.sections.includes("pedal")),
-    [allGearOptions]
+    [allGearOptions],
   );
   const otherGearOptions = useMemo(
     () => allGearOptions.filter((gear) => gear.sections.includes("other")),
-    [allGearOptions]
+    [allGearOptions],
   );
 
   const handleResetLoadout = () => {
@@ -316,7 +418,7 @@ const MyGear: React.FC = () => {
               gearId: nextGearId,
               equipped: nextGearId ? true : false,
             }
-          : slot
+          : slot,
       ),
     }));
   };
@@ -324,7 +426,9 @@ const MyGear: React.FC = () => {
   const handleVocalEquippedChange = (slotId: string, equipped: boolean) => {
     setLoadout((prev) => ({
       ...prev,
-      vocalSetup: prev.vocalSetup.map((slot) => (slot.id === slotId ? { ...slot, equipped } : slot)),
+      vocalSetup: prev.vocalSetup.map((slot) =>
+        slot.id === slotId ? { ...slot, equipped } : slot,
+      ),
     }));
   };
 
@@ -340,20 +444,24 @@ const MyGear: React.FC = () => {
                 gearId: null,
                 equipped: false,
               }
-            : slot
+            : slot,
         ),
       }));
       return;
     }
 
     const selectedGear = gearById.get(value);
-    const targetSlot = loadout.pedalBoard.find((slot) => slot.slotNumber === slotNumber);
+    const targetSlot = loadout.pedalBoard.find(
+      (slot) => slot.slotNumber === slotNumber,
+    );
 
     if (!selectedGear || !targetSlot) {
       return;
     }
 
-    const currentAssignments = loadout.pedalBoard.filter((slot) => Boolean(slot.gearId)).length;
+    const currentAssignments = loadout.pedalBoard.filter((slot) =>
+      Boolean(slot.gearId),
+    ).length;
     const isSlotCurrentlyEmpty = !targetSlot.gearId;
 
     if (isSlotCurrentlyEmpty && currentAssignments >= PEDAL_SLOT_LIMIT) {
@@ -376,7 +484,7 @@ const MyGear: React.FC = () => {
     }
 
     const duplicate = loadout.pedalBoard.find(
-      (slot) => slot.slotNumber !== slotNumber && slot.gearId === value
+      (slot) => slot.slotNumber !== slotNumber && slot.gearId === value,
     );
 
     if (duplicate) {
@@ -397,7 +505,7 @@ const MyGear: React.FC = () => {
               gearId: value,
               equipped: true,
             }
-          : slot
+          : slot,
       ),
     }));
   };
@@ -406,7 +514,7 @@ const MyGear: React.FC = () => {
     setLoadout((prev) => ({
       ...prev,
       pedalBoard: prev.pedalBoard.map((slot) =>
-        slot.slotNumber === slotNumber ? { ...slot, equipped } : slot
+        slot.slotNumber === slotNumber ? { ...slot, equipped } : slot,
       ),
     }));
   };
@@ -423,7 +531,7 @@ const MyGear: React.FC = () => {
                 gearId: null,
                 equipped: false,
               }
-            : item
+            : item,
         ),
       }));
       return;
@@ -436,7 +544,7 @@ const MyGear: React.FC = () => {
     }
 
     const duplicate = loadout.otherGear.find(
-      (item) => item.id !== itemId && item.gearId === value
+      (item) => item.id !== itemId && item.gearId === value,
     );
 
     if (duplicate) {
@@ -457,7 +565,7 @@ const MyGear: React.FC = () => {
               gearId: value,
               equipped: true,
             }
-          : item
+          : item,
       ),
     }));
   };
@@ -466,7 +574,7 @@ const MyGear: React.FC = () => {
     setLoadout((prev) => ({
       ...prev,
       otherGear: prev.otherGear.map((item) =>
-        item.id === itemId ? { ...item, equipped } : item
+        item.id === itemId ? { ...item, equipped } : item,
       ),
     }));
   };
@@ -523,29 +631,47 @@ const MyGear: React.FC = () => {
     return (
       <div className="flex flex-col gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className={getQualityBadgeClass(selectedGear)}>
+          <Badge
+            variant="outline"
+            className={getQualityBadgeClass(selectedGear)}
+          >
             {selectedGear.quality}
           </Badge>
-          <Badge variant="outline" className={getRarityBadgeClass(selectedGear)}>
+          <Badge
+            variant="outline"
+            className={getRarityBadgeClass(selectedGear)}
+          >
             {selectedGear.rarity}
           </Badge>
-          {selectedGear.source === "inventory" ? <Badge variant="secondary">Owned</Badge> : null}
+          {selectedGear.source === "inventory" ? (
+            <Badge variant="secondary">Owned</Badge>
+          ) : null}
         </div>
         <div className="text-muted-foreground">
-          Cost: {typeof selectedGear.price === "number" ? `$${selectedGear.price.toLocaleString()}` : "—"}
+          Cost:{" "}
+          {typeof selectedGear.price === "number"
+            ? `$${selectedGear.price.toLocaleString()}`
+            : "—"}
         </div>
         {typeof selectedGear.stock === "number" ? (
           <div className="text-muted-foreground">
-            Shop stock: {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
+            Shop stock:{" "}
+            {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
           </div>
         ) : null}
         {getStatBoostEntries(selectedGear.statBoosts).length > 0 ? (
           <div className="flex flex-wrap gap-1">
-            {getStatBoostEntries(selectedGear.statBoosts).map(([stat, value]) => (
-              <Badge key={stat} variant="outline" className={getRarityBadgeClass(selectedGear)}>
-                {stat}: +{value}
-              </Badge>
-            ))}
+            {getStatBoostEntries(selectedGear.statBoosts).map(
+              ([stat, value]) => (
+                <Badge
+                  key={stat}
+                  variant="outline"
+                  className={getRarityBadgeClass(selectedGear)}
+                >
+                  {stat}: +{value}
+                </Badge>
+              ),
+            )}
           </div>
         ) : null}
       </div>
@@ -565,14 +691,19 @@ const MyGear: React.FC = () => {
         </Button>
       }
     >
-
       {prefillNotice && noticeGear ? (
         <Alert className="border-primary/40 bg-primary/5">
           <AlertTitle className="flex items-center justify-between gap-2 text-sm font-semibold">
             <span>
-              {noticeGear.name} {prefillNotice.assigned ? "equipped" : "ready"} in {tabLabelMap[prefillNotice.tab]}
+              {noticeGear.name} {prefillNotice.assigned ? "equipped" : "ready"}{" "}
+              in {tabLabelMap[prefillNotice.tab]}
             </span>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleDismissNotice}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleDismissNotice}
+            >
               Dismiss
             </Button>
           </AlertTitle>
@@ -593,12 +724,20 @@ const MyGear: React.FC = () => {
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {loadout.metadata.isActive ? <Badge variant="default">Active</Badge> : <Badge variant="secondary">Archived</Badge>}
-            <Badge variant="outline">Primary: {loadout.metadata.primaryInstrument}</Badge>
+            {loadout.metadata.isActive ? (
+              <Badge variant="default">Active</Badge>
+            ) : (
+              <Badge variant="secondary">Archived</Badge>
+            )}
+            <Badge variant="outline">
+              Primary: {loadout.metadata.primaryInstrument}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{loadout.metadata.notes}</p>
+          <p className="text-sm text-muted-foreground">
+            {loadout.metadata.notes}
+          </p>
         </CardContent>
       </Card>
 
@@ -620,7 +759,8 @@ const MyGear: React.FC = () => {
             </div>
           ) : inventoryGear.length === 0 ? (
             <p className="py-6 text-sm text-muted-foreground">
-              You haven&apos;t purchased any gear yet. Visit the Gear Shop to unlock stat-boosting equipment tiers.
+              You haven&apos;t purchased any gear yet. Visit the Gear Shop to
+              unlock stat-boosting equipment tiers.
             </p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -636,40 +776,61 @@ const MyGear: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
-                        {gear.source === "inventory" && (() => {
-                          const invItem = inventory.find(i => i.id === gear.id);
-                          const cond = invItem?.condition ?? 100;
-                          const needsRepair = cond < 85;
-                          const repairCost = needsRepair && gear.price ? calculateRepairCost(cond, gear.price, 100).cost : 0;
-                          return (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <EquipmentConditionBadge condition={cond} />
-                              {needsRepair && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-5 px-1.5 text-[10px] gap-1"
-                                  disabled={repairingId === gear.id}
-                                  onClick={() => handleRepair(gear.id, cond, gear.price ?? 0)}
-                                >
-                                  {repairingId === gear.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Wrench className="h-3 w-3" />
-                                  )}
-                                  Repair ${repairCost.toLocaleString()}
-                                </Button>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        <p className="text-xs text-muted-foreground">
+                          {formatSectionList(gear.sections)}
+                        </p>
+                        {gear.source === "inventory" &&
+                          (() => {
+                            const invItem = inventory.find(
+                              (i) => i.id === gear.id,
+                            );
+                            const cond = invItem?.condition ?? 100;
+                            const needsRepair = cond < 85;
+                            const repairCost =
+                              needsRepair && gear.price
+                                ? calculateRepairCost(cond, gear.price, 100)
+                                    .cost
+                                : 0;
+                            return (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <EquipmentConditionBadge condition={cond} />
+                                {needsRepair && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-5 px-1.5 text-[10px] gap-1"
+                                    disabled={repairingId === gear.id}
+                                    onClick={() =>
+                                      handleRepair(
+                                        gear.id,
+                                        cond,
+                                        gear.price ?? 0,
+                                      )
+                                    }
+                                  >
+                                    {repairingId === gear.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Wrench className="h-3 w-3" />
+                                    )}
+                                    Repair ${repairCost.toLocaleString()}
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })()}
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge variant="outline" className={getQualityBadgeClass(gear)}>
+                        <Badge
+                          variant="outline"
+                          className={getQualityBadgeClass(gear)}
+                        >
                           {gear.quality}
                         </Badge>
-                        <Badge variant="outline" className={getRarityBadgeClass(gear)}>
+                        <Badge
+                          variant="outline"
+                          className={getRarityBadgeClass(gear)}
+                        >
                           {gear.rarity}
                         </Badge>
                       </div>
@@ -677,7 +838,9 @@ const MyGear: React.FC = () => {
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                       <span>Cost</span>
                       <span className="text-right">
-                        {typeof gear.price === "number" ? `$${gear.price.toLocaleString()}` : "—"}
+                        {typeof gear.price === "number"
+                          ? `$${gear.price.toLocaleString()}`
+                          : "—"}
                       </span>
                       <span>Shop stock</span>
                       <span className="text-right">
@@ -691,7 +854,11 @@ const MyGear: React.FC = () => {
                     {boosts.length > 0 ? (
                       <div className="mt-3 flex flex-wrap gap-1 text-[10px]">
                         {boosts.map(([stat, value]) => (
-                          <Badge key={stat} variant="outline" className={getRarityBadgeClass(gear)}>
+                          <Badge
+                            key={stat}
+                            variant="outline"
+                            className={getRarityBadgeClass(gear)}
+                          >
                             {stat}: +{value}
                           </Badge>
                         ))}
@@ -705,7 +872,11 @@ const MyGear: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LoadoutTabKey)} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as LoadoutTabKey)}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="vocal">Vocal Setup</TabsTrigger>
           <TabsTrigger value="pedal">Pedal Board</TabsTrigger>
@@ -757,7 +928,10 @@ interface GearAssignmentStatusProps {
   gearLookup: Map<string, GearDefinition>;
 }
 
-const GearAssignmentStatus: React.FC<GearAssignmentStatusProps> = ({ gearId, gearLookup }) => {
+const GearAssignmentStatus: React.FC<GearAssignmentStatusProps> = ({
+  gearId,
+  gearLookup,
+}) => {
   if (!gearId) {
     return <Badge variant="outline">Unassigned</Badge>;
   }
@@ -777,20 +951,30 @@ const GearAssignmentStatus: React.FC<GearAssignmentStatusProps> = ({ gearId, gea
         <Badge variant="outline" className={getRarityBadgeClass(selectedGear)}>
           {selectedGear.rarity}
         </Badge>
-        {selectedGear.source === "inventory" ? <Badge variant="secondary">Owned</Badge> : null}
+        {selectedGear.source === "inventory" ? (
+          <Badge variant="secondary">Owned</Badge>
+        ) : null}
       </div>
       <div className="text-muted-foreground">
-        Cost: {typeof selectedGear.price === "number" ? `$${selectedGear.price.toLocaleString()}` : "—"}
+        Cost:{" "}
+        {typeof selectedGear.price === "number"
+          ? `$${selectedGear.price.toLocaleString()}`
+          : "—"}
       </div>
       {typeof selectedGear.stock === "number" ? (
         <div className="text-muted-foreground">
-          Shop stock: {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
+          Shop stock:{" "}
+          {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
         </div>
       ) : null}
       {getStatBoostEntries(selectedGear.statBoosts).length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {getStatBoostEntries(selectedGear.statBoosts).map(([stat, value]) => (
-            <Badge key={stat} variant="outline" className={getRarityBadgeClass(selectedGear)}>
+            <Badge
+              key={stat}
+              variant="outline"
+              className={getRarityBadgeClass(selectedGear)}
+            >
               {stat}: +{value}
             </Badge>
           ))}
@@ -824,12 +1008,15 @@ const VocalSetupPanel: React.FC<VocalSetupPanelProps> = ({
     <CardHeader>
       <CardTitle>Vocal Signal Flow</CardTitle>
       <CardDescription>
-        Assign microphones, preamps, and monitoring for the front-of-house vocal chain.
+        Assign microphones, preamps, and monitoring for the front-of-house vocal
+        chain.
       </CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       {slots.map((slot) => {
-        const selectedGear = slot.gearId ? gearLookup.get(slot.gearId) : undefined;
+        const selectedGear = slot.gearId
+          ? gearLookup.get(slot.gearId)
+          : undefined;
 
         return (
           <div key={slot.id} className="rounded-lg border p-4">
@@ -843,11 +1030,13 @@ const VocalSetupPanel: React.FC<VocalSetupPanelProps> = ({
               <div className="flex items-center gap-3">
                 <Switch
                   checked={slot.equipped}
-                  onCheckedChange={(checked) => onEquippedChange(slot.id, checked)}
+                  onCheckedChange={(checked) =>
+                    onEquippedChange(slot.id, checked)
+                  }
                   disabled={!slot.gearId}
                   aria-label={`Toggle ${slot.label} equipped state`}
                 />
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs tracking-wide text-muted-foreground">
                   {slot.equipped ? "Equipped" : "Standby"}
                 </span>
               </div>
@@ -869,7 +1058,8 @@ const VocalSetupPanel: React.FC<VocalSetupPanelProps> = ({
                         <div className="flex flex-col">
                           <span className="font-medium">{gear.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                            {gear.source === "inventory" ? "Owned" : "Preset"} •{" "}
+                            {gear.rarity}
                           </span>
                         </div>
                       </SelectItem>
@@ -877,11 +1067,16 @@ const VocalSetupPanel: React.FC<VocalSetupPanelProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              <GearAssignmentStatus gearId={slot.gearId} gearLookup={gearLookup} />
+              <GearAssignmentStatus
+                gearId={slot.gearId}
+                gearLookup={gearLookup}
+              />
             </div>
 
             {selectedGear?.description ? (
-              <p className="mt-3 text-sm text-muted-foreground">{selectedGear.description}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {selectedGear.description}
+              </p>
             ) : null}
           </div>
         );
@@ -917,8 +1112,8 @@ const PedalBoardGrid: React.FC<PedalBoardGridProps> = ({
     <CardHeader>
       <CardTitle>Pedal Board Routing</CardTitle>
       <CardDescription>
-        Ten configurable slots handle the full guitar signal chain. Slot validation keeps incompatible pedals out of the wrong
-        lane.
+        Ten configurable slots handle the full guitar signal chain. Slot
+        validation keeps incompatible pedals out of the wrong lane.
       </CardDescription>
     </CardHeader>
     <CardContent>
@@ -929,29 +1124,37 @@ const PedalBoardGrid: React.FC<PedalBoardGridProps> = ({
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {slots.map((slot) => {
-          const selectedGear = slot.gearId ? gearLookup.get(slot.gearId) : undefined;
+          const selectedGear = slot.gearId
+            ? gearLookup.get(slot.gearId)
+            : undefined;
           const errorMessage = validationMessages[slot.slotNumber] ?? null;
 
           return (
             <div key={slot.slotNumber} className="rounded-lg border p-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <p className="text-base font-semibold">Slot {slot.slotNumber}</p>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <p className="text-base font-semibold">
+                    Slot {slot.slotNumber}
+                  </p>
+                  <p className="text-xs tracking-wide text-muted-foreground">
                     {formatSlotLabel(slot)}
                   </p>
                   {slot.notes ? (
-                    <p className="text-sm text-muted-foreground">{slot.notes}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {slot.notes}
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-3">
                   <Switch
                     checked={slot.equipped}
-                    onCheckedChange={(checked) => onEquippedChange(slot.slotNumber, checked)}
+                    onCheckedChange={(checked) =>
+                      onEquippedChange(slot.slotNumber, checked)
+                    }
                     disabled={!slot.gearId}
                     aria-label={`Toggle slot ${slot.slotNumber} equipped state`}
                   />
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <span className="text-xs tracking-wide text-muted-foreground">
                     {slot.equipped ? "Equipped" : "Bypassed"}
                   </span>
                 </div>
@@ -962,7 +1165,9 @@ const PedalBoardGrid: React.FC<PedalBoardGridProps> = ({
                   value={slot.gearId ?? UNASSIGNED_VALUE}
                   onValueChange={(next) => onGearChange(slot.slotNumber, next)}
                 >
-                  <SelectTrigger aria-label={`Select pedal for slot ${slot.slotNumber}`}>
+                  <SelectTrigger
+                    aria-label={`Select pedal for slot ${slot.slotNumber}`}
+                  >
                     <SelectValue placeholder="Assign pedal" />
                   </SelectTrigger>
                   <SelectContent>
@@ -972,19 +1177,27 @@ const PedalBoardGrid: React.FC<PedalBoardGridProps> = ({
                         <div className="flex flex-col">
                           <span className="font-medium">{gear.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                            {gear.source === "inventory" ? "Owned" : "Preset"} •{" "}
+                            {gear.rarity}
                           </span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <GearAssignmentStatus gearId={slot.gearId} gearLookup={gearLookup} />
-                {errorMessage ? <p className="text-xs text-destructive">{errorMessage}</p> : null}
+                <GearAssignmentStatus
+                  gearId={slot.gearId}
+                  gearLookup={gearLookup}
+                />
+                {errorMessage ? (
+                  <p className="text-xs text-destructive">{errorMessage}</p>
+                ) : null}
               </div>
 
               {selectedGear?.description ? (
-                <p className="mt-3 text-sm text-muted-foreground">{selectedGear.description}</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {selectedGear.description}
+                </p>
               ) : null}
             </div>
           );
@@ -1025,7 +1238,9 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
     <CardHeader className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <CardTitle>Auxiliary & Backup Gear</CardTitle>
-        <CardDescription>Backups and extras beyond your core rig.</CardDescription>
+        <CardDescription>
+          Backups and extras beyond your core rig.
+        </CardDescription>
       </div>
       <Button
         type="button"
@@ -1041,12 +1256,15 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
     <CardContent className="space-y-4">
       {isAddDisabled ? (
         <p className="text-xs text-muted-foreground">
-          Maximum of {OTHER_GEAR_LIMIT} auxiliary items reached. Free up a slot to add more equipment.
+          Maximum of {OTHER_GEAR_LIMIT} auxiliary items reached. Free up a slot
+          to add more equipment.
         </p>
       ) : null}
 
       {items.map((item) => {
-        const selectedGear = item.gearId ? gearLookup.get(item.gearId) : undefined;
+        const selectedGear = item.gearId
+          ? gearLookup.get(item.gearId)
+          : undefined;
         const errorMessage = validationMessages[item.id] ?? null;
 
         return (
@@ -1061,11 +1279,13 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
               <div className="flex items-center gap-2">
                 <Switch
                   checked={item.equipped}
-                  onCheckedChange={(checked) => onEquippedChange(item.id, checked)}
+                  onCheckedChange={(checked) =>
+                    onEquippedChange(item.id, checked)
+                  }
                   disabled={!item.gearId}
                   aria-label={`Toggle ${item.label} equipped state`}
                 />
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs tracking-wide text-muted-foreground">
                   {item.equipped ? "Packed" : "Reserve"}
                 </span>
                 <Button
@@ -1096,7 +1316,8 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
                         <div className="flex flex-col">
                           <span className="font-medium">{gear.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                            {gear.source === "inventory" ? "Owned" : "Preset"} •{" "}
+                            {gear.rarity}
                           </span>
                         </div>
                       </SelectItem>
@@ -1104,13 +1325,20 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              <GearAssignmentStatus gearId={item.gearId} gearLookup={gearLookup} />
+              <GearAssignmentStatus
+                gearId={item.gearId}
+                gearLookup={gearLookup}
+              />
             </div>
 
-            {errorMessage ? <p className="mt-2 text-xs text-destructive">{errorMessage}</p> : null}
+            {errorMessage ? (
+              <p className="mt-2 text-xs text-destructive">{errorMessage}</p>
+            ) : null}
 
             {selectedGear?.description ? (
-              <p className="mt-3 text-sm text-muted-foreground">{selectedGear.description}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {selectedGear.description}
+              </p>
             ) : null}
           </div>
         );
@@ -1118,7 +1346,8 @@ const OtherGearList: React.FC<OtherGearListProps> = ({
 
       {items.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No auxiliary gear assigned yet. Use “Add gear slot” to start tracking extras.
+          No auxiliary gear assigned yet. Use “Add gear slot” to start tracking
+          extras.
         </div>
       ) : null}
     </CardContent>

@@ -5,7 +5,13 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { AvatarPreview } from "@/components/onboarding/AvatarPreview";
 import { BiographyInput } from "@/components/onboarding/BiographyInput";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
@@ -57,9 +63,15 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Step {currentStep + 1} of {STEPS.length}</p>
-          <h2 className="text-2xl font-semibold text-foreground">{STEPS[currentStep]?.title}</h2>
-          <p className="text-sm text-muted-foreground">{STEPS[currentStep]?.description}</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Step {currentStep + 1} of {STEPS.length}
+          </p>
+          <h2 className="text-2xl font-semibold text-foreground">
+            {STEPS[currentStep]?.title}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {STEPS[currentStep]?.description}
+          </p>
         </div>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -68,7 +80,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <ol className="flex flex-wrap items-center gap-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <ol className="flex flex-wrap items-center gap-4 text-xs font-medium tracking-wide text-muted-foreground">
         {STEPS.map((step, index) => {
           const isActive = index === currentStep;
           const isComplete = index < currentStep;
@@ -79,13 +91,19 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
                   isActive
                     ? "border-primary bg-primary/10 text-primary"
                     : isComplete
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border text-muted-foreground"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground"
                 }`}
               >
                 {index + 1}
               </span>
-              <span className={isActive ? "text-foreground" : "text-muted-foreground"}>{step.title}</span>
+              <span
+                className={
+                  isActive ? "text-foreground" : "text-muted-foreground"
+                }
+              >
+                {step.title}
+              </span>
             </li>
           );
         })}
@@ -99,13 +117,19 @@ const ReviewCard = ({ profile }: { profile: FormState }) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Review your persona</CardTitle>
-        <CardDescription>Take a quick look before you launch into Rockmundo.</CardDescription>
+        <CardDescription>
+          Take a quick look before you launch into Rockmundo.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6 sm:flex-row">
         <div className="flex flex-col items-center gap-3">
           <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-muted shadow-sm">
             {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt="Avatar preview" className="h-full w-full object-cover" />
+              <img
+                src={profile.avatarUrl}
+                alt="Avatar preview"
+                className="h-full w-full object-cover"
+              />
             ) : (
               <span className="text-xl font-semibold text-muted-foreground">
                 {profile.displayName
@@ -121,13 +145,21 @@ const ReviewCard = ({ profile }: { profile: FormState }) => {
         </div>
         <div className="flex-1 space-y-3">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Stage name</h3>
-            <p className="text-base font-medium text-foreground">{profile.displayName || "Not set"}</p>
+            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground">
+              Stage name
+            </h3>
+            <p className="text-base font-medium text-foreground">
+              {profile.displayName || "Not set"}
+            </p>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Biography</h3>
+            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground">
+              Biography
+            </h3>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {profile.bio.trim().length > 0 ? profile.bio : "No bio yet. You can update this anytime."}
+              {profile.bio.trim().length > 0
+                ? profile.bio
+                : "No bio yet. You can update this anytime."}
             </p>
           </div>
         </div>
@@ -196,19 +228,24 @@ const OnboardingWizard = () => {
       console.error("onboarding.save.error", error);
       toast({
         title: "We hit a snag",
-        description: error instanceof Error ? error.message : "Unable to save your onboarding details.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Unable to save your onboarding details.",
         variant: "destructive",
       });
     },
   });
 
   const isLoading = authLoading || profileQuery.isLoading;
-  const errorMessage = profileQuery.error instanceof Error ? profileQuery.error.message : null;
+  const errorMessage =
+    profileQuery.error instanceof Error ? profileQuery.error.message : null;
 
   const canGoBack = currentStep > 0;
   const canGoNext = currentStep < STEPS.length - 1;
   const continueDisabled =
-    mutation.isPending || (currentStep === 0 && formState.displayName.trim().length === 0);
+    mutation.isPending ||
+    (currentStep === 0 && formState.displayName.trim().length === 0);
 
   const handleNext = () => {
     setCurrentStep((step) => Math.min(step + 1, STEPS.length - 1));
@@ -225,7 +262,8 @@ const OnboardingWizard = () => {
   const stageNameContent = (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        This name appears on leaderboards, gig posters, and multiplayer events. Make it memorable!
+        This name appears on leaderboards, gig posters, and multiplayer events.
+        Make it memorable!
       </p>
       <label className="flex flex-col gap-2">
         <span className="text-sm font-medium text-foreground">Stage name</span>
@@ -298,9 +336,12 @@ const OnboardingWizard = () => {
     <div className="mx-auto max-w-4xl space-y-8 py-10">
       <Card className="border-none bg-gradient-to-br from-background via-background to-muted shadow-xl">
         <CardHeader className="border-b border-border/40 bg-background/70">
-          <CardTitle className="text-3xl font-bold">Welcome to Rockmundo</CardTitle>
+          <CardTitle className="text-3xl font-bold">
+            Welcome to Rockmundo
+          </CardTitle>
           <CardDescription className="text-base text-muted-foreground">
-            Let&apos;s personalize your character before dropping you into the action.
+            Let&apos;s personalize your character before dropping you into the
+            action.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8 py-8">
@@ -308,14 +349,20 @@ const OnboardingWizard = () => {
 
           {isLoading ? (
             <div className="flex h-48 items-center justify-center">
-              <p className="text-sm text-muted-foreground">Loading your profile...</p>
+              <p className="text-sm text-muted-foreground">
+                Loading your profile...
+              </p>
             </div>
           ) : errorMessage ? (
             <div className="space-y-4">
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                 {errorMessage}
               </div>
-              <Button variant="outline" onClick={() => profileQuery.refetch()} disabled={mutation.isPending}>
+              <Button
+                variant="outline"
+                onClick={() => profileQuery.refetch()}
+                disabled={mutation.isPending}
+              >
                 Try again
               </Button>
             </div>
@@ -325,7 +372,11 @@ const OnboardingWizard = () => {
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {canGoBack && (
-                    <Button variant="ghost" onClick={handlePrev} disabled={mutation.isPending}>
+                    <Button
+                      variant="ghost"
+                      onClick={handlePrev}
+                      disabled={mutation.isPending}
+                    >
                       Back
                     </Button>
                   )}
@@ -336,7 +387,10 @@ const OnboardingWizard = () => {
                       Continue
                     </Button>
                   ) : (
-                    <Button onClick={handleSubmit} disabled={mutation.isPending}>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={mutation.isPending}
+                    >
                       {mutation.isPending ? "Saving..." : "Complete onboarding"}
                     </Button>
                   )}

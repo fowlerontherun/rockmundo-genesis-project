@@ -1,5 +1,12 @@
 import { Fragment, useMemo } from "react";
-import { CheckCircle2, Scale, ShieldCheck, Sparkles, TrendingUp, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,9 +58,11 @@ const RARITY_EFFECTS: Record<GearRarityKey, string> = {
 const QUALITY_EFFECTS: Record<GearQualityTier, string> = {
   budget: "Reliable starter quality. Perfect for rehearsals and learning runs.",
   standard: "Tour-ready craftsmanship with predictable performance gains.",
-  professional: "Studio-grade calibration. Boosts stage presence and sound checks.",
+  professional:
+    "Studio-grade calibration. Boosts stage presence and sound checks.",
   boutique: "Handcrafted nuance adored by critics and superfans alike.",
-  experimental: "Cutting-edge prototype effects that unlock unique skill combos.",
+  experimental:
+    "Cutting-edge prototype effects that unlock unique skill combos.",
 };
 
 const sumBoosts = (boosts: Record<string, number> | null | undefined) => {
@@ -70,7 +79,8 @@ const sumBoosts = (boosts: Record<string, number> | null | undefined) => {
   }, 0);
 };
 
-const formatStatKey = (key: string) => key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const formatStatKey = (key: string) =>
+  key.replace(/_/g, "").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export const GearComparisonDrawer = ({
   item,
@@ -84,7 +94,9 @@ export const GearComparisonDrawer = ({
       return [] as PlayerEquipmentWithItem[];
     }
 
-    return ownedEquipment.filter((entry) => entry.equipment?.category === item.category);
+    return ownedEquipment.filter(
+      (entry) => entry.equipment?.category === item.category,
+    );
   }, [item, ownedEquipment]);
 
   const bestOwned = useMemo(() => {
@@ -92,37 +104,50 @@ export const GearComparisonDrawer = ({
       return null;
     }
 
-    return ownedInCategory.reduce<PlayerEquipmentWithItem | null>((best, current) => {
-      if (!best) {
-        return current;
-      }
+    return ownedInCategory.reduce<PlayerEquipmentWithItem | null>(
+      (best, current) => {
+        if (!best) {
+          return current;
+        }
 
-      const bestScore = sumBoosts(best.equipment?.stat_boosts);
-      const currentScore = sumBoosts(current.equipment?.stat_boosts);
+        const bestScore = sumBoosts(best.equipment?.stat_boosts);
+        const currentScore = sumBoosts(current.equipment?.stat_boosts);
 
-      if (currentScore > bestScore) {
-        return current;
-      }
+        if (currentScore > bestScore) {
+          return current;
+        }
 
-      return best;
-    }, null);
+        return best;
+      },
+      null,
+    );
   }, [ownedInCategory]);
 
   const statComparison = useMemo(() => {
     if (!item) {
-      return [] as Array<{ stat: string; current: number; owned: number; delta: number }>;
+      return [] as Array<{
+        stat: string;
+        current: number;
+        owned: number;
+        delta: number;
+      }>;
     }
 
     const allStats = new Set<string>();
     const selectedBoosts = item.stat_boosts ?? {};
-    const ownedBoosts = (bestOwned?.equipment?.stat_boosts ?? {}) as Record<string, number>;
+    const ownedBoosts = (bestOwned?.equipment?.stat_boosts ?? {}) as Record<
+      string,
+      number
+    >;
 
     Object.keys(selectedBoosts).forEach((stat) => allStats.add(stat));
     Object.keys(ownedBoosts).forEach((stat) => allStats.add(stat));
 
     return Array.from(allStats).map((stat) => {
-      const currentValue = typeof selectedBoosts[stat] === "number" ? selectedBoosts[stat] : 0;
-      const ownedValue = typeof ownedBoosts[stat] === "number" ? ownedBoosts[stat] : 0;
+      const currentValue =
+        typeof selectedBoosts[stat] === "number" ? selectedBoosts[stat] : 0;
+      const ownedValue =
+        typeof ownedBoosts[stat] === "number" ? ownedBoosts[stat] : 0;
 
       return {
         stat,
@@ -146,7 +171,8 @@ export const GearComparisonDrawer = ({
       return 0;
     }
 
-    return ownedEquipment.filter((entry) => entry.equipment?.id === item.id).length;
+    return ownedEquipment.filter((entry) => entry.equipment?.id === item.id)
+      .length;
   }, [item, ownedEquipment]);
 
   return (
@@ -154,11 +180,14 @@ export const GearComparisonDrawer = ({
       <DrawerContent className="max-h-[92vh]">
         <DrawerHeader className="space-y-2 border-b pb-4">
           <DrawerTitle className="flex flex-col gap-1 text-left">
-            <span className="text-xs uppercase text-muted-foreground">Comparing</span>
-            <span className="text-2xl font-semibold">{item?.name ?? "Select an item"}</span>
+            <span className="text-xs text-muted-foreground">Comparing</span>
+            <span className="text-2xl font-semibold">
+              {item?.name ?? "Select an item"}
+            </span>
           </DrawerTitle>
           <DrawerDescription>
-            Evaluate rarity perks, quality scaling, and stat shifts before committing to a purchase.
+            Evaluate rarity perks, quality scaling, and stat shifts before
+            committing to a purchase.
           </DrawerDescription>
         </DrawerHeader>
         <ScrollArea className="h-full">
@@ -167,18 +196,29 @@ export const GearComparisonDrawer = ({
               <Fragment>
                 <section className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className={rarityStyles[item.rarityKey]}>
+                    <Badge
+                      variant="outline"
+                      className={rarityStyles[item.rarityKey]}
+                    >
                       {getRarityLabel(item.rarityKey)}
                     </Badge>
-                    <Badge variant="outline" className={qualityTierStyles[item.qualityTier]}>
+                    <Badge
+                      variant="outline"
+                      className={qualityTierStyles[item.qualityTier]}
+                    >
                       {getQualityLabel(item.qualityTier)}
                     </Badge>
-                    <Badge variant="secondary" className="ml-auto flex items-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      ${item.price.toLocaleString()}
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto flex items-center gap-1"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />$
+                      {item.price.toLocaleString()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{item.description ?? "No flavour text provided."}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description ?? "No flavour text provided."}
+                  </p>
                 </section>
 
                 <section className="space-y-3 rounded-lg border bg-muted/30 p-4">
@@ -188,16 +228,20 @@ export const GearComparisonDrawer = ({
                   </div>
                   <div className="grid gap-3 text-sm md:grid-cols-2">
                     <div className="rounded-md border bg-background/60 p-3 shadow-sm">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground">
                         Rarity insight
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed">{RARITY_EFFECTS[item.rarityKey]}</p>
+                      <p className="mt-2 text-sm leading-relaxed">
+                        {RARITY_EFFECTS[item.rarityKey]}
+                      </p>
                     </div>
                     <div className="rounded-md border bg-background/60 p-3 shadow-sm">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground">
                         Quality impact
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed">{QUALITY_EFFECTS[item.qualityTier]}</p>
+                      <p className="mt-2 text-sm leading-relaxed">
+                        {QUALITY_EFFECTS[item.qualityTier]}
+                      </p>
                     </div>
                   </div>
                 </section>
@@ -209,12 +253,13 @@ export const GearComparisonDrawer = ({
                   </div>
                   {statComparison.length === 0 ? (
                     <p className="rounded-md border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-                      This item does not influence tracked stats. Consider rarity and quality effects to judge its impact.
+                      This item does not influence tracked stats. Consider
+                      rarity and quality effects to judge its impact.
                     </p>
                   ) : (
                     <div className="overflow-hidden rounded-md border">
                       <table className="w-full text-left text-sm">
-                        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                        <thead className="bg-muted/50 text-xs text-muted-foreground">
                           <tr>
                             <th className="px-4 py-2">Stat</th>
                             <th className="px-4 py-2">Selected</th>
@@ -225,16 +270,20 @@ export const GearComparisonDrawer = ({
                         <tbody>
                           {statComparison.map((row) => (
                             <tr key={row.stat} className="border-t">
-                              <td className="px-4 py-2 font-medium">{formatStatKey(row.stat)}</td>
+                              <td className="px-4 py-2 font-medium">
+                                {formatStatKey(row.stat)}
+                              </td>
                               <td className="px-4 py-2">+{row.current}</td>
-                              <td className="px-4 py-2 text-muted-foreground">+{row.owned}</td>
+                              <td className="px-4 py-2 text-muted-foreground">
+                                +{row.owned}
+                              </td>
                               <td
                                 className={`px-4 py-2 font-semibold ${
                                   row.delta > 0
                                     ? "text-emerald-600"
                                     : row.delta < 0
-                                    ? "text-destructive"
-                                    : "text-muted-foreground"
+                                      ? "text-destructive"
+                                      : "text-muted-foreground"
                                 }`}
                               >
                                 {row.delta > 0 ? "+" : ""}
@@ -255,19 +304,30 @@ export const GearComparisonDrawer = ({
                   </div>
                   <div className="grid gap-4 text-sm md:grid-cols-2">
                     <div className="rounded-md border bg-muted/30 p-3">
-                      <div className="text-xs uppercase text-muted-foreground">Budget check</div>
+                      <div className="text-xs text-muted-foreground">
+                        Budget check
+                      </div>
                       <p className="mt-1 font-semibold">
-                        Remaining after purchase: {budgetDelta !== null ? `$${budgetDelta.toLocaleString()}` : "—"}
+                        Remaining after purchase:{" "}
+                        {budgetDelta !== null
+                          ? `$${budgetDelta.toLocaleString()}`
+                          : "—"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Current balance ${cashOnHand.toLocaleString()} minus listed price ${item.price.toLocaleString()}.
+                        Current balance ${cashOnHand.toLocaleString()} minus
+                        listed price ${item.price.toLocaleString()}.
                       </p>
                     </div>
                     <div className="rounded-md border bg-muted/30 p-3">
-                      <div className="text-xs uppercase text-muted-foreground">Category depth</div>
-                      <p className="mt-1 font-semibold">{ownedInCategory.length} owned in {item.category}</p>
+                      <div className="text-xs text-muted-foreground">
+                        Category depth
+                      </div>
+                      <p className="mt-1 font-semibold">
+                        {ownedInCategory.length} owned in {item.category}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        Helps determine loadout overlap and whether this fills a gap in your rig.
+                        Helps determine loadout overlap and whether this fills a
+                        gap in your rig.
                       </p>
                     </div>
                   </div>
@@ -278,17 +338,21 @@ export const GearComparisonDrawer = ({
                       <p className="font-semibold">Ownership overlap</p>
                       {duplicateCount > 0 ? (
                         <p className="text-muted-foreground">
-                          You already own {duplicateCount} {duplicateCount === 1 ? "copy" : "copies"} of this exact item.
-                          Consider upgrading or selling extras before buying again.
+                          You already own {duplicateCount}{" "}
+                          {duplicateCount === 1 ? "copy" : "copies"} of this
+                          exact item. Consider upgrading or selling extras
+                          before buying again.
                         </p>
                       ) : ownedInCategory.length > 0 ? (
                         <p className="text-muted-foreground">
-                          You have {ownedInCategory.length} other pieces in this category. Compare stat deltas above to avoid
-                          redundant purchases.
+                          You have {ownedInCategory.length} other pieces in this
+                          category. Compare stat deltas above to avoid redundant
+                          purchases.
                         </p>
                       ) : (
                         <p className="text-muted-foreground">
-                          No overlap detected. Picking this up expands your toolkit and opens new setlist synergies.
+                          No overlap detected. Picking this up expands your
+                          toolkit and opens new setlist synergies.
                         </p>
                       )}
                     </div>
@@ -302,9 +366,13 @@ export const GearComparisonDrawer = ({
                       Best owned reference
                     </div>
                     <div className="flex flex-col gap-1 text-sm">
-                      <p className="font-semibold">{bestOwned.equipment?.name ?? "Owned gear"}</p>
+                      <p className="font-semibold">
+                        {bestOwned.equipment?.name ?? "Owned gear"}
+                      </p>
                       <p className="text-muted-foreground">
-                        Total boost score {sumBoosts(bestOwned.equipment?.stat_boosts)} with condition {bestOwned.condition ?? 100}%.
+                        Total boost score{" "}
+                        {sumBoosts(bestOwned.equipment?.stat_boosts)} with
+                        condition {bestOwned.condition ?? 100}%.
                       </p>
                     </div>
                   </section>
@@ -312,13 +380,16 @@ export const GearComparisonDrawer = ({
               </Fragment>
             ) : (
               <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
-                Choose a gear card from the catalogue to preview stat swings and wallet impact here.
+                Choose a gear card from the catalogue to preview stat swings and
+                wallet impact here.
               </div>
             )}
           </div>
         </ScrollArea>
         <DrawerFooter className="border-t bg-background/95">
-          <DrawerClose className="w-full rounded-md border bg-muted/50 px-4 py-2 text-sm font-medium">Close</DrawerClose>
+          <DrawerClose className="w-full rounded-md border bg-muted/50 px-4 py-2 text-sm font-medium">
+            Close
+          </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

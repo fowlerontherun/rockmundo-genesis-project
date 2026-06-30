@@ -1,9 +1,19 @@
 import { useState, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Gift, Zap } from "lucide-react";
-import type { NightclubQuest, DialogueNode, QuestProgress } from "@/hooks/useNightclubQuests";
+import type {
+  NightclubQuest,
+  DialogueNode,
+  QuestProgress,
+} from "@/hooks/useNightclubQuests";
 
 interface NPCDialoguePanelProps {
   open: boolean;
@@ -37,7 +47,9 @@ export const NPCDialoguePanel = ({
 
   const currentNode = useMemo(() => {
     if (!progress || progress.status !== "active") return null;
-    const state = progress.dialogue_state as { current_node_id?: string } | null;
+    const state = progress.dialogue_state as {
+      current_node_id?: string;
+    } | null;
     const nodeId = state?.current_node_id;
     if (!nodeId) return dialogueNodes[0] ?? null;
     return dialogueNodes.find((n) => n.id === nodeId) ?? null;
@@ -75,7 +87,11 @@ export const NPCDialoguePanel = ({
               <Zap className="h-3 w-3" /> {quest.energy_cost} energy
             </Badge>
             {rewardLabels.map((label) => (
-              <Badge key={label} variant="secondary" className="flex items-center gap-1">
+              <Badge
+                key={label}
+                variant="secondary"
+                className="flex items-center gap-1"
+              >
                 <Gift className="h-3 w-3" /> {label}
               </Badge>
             ))}
@@ -98,7 +114,7 @@ export const NPCDialoguePanel = ({
           {progress?.status === "active" && currentNode && (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-                <div className="text-xs font-semibold text-primary uppercase tracking-wide">
+                <div className="text-xs font-semibold text-primary tracking-wide">
                   {currentNode.speaker}
                 </div>
                 <p className="text-sm">{currentNode.text}</p>
@@ -140,14 +156,17 @@ export const NPCDialoguePanel = ({
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-center">
                 <p className="text-sm font-semibold">Quest Complete!</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Rewards: {rewardLabels.join(", ") || "None"}
+                  Rewards: {rewardLabels.join(",") || "None"}
                 </p>
               </div>
               <Button
                 className="w-full"
                 disabled={busy}
                 onClick={() =>
-                  onClaimRewards(progress!.id, quest.rewards as Record<string, any>)
+                  onClaimRewards(
+                    progress!.id,
+                    quest.rewards as Record<string, any>,
+                  )
                 }
               >
                 {isClaiming ? "Claiming..." : "Claim Rewards"}

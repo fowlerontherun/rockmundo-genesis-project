@@ -24,7 +24,10 @@ const statusVariants: Record<PressRelease["status"], string> = {
   published: "border border-success/30 bg-success/10",
 };
 
-export function PressReleaseList({ releases, isLoading }: PressReleaseListProps) {
+export function PressReleaseList({
+  releases,
+  isLoading,
+}: PressReleaseListProps) {
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -73,9 +76,13 @@ export function PressReleaseList({ releases, isLoading }: PressReleaseListProps)
                       <Badge variant="secondary" className="capitalize">
                         {release.channel}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">{release.status}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {release.status}
+                      </span>
                     </div>
-                    <p className="text-lg font-semibold leading-tight">{release.title}</p>
+                    <p className="text-lg font-semibold leading-tight">
+                      {release.title}
+                    </p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>{new Date(release.date).toLocaleDateString()}</span>
@@ -83,16 +90,27 @@ export function PressReleaseList({ releases, isLoading }: PressReleaseListProps)
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-xs uppercase text-muted-foreground">Estimated reach</p>
-                      <p className="text-xl font-bold">{release.reach.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Estimated reach
+                      </p>
+                      <p className="text-xl font-bold">
+                        {release.reach.toLocaleString()}
+                      </p>
                     </div>
-                    <Badge className={cn("capitalize border", sentimentColors[release.sentiment])}>
+                    <Badge
+                      className={cn(
+                        "capitalize border",
+                        sentimentColors[release.sentiment],
+                      )}
+                    >
                       {release.sentiment}
                     </Badge>
                   </div>
                 </div>
                 {release.notes ? (
-                  <p className="mt-2 text-sm text-muted-foreground">{release.notes}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {release.notes}
+                  </p>
                 ) : null}
               </div>
             ))}

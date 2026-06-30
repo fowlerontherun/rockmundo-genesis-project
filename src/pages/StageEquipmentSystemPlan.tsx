@@ -1,31 +1,49 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ClipboardList } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const architectureLayers = [
   {
     layer: "Backend (FastAPI)",
-    description: "RESTful API managing equipment CRUD, player inventory, wear updates, and show-performance modifiers.",
+    description:
+      "RESTful API managing equipment CRUD, player inventory, wear updates, and show-performance modifiers.",
   },
   {
     layer: "Database (SQLite -> Postgres for prod)",
-    description: "Tables for equipment types, owned items, maintenance logs, vehicles, and shops.",
+    description:
+      "Tables for equipment types, owned items, maintenance logs, vehicles, and shops.",
   },
   {
     layer: "Frontend (React/Vite + Tailwind)",
-    description: "Player UI for viewing/buying/upgrading equipment and admin UI for managing types.",
+    description:
+      "Player UI for viewing/buying/upgrading equipment and admin UI for managing types.",
   },
   {
     layer: "Scheduler Jobs (XP / World Pulse system)",
-    description: "Daily wear, maintenance, repair, and sale updates triggered via cron or async tasks.",
+    description:
+      "Daily wear, maintenance, repair, and sale updates triggered via cron or async tasks.",
   },
   {
     layer: "Microservices Integration",
-    description: "Gig system calls equipment service for show quality modifiers; WorldPulse logs sales.",
+    description:
+      "Gig system calls equipment service for show quality modifiers; WorldPulse logs sales.",
   },
 ];
 
@@ -35,19 +53,55 @@ const databaseTables = [
     description: "Stores all possible equipment in the game (admin-managed).",
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
-      { column: "name", type: "TEXT", description: 'e.g. "Loudspeaker 2000W"' },
-      { column: "category", type: "TEXT", description: '"Sound", "Lighting", "Visuals", "Effects", "Decor"' },
-      { column: "base_power", type: "INTEGER", description: "Base power output (e.g. 2000)" },
-      { column: "base_condition", type: "INTEGER", description: "Max condition value, defaults to 100" },
-      { column: "purchase_cost", type: "INTEGER", description: "Cost in game currency" },
-      { column: "maintenance_cost", type: "INTEGER", description: "Cost per maintenance action" },
-      { column: "size_units", type: "INTEGER", description: "Used to calculate transport capacity" },
+      { column: "name", type: "TEXT", description: 'e.g."Loudspeaker 2000W"' },
+      {
+        column: "category",
+        type: "TEXT",
+        description: '"Sound","Lighting","Visuals","Effects","Decor"',
+      },
+      {
+        column: "base_power",
+        type: "INTEGER",
+        description: "Base power output (e.g. 2000)",
+      },
+      {
+        column: "base_condition",
+        type: "INTEGER",
+        description: "Max condition value, defaults to 100",
+      },
+      {
+        column: "purchase_cost",
+        type: "INTEGER",
+        description: "Cost in game currency",
+      },
+      {
+        column: "maintenance_cost",
+        type: "INTEGER",
+        description: "Cost per maintenance action",
+      },
+      {
+        column: "size_units",
+        type: "INTEGER",
+        description: "Used to calculate transport capacity",
+      },
       { column: "image_url", type: "TEXT", description: "CDN image asset" },
       { column: "description", type: "TEXT", description: "Short info text" },
-      { column: "required_vehicle_type", type: "TEXT", description: 'Optional e.g. "Tour Bus"' },
-      { column: "required_band_level", type: "INTEGER", description: "Optional progression gate" },
-      { column: "rarity", type: "TEXT", description: 'e.g. "Common", "Epic"' },
-      { column: "created_at / updated_at", type: "DATETIME", description: "Record metadata" },
+      {
+        column: "required_vehicle_type",
+        type: "TEXT",
+        description: 'Optional e.g."Tour Bus"',
+      },
+      {
+        column: "required_band_level",
+        type: "INTEGER",
+        description: "Optional progression gate",
+      },
+      { column: "rarity", type: "TEXT", description: 'e.g."Common","Epic"' },
+      {
+        column: "created_at / updated_at",
+        type: "DATETIME",
+        description: "Record metadata",
+      },
     ],
   },
   {
@@ -55,11 +109,31 @@ const databaseTables = [
     description: "Optional upgraded versions of base types.",
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
-      { column: "equipment_type_id", type: "INTEGER", description: "FK -> equipment_types" },
-      { column: "variant_name", type: "TEXT", description: 'e.g. "Deluxe 5000W"' },
-      { column: "modifier_power", type: "INTEGER", description: "+ power bonus (e.g. +3000)" },
-      { column: "modifier_cost", type: "INTEGER", description: "Additional purchase cost" },
-      { column: "modifier_maintenance_cost", type: "INTEGER", description: "Additional maintenance cost" },
+      {
+        column: "equipment_type_id",
+        type: "INTEGER",
+        description: "FK -> equipment_types",
+      },
+      {
+        column: "variant_name",
+        type: "TEXT",
+        description: 'e.g."Deluxe 5000W"',
+      },
+      {
+        column: "modifier_power",
+        type: "INTEGER",
+        description: "+ power bonus (e.g. +3000)",
+      },
+      {
+        column: "modifier_cost",
+        type: "INTEGER",
+        description: "Additional purchase cost",
+      },
+      {
+        column: "modifier_maintenance_cost",
+        type: "INTEGER",
+        description: "Additional maintenance cost",
+      },
       { column: "created_at", type: "DATETIME", description: "Timestamp" },
     ],
   },
@@ -69,15 +143,47 @@ const databaseTables = [
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
       { column: "band_id", type: "INTEGER", description: "FK -> bands" },
-      { column: "equipment_type_id", type: "INTEGER", description: "FK -> equipment_types" },
-      { column: "variant_id", type: "INTEGER", description: "FK -> equipment_variants (nullable)" },
-      { column: "condition", type: "INTEGER", description: "0-100 condition score" },
-      { column: "power_output", type: "INTEGER", description: "Calculated (base + variant + bonuses)" },
+      {
+        column: "equipment_type_id",
+        type: "INTEGER",
+        description: "FK -> equipment_types",
+      },
+      {
+        column: "variant_id",
+        type: "INTEGER",
+        description: "FK -> equipment_variants (nullable)",
+      },
+      {
+        column: "condition",
+        type: "INTEGER",
+        description: "0-100 condition score",
+      },
+      {
+        column: "power_output",
+        type: "INTEGER",
+        description: "Calculated (base + variant + bonuses)",
+      },
       { column: "city_id", type: "INTEGER", description: "FK -> cities" },
-      { column: "in_vehicle_id", type: "INTEGER", description: "FK -> vehicles (nullable)" },
-      { column: "is_in_use", type: "BOOLEAN", description: "Whether currently active for shows" },
-      { column: "last_used_at", type: "DATETIME", description: "For wear updates" },
-      { column: "purchased_at", type: "DATETIME", description: "For age tracking" },
+      {
+        column: "in_vehicle_id",
+        type: "INTEGER",
+        description: "FK -> vehicles (nullable)",
+      },
+      {
+        column: "is_in_use",
+        type: "BOOLEAN",
+        description: "Whether currently active for shows",
+      },
+      {
+        column: "last_used_at",
+        type: "DATETIME",
+        description: "For wear updates",
+      },
+      {
+        column: "purchased_at",
+        type: "DATETIME",
+        description: "For age tracking",
+      },
     ],
   },
   {
@@ -85,11 +191,23 @@ const databaseTables = [
     description: "Tracks all repairs or breakdowns.",
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
-      { column: "equipment_id", type: "INTEGER", description: "FK -> player_equipment" },
-      { column: "action", type: "TEXT", description: '"repair", "maintenance", "breakdown"' },
+      {
+        column: "equipment_id",
+        type: "INTEGER",
+        description: "FK -> player_equipment",
+      },
+      {
+        column: "action",
+        type: "TEXT",
+        description: '"repair","maintenance","breakdown"',
+      },
       { column: "cost", type: "INTEGER", description: "Currency spent" },
       { column: "performed_at", type: "DATETIME", description: "Timestamp" },
-      { column: "performed_by", type: "INTEGER", description: "FK -> player/admin" },
+      {
+        column: "performed_by",
+        type: "INTEGER",
+        description: "FK -> player/admin",
+      },
     ],
   },
   {
@@ -98,10 +216,26 @@ const databaseTables = [
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
       { column: "band_id", type: "INTEGER", description: "FK -> bands" },
-      { column: "type", type: "TEXT", description: 'e.g. "Van", "Tour Bus", "Truck"' },
-      { column: "capacity", type: "INTEGER", description: "Total size units capacity" },
-      { column: "location_city_id", type: "INTEGER", description: "FK -> cities" },
-      { column: "condition", type: "INTEGER", description: "Optional vehicle condition" },
+      {
+        column: "type",
+        type: "TEXT",
+        description: 'e.g."Van","Tour Bus","Truck"',
+      },
+      {
+        column: "capacity",
+        type: "INTEGER",
+        description: "Total size units capacity",
+      },
+      {
+        column: "location_city_id",
+        type: "INTEGER",
+        description: "FK -> cities",
+      },
+      {
+        column: "condition",
+        type: "INTEGER",
+        description: "Optional vehicle condition",
+      },
       { column: "created_at", type: "DATETIME", description: "Timestamp" },
     ],
   },
@@ -111,27 +245,92 @@ const databaseTables = [
     columns: [
       { column: "id", type: "INTEGER", description: "Primary key" },
       { column: "city_id", type: "INTEGER", description: "FK -> cities" },
-      { column: "equipment_type_id", type: "INTEGER", description: "FK -> equipment_types" },
-      { column: "price_modifier", type: "FLOAT", description: "e.g. 1.1 for +10% markup" },
-      { column: "available", type: "BOOLEAN", description: "Stock availability" },
+      {
+        column: "equipment_type_id",
+        type: "INTEGER",
+        description: "FK -> equipment_types",
+      },
+      {
+        column: "price_modifier",
+        type: "FLOAT",
+        description: "e.g. 1.1 for +10% markup",
+      },
+      {
+        column: "available",
+        type: "BOOLEAN",
+        description: "Stock availability",
+      },
     ],
   },
 ];
 
 const backendEndpoints = [
-  { path: "/equipment/types", method: "GET", description: "List all equipment types (filtered by category or shop)." },
-  { path: "/equipment/types/{id}", method: "GET", description: "Get detail of a specific equipment type." },
-  { path: "/equipment/purchase", method: "POST", description: "Buy an equipment item (requires band, type, city, transport check)." },
-  { path: "/equipment/my", method: "GET", description: "List player's owned equipment." },
-  { path: "/equipment/repair/{id}", method: "POST", description: "Repair or maintain equipment." },
-  { path: "/equipment/load/{id}", method: "POST", description: "Load item into vehicle." },
-  { path: "/equipment/unload/{id}", method: "POST", description: "Unload item." },
-  { path: "/equipment/use/{id}", method: "POST", description: "Mark item as active." },
-  { path: "/equipment/wear", method: "POST", description: "Apply wear after show (called by gig system)." },
-  { path: "/admin/equipment", method: "POST", description: "Add new equipment type." },
-  { path: "/admin/equipment/{id}", method: "PUT", description: "Update existing equipment type." },
-  { path: "/admin/equipment/variant", method: "POST", description: "Add variant." },
-  { path: "/admin/equipment/shoplink", method: "POST", description: "Add item to shop/city." },
+  {
+    path: "/equipment/types",
+    method: "GET",
+    description: "List all equipment types (filtered by category or shop).",
+  },
+  {
+    path: "/equipment/types/{id}",
+    method: "GET",
+    description: "Get detail of a specific equipment type.",
+  },
+  {
+    path: "/equipment/purchase",
+    method: "POST",
+    description:
+      "Buy an equipment item (requires band, type, city, transport check).",
+  },
+  {
+    path: "/equipment/my",
+    method: "GET",
+    description: "List player's owned equipment.",
+  },
+  {
+    path: "/equipment/repair/{id}",
+    method: "POST",
+    description: "Repair or maintain equipment.",
+  },
+  {
+    path: "/equipment/load/{id}",
+    method: "POST",
+    description: "Load item into vehicle.",
+  },
+  {
+    path: "/equipment/unload/{id}",
+    method: "POST",
+    description: "Unload item.",
+  },
+  {
+    path: "/equipment/use/{id}",
+    method: "POST",
+    description: "Mark item as active.",
+  },
+  {
+    path: "/equipment/wear",
+    method: "POST",
+    description: "Apply wear after show (called by gig system).",
+  },
+  {
+    path: "/admin/equipment",
+    method: "POST",
+    description: "Add new equipment type.",
+  },
+  {
+    path: "/admin/equipment/{id}",
+    method: "PUT",
+    description: "Update existing equipment type.",
+  },
+  {
+    path: "/admin/equipment/variant",
+    method: "POST",
+    description: "Add variant.",
+  },
+  {
+    path: "/admin/equipment/shoplink",
+    method: "POST",
+    description: "Add item to shop/city.",
+  },
 ];
 
 const playerPages = [
@@ -150,17 +349,20 @@ const playerPages = [
   {
     name: "Maintenance/Repair Modal",
     url: "In-context modal",
-    summary: "Shows repair costs, supports partial repairs, and animates progress feedback.",
+    summary:
+      "Shows repair costs, supports partial repairs, and animates progress feedback.",
   },
   {
     name: "Vehicle Loadout",
     url: "/band/:bandId/vehicles",
-    summary: "Visual load planner with drag-and-drop into transport slots and capacity usage feedback.",
+    summary:
+      "Visual load planner with drag-and-drop into transport slots and capacity usage feedback.",
   },
   {
     name: "Condition Alerts",
     url: "Global notifications",
-    summary: "Alerts trigger when any equipment drops below 20% condition to prompt maintenance.",
+    summary:
+      "Alerts trigger when any equipment drops below 20% condition to prompt maintenance.",
   },
 ];
 
@@ -168,7 +370,8 @@ const adminPages = [
   {
     name: "Equipment Type Manager",
     url: "/admin/equipment/types",
-    summary: "CRUD for equipment types with search and modal-driven creation flows.",
+    summary:
+      "CRUD for equipment types with search and modal-driven creation flows.",
   },
   {
     name: "Variant Manager",
@@ -178,12 +381,14 @@ const adminPages = [
   {
     name: "Shop Manager",
     url: "/admin/equipment/shops",
-    summary: "Assign city availability and price modifiers for equipment stock.",
+    summary:
+      "Assign city availability and price modifiers for equipment stock.",
   },
   {
     name: "Balance Dashboard",
     url: "/admin/equipment/analytics",
-    summary: "Charts covering usage rates, condition averages, revenue, and total power per band via WorldPulse/XP feeds.",
+    summary:
+      "Charts covering usage rates, condition averages, revenue, and total power per band via WorldPulse/XP feeds.",
   },
 ];
 
@@ -221,7 +426,8 @@ const backgroundJobs = [
   {
     job: "repair_job",
     frequency: "Daily",
-    description: "Applies pending maintenance tasks or clears breakdown flags when repaired.",
+    description:
+      "Applies pending maintenance tasks or clears breakdown flags when repaired.",
   },
   {
     job: "equipment_sale_refresh",
@@ -231,7 +437,8 @@ const backgroundJobs = [
   {
     job: "analytics_update",
     frequency: "Daily",
-    description: "Syncs equipment stats to WorldPulse for leaderboards and analytics dashboards.",
+    description:
+      "Syncs equipment stats to WorldPulse for leaderboards and analytics dashboards.",
   },
 ];
 
@@ -243,21 +450,36 @@ const StageEquipmentSystemPlan = () => {
       icon={ClipboardList}
       backTo="/hub/band-live"
       headerActions={
-        <Badge variant="outline" className="text-[10px] uppercase tracking-widest">Deployment Plan</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          Deployment Plan
+        </Badge>
       }
     >
-
       <Card>
         <CardHeader>
           <CardTitle>System Purpose</CardTitle>
-          <CardDescription>Guiding goals for the end-to-end equipment lifecycle.</CardDescription>
+          <CardDescription>
+            Guiding goals for the end-to-end equipment lifecycle.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="list-disc space-y-2 pl-6 text-left">
-            <li>Manage equipment ownership, purchasing, upgrading, maintenance, and wear/tear for bands and artists.</li>
-            <li>Integrate equipment status with vehicles and city locations to inform logistics gameplay.</li>
-            <li>Influence gig/show performance, fame, and economic balance through equipment stats.</li>
-            <li>Provide admin tooling to add new equipment, manage balancing, and track the in-game economy.</li>
+            <li>
+              Manage equipment ownership, purchasing, upgrading, maintenance,
+              and wear/tear for bands and artists.
+            </li>
+            <li>
+              Integrate equipment status with vehicles and city locations to
+              inform logistics gameplay.
+            </li>
+            <li>
+              Influence gig/show performance, fame, and economic balance through
+              equipment stats.
+            </li>
+            <li>
+              Provide admin tooling to add new equipment, manage balancing, and
+              track the in-game economy.
+            </li>
           </ul>
         </CardContent>
       </Card>
@@ -265,7 +487,9 @@ const StageEquipmentSystemPlan = () => {
       <Card>
         <CardHeader>
           <CardTitle>Architecture Overview</CardTitle>
-          <CardDescription>Major components and responsibilities.</CardDescription>
+          <CardDescription>
+            Major components and responsibilities.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -290,13 +514,17 @@ const StageEquipmentSystemPlan = () => {
       <section className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold">Database Schema</h2>
-          <p className="text-muted-foreground">Core tables supporting inventory, logistics, and commerce.</p>
+          <p className="text-muted-foreground">
+            Core tables supporting inventory, logistics, and commerce.
+          </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           {databaseTables.map((table) => (
             <Card key={table.name}>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold">{table.name}</CardTitle>
+                <CardTitle className="text-xl font-semibold">
+                  {table.name}
+                </CardTitle>
                 <CardDescription>{table.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -311,7 +539,9 @@ const StageEquipmentSystemPlan = () => {
                   <TableBody>
                     {table.columns.map((column) => (
                       <TableRow key={column.column}>
-                        <TableCell className="font-medium">{column.column}</TableCell>
+                        <TableCell className="font-medium">
+                          {column.column}
+                        </TableCell>
                         <TableCell>{column.type}</TableCell>
                         <TableCell>{column.description}</TableCell>
                       </TableRow>
@@ -327,12 +557,16 @@ const StageEquipmentSystemPlan = () => {
       <section className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold">Backend Functionality</h2>
-          <p className="text-muted-foreground">RESTful FastAPI surface for player and admin operations.</p>
+          <p className="text-muted-foreground">
+            RESTful FastAPI surface for player and admin operations.
+          </p>
         </div>
         <Card>
           <CardHeader>
             <CardTitle>API Endpoints</CardTitle>
-            <CardDescription>Primary routes consumed by gameplay, admin tools, and schedulers.</CardDescription>
+            <CardDescription>
+              Primary routes consumed by gameplay, admin tools, and schedulers.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -346,8 +580,12 @@ const StageEquipmentSystemPlan = () => {
               <TableBody>
                 {backendEndpoints.map((endpoint) => (
                   <TableRow key={`${endpoint.method}-${endpoint.path}`}>
-                    <TableCell className="font-medium">{endpoint.method}</TableCell>
-                    <TableCell className="font-mono text-sm">{endpoint.path}</TableCell>
+                    <TableCell className="font-medium">
+                      {endpoint.method}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {endpoint.path}
+                    </TableCell>
                     <TableCell>{endpoint.description}</TableCell>
                   </TableRow>
                 ))}
@@ -360,21 +598,30 @@ const StageEquipmentSystemPlan = () => {
       <section className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold">Frontend Implementation</h2>
-          <p className="text-muted-foreground">Experience touchpoints for players and administrators.</p>
+          <p className="text-muted-foreground">
+            Experience touchpoints for players and administrators.
+          </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>Player-Facing Experiences</CardTitle>
-              <CardDescription>UI surfaces guiding bands through acquisition, upkeep, and logistics.</CardDescription>
+              <CardDescription>
+                UI surfaces guiding bands through acquisition, upkeep, and
+                logistics.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {playerPages.map((page) => (
                 <div key={page.name} className="rounded-md border p-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">{page.name}</h3>
-                    <p className="text-sm font-mono text-muted-foreground">{page.url}</p>
-                    <p className="text-sm text-muted-foreground">{page.summary}</p>
+                    <p className="text-sm font-mono text-muted-foreground">
+                      {page.url}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {page.summary}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -383,15 +630,21 @@ const StageEquipmentSystemPlan = () => {
           <Card>
             <CardHeader>
               <CardTitle>Admin Consoles</CardTitle>
-              <CardDescription>Tools for balancing content, pricing, and analytics oversight.</CardDescription>
+              <CardDescription>
+                Tools for balancing content, pricing, and analytics oversight.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {adminPages.map((page) => (
                 <div key={page.name} className="rounded-md border p-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">{page.name}</h3>
-                    <p className="text-sm font-mono text-muted-foreground">{page.url}</p>
-                    <p className="text-sm text-muted-foreground">{page.summary}</p>
+                    <p className="text-sm font-mono text-muted-foreground">
+                      {page.url}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {page.summary}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -403,7 +656,9 @@ const StageEquipmentSystemPlan = () => {
       <section className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold">Gameplay Logic</h2>
-          <p className="text-muted-foreground">Formulas connecting equipment stats to show outcomes.</p>
+          <p className="text-muted-foreground">
+            Formulas connecting equipment stats to show outcomes.
+          </p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {gameplayHighlights.map((item) => (
@@ -425,8 +680,12 @@ const StageEquipmentSystemPlan = () => {
 
       <section className="space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold">Background Jobs &amp; Schedulers</h2>
-          <p className="text-muted-foreground">Automations that keep the equipment ecosystem dynamic.</p>
+          <h2 className="text-2xl font-semibold">
+            Background Jobs &amp; Schedulers
+          </h2>
+          <p className="text-muted-foreground">
+            Automations that keep the equipment ecosystem dynamic.
+          </p>
         </div>
         <Card>
           <CardContent className="space-y-4">
@@ -455,7 +714,9 @@ const StageEquipmentSystemPlan = () => {
       <Separator />
 
       <p className="text-center text-sm text-muted-foreground">
-        This roadmap anchors the November 2025 launch scope for the Rockmundo Stage Equipment System and guides iteration across backend, frontend, and live operations.
+        This roadmap anchors the November 2025 launch scope for the Rockmundo
+        Stage Equipment System and guides iteration across backend, frontend,
+        and live operations.
       </p>
     </FMPageScaffold>
   );

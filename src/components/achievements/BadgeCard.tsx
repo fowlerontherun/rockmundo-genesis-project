@@ -3,7 +3,13 @@ import type { LeaderboardBadge } from "@/lib/api/leaderboards";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 const RARITY_STYLES: Record<string, string> = {
@@ -12,15 +18,16 @@ const RARITY_STYLES: Record<string, string> = {
   rare: "bg-primary/10 text-primary",
   epic: "bg-purple-500/10 text-purple-500",
   legendary: "bg-amber-500/10 text-amber-500",
-  mythic: "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white",
+  mythic:
+    "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white",
 };
 
 const getFallbackInitials = (name: string | null, username: string | null) => {
   const source = name || username || "";
   if (!source) return "?";
   return source
-    .split(" ")
-    .map(part => part[0])
+    .split("")
+    .map((part) => part[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
@@ -31,7 +38,10 @@ export interface BadgeCardProps {
   showSeasonLabel?: boolean;
 }
 
-export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) => {
+export const BadgeCard = ({
+  badge,
+  showSeasonLabel = false,
+}: BadgeCardProps) => {
   const awardedCount = badge.awards.length;
   const topRecipients = badge.awards.slice(0, 3);
   const rarityClass = RARITY_STYLES[badge.rarity] ?? RARITY_STYLES.rare;
@@ -49,7 +59,7 @@ export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) =>
               {badge.rarity}
             </Badge>
             {badge.tier && (
-              <Badge variant="secondary" className="uppercase tracking-wide">
+              <Badge variant="secondary" className="tracking-wide">
                 {badge.tier}
               </Badge>
             )}
@@ -59,12 +69,16 @@ export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) =>
             {showSeasonLabel && badge.season_id !== null && (
               <Badge variant="secondary">Season</Badge>
             )}
-            <span>{awardedCount} award{awardedCount === 1 ? "" : "s"}</span>
+            <span>
+              {awardedCount} award{awardedCount === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {badge.description && <CardDescription>{badge.description}</CardDescription>}
+        {badge.description && (
+          <CardDescription>{badge.description}</CardDescription>
+        )}
 
         {Object.keys(badge.criteria ?? {}).length > 0 && (
           <div className="space-y-1">
@@ -72,7 +86,10 @@ export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) =>
             <ul className="space-y-1 text-sm text-muted-foreground">
               {Object.entries(badge.criteria ?? {}).map(([key, value]) => (
                 <li key={key}>
-                  <span className="font-medium capitalize">{key.replace(/_/g, " ")}:</span> {String(value)}
+                  <span className="font-medium capitalize">
+                    {key.replace(/_/g, "")}:
+                  </span>{" "}
+                  {String(value)}
                 </li>
               ))}
             </ul>
@@ -83,21 +100,41 @@ export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) =>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Top recipients</p>
-              <span className="text-xs text-muted-foreground">Most recent awards</span>
+              <span className="text-xs text-muted-foreground">
+                Most recent awards
+              </span>
             </div>
             <div className="space-y-2">
-              {topRecipients.map(award => (
-                <div key={award.id} className="flex items-center gap-3 rounded-md border border-border/60 p-2">
+              {topRecipients.map((award) => (
+                <div
+                  key={award.id}
+                  className="flex items-center gap-3 rounded-md border border-border/60 p-2"
+                >
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={award.profile?.avatarUrl ?? undefined} alt={award.profile?.displayName ?? award.profile?.username ?? "Player"} />
-                    <AvatarFallback>{getFallbackInitials(award.profile?.displayName ?? null, award.profile?.username ?? null)}</AvatarFallback>
+                    <AvatarImage
+                      src={award.profile?.avatarUrl ?? undefined}
+                      alt={
+                        award.profile?.displayName ??
+                        award.profile?.username ??
+                        "Player"
+                      }
+                    />
+                    <AvatarFallback>
+                      {getFallbackInitials(
+                        award.profile?.displayName ?? null,
+                        award.profile?.username ?? null,
+                      )}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <p className="text-sm font-medium leading-tight">
-                      {award.profile?.displayName || award.profile?.username || "Unknown competitor"}
+                      {award.profile?.displayName ||
+                        award.profile?.username ||
+                        "Unknown competitor"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Awarded {new Date(award.awarded_at).toLocaleDateString()} {award.rank ? `• Rank #${award.rank}` : ""}
+                      Awarded {new Date(award.awarded_at).toLocaleDateString()}{" "}
+                      {award.rank ? `• Rank #${award.rank}` : ""}
                     </p>
                   </div>
                 </div>
@@ -110,7 +147,8 @@ export const BadgeCard = ({ badge, showSeasonLabel = false }: BadgeCardProps) =>
 
         {awardedCount > topRecipients.length && (
           <p className="text-xs text-muted-foreground">
-            +{awardedCount - topRecipients.length} additional recipient{awardedCount - topRecipients.length === 1 ? "" : "s"}
+            +{awardedCount - topRecipients.length} additional recipient
+            {awardedCount - topRecipients.length === 1 ? "" : "s"}
           </p>
         )}
       </CardContent>

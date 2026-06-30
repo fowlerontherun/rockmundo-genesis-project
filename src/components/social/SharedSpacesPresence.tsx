@@ -8,12 +8,31 @@ import { cn } from "@/lib/utils";
 
 const SPACES = [
   { key: "jam-lobby", label: "Jam Lobby", icon: Music, path: "/jam-sessions" },
-  { key: "studio-lobby", label: "Studio", icon: Disc3, path: "/recording-studio" },
-  { key: "nightclub-floor", label: "Nightclubs", icon: PartyPopper, path: "/nightclubs" },
-  { key: "festival-backstage", label: "Festival Backstage", icon: Mic2, path: "/festivals" },
+  {
+    key: "studio-lobby",
+    label: "Studio",
+    icon: Disc3,
+    path: "/recording-studio",
+  },
+  {
+    key: "nightclub-floor",
+    label: "Nightclubs",
+    icon: PartyPopper,
+    path: "/nightclubs",
+  },
+  {
+    key: "festival-backstage",
+    label: "Festival Backstage",
+    icon: Mic2,
+    path: "/festivals",
+  },
 ] as const;
 
-export function SharedSpacesPresence({ profileId }: { profileId: string | null }) {
+export function SharedSpacesPresence({
+  profileId,
+}: {
+  profileId: string | null;
+}) {
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -43,10 +62,12 @@ export function SharedSpacesPresence({ profileId }: { profileId: string | null }
     <Card>
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <h3 className="text-xs font-semibold text-muted-foreground tracking-wide">
             Shared Spaces
           </h3>
-          <span className="text-[10px] text-muted-foreground">Live presence</span>
+          <span className="text-[10px] text-muted-foreground">
+            Live presence
+          </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {SPACES.map((s) => {

@@ -40,7 +40,9 @@ interface AdvisorChatMessage {
   timestamp: Date;
 }
 
-const getTrendBadgeClasses = (trend: "up" | "down" | "neutral" | undefined): string => {
+const getTrendBadgeClasses = (
+  trend: "up" | "down" | "neutral" | undefined,
+): string => {
   switch (trend) {
     case "up":
       return "bg-emerald-500/15 text-emerald-600 border-emerald-500/40";
@@ -109,7 +111,9 @@ const AdvisorPage = () => {
       setInsights(result);
 
       setMessages((previous) => {
-        const retainedMessages = previous.filter((message) => message.kind !== "insights");
+        const retainedMessages = previous.filter(
+          (message) => message.kind !== "insights",
+        );
         const advisoryCopy =
           result.suggestions.length > 0
             ? "Here's what I'm seeing in your numbers right now."
@@ -148,7 +152,7 @@ const AdvisorPage = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inputValue.trim() || isStreaming) return;
-    
+
     const userMessage: AdvisorChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -179,7 +183,7 @@ const AdvisorPage = () => {
         const last = prev[prev.length - 1];
         if (last?.role === "advisor") {
           return prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+            i === prev.length - 1 ? { ...m, content: assistantContent } : m,
           );
         }
         return [
@@ -203,7 +207,10 @@ const AdvisorPage = () => {
       }));
 
     await streamAdvisorChat({
-      messages: [...conversationHistory, { role: "user", content: userMessage.content }],
+      messages: [
+        ...conversationHistory,
+        { role: "user", content: userMessage.content },
+      ],
       insights,
       summary: insights?.summary,
       apiKey: session.data.session.access_token,
@@ -243,7 +250,9 @@ const AdvisorPage = () => {
         icon: Users,
         helper: summary?.updatedAt ? "Unique listeners" : "Growth pending",
       },
-    ], [summary]);
+    ],
+    [summary],
+  );
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-background via-background to-muted/30">
@@ -255,16 +264,21 @@ const AdvisorPage = () => {
                 <Bot className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold leading-tight sm:text-4xl">Advisor</h1>
+                <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
+                  Advisor
+                </h1>
                 <p className="text-sm text-muted-foreground">
-                  A tactical coach that turns your analytics into next best moves.
+                  A tactical coach that turns your analytics into next best
+                  moves.
                 </p>
               </div>
             </div>
             {summary?.updatedAt && (
               <div className="flex items-center gap-2 rounded-full border border-muted-foreground/20 bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span>Last sync: {new Date(summary.updatedAt).toLocaleString()}</span>
+                <span>
+                  Last sync: {new Date(summary.updatedAt).toLocaleString()}
+                </span>
               </div>
             )}
           </div>
@@ -273,18 +287,28 @@ const AdvisorPage = () => {
         <div className="grid gap-4 md:grid-cols-3">
           {statCards.map((stat) => {
             const Icon = stat.icon;
-            const formatter = stat.formatter ?? ((value: number) => value.toLocaleString());
+            const formatter =
+              stat.formatter ?? ((value: number) => value.toLocaleString());
             return (
-              <Card key={stat.label} className="border-muted-foreground/20 bg-background/70 backdrop-blur">
+              <Card
+                key={stat.label}
+                className="border-muted-foreground/20 bg-background/70 backdrop-blur"
+              >
                 <CardContent className="flex flex-col gap-3 p-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {stat.label}
+                    </span>
                     <span className="rounded-full bg-primary/10 p-2 text-primary">
                       <Icon className="h-4 w-4" />
                     </span>
                   </div>
-                  <div className="text-3xl font-semibold tracking-tight">{formatter(stat.value)}</div>
-                  <span className="text-xs text-muted-foreground">{stat.helper}</span>
+                  <div className="text-3xl font-semibold tracking-tight">
+                    {formatter(stat.value)}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {stat.helper}
+                  </span>
                 </CardContent>
               </Card>
             );
@@ -297,10 +321,20 @@ const AdvisorPage = () => {
               <div className="flex items-start gap-3">
                 <Sparkles className="mt-1 h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm font-medium text-primary">Momentum watch</p>
-                  <h2 className="text-xl font-semibold">{summary.topMomentumTrack.title}</h2>
+                  <p className="text-sm font-medium text-primary">
+                    Momentum watch
+                  </p>
+                  <h2 className="text-xl font-semibold">
+                    {summary.topMomentumTrack.title}
+                  </h2>
                   <p className="text-sm text-primary/80">
-                    Week-over-week lift of {Math.round((summary.topMomentumTrack.growthRate ?? 0) * 100)}% with {summary.topMomentumTrack.currentStreams.toLocaleString()} plays in the last 7 days.
+                    Week-over-week lift of{" "}
+                    {Math.round(
+                      (summary.topMomentumTrack.growthRate ?? 0) * 100,
+                    )}
+                    % with{" "}
+                    {summary.topMomentumTrack.currentStreams.toLocaleString()}{" "}
+                    plays in the last 7 days.
                   </p>
                 </div>
               </div>
@@ -320,14 +354,26 @@ const AdvisorPage = () => {
           <CardHeader className="border-b border-muted-foreground/10 pb-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="text-2xl font-semibold">Advisor chat</CardTitle>
+                <CardTitle className="text-2xl font-semibold">
+                  Advisor chat
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Ask questions, refresh analytics, and follow tailored playbooks.
+                  Ask questions, refresh analytics, and follow tailored
+                  playbooks.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={loadInsights} disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadInsights}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
                   Refresh insights
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
@@ -369,52 +415,78 @@ const AdvisorPage = () => {
                           <span>You</span>
                         )}
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed">{message.content}</p>
+                      <p className="mt-2 text-sm leading-relaxed">
+                        {message.content}
+                      </p>
                       <div className="mt-2 text-xs text-muted-foreground">
-                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
 
-                      {message.role === "advisor" && message.suggestions && message.suggestions.length > 0 && (
-                        <div className="mt-4 space-y-4">
-                          {message.suggestions.map((suggestion) => (
-                            <div
-                              key={suggestion.id}
-                              className="rounded-xl border border-muted-foreground/15 bg-muted/20 p-4"
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-base font-semibold">{suggestion.title}</h3>
-                                <Badge variant="outline" className="uppercase text-[10px] tracking-wide">
-                                  {suggestion.category}
-                                </Badge>
-                              </div>
-                              <p className="mt-2 text-sm text-muted-foreground">{suggestion.message}</p>
-                              {suggestion.metrics.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {suggestion.metrics.map((metric) => (
-                                    <Badge
-                                      key={`${suggestion.id}-${metric.label}`}
+                      {message.role === "advisor" &&
+                        message.suggestions &&
+                        message.suggestions.length > 0 && (
+                          <div className="mt-4 space-y-4">
+                            {message.suggestions.map((suggestion) => (
+                              <div
+                                key={suggestion.id}
+                                className="rounded-xl border border-muted-foreground/15 bg-muted/20 p-4"
+                              >
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-base font-semibold">
+                                    {suggestion.title}
+                                  </h3>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] tracking-wide"
+                                  >
+                                    {suggestion.category}
+                                  </Badge>
+                                </div>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                  {suggestion.message}
+                                </p>
+                                {suggestion.metrics.length > 0 && (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {suggestion.metrics.map((metric) => (
+                                      <Badge
+                                        key={`${suggestion.id}-${metric.label}`}
+                                        variant="outline"
+                                        className={cn(
+                                          "border",
+                                          getTrendBadgeClasses(metric.trend),
+                                        )}
+                                      >
+                                        <span className="font-medium">
+                                          {metric.value}
+                                        </span>
+                                        <span className="ml-2 text-xs tracking-wide text-muted-foreground/80">
+                                          {metric.label}
+                                        </span>
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  {suggestion.actions.map((action) => (
+                                    <Button
+                                      key={action.href}
                                       variant="outline"
-                                      className={cn("border", getTrendBadgeClasses(metric.trend))}
+                                      size="sm"
+                                      asChild
                                     >
-                                      <span className="font-medium">{metric.value}</span>
-                                      <span className="ml-2 text-xs uppercase tracking-wide text-muted-foreground/80">
-                                        {metric.label}
-                                      </span>
-                                    </Badge>
+                                      <Link to={action.href}>
+                                        {action.label}
+                                      </Link>
+                                    </Button>
                                   ))}
                                 </div>
-                              )}
-                              <div className="mt-4 flex flex-wrap gap-2">
-                                {suggestion.actions.map((action) => (
-                                  <Button key={action.href} variant="outline" size="sm" asChild>
-                                    <Link to={action.href}>{action.label}</Link>
-                                  </Button>
-                                ))}
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        )}
                     </div>
                   </div>
                 ))}
@@ -436,7 +508,10 @@ const AdvisorPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3 border-t border-muted-foreground/10 px-6 pb-6 pt-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-3 border-t border-muted-foreground/10 px-6 pb-6 pt-4"
+            >
               <Textarea
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
@@ -445,9 +520,14 @@ const AdvisorPage = () => {
               />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
-                  Pro tip: update your analytics, then hit refresh for fresh marching orders.
+                  Pro tip: update your analytics, then hit refresh for fresh
+                  marching orders.
                 </p>
-                <Button type="submit" size="sm" disabled={!inputValue.trim() || isStreaming}>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!inputValue.trim() || isStreaming}
+                >
                   {isStreaming ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -55,12 +55,13 @@ export function WeatherReport() {
 
   if (!weather) return null;
 
-  const icon = WEATHER_ICONS[weather.condition.toLowerCase()] || WEATHER_ICONS.clear;
+  const icon =
+    WEATHER_ICONS[weather.condition.toLowerCase()] || WEATHER_ICONS.clear;
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-serif uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="text-sm font-serif text-muted-foreground">
           Weather
         </CardTitle>
       </CardHeader>
@@ -68,9 +69,15 @@ export function WeatherReport() {
         <div className="flex items-center gap-3">
           {icon}
           <div>
-            <p className="font-semibold text-sm">{weather.city}, {weather.country}</p>
-            <p className="text-xs text-muted-foreground capitalize">{weather.condition}</p>
-            <p className="text-xs text-muted-foreground">{weather.tempMin}°C – {weather.tempMax}°C</p>
+            <p className="font-semibold text-sm">
+              {weather.city}, {weather.country}
+            </p>
+            <p className="text-xs text-muted-foreground capitalize">
+              {weather.condition}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {weather.tempMin}°C – {weather.tempMax}°C
+            </p>
           </div>
         </div>
       </CardContent>

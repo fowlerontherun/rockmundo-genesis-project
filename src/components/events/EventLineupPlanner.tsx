@@ -3,7 +3,13 @@ import { CalendarClock, Edit2, Music, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +29,10 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlannerProps) => {
+export const EventLineupPlanner = ({
+  lineup,
+  onLineupChange,
+}: EventLineupPlannerProps) => {
   const [form, setForm] = useState<Omit<LineupSlot, "id">>({
     artist: "",
     stage: "",
@@ -48,7 +57,9 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
   }, [lineup]);
 
   const genreDiversityScore = useMemo(() => {
-    const stages = new Set(lineup.map((slot) => slot.stage.trim().toLowerCase()).filter(Boolean));
+    const stages = new Set(
+      lineup.map((slot) => slot.stage.trim().toLowerCase()).filter(Boolean),
+    );
     return Math.min(100, stages.size * 20 + lineup.length * 5);
   }, [lineup]);
 
@@ -110,7 +121,9 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-2xl">Lineup Planner</CardTitle>
-            <CardDescription>Craft a balanced experience across stages and time slots.</CardDescription>
+            <CardDescription>
+              Craft a balanced experience across stages and time slots.
+            </CardDescription>
           </div>
           <Badge variant="secondary" className="text-sm">
             <Music className="mr-1 h-4 w-4" /> {lineup.length} acts scheduled
@@ -118,17 +131,26 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Performance time</p>
-            <p className="text-lg font-semibold">{Math.round(totalPerformanceMinutes)} minutes</p>
+            <p className="text-xs text-muted-foreground">Performance time</p>
+            <p className="text-lg font-semibold">
+              {Math.round(totalPerformanceMinutes)} minutes
+            </p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Stage coverage score</p>
+            <p className="text-xs text-muted-foreground">
+              Stage coverage score
+            </p>
             <p className="text-lg font-semibold">{genreDiversityScore}</p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Prime time slots</p>
+            <p className="text-xs text-muted-foreground">Prime time slots</p>
             <p className="text-lg font-semibold">
-              {lineup.filter((slot) => slot.startTime >= "18:00" && slot.startTime <= "22:00").length}
+              {
+                lineup.filter(
+                  (slot) =>
+                    slot.startTime >= "18:00" && slot.startTime <= "22:00",
+                ).length
+              }
             </p>
           </div>
         </div>
@@ -141,7 +163,9 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
               <Input
                 id="artist"
                 value={form.artist}
-                onChange={(event) => setForm((prev) => ({ ...prev, artist: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, artist: event.target.value }))
+                }
                 placeholder="Headliner, support act, or experiential moment"
               />
             </div>
@@ -150,7 +174,9 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
               <Input
                 id="stage"
                 value={form.stage}
-                onChange={(event) => setForm((prev) => ({ ...prev, stage: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, stage: event.target.value }))
+                }
                 placeholder="Main stage, VIP lounge, rooftop, etc."
               />
             </div>
@@ -161,7 +187,12 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
                   id="start-time"
                   type="time"
                   value={form.startTime}
-                  onChange={(event) => setForm((prev) => ({ ...prev, startTime: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      startTime: event.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -170,7 +201,12 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
                   id="end-time"
                   type="time"
                   value={form.endTime}
-                  onChange={(event) => setForm((prev) => ({ ...prev, endTime: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      endTime: event.target.value,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -179,14 +215,17 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
               <Textarea
                 id="notes"
                 value={form.notes}
-                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, notes: event.target.value }))
+                }
                 placeholder="Highlight special guests, transitions, or production cues."
                 rows={3}
               />
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={handleSubmit} className="flex-1">
-                <Plus className="mr-2 h-4 w-4" /> {editingId ? "Update slot" : "Add to lineup"}
+                <Plus className="mr-2 h-4 w-4" />{" "}
+                {editingId ? "Update slot" : "Add to lineup"}
               </Button>
               {editingId && (
                 <Button variant="ghost" onClick={resetForm}>
@@ -201,12 +240,16 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
                 <CalendarClock className="mb-3 h-10 w-10 text-muted-foreground" />
                 <p className="font-semibold">No segments scheduled yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Map out your performer flow to balance crowd energy and production resets.
+                  Map out your performer flow to balance crowd energy and
+                  production resets.
                 </p>
               </div>
             ) : (
               lineup.map((slot) => (
-                <div key={slot.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  key={slot.id}
+                  className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="capitalize">
@@ -217,13 +260,25 @@ export const EventLineupPlanner = ({ lineup, onLineupChange }: EventLineupPlanne
                     <p className="text-sm text-muted-foreground">
                       {slot.startTime || "TBD"} - {slot.endTime || "TBD"}
                     </p>
-                    {slot.notes && <p className="text-sm text-muted-foreground">{slot.notes}</p>}
+                    {slot.notes && (
+                      <p className="text-sm text-muted-foreground">
+                        {slot.notes}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(slot)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(slot)}
+                    >
                       <Edit2 className="mr-1 h-4 w-4" /> Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(slot.id)}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(slot.id)}
+                    >
                       <Trash2 className="mr-1 h-4 w-4" /> Remove
                     </Button>
                   </div>

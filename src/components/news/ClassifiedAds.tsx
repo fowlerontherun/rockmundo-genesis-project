@@ -38,7 +38,9 @@ export function ClassifiedAds() {
         items.push({
           type: "opportunity",
           title: `${inv.bands?.name || "A band"} looking for ${inv.instrument_role}`,
-          detail: inv.vocal_role ? `Vocal role: ${inv.vocal_role}` : "Join an active band!",
+          detail: inv.vocal_role
+            ? `Vocal role: ${inv.vocal_role}`
+            : "Join an active band!",
         });
       });
 
@@ -58,14 +60,17 @@ export function ClassifiedAds() {
       <CardContent className="space-y-2">
         {ads && ads.length > 0 ? (
           ads.map((ad, i) => (
-            <div key={i} className="border border-dashed border-border rounded px-3 py-2">
+            <div
+              key={i}
+              className="border border-dashed border-border rounded px-3 py-2"
+            >
               <div className="flex items-center gap-1.5 mb-0.5">
                 {ad.type === "wanted" ? (
                   <Guitar className="h-3 w-3 text-primary" />
                 ) : (
                   <Mic className="h-3 w-3 text-primary" />
                 )}
-                <p className="text-xs font-bold uppercase tracking-wide">{ad.title}</p>
+                <p className="text-xs font-bold tracking-wide">{ad.title}</p>
               </div>
               <p className="text-[11px] text-muted-foreground">{ad.detail}</p>
             </div>

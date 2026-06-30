@@ -3,32 +3,46 @@ import { Inbox as InboxIcon, CheckCheck, Settings } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useInbox, useUnreadInboxCount, type InboxCategory, type InboxMessage as InboxMessageType } from "@/hooks/useInbox";
+import {
+  useInbox,
+  useUnreadInboxCount,
+  type InboxCategory,
+  type InboxMessage as InboxMessageType,
+} from "@/hooks/useInbox";
 import { InboxMessage } from "@/components/inbox/InboxMessage";
 import { InboxFilters } from "@/components/inbox/InboxFilters";
 import { InboxEmptyState } from "@/components/inbox/InboxEmptyState";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
-type DateGroup = 'today' | 'yesterday' | 'this_week' | 'older';
+type DateGroup = "today" | "yesterday" | "this_week" | "older";
 
 function getDateGroup(dateStr: string): DateGroup {
   const date = new Date(dateStr);
-  if (isToday(date)) return 'today';
-  if (isYesterday(date)) return 'yesterday';
-  if (isThisWeek(date)) return 'this_week';
-  return 'older';
+  if (isToday(date)) return "today";
+  if (isYesterday(date)) return "yesterday";
+  if (isThisWeek(date)) return "this_week";
+  return "older";
 }
 
 const dateGroupLabels: Record<DateGroup, string> = {
-  today: 'Today',
-  yesterday: 'Yesterday',
-  this_week: 'This Week',
-  older: 'Older',
+  today: "Today",
+  yesterday: "Yesterday",
+  this_week: "This Week",
+  older: "Older",
 };
 
 export default function InboxPage() {
-  const [activeFilter, setActiveFilter] = useState<InboxCategory | 'all'>('all');
-  const { messages, isLoading, markAsRead, markAllAsRead, archiveMessage, deleteMessage } = useInbox(activeFilter);
+  const [activeFilter, setActiveFilter] = useState<InboxCategory | "all">(
+    "all",
+  );
+  const {
+    messages,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    archiveMessage,
+    deleteMessage,
+  } = useInbox(activeFilter);
   const { data: unreadCount } = useUnreadInboxCount();
 
   // Group messages by date
@@ -63,7 +77,11 @@ export default function InboxPage() {
   return (
     <FMPageScaffold
       title="Inbox"
-      subtitle={hasUnread ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : undefined}
+      subtitle={
+        hasUnread
+          ? `${unreadCount} unread message${unreadCount !== 1 ? "s" : ""}`
+          : undefined
+      }
       backTo="/dashboard"
       backLabel="Back to Dashboard"
       icon={InboxIcon}
@@ -81,8 +99,6 @@ export default function InboxPage() {
         ) : undefined
       }
     >
-
-
       {/* Filters */}
       <InboxFilters
         activeFilter={activeFilter}
@@ -107,7 +123,7 @@ export default function InboxPage() {
 
             return (
               <div key={group} className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                <h3 className="text-sm font-medium text-muted-foreground">
                   {dateGroupLabels[group]}
                 </h3>
                 <div className="space-y-2">

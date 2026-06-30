@@ -1,8 +1,22 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Trophy, Sparkles, Users, Target, Clock, CheckCircle2, Circle } from "lucide-react";
+import {
+  Trophy,
+  Sparkles,
+  Users,
+  Target,
+  Clock,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCoopQuestDetails } from "@/hooks/useCoopQuestDetails";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -13,7 +27,11 @@ interface CoopQuestDetailsDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQuestDetailsDrawerProps) {
+export function CoopQuestDetailsDrawer({
+  questId,
+  open,
+  onOpenChange,
+}: CoopQuestDetailsDrawerProps) {
   const { profileId } = useActiveProfile();
   const { data: quest, isLoading } = useCoopQuestDetails(questId);
 
@@ -26,7 +44,8 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
             Quest details
           </SheetTitle>
           <SheetDescription>
-            Click-through view of this co-op quest's players, targets, rewards and live progress.
+            Click-through view of this co-op quest's players, targets, rewards
+            and live progress.
           </SheetDescription>
         </SheetHeader>
 
@@ -45,7 +64,7 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
             {/* Title block */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary" className="text-[10px] uppercase">
+                <Badge variant="secondary" className="text-[10px]">
                   {quest.cadence}
                 </Badge>
                 <Badge variant="outline" className="text-[10px]">
@@ -57,26 +76,38 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
                   </Badge>
                 )}
               </div>
-              <h3 className="text-lg font-semibold leading-tight">{quest.title}</h3>
-              <p className="text-sm text-muted-foreground">{quest.description}</p>
+              <h3 className="text-lg font-semibold leading-tight">
+                {quest.title}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {quest.description}
+              </p>
             </div>
 
             <Separator />
 
             {/* Players */}
             <section className="space-y-3">
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <h4 className="text-xs tracking-wide text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" /> Players
               </h4>
               <PlayerProgressRow
-                label={profileId === quest.profile_a_id ? `${quest.profile_a_name ?? "You"} (You)` : (quest.profile_a_name ?? "Player A")}
+                label={
+                  profileId === quest.profile_a_id
+                    ? `${quest.profile_a_name ?? "You"} (You)`
+                    : (quest.profile_a_name ?? "Player A")
+                }
                 progress={quest.progress_a}
                 target={quest.target_count}
                 claimed={quest.claimed_by_a}
                 completed={!!quest.completed_at}
               />
               <PlayerProgressRow
-                label={profileId === quest.profile_b_id ? `${quest.profile_b_name ?? "You"} (You)` : (quest.profile_b_name ?? "Player B")}
+                label={
+                  profileId === quest.profile_b_id
+                    ? `${quest.profile_b_name ?? "You"} (You)`
+                    : (quest.profile_b_name ?? "Player B")
+                }
                 progress={quest.progress_b}
                 target={quest.target_count}
                 claimed={quest.claimed_by_b}
@@ -88,12 +119,17 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
 
             {/* Target */}
             <section className="space-y-2">
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <h4 className="text-xs tracking-wide text-muted-foreground flex items-center gap-1">
                 <Target className="h-3 w-3" /> Quest target
               </h4>
               <p className="text-sm">
-                Each player must perform <span className="font-semibold">{quest.action_type}</span>
-                {" "}<span className="font-semibold">{quest.target_count}×</span> before the quest expires.
+                Each player must perform{" "}
+                <span className="font-semibold">{quest.action_type}</span>
+                {""}
+                <span className="font-semibold">
+                  {quest.target_count}×
+                </span>{" "}
+                before the quest expires.
               </p>
             </section>
 
@@ -101,11 +137,13 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
 
             {/* Reward */}
             <section className="space-y-2">
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <h4 className="text-xs tracking-wide text-muted-foreground flex items-center gap-1">
                 <Sparkles className="h-3 w-3" /> Reward (each player)
               </h4>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs">+{quest.reward_xp} XP</Badge>
+                <Badge variant="outline" className="text-xs">
+                  +{quest.reward_xp} XP
+                </Badge>
                 {quest.reward_skill_xp > 0 && quest.reward_skill_slug && (
                   <Badge variant="outline" className="text-xs">
                     +{quest.reward_skill_xp} {quest.reward_skill_slug} XP
@@ -124,14 +162,20 @@ export function CoopQuestDetailsDrawer({ questId, open, onOpenChange }: CoopQues
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 <span>
-                  Started {formatDistanceToNow(new Date(quest.created_at), { addSuffix: true })}
+                  Started{" "}
+                  {formatDistanceToNow(new Date(quest.created_at), {
+                    addSuffix: true,
+                  })}
                 </span>
               </div>
               {quest.completed_at && (
                 <div className="flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3 text-amber-500" />
                   <span>
-                    Completed {formatDistanceToNow(new Date(quest.completed_at), { addSuffix: true })}
+                    Completed{" "}
+                    {formatDistanceToNow(new Date(quest.completed_at), {
+                      addSuffix: true,
+                    })}
                   </span>
                 </div>
               )}
@@ -164,7 +208,8 @@ function PlayerProgressRow({
   claimed: boolean;
   completed: boolean;
 }) {
-  const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+  const pct =
+    target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
   const done = progress >= target;
   return (
     <div className="rounded-md border p-2.5 space-y-1.5">

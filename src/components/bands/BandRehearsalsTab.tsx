@@ -3,7 +3,13 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarClock, Music2, DollarSign } from "lucide-react";
@@ -14,7 +20,10 @@ interface BandRehearsalsTabProps {
 
 type RehearsalRoom = Database["public"]["Tables"]["rehearsal_rooms"]["Row"];
 type BandRehearsal = Database["public"]["Tables"]["band_rehearsals"]["Row"] & {
-  rehearsal_rooms?: Pick<RehearsalRoom, "name" | "location" | "hourly_rate"> | null;
+  rehearsal_rooms?: Pick<
+    RehearsalRoom,
+    "name" | "location" | "hourly_rate"
+  > | null;
   songs?: { title: string } | null;
 };
 
@@ -44,8 +53,14 @@ function getStatusBadge(status: string) {
   const label = normalized
     .split("_")
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-  return <Badge className={statusColorMap[normalized] ?? "bg-slate-500/10 text-slate-700"}>{label}</Badge>;
+    .join("");
+  return (
+    <Badge
+      className={statusColorMap[normalized] ?? "bg-slate-500/10 text-slate-700"}
+    >
+      {label}
+    </Badge>
+  );
 }
 
 export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
@@ -60,11 +75,13 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
       try {
         const { data, error } = await supabase
           .from("band_rehearsals")
-          .select(`
-            *,
-            rehearsal_rooms:rehearsal_room_id (name, location, hourly_rate),
-            songs:selected_song_id (title)
-          `)
+          .select(
+            `
+ *,
+ rehearsal_rooms:rehearsal_room_id (name, location, hourly_rate),
+ songs:selected_song_id (title)
+ `,
+          )
           .eq("band_id", bandId)
           .order("scheduled_start", { ascending: true });
 
@@ -113,9 +130,15 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
   );
 
   const aggregatedCosts = useMemo<AggregatedCosts>(() => {
-    const upcomingCommitment = upcoming.reduce((sum, rehearsal) => sum + (rehearsal.total_cost ?? 0), 0);
+    const upcomingCommitment = upcoming.reduce(
+      (sum, rehearsal) => sum + (rehearsal.total_cost ?? 0),
+      0,
+    );
     const completedSessions = completed.length;
-    const totalSpent = completed.reduce((sum, rehearsal) => sum + (rehearsal.total_cost ?? 0), 0);
+    const totalSpent = completed.reduce(
+      (sum, rehearsal) => sum + (rehearsal.total_cost ?? 0),
+      0,
+    );
 
     return {
       totalSpent,
@@ -153,34 +176,49 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <DollarSign className="h-4 w-4 text-muted-foreground" /> Total spent on rehearsals
+              <DollarSign className="h-4 w-4 text-muted-foreground" /> Total
+              spent on rehearsals
             </CardTitle>
-            <CardDescription>Lifetime investment into rehearsal preparation</CardDescription>
+            <CardDescription>
+              Lifetime investment into rehearsal preparation
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">${aggregatedCosts.totalSpent.toLocaleString()}</p>
+            <p className="text-2xl font-semibold">
+              ${aggregatedCosts.totalSpent.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <CalendarClock className="h-4 w-4 text-muted-foreground" /> Upcoming commitment
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />{" "}
+              Upcoming commitment
             </CardTitle>
-            <CardDescription>Cost reserved for scheduled rehearsals</CardDescription>
+            <CardDescription>
+              Cost reserved for scheduled rehearsals
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">${aggregatedCosts.upcomingCommitment.toLocaleString()}</p>
+            <p className="text-2xl font-semibold">
+              ${aggregatedCosts.upcomingCommitment.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Music2 className="h-4 w-4 text-muted-foreground" /> Sessions completed
+              <Music2 className="h-4 w-4 text-muted-foreground" /> Sessions
+              completed
             </CardTitle>
-            <CardDescription>Recorded rehearsals with chemistry updates</CardDescription>
+            <CardDescription>
+              Recorded rehearsals with chemistry updates
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{aggregatedCosts.completedSessions}</p>
+            <p className="text-2xl font-semibold">
+              {aggregatedCosts.completedSessions}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -188,11 +226,15 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Upcoming rehearsals</CardTitle>
-          <CardDescription>Sessions scheduled for the band in the near future.</CardDescription>
+          <CardDescription>
+            Sessions scheduled for the band in the near future.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {upcoming.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No upcoming rehearsals scheduled.</p>
+            <p className="text-sm text-muted-foreground">
+              No upcoming rehearsals scheduled.
+            </p>
           ) : (
             upcoming.map((session) => (
               <div
@@ -201,7 +243,9 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium">{session.rehearsal_rooms?.name ?? "Rehearsal room"}</p>
+                    <p className="text-sm font-medium">
+                      {session.rehearsal_rooms?.name ?? "Rehearsal room"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {session.rehearsal_rooms?.location ?? "Location TBC"}
                     </p>
@@ -211,16 +255,24 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
                 <Separator className="my-3" />
                 <div className="grid gap-2 md:grid-cols-3">
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Start</p>
-                    <p className="text-sm font-medium">{formatDateTime(session.scheduled_start)}</p>
+                    <p className="text-xs text-muted-foreground">Start</p>
+                    <p className="text-sm font-medium">
+                      {formatDateTime(session.scheduled_start)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Duration</p>
-                    <p className="text-sm font-medium">{session.duration_hours} hours</p>
+                    <p className="text-xs text-muted-foreground">Duration</p>
+                    <p className="text-sm font-medium">
+                      {session.duration_hours} hours
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Featured song</p>
-                    <p className="text-sm font-medium">{session.songs?.title ?? "Setlist rotation"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Featured song
+                    </p>
+                    <p className="text-sm font-medium">
+                      {session.songs?.title ?? "Setlist rotation"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -232,17 +284,26 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Recent history</CardTitle>
-          <CardDescription>Completed or archived rehearsal sessions.</CardDescription>
+          <CardDescription>
+            Completed or archived rehearsal sessions.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {completed.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rehearsals have been completed yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No rehearsals have been completed yet.
+            </p>
           ) : (
             completed.map((session) => (
-              <div key={session.id} className="rounded-lg border border-dashed border-muted bg-muted/40 p-4">
+              <div
+                key={session.id}
+                className="rounded-lg border border-dashed border-muted bg-muted/40 p-4"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium">{session.rehearsal_rooms?.name ?? "Rehearsal room"}</p>
+                    <p className="text-sm font-medium">
+                      {session.rehearsal_rooms?.name ?? "Rehearsal room"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {session.rehearsal_rooms?.location ?? "Location TBC"}
                     </p>
@@ -251,22 +312,32 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-4">
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Started</p>
-                    <p className="text-sm font-medium">{formatDateTime(session.scheduled_start)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase text-muted-foreground">Completed</p>
+                    <p className="text-xs text-muted-foreground">Started</p>
                     <p className="text-sm font-medium">
-                      {session.completed_at ? formatDateTime(session.completed_at) : "—"}
+                      {formatDateTime(session.scheduled_start)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Cost</p>
-                    <p className="text-sm font-medium">${(session.total_cost ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Completed</p>
+                    <p className="text-sm font-medium">
+                      {session.completed_at
+                        ? formatDateTime(session.completed_at)
+                        : "—"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">Chemistry gain</p>
-                    <p className="text-sm font-medium">{session.chemistry_gain ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Cost</p>
+                    <p className="text-sm font-medium">
+                      ${(session.total_cost ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Chemistry gain
+                    </p>
+                    <p className="text-sm font-medium">
+                      {session.chemistry_gain ?? 0}
+                    </p>
                   </div>
                 </div>
               </div>

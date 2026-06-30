@@ -7,11 +7,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
-import { ChartLine, Package, Sparkles, ArrowLeft, Trophy, BarChart3, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChartLine,
+  Package,
+  Sparkles,
+  ArrowLeft,
+  Trophy,
+  BarChart3,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -36,7 +59,11 @@ type Opening = {
   rolled_at: string;
   xp_awarded: number;
   ap_awarded: number;
-  reward_summary: { quality?: number; song?: string; instrument?: string } | null;
+  reward_summary: {
+    quality?: number;
+    song?: string;
+    instrument?: string;
+  } | null;
 };
 
 type Box = { id: string; name: string; tier_odds: Record<string, number> };
@@ -84,7 +111,9 @@ export default function BlindBoxAnalytics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blind_box_openings" as any)
-        .select("id, box_id, tier, rolled_at, xp_awarded, ap_awarded, reward_summary")
+        .select(
+          "id, box_id, tier, rolled_at, xp_awarded, ap_awarded, reward_summary",
+        )
         .eq("profile_id", profileId!)
         .order("rolled_at", { ascending: true })
         .limit(1000);
@@ -98,8 +127,8 @@ export default function BlindBoxAnalytics() {
       range === "7d"
         ? Date.now() - 7 * 86400000
         : range === "30d"
-        ? Date.now() - 30 * 86400000
-        : 0;
+          ? Date.now() - 30 * 86400000
+          : 0;
     return openings.filter((o) => {
       if (boxFilter !== "all" && o.box_id !== boxFilter) return false;
       if (cutoff && new Date(o.rolled_at).getTime() < cutoff) return false;
@@ -121,7 +150,12 @@ export default function BlindBoxAnalytics() {
       if (q < min || q > max) return false;
       return true;
     });
-    return rows.slice().sort((a, b) => new Date(b.rolled_at).getTime() - new Date(a.rolled_at).getTime());
+    return rows
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.rolled_at).getTime() - new Date(a.rolled_at).getTime(),
+      );
   }, [filtered, tierFilter, dateFrom, dateTo, qMin, qMax]);
 
   const boxNameById = useMemo(() => {
@@ -131,10 +165,22 @@ export default function BlindBoxAnalytics() {
   }, [boxes]);
 
   const totalPages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
-  const pageRows = tableRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const pageRows = tableRows.slice(
+    page * PAGE_SIZE,
+    page * PAGE_SIZE + PAGE_SIZE,
+  );
 
   const exportCsv = () => {
-    const header = ["Date", "Box", "Tier", "Quality", "Instrument", "Song", "XP", "AP"];
+    const header = [
+      "Date",
+      "Box",
+      "Tier",
+      "Quality",
+      "Instrument",
+      "Song",
+      "XP",
+      "AP",
+    ];
     const lines = [header.join(",")];
     for (const o of tableRows) {
       const cells = [
@@ -160,7 +206,12 @@ export default function BlindBoxAnalytics() {
 
   const total = filtered.length;
   const tierCounts = useMemo(() => {
-    const c: Record<string, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    const c: Record<string, number> = {
+      common: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+    };
     for (const o of filtered) c[o.tier] = (c[o.tier] ?? 0) + 1;
     return c;
   }, [filtered]);
@@ -171,7 +222,12 @@ export default function BlindBoxAnalytics() {
       return b?.tier_odds ?? null;
     }
     if (boxes.length === 0) return null;
-    const agg: Record<string, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    const agg: Record<string, number> = {
+      common: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+    };
     for (const b of boxes) {
       for (const t of TIERS) agg[t] += Number(b.tier_odds?.[t] ?? 0);
     }
@@ -199,12 +255,13 @@ export default function BlindBoxAnalytics() {
 
   // Time-series: bucket by day with cumulative best tier and rolling quality
   const series = useMemo(() => {
-    if (filtered.length === 0) return [] as Array<{
-      date: string;
-      opens: number;
-      avgQuality: number;
-      epicPlus: number;
-    }>;
+    if (filtered.length === 0)
+      return [] as Array<{
+        date: string;
+        opens: number;
+        avgQuality: number;
+        epicPlus: number;
+      }>;
     const byDay = new Map<string, Opening[]>();
     for (const o of filtered) {
       const d = new Date(o.rolled_at);
@@ -217,13 +274,19 @@ export default function BlindBoxAnalytics() {
     let cumEpic = 0;
     return keys.map((k) => {
       const arr = byDay.get(k)!;
-      const qs = arr.map((o) => Number(o.reward_summary?.quality ?? 0)).filter((n) => n > 0);
-      const epic = arr.filter((o) => o.tier === "epic" || o.tier === "legendary").length;
+      const qs = arr
+        .map((o) => Number(o.reward_summary?.quality ?? 0))
+        .filter((n) => n > 0);
+      const epic = arr.filter(
+        (o) => o.tier === "epic" || o.tier === "legendary",
+      ).length;
       cumEpic += epic;
       return {
         date: k,
         opens: arr.length,
-        avgQuality: qs.length ? Math.round(qs.reduce((a, b) => a + b, 0) / qs.length) : 0,
+        avgQuality: qs.length
+          ? Math.round(qs.reduce((a, b) => a + b, 0) / qs.length)
+          : 0,
         epicPlus: cumEpic,
       };
     });
@@ -269,24 +332,39 @@ export default function BlindBoxAnalytics() {
         </div>
       }
     >
-
-
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : total === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             <Package className="mx-auto h-8 w-8 mb-2 opacity-60" />
-            No openings in this range yet. Open a box to start tracking your luck.
+            No openings in this range yet. Open a box to start tracking your
+            luck.
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Stat title="Total Opens" value={total.toLocaleString()} icon={<Package className="h-4 w-4" />} />
-            <Stat title="Avg Quality" value={avgQuality} icon={<Sparkles className="h-4 w-4" />} />
-            <Stat title="Best Roll" value={bestQuality} icon={<Trophy className="h-4 w-4" />} />
-            <Stat title="XP / AP" value={`${totalXp.toLocaleString()} / ${totalAp}`} icon={<ChartLine className="h-4 w-4" />} />
+            <Stat
+              title="Total Opens"
+              value={total.toLocaleString()}
+              icon={<Package className="h-4 w-4" />}
+            />
+            <Stat
+              title="Avg Quality"
+              value={avgQuality}
+              icon={<Sparkles className="h-4 w-4" />}
+            />
+            <Stat
+              title="Best Roll"
+              value={bestQuality}
+              icon={<Trophy className="h-4 w-4" />}
+            />
+            <Stat
+              title="XP / AP"
+              value={`${totalXp.toLocaleString()} / ${totalAp}`}
+              icon={<ChartLine className="h-4 w-4" />}
+            />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -299,10 +377,18 @@ export default function BlindBoxAnalytics() {
                   <BarChart data={tierData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="tier" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(v) => `${v}%`}
+                    />
                     <Tooltip formatter={(v: number) => `${v}%`} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="expected" name="Expected" fill="hsl(var(--muted-foreground))" opacity={0.4} />
+                    <Bar
+                      dataKey="expected"
+                      name="Expected"
+                      fill="hsl(var(--muted-foreground))"
+                      opacity={0.4}
+                    />
                     <Bar dataKey="actual" name="Actual">
                       {tierData.map((d) => (
                         <Cell key={d.key} fill={TIER_HSL[d.key]} />
@@ -312,7 +398,10 @@ export default function BlindBoxAnalytics() {
                 </ResponsiveContainer>
                 <div className="mt-3 space-y-1.5">
                   {tierData.map((d) => (
-                    <div key={d.key} className="flex items-center gap-2 text-xs">
+                    <div
+                      key={d.key}
+                      className="flex items-center gap-2 text-xs"
+                    >
                       <span
                         className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: TIER_HSL[d.key] }}
@@ -321,7 +410,9 @@ export default function BlindBoxAnalytics() {
                       <Badge variant="outline" className="text-[10px]">
                         {d.count} pulls
                       </Badge>
-                      <span className="w-14 text-right tabular-nums">{d.actual}%</span>
+                      <span className="w-14 text-right tabular-nums">
+                        {d.actual}%
+                      </span>
                       <span className="w-16 text-right tabular-nums text-muted-foreground">
                         exp {d.expected}%
                       </span>
@@ -333,7 +424,9 @@ export default function BlindBoxAnalytics() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Quality Distribution</CardTitle>
+                <CardTitle className="text-base">
+                  Quality Distribution
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={240}>
@@ -346,7 +439,10 @@ export default function BlindBoxAnalytics() {
                   </BarChart>
                 </ResponsiveContainer>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                  <Mini label="Min" value={qualities.length ? Math.min(...qualities) : 0} />
+                  <Mini
+                    label="Min"
+                    value={qualities.length ? Math.min(...qualities) : 0}
+                  />
                   <Mini label="Avg" value={avgQuality} />
                   <Mini label="Max" value={bestQuality} />
                 </div>
@@ -363,8 +459,16 @@ export default function BlindBoxAnalytics() {
                 <AreaChart data={series}>
                   <defs>
                     <linearGradient id="qGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      <stop
+                        offset="0%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.4}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -372,11 +476,18 @@ export default function BlindBoxAnalytics() {
                     dataKey="date"
                     tick={{ fontSize: 11 }}
                     tickFormatter={(v) =>
-                      new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      new Date(v).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
                     }
                   />
                   <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 11 }}
+                  />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Area
@@ -413,12 +524,21 @@ export default function BlindBoxAnalytics() {
                     dataKey="date"
                     tick={{ fontSize: 11 }}
                     tickFormatter={(v) =>
-                      new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      new Date(v).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
                     }
                   />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="opens" stroke="hsl(var(--primary))" dot={false} strokeWidth={2} />
+                  <Line
+                    type="monotone"
+                    dataKey="opens"
+                    stroke="hsl(var(--primary))"
+                    dot={false}
+                    strokeWidth={2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -428,19 +548,34 @@ export default function BlindBoxAnalytics() {
             <CardHeader className="pb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-base">Opening Drill-Down</CardTitle>
-                <Button size="sm" variant="outline" onClick={exportCsv} disabled={tableRows.length === 0}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={exportCsv}
+                  disabled={tableRows.length === 0}
+                >
                   <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-                <Select value={tierFilter} onValueChange={(v) => { setTierFilter(v); setPage(0); }}>
-                  <SelectTrigger className="h-8"><SelectValue placeholder="Tier" /></SelectTrigger>
+                <Select
+                  value={tierFilter}
+                  onValueChange={(v) => {
+                    setTierFilter(v);
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Tier" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All tiers</SelectItem>
                     {TIERS.map((t) => (
-                      <SelectItem key={t} value={t}>{TIER_LABEL[t]}</SelectItem>
+                      <SelectItem key={t} value={t}>
+                        {TIER_LABEL[t]}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -448,14 +583,20 @@ export default function BlindBoxAnalytics() {
                   type="date"
                   className="h-8"
                   value={dateFrom}
-                  onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setPage(0);
+                  }}
                   placeholder="From"
                 />
                 <Input
                   type="date"
                   className="h-8"
                   value={dateTo}
-                  onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setPage(0);
+                  }}
                   placeholder="To"
                 />
                 <Input
@@ -464,7 +605,10 @@ export default function BlindBoxAnalytics() {
                   className="h-8"
                   placeholder="Min quality"
                   value={qMin}
-                  onChange={(e) => { setQMin(e.target.value); setPage(0); }}
+                  onChange={(e) => {
+                    setQMin(e.target.value);
+                    setPage(0);
+                  }}
                 />
                 <Input
                   type="number"
@@ -472,7 +616,10 @@ export default function BlindBoxAnalytics() {
                   className="h-8"
                   placeholder="Max quality"
                   value={qMax}
-                  onChange={(e) => { setQMax(e.target.value); setPage(0); }}
+                  onChange={(e) => {
+                    setQMax(e.target.value);
+                    setPage(0);
+                  }}
                 />
               </div>
 
@@ -493,7 +640,10 @@ export default function BlindBoxAnalytics() {
                   <TableBody>
                     {pageRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground py-6"
+                        >
                           No openings match these filters.
                         </TableCell>
                       </TableRow>
@@ -502,24 +652,43 @@ export default function BlindBoxAnalytics() {
                         <TableRow key={o.id}>
                           <TableCell className="whitespace-nowrap">
                             {new Date(o.rolled_at).toLocaleString("en-US", {
-                              month: "short", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit",
+                              month: "short",
+                              day: "numeric",
+                              year: "2-digit",
+                              hour: "numeric",
+                              minute: "2-digit",
                             })}
                           </TableCell>
-                          <TableCell className="max-w-[140px] truncate">{boxNameById.get(o.box_id) ?? "—"}</TableCell>
+                          <TableCell className="max-w-[140px] truncate">
+                            {boxNameById.get(o.box_id) ?? "—"}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
                               className="text-[10px]"
-                              style={{ borderColor: TIER_HSL[o.tier], color: TIER_HSL[o.tier] }}
+                              style={{
+                                borderColor: TIER_HSL[o.tier],
+                                color: TIER_HSL[o.tier],
+                              }}
                             >
                               {TIER_LABEL[o.tier] ?? o.tier}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">{o.reward_summary?.quality ?? "—"}</TableCell>
-                          <TableCell className="max-w-[140px] truncate">{o.reward_summary?.instrument ?? "—"}</TableCell>
-                          <TableCell className="max-w-[160px] truncate">{o.reward_summary?.song ?? "—"}</TableCell>
-                          <TableCell className="text-right tabular-nums">{o.xp_awarded ?? 0}</TableCell>
-                          <TableCell className="text-right tabular-nums">{o.ap_awarded ?? 0}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {o.reward_summary?.quality ?? "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[140px] truncate">
+                            {o.reward_summary?.instrument ?? "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[160px] truncate">
+                            {o.reward_summary?.song ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {o.xp_awarded ?? 0}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {o.ap_awarded ?? 0}
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -530,7 +699,8 @@ export default function BlindBoxAnalytics() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {tableRows.length === 0 ? 0 : page * PAGE_SIZE + 1}–
-                  {Math.min(tableRows.length, (page + 1) * PAGE_SIZE)} of {tableRows.length}
+                  {Math.min(tableRows.length, (page + 1) * PAGE_SIZE)} of{" "}
+                  {tableRows.length}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -549,7 +719,9 @@ export default function BlindBoxAnalytics() {
                     size="sm"
                     variant="outline"
                     className="h-7 px-2"
-                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPages - 1, p + 1))
+                    }
                     disabled={page >= totalPages - 1}
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -578,7 +750,15 @@ function qualityBuckets(qualities: number[]) {
   }));
 }
 
-function Stat({ title, value, icon }: { title: string; value: React.ReactNode; icon: React.ReactNode }) {
+function Stat({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+}) {
   return (
     <Card>
       <CardContent className="p-3">
@@ -595,7 +775,9 @@ function Stat({ title, value, icon }: { title: string; value: React.ReactNode; i
 function Mini({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border p-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-[10px] tracking-wide text-muted-foreground">
+        {label}
+      </div>
       <div className="text-sm font-semibold tabular-nums">{value}</div>
     </div>
   );

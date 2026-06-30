@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -58,7 +64,8 @@ const ContractsPage = () => {
   const [loadingContracts, setLoadingContracts] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedContract, setSelectedContract] = useState<ArtistLabelContract | null>(null);
+  const [selectedContract, setSelectedContract] =
+    useState<ArtistLabelContract | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
   const [negotiations, setNegotiations] = useState<ContractNegotiation[]>([]);
   const [clausesLoading, setClausesLoading] = useState(false);
@@ -80,7 +87,9 @@ const ContractsPage = () => {
         const data = await fetchActiveContracts();
         setContracts(data);
       } catch (error) {
-        setContractsError(error instanceof Error ? error.message : "Unable to load contracts");
+        setContractsError(
+          error instanceof Error ? error.message : "Unable to load contracts",
+        );
       } finally {
         setLoadingContracts(false);
       }
@@ -90,10 +99,13 @@ const ContractsPage = () => {
   }, []);
 
   const negotiationMap = useMemo(() => {
-    return negotiations.reduce<Record<string, ContractNegotiation>>((map, entry) => {
-      map[entry.clause_id] = entry;
-      return map;
-    }, {});
+    return negotiations.reduce<Record<string, ContractNegotiation>>(
+      (map, entry) => {
+        map[entry.clause_id] = entry;
+        return map;
+      },
+      {},
+    );
   }, [negotiations]);
 
   useEffect(() => {
@@ -114,8 +126,12 @@ const ContractsPage = () => {
       return;
     }
 
-    const existingProposal = parseNegotiationTerms(activeNegotiation.proposed_terms);
-    const existingCounter = parseNegotiationTerms(activeNegotiation.counter_terms);
+    const existingProposal = parseNegotiationTerms(
+      activeNegotiation.proposed_terms,
+    );
+    const existingCounter = parseNegotiationTerms(
+      activeNegotiation.counter_terms,
+    );
 
     setProposalNotes(existingProposal.notes ?? "");
     setCounterNotes(existingCounter.notes ?? "");
@@ -147,7 +163,11 @@ const ContractsPage = () => {
         setActiveClauseId(clauseData[0].id);
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to load negotiation data");
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load negotiation data",
+      );
     } finally {
       setClausesLoading(false);
     }
@@ -171,18 +191,24 @@ const ContractsPage = () => {
     const payload: NegotiationInput = {
       clauseId: activeClauseId,
       proposedTerms: { notes: proposalNotes.trim() },
-      counterTerms: counterNotes.trim() ? { notes: counterNotes.trim() } : undefined,
+      counterTerms: counterNotes.trim()
+        ? { notes: counterNotes.trim() }
+        : undefined,
       status,
       lastActionBy: "artist_representative",
     };
 
     try {
       await submitNegotiation(selectedContract.id, payload);
-      const updatedNegotiations = await fetchNegotiationsForContract(selectedContract.id);
+      const updatedNegotiations = await fetchNegotiationsForContract(
+        selectedContract.id,
+      );
       setNegotiations(updatedNegotiations);
       setFormSuccess("Negotiation saved");
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Failed to save negotiation");
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save negotiation",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -195,11 +221,12 @@ const ContractsPage = () => {
       icon={FileText}
       backTo="/hub/career-business"
     >
-
       {contractsError && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
-            <CardTitle className="text-destructive">Unable to load contracts</CardTitle>
+            <CardTitle className="text-destructive">
+              Unable to load contracts
+            </CardTitle>
             <CardDescription>{contractsError}</CardDescription>
           </CardHeader>
         </Card>
@@ -226,8 +253,10 @@ const ContractsPage = () => {
               <Card key={contract.id} className="flex flex-col justify-between">
                 <CardHeader className="space-y-2">
                   <div className="flex items-center justify-between gap-4">
-                    <CardTitle className="text-xl">{contract.deal_type_id || "General recording agreement"}</CardTitle>
-                    <Badge variant="secondary" className="uppercase tracking-wide">
+                    <CardTitle className="text-xl">
+                      {contract.deal_type_id || "General recording agreement"}
+                    </CardTitle>
+                    <Badge variant="secondary" className="tracking-wide">
                       {contract.status ?? "active"}
                     </Badge>
                   </div>
@@ -239,34 +268,46 @@ const ContractsPage = () => {
                   <div className="grid gap-3 text-sm text-muted-foreground">
                     <div className="flex items-center justify-between">
                       <span>Label</span>
-                      <span className="font-medium text-foreground">{contract.label_id ?? "Unassigned"}</span>
+                      <span className="font-medium text-foreground">
+                        {contract.label_id ?? "Unassigned"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Royalty split</span>
                       <span className="font-medium text-foreground">
-                        {contract.royalty_artist_pct}% Artist / {contract.royalty_label_pct ?? 100 - contract.royalty_artist_pct}% Label
+                        {contract.royalty_artist_pct}% Artist /{" "}
+                        {contract.royalty_label_pct ??
+                          100 - contract.royalty_artist_pct}
+                        % Label
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Advance</span>
                       <span className="font-medium text-foreground">
-                        {contract.advance_amount ? `$${contract.advance_amount.toLocaleString()}` : "None"}
+                        {contract.advance_amount
+                          ? `$${contract.advance_amount.toLocaleString()}`
+                          : "None"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Release commitment</span>
                       <span className="font-medium text-foreground">
-                        {contract.release_quota} releases / {contract.releases_completed ?? 0} delivered
+                        {contract.release_quota} releases /{" "}
+                        {contract.releases_completed ?? 0} delivered
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Territories</span>
                       <span className="max-w-[60%] text-right font-medium text-foreground">
-                        {contract.territories?.length ? contract.territories.join(", ") : "Global"}
+                        {contract.territories?.length
+                          ? contract.territories.join(",")
+                          : "Global"}
                       </span>
                     </div>
                   </div>
-                  <Button onClick={() => void openNegotiationModal(contract)}>Negotiate terms</Button>
+                  <Button onClick={() => void openNegotiationModal(contract)}>
+                    Negotiate terms
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -276,7 +317,8 @@ const ContractsPage = () => {
             <CardHeader>
               <CardTitle>No active contracts</CardTitle>
               <CardDescription>
-                When you secure a label agreement, the full contract summary and negotiation tools will appear here.
+                When you secure a label agreement, the full contract summary and
+                negotiation tools will appear here.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -288,7 +330,8 @@ const ContractsPage = () => {
           <DialogHeader>
             <DialogTitle>Negotiate contract terms</DialogTitle>
             <DialogDescription>
-              Align on a clause, document your ask, and share counter positions before submitting to the label.
+              Align on a clause, document your ask, and share counter positions
+              before submitting to the label.
             </DialogDescription>
           </DialogHeader>
 
@@ -305,7 +348,9 @@ const ContractsPage = () => {
                   {clauses.map((clause) => {
                     const terms = parseClauseTerms(clause.default_terms);
                     const existingNegotiation = negotiationMap[clause.id];
-                    const existingStatus = (existingNegotiation?.status as NegotiationStatus) ?? "pending";
+                    const existingStatus =
+                      (existingNegotiation?.status as NegotiationStatus) ??
+                      "pending";
 
                     return (
                       <Card
@@ -319,10 +364,22 @@ const ContractsPage = () => {
                         <CardHeader className="space-y-1">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <CardTitle className="text-lg">{clause.title}</CardTitle>
-                              <CardDescription>{clause.description}</CardDescription>
+                              <CardTitle className="text-lg">
+                                {clause.title}
+                              </CardTitle>
+                              <CardDescription>
+                                {clause.description}
+                              </CardDescription>
                             </div>
-                            <Badge variant={existingStatus === "accepted" ? "default" : existingStatus === "countered" ? "outline" : "secondary"}>
+                            <Badge
+                              variant={
+                                existingStatus === "accepted"
+                                  ? "default"
+                                  : existingStatus === "countered"
+                                    ? "outline"
+                                    : "secondary"
+                              }
+                            >
                               {existingStatus}
                             </Badge>
                           </div>
@@ -330,19 +387,29 @@ const ContractsPage = () => {
                         <CardContent className="space-y-3 text-sm">
                           {terms.summary && (
                             <div>
-                              <p className="text-xs uppercase text-muted-foreground">Label baseline</p>
-                              <p className="font-medium text-foreground">{terms.summary}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Label baseline
+                              </p>
+                              <p className="font-medium text-foreground">
+                                {terms.summary}
+                              </p>
                             </div>
                           )}
                           {terms.expectations && (
                             <div>
-                              <p className="text-xs uppercase text-muted-foreground">Expectations</p>
-                              <p className="text-foreground">{terms.expectations}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Expectations
+                              </p>
+                              <p className="text-foreground">
+                                {terms.expectations}
+                              </p>
                             </div>
                           )}
                           {terms.value && (
                             <div>
-                              <p className="text-xs uppercase text-muted-foreground">Target value</p>
+                              <p className="text-xs text-muted-foreground">
+                                Target value
+                              </p>
                               <p className="text-foreground">{terms.value}</p>
                             </div>
                           )}
@@ -364,7 +431,10 @@ const ContractsPage = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="clause">Clause</Label>
-                  <Select value={activeClauseId} onValueChange={(value) => setActiveClauseId(value)}>
+                  <Select
+                    value={activeClauseId}
+                    onValueChange={(value) => setActiveClauseId(value)}
+                  >
                     <SelectTrigger id="clause">
                       <SelectValue placeholder="Select clause" />
                     </SelectTrigger>
@@ -402,7 +472,12 @@ const ContractsPage = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <Select value={status} onValueChange={(value) => setStatus(value as NegotiationStatus)}>
+                  <Select
+                    value={status}
+                    onValueChange={(value) =>
+                      setStatus(value as NegotiationStatus)
+                    }
+                  >
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Negotiation status" />
                     </SelectTrigger>
@@ -418,14 +493,21 @@ const ContractsPage = () => {
 
                 <Separator />
 
-                {formError && <p className="text-sm text-destructive">{formError}</p>}
-                {formSuccess && <p className="text-sm text-emerald-600">{formSuccess}</p>}
+                {formError && (
+                  <p className="text-sm text-destructive">{formError}</p>
+                )}
+                {formSuccess && (
+                  <p className="text-sm text-emerald-600">{formSuccess}</p>
+                )}
 
                 <div className="flex justify-end gap-3">
                   <Button variant="outline" onClick={() => setModalOpen(false)}>
                     Close
                   </Button>
-                  <Button onClick={() => void handleSubmit()} disabled={submitting}>
+                  <Button
+                    onClick={() => void handleSubmit()}
+                    disabled={submitting}
+                  >
                     {submitting ? "Saving..." : "Save negotiation"}
                   </Button>
                 </div>

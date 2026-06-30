@@ -2,7 +2,13 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -50,10 +56,10 @@ const Auth = () => {
     totalPlayers,
     onlinePlayers,
     loading: presenceLoading,
-    error: presenceError
+    error: presenceError,
   } = usePlayerPresenceStats({
     refreshInterval: 45_000,
-    publicMode: true // Use public presence since user isn't logged in yet
+    publicMode: true, // Use public presence since user isn't logged in yet
   });
 
   const formatPresenceValue = (value: number | null) => {
@@ -66,12 +72,12 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
-    betaCode: ""
+    betaCode: "",
   });
 
   const [signupData, setSignupData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -92,40 +98,50 @@ const Auth = () => {
     }
     const allButLast = requirements.slice(0, -1);
     const last = requirements[requirements.length - 1];
-    return `${allButLast.join(", ")}, and ${last}`;
+    return `${allButLast.join(",")}, and ${last}`;
   };
 
   const assessPasswordStrength = (password: string) => {
     const trimmed = password.trim();
     const requirements = [
-      { check: trimmed.length >= 8, message: t('auth.passwordReq8Chars') },
-      { check: /[a-z]/.test(trimmed), message: t('auth.passwordReqLowercase') },
-      { check: /[A-Z]/.test(trimmed), message: t('auth.passwordReqUppercase') },
-      { check: /\d/.test(trimmed), message: t('auth.passwordReqNumber') }
+      { check: trimmed.length >= 8, message: t("auth.passwordReq8Chars") },
+      { check: /[a-z]/.test(trimmed), message: t("auth.passwordReqLowercase") },
+      { check: /[A-Z]/.test(trimmed), message: t("auth.passwordReqUppercase") },
+      { check: /\d/.test(trimmed), message: t("auth.passwordReqNumber") },
     ];
-    const unmet = requirements.filter(requirement => !requirement.check).map(requirement => requirement.message);
+    const unmet = requirements
+      .filter((requirement) => !requirement.check)
+      .map((requirement) => requirement.message);
     if (trimmed.length === 0) {
       return {
         valid: false,
-        message: t('auth.passwordHint')
+        message: t("auth.passwordHint"),
       };
     }
     if (unmet.length === 0) {
       return {
         valid: true,
-        message: t('auth.strongPassword')
+        message: t("auth.strongPassword"),
       };
     }
     return {
       valid: false,
-      message: `${t('auth.passwordMustInclude')} ${formatRequirementList(unmet)}.`
+      message: `${t("auth.passwordMustInclude")} ${formatRequirementList(unmet)}.`,
     };
   };
 
   const passwordStrength = assessPasswordStrength(newPassword);
   const signupPasswordStrength = assessPasswordStrength(signupData.password);
-  const passwordStrengthTone = passwordStrength.valid ? "text-emerald-500" : newPassword.length > 0 ? "text-destructive" : "text-muted-foreground";
-  const signupPasswordStrengthTone = signupPasswordStrength.valid ? "text-emerald-500" : signupData.password.length > 0 ? "text-destructive" : "text-muted-foreground";
+  const passwordStrengthTone = passwordStrength.valid
+    ? "text-emerald-500"
+    : newPassword.length > 0
+      ? "text-destructive"
+      : "text-muted-foreground";
+  const signupPasswordStrengthTone = signupPasswordStrength.valid
+    ? "text-emerald-500"
+    : signupData.password.length > 0
+      ? "text-destructive"
+      : "text-muted-foreground";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -137,8 +153,8 @@ const Auth = () => {
     if (isRecovery) {
       setIsResettingPassword(true);
       setStatus({
-        message: t('auth.enterNewPassword'),
-        variant: "info"
+        message: t("auth.enterNewPassword"),
+        variant: "info",
       });
     }
     const checkUser = async () => {
@@ -149,7 +165,7 @@ const Auth = () => {
         }
         if (sessionError) {
           console.error("Failed to fetch auth session:", sessionError);
-          setError(t('auth.sessionVerifyError'));
+          setError(t("auth.sessionVerifyError"));
           return;
         }
         if (data.session?.user && !isRecovery) {
@@ -160,7 +176,7 @@ const Auth = () => {
         if (!isMounted) {
           return;
         }
-        setError(t('auth.sessionVerifyError'));
+        setError(t("auth.sessionVerifyError"));
       }
     };
     void checkUser();
@@ -171,13 +187,13 @@ const Auth = () => {
 
   useEffect(() => {
     const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(event => {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsResettingPassword(true);
         setStatus({
-          message: t('auth.enterNewPassword'),
-          variant: "info"
+          message: t("auth.enterNewPassword"),
+          variant: "info",
         });
       }
     });
@@ -196,22 +212,27 @@ const Auth = () => {
     setStatus(null);
     setUnverifiedEmail("");
     if (loginData.betaCode.trim().toUpperCase() !== BETA_CODE) {
-      setError("Invalid Beta code. Please enter the correct Beta access code to sign in.");
+      setError(
+        "Invalid Beta code. Please enter the correct Beta access code to sign in.",
+      );
       setLoading(false);
       return;
     }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
-        password: loginData.password
+        password: loginData.password,
       });
       if (error) {
         const message = error.message?.toLowerCase() ?? "";
-        if (message.includes("email not confirmed") || message.includes("confirm your email")) {
+        if (
+          message.includes("email not confirmed") ||
+          message.includes("confirm your email")
+        ) {
           setStatus({
-            message: t('auth.emailNotVerified'),
+            message: t("auth.emailNotVerified"),
             variant: "info",
-            showResend: true
+            showResend: true,
           });
           setUnverifiedEmail(loginData.email);
         } else {
@@ -221,13 +242,13 @@ const Auth = () => {
         setStatus(null);
         setUnverifiedEmail("");
         toast({
-          title: t('auth.welcomeBack'),
-          description: t('auth.loginSuccess')
+          title: t("auth.welcomeBack"),
+          description: t("auth.loginSuccess"),
         });
         navigate("/home", { replace: true });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.generic');
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setLoading(false);
@@ -251,7 +272,7 @@ const Auth = () => {
       }
       const origin = getBrowserOrigin();
       if (!origin) {
-        setError(t('auth.browserOnlySignup'));
+        setError(t("auth.browserOnlySignup"));
         setLoading(false);
         return;
       }
@@ -260,31 +281,31 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl
-        }
+          emailRedirectTo: redirectUrl,
+        },
       });
       if (error) {
         console.error("Supabase signUp failed", { error, context: { email } });
-        setError(t('auth.accountCreateError'));
+        setError(t("auth.accountCreateError"));
       } else if (data.user) {
         setUnverifiedEmail(email);
         setStatus({
-          message: `${t('auth.verificationSent')} ${email}. ${t('auth.confirmEmailToPlay')}`,
+          message: `${t("auth.verificationSent")} ${email}. ${t("auth.confirmEmailToPlay")}`,
           variant: "info",
-          showResend: true
+          showResend: true,
         });
         setActiveTab("login");
-        setLoginData(prev => ({ ...prev, email }));
+        setLoginData((prev) => ({ ...prev, email }));
         toast({
-          title: t('auth.accountCreated'),
-          description: t('auth.checkEmailConfirm')
+          title: t("auth.accountCreated"),
+          description: t("auth.checkEmailConfirm"),
         });
       } else {
         console.warn("Supabase signUp returned without user", { data, email });
       }
     } catch (err) {
       console.error("Unexpected error during signUp", err);
-      const message = err instanceof Error ? err.message : t('errors.generic');
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setLoading(false);
@@ -299,26 +320,29 @@ const Auth = () => {
     try {
       const origin = getBrowserOrigin();
       if (!origin) {
-        setError(t('auth.originError'));
+        setError(t("auth.originError"));
         setResetLinkLoading(false);
         return;
       }
       const redirectUrl = `${origin}/auth`;
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: redirectUrl
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        forgotPasswordEmail,
+        {
+          redirectTo: redirectUrl,
+        },
+      );
       if (error) {
         setError(error.message);
       } else {
         setStatus({
-          message: `${t('auth.resetLinkSent')} ${forgotPasswordEmail}.`,
-          variant: "success"
+          message: `${t("auth.resetLinkSent")} ${forgotPasswordEmail}.`,
+          variant: "success",
         });
         setForgotPasswordEmail("");
         setActiveTab("login");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.generic');
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setResetLinkLoading(false);
@@ -330,7 +354,7 @@ const Auth = () => {
     setError("");
     setStatus(null);
     if (newPassword !== confirmPassword) {
-      setError(t('auth.passwordMismatch'));
+      setError(t("auth.passwordMismatch"));
       return;
     }
     const passwordAssessment = assessPasswordStrength(newPassword);
@@ -341,14 +365,14 @@ const Auth = () => {
     setPasswordUpdateLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: newPassword,
       });
       if (error) {
         setError(error.message);
       } else {
         setStatus({
-          message: t('auth.passwordUpdatedSuccess'),
-          variant: "success"
+          message: t("auth.passwordUpdatedSuccess"),
+          variant: "success",
         });
         setNewPassword("");
         setConfirmPassword("");
@@ -359,11 +383,14 @@ const Auth = () => {
         }
         const { error: signOutError } = await supabase.auth.signOut();
         if (signOutError) {
-          console.error("Error signing out after password reset:", signOutError);
+          console.error(
+            "Error signing out after password reset:",
+            signOutError,
+          );
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.generic');
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setPasswordUpdateLoading(false);
@@ -377,7 +404,7 @@ const Auth = () => {
     try {
       const origin = getBrowserOrigin();
       if (!origin) {
-        setError(t('auth.browserOnlyResend'));
+        setError(t("auth.browserOnlyResend"));
         setResendingVerification(false);
         return;
       }
@@ -385,20 +412,20 @@ const Auth = () => {
         type: "signup",
         email: unverifiedEmail,
         options: {
-          emailRedirectTo: `${origin}/auth`
-        }
+          emailRedirectTo: `${origin}/auth`,
+        },
       });
       if (error) {
         setError(error.message);
       } else {
         setStatus({
-          message: `${t('auth.verificationResent')} ${unverifiedEmail}.`,
+          message: `${t("auth.verificationResent")} ${unverifiedEmail}.`,
           variant: "success",
-          showResend: false
+          showResend: false,
         });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.generic');
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setResendingVerification(false);
@@ -409,20 +436,24 @@ const Auth = () => {
     const discordUrl = "https://discord.gg/KB45k3XJuZ";
     if (typeof window === "undefined") {
       toast({
-        title: t('auth.discordUnavailable'),
+        title: t("auth.discordUnavailable"),
         description: "Open this link manually: https://discord.gg/KB45k3XJuZ",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
     const newWindow = window.open(discordUrl, "_blank", "noopener,noreferrer");
     if (!newWindow) {
       toast({
-        title: t('auth.unableOpenDiscord'),
-        description: t('auth.linkCopied')
+        title: t("auth.unableOpenDiscord"),
+        description: t("auth.linkCopied"),
       });
       try {
-        if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard &&
+          navigator.clipboard.writeText
+        ) {
           await navigator.clipboard.writeText(discordUrl);
         } else {
           throw new Error("Clipboard API not available");
@@ -430,9 +461,10 @@ const Auth = () => {
       } catch (clipboardError) {
         console.error("Failed to copy Discord invite link:", clipboardError);
         toast({
-          title: t('auth.copyLinkManually'),
-          description: "Please copy this invite link: https://discord.gg/KB45k3XJuZ",
-          variant: "destructive"
+          title: t("auth.copyLinkManually"),
+          description:
+            "Please copy this invite link: https://discord.gg/KB45k3XJuZ",
+          variant: "destructive",
         });
       }
     }
@@ -444,9 +476,16 @@ const Auth = () => {
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center mb-4">
-            <img src={logo} alt="RockMundo - Live The Dream" className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" />
+            <img
+              src={logo}
+              alt="RockMundo - Live The Dream"
+              className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl"
+            />
           </div>
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2">
+          <Badge
+            variant="outline"
+            className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2"
+          >
             BETA V1
           </Badge>
           <Button
@@ -464,7 +503,8 @@ const Auth = () => {
           <AlertDescription className="space-y-1 text-left">
             <p className="font-semibold">Thank you for playing Beta V1!</p>
             <p className="text-sm text-muted-foreground">
-              Beta V2 will be available in August with a full world reset. Enter your Beta code below to sign in.
+              Beta V2 will be available in August with a full world reset. Enter
+              your Beta code below to sign in.
             </p>
           </AlertDescription>
         </Alert>
@@ -472,10 +512,10 @@ const Auth = () => {
         <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-center text-xl sm:text-2xl font-bebas tracking-wide">
-              {t('auth.joinTheRevolution')}
+              {t("auth.joinTheRevolution")}
             </CardTitle>
             <CardDescription className="text-center text-sm font-oswald">
-              {t('auth.createLegacy')}
+              {t("auth.createLegacy")}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
@@ -486,8 +526,8 @@ const Auth = () => {
                     <Users className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/80 font-oswald">
-                      {t('auth.registeredPlayers')}
+                    <p className="text-[0.7rem] text-muted-foreground/80 font-oswald">
+                      {t("auth.registeredPlayers")}
                     </p>
                     {presenceLoading ? (
                       <Skeleton className="mt-1 h-6 w-20" />
@@ -497,7 +537,7 @@ const Auth = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground/70">
-                      {t('auth.musiciansJoined')}
+                      {t("auth.musiciansJoined")}
                     </p>
                   </div>
                 </div>
@@ -506,8 +546,8 @@ const Auth = () => {
                     <Activity className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/80 font-oswald">
-                      {t('auth.playersOnline')}
+                    <p className="text-[0.7rem] text-muted-foreground/80 font-oswald">
+                      {t("auth.playersOnline")}
                     </p>
                     {presenceLoading ? (
                       <Skeleton className="mt-1 h-6 w-20" />
@@ -517,7 +557,7 @@ const Auth = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground/70">
-                      {t('auth.exploringWorld')}
+                      {t("auth.exploringWorld")}
                     </p>
                   </div>
                 </div>
@@ -530,10 +570,14 @@ const Auth = () => {
 
               {status && (
                 <Alert
-                  variant={status.variant === "error" ? "destructive" : "default"}
+                  variant={
+                    status.variant === "error" ? "destructive" : "default"
+                  }
                   className={cn(
-                    status.variant === "info" && "border-border/50 bg-muted/60 text-foreground",
-                    status.variant === "success" && "border-success/50 bg-success/15 text-success-foreground"
+                    status.variant === "info" &&
+                      "border-border/50 bg-muted/60 text-foreground",
+                    status.variant === "success" &&
+                      "border-success/50 bg-success/15 text-success-foreground",
                   )}
                 >
                   <Mail className="h-4 w-4" />
@@ -547,7 +591,9 @@ const Auth = () => {
                         className="w-full border-border/60 bg-muted/60 text-foreground hover:bg-muted/80 hover:text-foreground"
                         variant="outline"
                       >
-                        {resendingVerification ? t('auth.resending') : t('auth.resendVerification')}
+                        {resendingVerification
+                          ? t("auth.resending")
+                          : t("auth.resendVerification")}
                       </Button>
                     )}
                   </AlertDescription>
@@ -564,8 +610,11 @@ const Auth = () => {
               {isResettingPassword ? (
                 <form onSubmit={handlePasswordUpdate} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="new-password" className="font-oswald text-sm">
-                      {t('auth.newPassword')}
+                    <Label
+                      htmlFor="new-password"
+                      className="font-oswald text-sm"
+                    >
+                      {t("auth.newPassword")}
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -575,19 +624,24 @@ const Auth = () => {
                         placeholder="••••••••"
                         className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
+                        onChange={(e) => setNewPassword(e.target.value)}
                         required
                         minLength={6}
                       />
                     </div>
-                    <p className={`text-xs font-oswald ${passwordStrengthTone}`}>
+                    <p
+                      className={`text-xs font-oswald ${passwordStrengthTone}`}
+                    >
                       {passwordStrength.message}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="font-oswald text-sm">
-                      {t('auth.confirmNewPassword')}
+                    <Label
+                      htmlFor="confirm-password"
+                      className="font-oswald text-sm"
+                    >
+                      {t("auth.confirmNewPassword")}
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -597,7 +651,7 @@ const Auth = () => {
                         placeholder="••••••••"
                         className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         minLength={6}
                       />
@@ -609,28 +663,46 @@ const Auth = () => {
                     className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
                     disabled={passwordUpdateLoading}
                   >
-                    {passwordUpdateLoading ? t('auth.updatingPassword') : t('auth.updatePassword')}
+                    {passwordUpdateLoading
+                      ? t("auth.updatingPassword")
+                      : t("auth.updatePassword")}
                   </Button>
                 </form>
               ) : (
-                <Tabs value={activeTab} onValueChange={value => handleTabChange(value as AuthTab)} className="space-y-4">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(value) => handleTabChange(value as AuthTab)}
+                  className="space-y-4"
+                >
                   <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
-                    <TabsTrigger value="login" className="font-oswald text-xs sm:text-sm">
-                      {t('auth.signIn')}
+                    <TabsTrigger
+                      value="login"
+                      className="font-oswald text-xs sm:text-sm"
+                    >
+                      {t("auth.signIn")}
                     </TabsTrigger>
-                    <TabsTrigger value="signup" className="font-oswald text-xs sm:text-sm">
-                      {t('auth.signUp')}
+                    <TabsTrigger
+                      value="signup"
+                      className="font-oswald text-xs sm:text-sm"
+                    >
+                      {t("auth.signUp")}
                     </TabsTrigger>
-                    <TabsTrigger value="forgot" className="font-oswald text-xs sm:text-sm">
-                      {t('auth.forgotPassword')}
+                    <TabsTrigger
+                      value="forgot"
+                      className="font-oswald text-xs sm:text-sm"
+                    >
+                      {t("auth.forgotPassword")}
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="login">
                     <form onSubmit={handleLogin} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="login-email" className="font-oswald text-sm">
-                          {t('forms.email')}
+                        <Label
+                          htmlFor="login-email"
+                          className="font-oswald text-sm"
+                        >
+                          {t("forms.email")}
                         </Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -640,15 +712,23 @@ const Auth = () => {
                             placeholder="your@email.com"
                             className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={loginData.email}
-                            onChange={e => setLoginData({ ...loginData, email: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="login-password" className="font-oswald text-sm">
-                          {t('forms.password')}
+                        <Label
+                          htmlFor="login-password"
+                          className="font-oswald text-sm"
+                        >
+                          {t("forms.password")}
                         </Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -658,14 +738,22 @@ const Auth = () => {
                             placeholder="••••••••"
                             className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={loginData.password}
-                            onChange={e => setLoginData({ ...loginData, password: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="login-beta-code" className="font-oswald text-sm">
+                        <Label
+                          htmlFor="login-beta-code"
+                          className="font-oswald text-sm"
+                        >
                           Beta Access Code
                         </Label>
                         <div className="relative">
@@ -675,21 +763,25 @@ const Auth = () => {
                             type="text"
                             placeholder="Enter your Beta code"
                             autoComplete="off"
-                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary tracking-widest uppercase"
+                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={loginData.betaCode}
-                            onChange={e => setLoginData({ ...loginData, betaCode: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                betaCode: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
                       </div>
-
 
                       <Button
                         type="submit"
                         className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
                         disabled={loading}
                       >
-                        {loading ? t('auth.signingIn') : t('auth.signIn')}
+                        {loading ? t("auth.signingIn") : t("auth.signIn")}
                       </Button>
                     </form>
                   </TabsContent>
@@ -697,8 +789,11 @@ const Auth = () => {
                   <TabsContent value="signup">
                     <form onSubmit={handleSignup} className="space-y-3">
                       <div className="space-y-2">
-                        <Label htmlFor="signup-email" className="font-oswald text-sm">
-                          {t('forms.email')}
+                        <Label
+                          htmlFor="signup-email"
+                          className="font-oswald text-sm"
+                        >
+                          {t("forms.email")}
                         </Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -708,15 +803,23 @@ const Auth = () => {
                             placeholder="your@email.com"
                             className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={signupData.email}
-                            onChange={e => setSignupData({ ...signupData, email: e.target.value })}
+                            onChange={(e) =>
+                              setSignupData({
+                                ...signupData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="signup-password" className="font-oswald text-sm">
-                          {t('forms.password')}
+                        <Label
+                          htmlFor="signup-password"
+                          className="font-oswald text-sm"
+                        >
+                          {t("forms.password")}
                         </Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -726,12 +829,19 @@ const Auth = () => {
                             placeholder="••••••••"
                             className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={signupData.password}
-                            onChange={e => setSignupData({ ...signupData, password: e.target.value })}
+                            onChange={(e) =>
+                              setSignupData({
+                                ...signupData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                             minLength={6}
                           />
                         </div>
-                        <p className={`text-xs font-oswald ${signupPasswordStrengthTone}`}>
+                        <p
+                          className={`text-xs font-oswald ${signupPasswordStrengthTone}`}
+                        >
                           {signupPasswordStrength.message}
                         </p>
                       </div>
@@ -740,10 +850,16 @@ const Auth = () => {
                         <Checkbox
                           id="terms"
                           checked={termsAccepted}
-                          onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setTermsAccepted(checked === true)
+                          }
                         />
-                        <Label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                          {t('auth.termsAgreement')} <TermsDialog triggerText={t('auth.termsOfService')} />
+                        <Label
+                          htmlFor="terms"
+                          className="text-xs text-muted-foreground leading-tight cursor-pointer"
+                        >
+                          {t("auth.termsAgreement")}{" "}
+                          <TermsDialog triggerText={t("auth.termsOfService")} />
                         </Label>
                       </div>
 
@@ -752,7 +868,9 @@ const Auth = () => {
                         className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200 mt-4"
                         disabled={loading || !termsAccepted}
                       >
-                        {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
+                        {loading
+                          ? t("auth.creatingAccount")
+                          : t("auth.createAccount")}
                       </Button>
                     </form>
                   </TabsContent>
@@ -760,8 +878,11 @@ const Auth = () => {
                   <TabsContent value="forgot">
                     <form onSubmit={handleForgotPassword} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="forgot-email" className="font-oswald text-sm">
-                          {t('forms.email')}
+                        <Label
+                          htmlFor="forgot-email"
+                          className="font-oswald text-sm"
+                        >
+                          {t("forms.email")}
                         </Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -771,14 +892,16 @@ const Auth = () => {
                             placeholder="your@email.com"
                             className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                             value={forgotPasswordEmail}
-                            onChange={e => setForgotPasswordEmail(e.target.value)}
+                            onChange={(e) =>
+                              setForgotPasswordEmail(e.target.value)
+                            }
                             required
                           />
                         </div>
                       </div>
 
                       <p className="text-xs text-muted-foreground font-oswald">
-                        {t('auth.resetLinkInfo')}
+                        {t("auth.resetLinkInfo")}
                       </p>
 
                       <Button
@@ -786,7 +909,9 @@ const Auth = () => {
                         className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
                         disabled={resetLinkLoading}
                       >
-                        {resetLinkLoading ? t('auth.sendingResetLink') : t('auth.sendResetLink')}
+                        {resetLinkLoading
+                          ? t("auth.sendingResetLink")
+                          : t("auth.sendResetLink")}
                       </Button>
                     </form>
                   </TabsContent>
@@ -798,7 +923,7 @@ const Auth = () => {
 
         <div className="text-center mt-6 space-y-4">
           <p className="text-xs text-muted-foreground/70 font-oswald">
-            {t('auth.joinThousands')}
+            {t("auth.joinThousands")}
           </p>
           <button
             type="button"
@@ -806,7 +931,7 @@ const Auth = () => {
             className="flex items-center justify-center gap-3 mx-auto px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] transition-colors text-white font-oswald tracking-wide shadow-lg hover:shadow-xl"
           >
             <img src={discordLogo} alt="Discord" className="h-6 w-auto" />
-            <span>{t('auth.joinDiscord')}</span>
+            <span>{t("auth.joinDiscord")}</span>
           </button>
         </div>
       </div>

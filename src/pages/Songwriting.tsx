@@ -17,20 +17,44 @@ import {
   SONG_RATING_RANGE,
 } from "@/hooks/useSongwritingData";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MUSIC_GENRES, getGenreSkillSlug } from "@/data/genres";
-import { calculateSongQuality, canStartSongwriting, canWriteGenre } from "@/utils/songQuality";
+import {
+  calculateSongQuality,
+  canStartSongwriting,
+  canWriteGenre,
+} from "@/utils/songQuality";
 import { getSongRating } from "@/data/songRatings";
 import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
-import { LyricsEditor, parseLyricsToSections, sectionsToLyrics, type LyricsSection } from "@/components/songwriting/LyricsEditor";
-import { SongNotesDisplay, generateSongNotesForAI } from "@/components/songwriting/SongNotesDisplay";
+import {
+  LyricsEditor,
+  parseLyricsToSections,
+  sectionsToLyrics,
+  type LyricsSection,
+} from "@/components/songwriting/LyricsEditor";
+import {
+  SongNotesDisplay,
+  generateSongNotesForAI,
+} from "@/components/songwriting/SongNotesDisplay";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
 import { SongwritingInstrumentSelector } from "@/components/songwriting/SongwritingInstrumentSelector";
@@ -49,7 +73,12 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Music,
   Plus,
@@ -161,7 +190,8 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
 };
 
 // Simplified song select - only use existing columns
-const SONG_SELECT_COLUMNS = "id, title, genre, status, quality_score, song_rating, streams, revenue, release_date, duration_seconds";
+const SONG_SELECT_COLUMNS =
+  "id, title, genre, status, quality_score, song_rating, streams, revenue, release_date, duration_seconds";
 
 type PostgrestErrorLike = {
   code?: string | null;
@@ -175,7 +205,9 @@ type PostgrestErrorContext = {
   haystack: string;
 };
 
-const getPostgrestErrorContext = (error: unknown): PostgrestErrorContext | null => {
+const getPostgrestErrorContext = (
+  error: unknown,
+): PostgrestErrorContext | null => {
   if (!error || typeof error !== "object") {
     return null;
   }
@@ -183,8 +215,10 @@ const getPostgrestErrorContext = (error: unknown): PostgrestErrorContext | null 
   const candidate = error as PostgrestErrorLike;
   const code = typeof candidate.code === "string" ? candidate.code : null;
   const haystack = [candidate.message, candidate.details, candidate.hint]
-    .filter((value): value is string => typeof value === "string" && value.length > 0)
-    .join(" ")
+    .filter(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    )
+    .join("")
     .toLowerCase();
 
   return { code, haystack };
@@ -197,7 +231,13 @@ const isMissingTableError = (error: unknown, tableName: string): boolean => {
     return false;
   }
 
-  const knownMissingTableCodes = new Set(["PGRST201", "PGRST202", "PGRST205", "PGRST114", "42P01"]);
+  const knownMissingTableCodes = new Set([
+    "PGRST201",
+    "PGRST202",
+    "PGRST205",
+    "PGRST114",
+    "42P01",
+  ]);
   if (context.code && knownMissingTableCodes.has(context.code)) {
     return true;
   }
@@ -220,7 +260,6 @@ const isMissingTableError = (error: unknown, tableName: string): boolean => {
   );
 };
 
-
 type NamedOption = {
   id: string;
   label: string;
@@ -231,32 +270,89 @@ type NamedOption = {
 };
 
 // Genre library - use centralized genre list from skill tree
-const GENRE_LIBRARY = MUSIC_GENRES.map(genre => ({
+const GENRE_LIBRARY = MUSIC_GENRES.map((genre) => ({
   id: genre,
   label: genre,
-  relatedSkill: getGenreSkillSlug(genre, 'basic')
+  relatedSkill: getGenreSkillSlug(genre, "basic"),
 }));
 
-
 const WRITING_MODE_OPTIONS: NamedOption[] = [
-  { id: "solo", label: "Solo writing", description: "You drive the full process." },
-  { id: "topline", label: "Top-line", description: "Craft lyrics and melody over existing track." },
-  { id: "track-led", label: "Track-led", description: "Build the production bed before lyric focus." },
-  { id: "camp", label: "Writing camp", description: "Coordinate multiple collaborators in rotations." },
+  {
+    id: "solo",
+    label: "Solo writing",
+    description: "You drive the full process.",
+  },
+  {
+    id: "topline",
+    label: "Top-line",
+    description: "Craft lyrics and melody over existing track.",
+  },
+  {
+    id: "track-led",
+    label: "Track-led",
+    description: "Build the production bed before lyric focus.",
+  },
+  {
+    id: "camp",
+    label: "Writing camp",
+    description: "Coordinate multiple collaborators in rotations.",
+  },
 ];
 
 const CO_WRITER_OPTIONS: NamedOption[] = [
-  { id: "lyricist", label: "Specialist Lyricist", familiarity: "Wordsmith", role: "lyrics", defaultSplit: 25 },
-  { id: "melodist", label: "Hook Melody Writer", familiarity: "Hook architect", role: "melody", defaultSplit: 25 },
-  { id: "producer-writer", label: "Producer Writer", familiarity: "Track architect", role: "production", defaultSplit: 20 },
-  { id: "bandmate", label: "Bandmate", familiarity: "Shared chemistry", role: "band", defaultSplit: 15 },
-  { id: "remote", label: "Remote collaborator", familiarity: "Online match", role: "remote", defaultSplit: 15 },
+  {
+    id: "lyricist",
+    label: "Specialist Lyricist",
+    familiarity: "Wordsmith",
+    role: "lyrics",
+    defaultSplit: 25,
+  },
+  {
+    id: "melodist",
+    label: "Hook Melody Writer",
+    familiarity: "Hook architect",
+    role: "melody",
+    defaultSplit: 25,
+  },
+  {
+    id: "producer-writer",
+    label: "Producer Writer",
+    familiarity: "Track architect",
+    role: "production",
+    defaultSplit: 20,
+  },
+  {
+    id: "bandmate",
+    label: "Bandmate",
+    familiarity: "Shared chemistry",
+    role: "band",
+    defaultSplit: 15,
+  },
+  {
+    id: "remote",
+    label: "Remote collaborator",
+    familiarity: "Online match",
+    role: "remote",
+    defaultSplit: 15,
+  },
 ];
 
 const PRODUCER_OPTIONS: NamedOption[] = [
-  { id: "self-produce", label: "Self-produce", description: "Artist leads the console and creative calls." },
-  { id: "trusted-pro", label: "Trusted Producer", description: "Bring in your go-to sonic director." },
-  { id: "experimental", label: "Experimental Architect", description: "Chase adventurous textures and sound design." },
+  {
+    id: "self-produce",
+    label: "Self-produce",
+    description: "Artist leads the console and creative calls.",
+  },
+  {
+    id: "trusted-pro",
+    label: "Trusted Producer",
+    description: "Bring in your go-to sonic director.",
+  },
+  {
+    id: "experimental",
+    label: "Experimental Architect",
+    description: "Chase adventurous textures and sound design.",
+  },
 ];
 
 const SESSION_MUSICIAN_OPTIONS: NamedOption[] = [
@@ -283,7 +379,10 @@ const MOOD_TAGS: NamedOption[] = [
   { id: "playful", label: "Playful" },
 ];
 
-const STATUS_METADATA: Record<string, { label: string; badge: "default" | "secondary" | "outline" | "destructive" }> = {
+const STATUS_METADATA: Record<
+  string,
+  { label: string; badge: "default" | "secondary" | "outline" | "destructive" }
+> = {
   idea: { label: "Idea", badge: "secondary" },
   draft: { label: "Draft", badge: "secondary" },
   writing: { label: "Writing", badge: "default" },
@@ -305,7 +404,12 @@ const DEFAULT_STATUS_ORDER = [
 ];
 
 const ACTIVE_STATUSES = new Set(["writing", "arranging"]);
-const RELEASE_READY_STATUSES = new Set(["ready_to_finish", "demo", "completed", "complete"]);
+const RELEASE_READY_STATUSES = new Set([
+  "ready_to_finish",
+  "demo",
+  "completed",
+  "complete",
+]);
 
 const computeCoreAttributes = (project: SongwritingProject) => {
   const creativeAttributes = project.creative_brief?.core_attributes;
@@ -323,14 +427,22 @@ const computeCoreAttributes = (project: SongwritingProject) => {
   const musicProgress = project.music_progress ?? 0;
   const quality = project.quality_score ?? 0;
 
-  const progressRatio = (value: number) => Math.min(1, Math.max(0, value / PROGRESS_TARGET));
-  const qualityRatio = Math.min(1, Math.max(0, quality / SONG_RATING_RANGE.max));
+  const progressRatio = (value: number) =>
+    Math.min(1, Math.max(0, value / PROGRESS_TARGET));
+  const qualityRatio = Math.min(
+    1,
+    Math.max(0, quality / SONG_RATING_RANGE.max),
+  );
 
   return {
     lyrics: Math.round(progressRatio(lyricsProgress) * 100),
-    melody: Math.round(((progressRatio(musicProgress) * 0.6 + qualityRatio * 0.4) || 0) * 100),
+    melody: Math.round(
+      (progressRatio(musicProgress) * 0.6 + qualityRatio * 0.4 || 0) * 100,
+    ),
     rhythm: Math.round(progressRatio(musicProgress) * 100),
-    arrangement: Math.round(((progressRatio(musicProgress) + qualityRatio) / 2) * 100),
+    arrangement: Math.round(
+      ((progressRatio(musicProgress) + qualityRatio) / 2) * 100,
+    ),
     production: Math.round(qualityRatio * 100),
   };
 };
@@ -338,13 +450,21 @@ const computeCoreAttributes = (project: SongwritingProject) => {
 const computeCoWriterSplits = (project: SongwritingProject) => {
   const coWriters = project.creative_brief?.co_writers ?? [];
   if (coWriters.length === 0) {
-    return [] as Array<{ id: string; label: string; split: number; role?: string | null }>;
+    return [] as Array<{
+      id: string;
+      label: string;
+      split: number;
+      role?: string | null;
+    }>;
   }
 
   return coWriters.map((writer) => ({
     id: writer.id,
     label: writer.name,
-    split: typeof writer.split === "number" ? Math.round(writer.split) : Math.round(100 / coWriters.length),
+    split:
+      typeof writer.split === "number"
+        ? Math.round(writer.split)
+        : Math.round(100 / coWriters.length),
     role: writer.role,
   }));
 };
@@ -360,10 +480,14 @@ const getStatusMeta = (status: string | null | undefined) => {
   }
 
   const normalized = status.toLowerCase();
-  return STATUS_METADATA[normalized] ?? {
-    label: status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()),
-    badge: "secondary" as const,
-  };
+  return (
+    STATUS_METADATA[normalized] ?? {
+      label: status
+        .replace(/_/g, "")
+        .replace(/\b\w/g, (char) => char.toUpperCase()),
+      badge: "secondary" as const,
+    }
+  );
 };
 
 const computeLockState = (lockedUntil: string | null | undefined) => {
@@ -402,7 +526,15 @@ const Songwriting = () => {
   // useAuth removed — profileId from useActiveProfile below
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
-  const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
+  const {
+    profile,
+    activityStatus,
+    startActivity,
+    clearActivityStatus,
+    refreshActivityStatus,
+    skills,
+    attributes: rawAttributes,
+  } = useGameData();
   const {
     themes,
     chordProgressions,
@@ -426,7 +558,7 @@ const Songwriting = () => {
     return {
       creative_insight: rawAttributes.creative_insight || 10,
       musical_ability: rawAttributes.musical_ability || 10,
-      technical_mastery: rawAttributes.technical_mastery || 10
+      technical_mastery: rawAttributes.technical_mastery || 10,
     };
   }, [rawAttributes]);
 
@@ -437,18 +569,29 @@ const Songwriting = () => {
   const [showLockedOnly, setShowLockedOnly] = useState(false);
   const [showReadyOnly, setShowReadyOnly] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<SongwritingProject | null>(null);
-  const [historyProject, setHistoryProject] = useState<SongwritingProject | null>(null);
+  const [selectedProject, setSelectedProject] =
+    useState<SongwritingProject | null>(null);
+  const [historyProject, setHistoryProject] =
+    useState<SongwritingProject | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [completionProject, setCompletionProject] = useState<SongwritingProject | null>(null);
+  const [completionProject, setCompletionProject] =
+    useState<SongwritingProject | null>(null);
   const [completionNotes, setCompletionNotes] = useState("");
-  const [formState, setFormState] = useState<ProjectFormState>(DEFAULT_FORM_STATE);
+  const [formState, setFormState] =
+    useState<ProjectFormState>(DEFAULT_FORM_STATE);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [effortSelections, setEffortSelections] = useState<Record<string, SessionEffortOption["id"]>>({});
-  const [sessionParticipants, setSessionParticipants] = useState<
-    Record<string, { coWriters: string[]; producers: string[]; musicians: string[] }>
+  const [effortSelections, setEffortSelections] = useState<
+    Record<string, SessionEffortOption["id"]>
   >({});
-  const [rehearsalUnlocks, setRehearsalUnlocks] = useState<Record<string, boolean>>({});
+  const [sessionParticipants, setSessionParticipants] = useState<
+    Record<
+      string,
+      { coWriters: string[]; producers: string[]; musicians: string[] }
+    >
+  >({});
+  const [rehearsalUnlocks, setRehearsalUnlocks] = useState<
+    Record<string, boolean>
+  >({});
 
   // Quick Create dialog state
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
@@ -458,33 +601,35 @@ const Songwriting = () => {
 
   // Song completion dialog state
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
-  const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
+  const [completedProject, setCompletedProject] =
+    useState<SongwritingProject | null>(null);
   const [completionQuality, setCompletionQuality] = useState<any>(null);
   const [completionXp, setCompletionXp] = useState(0);
-  
-  
+
   // Add to repertoire dialog state
   const [showRepertoireDialog, setShowRepertoireDialog] = useState(false);
-  const [repertoireProjectSongId, setRepertoireProjectSongId] = useState<string | null>(null);
-  
+  const [repertoireProjectSongId, setRepertoireProjectSongId] = useState<
+    string | null
+  >(null);
+
   // Schedule dialog state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [scheduleProject, setScheduleProject] = useState<SongwritingProject | null>(null);
+  const [scheduleProject, setScheduleProject] =
+    useState<SongwritingProject | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
   const createFormRef = useRef<HTMLFormElement | null>(null);
-  const [inviteAfterCreateRequested, setInviteAfterCreateRequested] = useState(false);
-  
+  const [inviteAfterCreateRequested, setInviteAfterCreateRequested] =
+    useState(false);
+
   // Check if player can start songwriting
   const canWrite = useMemo(() => {
     return canStartSongwriting(skills || {});
   }, [skills]);
-  
+
   // Filter genres by unlocked skills
   const availableGenres = useMemo(() => {
-    return MUSIC_GENRES.filter(genre => 
-      canWriteGenre(genre, skills || {})
-    );
+    return MUSIC_GENRES.filter((genre) => canWriteGenre(genre, skills || {}));
   }, [skills]);
 
   const fetchSongs = useCallback(async () => {
@@ -506,10 +651,15 @@ const Songwriting = () => {
         throw error;
       }
 
-      const resolvedSongs = Array.isArray(data) ? (data as unknown as Song[]) : [];
+      const resolvedSongs = Array.isArray(data)
+        ? (data as unknown as Song[])
+        : [];
       setSongs(resolvedSongs);
     } catch (error) {
-      logger.error("Error fetching songs for songwriting", { profileId, error });
+      logger.error("Error fetching songs for songwriting", {
+        profileId,
+        error,
+      });
       toast.error("Failed to load songs");
       setSongs([]);
     }
@@ -527,44 +677,68 @@ const Songwriting = () => {
   }, []);
 
   useEffect(() => {
-    if (convertToSong.isSuccess || createProject.isSuccess || updateProject.isSuccess) {
+    if (
+      convertToSong.isSuccess ||
+      createProject.isSuccess ||
+      updateProject.isSuccess
+    ) {
       void fetchSongs();
     }
-  }, [convertToSong.isSuccess, createProject.isSuccess, updateProject.isSuccess, fetchSongs]);
+  }, [
+    convertToSong.isSuccess,
+    createProject.isSuccess,
+    updateProject.isSuccess,
+    fetchSongs,
+  ]);
 
   const projectsList = useMemo(() => projects ?? [], [projects]);
   const themesList = useMemo(() => themes ?? [], [themes]);
-  const progressionsList = useMemo(() => chordProgressions ?? [], [chordProgressions]);
+  const progressionsList = useMemo(
+    () => chordProgressions ?? [],
+    [chordProgressions],
+  );
   const coWriterOptionMap = useMemo(
     () =>
-      CO_WRITER_OPTIONS.reduce<Record<string, NamedOption>>((accumulator, option) => {
-        accumulator[option.id] = option;
-        return accumulator;
-      }, {}),
+      CO_WRITER_OPTIONS.reduce<Record<string, NamedOption>>(
+        (accumulator, option) => {
+          accumulator[option.id] = option;
+          return accumulator;
+        },
+        {},
+      ),
     [],
   );
   const producerOptionMap = useMemo(
     () =>
-      PRODUCER_OPTIONS.reduce<Record<string, NamedOption>>((accumulator, option) => {
-        accumulator[option.id] = option;
-        return accumulator;
-      }, {}),
+      PRODUCER_OPTIONS.reduce<Record<string, NamedOption>>(
+        (accumulator, option) => {
+          accumulator[option.id] = option;
+          return accumulator;
+        },
+        {},
+      ),
     [],
   );
   const sessionMusicianOptionMap = useMemo(
     () =>
-      SESSION_MUSICIAN_OPTIONS.reduce<Record<string, NamedOption>>((accumulator, option) => {
-        accumulator[option.id] = option;
-        return accumulator;
-      }, {}),
+      SESSION_MUSICIAN_OPTIONS.reduce<Record<string, NamedOption>>(
+        (accumulator, option) => {
+          accumulator[option.id] = option;
+          return accumulator;
+        },
+        {},
+      ),
     [],
   );
   const inspirationTagMap = useMemo(
     () =>
-      INSPIRATION_TAGS.reduce<Record<string, NamedOption>>((accumulator, option) => {
-        accumulator[option.id] = option;
-        return accumulator;
-      }, {}),
+      INSPIRATION_TAGS.reduce<Record<string, NamedOption>>(
+        (accumulator, option) => {
+          accumulator[option.id] = option;
+          return accumulator;
+        },
+        {},
+      ),
     [],
   );
   const moodTagMap = useMemo(
@@ -590,7 +764,9 @@ const Songwriting = () => {
       return skillScore >= 25;
     });
 
-    return (familiarGenres.length > 0 ? familiarGenres : GENRE_LIBRARY.slice(0, 6)).map((genre) => ({
+    return (
+      familiarGenres.length > 0 ? familiarGenres : GENRE_LIBRARY.slice(0, 6)
+    ).map((genre) => ({
       id: genre.id,
       label: genre.label,
     }));
@@ -599,7 +775,12 @@ const Songwriting = () => {
   const plannedCoWriterSplits = useMemo(() => {
     const total = formState.coWriters.length;
     if (total === 0) {
-      return [] as Array<{ id: string; label: string; split: number; role?: string }>;
+      return [] as Array<{
+        id: string;
+        label: string;
+        split: number;
+        role?: string;
+      }>;
     }
 
     const evenSplit = Math.floor(100 / total);
@@ -617,7 +798,10 @@ const Songwriting = () => {
   }, [formState.coWriters, coWriterOptionMap]);
 
   const selectedWritingMode = useMemo(
-    () => WRITING_MODE_OPTIONS.find((option) => option.id === formState.writingMode) ?? null,
+    () =>
+      WRITING_MODE_OPTIONS.find(
+        (option) => option.id === formState.writingMode,
+      ) ?? null,
     [formState.writingMode],
   );
 
@@ -634,62 +818,74 @@ const Songwriting = () => {
 
   // Auto-check for completed sessions - with abort controller support
   const abortControllerRef = useRef<AbortController | null>(null);
-  
-  const checkAutoCompletions = useCallback(async (force = false) => {
-    const now = Date.now();
-    // Check immediately on first load, then throttle to 60 seconds (reduced from 30)
-    if (!force && lastCheckRef.current > 0 && now - lastCheckRef.current < 60000) return;
-    
-    // Cancel any in-flight request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-    
-    lastCheckRef.current = now;
 
-    try {
-      setIsRefreshing(true);
-      
-      // Add timeout to prevent hanging
-      const timeoutId = setTimeout(() => {
-        abortControllerRef.current?.abort();
-      }, 10000); // 10 second timeout
-      
-      const { data, error } = await supabase.functions.invoke('cleanup-songwriting');
-      
-      clearTimeout(timeoutId);
-      
-      if (error) {
-        console.error('Auto-complete error:', error);
-        if (force) {
-          toast.error('Failed to check for completed sessions');
-        }
+  const checkAutoCompletions = useCallback(
+    async (force = false) => {
+      const now = Date.now();
+      // Check immediately on first load, then throttle to 60 seconds (reduced from 30)
+      if (
+        !force &&
+        lastCheckRef.current > 0 &&
+        now - lastCheckRef.current < 60000
+      )
         return;
+
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-      
-      if (data?.completedSessions > 0) {
-        toast.success(`${data.completedSessions} session(s) completed! Progress updated.`);
-        refetchProjects(); // Don't await - fire and forget
-      } else if (force) {
-        toast.info('No sessions ready to complete');
+      abortControllerRef.current = new AbortController();
+
+      lastCheckRef.current = now;
+
+      try {
+        setIsRefreshing(true);
+
+        // Add timeout to prevent hanging
+        const timeoutId = setTimeout(() => {
+          abortControllerRef.current?.abort();
+        }, 10000); // 10 second timeout
+
+        const { data, error } = await supabase.functions.invoke(
+          "cleanup-songwriting",
+        );
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error("Auto-complete error:", error);
+          if (force) {
+            toast.error("Failed to check for completed sessions");
+          }
+          return;
+        }
+
+        if (data?.completedSessions > 0) {
+          toast.success(
+            `${data.completedSessions} session(s) completed! Progress updated.`,
+          );
+          refetchProjects(); // Don't await - fire and forget
+        } else if (force) {
+          toast.info("No sessions ready to complete");
+        }
+      } catch (error) {
+        // Ignore abort errors
+        if (error instanceof Error && error.name === "AbortError") return;
+        console.error("Auto-complete check failed:", error);
+        if (force) {
+          toast.error("Failed to refresh sessions");
+        }
+      } finally {
+        setIsRefreshing(false);
       }
-    } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('Auto-complete check failed:', error);
-      if (force) {
-        toast.error('Failed to refresh sessions');
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetchProjects]);
+    },
+    [refetchProjects],
+  );
 
   // Check on mount and when page becomes visible - with proper cleanup
   useEffect(() => {
     let isMounted = true;
-    
+
     // Delay initial check slightly to not block page render
     const initialTimeout = setTimeout(() => {
       if (isMounted) checkAutoCompletions();
@@ -701,8 +897,8 @@ const Songwriting = () => {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     // Poll every 60 seconds while page is visible (increased from 30)
     const interval = setInterval(() => {
       if (!document.hidden && isMounted) {
@@ -713,7 +909,7 @@ const Songwriting = () => {
     return () => {
       isMounted = false;
       clearTimeout(initialTimeout);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
       // Abort any in-flight requests on unmount
       abortControllerRef.current?.abort();
@@ -721,41 +917,48 @@ const Songwriting = () => {
   }, [checkAutoCompletions]);
 
   useEffect(() => {
-    const newProjects = projectsList.filter(p => !initializedProjectsRef.current.has(p.id));
-    
+    const newProjects = projectsList.filter(
+      (p) => !initializedProjectsRef.current.has(p.id),
+    );
+
     if (newProjects.length === 0) return;
-    
+
     setEffortSelections((previous) => {
       const nextSelections = { ...previous };
-      
+
       newProjects.forEach((project) => {
         if (!project.id) return;
         const defaultEffort = SESSION_EFFORT_OPTIONS.find(
-          (option) => option.id === (project.creative_brief?.effort_level as SessionEffortOption["id"]),
+          (option) =>
+            option.id ===
+            (project.creative_brief?.effort_level as SessionEffortOption["id"]),
         );
-        nextSelections[project.id] = defaultEffort?.id ?? DEFAULT_EFFORT_OPTION.id;
+        nextSelections[project.id] =
+          defaultEffort?.id ?? DEFAULT_EFFORT_OPTION.id;
       });
-      
+
       return nextSelections;
     });
 
     setSessionParticipants((previous) => {
       const nextParticipants = { ...previous };
-      
+
       newProjects.forEach((project) => {
         if (!project.id) return;
         nextParticipants[project.id] = {
-          coWriters: project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
+          coWriters:
+            project.creative_brief?.co_writers?.map((writer) => writer.id) ??
+            [],
           producers: project.creative_brief?.producers ?? [],
           musicians: project.creative_brief?.session_musicians ?? [],
         };
       });
-      
+
       return nextParticipants;
     });
-    
+
     // Track that we've initialized these projects
-    newProjects.forEach(p => initializedProjectsRef.current.add(p.id));
+    newProjects.forEach((p) => initializedProjectsRef.current.add(p.id));
   }, [projectsList]);
 
   useEffect(() => {
@@ -764,7 +967,10 @@ const Songwriting = () => {
       const nextUnlocks = { ...previous };
       projectsList.forEach((project) => {
         if (!project.id) return;
-        if (project.creative_brief?.rating_revealed_at && !previous[project.id]) {
+        if (
+          project.creative_brief?.rating_revealed_at &&
+          !previous[project.id]
+        ) {
           nextUnlocks[project.id] = true;
           hasChanges = true;
         }
@@ -789,18 +995,28 @@ const Songwriting = () => {
 
   const globalActivityLock = useMemo(() => {
     if (!activityStatus || activityStatus.status === "idle") {
-      return { locked: false, endsAt: null as Date | null, label: null as string | null };
+      return {
+        locked: false,
+        endsAt: null as Date | null,
+        label: null as string | null,
+      };
     }
 
-    const label = activityStatus.status.replace(/_/g, " ");
+    const label = activityStatus.status.replace(/_/g, "");
 
     if (typeof activityStatus.duration_minutes !== "number") {
       return { locked: true, endsAt: null as Date | null, label };
     }
 
-    const explicitEndsAt = activityStatus.ends_at ? new Date(activityStatus.ends_at) : null;
+    const explicitEndsAt = activityStatus.ends_at
+      ? new Date(activityStatus.ends_at)
+      : null;
     if (explicitEndsAt && !Number.isNaN(explicitEndsAt.getTime())) {
-      return { locked: explicitEndsAt.getTime() > Date.now(), endsAt: explicitEndsAt, label };
+      return {
+        locked: explicitEndsAt.getTime() > Date.now(),
+        endsAt: explicitEndsAt,
+        label,
+      };
     }
 
     if (!activityStatus.started_at) {
@@ -812,8 +1028,14 @@ const Songwriting = () => {
       return { locked: false, endsAt: null as Date | null, label };
     }
 
-    const computedEnds = new Date(startedAt.getTime() + activityStatus.duration_minutes * 60_000);
-    return { locked: computedEnds.getTime() > Date.now(), endsAt: computedEnds, label };
+    const computedEnds = new Date(
+      startedAt.getTime() + activityStatus.duration_minutes * 60_000,
+    );
+    return {
+      locked: computedEnds.getTime() > Date.now(),
+      endsAt: computedEnds,
+      label,
+    };
   }, [activityStatus]);
 
   const globalActivityCountdown = useMemo(() => {
@@ -822,7 +1044,9 @@ const Songwriting = () => {
     }
 
     try {
-      return formatDistanceToNowStrict(globalActivityLock.endsAt, { addSuffix: true });
+      return formatDistanceToNowStrict(globalActivityLock.endsAt, {
+        addSuffix: true,
+      });
     } catch (error) {
       logger.warn("Failed to compute activity countdown", {
         error: error instanceof Error ? error.message : String(error),
@@ -832,57 +1056,84 @@ const Songwriting = () => {
   }, [globalActivityLock]);
 
   const totalProjects = projectsList.length;
-  const totalSessions = projectsList.reduce((sum, project) => sum + (project.total_sessions ?? 0), 0);
+  const totalSessions = projectsList.reduce(
+    (sum, project) => sum + (project.total_sessions ?? 0),
+    0,
+  );
   const focusMinutes = projectsList.reduce((total, project) => {
     const effortOption = SESSION_EFFORT_OPTIONS.find(
-      (option) => option.id === (project.creative_brief?.effort_level as SessionEffortOption["id"]),
+      (option) =>
+        option.id ===
+        (project.creative_brief?.effort_level as SessionEffortOption["id"]),
     );
     const hours = effortOption?.hours ?? DEFAULT_EFFORT_OPTION.hours;
     return total + (project.total_sessions ?? 0) * hours * 60;
   }, 0);
   const activeProjects = projectsList.filter((project) =>
-    ACTIVE_STATUSES.has((project.status || "").toLowerCase())
+    ACTIVE_STATUSES.has((project.status || "").toLowerCase()),
   ).length;
-  const completedProjects = projectsList.filter((project) =>
-    RELEASE_READY_STATUSES.has((project.status || "").toLowerCase()) &&
-    (project.music_progress ?? 0) >= PROGRESS_TARGET &&
-    (project.lyrics_progress ?? 0) >= PROGRESS_TARGET
+  const completedProjects = projectsList.filter(
+    (project) =>
+      RELEASE_READY_STATUSES.has((project.status || "").toLowerCase()) &&
+      (project.music_progress ?? 0) >= PROGRESS_TARGET &&
+      (project.lyrics_progress ?? 0) >= PROGRESS_TARGET,
   ).length;
   const readyProjects = projectsList.filter((project) =>
-    RELEASE_READY_STATUSES.has((project.status || "").toLowerCase())
+    RELEASE_READY_STATUSES.has((project.status || "").toLowerCase()),
   ).length;
   const averageQualityScore = totalProjects
     ? Math.round(
-        projectsList.reduce((sum, project) => sum + (project.quality_score ?? 0), 0) / totalProjects
+        projectsList.reduce(
+          (sum, project) => sum + (project.quality_score ?? 0),
+          0,
+        ) / totalProjects,
       )
     : 0;
-  const averageQualityDescriptor = getSongQualityDescriptor(averageQualityScore);
+  const averageQualityDescriptor =
+    getSongQualityDescriptor(averageQualityScore);
 
   const filteredProjects = useMemo(() => {
     return projectsList.filter((project) => {
       const status = (project.status || "").toLowerCase();
-      
+
       // Filter out completed by default when statusFilter is "active"
-      if (statusFilter === "active" && (status === "completed" || status === "complete")) {
+      if (
+        statusFilter === "active" &&
+        (status === "completed" || status === "complete")
+      ) {
         return false;
       }
-      
+
       const matchesStatus =
         statusFilter === "all" ||
         statusFilter === "active" ||
         status === statusFilter ||
         (statusFilter === "completed" && status === "complete");
 
-      const matchesTheme = themeFilter === "all" || project.theme_id === themeFilter;
+      const matchesTheme =
+        themeFilter === "all" || project.theme_id === themeFilter;
       const activeSession = findActiveSession(project.songwriting_sessions);
       const matchesActive = !showActiveOnly || Boolean(activeSession);
       const lockState = computeLockState(project.locked_until ?? null);
       const matchesLocked = !showLockedOnly || lockState.locked;
       const matchesReady = !showReadyOnly || RELEASE_READY_STATUSES.has(status);
 
-      return matchesStatus && matchesTheme && matchesActive && matchesLocked && matchesReady;
+      return (
+        matchesStatus &&
+        matchesTheme &&
+        matchesActive &&
+        matchesLocked &&
+        matchesReady
+      );
     });
-  }, [projectsList, statusFilter, themeFilter, showActiveOnly, showLockedOnly, showReadyOnly]);
+  }, [
+    projectsList,
+    statusFilter,
+    themeFilter,
+    showActiveOnly,
+    showLockedOnly,
+    showReadyOnly,
+  ]);
 
   const formatCurrency = useMemo(
     () =>
@@ -891,7 +1142,7 @@ const Songwriting = () => {
         currency: "USD",
         maximumFractionDigits: 0,
       }),
-    []
+    [],
   );
 
   const formatNumber = useMemo(
@@ -899,7 +1150,7 @@ const Songwriting = () => {
       new Intl.NumberFormat("en-US", {
         maximumFractionDigits: 0,
       }),
-    []
+    [],
   );
 
   const resetForm = useCallback(() => {
@@ -908,17 +1159,29 @@ const Songwriting = () => {
     setFormErrors({});
   }, []);
 
-  const toggleSelection = useCallback((list: string[], id: string, checked: boolean) => {
-    if (checked) {
-      return Array.from(new Set([...list, id]));
-    }
-    return list.filter((item) => item !== id);
-  }, []);
+  const toggleSelection = useCallback(
+    (list: string[], id: string, checked: boolean) => {
+      if (checked) {
+        return Array.from(new Set([...list, id]));
+      }
+      return list.filter((item) => item !== id);
+    },
+    [],
+  );
 
   const updateSessionParticipant = useCallback(
-    (projectId: string, key: "coWriters" | "producers" | "musicians", value: string, checked: boolean) => {
+    (
+      projectId: string,
+      key: "coWriters" | "producers" | "musicians",
+      value: string,
+      checked: boolean,
+    ) => {
       setSessionParticipants((previous) => {
-        const current = previous[projectId] ?? { coWriters: [], producers: [], musicians: [] };
+        const current = previous[projectId] ?? {
+          coWriters: [],
+          producers: [],
+          musicians: [],
+        };
         return {
           ...previous,
           [projectId]: {
@@ -942,7 +1205,9 @@ const Songwriting = () => {
     setIsQuickCreateOpen(true);
   };
 
-  const handleQuickCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleQuickCreateSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
     const trimmed = quickCreateTitle.trim();
     if (!trimmed) {
@@ -977,7 +1242,9 @@ const Songwriting = () => {
         creative_brief: creativeBrief,
         instruments: [],
       });
-      toast.success(`Quick project "${trimmed}" created (Solo · ${quickCreateGenre})`);
+      toast.success(
+        `Quick project"${trimmed}"created (Solo · ${quickCreateGenre})`,
+      );
       setIsQuickCreateOpen(false);
     } catch (error) {
       logger.error("Failed to quick-create songwriting project", {
@@ -1012,7 +1279,7 @@ const Songwriting = () => {
   };
 
   const handleDelete = async (project: SongwritingProject) => {
-    if (!confirm(`Delete songwriting project "${project.title}"?`)) {
+    if (!confirm(`Delete songwriting project"${project.title}"?`)) {
       return;
     }
 
@@ -1040,7 +1307,8 @@ const Songwriting = () => {
     }
 
     if (!formState.genre) {
-      validationErrors.genre = "Select a genre focus to unlock tailored prompts.";
+      validationErrors.genre =
+        "Select a genre focus to unlock tailored prompts.";
     }
 
     if (!formState.writingMode) {
@@ -1077,7 +1345,8 @@ const Songwriting = () => {
       session_musicians: formState.sessionMusicians,
       inspiration_modifiers: formState.inspirationModifiers,
       mood_modifiers: formState.moodModifiers,
-      rating_revealed_at: selectedProject?.creative_brief?.rating_revealed_at ?? null,
+      rating_revealed_at:
+        selectedProject?.creative_brief?.rating_revealed_at ?? null,
       core_attributes: selectedProject?.creative_brief?.core_attributes ?? null,
     } as const;
 
@@ -1134,15 +1403,20 @@ const Songwriting = () => {
   const handleStartSession = async (project: SongwritingProject) => {
     const effortId = effortSelections[project.id] ?? DEFAULT_EFFORT_OPTION.id;
     const effortOption =
-      SESSION_EFFORT_OPTIONS.find((option) => option.id === effortId) ?? DEFAULT_EFFORT_OPTION;
+      SESSION_EFFORT_OPTIONS.find((option) => option.id === effortId) ??
+      DEFAULT_EFFORT_OPTION;
     const participants = sessionParticipants[project.id] ?? {
-      coWriters: project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
+      coWriters:
+        project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
       producers: project.creative_brief?.producers ?? [],
       musicians: project.creative_brief?.session_musicians ?? [],
     };
 
     try {
-      await startSession.mutateAsync({ projectId: project.id, effortHours: effortOption.hours });
+      await startSession.mutateAsync({
+        projectId: project.id,
+        effortHours: effortOption.hours,
+      });
       await startActivity({
         status: "songwriting_session",
         durationMinutes: effortOption.hours * 60,
@@ -1212,15 +1486,21 @@ const Songwriting = () => {
         projectId: project.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      toast.error("Unable to reveal rating yet. Try again after saving your rehearsal notes.");
+      toast.error(
+        "Unable to reveal rating yet. Try again after saving your rehearsal notes.",
+      );
     }
   };
 
-  const handleCompleteSessionSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCompleteSessionSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
     if (!completionProject) return;
 
-    const activeSession = findActiveSession(completionProject.songwriting_sessions);
+    const activeSession = findActiveSession(
+      completionProject.songwriting_sessions,
+    );
     if (!activeSession) {
       toast.info("No active session to complete for this project.");
       return;
@@ -1228,7 +1508,9 @@ const Songwriting = () => {
 
     if (!activeSession.id) {
       toast.error("Session ID is missing - cannot complete.");
-      logger.error("Active session missing ID", { project: completionProject.id });
+      logger.error("Active session missing ID", {
+        project: completionProject.id,
+      });
       return;
     }
 
@@ -1241,8 +1523,8 @@ const Songwriting = () => {
         attributes: attributes || {
           creative_insight: 10,
           musical_ability: 10,
-          technical_mastery: 10
-        }
+          technical_mastery: 10,
+        },
       });
 
       setCompletionProject(null);
@@ -1259,21 +1541,25 @@ const Songwriting = () => {
     }
   };
 
-  const handleConvertProject = async (project: SongwritingProject, catalogStatus: string = 'private', bandId?: string) => {
+  const handleConvertProject = async (
+    project: SongwritingProject,
+    catalogStatus: string = "private",
+    bandId?: string,
+  ) => {
     try {
       // Calculate final quality using actual player data
       // Include experience bonus from total songs written and session depth
       const quality = calculateSongQuality({
-        genre: project.genres?.[0] || 'Rock',
+        genre: project.genres?.[0] || "Rock",
         skillLevels: skills || {},
         attributes: attributes || {
           creative_insight: 10,
           musical_ability: 10,
-          technical_mastery: 10
+          technical_mastery: 10,
         },
         sessionHours: (project.total_sessions || 0) * 6,
         coWriters: project.creative_brief?.co_writers?.length || 0,
-        aiLyrics: project.lyrics?.includes('[AI]') || false,
+        aiLyrics: project.lyrics?.includes("[AI]") || false,
         songsWritten: songs.length,
         sessionsCompleted: project.sessions_completed || 0,
       });
@@ -1282,7 +1568,7 @@ const Songwriting = () => {
         projectId: project.id,
         quality,
         catalogStatus,
-        bandId
+        bandId,
       });
     } catch (error) {
       logger.error("Failed to convert songwriting project", {
@@ -1313,23 +1599,23 @@ const Songwriting = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              {t('songwriting.title')} - {t('songwriting.locked')}
+              {t("songwriting.title")} - {t("songwriting.locked")}
             </CardTitle>
             <CardDescription>
-              {t('songwriting.unlockGenreSkill')}
+              {t("songwriting.unlockGenreSkill")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              {t('songwriting.genreRequired')}
+              {t("songwriting.genreRequired")}
             </p>
             <p className="text-sm text-muted-foreground">
-              {t('songwriting.unlockGenreSkill')}
+              {t("songwriting.unlockGenreSkill")}
             </p>
             <Button asChild>
               <Link to="/skills">
                 <Music className="mr-2 h-4 w-4" />
-                {t('skills.title')}
+                {t("skills.title")}
               </Link>
             </Button>
           </CardContent>
@@ -1337,21 +1623,21 @@ const Songwriting = () => {
       </div>
     );
   }
-  
+
   if (isLoadingProjects && projectsList.length === 0) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">{t('common.loading')}</div>
+          <div className="text-muted-foreground">{t("common.loading")}</div>
         </div>
       </div>
     );
   }
 
-   return (
+  return (
     <FMPageScaffold
-      title={t('songwriting.title')}
-      subtitle={t('songwriting.subtitle')}
+      title={t("songwriting.title")}
+      subtitle={t("songwriting.subtitle")}
       icon={Music}
       backTo="/hub/music"
       backLabel="Back to Music Hub"
@@ -1363,121 +1649,146 @@ const Songwriting = () => {
           disabled={isRefreshing}
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
-          {isRefreshing ? t('common.loading') : t('songwriting.refreshSessions')}
+          {isRefreshing
+            ? t("common.loading")
+            : t("songwriting.refreshSessions")}
         </Button>
       }
     >
-        
-        {/* Session Info Banner */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <ClockIcon className="h-4 w-4 text-primary" />
-                <span><strong>1-hour</strong> sessions</span>
-              </div>
-              <Separator orientation="vertical" className="h-4" />
-              <div className="flex items-center gap-2">
-                <NotebookPen className="h-4 w-4 text-primary" />
-                <span>Write <strong>2 songs</strong> at once</span>
-              </div>
-              <Separator orientation="vertical" className="h-4 hidden sm:block" />
-              <span className="text-muted-foreground hidden sm:block">Sessions auto-complete when time expires</span>
+      {/* Session Info Banner */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <ClockIcon className="h-4 w-4 text-primary" />
+              <span>
+                <strong>1-hour</strong> sessions
+              </span>
             </div>
-          </CardContent>
-        </Card>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <div className="flex items-center gap-2">
+            <Separator orientation="vertical" className="h-4" />
+            <div className="flex items-center gap-2">
+              <NotebookPen className="h-4 w-4 text-primary" />
+              <span>
+                Write <strong>2 songs</strong> at once
+              </span>
+            </div>
+            <Separator orientation="vertical" className="h-4 hidden sm:block" />
+            <span className="text-muted-foreground hidden sm:block">
+              Sessions auto-complete when time expires
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="md:size-default"
+            onClick={handleOpenQuickCreate}
+          >
+            <Zap className="mr-2 h-4 w-4" />
+            Quick Create
+          </Button>
+          <DialogTrigger asChild>
             <Button
-              type="button"
-              variant="outline"
+              onClick={handleOpenCreate}
               size="sm"
               className="md:size-default"
-              onClick={handleOpenQuickCreate}
             >
-              <Zap className="mr-2 h-4 w-4" />
-              Quick Create
+              <Plus className="mr-2 h-4 w-4" />
+              {t("songwriting.newProject")}
             </Button>
-            <DialogTrigger asChild>
-              <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('songwriting.newProject')}
-              </Button>
-            </DialogTrigger>
-          </div>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>
-              <DialogDescription>
-                {selectedProject
-                  ? "Update your creative plan or refresh the concept notes for this project."
-                  : "Define the creative direction and we'll forecast the focus sprints you'll need."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            {/* Music Ownership Reminder */}
-            {!selectedProject && (
-              <MusicOwnershipReminder />
-            )}
-            <form onSubmit={handleSubmit} ref={createFormRef}>
-              {(() => {
-                const step1Complete = Boolean(formState.title.trim()) && Boolean(formState.genre);
-                const step2Unlocked = step1Complete;
-                const step2Complete = step2Unlocked; // creative brief has no required fields beyond step 1
-                const step3Unlocked = step2Complete;
-                const step3Complete = step3Unlocked && Boolean(formState.writingMode);
-                const completedSteps = [step1Complete, step2Complete, step3Complete].filter(Boolean).length;
+          </DialogTrigger>
+        </div>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedProject
+                ? "Edit Songwriting Project"
+                : "Create Songwriting Project"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProject
+                ? "Update your creative plan or refresh the concept notes for this project."
+                : "Define the creative direction and we'll forecast the focus sprints you'll need."}
+            </DialogDescription>
+          </DialogHeader>
 
-                const StepHeader = ({
-                  number,
-                  title,
-                  subtitle,
-                  icon: Icon,
-                  done,
-                  locked,
-                }: {
-                  number: number;
-                  title: string;
-                  subtitle: string;
-                  icon: typeof Music2;
-                  done: boolean;
-                  locked: boolean;
-                }) => (
-                  <div className="flex items-start gap-3 mb-4">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                        locked
-                          ? "bg-muted text-muted-foreground"
-                          : done
+          {/* Music Ownership Reminder */}
+          {!selectedProject && <MusicOwnershipReminder />}
+          <form onSubmit={handleSubmit} ref={createFormRef}>
+            {(() => {
+              const step1Complete =
+                Boolean(formState.title.trim()) && Boolean(formState.genre);
+              const step2Unlocked = step1Complete;
+              const step2Complete = step2Unlocked; // creative brief has no required fields beyond step 1
+              const step3Unlocked = step2Complete;
+              const step3Complete =
+                step3Unlocked && Boolean(formState.writingMode);
+              const completedSteps = [
+                step1Complete,
+                step2Complete,
+                step3Complete,
+              ].filter(Boolean).length;
+
+              const StepHeader = ({
+                number,
+                title,
+                subtitle,
+                icon: Icon,
+                done,
+                locked,
+              }: {
+                number: number;
+                title: string;
+                subtitle: string;
+                icon: typeof Music2;
+                done: boolean;
+                locked: boolean;
+              }) => (
+                <div className="flex items-start gap-3 mb-4">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                      locked
+                        ? "bg-muted text-muted-foreground"
+                        : done
                           ? "bg-primary text-primary-foreground"
                           : "bg-primary/15 text-primary border border-primary/30"
-                      }`}
-                    >
-                      {locked ? <Lock className="h-4 w-4" /> : done ? <CheckCircle2 className="h-4 w-4" /> : number}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-base flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          {title}
-                        </h3>
-                        {locked && (
-                          <Badge variant="outline" className="text-[10px]">
-                            Complete previous step
-                          </Badge>
-                        )}
-                        {!locked && done && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Done
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{subtitle}</p>
-                    </div>
+                    }`}
+                  >
+                    {locked ? (
+                      <Lock className="h-4 w-4" />
+                    ) : done ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      number
+                    )}
                   </div>
-                );
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-base flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        {title}
+                      </h3>
+                      {locked && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Complete previous step
+                        </Badge>
+                      )}
+                      {!locked && done && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Done
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                  </div>
+                </div>
+              );
 
-                return (
+              return (
                 <>
                   {/* Workflow progress */}
                   <div className="mb-4 space-y-2">
@@ -1485,427 +1796,562 @@ const Songwriting = () => {
                       <span>Workflow progress</span>
                       <span>{completedSteps} of 3 complete</span>
                     </div>
-                    <Progress value={(completedSteps / 3) * 100} className="h-1.5" />
+                    <Progress
+                      value={(completedSteps / 3) * 100}
+                      className="h-1.5"
+                    />
                   </div>
 
                   <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
-                  {/* Step 1: Basics */}
-                  <section className="space-y-4">
-                    <StepHeader
-                      number={1}
-                      title="Basics"
-                      subtitle="Name your project and pick a genre to get started."
-                      icon={Music2}
-                      done={step1Complete}
-                      locked={false}
-                    />
-                    <div className="space-y-2">
-                      <Label htmlFor="project-title">Project Title *</Label>
-                      <Input
-                        id="project-title"
-                        value={formState.title}
-                        onChange={(event) => setFormState((previous) => ({ ...previous, title: event.target.value }))}
-                        placeholder="e.g., Anthemic stadium rock banger"
-                        aria-invalid={Boolean(formErrors.title)}
+                    {/* Step 1: Basics */}
+                    <section className="space-y-4">
+                      <StepHeader
+                        number={1}
+                        title="Basics"
+                        subtitle="Name your project and pick a genre to get started."
+                        icon={Music2}
+                        done={step1Complete}
+                        locked={false}
                       />
-                      {formErrors.title && <p className="text-sm text-destructive">{formErrors.title}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="project-genre">Primary Genre *</Label>
-                      <Select
-                        value={formState.genre || "none"}
-                        onValueChange={(value) =>
-                          setFormState((previous) => ({ ...previous, genre: value === "none" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger id="project-genre">
-                          <SelectValue placeholder="Select a genre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Explore something new</SelectItem>
-                          {MUSIC_GENRES.map((genre) => {
-                            const isUnlocked = canWriteGenre(genre, skills || {});
-                            const genreSkillSlug = getGenreSkillSlug(genre, 'basic');
-                            const skillLevel = genreSkillSlug ? (skills?.[genreSkillSlug] || 0) : 0;
-                            return (
-                              <SelectItem 
-                                key={genre} 
-                                value={genre}
-                                disabled={!isUnlocked}
-                              >
-                                {genre} {isUnlocked ? '✓' : `🔒 (Need level 1, currently ${skillLevel})`}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                      {formErrors.genre && <p className="text-sm text-destructive">{formErrors.genre}</p>}
-                      {availableGenres.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Learn genre skills through University, Books, or Mentors to unlock songwriting genres.
-                        </p>
-                      )}
-                      {availableGenres.length > 0 && availableGenres.length < MUSIC_GENRES.length && (
-                        <p className="text-xs text-muted-foreground">
-                          {availableGenres.length} of {MUSIC_GENRES.length} genres unlocked. Learn more through University!
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="project-theme">Song Theme</Label>
-                      <Select
-                        value={formState.theme_id || "none"}
-                        onValueChange={(value) =>
-                          setFormState((previous) => ({ ...previous, theme_id: value === "none" ? "" : value }))
-                        }
-                        disabled={isLoadingThemes && themesList.length === 0}
-                      >
-                        <SelectTrigger id="project-theme">
-                          <SelectValue placeholder="Choose a theme (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No specific theme</SelectItem>
-                          {themesList.map((theme) => (
-                            <SelectItem key={theme.id} value={theme.id}>
-                              {theme.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="project-progression">Chord Progression</Label>
-                      <Select
-                        value={formState.chord_progression_id || "none"}
-                        onValueChange={(value) =>
-                          setFormState((previous) => ({
-                            ...previous,
-                            chord_progression_id: value === "none" ? "" : value,
-                          }))
-                        }
-                        disabled={isLoadingChordProgressions && progressionsList.length === 0}
-                      >
-                        <SelectTrigger id="project-progression">
-                          <SelectValue placeholder="Select a progression (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No progression yet</SelectItem>
-                          {progressionsList.map((progression) => (
-                            <SelectItem key={progression.id} value={progression.id}>
-                              {progression.name} · {progression.progression}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Instrument Selector */}
-                    <SongwritingInstrumentSelector
-                      selected={formState.instruments}
-                      onChange={(instruments) =>
-                        setFormState((previous) => ({ ...previous, instruments }))
-                      }
-                    />
-                  </section>
-
-                  <Separator />
-
-                  {/* Step 2: Creative Brief */}
-                  <section className={`space-y-4 ${!step2Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`} aria-disabled={!step2Unlocked}>
-                    <StepHeader
-                      number={2}
-                      title="Creative Brief"
-                      subtitle="Sketch the lyrics, mood, and inspiration."
-                      icon={Pen}
-                      done={step2Complete && step2Unlocked}
-                      locked={!step2Unlocked}
-                    />
-                    {/* Song Notes - Auto-populated */}
-                    <SongNotesDisplay
-                      genre={formState.genre}
-                      theme={selectedProject?.song_themes}
-                      chordProgression={selectedProject?.chord_progressions}
-                      creativeBrief={{
-                        genre: formState.genre,
-                        writing_mode: formState.writingMode,
-                        co_writers: formState.coWriters.map(id => {
-                          const opt = CO_WRITER_OPTIONS.find(o => o.id === id);
-                          return { id, name: opt?.label || id, role: opt?.role };
-                        }),
-                        producers: formState.producers,
-                        session_musicians: formState.sessionMusicians,
-                        inspiration_modifiers: formState.inspirationModifiers,
-                        mood_modifiers: formState.moodModifiers,
-                      }}
-                      additionalNotes={formState.additionalNotes}
-                      onAdditionalNotesChange={(notes) =>
-                        setFormState((prev) => ({ ...prev, additionalNotes: notes }))
-                      }
-                    />
-
-                    <Separator />
-
-                    {/* Structured Lyrics Editor */}
-                    <LyricsEditor
-                      sections={formState.lyricsSections}
-                      onChange={(sections) => {
-                        setFormState((prev) => ({
-                          ...prev,
-                          lyricsSections: sections,
-                          initial_lyrics: sectionsToLyrics(sections)
-                        }));
-                      }}
-                    />
-                    
-                    {/* AI Lyrics Generator */}
-                    <div className="pt-2">
-                      <AILyricsGenerator
-                        title={selectedProject?.title || formState.title}
-                        theme={selectedProject?.song_themes?.name || ''}
-                        genre={formState.genre}
-                        chordProgression={selectedProject?.chord_progressions?.progression || ''}
-                        creativeBrief={{
-                          inspirationModifiers: formState.inspirationModifiers,
-                          moodModifiers: formState.moodModifiers,
-                          writingMode: formState.writingMode,
-                        }}
-                        existingLyrics={formState.additionalNotes}
-                        onLyricsGenerated={(lyrics) => {
-                          const newSections = parseLyricsToSections(lyrics);
-                          setFormState(prev => ({
-                            ...prev,
-                            lyricsSections: newSections,
-                            initial_lyrics: lyrics
-                          }));
-                        }}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="flex items-center gap-2 mb-2">
-                          <Lightbulb className="h-4 w-4 text-amber-500" />
-                          Inspiration Anchors
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {INSPIRATION_TAGS.map((tag) => {
-                            const selected = formState.inspirationModifiers.includes(tag.id);
-                            return (
-                              <Button
-                                type="button"
-                                key={tag.id}
-                                size="sm"
-                                variant={selected ? "default" : "outline"}
-                                onClick={() =>
-                                  setFormState((previous) => ({
-                                    ...previous,
-                                    inspirationModifiers: toggleSelection(
-                                      previous.inspirationModifiers,
-                                      tag.id,
-                                      !selected,
-                                    ),
-                                  }))
-                                }
-                              >
-                                {tag.label}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label className="flex items-center gap-2 mb-2">
-                          <Sparkles className="h-4 w-4 text-purple-500" />
-                          Mood Palette
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {MOOD_TAGS.map((tag) => {
-                            const selected = formState.moodModifiers.includes(tag.id);
-                            return (
-                              <Button
-                                type="button"
-                                key={tag.id}
-                                size="sm"
-                                variant={selected ? "default" : "outline"}
-                                onClick={() =>
-                                  setFormState((previous) => ({
-                                    ...previous,
-                                    moodModifiers: toggleSelection(previous.moodModifiers, tag.id, !selected),
-                                  }))
-                                }
-                              >
-                                {tag.label}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <Separator />
-
-                  {/* Step 3: Collaborators */}
-                  <section className={`space-y-4 ${!step3Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`} aria-disabled={!step3Unlocked}>
-                    <StepHeader
-                      number={3}
-                      title="Collaborators"
-                      subtitle="Choose your writing mode and invite co-writers."
-                      icon={UserPlus}
-                      done={step3Complete}
-                      locked={!step3Unlocked}
-                    />
-                    <div className="space-y-2">
-                      <Label htmlFor="project-writing-mode">Writing Mode *</Label>
-                      <Select
-                        value={formState.writingMode || "none"}
-                        onValueChange={(value) =>
-                          setFormState((previous) => ({ ...previous, writingMode: value === "none" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger id="project-writing-mode">
-                          <SelectValue placeholder="How will this sprint run?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Decide later</SelectItem>
-                          {WRITING_MODE_OPTIONS.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedWritingMode?.description ?? "Pick a mode to set expectations for collaborators."}
-                      </p>
-                      {formErrors.writingMode && <p className="text-sm text-destructive">{formErrors.writingMode}</p>}
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-sm font-semibold mb-2 block">Co-writers</Label>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Invite collaborators to shape the song. Royalty splits will be calculated automatically.
-                        </p>
-                        <div className="space-y-2">
-                          {CO_WRITER_OPTIONS.map((option) => (
-                            <label
-                              key={option.id}
-                              className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer"
-                            >
-                              <Checkbox
-                                checked={formState.coWriters.includes(option.id)}
-                                onCheckedChange={(checked) =>
-                                  setFormState((previous) => ({
-                                    ...previous,
-                                    coWriters: toggleSelection(previous.coWriters, option.id, Boolean(checked)),
-                                  }))
-                                }
-                              />
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium">{option.label}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {option.description ?? option.familiarity}
-                                </p>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                        {plannedCoWriterSplits.length > 0 && (
-                          <div className="mt-3 rounded-md bg-muted p-3">
-                            <p className="text-xs font-semibold mb-2 flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" /> Royalty Split Preview
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {plannedCoWriterSplits.map((entry) => (
-                                <Badge key={entry.id} variant="secondary">
-                                  {entry.label}: {entry.split}%
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="project-title">Project Title *</Label>
+                        <Input
+                          id="project-title"
+                          value={formState.title}
+                          onChange={(event) =>
+                            setFormState((previous) => ({
+                              ...previous,
+                              title: event.target.value,
+                            }))
+                          }
+                          placeholder="e.g., Anthemic stadium rock banger"
+                          aria-invalid={Boolean(formErrors.title)}
+                        />
+                        {formErrors.title && (
+                          <p className="text-sm text-destructive">
+                            {formErrors.title}
+                          </p>
                         )}
                       </div>
 
-                      <div>
-                        <Label className="text-sm font-semibold mb-2 block">Producer Leadership</Label>
-                        <div className="space-y-2">
-                          {PRODUCER_OPTIONS.map((option) => (
-                            <label key={option.id} className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
-                              <Checkbox
-                                checked={formState.producers.includes(option.id)}
-                                onCheckedChange={(checked) =>
-                                  setFormState((previous) => ({
-                                    ...previous,
-                                    producers: toggleSelection(previous.producers, option.id, Boolean(checked)),
-                                  }))
-                                }
-                              />
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium">{option.label}</p>
-                                {option.description && (
-                                  <p className="text-xs text-muted-foreground">{option.description}</p>
-                                )}
+                      <div className="space-y-2">
+                        <Label htmlFor="project-genre">Primary Genre *</Label>
+                        <Select
+                          value={formState.genre || "none"}
+                          onValueChange={(value) =>
+                            setFormState((previous) => ({
+                              ...previous,
+                              genre: value === "none" ? "" : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger id="project-genre">
+                            <SelectValue placeholder="Select a genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              Explore something new
+                            </SelectItem>
+                            {MUSIC_GENRES.map((genre) => {
+                              const isUnlocked = canWriteGenre(
+                                genre,
+                                skills || {},
+                              );
+                              const genreSkillSlug = getGenreSkillSlug(
+                                genre,
+                                "basic",
+                              );
+                              const skillLevel = genreSkillSlug
+                                ? skills?.[genreSkillSlug] || 0
+                                : 0;
+                              return (
+                                <SelectItem
+                                  key={genre}
+                                  value={genre}
+                                  disabled={!isUnlocked}
+                                >
+                                  {genre}{" "}
+                                  {isUnlocked
+                                    ? "✓"
+                                    : `🔒 (Need level 1, currently ${skillLevel})`}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.genre && (
+                          <p className="text-sm text-destructive">
+                            {formErrors.genre}
+                          </p>
+                        )}
+                        {availableGenres.length === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Learn genre skills through University, Books, or
+                            Mentors to unlock songwriting genres.
+                          </p>
+                        )}
+                        {availableGenres.length > 0 &&
+                          availableGenres.length < MUSIC_GENRES.length && (
+                            <p className="text-xs text-muted-foreground">
+                              {availableGenres.length} of {MUSIC_GENRES.length}{" "}
+                              genres unlocked. Learn more through University!
+                            </p>
+                          )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="project-theme">Song Theme</Label>
+                        <Select
+                          value={formState.theme_id || "none"}
+                          onValueChange={(value) =>
+                            setFormState((previous) => ({
+                              ...previous,
+                              theme_id: value === "none" ? "" : value,
+                            }))
+                          }
+                          disabled={isLoadingThemes && themesList.length === 0}
+                        >
+                          <SelectTrigger id="project-theme">
+                            <SelectValue placeholder="Choose a theme (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              No specific theme
+                            </SelectItem>
+                            {themesList.map((theme) => (
+                              <SelectItem key={theme.id} value={theme.id}>
+                                {theme.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="project-progression">
+                          Chord Progression
+                        </Label>
+                        <Select
+                          value={formState.chord_progression_id || "none"}
+                          onValueChange={(value) =>
+                            setFormState((previous) => ({
+                              ...previous,
+                              chord_progression_id:
+                                value === "none" ? "" : value,
+                            }))
+                          }
+                          disabled={
+                            isLoadingChordProgressions &&
+                            progressionsList.length === 0
+                          }
+                        >
+                          <SelectTrigger id="project-progression">
+                            <SelectValue placeholder="Select a progression (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              No progression yet
+                            </SelectItem>
+                            {progressionsList.map((progression) => (
+                              <SelectItem
+                                key={progression.id}
+                                value={progression.id}
+                              >
+                                {progression.name} · {progression.progression}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Instrument Selector */}
+                      <SongwritingInstrumentSelector
+                        selected={formState.instruments}
+                        onChange={(instruments) =>
+                          setFormState((previous) => ({
+                            ...previous,
+                            instruments,
+                          }))
+                        }
+                      />
+                    </section>
+
+                    <Separator />
+
+                    {/* Step 2: Creative Brief */}
+                    <section
+                      className={`space-y-4 ${!step2Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`}
+                      aria-disabled={!step2Unlocked}
+                    >
+                      <StepHeader
+                        number={2}
+                        title="Creative Brief"
+                        subtitle="Sketch the lyrics, mood, and inspiration."
+                        icon={Pen}
+                        done={step2Complete && step2Unlocked}
+                        locked={!step2Unlocked}
+                      />
+                      {/* Song Notes - Auto-populated */}
+                      <SongNotesDisplay
+                        genre={formState.genre}
+                        theme={selectedProject?.song_themes}
+                        chordProgression={selectedProject?.chord_progressions}
+                        creativeBrief={{
+                          genre: formState.genre,
+                          writing_mode: formState.writingMode,
+                          co_writers: formState.coWriters.map((id) => {
+                            const opt = CO_WRITER_OPTIONS.find(
+                              (o) => o.id === id,
+                            );
+                            return {
+                              id,
+                              name: opt?.label || id,
+                              role: opt?.role,
+                            };
+                          }),
+                          producers: formState.producers,
+                          session_musicians: formState.sessionMusicians,
+                          inspiration_modifiers: formState.inspirationModifiers,
+                          mood_modifiers: formState.moodModifiers,
+                        }}
+                        additionalNotes={formState.additionalNotes}
+                        onAdditionalNotesChange={(notes) =>
+                          setFormState((prev) => ({
+                            ...prev,
+                            additionalNotes: notes,
+                          }))
+                        }
+                      />
+
+                      <Separator />
+
+                      {/* Structured Lyrics Editor */}
+                      <LyricsEditor
+                        sections={formState.lyricsSections}
+                        onChange={(sections) => {
+                          setFormState((prev) => ({
+                            ...prev,
+                            lyricsSections: sections,
+                            initial_lyrics: sectionsToLyrics(sections),
+                          }));
+                        }}
+                      />
+
+                      {/* AI Lyrics Generator */}
+                      <div className="pt-2">
+                        <AILyricsGenerator
+                          title={selectedProject?.title || formState.title}
+                          theme={selectedProject?.song_themes?.name || ""}
+                          genre={formState.genre}
+                          chordProgression={
+                            selectedProject?.chord_progressions?.progression ||
+                            ""
+                          }
+                          creativeBrief={{
+                            inspirationModifiers:
+                              formState.inspirationModifiers,
+                            moodModifiers: formState.moodModifiers,
+                            writingMode: formState.writingMode,
+                          }}
+                          existingLyrics={formState.additionalNotes}
+                          onLyricsGenerated={(lyrics) => {
+                            const newSections = parseLyricsToSections(lyrics);
+                            setFormState((prev) => ({
+                              ...prev,
+                              lyricsSections: newSections,
+                              initial_lyrics: lyrics,
+                            }));
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="flex items-center gap-2 mb-2">
+                            <Lightbulb className="h-4 w-4 text-amber-500" />
+                            Inspiration Anchors
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {INSPIRATION_TAGS.map((tag) => {
+                              const selected =
+                                formState.inspirationModifiers.includes(tag.id);
+                              return (
+                                <Button
+                                  type="button"
+                                  key={tag.id}
+                                  size="sm"
+                                  variant={selected ? "default" : "outline"}
+                                  onClick={() =>
+                                    setFormState((previous) => ({
+                                      ...previous,
+                                      inspirationModifiers: toggleSelection(
+                                        previous.inspirationModifiers,
+                                        tag.id,
+                                        !selected,
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  {tag.label}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="flex items-center gap-2 mb-2">
+                            <Sparkles className="h-4 w-4 text-purple-500" />
+                            Mood Palette
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {MOOD_TAGS.map((tag) => {
+                              const selected = formState.moodModifiers.includes(
+                                tag.id,
+                              );
+                              return (
+                                <Button
+                                  type="button"
+                                  key={tag.id}
+                                  size="sm"
+                                  variant={selected ? "default" : "outline"}
+                                  onClick={() =>
+                                    setFormState((previous) => ({
+                                      ...previous,
+                                      moodModifiers: toggleSelection(
+                                        previous.moodModifiers,
+                                        tag.id,
+                                        !selected,
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  {tag.label}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <Separator />
+
+                    {/* Step 3: Collaborators */}
+                    <section
+                      className={`space-y-4 ${!step3Unlocked ? "opacity-50 pointer-events-none select-none" : ""}`}
+                      aria-disabled={!step3Unlocked}
+                    >
+                      <StepHeader
+                        number={3}
+                        title="Collaborators"
+                        subtitle="Choose your writing mode and invite co-writers."
+                        icon={UserPlus}
+                        done={step3Complete}
+                        locked={!step3Unlocked}
+                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="project-writing-mode">
+                          Writing Mode *
+                        </Label>
+                        <Select
+                          value={formState.writingMode || "none"}
+                          onValueChange={(value) =>
+                            setFormState((previous) => ({
+                              ...previous,
+                              writingMode: value === "none" ? "" : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger id="project-writing-mode">
+                            <SelectValue placeholder="How will this sprint run?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Decide later</SelectItem>
+                            {WRITING_MODE_OPTIONS.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedWritingMode?.description ??
+                            "Pick a mode to set expectations for collaborators."}
+                        </p>
+                        {formErrors.writingMode && (
+                          <p className="text-sm text-destructive">
+                            {formErrors.writingMode}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-semibold mb-2 block">
+                            Co-writers
+                          </Label>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Invite collaborators to shape the song. Royalty
+                            splits will be calculated automatically.
+                          </p>
+                          <div className="space-y-2">
+                            {CO_WRITER_OPTIONS.map((option) => (
+                              <label
+                                key={option.id}
+                                className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={formState.coWriters.includes(
+                                    option.id,
+                                  )}
+                                  onCheckedChange={(checked) =>
+                                    setFormState((previous) => ({
+                                      ...previous,
+                                      coWriters: toggleSelection(
+                                        previous.coWriters,
+                                        option.id,
+                                        Boolean(checked),
+                                      ),
+                                    }))
+                                  }
+                                />
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium">
+                                    {option.label}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {option.description ?? option.familiarity}
+                                  </p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          {plannedCoWriterSplits.length > 0 && (
+                            <div className="mt-3 rounded-md bg-muted p-3">
+                              <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                                <Users className="h-3.5 w-3.5" /> Royalty Split
+                                Preview
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {plannedCoWriterSplits.map((entry) => (
+                                  <Badge key={entry.id} variant="secondary">
+                                    {entry.label}: {entry.split}%
+                                  </Badge>
+                                ))}
                               </div>
-                            </label>
-                          ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
 
-                      <div>
-                        <Label className="text-sm font-semibold mb-2 block">Session Musicians</Label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {SESSION_MUSICIAN_OPTIONS.map((option) => (
-                            <label key={option.id} className="flex items-center gap-2 text-sm p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
-                              <Checkbox
-                                checked={formState.sessionMusicians.includes(option.id)}
-                                onCheckedChange={(checked) =>
-                                  setFormState((previous) => ({
-                                    ...previous,
-                                    sessionMusicians: toggleSelection(previous.sessionMusicians, option.id, Boolean(checked)),
-                                  }))
-                                }
-                              />
-                              <span>{option.label}</span>
-                            </label>
-                          ))}
+                        <div>
+                          <Label className="text-sm font-semibold mb-2 block">
+                            Producer Leadership
+                          </Label>
+                          <div className="space-y-2">
+                            {PRODUCER_OPTIONS.map((option) => (
+                              <label
+                                key={option.id}
+                                className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={formState.producers.includes(
+                                    option.id,
+                                  )}
+                                  onCheckedChange={(checked) =>
+                                    setFormState((previous) => ({
+                                      ...previous,
+                                      producers: toggleSelection(
+                                        previous.producers,
+                                        option.id,
+                                        Boolean(checked),
+                                      ),
+                                    }))
+                                  }
+                                />
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium">
+                                    {option.label}
+                                  </p>
+                                  {option.description && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {option.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-semibold mb-2 block">
+                            Session Musicians
+                          </Label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {SESSION_MUSICIAN_OPTIONS.map((option) => (
+                              <label
+                                key={option.id}
+                                className="flex items-center gap-2 text-sm p-2 rounded-md border hover:bg-muted/50 cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={formState.sessionMusicians.includes(
+                                    option.id,
+                                  )}
+                                  onCheckedChange={(checked) =>
+                                    setFormState((previous) => ({
+                                      ...previous,
+                                      sessionMusicians: toggleSelection(
+                                        previous.sessionMusicians,
+                                        option.id,
+                                        Boolean(checked),
+                                      ),
+                                    }))
+                                  }
+                                />
+                                <span>{option.label}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </section>
-                </div>
+                    </section>
+                  </div>
                 </>
-                );
-              })()}
+              );
+            })()}
 
-              <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              {!selectedProject && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={createProject.isPending}
+                  onClick={() => {
+                    setInviteAfterCreateRequested(true);
+                    createFormRef.current?.requestSubmit();
+                  }}
+                >
+                  Create & Invite Collaborators
                 </Button>
-                {!selectedProject && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={createProject.isPending}
-                    onClick={() => {
-                      setInviteAfterCreateRequested(true);
-                      createFormRef.current?.requestSubmit();
-                    }}
-                  >
-                    Create & Invite Collaborators
-                  </Button>
-                )}
-                <Button type="submit" disabled={createProject.isPending || updateProject.isPending}>
-                  {selectedProject ? "Update Project" : "Create Project"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              )}
+              <Button
+                type="submit"
+                disabled={createProject.isPending || updateProject.isPending}
+              >
+                {selectedProject ? "Update Project" : "Create Project"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Card className="overflow-hidden">
         <CardContent className="p-4 md:py-6">
           <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
@@ -1915,23 +2361,33 @@ const Songwriting = () => {
                 <NotebookPen className="h-4 w-4" />
               </div>
               <p className="mt-2 text-2xl font-semibold">{activeProjects}</p>
-              <p className="text-xs text-muted-foreground">Songs currently in writing or arranging phases.</p>
+              <p className="text-xs text-muted-foreground">
+                Songs currently in writing or arranging phases.
+              </p>
             </div>
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 Focus Minutes Logged
                 <ClockIcon className="h-4 w-4" />
               </div>
-              <p className="mt-2 text-2xl font-semibold">{formatNumber.format(focusMinutes)}</p>
-              <p className="text-xs text-muted-foreground">Cumulative deep work invested across all projects.</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatNumber.format(focusMinutes)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Cumulative deep work invested across all projects.
+              </p>
             </div>
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 Average Quality
                 <Trophy className="h-4 w-4" />
               </div>
-              <p className="mt-2 text-2xl font-semibold">{averageQualityDescriptor.label}</p>
-              <p className="text-xs text-muted-foreground">{averageQualityDescriptor.hint}</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {averageQualityDescriptor.label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {averageQualityDescriptor.hint}
+              </p>
             </div>
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -1939,7 +2395,9 @@ const Songwriting = () => {
                 <Sparkles className="h-4 w-4" />
               </div>
               <p className="mt-2 text-2xl font-semibold">{completedProjects}</p>
-              <p className="text-xs text-muted-foreground">Projects that hit 100% on both creative tracks.</p>
+              <p className="text-xs text-muted-foreground">
+                Projects that hit 100% on both creative tracks.
+              </p>
             </div>
           </div>
         </CardContent>
@@ -1951,7 +2409,9 @@ const Songwriting = () => {
             <Filter className="h-4 w-4" />
             Refine your view
           </CardTitle>
-          <CardDescription>Filter by status, theme, and sprint.</CardDescription>
+          <CardDescription>
+            Filter by status, theme, and sprint.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -1991,7 +2451,9 @@ const Songwriting = () => {
               <Checkbox
                 id="filter-active"
                 checked={showActiveOnly}
-                onCheckedChange={(checked) => setShowActiveOnly(Boolean(checked))}
+                onCheckedChange={(checked) =>
+                  setShowActiveOnly(Boolean(checked))
+                }
               />
               <Label htmlFor="filter-active" className="text-sm font-medium">
                 Active sprint in progress
@@ -2001,7 +2463,9 @@ const Songwriting = () => {
               <Checkbox
                 id="filter-ready"
                 checked={showReadyOnly}
-                onCheckedChange={(checked) => setShowReadyOnly(Boolean(checked))}
+                onCheckedChange={(checked) =>
+                  setShowReadyOnly(Boolean(checked))
+                }
               />
               <Label htmlFor="filter-ready" className="text-sm font-medium">
                 Ready for polish or release
@@ -2011,7 +2475,9 @@ const Songwriting = () => {
               <Checkbox
                 id="filter-locked"
                 checked={showLockedOnly}
-                onCheckedChange={(checked) => setShowLockedOnly(Boolean(checked))}
+                onCheckedChange={(checked) =>
+                  setShowLockedOnly(Boolean(checked))
+                }
               />
               <Label htmlFor="filter-locked" className="text-sm font-medium">
                 Currently locked for recovery
@@ -2023,7 +2489,8 @@ const Songwriting = () => {
 
       {globalActivityLock.locked && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          You're currently focused on {globalActivityLock.label ?? "another activity"}.{" "}
+          You're currently focused on{" "}
+          {globalActivityLock.label ?? "another activity"}.{""}
           {globalActivityCountdown
             ? `You'll be free ${globalActivityCountdown}.`
             : "Wrap up your current activity to start a new sprint."}
@@ -2034,9 +2501,12 @@ const Songwriting = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Music className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No songwriting projects yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              No songwriting projects yet
+            </h3>
             <p className="text-muted-foreground text-center mb-4 max-w-md">
-              Capture a new concept, set creative targets, and let focus sprints carry you to a finished song.
+              Capture a new concept, set creative targets, and let focus sprints
+              carry you to a finished song.
             </p>
             <Button onClick={handleOpenCreate}>
               <Plus className="h-4 w-4 mr-2" />
@@ -2047,7 +2517,10 @@ const Songwriting = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => {
-            const isLocked = project.is_locked && project.locked_until && new Date(project.locked_until) > new Date();
+            const isLocked =
+              project.is_locked &&
+              project.locked_until &&
+              new Date(project.locked_until) > new Date();
 
             return (
               <SimplifiedProjectCard
@@ -2073,12 +2546,16 @@ const Songwriting = () => {
         </div>
       )}
 
-      <Dialog open={Boolean(completionProject)} onOpenChange={handleCompletionDialogChange}>
+      <Dialog
+        open={Boolean(completionProject)}
+        onOpenChange={handleCompletionDialogChange}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Log your sprint notes</DialogTitle>
             <DialogDescription>
-              Capture the breakthroughs from this focus session before marking it complete.
+              Capture the breakthroughs from this focus session before marking
+              it complete.
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleCompleteSessionSubmit}>
@@ -2090,85 +2567,100 @@ const Songwriting = () => {
                 onChange={(event) => setCompletionNotes(event.target.value)}
                 placeholder="Captured a new chorus hook, refined verse lyrics..."
               />
-              <p className="text-xs text-muted-foreground text-right">{formatWordCount(completionNotes)}</p>
+              <p className="text-xs text-muted-foreground text-right">
+                {formatWordCount(completionNotes)}
+              </p>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => handleCompletionDialogChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleCompletionDialogChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={!completionProject || completeSession.isPending}>
+              <Button
+                type="submit"
+                disabled={!completionProject || completeSession.isPending}
+              >
                 Complete Sprint
               </Button>
             </div>
           </form>
-          </DialogContent>
-        </Dialog>
+        </DialogContent>
+      </Dialog>
 
-        {/* Quick Create Dialog */}
-        <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                Quick Create
-              </DialogTitle>
-              <DialogDescription>
-                Skip the creative brief — just title + genre. Defaults to Solo writing mode. You can edit details later.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleQuickCreateSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="quick-title">Project Title *</Label>
-                <Input
-                  id="quick-title"
-                  value={quickCreateTitle}
-                  onChange={(e) => setQuickCreateTitle(e.target.value)}
-                  placeholder="e.g., Late night demo"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quick-genre">Genre *</Label>
-                <Select
-                  value={quickCreateGenre || "none"}
-                  onValueChange={(v) => setQuickCreateGenre(v === "none" ? "" : v)}
-                >
-                  <SelectTrigger id="quick-genre">
-                    <SelectValue placeholder="Select a genre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Select a genre</SelectItem>
-                    {MUSIC_GENRES.map((genre) => (
-                      <SelectItem key={genre} value={genre}>
-                        {genre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {quickCreateError && (
-                <p className="text-sm text-destructive">{quickCreateError}</p>
-              )}
-              <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <strong className="text-foreground">Defaults applied:</strong> Solo writing mode · No co-writers · No theme/chord progression. Edit the project anytime to add a creative brief and collaborators.
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsQuickCreateOpen(false)}
-                  disabled={createProject.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createProject.isPending}>
-                  <Zap className="mr-2 h-4 w-4" />
-                  {createProject.isPending ? "Creating…" : "Create Project"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      {/* Quick Create Dialog */}
+      <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              Quick Create
+            </DialogTitle>
+            <DialogDescription>
+              Skip the creative brief — just title + genre. Defaults to Solo
+              writing mode. You can edit details later.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleQuickCreateSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quick-title">Project Title *</Label>
+              <Input
+                id="quick-title"
+                value={quickCreateTitle}
+                onChange={(e) => setQuickCreateTitle(e.target.value)}
+                placeholder="e.g., Late night demo"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quick-genre">Genre *</Label>
+              <Select
+                value={quickCreateGenre || "none"}
+                onValueChange={(v) =>
+                  setQuickCreateGenre(v === "none" ? "" : v)
+                }
+              >
+                <SelectTrigger id="quick-genre">
+                  <SelectValue placeholder="Select a genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select a genre</SelectItem>
+                  {MUSIC_GENRES.map((genre) => (
+                    <SelectItem key={genre} value={genre}>
+                      {genre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {quickCreateError && (
+              <p className="text-sm text-destructive">{quickCreateError}</p>
+            )}
+            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <strong className="text-foreground">Defaults applied:</strong>{" "}
+              Solo writing mode · No co-writers · No theme/chord progression.
+              Edit the project anytime to add a creative brief and
+              collaborators.
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsQuickCreateOpen(false)}
+                disabled={createProject.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createProject.isPending}>
+                <Zap className="mr-2 h-4 w-4" />
+                {createProject.isPending ? "Creating…" : "Create Project"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {inviteProjectId && (
         <CollaboratorInviteDialog
@@ -2200,21 +2692,27 @@ const Songwriting = () => {
         isInBand={!!primaryBand?.bands?.id}
         onKeepPrivate={() => {
           if (completedProject) {
-            handleConvertProject(completedProject, 'private');
+            handleConvertProject(completedProject, "private");
             setShowCompletionDialog(false);
           }
         }}
         onAddToBand={async () => {
           if (completedProject && primaryBand?.bands?.id) {
             // First convert the project to a song
-            await handleConvertProject(completedProject, 'private', primaryBand.bands.id);
+            await handleConvertProject(
+              completedProject,
+              "private",
+              primaryBand.bands.id,
+            );
             setShowCompletionDialog(false);
-            toast.success(`Song added to ${primaryBand.bands.name}'s repertoire!`);
+            toast.success(
+              `Song added to ${primaryBand.bands.name}'s repertoire!`,
+            );
           }
         }}
         onListForSale={() => {
           if (completedProject) {
-            handleConvertProject(completedProject, 'for_sale');
+            handleConvertProject(completedProject, "for_sale");
             setShowCompletionDialog(false);
             toast.success("Song listed on marketplace!");
           }
@@ -2231,50 +2729,77 @@ const Songwriting = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {historyProject ? `Sprint history · ${historyProject.title}` : "Sprint history"}
+              {historyProject
+                ? `Sprint history · ${historyProject.title}`
+                : "Sprint history"}
             </DialogTitle>
             <DialogDescription>
-              Review every focus sprint, including timestamps, gains, and notes captured along the way.
+              Review every focus sprint, including timestamps, gains, and notes
+              captured along the way.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-72 pr-4">
             <div className="space-y-4">
-              {historyProject?.songwriting_sessions && historyProject.songwriting_sessions.length > 0 ? (
+              {historyProject?.songwriting_sessions &&
+              historyProject.songwriting_sessions.length > 0 ? (
                 [...historyProject.songwriting_sessions]
-                  .sort((a, b) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime())
+                  .sort(
+                    (a, b) =>
+                      new Date(b.session_start).getTime() -
+                      new Date(a.session_start).getTime(),
+                  )
                   .map((session) => {
                     const started = session.session_start;
                     const ended = session.completed_at ?? session.session_end;
                     return (
-                      <div key={session.id} className="rounded-md border p-3 text-sm space-y-2">
+                      <div
+                        key={session.id}
+                        className="rounded-md border p-3 text-sm space-y-2"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium">{new Date(started).toLocaleString()}</p>
+                            <p className="font-medium">
+                              {new Date(started).toLocaleString()}
+                            </p>
                           </div>
-                          <Badge variant={session.completed_at ? "default" : "secondary"}>
+                          <Badge
+                            variant={
+                              session.completed_at ? "default" : "secondary"
+                            }
+                          >
                             {session.completed_at ? "Completed" : "In progress"}
                           </Badge>
                         </div>
                         {ended && (
-                          <p className="text-xs text-muted-foreground">Completed {new Date(ended).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Completed {new Date(ended).toLocaleString()}
+                          </p>
                         )}
                         <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                           <div>
                             <p>Music +</p>
-                            <p className="font-semibold text-foreground">{session.music_progress_gained ?? 0}</p>
+                            <p className="font-semibold text-foreground">
+                              {session.music_progress_gained ?? 0}
+                            </p>
                           </div>
                           <div>
                             <p>Lyrics +</p>
-                            <p className="font-semibold text-foreground">{session.lyrics_progress_gained ?? 0}</p>
+                            <p className="font-semibold text-foreground">
+                              {session.lyrics_progress_gained ?? 0}
+                            </p>
                           </div>
                           <div>
                             <p>XP</p>
-                            <p className="font-semibold text-foreground">{session.xp_earned ?? 0}</p>
+                            <p className="font-semibold text-foreground">
+                              {session.xp_earned ?? 0}
+                            </p>
                           </div>
                         </div>
                         {session.notes && (
                           <div className="rounded-md bg-muted/40 p-2">
-                            <p className="text-xs uppercase text-muted-foreground mb-1">Session notes</p>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Session notes
+                            </p>
                             <p>{session.notes}</p>
                           </div>
                         )}
@@ -2283,7 +2808,8 @@ const Songwriting = () => {
                   })
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  No sprint history recorded yet. Complete a sprint to see it here.
+                  No sprint history recorded yet. Complete a sprint to see it
+                  here.
                 </div>
               )}
             </div>

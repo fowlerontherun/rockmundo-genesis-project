@@ -1,7 +1,13 @@
 import { Calendar, Music, Star, Sparkles, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useClubEvents, getTonightsEvent, getDayName, getEventTypeLabel, type NightclubEvent } from "@/hooks/useNightclubEvents";
+import {
+  useClubEvents,
+  getTonightsEvent,
+  getDayName,
+  getEventTypeLabel,
+  type NightclubEvent,
+} from "@/hooks/useNightclubEvents";
 
 interface ClubEventsSectionProps {
   clubId: string;
@@ -28,7 +34,7 @@ export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
           <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 space-y-2">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase text-primary tracking-wider">Tonight</span>
+              <span className="text-xs font-bold text-primary">Tonight</span>
             </div>
             <EventCard event={tonightsEvent} highlight />
           </div>
@@ -37,7 +43,9 @@ export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
         {/* Upcoming Schedule */}
         {upcomingEvents.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-muted-foreground">Weekly Schedule</h4>
+            <h4 className="text-sm font-semibold text-muted-foreground">
+              Weekly Schedule
+            </h4>
             {upcomingEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
@@ -48,11 +56,21 @@ export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
   );
 };
 
-const EventCard = ({ event, highlight = false }: { event: NightclubEvent; highlight?: boolean }) => (
-  <div className={`rounded-lg border p-3 space-y-2 ${highlight ? "border-primary/30" : "border-border/60"}`}>
+const EventCard = ({
+  event,
+  highlight = false,
+}: {
+  event: NightclubEvent;
+  highlight?: boolean;
+}) => (
+  <div
+    className={`rounded-lg border p-3 space-y-2 ${highlight ? "border-primary/30" : "border-border/60"}`}
+  >
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
-        <span className={`font-medium text-sm truncate ${highlight ? "text-primary" : ""}`}>
+        <span
+          className={`font-medium text-sm truncate ${highlight ? "text-primary" : ""}`}
+        >
           {event.event_name}
         </span>
         <Badge variant="outline" className="text-[10px] shrink-0">
@@ -68,7 +86,9 @@ const EventCard = ({ event, highlight = false }: { event: NightclubEvent; highli
     </div>
 
     {event.description && (
-      <p className="text-xs text-muted-foreground line-clamp-2">{event.description}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2">
+        {event.description}
+      </p>
     )}
 
     <div className="flex flex-wrap gap-1.5">

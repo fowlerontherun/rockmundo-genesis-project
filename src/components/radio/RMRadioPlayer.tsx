@@ -1,24 +1,40 @@
-import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  Volume2, 
-  VolumeX, 
-  Loader2, 
+import {
+  Play,
+  Pause,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Loader2,
   Radio,
   Music,
   Shuffle,
-  Megaphone
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { useRadioContent, RadioContent, getRandomContent } from "@/hooks/useRadioContent";
+import {
+  useRadioContent,
+  RadioContent,
+  getRandomContent,
+} from "@/hooks/useRadioContent";
 
 interface Song {
   id: string;
@@ -29,7 +45,7 @@ interface Song {
 }
 
 interface PlaylistItem {
-  type: 'song' | 'content' | 'host-segment' | 'chart-number-one';
+  type: "song" | "content" | "host-segment" | "chart-number-one";
   song?: Song;
   content?: RadioContent;
 }
@@ -49,22 +65,25 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Build playlist with interleaved content
-function buildPlaylistWithContent(songs: Song[], content: RadioContent[]): PlaylistItem[] {
+function buildPlaylistWithContent(
+  songs: Song[],
+  content: RadioContent[],
+): PlaylistItem[] {
   const result: PlaylistItem[] = [];
   const songsBetweenContent = 3 + Math.floor(Math.random() * 3); // 3-5 songs between content
-  
+
   songs.forEach((song, index) => {
-    result.push({ type: 'song', song });
-    
+    result.push({ type: "song", song });
+
     // Add random content every X songs
     if ((index + 1) % songsBetweenContent === 0 && content.length > 0) {
       const randomContent = getRandomContent(content);
       if (randomContent) {
-        result.push({ type: 'content', content: randomContent });
+        result.push({ type: "content", content: randomContent });
       }
     }
   });
-  
+
   return result;
 }
 
@@ -100,16 +119,16 @@ export const useRadio = () => {
 
 // Helper to get audio URL from playlist item
 function getAudioUrl(item: PlaylistItem): string | null {
-  if (item.type === 'song' && item.song) {
+  if (item.type === "song" && item.song) {
     return item.song.audio_url;
   }
-  if (item.type === 'content' && item.content) {
+  if (item.type === "content" && item.content) {
     return item.content.audio_url;
   }
-  if (item.type === 'host-segment') {
+  if (item.type === "host-segment") {
     return RADIO_HOST_CLIP_URL;
   }
-  if (item.type === 'chart-number-one' && item.song) {
+  if (item.type === "chart-number-one" && item.song) {
     return item.song.audio_url;
   }
   return null;
@@ -131,7 +150,7 @@ let chartNumberOneSong: Song | null = null; // Cached #1 chart song
 let pendingHostSegment: boolean = false; // Flag: next track should be host segment
 
 const notifyListeners = () => {
-  stateListeners.forEach(l => l());
+  stateListeners.forEach((l) => l());
 };
 
 export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
@@ -147,7 +166,7 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
 
     const listener = () => forceUpdate({});
     stateListeners.add(listener);
-    
+
     return () => {
       stateListeners.delete(listener);
     };
@@ -173,26 +192,29 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const initializePlaylist = useCallback((songs: Song[], content: RadioContent[]) => {
-    if (songs.length === 0) return;
-    if (globalState.playlist.length > 0) return; // Already initialized
-    
-    const shuffledSongs = shuffleArray(songs);
-    const playlist = buildPlaylistWithContent(shuffledSongs, content);
-    
-    globalState = {
-      ...globalState,
-      playlist,
-      currentIndex: 0,
-      currentItem: playlist[0] || null,
-    };
-    
-    const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
-    if (globalAudio && audioUrl) {
-      globalAudio.src = audioUrl;
-    }
-    notifyListeners();
-  }, []);
+  const initializePlaylist = useCallback(
+    (songs: Song[], content: RadioContent[]) => {
+      if (songs.length === 0) return;
+      if (globalState.playlist.length > 0) return; // Already initialized
+
+      const shuffledSongs = shuffleArray(songs);
+      const playlist = buildPlaylistWithContent(shuffledSongs, content);
+
+      globalState = {
+        ...globalState,
+        playlist,
+        currentIndex: 0,
+        currentItem: playlist[0] || null,
+      };
+
+      const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
+      if (globalAudio && audioUrl) {
+        globalAudio.src = audioUrl;
+      }
+      notifyListeners();
+    },
+    [],
+  );
 
   const togglePlay = useCallback(async () => {
     if (!globalAudio || !globalState.currentItem) return;
@@ -218,12 +240,16 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     const timeSinceLastHost = now - lastHostSegmentTime;
 
     // Check if it's time for a host segment (every 30 minutes)
-    if (timeSinceLastHost >= HOST_SEGMENT_INTERVAL_MS && !pendingHostSegment && globalState.currentItem?.type !== 'host-segment') {
+    if (
+      timeSinceLastHost >= HOST_SEGMENT_INTERVAL_MS &&
+      !pendingHostSegment &&
+      globalState.currentItem?.type !== "host-segment"
+    ) {
       // Play host segment clip
       pendingHostSegment = true;
       lastHostSegmentTime = now;
-      
-      const hostItem: PlaylistItem = { type: 'host-segment' };
+
+      const hostItem: PlaylistItem = { type: "host-segment" };
       globalState = {
         ...globalState,
         currentItem: hostItem,
@@ -240,11 +266,17 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     // After host segment, play the #1 chart song
-    if (pendingHostSegment && globalState.currentItem?.type === 'host-segment') {
+    if (
+      pendingHostSegment &&
+      globalState.currentItem?.type === "host-segment"
+    ) {
       pendingHostSegment = false;
-      
+
       if (chartNumberOneSong) {
-        const chartItem: PlaylistItem = { type: 'chart-number-one', song: chartNumberOneSong };
+        const chartItem: PlaylistItem = {
+          type: "chart-number-one",
+          song: chartNumberOneSong,
+        };
         globalState = {
           ...globalState,
           currentItem: chartItem,
@@ -262,9 +294,10 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     // Normal playlist progression
-    const nextIndex = (globalState.currentIndex + 1) % globalState.playlist.length;
+    const nextIndex =
+      (globalState.currentIndex + 1) % globalState.playlist.length;
     const nextItem = globalState.playlist[nextIndex];
-    
+
     globalState = {
       ...globalState,
       currentIndex: nextIndex,
@@ -283,7 +316,7 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
 
   const reshufflePlaylist = useCallback(() => {
     if (globalState.playlist.length === 0) return;
-    
+
     const shuffled = shuffleArray(globalState.playlist);
     globalState = {
       ...globalState,
@@ -357,13 +390,15 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("songs")
-        .select(`
-          id,
-          title,
-          audio_url,
-          genre,
-          bands(name, artist_name)
-        `)
+        .select(
+          `
+ id,
+ title,
+ audio_url,
+ genre,
+ bands(name, artist_name)
+ `,
+        )
         .eq("audio_generation_status", "completed")
         .not("audio_url", "is", null)
         .order("created_at", { ascending: false })
@@ -378,7 +413,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         id: song.id,
         title: song.title || "Unknown Song",
         audio_url: song.audio_url!,
-        band_name: song.bands?.artist_name || song.bands?.name || "Unknown Artist",
+        band_name:
+          song.bands?.artist_name || song.bands?.name || "Unknown Artist",
         genre: song.genre,
       })) as Song[];
     },
@@ -433,7 +469,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   useEffect(() => {
     if (!globalAudio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(globalAudio?.currentTime || 0);
+    const handleTimeUpdate = () =>
+      setCurrentTime(globalAudio?.currentTime || 0);
     const handleDurationChange = () => setDuration(globalAudio?.duration || 0);
     const handleWaiting = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
@@ -476,7 +513,12 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Radio className={cn("h-5 w-5 text-primary", state.isPlaying && "animate-pulse")} />
+            <Radio
+              className={cn(
+                "h-5 w-5 text-primary",
+                state.isPlaying && "animate-pulse",
+              )}
+            />
             RM Radio
             <Badge variant="outline" className="ml-2">
               {state.playlist.length} songs
@@ -488,7 +530,9 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
           {songsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Loading songs...</span>
+              <span className="ml-2 text-muted-foreground">
+                Loading songs...
+              </span>
             </div>
           ) : state.playlist.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -498,20 +542,22 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
           ) : (
             <>
               {/* Now Playing */}
-              {state.currentItem?.type === 'host-segment' ? (
+              {state.currentItem?.type === "host-segment" ? (
                 <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
-                  <div className="text-xs text-primary uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <div className="text-xs text-primary mb-1 flex items-center gap-1">
                     <Radio className="h-3 w-3 animate-pulse" />
                     Live Host Segment
                   </div>
                   <div className="text-lg font-semibold truncate">
                     Blondie - Radio Host
                   </div>
-                  <div className="text-sm text-muted-foreground">RM Radio Presenter</div>
+                  <div className="text-sm text-muted-foreground">
+                    RM Radio Presenter
+                  </div>
                 </div>
-              ) : state.currentItem?.type === 'chart-number-one' ? (
+              ) : state.currentItem?.type === "chart-number-one" ? (
                 <div className="bg-chart-1/10 rounded-lg p-4 border border-chart-1/30">
-                  <div className="text-xs text-chart-1 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <div className="text-xs text-chart-1 mb-1 flex items-center gap-1">
                     🏆 #1 Chart Hit
                   </div>
                   <div className="text-lg font-semibold truncate">
@@ -521,22 +567,26 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
                     {state.currentItem?.song?.band_name || "---"}
                   </div>
                 </div>
-              ) : state.currentItem?.type === 'content' ? (
+              ) : state.currentItem?.type === "content" ? (
                 <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
-                  <div className="text-xs text-amber-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <div className="text-xs text-amber-500 mb-1 flex items-center gap-1">
                     <Megaphone className="h-3 w-3" />
-                    {state.currentItem.content?.content_type === 'jingle' ? 'Station Break' : 'Message from our Sponsors'}
+                    {state.currentItem.content?.content_type === "jingle"
+                      ? "Station Break"
+                      : "Message from our Sponsors"}
                   </div>
                   <div className="text-lg font-semibold truncate">
                     {state.currentItem.content?.title || "---"}
                   </div>
                   {state.currentItem.content?.brand_name && (
-                    <div className="text-sm text-muted-foreground">by {state.currentItem.content.brand_name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      by {state.currentItem.content.brand_name}
+                    </div>
                   )}
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg p-4 border">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                  <div className="text-xs text-muted-foreground mb-1">
                     Now Playing
                   </div>
                   <div className="text-lg font-semibold truncate">
@@ -630,7 +680,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
 
               {/* Queue Info */}
               <div className="text-center text-xs text-muted-foreground">
-                Song {state.currentIndex + 1} of {state.playlist.length} • Continuous play
+                Song {state.currentIndex + 1} of {state.playlist.length} •
+                Continuous play
               </div>
             </>
           )}
@@ -647,7 +698,7 @@ interface RMRadioButtonProps {
 
 export const RMRadioButton = ({ className }: RMRadioButtonProps) => {
   const [open, setOpen] = useState(false);
-  
+
   // Try to use radio context if available
   let isPlaying = false;
   try {
@@ -666,7 +717,9 @@ export const RMRadioButton = ({ className }: RMRadioButtonProps) => {
         title="RM Radio"
         className={cn("relative gap-1.5 h-7 px-2", className)}
       >
-        <Radio className={cn("h-4 w-4", isPlaying && "text-primary animate-pulse")} />
+        <Radio
+          className={cn("h-4 w-4", isPlaying && "text-primary animate-pulse")}
+        />
         <span className="text-xs hidden sm:inline">Radio</span>
         {isPlaying && (
           <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-primary rounded-full animate-pulse" />

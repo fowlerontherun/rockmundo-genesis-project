@@ -1,24 +1,105 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, TrendingDown, Minus, Sparkles, Music, Disc, Radio, Download, PlaySquare, BarChart3, Globe, Filter, HelpCircle, Calendar, Album } from "lucide-react";
-import { useCountryCharts, useAvailableGenres, useAvailableCountries, ChartType, ChartEntry, GENRES, COUNTRIES, ReleaseCategory, ChartTimeRange, ChartYear, getMetricLabels } from "@/hooks/useCountryCharts";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Sparkles,
+  Music,
+  Disc,
+  Radio,
+  Download,
+  PlaySquare,
+  BarChart3,
+  Globe,
+  Filter,
+  HelpCircle,
+  Calendar,
+  Album,
+} from "lucide-react";
+import {
+  useCountryCharts,
+  useAvailableGenres,
+  useAvailableCountries,
+  ChartType,
+  ChartEntry,
+  GENRES,
+  COUNTRIES,
+  ReleaseCategory,
+  ChartTimeRange,
+  ChartYear,
+  getMetricLabels,
+} from "@/hooks/useCountryCharts";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { ChartHistoryDialog } from "@/components/charts/ChartHistoryDialog";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
-const CHART_TYPES: { value: ChartType; label: string; icon: React.ReactNode; description: string; hasAlbumData: boolean }[] = [
-  { value: "combined", label: "Top 50", icon: <BarChart3 className="h-4 w-4" />, description: "Official chart combining streams & all sales", hasAlbumData: true },
-  { value: "streaming", label: "Streaming", icon: <Radio className="h-4 w-4" />, description: "Ranked by weekly streams", hasAlbumData: true },
-  { value: "digital_sales", label: "Digital", icon: <Download className="h-4 w-4" />, description: "Digital download sales", hasAlbumData: true },
-  { value: "physical_sales", label: "Physical", icon: <Disc className="h-4 w-4" />, description: "CD, Vinyl & Cassette sales combined", hasAlbumData: true },
-  { value: "radio_airplay", label: "Radio", icon: <Radio className="h-4 w-4" />, description: "Radio airplay chart", hasAlbumData: false },
+const CHART_TYPES: {
+  value: ChartType;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+  hasAlbumData: boolean;
+}[] = [
+  {
+    value: "combined",
+    label: "Top 50",
+    icon: <BarChart3 className="h-4 w-4" />,
+    description: "Official chart combining streams & all sales",
+    hasAlbumData: true,
+  },
+  {
+    value: "streaming",
+    label: "Streaming",
+    icon: <Radio className="h-4 w-4" />,
+    description: "Ranked by weekly streams",
+    hasAlbumData: true,
+  },
+  {
+    value: "digital_sales",
+    label: "Digital",
+    icon: <Download className="h-4 w-4" />,
+    description: "Digital download sales",
+    hasAlbumData: true,
+  },
+  {
+    value: "physical_sales",
+    label: "Physical",
+    icon: <Disc className="h-4 w-4" />,
+    description: "CD, Vinyl & Cassette sales combined",
+    hasAlbumData: true,
+  },
+  {
+    value: "radio_airplay",
+    label: "Radio",
+    icon: <Radio className="h-4 w-4" />,
+    description: "Radio airplay chart",
+    hasAlbumData: false,
+  },
 ];
 
 const TIME_RANGES: { value: ChartTimeRange; label: string }[] = [
@@ -59,11 +140,17 @@ interface ChartTableProps {
   releaseCategory: ReleaseCategory;
 }
 
-const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory }: ChartTableProps) => {
+const ChartTable = ({
+  entries,
+  isLoading,
+  chartType,
+  timeRange,
+  releaseCategory,
+}: ChartTableProps) => {
   const labels = getMetricLabels(chartType, timeRange);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const isAlbumView = releaseCategory === "album" || releaseCategory === "ep";
-  
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -78,9 +165,13 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Music className="h-12 w-12 text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-semibold text-muted-foreground">No Chart Data Available</h3>
+        <h3 className="text-lg font-semibold text-muted-foreground">
+          No Chart Data Available
+        </h3>
         <p className="text-sm text-muted-foreground/70 max-w-md mt-2">
-          No {isAlbumView ? "albums" : "songs"} are currently charting for the selected filters. This may happen for physical formats like vinyl or cassette if there haven't been recent sales.
+          No {isAlbumView ? "albums" : "songs"} are currently charting for the
+          selected filters. This may happen for physical formats like vinyl or
+          cassette if there haven't been recent sales.
         </p>
       </div>
     );
@@ -100,7 +191,16 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
       return entry.weekly_plays; // Period streams
     }
     // For sales charts, show all-time cumulative sales (ensure >= weekly)
-    if (["digital_sales", "cd_sales", "vinyl_sales", "cassette_sales", "record_sales", "physical_sales"].includes(chartType)) {
+    if (
+      [
+        "digital_sales",
+        "cd_sales",
+        "vinyl_sales",
+        "cassette_sales",
+        "record_sales",
+        "physical_sales",
+      ].includes(chartType)
+    ) {
       const allTime = entry.plays_count || 0;
       const weekly = entry.weekly_plays || 0;
       return Math.max(allTime, weekly); // All-time must always be >= this week
@@ -112,9 +212,11 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
     <>
       <div className="space-y-1">
         {/* Header */}
-        <div className="grid grid-cols-8 sm:grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+        <div className="grid grid-cols-8 sm:grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium text-muted-foreground border-b border-border">
           <div className="col-span-1">#</div>
-          <div className="col-span-4 sm:col-span-3">{isAlbumView ? "Album" : "Song"}</div>
+          <div className="col-span-4 sm:col-span-3">
+            {isAlbumView ? "Album" : "Song"}
+          </div>
           <div className="col-span-2 hidden sm:block">Genre</div>
           <div className="col-span-3 sm:col-span-2 text-right hidden sm:flex items-center justify-end gap-1">
             {labels.weekly}
@@ -126,8 +228,10 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
-                      <strong>Chart Points Formula:</strong><br/>
-                      (Weekly Streams ÷ 150) + Digital Sales + CD Sales + Vinyl Sales + Cassette Sales
+                      <strong>Chart Points Formula:</strong>
+                      <br />
+                      (Weekly Streams ÷ 150) + Digital Sales + CD Sales + Vinyl
+                      Sales + Cassette Sales
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -135,7 +239,9 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
             )}
           </div>
           <div className="col-span-3 sm:hidden text-right">Sales</div>
-          <div className="col-span-2 text-right hidden sm:block">{labels.total}</div>
+          <div className="col-span-2 text-right hidden sm:block">
+            {labels.total}
+          </div>
           <div className="col-span-1 text-center hidden sm:block">Trend</div>
           <div className="col-span-1 text-right hidden sm:block">Wks</div>
         </div>
@@ -143,14 +249,14 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
         {/* Entries */}
         {entries.map((entry) => {
           const isAlbumEntry = entry.entry_type === "album";
-          
+
           return (
             <div
               key={entry.id}
               className={cn(
                 "grid grid-cols-8 sm:grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 rounded-lg hover:bg-accent/50 transition-colors items-start cursor-pointer",
                 entry.rank <= 3 && "bg-accent/30",
-                entry.is_fake && "opacity-70"
+                entry.is_fake && "opacity-70",
               )}
               onClick={() => setSelectedSongId(entry.song_id)}
             >
@@ -161,7 +267,7 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
                     "font-bold text-base sm:text-lg",
                     entry.rank === 1 && "text-yellow-500",
                     entry.rank === 2 && "text-slate-400",
-                    entry.rank === 3 && "text-amber-600"
+                    entry.rank === 3 && "text-amber-600",
                   )}
                 >
                   {entry.rank}
@@ -176,24 +282,37 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
                       {isAlbumEntry && (
                         <Album className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary shrink-0" />
                       )}
-                      <p className="font-medium truncate text-xs sm:text-sm">{entry.title}</p>
+                      <p className="font-medium truncate text-xs sm:text-sm">
+                        {entry.title}
+                      </p>
                     </div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{entry.artist}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                      {entry.artist}
+                    </p>
                   </div>
                   {entry.is_fake && (
-                    <Badge variant="outline" className="text-[10px] px-1 shrink-0">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 shrink-0"
+                    >
                       SIM
                     </Badge>
                   )}
                   {isAlbumEntry && (
-                    <Badge variant="secondary" className="text-[10px] px-1 shrink-0 hidden sm:inline-flex">
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-1 shrink-0 hidden sm:inline-flex"
+                    >
                       Album
                     </Badge>
                   )}
                 </div>
                 {/* Audio Player for real songs (only for song entries) */}
                 {!entry.is_fake && entry.audio_url && !isAlbumEntry && (
-                  <div className="mt-1 sm:mt-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="mt-1 sm:mt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <TrackableSongPlayer
                       songId={entry.song_id}
                       audioUrl={entry.audio_url}
@@ -218,24 +337,36 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
               <div className="col-span-3 sm:hidden text-right">
                 <div className="flex flex-col gap-0.5">
                   <div>
-                    <span className="text-[9px] text-muted-foreground block">{labels.weekly}</span>
-                    <span className="font-mono text-xs">{formatNumber(getWeeklyValue(entry))}</span>
+                    <span className="text-[9px] text-muted-foreground block">
+                      {labels.weekly}
+                    </span>
+                    <span className="font-mono text-xs">
+                      {formatNumber(getWeeklyValue(entry))}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-muted-foreground block">{labels.total}</span>
-                    <span className="font-mono text-xs">{formatNumber(getTotalValue(entry))}</span>
+                    <span className="text-[9px] text-muted-foreground block">
+                      {labels.total}
+                    </span>
+                    <span className="font-mono text-xs">
+                      {formatNumber(getTotalValue(entry))}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Desktop: Weekly/Chart Points */}
               <div className="col-span-2 text-right hidden sm:block">
-                <span className="font-mono text-sm">{formatNumber(getWeeklyValue(entry))}</span>
+                <span className="font-mono text-sm">
+                  {formatNumber(getWeeklyValue(entry))}
+                </span>
               </div>
 
               {/* Desktop: Total */}
               <div className="col-span-2 text-right hidden sm:block">
-                <span className="font-mono text-sm">{formatNumber(getTotalValue(entry))}</span>
+                <span className="font-mono text-sm">
+                  {formatNumber(getTotalValue(entry))}
+                </span>
               </div>
 
               {/* Trend */}
@@ -245,7 +376,9 @@ const ChartTable = ({ entries, isLoading, chartType, timeRange, releaseCategory 
 
               {/* Weeks */}
               <div className="col-span-1 text-right hidden sm:block">
-                <span className="text-sm text-muted-foreground">{entry.weeks_on_chart}</span>
+                <span className="text-sm text-muted-foreground">
+                  {entry.weeks_on_chart}
+                </span>
               </div>
             </div>
           );
@@ -269,7 +402,8 @@ export default function CountryCharts() {
   const [country, setCountry] = useState("Global");
   const [genre, setGenre] = useState("All");
   const [chartType, setChartType] = useState<ChartType>("combined");
-  const [releaseCategory, setReleaseCategory] = useState<ReleaseCategory>("single"); // Default to singles
+  const [releaseCategory, setReleaseCategory] =
+    useState<ReleaseCategory>("single"); // Default to singles
   const [timeRange, setTimeRange] = useState<ChartTimeRange>("weekly");
   const [selectedYear, setSelectedYear] = useState<ChartYear>("current");
 
@@ -277,7 +411,7 @@ export default function CountryCharts() {
   const currentYear = new Date().getFullYear();
   const availableYears = useMemo(() => {
     const years: { value: ChartYear; label: string }[] = [
-      { value: "current", label: "Last 12 Months" }
+      { value: "current", label: "Last 12 Months" },
     ];
     for (let year = currentYear; year >= 2020; year--) {
       years.push({ value: year, label: String(year) });
@@ -285,12 +419,19 @@ export default function CountryCharts() {
     return years;
   }, [currentYear]);
 
-  const { data: entries = [], isLoading } = useCountryCharts(country, genre, chartType, releaseCategory, timeRange, selectedYear);
+  const { data: entries = [], isLoading } = useCountryCharts(
+    country,
+    genre,
+    chartType,
+    releaseCategory,
+    timeRange,
+    selectedYear,
+  );
   const { data: genres = ["All", ...GENRES] } = useAvailableGenres();
   const { data: countries = COUNTRIES } = useAvailableCountries();
 
   const realSongsCount = entries.filter((e) => !e.is_fake).length;
-  const currentChartInfo = CHART_TYPES.find(t => t.value === chartType);
+  const currentChartInfo = CHART_TYPES.find((t) => t.value === chartType);
   const isAlbumView = releaseCategory === "album" || releaseCategory === "ep";
 
   return (
@@ -301,19 +442,20 @@ export default function CountryCharts() {
       backTo="/hub/music"
     >
       <div className="flex flex-col gap-4">
-
-
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Select value={timeRange} onValueChange={(v) => {
-              setTimeRange(v as ChartTimeRange);
-              // Reset year selection when changing away from yearly
-              if (v !== "yearly") {
-                setSelectedYear("current");
-              }
-            }}>
+            <Select
+              value={timeRange}
+              onValueChange={(v) => {
+                setTimeRange(v as ChartTimeRange);
+                // Reset year selection when changing away from yearly
+                if (v !== "yearly") {
+                  setSelectedYear("current");
+                }
+              }}
+            >
               <SelectTrigger className="w-[110px] sm:w-[130px]">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
@@ -330,9 +472,11 @@ export default function CountryCharts() {
           {/* Year selector - only show when yearly time range is selected */}
           {timeRange === "yearly" && (
             <div className="flex items-center gap-2">
-              <Select 
-                value={String(selectedYear)} 
-                onValueChange={(v) => setSelectedYear(v === "current" ? "current" : parseInt(v))}
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(v) =>
+                  setSelectedYear(v === "current" ? "current" : parseInt(v))
+                }
               >
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Select year" />
@@ -384,7 +528,10 @@ export default function CountryCharts() {
           {currentChartInfo?.hasAlbumData && (
             <div className="flex items-center gap-2">
               <Disc className="h-4 w-4 text-muted-foreground" />
-              <Select value={releaseCategory} onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}>
+              <Select
+                value={releaseCategory}
+                onValueChange={(v) => setReleaseCategory(v as ReleaseCategory)}
+              >
                 <SelectTrigger className="w-[110px] sm:w-[150px]">
                   <SelectValue placeholder="Release type" />
                 </SelectTrigger>
@@ -407,14 +554,21 @@ export default function CountryCharts() {
       </div>
 
       {/* Chart Type Tabs */}
-      <Tabs value={chartType} onValueChange={(v) => {
-        setChartType(v as ChartType);
-        // Reset to singles for chart types without album data
-        const newType = CHART_TYPES.find(t => t.value === v);
-        if (newType && !newType.hasAlbumData && (releaseCategory === "album" || releaseCategory === "ep")) {
-          setReleaseCategory("single");
-        }
-      }}>
+      <Tabs
+        value={chartType}
+        onValueChange={(v) => {
+          setChartType(v as ChartType);
+          // Reset to singles for chart types without album data
+          const newType = CHART_TYPES.find((t) => t.value === v);
+          if (
+            newType &&
+            !newType.hasAlbumData &&
+            (releaseCategory === "album" || releaseCategory === "ep")
+          ) {
+            setReleaseCategory("single");
+          }
+        }}
+      >
         <TabsList className="grid w-full grid-cols-5 h-auto">
           {CHART_TYPES.map((type) => (
             <TabsTrigger
@@ -424,7 +578,7 @@ export default function CountryCharts() {
             >
               {type.icon}
               <span className="hidden sm:inline">{type.label}</span>
-              <span className="sm:hidden">{type.label.split(" ")[0]}</span>
+              <span className="sm:hidden">{type.label.split("")[0]}</span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -435,23 +589,22 @@ export default function CountryCharts() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   {type.icon}
-                  {country} - {genre === "All" ? "All Genres" : genre} - {type.label} Chart
+                  {country} - {genre === "All" ? "All Genres" : genre} -{" "}
+                  {type.label} Chart
                   {isAlbumView && (
                     <Badge variant="secondary" className="ml-2">
                       {releaseCategory === "album" ? "Albums" : "EPs"}
                     </Badge>
                   )}
                 </CardTitle>
-                <CardDescription>
-                  {type.description}
-                </CardDescription>
+                <CardDescription>{type.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartTable 
-                  entries={entries} 
-                  isLoading={isLoading} 
-                  chartType={chartType} 
-                  timeRange={timeRange} 
+                <ChartTable
+                  entries={entries}
+                  isLoading={isLoading}
+                  chartType={chartType}
+                  timeRange={timeRange}
                   releaseCategory={releaseCategory}
                 />
               </CardContent>

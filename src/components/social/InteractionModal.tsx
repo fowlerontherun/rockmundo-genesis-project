@@ -1,7 +1,12 @@
 // Universal Interaction Modal — Reusable for all social actions
 import { useState } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +14,18 @@ import { cn } from "@/lib/utils";
 import { ScoreGauge } from "./ScoreGauge";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Heart, Swords, MessageSquare, Gift, Music, Handshake,
-  AlertTriangle, TrendingUp, TrendingDown, Sparkles, Check, X,
+  Heart,
+  Swords,
+  MessageSquare,
+  Gift,
+  Music,
+  Handshake,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+  Check,
+  X,
 } from "lucide-react";
 
 export interface InteractionOption {
@@ -44,7 +59,11 @@ interface InteractionModalProps {
   isProcessing?: boolean;
 }
 
-function ImpactPreview({ impacts }: { impacts: { label: string; change: number }[] }) {
+function ImpactPreview({
+  impacts,
+}: {
+  impacts: { label: string; change: number }[];
+}) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {impacts.map((impact, i) => (
@@ -53,11 +72,18 @@ function ImpactPreview({ impacts }: { impacts: { label: string; change: number }
           variant="outline"
           className={cn(
             "text-[10px] gap-0.5",
-            impact.change > 0 ? "text-success border-success/30" : "text-social-tension border-social-tension/30",
+            impact.change > 0
+              ? "text-success border-success/30"
+              : "text-social-tension border-social-tension/30",
           )}
         >
-          {impact.change > 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-          {impact.label} {impact.change > 0 ? "+" : ""}{impact.change}
+          {impact.change > 0 ? (
+            <TrendingUp className="h-2.5 w-2.5" />
+          ) : (
+            <TrendingDown className="h-2.5 w-2.5" />
+          )}
+          {impact.label} {impact.change > 0 ? "+" : ""}
+          {impact.change}
         </Badge>
       ))}
     </div>
@@ -65,10 +91,22 @@ function ImpactPreview({ impacts }: { impacts: { label: string; change: number }
 }
 
 function SuccessIndicator({ probability }: { probability: number }) {
-  const color = probability >= 75 ? "social-loyalty" : probability >= 40 ? "social-jealousy" : "social-tension";
+  const color =
+    probability >= 75
+      ? "social-loyalty"
+      : probability >= 40
+        ? "social-jealousy"
+        : "social-tension";
   return (
     <div className="flex items-center gap-1.5">
-      <ScoreGauge value={probability} label="" color={color} size="sm" variant="ring" showValue />
+      <ScoreGauge
+        value={probability}
+        label=""
+        color={color}
+        size="sm"
+        variant="ring"
+        showValue
+      />
       <span className="text-[10px] text-muted-foreground">Success</span>
     </div>
   );
@@ -132,16 +170,20 @@ export function InteractionModal({
               exit={{ opacity: 0 }}
               className="space-y-4 py-4"
             >
-              <div className={cn(
-                "flex items-center gap-3 p-4 rounded-lg border",
-                result.success
-                  ? "bg-success/10 border-success/30"
-                  : "bg-social-tension/10 border-social-tension/30",
-              )}>
-                <div className={cn(
-                  "flex items-center justify-center h-10 w-10 rounded-full",
-                  result.success ? "bg-success/20" : "bg-social-tension/20",
-                )}>
+              <div
+                className={cn(
+                  "flex items-center gap-3 p-4 rounded-lg border",
+                  result.success
+                    ? "bg-success/10 border-success/30"
+                    : "bg-social-tension/10 border-social-tension/30",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-center h-10 w-10 rounded-full",
+                    result.success ? "bg-success/20" : "bg-social-tension/20",
+                  )}
+                >
                   {result.success ? (
                     <Check className="h-5 w-5 text-success" />
                   ) : (
@@ -150,13 +192,17 @@ export function InteractionModal({
                 </div>
                 <div>
                   <p className="font-semibold">{result.title}</p>
-                  <p className="text-sm text-muted-foreground">{result.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {result.description}
+                  </p>
                 </div>
               </div>
 
               {result.impacts.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">Consequences</span>
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    Consequences
+                  </span>
                   <div className="space-y-1.5">
                     {result.impacts.map((impact, i) => (
                       <motion.div
@@ -166,15 +212,22 @@ export function InteractionModal({
                         transition={{ delay: i * 0.1 }}
                         className={cn(
                           "flex items-center justify-between p-2 rounded border text-sm",
-                          impact.change > 0 ? "border-success/20" : "border-social-tension/20",
+                          impact.change > 0
+                            ? "border-success/20"
+                            : "border-social-tension/20",
                         )}
                       >
                         <span>{impact.label}</span>
-                        <span className={cn(
-                          "font-oswald font-bold",
-                          impact.change > 0 ? "text-success" : "text-social-tension",
-                        )}>
-                          {impact.change > 0 ? "+" : ""}{impact.change}
+                        <span
+                          className={cn(
+                            "font-oswald font-bold",
+                            impact.change > 0
+                              ? "text-success"
+                              : "text-social-tension",
+                          )}
+                        >
+                          {impact.change > 0 ? "+" : ""}
+                          {impact.change}
                         </span>
                       </motion.div>
                     ))}
@@ -204,16 +257,22 @@ export function InteractionModal({
                     "w-full text-left p-3 rounded-lg border border-border/50 bg-muted/20",
                     "hover:bg-muted/40 hover:border-primary/30 transition-all duration-200",
                     "disabled:opacity-40 disabled:cursor-not-allowed",
-                    selectedOption === option.id && processing && "border-primary/50 bg-primary/10",
+                    selectedOption === option.id &&
+                      processing &&
+                      "border-primary/50 bg-primary/10",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 space-y-1.5">
                       <div className="flex items-center gap-2">
                         {option.icon}
-                        <span className="font-medium text-sm">{option.label}</span>
+                        <span className="font-medium text-sm">
+                          {option.label}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {option.description}
+                      </p>
                       <ImpactPreview impacts={option.emotionalImpact} />
                       {option.disabled && option.disabledReason && (
                         <div className="flex items-center gap-1 text-[10px] text-social-tension">

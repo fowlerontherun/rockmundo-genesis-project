@@ -6,7 +6,13 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
@@ -93,12 +99,12 @@ const NarrativeStoryPage = () => {
         throw new Error("Story and user must be available");
       }
 
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = (await supabase
         .from("story_states" as any)
         .select("*")
         .eq("story_id", story.id)
         .eq("user_id", user.id)
-        .maybeSingle() as { data: StoryStateRow | null; error: any };
+        .maybeSingle()) as { data: StoryStateRow | null; error: any };
 
       if (fetchError) {
         throw fetchError;
@@ -119,11 +125,11 @@ const NarrativeStoryPage = () => {
         flags: initialState.flags,
       };
 
-      const { data: inserted, error: insertError } = await supabase
+      const { data: inserted, error: insertError } = (await supabase
         .from("story_states" as any)
         .insert(payload)
         .select()
-        .single() as { data: StoryStateRow | null; error: any };
+        .single()) as { data: StoryStateRow | null; error: any };
 
       if (insertError || !inserted) {
         throw insertError ?? new Error("Failed to initialize story state");
@@ -134,7 +140,8 @@ const NarrativeStoryPage = () => {
   });
 
   const handleChoiceResult = (choice: NarrativeChoice, message?: string) => {
-    const description = message ?? choice.resultSummary ?? `You chose ${choice.label}.`;
+    const description =
+      message ?? choice.resultSummary ?? `You chose ${choice.label}.`;
     setLastOutcome(description);
     toast({
       title: "Choice recorded",
@@ -153,7 +160,9 @@ const NarrativeStoryPage = () => {
         throw new Error("Current story node not found");
       }
 
-      const selectedChoice = currentNode.choices.find((choice) => choice.id === choiceId);
+      const selectedChoice = currentNode.choices.find(
+        (choice) => choice.id === choiceId,
+      );
       if (!selectedChoice) {
         throw new Error("Choice not found for this node");
       }
@@ -195,7 +204,9 @@ const NarrativeStoryPage = () => {
         },
       };
 
-      const { error: choiceInsertError } = await (supabase as any).from("story_choices").insert(choiceRecord);
+      const { error: choiceInsertError } = await (supabase as any)
+        .from("story_choices")
+        .insert(choiceRecord);
       if (choiceInsertError) {
         throw choiceInsertError;
       }
@@ -206,14 +217,20 @@ const NarrativeStoryPage = () => {
       };
     },
     onSuccess: ({ state, choice }) => {
-      queryClient.setQueryData([STORY_STATE_QUERY_KEY, storyId, user?.id], state);
+      queryClient.setQueryData(
+        [STORY_STATE_QUERY_KEY, storyId, user?.id],
+        state,
+      );
       handleChoiceResult(choice);
     },
     onError: (mutationError) => {
       console.error("Failed to apply choice", mutationError);
       toast({
         title: "Unable to continue the story",
-        description: mutationError instanceof Error ? mutationError.message : "Please try again.",
+        description:
+          mutationError instanceof Error
+            ? mutationError.message
+            : "Please try again.",
         variant: "destructive",
       });
     },
@@ -243,7 +260,9 @@ const NarrativeStoryPage = () => {
       return [];
     }
 
-    return currentNode.choices.filter((choice) => isChoiceAvailable(choice, storyState));
+    return currentNode.choices.filter((choice) =>
+      isChoiceAvailable(choice, storyState),
+    );
   }, [storyState, currentNode]);
 
   const lockedChoices = useMemo(() => {
@@ -251,7 +270,9 @@ const NarrativeStoryPage = () => {
       return [];
     }
 
-    return currentNode.choices.filter((choice) => !isChoiceAvailable(choice, storyState));
+    return currentNode.choices.filter(
+      (choice) => !isChoiceAvailable(choice, storyState),
+    );
   }, [storyState, currentNode]);
 
   if (!story) {
@@ -260,7 +281,9 @@ const NarrativeStoryPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Story not found</CardTitle>
-            <CardDescription>The requested narrative does not exist yet.</CardDescription>
+            <CardDescription>
+              The requested narrative does not exist yet.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" onClick={() => navigate(-1)}>
@@ -278,10 +301,14 @@ const NarrativeStoryPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Sign in to explore narratives</CardTitle>
-            <CardDescription>You need to be signed in to continue your story.</CardDescription>
+            <CardDescription>
+              You need to be signed in to continue your story.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => navigate("/auth")}>Sign in</Button>
+            <Button variant="outline" onClick={() => navigate("/auth")}>
+              Sign in
+            </Button>
           </CardContent>
         </Card>
       </FMPageScaffold>
@@ -296,15 +323,17 @@ const NarrativeStoryPage = () => {
       headerActions={
         <div className="flex flex-wrap gap-1.5">
           {story.themeTags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-[10px] uppercase tracking-wide">
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="text-[10px] tracking-wide"
+            >
               {tag}
             </Badge>
           ))}
         </div>
       }
     >
-
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-3xl font-bold">
@@ -330,10 +359,14 @@ const NarrativeStoryPage = () => {
         <Alert variant="destructive">
           <AlertTitle>We couldn't load your progress</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Something went wrong while loading this narrative."}
+            {error instanceof Error
+              ? error.message
+              : "Something went wrong while loading this narrative."}
           </AlertDescription>
           <div className="mt-4">
-            <Button variant="outline" onClick={() => refetch()}>Try again</Button>
+            <Button variant="outline" onClick={() => refetch()}>
+              Try again
+            </Button>
           </div>
         </Alert>
       )}
@@ -347,20 +380,28 @@ const NarrativeStoryPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {currentNode.atmosphere && (
-                <p className="text-sm italic text-muted-foreground">{currentNode.atmosphere}</p>
+                <p className="text-sm italic text-muted-foreground">
+                  {currentNode.atmosphere}
+                </p>
               )}
               {currentNode.body.map((paragraph, index) => (
-                <p key={index} className="leading-relaxed text-muted-foreground">
+                <p
+                  key={index}
+                  className="leading-relaxed text-muted-foreground"
+                >
                   {paragraph}
                 </p>
               ))}
               {currentNode.spotlight && (
                 <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">Spotlight:</span> {currentNode.spotlight}
+                  <span className="font-semibold text-foreground">
+                    Spotlight:
+                  </span>{" "}
+                  {currentNode.spotlight}
                 </div>
               )}
               {currentNode.endingType && (
-                <Badge variant="outline" className="uppercase">
+                <Badge variant="outline" className="">
                   {currentNode.endingType === "success"
                     ? "Triumphant ending"
                     : currentNode.endingType === "failure"
@@ -375,7 +416,9 @@ const NarrativeStoryPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Story progress</CardTitle>
-                <CardDescription>Scenes you've explored so far.</CardDescription>
+                <CardDescription>
+                  Scenes you've explored so far.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="max-h-64">
@@ -384,9 +427,15 @@ const NarrativeStoryPage = () => {
                       <li key={node.id} className="rounded-lg border p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-xs uppercase text-muted-foreground">Step {index + 1}</p>
-                            <p className="font-semibold text-foreground">{node.title}</p>
-                            <p className="text-sm text-muted-foreground">{node.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Step {index + 1}
+                            </p>
+                            <p className="font-semibold text-foreground">
+                              {node.title}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {node.description}
+                            </p>
                           </div>
                           {index === visitedNodes.length - 1 && (
                             <Badge variant="secondary">Current</Badge>
@@ -410,12 +459,15 @@ const NarrativeStoryPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Choose your next move</CardTitle>
-              <CardDescription>Every decision shapes the legend your band carries forward.</CardDescription>
+              <CardDescription>
+                Every decision shapes the legend your band carries forward.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {availableChoices.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  This branch of the story has reached its current conclusion. Check back later for new narrative beats.
+                  This branch of the story has reached its current conclusion.
+                  Check back later for new narrative beats.
                 </p>
               )}
 
@@ -423,16 +475,22 @@ const NarrativeStoryPage = () => {
                 <div key={choice.id} className="rounded-lg border p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-foreground">{choice.label}</h3>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {choice.label}
+                      </h3>
                       {choice.description && (
-                        <p className="text-sm text-muted-foreground">{choice.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {choice.description}
+                        </p>
                       )}
                     </div>
                     <Button
                       onClick={() => applyChoiceMutation.mutate(choice.id)}
                       disabled={applyChoiceMutation.isPending}
                     >
-                      {applyChoiceMutation.isPending ? "Processing..." : "Commit to this choice"}
+                      {applyChoiceMutation.isPending
+                        ? "Processing..."
+                        : "Commit to this choice"}
                     </Button>
                   </div>
                 </div>
@@ -445,9 +503,13 @@ const NarrativeStoryPage = () => {
                   </p>
                   {lockedChoices.map((choice) => (
                     <div key={choice.id} className="rounded-md bg-muted/50 p-3">
-                      <p className="text-sm font-semibold text-muted-foreground">{choice.label}</p>
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        {choice.label}
+                      </p>
                       {choice.description && (
-                        <p className="text-xs text-muted-foreground/80">{choice.description}</p>
+                        <p className="text-xs text-muted-foreground/80">
+                          {choice.description}
+                        </p>
                       )}
                     </div>
                   ))}

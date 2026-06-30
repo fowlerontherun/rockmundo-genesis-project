@@ -1,9 +1,21 @@
 import { useCallback, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Sparkles, Target } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Target,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -77,7 +89,9 @@ const EventBuilderPage = () => {
   const [eventDetails, setEventDetails] = useState(defaultEventDetails);
   const [lineup, setLineup] = useState<LineupSlot[]>([]);
   const [sponsors, setSponsors] = useState<SponsorPackage[]>([]);
-  const [pricing, setPricing] = useState<PricingStrategyState>(defaultPricingStrategy);
+  const [pricing, setPricing] = useState<PricingStrategyState>(
+    defaultPricingStrategy,
+  );
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([]);
 
   const sponsorContribution = useMemo(
@@ -85,7 +99,10 @@ const EventBuilderPage = () => {
     [sponsors],
   );
   const stageCount = useMemo(
-    () => new Set(lineup.map((slot) => slot.stage.trim().toLowerCase()).filter(Boolean)).size,
+    () =>
+      new Set(
+        lineup.map((slot) => slot.stage.trim().toLowerCase()).filter(Boolean),
+      ).size,
     [lineup],
   );
   const lineupEnergyScore = useMemo(
@@ -101,9 +118,18 @@ const EventBuilderPage = () => {
 
   const progressValue = ((currentStep + 1) / steps.length) * 100;
 
-  const handleLineupChange = useCallback((updated: LineupSlot[]) => setLineup(updated), []);
-  const handleSponsorsChange = useCallback((updated: SponsorPackage[]) => setSponsors(updated), []);
-  const handleTiersChange = useCallback((updated: TicketTier[]) => setTicketTiers(updated), []);
+  const handleLineupChange = useCallback(
+    (updated: LineupSlot[]) => setLineup(updated),
+    [],
+  );
+  const handleSponsorsChange = useCallback(
+    (updated: SponsorPackage[]) => setSponsors(updated),
+    [],
+  );
+  const handleTiersChange = useCallback(
+    (updated: TicketTier[]) => setTicketTiers(updated),
+    [],
+  );
 
   const currentStepLabel = steps[currentStep];
 
@@ -117,11 +143,13 @@ const EventBuilderPage = () => {
                 <div>
                   <CardTitle className="text-2xl">Event blueprint</CardTitle>
                   <CardDescription>
-                    Anchor the experience with a compelling story, venue parameters, and projected scale.
+                    Anchor the experience with a compelling story, venue
+                    parameters, and projected scale.
                   </CardDescription>
                 </div>
                 <Badge variant="secondary" className="text-sm">
-                  <Target className="mr-1 h-4 w-4" /> Confidence {planningConfidence}%
+                  <Target className="mr-1 h-4 w-4" /> Confidence{" "}
+                  {planningConfidence}%
                 </Badge>
               </div>
             </CardHeader>
@@ -133,7 +161,12 @@ const EventBuilderPage = () => {
                     <Input
                       id="event-name"
                       value={eventDetails.name}
-                      onChange={(event) => setEventDetails((prev) => ({ ...prev, name: event.target.value }))}
+                      onChange={(event) =>
+                        setEventDetails((prev) => ({
+                          ...prev,
+                          name: event.target.value,
+                        }))
+                      }
                       placeholder="Galactic Sound Summit"
                     />
                   </div>
@@ -143,13 +176,23 @@ const EventBuilderPage = () => {
                       <Input
                         id="event-id"
                         value={eventDetails.eventId}
-                        onChange={(event) => setEventDetails((prev) => ({ ...prev, eventId: event.target.value }))}
+                        onChange={(event) =>
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            eventId: event.target.value,
+                          }))
+                        }
                         placeholder="evt_2025_summit"
                       />
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setEventDetails((prev) => ({ ...prev, eventId: generateId() }))}
+                        onClick={() =>
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            eventId: generateId(),
+                          }))
+                        }
                       >
                         Generate
                       </Button>
@@ -162,7 +205,12 @@ const EventBuilderPage = () => {
                         id="event-date"
                         type="date"
                         value={eventDetails.date}
-                        onChange={(event) => setEventDetails((prev) => ({ ...prev, date: event.target.value }))}
+                        onChange={(event) =>
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            date: event.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -170,7 +218,12 @@ const EventBuilderPage = () => {
                       <Input
                         id="event-venue"
                         value={eventDetails.venue}
-                        onChange={(event) => setEventDetails((prev) => ({ ...prev, venue: event.target.value }))}
+                        onChange={(event) =>
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            venue: event.target.value,
+                          }))
+                        }
                         placeholder="Harborfront Amphitheater"
                       />
                     </div>
@@ -184,7 +237,10 @@ const EventBuilderPage = () => {
                         min={0}
                         value={eventDetails.capacity || ""}
                         onChange={(event) =>
-                          setEventDetails((prev) => ({ ...prev, capacity: Number.parseInt(event.target.value) || 0 }))
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            capacity: Number.parseInt(event.target.value) || 0,
+                          }))
                         }
                       />
                     </div>
@@ -193,17 +249,29 @@ const EventBuilderPage = () => {
                       <Input
                         id="event-theme"
                         value={eventDetails.theme}
-                        onChange={(event) => setEventDetails((prev) => ({ ...prev, theme: event.target.value }))}
+                        onChange={(event) =>
+                          setEventDetails((prev) => ({
+                            ...prev,
+                            theme: event.target.value,
+                          }))
+                        }
                         placeholder="Midnight Future Bass"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="event-description">Narrative & promise</Label>
+                    <Label htmlFor="event-description">
+                      Narrative & promise
+                    </Label>
                     <Textarea
                       id="event-description"
                       value={eventDetails.description}
-                      onChange={(event) => setEventDetails((prev) => ({ ...prev, description: event.target.value }))}
+                      onChange={(event) =>
+                        setEventDetails((prev) => ({
+                          ...prev,
+                          description: event.target.value,
+                        }))
+                      }
                       placeholder="A waterfront takeover blending immersive art, next-gen production, and global bass pioneers."
                       rows={4}
                     />
@@ -214,7 +282,8 @@ const EventBuilderPage = () => {
                     <div>
                       <p className="text-sm font-semibold">Planning snapshot</p>
                       <p className="text-xs text-muted-foreground">
-                        Keep the blueprint updated so every team has the latest source of truth.
+                        Keep the blueprint updated so every team has the latest
+                        source of truth.
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">
@@ -225,19 +294,37 @@ const EventBuilderPage = () => {
                   <Separator />
                   <div className="space-y-3">
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Lineup readiness</p>
-                      <p className="text-lg font-semibold">{lineupEnergyScore} / 100 energy score</p>
-                      <p className="text-xs text-muted-foreground">{lineup.length} segments • {stageCount} stages mapped</p>
+                      <p className="text-xs text-muted-foreground">
+                        Lineup readiness
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {lineupEnergyScore} / 100 energy score
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {lineup.length} segments • {stageCount} stages mapped
+                      </p>
                     </div>
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Sponsor traction</p>
-                      <p className="text-lg font-semibold">${sponsorContribution.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{sponsors.length} partners in conversation</p>
+                      <p className="text-xs text-muted-foreground">
+                        Sponsor traction
+                      </p>
+                      <p className="text-lg font-semibold">
+                        ${sponsorContribution.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {sponsors.length} partners in conversation
+                      </p>
                     </div>
                     <div className="rounded-lg border p-3">
-                      <p className="text-xs uppercase text-muted-foreground">Ticket architecture</p>
-                      <p className="text-lg font-semibold">{ticketTiers.length} tiers scoped</p>
-                      <p className="text-xs text-muted-foreground">Set the event ID to sync Supabase pricing data.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Ticket architecture
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {ticketTiers.length} tiers scoped
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Set the event ID to sync Supabase pricing data.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -246,9 +333,19 @@ const EventBuilderPage = () => {
           </Card>
         );
       case 1:
-        return <EventLineupPlanner lineup={lineup} onLineupChange={handleLineupChange} />;
+        return (
+          <EventLineupPlanner
+            lineup={lineup}
+            onLineupChange={handleLineupChange}
+          />
+        );
       case 2:
-        return <EventSponsorManager sponsors={sponsors} onSponsorsChange={handleSponsorsChange} />;
+        return (
+          <EventSponsorManager
+            sponsors={sponsors}
+            onSponsorsChange={handleSponsorsChange}
+          />
+        );
       case 3:
         return (
           <div className="space-y-6">
@@ -259,7 +356,10 @@ const EventBuilderPage = () => {
               sponsorSupport={sponsorContribution}
               lineupEnergyScore={lineupEnergyScore}
             />
-            <TicketTierManager eventId={eventDetails.eventId} onTiersChange={handleTiersChange} />
+            <TicketTierManager
+              eventId={eventDetails.eventId}
+              onTiersChange={handleTiersChange}
+            />
           </div>
         );
       case 4:
@@ -293,7 +393,6 @@ const EventBuilderPage = () => {
     >
       <Progress value={progressValue} className="h-2" />
 
-
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <div className="space-y-2">
           {steps.map((step, index) => (
@@ -306,14 +405,18 @@ const EventBuilderPage = () => {
               <div className="flex items-center gap-3">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm ${
-                    currentStep === index ? "bg-primary text-primary-foreground" : "bg-background"
+                    currentStep === index
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background"
                   }`}
                 >
                   {index + 1}
                 </div>
                 <div>
                   <p className="font-semibold">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {step.description}
+                  </p>
                 </div>
               </div>
             </Button>
@@ -322,7 +425,9 @@ const EventBuilderPage = () => {
         <div className="space-y-6">
           <div className="rounded-lg border p-4">
             <p className="text-sm font-semibold">{currentStepLabel.title}</p>
-            <p className="text-sm text-muted-foreground">{currentStepLabel.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {currentStepLabel.description}
+            </p>
           </div>
           {renderStep()}
           <div className="flex justify-between">
@@ -334,7 +439,9 @@ const EventBuilderPage = () => {
               <ChevronLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <Button
-              onClick={() => setCurrentStep((prev) => Math.min(steps.length - 1, prev + 1))}
+              onClick={() =>
+                setCurrentStep((prev) => Math.min(steps.length - 1, prev + 1))
+              }
               disabled={currentStep === steps.length - 1}
             >
               Next <ChevronRight className="ml-2 h-4 w-4" />

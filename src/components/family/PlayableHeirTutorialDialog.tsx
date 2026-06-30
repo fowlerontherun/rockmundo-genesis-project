@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,7 +63,12 @@ const NEXT_ACTIONS: NextAction[] = [
   },
 ];
 
-export function PlayableHeirTutorialDialog({ open, onOpenChange, heirName, onComplete }: Props) {
+export function PlayableHeirTutorialDialog({
+  open,
+  onOpenChange,
+  heirName,
+  onComplete,
+}: Props) {
   const navigate = useNavigate();
 
   const handleAction = (route: string) => {
@@ -83,13 +94,14 @@ export function PlayableHeirTutorialDialog({ open, onOpenChange, heirName, onCom
 
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            You're now playing a brand-new character. Here's what changed and what to do first.
+            You're now playing a brand-new character. Here's what changed and
+            what to do first.
           </p>
 
           {/* What changes */}
           <div className="rounded-md border border-border/60 bg-muted/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 What changes
               </span>
               <Sparkles className="h-3.5 w-3.5 text-social-chemistry" />
@@ -98,30 +110,34 @@ export function PlayableHeirTutorialDialog({ open, onOpenChange, heirName, onCom
               <li className="flex items-start gap-1.5">
                 <Repeat className="h-3 w-3 mt-0.5 shrink-0 text-social-chemistry" />
                 <span>
-                  <span className="font-semibold">New active character:</span> bands, gigs, gear and
-                  cash all swap to this heir. Your previous character keeps their progress and is
-                  available from the slot switcher.
+                  <span className="font-semibold">New active character:</span>{" "}
+                  bands, gigs, gear and cash all swap to this heir. Your
+                  previous character keeps their progress and is available from
+                  the slot switcher.
                 </span>
               </li>
               <li className="flex items-start gap-1.5">
                 <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-social-chemistry" />
                 <span>
-                  <span className="font-semibold">Legacy bonuses:</span> inherited potentials and
-                  bond translate into starter SXP/AP and trait modifiers.
+                  <span className="font-semibold">Legacy bonuses:</span>{" "}
+                  inherited potentials and bond translate into starter SXP/AP
+                  and trait modifiers.
                 </span>
               </li>
               <li className="flex items-start gap-1.5">
                 <Heart className="h-3 w-3 mt-0.5 shrink-0 text-social-chemistry" />
                 <span>
-                  <span className="font-semibold">Fresh relationships:</span> friendships, fans and
-                  reputation start at zero — your parents are still family contacts.
+                  <span className="font-semibold">Fresh relationships:</span>{" "}
+                  friendships, fans and reputation start at zero — your parents
+                  are still family contacts.
                 </span>
               </li>
               <li className="flex items-start gap-1.5">
                 <Calendar className="h-3 w-3 mt-0.5 shrink-0 text-social-chemistry" />
                 <span>
-                  <span className="font-semibold">Clean schedule:</span> no jobs, tours or
-                  rehearsals are auto-carried over. Block out your week from scratch.
+                  <span className="font-semibold">Clean schedule:</span> no
+                  jobs, tours or rehearsals are auto-carried over. Block out
+                  your week from scratch.
                 </span>
               </li>
             </ul>
@@ -130,10 +146,12 @@ export function PlayableHeirTutorialDialog({ open, onOpenChange, heirName, onCom
           {/* Next actions */}
           <div className="rounded-md border border-border/60 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 Recommended next steps
               </span>
-              <Badge variant="outline" className="text-[10px]">Optional</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                Optional
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-1.5">
               {NEXT_ACTIONS.map((action) => {

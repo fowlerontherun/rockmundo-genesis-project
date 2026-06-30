@@ -11,15 +11,31 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { MerchCategoryPerformanceChart, MerchSalesTrendChart } from "@/components/charts";
+import {
+  MerchCategoryPerformanceChart,
+  MerchSalesTrendChart,
+} from "@/components/charts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import {
   buildCategoryPerformance,
@@ -34,8 +50,22 @@ import {
 } from "@/lib/api/merch";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
-const fabricPalette = ["#111827", "#fde68a", "#f1f5f9", "#0f766e", "#1d4ed8", "#9333ea"];
-const inkPalette = ["#fb7185", "#f97316", "#22d3ee", "#a855f7", "#facc15", "#4ade80"];
+const fabricPalette = [
+  "#111827",
+  "#fde68a",
+  "#f1f5f9",
+  "#0f766e",
+  "#1d4ed8",
+  "#9333ea",
+];
+const inkPalette = [
+  "#fb7185",
+  "#f97316",
+  "#22d3ee",
+  "#a855f7",
+  "#facc15",
+  "#4ade80",
+];
 const patternOptions = ["none", "halftone", "grid", "sunburst"] as const;
 const productShapes = ["tee", "hoodie", "poster"] as const;
 
@@ -64,7 +94,9 @@ const defaultDesignerSettings: DesignerSettings = {
   texture: 0.45,
 };
 
-const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return "—";
@@ -72,7 +104,10 @@ const formatDate = (value: string | null | undefined) => {
   if (Number.isNaN(parsed.getTime())) {
     return "—";
   }
-  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 };
 
 interface MerchDesignerCanvasProps {
@@ -111,7 +146,12 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
         ctx.strokeStyle = settings.accentColor;
         ctx.lineWidth = 6;
         ctx.beginPath();
-        ctx.rect(-posterWidth / 2, -posterHeight / 2, posterWidth, posterHeight);
+        ctx.rect(
+          -posterWidth / 2,
+          -posterHeight / 2,
+          posterWidth,
+          posterHeight,
+        );
         ctx.fill();
         ctx.stroke();
       } else {
@@ -121,13 +161,33 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
         const shoulderCurve = settings.productShape === "hoodie" ? 48 : 36;
 
         ctx.moveTo(-bodyWidth / 2, -bodyHeight / 2 + shoulderCurve);
-        ctx.quadraticCurveTo(-bodyWidth / 2, -bodyHeight / 2, -bodyWidth / 2 + 40, -bodyHeight / 2);
+        ctx.quadraticCurveTo(
+          -bodyWidth / 2,
+          -bodyHeight / 2,
+          -bodyWidth / 2 + 40,
+          -bodyHeight / 2,
+        );
         ctx.lineTo(bodyWidth / 2 - 40, -bodyHeight / 2);
-        ctx.quadraticCurveTo(bodyWidth / 2, -bodyHeight / 2, bodyWidth / 2, -bodyHeight / 2 + shoulderCurve);
+        ctx.quadraticCurveTo(
+          bodyWidth / 2,
+          -bodyHeight / 2,
+          bodyWidth / 2,
+          -bodyHeight / 2 + shoulderCurve,
+        );
         ctx.lineTo(bodyWidth / 2, bodyHeight / 2 - 60);
-        ctx.quadraticCurveTo(bodyWidth / 2 - 12, bodyHeight / 2, bodyWidth / 2 - 64, bodyHeight / 2);
+        ctx.quadraticCurveTo(
+          bodyWidth / 2 - 12,
+          bodyHeight / 2,
+          bodyWidth / 2 - 64,
+          bodyHeight / 2,
+        );
         ctx.lineTo(-bodyWidth / 2 + 64, bodyHeight / 2);
-        ctx.quadraticCurveTo(-bodyWidth / 2, bodyHeight / 2, -bodyWidth / 2, bodyHeight / 2 - 60);
+        ctx.quadraticCurveTo(
+          -bodyWidth / 2,
+          bodyHeight / 2,
+          -bodyWidth / 2,
+          bodyHeight / 2 - 60,
+        );
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -137,7 +197,16 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
           ctx.fillStyle = settings.fabricColor;
           ctx.strokeStyle = "rgba(15, 23, 42, 0.6)";
           ctx.lineWidth = 3;
-          ctx.ellipse(0, -bodyHeight / 2 + 28, bodyWidth * 0.27, bodyHeight * 0.18, 0, Math.PI, 0, true);
+          ctx.ellipse(
+            0,
+            -bodyHeight / 2 + 28,
+            bodyWidth * 0.27,
+            bodyHeight * 0.18,
+            0,
+            Math.PI,
+            0,
+            true,
+          );
           ctx.fill();
           ctx.stroke();
         }
@@ -176,7 +245,13 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
           for (let y = -height / 2; y < height / 2; y += dotSpacing) {
             for (let x = -width / 2; x < width / 2; x += dotSpacing) {
               ctx.beginPath();
-              ctx.arc(x, y, dotRadius * Math.abs(Math.sin((x + y) / 120)), 0, Math.PI * 2);
+              ctx.arc(
+                x,
+                y,
+                dotRadius * Math.abs(Math.sin((x + y) / 120)),
+                0,
+                Math.PI * 2,
+              );
               ctx.fill();
             }
           }
@@ -187,7 +262,7 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
           ctx.lineWidth = 6;
           for (let index = 0; index < rays; index += 1) {
             const angle = (index / rays) * Math.PI * 2;
-            const length = height * (0.6 + ((index % 3) / 10));
+            const length = height * (0.6 + (index % 3) / 10);
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(Math.cos(angle) * length, Math.sin(angle) * length);
@@ -223,11 +298,11 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      ctx.font = `700 ${Math.round(34 + settings.texture * 14)}px 'Bebas Neue', 'Oswald', sans-serif`;
+      ctx.font = `700 ${Math.round(34 + settings.texture * 14)}px'Bebas Neue','Oswald', sans-serif`;
       ctx.fillText(settings.title.toUpperCase(), 0, -18);
 
       ctx.globalAlpha = 0.9;
-      ctx.font = `400 ${Math.round(18 + settings.texture * 6)}px 'Inter', 'Karla', sans-serif`;
+      ctx.font = `400 ${Math.round(18 + settings.texture * 6)}px'Inter','Karla', sans-serif`;
       ctx.fillText(settings.tagline, 0, 28);
       ctx.restore();
     };
@@ -243,7 +318,12 @@ const MerchDesignerCanvas = ({ settings }: MerchDesignerCanvasProps) => {
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-sm">
-      <canvas ref={canvasRef} width={420} height={420} className="h-full w-full" />
+      <canvas
+        ref={canvasRef}
+        width={420}
+        height={420}
+        className="h-full w-full"
+      />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-4 text-xs font-medium text-muted-foreground">
         {settings.productShape === "poster"
           ? "Poster mock simulated in canvas"
@@ -260,7 +340,9 @@ export default function MerchCommercePage() {
   const bandId = primaryBand?.band_id;
   const bandName = primaryBand?.bands?.name ?? "your band";
 
-  const [designerSettings, setDesignerSettings] = useState<DesignerSettings>(defaultDesignerSettings);
+  const [designerSettings, setDesignerSettings] = useState<DesignerSettings>(
+    defaultDesignerSettings,
+  );
 
   const inventoryQuery = useQuery({
     queryKey: ["merch-inventory", bandId],
@@ -270,7 +352,8 @@ export default function MerchCommercePage() {
 
   const ordersQuery = useQuery({
     queryKey: ["merch-orders", bandId, inventoryQuery.data?.length ?? 0],
-    queryFn: () => fetchMerchOrders(bandId as string, inventoryQuery.data ?? []),
+    queryFn: () =>
+      fetchMerchOrders(bandId as string, inventoryQuery.data ?? []),
     enabled: Boolean(bandId) && !inventoryQuery.isLoading,
   });
 
@@ -281,7 +364,10 @@ export default function MerchCommercePage() {
   const orders = useMemo(() => ordersQuery.data ?? [], [ordersQuery.data]);
 
   const orderSummary = useMemo(() => summarizeMerchOrders(orders), [orders]);
-  const inventoryHealth = useMemo(() => computeInventoryHealth(inventory), [inventory]);
+  const inventoryHealth = useMemo(
+    () => computeInventoryHealth(inventory),
+    [inventory],
+  );
   const salesTrend = useMemo(() => buildSalesTrendSeries(orders), [orders]);
   const categoryPerformance = useMemo(
     () => buildCategoryPerformance(inventory, orders),
@@ -296,22 +382,28 @@ export default function MerchCommercePage() {
     [inventoryHealth.lowStock],
   );
 
-  const handleSettingChange = useCallback(<K extends keyof DesignerSettings>(key: K, value: DesignerSettings[K]) => {
-    setDesignerSettings((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
-  const applyPreset = useCallback(
-    (preset: Partial<DesignerSettings>) => {
-      setDesignerSettings((prev) => ({ ...prev, ...preset }));
+  const handleSettingChange = useCallback(
+    <K extends keyof DesignerSettings>(key: K, value: DesignerSettings[K]) => {
+      setDesignerSettings((prev) => ({ ...prev, [key]: value }));
     },
     [],
   );
 
+  const applyPreset = useCallback((preset: Partial<DesignerSettings>) => {
+    setDesignerSettings((prev) => ({ ...prev, ...preset }));
+  }, []);
+
   if (loadingPrimaryBand) {
     return (
-      <FMPageScaffold title="Merch Designer & Control Room" subtitle="Checking band permissions…" icon={Sparkles} backTo="/hub/business">
+      <FMPageScaffold
+        title="Merch Designer & Control Room"
+        subtitle="Checking band permissions…"
+        icon={Sparkles}
+        backTo="/hub/business"
+      >
         <div className="flex h-[40vh] items-center justify-center text-muted-foreground">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking band permissions...
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking band
+          permissions...
         </div>
       </FMPageScaffold>
     );
@@ -319,18 +411,25 @@ export default function MerchCommercePage() {
 
   if (!bandId) {
     return (
-      <FMPageScaffold title="Merch Designer & Control Room" subtitle="Link your band to unlock commerce tools." icon={Sparkles} backTo="/hub/business">
+      <FMPageScaffold
+        title="Merch Designer & Control Room"
+        subtitle="Link your band to unlock commerce tools."
+        icon={Sparkles}
+        backTo="/hub/business"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Link your band to unlock commerce tools</CardTitle>
             <CardDescription>
-              Join or create a band first. The merch command center pulls live inventory from your Supabase tables.
+              Join or create a band first. The merch command center pulls live
+              inventory from your Supabase tables.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
-              When you become an active band member, this workspace will auto-load your merch inventory, simulate order
-              flows, and reveal analytics tuned to your drops.
+              When you become an active band member, this workspace will
+              auto-load your merch inventory, simulate order flows, and reveal
+              analytics tuned to your drops.
             </p>
             <p>Open Band Manager to invite teammates and start your merch.</p>
           </CardContent>
@@ -352,35 +451,49 @@ export default function MerchCommercePage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Trailing 30-day revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Trailing 30-day revenue
+              </CardTitle>
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{formatMerchCurrency(orderSummary.totalRevenue)}</div>
+              <div className="text-2xl font-semibold">
+                {formatMerchCurrency(orderSummary.totalRevenue)}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Avg order value {formatMerchCurrency(orderSummary.averageOrderValue || 0)}
+                Avg order value{" "}
+                {formatMerchCurrency(orderSummary.averageOrderValue || 0)}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inventory on hand</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Inventory on hand
+              </CardTitle>
               <PackageSearch className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{numberFormatter.format(inventoryHealth.totalUnits)}</div>
+              <div className="text-2xl font-semibold">
+                {numberFormatter.format(inventoryHealth.totalUnits)}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Potential revenue {formatMerchCurrency(inventoryHealth.potentialRevenue)}
+                Potential revenue{" "}
+                {formatMerchCurrency(inventoryHealth.potentialRevenue)}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Fulfillment rate</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Fulfillment rate
+              </CardTitle>
               <BadgeCheck className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{formatMerchPercent(orderSummary.fulfillmentRate || 0)}</div>
+              <div className="text-2xl font-semibold">
+                {formatMerchPercent(orderSummary.fulfillmentRate || 0)}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {orderSummary.orderCount} orders processed last 8 weeks
               </p>
@@ -388,11 +501,15 @@ export default function MerchCommercePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Margin outlook</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Margin outlook
+              </CardTitle>
               <Flame className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{formatMerchPercent(inventoryHealth.grossMargin || 0)}</div>
+              <div className="text-2xl font-semibold">
+                {formatMerchPercent(inventoryHealth.grossMargin || 0)}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Cost basis {formatMerchCurrency(inventoryHealth.costBasis)}
               </p>
@@ -406,7 +523,8 @@ export default function MerchCommercePage() {
           <CardHeader>
             <CardTitle>Concept canvas</CardTitle>
             <CardDescription>
-              Tweak palette and typography to visualize the next drop before sending specs to production.
+              Tweak palette and typography to visualize the next drop before
+              sending specs to production.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -419,7 +537,7 @@ export default function MerchCommercePage() {
               </TabsList>
               <TabsContent value="palette" className="space-y-6 pt-4">
                 <div className="space-y-3">
-                  <Label className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
+                  <Label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Palette className="h-4 w-4" /> Fabric color
                   </Label>
                   <div className="flex flex-wrap gap-2">
@@ -427,9 +545,13 @@ export default function MerchCommercePage() {
                       <button
                         key={color}
                         type="button"
-                        onClick={() => handleSettingChange("fabricColor", color)}
+                        onClick={() =>
+                          handleSettingChange("fabricColor", color)
+                        }
                         className={`${swatchClasses} ${
-                          designerSettings.fabricColor === color ? "ring-2 ring-offset-2 ring-primary" : ""
+                          designerSettings.fabricColor === color
+                            ? "ring-2 ring-offset-2 ring-primary"
+                            : ""
                         }`}
                         style={{ backgroundColor: color }}
                         aria-label={`Select fabric color ${color}`}
@@ -438,13 +560,15 @@ export default function MerchCommercePage() {
                     <Input
                       type="color"
                       value={designerSettings.fabricColor}
-                      onChange={(event) => handleSettingChange("fabricColor", event.target.value)}
+                      onChange={(event) =>
+                        handleSettingChange("fabricColor", event.target.value)
+                      }
                       className="h-8 w-12 cursor-pointer rounded-md border border-border/50 p-1"
                     />
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <Label className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
+                  <Label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Sparkles className="h-4 w-4" /> Ink &amp; accent
                   </Label>
                   <div className="flex flex-wrap gap-2">
@@ -452,9 +576,13 @@ export default function MerchCommercePage() {
                       <button
                         key={color}
                         type="button"
-                        onClick={() => handleSettingChange("accentColor", color)}
+                        onClick={() =>
+                          handleSettingChange("accentColor", color)
+                        }
                         className={`${swatchClasses} ${
-                          designerSettings.accentColor === color ? "ring-2 ring-offset-2 ring-primary" : ""
+                          designerSettings.accentColor === color
+                            ? "ring-2 ring-offset-2 ring-primary"
+                            : ""
                         }`}
                         style={{ backgroundColor: color }}
                         aria-label={`Select accent color ${color}`}
@@ -463,16 +591,22 @@ export default function MerchCommercePage() {
                     <Input
                       type="color"
                       value={designerSettings.accentColor}
-                      onChange={(event) => handleSettingChange("accentColor", event.target.value)}
+                      onChange={(event) =>
+                        handleSettingChange("accentColor", event.target.value)
+                      }
                       className="h-8 w-12 cursor-pointer rounded-md border border-border/50 p-1"
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <Label className="text-xs uppercase text-muted-foreground">Print color</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Print color
+                    </Label>
                     <Input
                       type="color"
                       value={designerSettings.inkColor}
-                      onChange={(event) => handleSettingChange("inkColor", event.target.value)}
+                      onChange={(event) =>
+                        handleSettingChange("inkColor", event.target.value)
+                      }
                       className="h-8 w-12 cursor-pointer rounded-md border border-border/50 p-1"
                     />
                   </div>
@@ -485,7 +619,9 @@ export default function MerchCommercePage() {
                     <Input
                       id="designer-title"
                       value={designerSettings.title}
-                      onChange={(event) => handleSettingChange("title", event.target.value)}
+                      onChange={(event) =>
+                        handleSettingChange("title", event.target.value)
+                      }
                       placeholder="Drop title"
                     />
                   </div>
@@ -494,36 +630,57 @@ export default function MerchCommercePage() {
                     <Input
                       id="designer-tagline"
                       value={designerSettings.tagline}
-                      onChange={(event) => handleSettingChange("tagline", event.target.value)}
+                      onChange={(event) =>
+                        handleSettingChange("tagline", event.target.value)
+                      }
                       placeholder="Tagline copy"
                     />
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-3">
-                    <Label className="text-xs uppercase text-muted-foreground">Pattern</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Pattern
+                    </Label>
                     <div className="grid grid-cols-2 gap-2">
                       {patternOptions.map((pattern) => (
                         <Button
                           key={pattern}
                           type="button"
-                          variant={designerSettings.pattern === pattern ? "default" : "outline"}
-                          onClick={() => handleSettingChange("pattern", pattern)}
+                          variant={
+                            designerSettings.pattern === pattern
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            handleSettingChange("pattern", pattern)
+                          }
                         >
-                          {pattern === "none" ? "No pattern" : pattern.charAt(0).toUpperCase() + pattern.slice(1)}
+                          {pattern === "none"
+                            ? "No pattern"
+                            : pattern.charAt(0).toUpperCase() +
+                              pattern.slice(1)}
                         </Button>
                       ))}
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-xs uppercase text-muted-foreground">Product silhouette</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Product silhouette
+                    </Label>
                     <div className="grid grid-cols-3 gap-2">
                       {productShapes.map((shape) => (
                         <Button
                           key={shape}
                           type="button"
-                          variant={designerSettings.productShape === shape ? "default" : "outline"}
-                          onClick={() => handleSettingChange("productShape", shape)}
+                          variant={
+                            designerSettings.productShape === shape
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            handleSettingChange("productShape", shape)
+                          }
                         >
                           {shape.charAt(0).toUpperCase() + shape.slice(1)}
                         </Button>
@@ -532,16 +689,21 @@ export default function MerchCommercePage() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-xs uppercase text-muted-foreground">Texture intensity</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Texture intensity
+                  </Label>
                   <Slider
                     value={[designerSettings.texture]}
                     min={0}
                     max={1}
                     step={0.05}
-                    onValueChange={(value) => handleSettingChange("texture", value[0] ?? 0)}
+                    onValueChange={(value) =>
+                      handleSettingChange("texture", value[0] ?? 0)
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Increase texture to push halftone depth, grid density, and gradient glow for bolder mockups.
+                    Increase texture to push halftone depth, grid density, and
+                    gradient glow for bolder mockups.
                   </p>
                 </div>
               </TabsContent>
@@ -603,7 +765,8 @@ export default function MerchCommercePage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Presets instantly reset palette, silhouette, and copy. Tweak further to match your merch vendor specs.
+                  Presets instantly reset palette, silhouette, and copy. Tweak
+                  further to match your merch vendor specs.
                 </p>
               </TabsContent>
             </Tabs>
@@ -612,7 +775,9 @@ export default function MerchCommercePage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Operations snapshot</CardTitle>
-            <CardDescription>Keep fulfillment teams aligned and prep restocks before tour legs.</CardDescription>
+            <CardDescription>
+              Keep fulfillment teams aligned and prep restocks before tour legs.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
@@ -620,16 +785,18 @@ export default function MerchCommercePage() {
                 <div>
                   <p className="text-sm font-medium">Latest activity</p>
                   <p className="text-xs text-muted-foreground">
-                    Last order {formatDate(orderSummary.lastOrderAt)} · {orderSummary.orderCount} orders active
+                    Last order {formatDate(orderSummary.lastOrderAt)} ·{" "}
+                    {orderSummary.orderCount} orders active
                   </p>
                 </div>
                 <Badge variant="outline" className="gap-1">
-                  <TrendingUp className="h-3.5 w-3.5" /> {formatMerchCurrency(orderSummary.totalRevenue)} revenue
+                  <TrendingUp className="h-3.5 w-3.5" />{" "}
+                  {formatMerchCurrency(orderSummary.totalRevenue)} revenue
                 </Badge>
               </div>
             </div>
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <h3 className="text-sm font-semibold tracking-wide text-muted-foreground">
                 Restock radar
               </h3>
               {restockAlerts.length ? (
@@ -640,15 +807,24 @@ export default function MerchCommercePage() {
                       className="flex items-start justify-between rounded-md border border-border/60 bg-background/80 p-3"
                     >
                       <div>
-                        <p className="text-sm font-medium">{item.design_name}</p>
-                        <p className="text-xs text-muted-foreground">{item.item_type}</p>
+                        <p className="text-sm font-medium">
+                          {item.design_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.item_type}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <Badge variant="secondary" className="gap-1">
-                          <AlertTriangle className="h-3.5 w-3.5" /> {item.stock_quantity} units
+                          <AlertTriangle className="h-3.5 w-3.5" />{" "}
+                          {item.stock_quantity} units
                         </Badge>
                         <span className="text-muted-foreground">
-                          {formatMerchCurrency((item.selling_price ?? 0) * (item.stock_quantity ?? 0))} left
+                          {formatMerchCurrency(
+                            (item.selling_price ?? 0) *
+                              (item.stock_quantity ?? 0),
+                          )}{" "}
+                          left
                         </span>
                       </div>
                     </div>
@@ -669,17 +845,31 @@ export default function MerchCommercePage() {
         <Card>
           <CardHeader>
             <CardTitle>Sales velocity</CardTitle>
-            <CardDescription>Trailing drop performance across storefronts and booths.</CardDescription>
+            <CardDescription>
+              Trailing drop performance across storefronts and booths.
+            </CardDescription>
           </CardHeader>
-          <CardContent>{isLoading ? <LoadingChartMessage /> : <MerchSalesTrendChart data={salesTrend} />}</CardContent>
+          <CardContent>
+            {isLoading ? (
+              <LoadingChartMessage />
+            ) : (
+              <MerchSalesTrendChart data={salesTrend} />
+            )}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Category performance</CardTitle>
-            <CardDescription>See which lanes are fueling merch revenue right now.</CardDescription>
+            <CardDescription>
+              See which lanes are fueling merch revenue right now.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? <LoadingChartMessage /> : <MerchCategoryPerformanceChart data={categoryPerformance} />}
+            {isLoading ? (
+              <LoadingChartMessage />
+            ) : (
+              <MerchCategoryPerformanceChart data={categoryPerformance} />
+            )}
           </CardContent>
         </Card>
       </section>
@@ -688,12 +878,15 @@ export default function MerchCommercePage() {
         <Card>
           <CardHeader>
             <CardTitle>Inventory ledger</CardTitle>
-            <CardDescription>Live view sourced from Supabase player_merchandise table.</CardDescription>
+            <CardDescription>
+              Live view sourced from Supabase player_merchandise table.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {inventoryQuery.isLoading ? (
               <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading inventory...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
+                inventory...
               </div>
             ) : inventory.length ? (
               <div className="overflow-x-auto">
@@ -710,21 +903,37 @@ export default function MerchCommercePage() {
                   </TableHeader>
                   <TableBody>
                     {inventory.map((item) => {
-                      const value = (item.stock_quantity ?? 0) * (item.selling_price ?? 0);
+                      const value =
+                        (item.stock_quantity ?? 0) * (item.selling_price ?? 0);
                       const isLow = (item.stock_quantity ?? 0) < 20;
                       return (
-                        <TableRow key={item.id} className={isLow ? "bg-destructive/5" : undefined}>
+                        <TableRow
+                          key={item.id}
+                          className={isLow ? "bg-destructive/5" : undefined}
+                        >
                           <TableCell>
-                            <div className="font-medium">{item.design_name}</div>
-                            <div className="text-xs text-muted-foreground">{item.id}</div>
+                            <div className="font-medium">
+                              {item.design_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.id}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">{item.item_type}</Badge>
                           </TableCell>
-                          <TableCell className="text-right">{item.stock_quantity}</TableCell>
-                          <TableCell className="text-right">{formatMerchCurrency(item.selling_price ?? 0)}</TableCell>
-                          <TableCell className="text-right">{formatMerchCurrency(value)}</TableCell>
-                          <TableCell className="text-right">{formatDate(item.updated_at)}</TableCell>
+                          <TableCell className="text-right">
+                            {item.stock_quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatMerchCurrency(item.selling_price ?? 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatMerchCurrency(value)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatDate(item.updated_at)}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -734,7 +943,10 @@ export default function MerchCommercePage() {
             ) : (
               <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-muted-foreground">
                 <PackageSearch className="h-8 w-8 text-muted-foreground" />
-                <p>Add your first product in the Merchandise page to populate this ledger.</p>
+                <p>
+                  Add your first product in the Merchandise page to populate
+                  this ledger.
+                </p>
               </div>
             )}
           </CardContent>

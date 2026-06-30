@@ -79,8 +79,12 @@ export default function TodaysNewsPage() {
   });
 
   return (
-    <FMPageScaffold title="Today's News" subtitle="The world is reading…" icon={Newspaper} backTo="/hub/media">
-
+    <FMPageScaffold
+      title="Today's News"
+      subtitle="The world is reading…"
+      icon={Newspaper}
+      backTo="/hub/media"
+    >
       {/* Masthead */}
       <NewspaperMasthead />
 
@@ -123,13 +127,22 @@ export default function TodaysNewsPage() {
               <CardContent className="space-y-2">
                 {releasedSongs && releasedSongs.length > 0 ? (
                   releasedSongs.slice(0, 5).map((release: any) => (
-                    <div key={release.id} className="py-1 border-b border-border/50 last:border-0">
-                      <p className="font-semibold text-sm font-serif">{release.title}</p>
-                      <p className="text-xs text-muted-foreground">{release.bands?.name} · {release.release_type}</p>
+                    <div
+                      key={release.id}
+                      className="py-1 border-b border-border/50 last:border-0"
+                    >
+                      <p className="font-semibold text-sm font-serif">
+                        {release.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {release.bands?.name} · {release.release_type}
+                      </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground italic font-serif py-2">No releases today</p>
+                  <p className="text-sm text-muted-foreground italic font-serif py-2">
+                    No releases today
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -160,16 +173,27 @@ export default function TodaysNewsPage() {
               <CardContent className="space-y-2">
                 {newBands && newBands.length > 0 ? (
                   newBands.slice(0, 5).map((band) => (
-                    <div key={band.id} className="flex items-center justify-between py-1 border-b border-border/50 last:border-0">
+                    <div
+                      key={band.id}
+                      className="flex items-center justify-between py-1 border-b border-border/50 last:border-0"
+                    >
                       <div>
-                        <p className="font-semibold text-sm font-serif">{band.name}</p>
-                        <p className="text-xs text-muted-foreground">{band.genre}</p>
+                        <p className="font-semibold text-sm font-serif">
+                          {band.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {band.genre}
+                        </p>
                       </div>
-                      <Badge variant="secondary" className="text-xs">{format(new Date(band.created_at!), "HH:mm")}</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {format(new Date(band.created_at!), "HH:mm")}
+                      </Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground italic font-serif py-2">No new bands today</p>
+                  <p className="text-sm text-muted-foreground italic font-serif py-2">
+                    No new bands today
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -186,9 +210,16 @@ export default function TodaysNewsPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {festivals.slice(0, 5).map((fest) => (
-                  <div key={fest.id} className="py-1 border-b border-border/50 last:border-0">
-                    <p className="font-semibold text-sm font-serif">{fest.title}</p>
-                    <p className="text-xs text-muted-foreground">{fest.event_type}</p>
+                  <div
+                    key={fest.id}
+                    className="py-1 border-b border-border/50 last:border-0"
+                  >
+                    <p className="font-semibold text-sm font-serif">
+                      {fest.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {fest.event_type}
+                    </p>
                   </div>
                 ))}
               </CardContent>
@@ -216,7 +247,9 @@ function SectionDivider({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-3 pt-4">
       <div className="h-px flex-1 bg-border" />
-      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground font-serif">{title}</h3>
+      <h3 className="text-xs font-bold text-muted-foreground font-serif">
+        {title}
+      </h3>
       <div className="h-px flex-1 bg-border" />
     </div>
   );

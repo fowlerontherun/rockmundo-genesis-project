@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Pencil, PlusCircle, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Loader2,
+  Pencil,
+  PlusCircle,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
@@ -8,7 +15,13 @@ import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -18,7 +31,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CulturalEventsManager } from "@/components/admin/CulturalEventsManager";
@@ -54,7 +74,10 @@ const createNumberField = ({
     .string()
     .trim()
     .min(1, `${field} is required`)
-    .refine((value) => !Number.isNaN(Number(value)), `${field} must be a number`)
+    .refine(
+      (value) => !Number.isNaN(Number(value)),
+      `${field} must be a number`,
+    )
     .refine((value) => {
       const parsed = Number(value);
       if (!Number.isFinite(parsed)) return false;
@@ -85,9 +108,24 @@ const citySchema = z.object({
   country: z.string().trim().min(1, "Country is required"),
   dominant_genre: z.string().optional(),
   population: createNumberField({ field: "Population", min: 0, integer: true }),
-  music_scene: createNumberField({ field: "Music scene", min: 0, max: 100, integer: true }),
-  cost_of_living: createNumberField({ field: "Cost of living", min: 0, max: 100, integer: true }),
-  local_bonus: createNumberField({ field: "Local bonus", min: 0, max: 100, integer: true }),
+  music_scene: createNumberField({
+    field: "Music scene",
+    min: 0,
+    max: 100,
+    integer: true,
+  }),
+  cost_of_living: createNumberField({
+    field: "Cost of living",
+    min: 0,
+    max: 100,
+    integer: true,
+  }),
+  local_bonus: createNumberField({
+    field: "Local bonus",
+    min: 0,
+    max: 100,
+    integer: true,
+  }),
   venues: createNumberField({ field: "Venues", min: 0, integer: true }),
   cultural_events: jsonArrayField("Cultural events"),
 });
@@ -174,7 +212,8 @@ const buildPayload = (values: CityFormValues) => ({
   cultural_events: parseStringArray(values.cultural_events),
 });
 
-const parseArrayCount = (value: string[] | null | undefined) => (Array.isArray(value) ? value.length : 0);
+const parseArrayCount = (value: string[] | null | undefined) =>
+  Array.isArray(value) ? value.length : 0;
 
 const useCityForm = () =>
   useForm<CityFormValues>({
@@ -212,7 +251,9 @@ const CitiesAdmin = () => {
       setCities((data ?? []) as CityRow[]);
     } catch (error) {
       console.error("Failed to load cities", error);
-      setLoadingError("We couldn't load the city list. Please try again later.");
+      setLoadingError(
+        "We couldn't load the city list. Please try again later.",
+      );
       toast({
         variant: "destructive",
         title: "Unable to load cities",
@@ -223,36 +264,42 @@ const CitiesAdmin = () => {
     }
   }, [toast]);
 
-  const fetchDistricts = useCallback(async (cityId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("city_districts")
-        .select("*")
-        .eq("city_id", cityId)
-        .order("name");
+  const fetchDistricts = useCallback(
+    async (cityId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("city_districts")
+          .select("*")
+          .eq("city_id", cityId)
+          .order("name");
 
-      if (error) throw error;
-      setDistricts(prev => ({ ...prev, [cityId]: data || [] }));
-    } catch (error) {
-      console.error("Error fetching districts:", error);
-      toast({
-        variant: "destructive",
-        title: "Unable to load districts",
-        description: "Failed to fetch districts for this city.",
-      });
-    }
-  }, [toast]);
-
-  const handleCityExpand = useCallback(async (cityId: string) => {
-    if (expandedCityId === cityId) {
-      setExpandedCityId(null);
-    } else {
-      setExpandedCityId(cityId);
-      if (!districts[cityId]) {
-        await fetchDistricts(cityId);
+        if (error) throw error;
+        setDistricts((prev) => ({ ...prev, [cityId]: data || [] }));
+      } catch (error) {
+        console.error("Error fetching districts:", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to load districts",
+          description: "Failed to fetch districts for this city.",
+        });
       }
-    }
-  }, [expandedCityId, districts, fetchDistricts]);
+    },
+    [toast],
+  );
+
+  const handleCityExpand = useCallback(
+    async (cityId: string) => {
+      if (expandedCityId === cityId) {
+        setExpandedCityId(null);
+      } else {
+        setExpandedCityId(cityId);
+        if (!districts[cityId]) {
+          await fetchDistricts(cityId);
+        }
+      }
+    },
+    [expandedCityId, districts, fetchDistricts],
+  );
 
   useEffect(() => {
     fetchCities();
@@ -283,7 +330,9 @@ const CitiesAdmin = () => {
               description: `${payload.name} has been updated successfully.`,
             });
           } else {
-            const { error } = await supabase.from("cities").insert(payload as any);
+            const { error } = await supabase
+              .from("cities")
+              .insert(payload as any);
 
             if (error) throw error;
 
@@ -327,7 +376,10 @@ const CitiesAdmin = () => {
   const handleDelete = async (city: CityRow) => {
     setDeletingCityId(city.id);
     try {
-      const { error } = await supabase.from("cities").delete().eq("id", city.id);
+      const { error } = await supabase
+        .from("cities")
+        .delete()
+        .eq("id", city.id);
 
       if (error) throw error;
 
@@ -357,10 +409,15 @@ const CitiesAdmin = () => {
     <AdminRoute>
       <div className="container mx-auto space-y-8 px-4 py-10">
         <div className="space-y-2 text-center">
-          <Badge variant="outline" className="uppercase">Admin Tool</Badge>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">City Management</h1>
+          <Badge variant="outline" className="">
+            Admin Tool
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            City Management
+          </h1>
           <p className="text-muted-foreground">
-            Manage the global roster of cities, keep their core stats up to date, and highlight cultural events.
+            Manage the global roster of cities, keep their core stats up to
+            date, and highlight cultural events.
           </p>
         </div>
 
@@ -368,7 +425,9 @@ const CitiesAdmin = () => {
           <Card className="order-2 lg:order-1">
             <CardHeader>
               <CardTitle>City Directory</CardTitle>
-              <CardDescription>Browse existing cities and edit or remove them as needed.</CardDescription>
+              <CardDescription>
+                Browse existing cities and edit or remove them as needed.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {isLoading ? (
@@ -395,12 +454,20 @@ const CitiesAdmin = () => {
                         <TableHead>Country</TableHead>
                         <TableHead>Genre</TableHead>
                         <TableHead className="text-right">Population</TableHead>
-                        <TableHead className="text-right">Music Scene</TableHead>
-                        <TableHead className="text-right">Cost of Living</TableHead>
-                        <TableHead className="text-right">Local Bonus</TableHead>
+                        <TableHead className="text-right">
+                          Music Scene
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Cost of Living
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Local Bonus
+                        </TableHead>
                         <TableHead className="text-right">Venues</TableHead>
                         <TableHead className="text-right">Events</TableHead>
-                        <TableHead className="w-[120px] text-right">Actions</TableHead>
+                        <TableHead className="w-[120px] text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -421,58 +488,77 @@ const CitiesAdmin = () => {
                                     <ChevronRight className="h-4 w-4" />
                                   )}
                                 </Button>
-                                <div className="font-medium">{city.name ?? "Unnamed city"}</div>
+                                <div className="font-medium">
+                                  {city.name ?? "Unnamed city"}
+                                </div>
                               </div>
                             </TableCell>
-                          <TableCell>{city.country ?? "—"}</TableCell>
-                          <TableCell>{city.dominant_genre ?? "—"}</TableCell>
-                          <TableCell className="text-right">
-                            {typeof city.population === "number" ? numberFormatter.format(city.population) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right">{percentFormatter(city.music_scene)}</TableCell>
-                          <TableCell className="text-right">{percentFormatter(city.cost_of_living)}</TableCell>
-                          <TableCell className="text-right">{percentFormatter(city.local_bonus)}</TableCell>
-                          <TableCell className="text-right">
-                            {typeof city.venues === "number" ? numberFormatter.format(city.venues) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right">{parseArrayCount(city.cultural_events)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(city)}
-                                aria-label={`Edit ${city.name ?? "city"}`}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(city)}
-                                aria-label={`Delete ${city.name ?? "city"}`}
-                                disabled={deletingCityId === city.id}
-                              >
-                                {deletingCityId === city.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {expandedCityId === city.id && (
-                          <TableRow>
-                            <TableCell colSpan={10} className="bg-muted/30 p-0">
-                              <CityDistrictsSection 
-                                cityId={city.id}
-                                districts={districts[city.id] || []}
-                                onDistrictAdded={() => fetchDistricts(city.id)}
-                              />
+                            <TableCell>{city.country ?? "—"}</TableCell>
+                            <TableCell>{city.dominant_genre ?? "—"}</TableCell>
+                            <TableCell className="text-right">
+                              {typeof city.population === "number"
+                                ? numberFormatter.format(city.population)
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {percentFormatter(city.music_scene)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {percentFormatter(city.cost_of_living)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {percentFormatter(city.local_bonus)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {typeof city.venues === "number"
+                                ? numberFormatter.format(city.venues)
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {parseArrayCount(city.cultural_events)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(city)}
+                                  aria-label={`Edit ${city.name ?? "city"}`}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(city)}
+                                  aria-label={`Delete ${city.name ?? "city"}`}
+                                  disabled={deletingCityId === city.id}
+                                >
+                                  {deletingCityId === city.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
-                        )}
+                          {expandedCityId === city.id && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={10}
+                                className="bg-muted/30 p-0"
+                              >
+                                <CityDistrictsSection
+                                  cityId={city.id}
+                                  districts={districts[city.id] || []}
+                                  onDistrictAdded={() =>
+                                    fetchDistricts(city.id)
+                                  }
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </>
                       ))}
                     </TableBody>
@@ -484,7 +570,9 @@ const CitiesAdmin = () => {
 
           <Card className="order-1 lg:order-2">
             <CardHeader>
-              <CardTitle>{editingCity ? "Edit city" : "Add a new city"}</CardTitle>
+              <CardTitle>
+                {editingCity ? "Edit city" : "Add a new city"}
+              </CardTitle>
               <CardDescription>
                 {editingCity
                   ? "Update core city stats and cultural events to keep the world fresh."
@@ -541,7 +629,12 @@ const CitiesAdmin = () => {
                         <FormItem>
                           <FormLabel>Population</FormLabel>
                           <FormControl>
-                            <Input type="number" inputMode="numeric" placeholder="1200000" {...field} />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="1200000"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -554,7 +647,12 @@ const CitiesAdmin = () => {
                         <FormItem>
                           <FormLabel>Music scene strength (0-100)</FormLabel>
                           <FormControl>
-                            <Input type="number" inputMode="numeric" placeholder="85" {...field} />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="85"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -567,7 +665,12 @@ const CitiesAdmin = () => {
                         <FormItem>
                           <FormLabel>Cost of living (0-100)</FormLabel>
                           <FormControl>
-                            <Input type="number" inputMode="numeric" placeholder="60" {...field} />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="60"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -580,7 +683,12 @@ const CitiesAdmin = () => {
                         <FormItem>
                           <FormLabel>Local bonus (0-100)</FormLabel>
                           <FormControl>
-                            <Input type="number" inputMode="numeric" placeholder="25" {...field} />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="25"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -593,7 +701,12 @@ const CitiesAdmin = () => {
                         <FormItem>
                           <FormLabel>Venue count</FormLabel>
                           <FormControl>
-                            <Input type="number" inputMode="numeric" placeholder="24" {...field} />
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="24"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -607,9 +720,11 @@ const CitiesAdmin = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <CulturalEventsManager 
-                            value={parseStringArray(field.value)} 
-                            onChange={(events) => field.onChange(formatStringArray(events))} 
+                          <CulturalEventsManager
+                            value={parseStringArray(field.value)}
+                            onChange={(events) =>
+                              field.onChange(formatStringArray(events))
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -637,7 +752,12 @@ const CitiesAdmin = () => {
                       )}
                     </Button>
                     {editingCity ? (
-                      <Button type="button" variant="outline" onClick={resetForm} disabled={isSubmitting}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={resetForm}
+                        disabled={isSubmitting}
+                      >
                         Cancel editing
                       </Button>
                     ) : null}

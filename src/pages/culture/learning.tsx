@@ -6,7 +6,13 @@ import type { LanguageCourseProgress } from "@/components/culture/LanguageCourse
 import { LanguageExchangeProgramTracker } from "@/components/culture/LanguageExchangeProgramTracker";
 import type { LanguageExchangeProgramProgress } from "@/components/culture/LanguageExchangeProgramTracker";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   LANGUAGE_PROFICIENCY_LABELS,
@@ -28,7 +34,8 @@ const languageCourse: LanguageCourseProgress = {
   dailyPracticeMinutes: 45,
   immersionHours: 62,
   studyStreakDays: 18,
-  currentFocus: "Expressive phrasing for songwriting and stage banter with emphasis on Kansai dialect idioms.",
+  currentFocus:
+    "Expressive phrasing for songwriting and stage banter with emphasis on Kansai dialect idioms.",
   modules: [
     {
       id: "module-1",
@@ -72,25 +79,29 @@ const exchangeProgram: LanguageExchangeProgramProgress = {
   proficiencyStartLevel: "elementary",
   proficiencyCurrentLevel: "upper_intermediate",
   proficiencyScoreDelta: 27,
-  upcomingHighlight: "Collaborative songwriting session with Catalan indie artists at Casa de la Música.",
+  upcomingHighlight:
+    "Collaborative songwriting session with Catalan indie artists at Casa de la Música.",
   milestones: [
     {
       id: "milestone-1",
       title: "Host Family Immersion Week",
       status: "completed",
-      description: "Integrated with local host family, daily Catalan breakfast conversations.",
+      description:
+        "Integrated with local host family, daily Catalan breakfast conversations.",
     },
     {
       id: "milestone-2",
       title: "Campus Jam Residency",
       status: "in_progress",
-      description: "Leading jam nights to practice spontaneous stage banter in Spanish.",
+      description:
+        "Leading jam nights to practice spontaneous stage banter in Spanish.",
     },
     {
       id: "milestone-3",
       title: "Festival Liaison Shadowing",
       status: "upcoming",
-      description: "Assist festival liaison team with bilingual artist relations duties.",
+      description:
+        "Assist festival liaison team with bilingual artist relations duties.",
     },
   ],
 };
@@ -136,34 +147,52 @@ const nextLevelFor = (level: LanguageProficiencyLevel) => {
 const formatAssessmentDate = (record: LanguageProficiencyRecord) => {
   if (!record.lastAssessedAt) return "Awaiting assessment";
   const date = new Date(record.lastAssessedAt);
-  return Number.isNaN(date.getTime()) ? "Awaiting assessment" : date.toLocaleDateString();
+  return Number.isNaN(date.getTime())
+    ? "Awaiting assessment"
+    : date.toLocaleDateString();
 };
 
 export default function CultureLearningPage() {
   const averageImmersionHours = useMemo(() => {
     if (!proficiencySnapshot.length) return 0;
-    const total = proficiencySnapshot.reduce((sum, record) => sum + record.immersionHours, 0);
+    const total = proficiencySnapshot.reduce(
+      (sum, record) => sum + record.immersionHours,
+      0,
+    );
     return Math.round(total / proficiencySnapshot.length);
   }, []);
 
   const highestLevel = useMemo(() => {
-    return proficiencySnapshot.reduce<LanguageProficiencyRecord | null>((highest, record) => {
-      if (!highest) return record;
-      const highestIndex = LANGUAGE_PROFICIENCY_LEVELS.indexOf(highest.proficiencyLevel);
-      const currentIndex = LANGUAGE_PROFICIENCY_LEVELS.indexOf(record.proficiencyLevel);
-      return currentIndex > highestIndex ? record : highest;
-    }, null);
+    return proficiencySnapshot.reduce<LanguageProficiencyRecord | null>(
+      (highest, record) => {
+        if (!highest) return record;
+        const highestIndex = LANGUAGE_PROFICIENCY_LEVELS.indexOf(
+          highest.proficiencyLevel,
+        );
+        const currentIndex = LANGUAGE_PROFICIENCY_LEVELS.indexOf(
+          record.proficiencyLevel,
+        );
+        return currentIndex > highestIndex ? record : highest;
+      },
+      null,
+    );
   }, []);
 
   return (
     <div className="space-y-10">
       <header className="space-y-3">
-        <Badge className="text-sm uppercase tracking-wide">Culture &amp; Language Learning</Badge>
+        <Badge className="text-sm tracking-wide">
+          Culture &amp; Language Learning
+        </Badge>
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Language Courses &amp; Exchange Programs</h1>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Language Courses &amp; Exchange Programs
+          </h1>
           <p className="max-w-3xl text-base text-muted-foreground md:text-lg">
-            Track real-time progress across structured language courses and cultural exchange residencies.
-            Blend classroom mastery with immersive experiences to elevate multilingual artistry on global stages.
+            Track real-time progress across structured language courses and
+            cultural exchange residencies. Blend classroom mastery with
+            immersive experiences to elevate multilingual artistry on global
+            stages.
           </p>
         </div>
       </header>
@@ -177,7 +206,8 @@ export default function CultureLearningPage() {
               Fluency Snapshot
             </CardTitle>
             <CardDescription className="text-base">
-              Consolidated language proficiency metrics across all active study paths.
+              Consolidated language proficiency metrics across all active study
+              paths.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -187,11 +217,14 @@ export default function CultureLearningPage() {
                   <Compass className="h-4 w-4" />
                   Average immersion per language
                 </span>
-                <span className="text-lg font-semibold text-foreground">{averageImmersionHours} hrs</span>
+                <span className="text-lg font-semibold text-foreground">
+                  {averageImmersionHours} hrs
+                </span>
               </div>
               {highestLevel && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Highest fluency: {highestLevel.language} ({LANGUAGE_PROFICIENCY_LABELS[highestLevel.proficiencyLevel]})
+                  Highest fluency: {highestLevel.language} (
+                  {LANGUAGE_PROFICIENCY_LABELS[highestLevel.proficiencyLevel]})
                 </p>
               )}
             </div>
@@ -199,21 +232,36 @@ export default function CultureLearningPage() {
             <div className="space-y-3">
               {proficiencySnapshot.map((record) => {
                 const nextLevel = nextLevelFor(record.proficiencyLevel);
-                const progressToNext = nextLevel ? Math.min(100, record.proficiencyScore) : 100;
+                const progressToNext = nextLevel
+                  ? Math.min(100, record.proficiencyScore)
+                  : 100;
 
                 return (
-                  <div key={record.language} className="rounded-lg border bg-background/70 p-3">
+                  <div
+                    key={record.language}
+                    className="rounded-lg border bg-background/70 p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">{record.language}</h3>
-                          <Badge variant="outline">{LANGUAGE_PROFICIENCY_LABELS[record.proficiencyLevel]}</Badge>
+                          <h3 className="text-lg font-semibold">
+                            {record.language}
+                          </h3>
+                          <Badge variant="outline">
+                            {
+                              LANGUAGE_PROFICIENCY_LABELS[
+                                record.proficiencyLevel
+                              ]
+                            }
+                          </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">Assessed {formatAssessmentDate(record)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Assessed {formatAssessmentDate(record)}
+                        </p>
                       </div>
                       {record.certifications?.length ? (
                         <Badge variant="secondary" className="text-xs">
-                          {record.certifications.join(", ")}
+                          {record.certifications.join(",")}
                         </Badge>
                       ) : null}
                     </div>
@@ -221,14 +269,21 @@ export default function CultureLearningPage() {
                       <Progress value={progressToNext} className="h-2" />
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                         <span>
-                          {record.proficiencyScore}% toward {nextLevel ? LANGUAGE_PROFICIENCY_LABELS[nextLevel] : "mastery"}
+                          {record.proficiencyScore}% toward{" "}
+                          {nextLevel
+                            ? LANGUAGE_PROFICIENCY_LABELS[nextLevel]
+                            : "mastery"}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Flame className="h-3.5 w-3.5 text-orange-500" /> {record.studyStreakDays ?? 0} day streak
+                          <Flame className="h-3.5 w-3.5 text-orange-500" />{" "}
+                          {record.studyStreakDays ?? 0} day streak
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {record.immersionHours} hrs immersed · {record.certifications?.length ? "Certified" : "Certification pending"}
+                        {record.immersionHours} hrs immersed ·{" "}
+                        {record.certifications?.length
+                          ? "Certified"
+                          : "Certification pending"}
                       </p>
                     </div>
                   </div>
@@ -248,27 +303,37 @@ export default function CultureLearningPage() {
               Cultural Impact Goals
             </CardTitle>
             <CardDescription className="text-base">
-              Benchmarks for language-led collaborations and global release readiness.
+              Benchmarks for language-led collaborations and global release
+              readiness.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="space-y-3">
               <div className="rounded-lg border bg-muted/30 p-4">
-                <h3 className="text-base font-semibold text-foreground">Multilingual release pipeline</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  Multilingual release pipeline
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Prepare dual-language EP launch with localized marketing and fan engagement plans in Japan and Spain.
+                  Prepare dual-language EP launch with localized marketing and
+                  fan engagement plans in Japan and Spain.
                 </p>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <h3 className="text-base font-semibold text-foreground">Exchange amplification</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  Exchange amplification
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Host livestream recaps from residency cities featuring collaborative performances with local artists.
+                  Host livestream recaps from residency cities featuring
+                  collaborative performances with local artists.
                 </p>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <h3 className="text-base font-semibold text-foreground">Certification roadmap</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  Certification roadmap
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Target JLPT N3 and DELE B2 within 9 months to unlock festival bookings requiring bilingual hosts.
+                  Target JLPT N3 and DELE B2 within 9 months to unlock festival
+                  bookings requiring bilingual hosts.
                 </p>
               </div>
             </div>

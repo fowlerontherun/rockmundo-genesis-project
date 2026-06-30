@@ -9,17 +9,32 @@ export const BottomActionBar = () => {
 
   return (
     <footer className="h-12 flex items-center gap-2 px-3 bg-fm-panel border-t border-fm-border">
-      <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/version-history")}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5"
+        onClick={() => navigate("/version-history")}
+      >
         <History className="h-3.5 w-3.5" />
         <span className="text-xs">v1.1.397</span>
       </Button>
 
-      <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/schedule")}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5"
+        onClick={() => navigate("/schedule")}
+      >
         <Calendar className="h-3.5 w-3.5" />
         <span className="text-xs">Schedule</span>
       </Button>
 
-      <Button variant="ghost" size="sm" className="h-8 gap-1.5 relative" onClick={() => navigate("/inbox")}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5 relative"
+        onClick={() => navigate("/inbox")}
+      >
         <Bell className="h-3.5 w-3.5" />
         <span className="text-xs">Inbox</span>
         {unread && unread > 0 ? (
@@ -33,7 +48,7 @@ export const BottomActionBar = () => {
 
       <Button
         size="sm"
-        className="h-8 gap-2 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold tracking-wide uppercase text-xs"
+        className="h-8 gap-2 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold tracking-wide text-xs"
         onClick={() => navigate("/gigs")}
       >
         Continue

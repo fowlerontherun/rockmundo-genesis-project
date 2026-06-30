@@ -3,10 +3,22 @@ import { Building2, Handshake, LineChart, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 import type { SponsorPackage } from "./types";
@@ -16,9 +28,17 @@ interface EventSponsorManagerProps {
   onSponsorsChange: (sponsors: SponsorPackage[]) => void;
 }
 
-const sponsorshipLevels: SponsorPackage["level"][] = ["title", "presenting", "supporting", "local"];
+const sponsorshipLevels: SponsorPackage["level"][] = [
+  "title",
+  "presenting",
+  "supporting",
+  "local",
+];
 
-export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsorManagerProps) => {
+export const EventSponsorManager = ({
+  sponsors,
+  onSponsorsChange,
+}: EventSponsorManagerProps) => {
   const [form, setForm] = useState<Omit<SponsorPackage, "id">>({
     name: "",
     level: "supporting",
@@ -37,7 +57,9 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
       return "0 activations scoped";
     }
 
-    const activations = sponsors.filter((sponsor) => sponsor.activationFocus).length;
+    const activations = sponsors.filter(
+      (sponsor) => sponsor.activationFocus,
+    ).length;
     return `${activations} active experiential commitments`;
   }, [sponsors]);
 
@@ -76,25 +98,32 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-2xl">Sponsorship Architecture</CardTitle>
-            <CardDescription>Model partner contributions, activations, and experience overlays.</CardDescription>
+            <CardDescription>
+              Model partner contributions, activations, and experience overlays.
+            </CardDescription>
           </div>
           <Badge variant="outline" className="text-sm capitalize">
-            <Handshake className="mr-1 h-4 w-4" /> {sponsors.length} partners engaged
+            <Handshake className="mr-1 h-4 w-4" /> {sponsors.length} partners
+            engaged
           </Badge>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Cash commitments</p>
-            <p className="text-lg font-semibold">${totalContribution.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Cash commitments</p>
+            <p className="text-lg font-semibold">
+              ${totalContribution.toLocaleString()}
+            </p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Activation focus</p>
+            <p className="text-xs text-muted-foreground">Activation focus</p>
             <p className="text-lg font-semibold">{averageROICommitment}</p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">Title availability</p>
+            <p className="text-xs text-muted-foreground">Title availability</p>
             <p className="text-lg font-semibold">
-              {sponsors.some((sponsor) => sponsor.level === "title") ? "Locked" : "Open"}
+              {sponsors.some((sponsor) => sponsor.level === "title")
+                ? "Locked"
+                : "Open"}
             </p>
           </div>
         </div>
@@ -108,7 +137,9 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
                 <Input
                   id="sponsor-name"
                   value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, name: event.target.value }))
+                  }
                   placeholder="Brand or strategic partner"
                 />
               </div>
@@ -116,14 +147,20 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
                 <Label htmlFor="sponsor-level">Tier</Label>
                 <Select
                   value={form.level}
-                  onValueChange={(value: SponsorPackage["level"]) => setForm((prev) => ({ ...prev, level: value }))}
+                  onValueChange={(value: SponsorPackage["level"]) =>
+                    setForm((prev) => ({ ...prev, level: value }))
+                  }
                 >
                   <SelectTrigger id="sponsor-level">
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
                   <SelectContent>
                     {sponsorshipLevels.map((level) => (
-                      <SelectItem key={level} value={level} className="capitalize">
+                      <SelectItem
+                        key={level}
+                        value={level}
+                        className="capitalize"
+                      >
                         {level}
                       </SelectItem>
                     ))}
@@ -139,7 +176,10 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
                 min={0}
                 value={form.contribution}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, contribution: Number.parseFloat(event.target.value) || 0 }))
+                  setForm((prev) => ({
+                    ...prev,
+                    contribution: Number.parseFloat(event.target.value) || 0,
+                  }))
                 }
               />
             </div>
@@ -148,7 +188,9 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
               <Textarea
                 id="benefits"
                 value={form.benefits}
-                onChange={(event) => setForm((prev) => ({ ...prev, benefits: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, benefits: event.target.value }))
+                }
                 placeholder="Hospitality, stage naming, digital content rights, etc."
                 rows={3}
               />
@@ -158,7 +200,12 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
               <Input
                 id="activation-focus"
                 value={form.activationFocus}
-                onChange={(event) => setForm((prev) => ({ ...prev, activationFocus: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    activationFocus: event.target.value,
+                  }))
+                }
                 placeholder="Immersive tech, sustainability, premium hospitality"
               />
             </div>
@@ -167,7 +214,9 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
               <Input
                 id="roi-goal"
                 value={form.roiGoal}
-                onChange={(event) => setForm((prev) => ({ ...prev, roiGoal: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, roiGoal: event.target.value }))
+                }
                 placeholder="Brand lift, qualified leads, content capture"
               />
             </div>
@@ -181,7 +230,8 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
                 <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
                 <p className="font-semibold">No sponsors scoped</p>
                 <p className="text-sm text-muted-foreground">
-                  Build a portfolio that balances cash, media value, and in-kind experiences.
+                  Build a portfolio that balances cash, media value, and in-kind
+                  experiences.
                 </p>
               </div>
             ) : (
@@ -196,14 +246,23 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
                         <p className="font-semibold">{sponsor.name}</p>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Contributing ${sponsor.contribution.toLocaleString()} · Focus: {sponsor.activationFocus || "TBD"}
+                        Contributing ${sponsor.contribution.toLocaleString()} ·
+                        Focus: {sponsor.activationFocus || "TBD"}
                       </p>
-                      <p className="text-sm text-muted-foreground">ROI goal: {sponsor.roiGoal || "Pending alignment"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        ROI goal: {sponsor.roiGoal || "Pending alignment"}
+                      </p>
                       {sponsor.benefits && (
-                        <p className="text-sm text-muted-foreground">Benefits: {sponsor.benefits}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Benefits: {sponsor.benefits}
+                        </p>
                       )}
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => handleRemoveSponsor(sponsor.id)}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveSponsor(sponsor.id)}
+                    >
                       <Trash2 className="mr-1 h-4 w-4" /> Remove
                     </Button>
                   </div>
@@ -215,22 +274,31 @@ export const EventSponsorManager = ({ sponsors, onSponsorsChange }: EventSponsor
         {sponsors.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase text-muted-foreground">Strategic mix</p>
+              <p className="text-xs text-muted-foreground">Strategic mix</p>
               <p className="text-sm text-muted-foreground">
-                Keep at least one title or presenting partner and 2-3 supporting partners for storytelling depth.
+                Keep at least one title or presenting partner and 2-3 supporting
+                partners for storytelling depth.
               </p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase text-muted-foreground">Projected partner ROI</p>
+              <p className="text-xs text-muted-foreground">
+                Projected partner ROI
+              </p>
               <p className="text-lg font-semibold flex items-center gap-1">
                 <LineChart className="h-4 w-4" />
-                {Math.round((totalContribution / Math.max(sponsors.length, 1)) * 0.12).toLocaleString()} media value units
+                {Math.round(
+                  (totalContribution / Math.max(sponsors.length, 1)) * 0.12,
+                ).toLocaleString()}{" "}
+                media value units
               </p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase text-muted-foreground">Experience readiness</p>
+              <p className="text-xs text-muted-foreground">
+                Experience readiness
+              </p>
               <p className="text-sm text-muted-foreground">
-                Align activation briefs with programming for seamless guest journeys.
+                Align activation briefs with programming for seamless guest
+                journeys.
               </p>
             </div>
           </div>

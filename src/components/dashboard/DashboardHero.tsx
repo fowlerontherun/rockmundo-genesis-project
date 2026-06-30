@@ -44,41 +44,142 @@ interface NextBestAction {
   tone?: "danger" | "warning" | "info" | "success";
 }
 
-function buildNextActions(profile: any, opts: {
-  unread: number;
-  unreadInbox: number;
-  pendingGigsToday: number;
-  pendingOffers: number;
-  currentProject: any;
-}): NextBestAction[] {
+function buildNextActions(
+  profile: any,
+  opts: {
+    unread: number;
+    unreadInbox: number;
+    pendingGigsToday: number;
+    pendingOffers: number;
+    currentProject: any;
+  },
+): NextBestAction[] {
   const energy = profile?.energy ?? 100;
   const health = profile?.health ?? 100;
   const fame = profile?.fame ?? 0;
   const cash = profile?.cash ?? 0;
   const out: NextBestAction[] = [];
 
-  if (health < 30) out.push({ label: "Rest up — health critical", description: "Sleep or visit a clinic.", to: "/wellness", cta: "Recover", icon: Flame, tone: "danger" });
-  if (energy < 25) out.push({ label: "Refill energy", description: "Low energy hurts every action.", to: "/schedule", cta: "Sleep", icon: Flame, tone: "warning" });
-  if (opts.pendingGigsToday > 0) out.push({ label: `${opts.pendingGigsToday} gig${opts.pendingGigsToday === 1 ? "" : "s"} today`, description: "Get to the venue and warm up.", to: "/gigs", cta: "Open gigs", icon: Music2, tone: "info" });
-  if (opts.pendingOffers > 0) out.push({ label: `${opts.pendingOffers} pending offer${opts.pendingOffers === 1 ? "" : "s"}`, description: "Review and accept new bookings.", to: "/gig-booking", cta: "Review", icon: Bell, tone: "info" });
-  if (opts.unreadInbox > 0) out.push({ label: `${opts.unreadInbox} unread message${opts.unreadInbox === 1 ? "" : "s"}`, description: "Check your inbox.", to: "/inbox", cta: "Open inbox", icon: Bell, tone: "info" });
-  if (opts.unread > 0 && opts.unreadInbox === 0) out.push({ label: `${opts.unread} new alert${opts.unread === 1 ? "" : "s"}`, description: "Tap the bell for details.", to: "/inbox", cta: "View", icon: Bell, tone: "info" });
-  if (opts.currentProject && (opts.currentProject.progress ?? 0) < 100) out.push({ label: `Continue "${opts.currentProject.title}"`, description: `${Math.round(opts.currentProject.progress ?? 0)}% complete.`, to: "/booking/songwriting", cta: "Resume", icon: Music2, tone: "success" });
-  if (fame < 100) out.push({ label: "Book a gig", description: "Perform to grow fame.", to: "/gigs", cta: "Find gigs", icon: Sparkles, tone: "success" });
-  if (cash < 500) out.push({ label: "Earn quick cash", description: "Take a side job to top up.", to: "/booking/work", cta: "Find work", icon: Coins, tone: "warning" });
-  if (out.length === 0) out.push({ label: "Write a new hit", description: "Keep the momentum going.", to: "/booking/songwriting", cta: "Start writing", icon: Music2, tone: "success" });
+  if (health < 30)
+    out.push({
+      label: "Rest up — health critical",
+      description: "Sleep or visit a clinic.",
+      to: "/wellness",
+      cta: "Recover",
+      icon: Flame,
+      tone: "danger",
+    });
+  if (energy < 25)
+    out.push({
+      label: "Refill energy",
+      description: "Low energy hurts every action.",
+      to: "/schedule",
+      cta: "Sleep",
+      icon: Flame,
+      tone: "warning",
+    });
+  if (opts.pendingGigsToday > 0)
+    out.push({
+      label: `${opts.pendingGigsToday} gig${opts.pendingGigsToday === 1 ? "" : "s"} today`,
+      description: "Get to the venue and warm up.",
+      to: "/gigs",
+      cta: "Open gigs",
+      icon: Music2,
+      tone: "info",
+    });
+  if (opts.pendingOffers > 0)
+    out.push({
+      label: `${opts.pendingOffers} pending offer${opts.pendingOffers === 1 ? "" : "s"}`,
+      description: "Review and accept new bookings.",
+      to: "/gig-booking",
+      cta: "Review",
+      icon: Bell,
+      tone: "info",
+    });
+  if (opts.unreadInbox > 0)
+    out.push({
+      label: `${opts.unreadInbox} unread message${opts.unreadInbox === 1 ? "" : "s"}`,
+      description: "Check your inbox.",
+      to: "/inbox",
+      cta: "Open inbox",
+      icon: Bell,
+      tone: "info",
+    });
+  if (opts.unread > 0 && opts.unreadInbox === 0)
+    out.push({
+      label: `${opts.unread} new alert${opts.unread === 1 ? "" : "s"}`,
+      description: "Tap the bell for details.",
+      to: "/inbox",
+      cta: "View",
+      icon: Bell,
+      tone: "info",
+    });
+  if (opts.currentProject && (opts.currentProject.progress ?? 0) < 100)
+    out.push({
+      label: `Continue"${opts.currentProject.title}"`,
+      description: `${Math.round(opts.currentProject.progress ?? 0)}% complete.`,
+      to: "/booking/songwriting",
+      cta: "Resume",
+      icon: Music2,
+      tone: "success",
+    });
+  if (fame < 100)
+    out.push({
+      label: "Book a gig",
+      description: "Perform to grow fame.",
+      to: "/gigs",
+      cta: "Find gigs",
+      icon: Sparkles,
+      tone: "success",
+    });
+  if (cash < 500)
+    out.push({
+      label: "Earn quick cash",
+      description: "Take a side job to top up.",
+      to: "/booking/work",
+      cta: "Find work",
+      icon: Coins,
+      tone: "warning",
+    });
+  if (out.length === 0)
+    out.push({
+      label: "Write a new hit",
+      description: "Keep the momentum going.",
+      to: "/booking/songwriting",
+      cta: "Start writing",
+      icon: Music2,
+      tone: "success",
+    });
   if (out.length < 3) {
-    if (!out.find(a => a.to === "/rehearsal")) out.push({ label: "Rehearse with your band", description: "Boost chemistry and stage skill.", to: "/rehearsal", cta: "Schedule", icon: Music2, tone: "success" });
-    if (!out.find(a => a.to === "/release-manager")) out.push({ label: "Plan a release", description: "Turn finished songs into income.", to: "/release-manager", cta: "Open", icon: Trophy, tone: "success" });
+    if (!out.find((a) => a.to === "/rehearsal"))
+      out.push({
+        label: "Rehearse with your band",
+        description: "Boost chemistry and stage skill.",
+        to: "/rehearsal",
+        cta: "Schedule",
+        icon: Music2,
+        tone: "success",
+      });
+    if (!out.find((a) => a.to === "/release-manager"))
+      out.push({
+        label: "Plan a release",
+        description: "Turn finished songs into income.",
+        to: "/release-manager",
+        cta: "Open",
+        icon: Trophy,
+        tone: "success",
+      });
   }
   return out.slice(0, 4);
 }
 
 const toneRing: Record<NonNullable<NextBestAction["tone"]>, string> = {
   danger: "border-destructive/50 bg-destructive/10 text-destructive",
-  warning: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  warning:
+    "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   info: "border-primary/40 bg-primary/10 text-primary",
-  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  success:
+    "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
 };
 
 export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
@@ -119,13 +220,14 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     refetchInterval: 30000,
   });
 
-
   const { data: pendingGigsToday = 0 } = useQuery({
     queryKey: ["dashboard-gigs-today", profileId],
     enabled: !!profileId,
     queryFn: async () => {
-      const start = new Date(); start.setHours(0,0,0,0);
-      const end = new Date(); end.setHours(23,59,59,999);
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
       const { data: bm } = await (supabase as any)
         .from("band_members")
         .select("band_id")
@@ -195,14 +297,22 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
   });
 
   const actions = useMemo(
-    () => buildNextActions(profile, {
-      unread: unreadCount,
+    () =>
+      buildNextActions(profile, {
+        unread: unreadCount,
+        unreadInbox,
+        pendingGigsToday,
+        pendingOffers,
+        currentProject,
+      }),
+    [
+      profile,
+      unreadCount,
       unreadInbox,
       pendingGigsToday,
       pendingOffers,
       currentProject,
-    }),
-    [profile, unreadCount, unreadInbox, pendingGigsToday, pendingOffers, currentProject]
+    ],
   );
   const primary = actions[0];
   const rest = actions.slice(1);
@@ -216,7 +326,10 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
   const xpForCurrent = Math.pow(level, 2) * 100;
   const xpPct = Math.max(
     0,
-    Math.min(100, ((experience - xpForCurrent) / (xpForNext - xpForCurrent)) * 100)
+    Math.min(
+      100,
+      ((experience - xpForCurrent) / (xpForNext - xpForCurrent)) * 100,
+    ),
   );
 
   const goals = [
@@ -254,13 +367,15 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
                 <PrimaryIcon className="h-6 w-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                <p className="text-xs font-semibold text-primary">
                   What to do next
                 </p>
                 <h2 className="mt-0.5 text-xl sm:text-2xl font-bold tracking-tight truncate">
                   {primary.label}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{primary.description}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {primary.description}
+                </p>
               </div>
             </div>
             <Link to={primary.to} className="sm:flex-shrink-0">
@@ -281,14 +396,18 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
                     to={a.to}
                     className={cn(
                       "group flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-background/60",
-                      toneRing[a.tone ?? "info"]
+                      toneRing[a.tone ?? "info"],
                     )}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <RowIcon className="h-4 w-4 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium leading-tight truncate text-foreground">{a.label}</p>
-                        <p className="text-xs text-muted-foreground truncate">{a.description}</p>
+                        <p className="text-sm font-medium leading-tight truncate text-foreground">
+                          {a.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {a.description}
+                        </p>
                       </div>
                     </div>
                     <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
@@ -299,7 +418,6 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
           )}
         </CardContent>
       </Card>
-
 
       {/* Key stats — money, fans, current project, notifications */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -340,7 +458,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
       <Card>
         <CardContent className="p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
               <Target className="h-4 w-4" />
               Goals
             </h3>
@@ -355,7 +473,9 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
                       <GoalIcon className="h-3.5 w-3.5 text-primary" />
                       {goal.label}
                     </span>
-                    <span className="text-xs text-muted-foreground">{goal.hint}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {goal.hint}
+                    </span>
                   </div>
                   <Progress value={goal.value} className="h-2" />
                 </div>
@@ -370,7 +490,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
         <Card>
           <CardContent className="p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
                 Recent Wins
               </h3>
@@ -381,13 +501,18 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
                   key={a.id}
                   className="flex items-center gap-3 rounded-lg border bg-card/50 p-2.5"
                 >
-                  <div className="text-2xl flex-shrink-0">{a.achievements?.icon ?? "🏆"}</div>
+                  <div className="text-2xl flex-shrink-0">
+                    {a.achievements?.icon ?? "🏆"}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">
                       {a.achievements?.name ?? "Achievement"}
                     </p>
                     {a.achievements?.rarity && (
-                      <Badge variant="outline" className="mt-0.5 text-[10px] capitalize">
+                      <Badge
+                        variant="outline"
+                        className="mt-0.5 text-[10px] capitalize"
+                      >
                         {a.achievements.rarity}
                       </Badge>
                     )}
@@ -419,20 +544,38 @@ const toneClasses: Record<NonNullable<StatTileProps["tone"]>, string> = {
   muted: "text-muted-foreground bg-muted",
 };
 
-const StatTile = ({ icon: Icon, label, value, subtle, tone = "muted", to }: StatTileProps) => {
+const StatTile = ({
+  icon: Icon,
+  label,
+  value,
+  subtle,
+  tone = "muted",
+  to,
+}: StatTileProps) => {
   const body = (
-    <Card className={cn("h-full transition-colors", to && "hover:bg-accent/40 cursor-pointer")}>
+    <Card
+      className={cn(
+        "h-full transition-colors",
+        to && "hover:bg-accent/40 cursor-pointer",
+      )}
+    >
       <CardContent className="p-3 sm:p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground truncate">{label}</span>
+          <span className="text-xs font-medium text-muted-foreground truncate">
+            {label}
+          </span>
           <div className={cn("rounded-md p-1.5", toneClasses[tone])}>
             <Icon className="h-3.5 w-3.5" />
           </div>
         </div>
         <div>
-          <p className="text-base sm:text-lg font-bold tracking-tight truncate">{value}</p>
+          <p className="text-base sm:text-lg font-bold tracking-tight truncate">
+            {value}
+          </p>
           {subtle && (
-            <p className="text-[11px] text-muted-foreground truncate mt-0.5">{subtle}</p>
+            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+              {subtle}
+            </p>
           )}
         </div>
       </CardContent>
