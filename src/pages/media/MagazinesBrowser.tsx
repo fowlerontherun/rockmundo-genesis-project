@@ -101,15 +101,38 @@ const MagazinesBrowser = () => {
     };
   }, [magazines]);
 
+  const playerLocale = useMemo(() => ({
+    cityId: currentCity?.id ?? null,
+    country: currentCity?.country ?? null,
+    fame: userBand?.fame ?? 0,
+  }), [currentCity, userBand]);
+
+  const decoratedMagazines = useMemo(() => {
+    return (magazines ?? []).map(mag => ({
+      mag,
+      gate: evaluateReachGate({
+        country: mag.country,
+        audience: mag.readership,
+        min_fame_required: mag.min_fame_required,
+      }, playerLocale),
+    }));
+  }, [magazines, playerLocale]);
+
   const filteredMagazines = useMemo(() => {
-    return magazines?.filter(mag => {
+    return decoratedMagazines.filter(({ mag, gate }) => {
+      if (!showOutOfReach && !gate.inReach) return false;
       const matchesSearch = mag.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || mag.magazine_type === typeFilter;
       const matchesCountry = countryFilter === "all" || mag.country === countryFilter;
       const matchesGenre = genreFilter === "all" || mag.genres?.includes(genreFilter);
       return matchesSearch && matchesType && matchesCountry && matchesGenre;
-    }) || [];
-  }, [magazines, searchTerm, typeFilter, countryFilter, genreFilter]);
+    });
+  }, [decoratedMagazines, showOutOfReach, searchTerm, typeFilter, countryFilter, genreFilter]);
+
+  const hiddenByReachCount = useMemo(
+    () => decoratedMagazines.filter(d => !d.gate.inReach).length,
+    [decoratedMagazines],
+  );
 
   const formatReadership = (readers: number) => {
     if (readers >= 1000000) return `${(readers / 1000000).toFixed(1)}M`;
