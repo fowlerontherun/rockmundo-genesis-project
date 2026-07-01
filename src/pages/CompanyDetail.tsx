@@ -456,6 +456,10 @@ const CompanyDetailContent = () => {
           <CompanyEventsTimeline companyId={company.id} />
         </TabsContent>
 
+        <TabsContent value="news" className="space-y-4">
+          <CompanyNewsFeed companyId={company.id} isOwner={company.owner_id === userId} />
+        </TabsContent>
+
         <TabsContent value="rivalries" className="space-y-4">
           <CompanyRivalries companyId={company.id} />
         </TabsContent>
