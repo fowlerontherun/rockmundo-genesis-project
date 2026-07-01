@@ -26,6 +26,7 @@ import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { CompanyJobListings } from "@/components/company/CompanyJobListings";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
+import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
