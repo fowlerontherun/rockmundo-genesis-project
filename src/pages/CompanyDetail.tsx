@@ -391,6 +391,11 @@ const CompanyDetailContent = () => {
           <CompanyStorefrontManager companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
+        <TabsContent value="analytics" className="space-y-4">
+          <CompanyAnalytics companyId={company.id} />
+        </TabsContent>
+
+
         <TabsContent value="finances" className="space-y-4">
           {/* Finance Actions */}
           <Card>
