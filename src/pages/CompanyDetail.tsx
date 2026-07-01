@@ -3,7 +3,7 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3
 } from "lucide-react";
 import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
 import { CompanyEventsTimeline } from "@/components/company/CompanyEventsTimeline";
