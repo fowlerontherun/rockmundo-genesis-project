@@ -3,8 +3,9 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3, Newspaper
 } from "lucide-react";
+import { CompanyNewsFeed } from "@/components/company/CompanyNewsFeed";
 import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
 import { CompanyEventsTimeline } from "@/components/company/CompanyEventsTimeline";
 import { CompanyRivalries } from "@/components/company/CompanyRivalries";
@@ -205,6 +206,10 @@ const CompanyDetailContent = () => {
           <TabsTrigger value="events">
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             Events
+          </TabsTrigger>
+          <TabsTrigger value="news">
+            <Newspaper className="h-3.5 w-3.5 mr-1" />
+            News
           </TabsTrigger>
           <TabsTrigger value="rivalries">
             <Swords className="h-3.5 w-3.5 mr-1" />
@@ -449,6 +454,10 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="events" className="space-y-4">
           <CompanyEventsTimeline companyId={company.id} />
+        </TabsContent>
+
+        <TabsContent value="news" className="space-y-4">
+          <CompanyNewsFeed companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
         <TabsContent value="rivalries" className="space-y-4">

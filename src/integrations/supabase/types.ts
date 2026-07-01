@@ -6829,6 +6829,10 @@ export type Database = {
           event_type: string
           headline: string
           id: string
+          is_hidden: boolean
+          is_pinned: boolean
+          moderated_at: string | null
+          moderated_by: string | null
           payload: Json | null
         }
         Insert: {
@@ -6838,6 +6842,10 @@ export type Database = {
           event_type: string
           headline: string
           id?: string
+          is_hidden?: boolean
+          is_pinned?: boolean
+          moderated_at?: string | null
+          moderated_by?: string | null
           payload?: Json | null
         }
         Update: {
@@ -6847,6 +6855,10 @@ export type Database = {
           event_type?: string
           headline?: string
           id?: string
+          is_hidden?: boolean
+          is_pinned?: boolean
+          moderated_at?: string | null
+          moderated_by?: string | null
           payload?: Json | null
         }
         Relationships: [
