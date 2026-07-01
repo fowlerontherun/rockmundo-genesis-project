@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.436",
+    date: "2026-07-01",
+    changes: [
+      { type: 'feature', description: "**Company analytics tab on CompanyDetail.** New Analytics tab surfaces a 30-day view of the actual revenue drivers behind each company: KPI row (7-day customers, revenue, taxes paid vs funding raised, active staff + low-stock badge, each with a % delta vs the prior 7 days); a daily revenue-drivers ComposedChart stacking customer revenue and funding raised against taxes, wages and other expenses with a net-profit line on top; a customer-traffic area chart driven off `company_demand_log`; a staffing-utilization ComposedChart plotting shift slots offered vs filled with the daily wage bill on a second axis; and a horizontal top-10 inventory bar chart comparing on-hand `stock` vs `restock_level` with retail value in the tooltip. All charts use the FM design tokens (`--fm-accent`, `--fm-good`, `--fm-bad`, `--fm-border`) and share a themed tooltip. Data is pulled in parallel from `company_demand_log`, `company_transactions`, `company_city_tax_payments`, `company_employees`, `company_inventory` and `company_shifts` and cached via React Query." },
+    ],
+  },
+  {
     version: "1.1.435",
     date: "2026-06-30",
     changes: [
