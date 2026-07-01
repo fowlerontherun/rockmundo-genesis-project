@@ -192,6 +192,10 @@ const CompanyDetailContent = () => {
             Jobs
           </TabsTrigger>
           <TabsTrigger value="storefront">Storefront</TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="h-3.5 w-3.5 mr-1" />
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
           <TabsTrigger value="contracts">
