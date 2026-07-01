@@ -207,6 +207,10 @@ const CompanyDetailContent = () => {
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             Events
           </TabsTrigger>
+          <TabsTrigger value="news">
+            <Newspaper className="h-3.5 w-3.5 mr-1" />
+            News
+          </TabsTrigger>
           <TabsTrigger value="rivalries">
             <Swords className="h-3.5 w-3.5 mr-1" />
             Rivalries
