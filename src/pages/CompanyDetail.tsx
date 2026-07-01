@@ -3,7 +3,7 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3
 } from "lucide-react";
 import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
 import { CompanyEventsTimeline } from "@/components/company/CompanyEventsTimeline";
@@ -26,6 +26,7 @@ import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { CompanyJobListings } from "@/components/company/CompanyJobListings";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
+import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels } from "@/hooks/useCompanyLabels";
@@ -191,6 +192,10 @@ const CompanyDetailContent = () => {
             Jobs
           </TabsTrigger>
           <TabsTrigger value="storefront">Storefront</TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="h-3.5 w-3.5 mr-1" />
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="finances">Finances</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
           <TabsTrigger value="contracts">
@@ -385,6 +390,11 @@ const CompanyDetailContent = () => {
         <TabsContent value="storefront" className="space-y-4">
           <CompanyStorefrontManager companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <CompanyAnalytics companyId={company.id} />
+        </TabsContent>
+
 
         <TabsContent value="finances" className="space-y-4">
           {/* Finance Actions */}
