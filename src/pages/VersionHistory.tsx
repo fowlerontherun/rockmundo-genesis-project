@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.437",
+    date: "2026-07-01",
+    changes: [
+      { type: 'feature', description: "**Lightweight moderation flow for the company news feed (bankruptcies + milestones).** Added `is_hidden`, `is_pinned`, `moderated_at` and `moderated_by` columns to `company_news_events`, with an index on `(company_id, is_pinned DESC, created_at DESC)`. RLS now lets any player read non-hidden entries but the company owner also sees their own hidden ones, and only the owner can update rows for their own company. New **News** tab on `CompanyDetail` renders the feed (pinned entries first, then newest), colour-codes bankruptcy vs recovery vs milestone events, shows Pinned/Hidden badges, and gives the owner one-click Pin/Unpin and Hide/Unhide buttons on each row." },
+    ],
+  },
+  {
     version: "1.1.436",
     date: "2026-07-01",
     changes: [
