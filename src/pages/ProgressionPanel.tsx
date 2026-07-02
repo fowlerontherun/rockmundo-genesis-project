@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Trophy, MapPin, Radio, Globe, Star, Lock, CheckCircle2 } from "lucide-react";
+import { Sparkles, Trophy, MapPin, Radio, Globe, Star, Lock, CheckCircle2, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
