@@ -97,6 +97,8 @@ export function BandFameDisplay({ bandId }: BandFameDisplayProps) {
         </CardContent>
       </Card>
 
+      <FameTimelineChart bandId={bandId} currentFame={currentFame} />
+
       <Card>
         <CardHeader>
           <CardTitle>Recent Fame Events</CardTitle>
