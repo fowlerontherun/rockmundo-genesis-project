@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.438",
+    date: "2026-07-02",
+    changes: [
+      { type: 'feature', description: "**Fame progress timeline chart on the Band Fame panel.** New `FameTimelineChart` reconstructs the band's historical fame curve by reading `band_fame_events` and walking cumulative `fame_gained` backwards from the current total, then renders it as a filled Recharts area chart. The chart overlays dashed reference lines at every reach-tier threshold pulled from `BAND_FAME_THRESHOLDS` — Regional (1,000), National (3,500) and International (18,000) — coloured green once passed and amber while still ahead, so the player can see at a glance how much fame is still needed to unlock the next tier. Header shows the current reach tier badge, the next tier target and the remaining fame delta; tooltips surface the exact event that drove each fame jump. Empty state gracefully falls back to a flat line at current fame." },
+    ],
+  },
+  {
     version: "1.1.437",
     date: "2026-07-01",
     changes: [
