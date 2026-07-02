@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.439",
+    date: "2026-07-02",
+    changes: [
+      { type: 'improvement', description: "**Deep-linked reach unlocks on the Progression panel.** Every bullet in each reach band's 'What this unlocks' list is now a React Router `<Link>` that takes the player straight to the in-app page where that feature lives — open-mic → `/open-mic`, community FM → `/media/radio`, DIY zines → `/media/newspapers`, DikCok/Twaater discoverability → `/dikcok` and `/twaater`, sponsorships → `/sponsorships`, tour routing → `/tour-manager`, festival side-stages → `/festivals`, national TV → `/media/tv-shows`, arena bookings → `/tour-manager`, label scouting → `/labels`, award nominations → `/awards`, modelling → `/modeling`, global charts → `/country-charts`, streaming territory revenue → `/streaming/dashboard`, Eurovision-style events → `/major-events`, merch demand → `/merchandise`, Hall of Immortals → `/hall-of-immortals`, and legacy bonuses → `/family/timeline`. Each link shows a subtle ArrowUpRight chevron and hover-underlines in the primary color so it's obvious the row is actionable." },
+    ],
+  },
+  {
     version: "1.1.438",
     date: "2026-07-02",
     changes: [
