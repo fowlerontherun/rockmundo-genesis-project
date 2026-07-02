@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Trophy, MapPin, Radio, Globe, Star, Lock, CheckCircle2 } from "lucide-react";
+import { Sparkles, Trophy, MapPin, Radio, Globe, Star, Lock, CheckCircle2, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,17 +32,23 @@ const TIERS: TierDef[] = (Object.entries(BAND_FAME_THRESHOLDS) as [keyof typeof 
   }))
   .sort((a, b) => a.fame - b.fame);
 
-const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb: string; unlocks: string[] }> = {
+interface Unlock {
+  label: string;
+  to?: string;
+}
+
+const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb: string; unlocks: Unlock[] }> = {
   hyperlocal: {
     title: "Hyper-local scene",
     icon: Sparkles,
     color: "text-zinc-400",
     blurb: "Bedroom, garage and open-mic stages. You're playing for friends, scene kids and a handful of regulars.",
     unlocks: [
-      "Open-mic venues and busking spots in your home city",
-      "Community FM + college radio stations (no fame required)",
-      "Neighborhood gazettes, DIY zines, basement-tape podcasts",
-      "Local sound blogs will cover your first releases",
+      { label: "Open-mic venues and busking spots in your home city", to: "/open-mic" },
+      { label: "Community FM + college radio stations (no fame required)", to: "/media/radio" },
+      { label: "Neighborhood gazettes, DIY zines", to: "/media/newspapers" },
+      { label: "Basement-tape podcasts", to: "/media/podcasts" },
+      { label: "Local sound blogs will cover your first releases", to: "/media/websites" },
     ],
   },
   local: {
@@ -50,10 +57,11 @@ const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb
     color: "text-emerald-400",
     blurb: "You're the band people in your city actually know. Small clubs book you, the local press answers.",
     unlocks: [
-      "Small club bookings (100–500 capacity)",
-      "Local newspaper features and weekly print circulation",
-      "City-wide DikCok and Twaater discoverability",
-      "First sponsorship offers from neighborhood brands",
+      { label: "Small club bookings (100–500 capacity)", to: "/gig-booking" },
+      { label: "Local newspaper features and weekly print circulation", to: "/media/newspapers" },
+      { label: "City-wide DikCok discoverability", to: "/dikcok" },
+      { label: "Twaater growth and hashtag traction", to: "/twaater" },
+      { label: "First sponsorship offers from neighborhood brands", to: "/sponsorships" },
     ],
   },
   regional: {
@@ -62,11 +70,11 @@ const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb
     color: "text-sky-400",
     blurb: "Word has spread across nearby cities and your home country. Mid-size venues and the bridge media tier open up.",
     unlocks: [
-      "Metro Music magazine + On Record podcast (bridge media tier @ ~400 fame)",
-      "Theaters and mid-cap venues (500–2,500 capacity)",
-      "Regional radio rotation and chart entries",
-      "Cross-city tour routing without losing money on transit",
-      "Festival side-stage slot offers",
+      { label: "Metro Music magazine + On Record podcast (bridge media tier @ ~400 fame)", to: "/media/magazines" },
+      { label: "Theaters and mid-cap venues (500–2,500 capacity)", to: "/gig-booking" },
+      { label: "Regional radio rotation and chart entries", to: "/music/charts" },
+      { label: "Cross-city tour routing without losing money on transit", to: "/tour-manager" },
+      { label: "Festival side-stage slot offers", to: "/festivals" },
     ],
   },
   national: {
@@ -75,11 +83,12 @@ const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb
     color: "text-amber-400",
     blurb: "You're a household name in your country. Major venues, national press and award nominations enter play.",
     unlocks: [
-      "National radio stations and TV interview shows",
-      "Arena bookings (5k–20k capacity) and headline tour slots",
-      "Major label scouting and full distribution deals",
-      "Award show nominations and red-carpet invites",
-      "National sponsorship campaigns and modelling offers",
+      { label: "National radio stations and TV interview shows", to: "/media/tv-shows" },
+      { label: "Arena bookings (5k–20k capacity) and headline tour slots", to: "/tour-manager" },
+      { label: "Major label scouting and full distribution deals", to: "/labels" },
+      { label: "Award show nominations and red-carpet invites", to: "/awards" },
+      { label: "National sponsorship campaigns", to: "/sponsorships" },
+      { label: "Modelling offers and photo shoots", to: "/modeling" },
     ],
   },
   international: {
@@ -88,10 +97,11 @@ const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb
     color: "text-violet-400",
     blurb: "Neighboring countries warm up via 20% fame spillover. You're touring the world and charting abroad.",
     unlocks: [
-      "Stadium tours and multi-country routing",
-      "Global streaming chart entries and territory sales without prior visits",
-      "International press coverage and Eurovision-style events",
-      "Crypto/token listings and global merchandise demand",
+      { label: "Stadium tours and multi-country routing", to: "/tour-manager" },
+      { label: "Global streaming chart entries", to: "/country-charts" },
+      { label: "Territory sales without prior visits", to: "/streaming/dashboard" },
+      { label: "International press coverage and Eurovision-style events", to: "/major-events" },
+      { label: "Global merchandise demand", to: "/merchandise" },
     ],
   },
   legendary: {
@@ -100,10 +110,10 @@ const REACH_INFO: Record<Reach, { title: string; icon: any; color: string; blurb
     color: "text-fuchsia-400",
     blurb: "Hall-of-fame territory. You shape the world more than it shapes you.",
     unlocks: [
-      "Hall of Immortals eligibility",
-      "Permanent legacy bonuses for your children's careers",
-      "Lifetime achievement awards and tributes",
-      "Maximum sponsorship + dividend ceilings",
+      { label: "Hall of Immortals eligibility", to: "/hall-of-immortals" },
+      { label: "Permanent legacy bonuses for your children's careers", to: "/family/timeline" },
+      { label: "Lifetime achievement awards and tributes", to: "/awards" },
+      { label: "Maximum sponsorship + dividend ceilings", to: "/sponsorships" },
     ],
   },
 };
@@ -218,9 +228,22 @@ export default function ProgressionPanel() {
                   <p className="text-muted-foreground">{info.blurb}</p>
                   <div>
                     <div className="text-xs font-medium mb-1">What this unlocks</div>
-                    <ul className="space-y-1 text-xs text-muted-foreground">
+                    <ul className="space-y-1 text-xs">
                       {info.unlocks.map(u => (
-                        <li key={u} className="flex gap-2"><span className="text-primary">•</span>{u}</li>
+                        <li key={u.label} className="flex gap-2 items-start">
+                          <span className="text-primary mt-0.5">•</span>
+                          {u.to ? (
+                            <Link
+                              to={u.to}
+                              className="group inline-flex items-start gap-1 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <span className="underline-offset-2 group-hover:underline">{u.label}</span>
+                              <ArrowUpRight className="h-3 w-3 mt-0.5 opacity-60 group-hover:opacity-100 flex-shrink-0" />
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">{u.label}</span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </div>
