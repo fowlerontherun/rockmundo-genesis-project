@@ -228,9 +228,22 @@ export default function ProgressionPanel() {
                   <p className="text-muted-foreground">{info.blurb}</p>
                   <div>
                     <div className="text-xs font-medium mb-1">What this unlocks</div>
-                    <ul className="space-y-1 text-xs text-muted-foreground">
+                    <ul className="space-y-1 text-xs">
                       {info.unlocks.map(u => (
-                        <li key={u} className="flex gap-2"><span className="text-primary">•</span>{u}</li>
+                        <li key={u.label} className="flex gap-2 items-start">
+                          <span className="text-primary mt-0.5">•</span>
+                          {u.to ? (
+                            <Link
+                              to={u.to}
+                              className="group inline-flex items-start gap-1 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <span className="underline-offset-2 group-hover:underline">{u.label}</span>
+                              <ArrowUpRight className="h-3 w-3 mt-0.5 opacity-60 group-hover:opacity-100 flex-shrink-0" />
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">{u.label}</span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </div>
