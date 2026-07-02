@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { getBandFameTitle, BAND_FAME_THRESHOLDS } from '@/utils/bandFame';
+import { FameTimelineChart } from './FameTimelineChart';
 
 interface BandFameDisplayProps {
   bandId: string;
@@ -95,6 +96,8 @@ export function BandFameDisplay({ bandId }: BandFameDisplayProps) {
           </div>
         </CardContent>
       </Card>
+
+      <FameTimelineChart bandId={bandId} currentFame={currentFame} />
 
       <Card>
         <CardHeader>
