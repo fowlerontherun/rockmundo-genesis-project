@@ -18,6 +18,7 @@ import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { useGigDayReminders } from "@/hooks/useGigDayReminders";
+import { useReachMilestoneReminders } from "@/hooks/useReachMilestoneReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
