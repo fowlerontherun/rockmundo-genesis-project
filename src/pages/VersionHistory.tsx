@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.442",
+    date: "2026-07-06",
+    changes: [
+      { type: 'improvement', description: "**Realistic revenue & tax math in `resolve_company_demand`.** The daily demand resolver now computes each company's per-customer ticket size from the *actual* SKUs on the shelf: a stock-weighted average of `company_inventory.unit_price` across `is_active` rows, honoring the storefront's `sold_out_behavior` (sold-out SKUs are excluded when behavior is `hide`, otherwise still counted). Falls back to the old price-tier constant only when the company has no active inventory. Taxes now combine `company_type_definitions.base_tax_rate` with the sitting mayor's `city_laws.sales_tax_rate` (currently-effective row picked by `effective_from`/`effective_until`) — replacing the previous flat 0.05 constant — with the combined rate clamped to 95%. The city treasury ledger description records both components (e.g. `Corporate tax: cafe (base 20% + city sales 8%)`), and `company_city_tax_payments.tax_rate` stores the combined effective rate so analytics reflect what was actually collected." },
+    ],
+  },
+  {
     version: "1.1.441",
     date: "2026-07-06",
     changes: [
