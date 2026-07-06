@@ -59,6 +59,9 @@ const Layout = () => {
   // Reminders for gigs in the next 24h
   useGigDayReminders();
 
+  // Reminders when close to unlocking the next reach tier (local/regional/national)
+  useReachMilestoneReminders();
+
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
 
