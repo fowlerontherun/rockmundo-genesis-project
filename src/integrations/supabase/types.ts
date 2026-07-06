@@ -36882,10 +36882,12 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
+      is_company_owner: { Args: { _company_id: string }; Returns: boolean }
       is_master_discovered: {
         Args: { p_mentor_id: string; p_profile_id: string }
         Returns: boolean
       }
+      is_storefront_open: { Args: { _company_id: string }; Returns: boolean }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
       log_child_school_event: {
@@ -36994,6 +36996,10 @@ export type Database = {
           p_funded_from: string
           p_party_id?: string
         }
+        Returns: string
+      }
+      storefront_sold_out_behavior: {
+        Args: { _company_id: string }
         Returns: string
       }
       swap_gettit_comment_vote: {
