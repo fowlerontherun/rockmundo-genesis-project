@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.441",
+    date: "2026-07-06",
+    changes: [
+      { type: 'improvement', description: "**Server-side enforcement of storefront visibility.** Buyer-facing reads of `company_storefront`, `company_inventory`, and `company_services` are now RLS-restricted at the database level. New SECURITY DEFINER helpers `public.is_storefront_open(company_id)` (checks `is_public`, `open_days`, and current-UTC hour against `open_hour`/`close_hour`, including overnight and 24h windows) and `public.storefront_sold_out_behavior(company_id)` power the new SELECT policies. Non-owners can only read a storefront row when it is public and currently within service hours; only see inventory rows that are `is_active`, from an open storefront, and either in stock or the storefront's `sold_out_behavior` is not `hide`; and only see service rows that are `is_active` on an open storefront. Owners always see every row for their own companies via `public.is_company_owner`, so the management UI keeps working unchanged." },
+    ],
+  },
+  {
     version: "1.1.440",
     date: "2026-07-06",
     changes: [
