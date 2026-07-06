@@ -18,6 +18,7 @@ import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
 import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { useGigDayReminders } from "@/hooks/useGigDayReminders";
+import { useReachMilestoneReminders } from "@/hooks/useReachMilestoneReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
@@ -57,6 +58,9 @@ const Layout = () => {
 
   // Reminders for gigs in the next 24h
   useGigDayReminders();
+
+  // Reminders when close to unlocking the next reach tier (local/regional/national)
+  useReachMilestoneReminders();
 
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();

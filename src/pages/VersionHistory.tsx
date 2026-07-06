@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.440",
+    date: "2026-07-06",
+    changes: [
+      { type: 'feature', description: "**Reach milestone reminder notifications.** New `useReachMilestoneReminders` hook (wired globally in `Layout`) watches the active character's `profiles.fame` and, once they cross 85% of the next reach threshold (Regional 1,000 / National 3,500 / International 18,000 — from `BAND_FAME_THRESHOLDS` via `getNextReachTier`), fires a persistent achievement notification in the bell: '⭐ Almost Regional reach! Just X fame to unlock regional reach.' with an action link to `/progression`. Dedupes per (character, next tier) via `metadata.reminder_kind='reach_milestone'` + `metadata.milestone` + `metadata.profile_id` so each milestone only ever reminds the player once. Polls every 5 minutes." },
+    ],
+  },
+  {
     version: "1.1.439",
     date: "2026-07-02",
     changes: [
