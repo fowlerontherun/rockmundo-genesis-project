@@ -6300,31 +6300,49 @@ export type Database = {
       }
       company_demand_log: {
         Row: {
+          avg_unit_price: number | null
+          base_tax_rate: number | null
+          combined_tax_rate: number | null
           company_id: string
           created_at: string
           customers: number
           demand_score: number
           id: string
+          net_revenue: number | null
           resolved_for: string
           revenue: number
+          sales_tax_rate: number | null
+          tax_amount: number | null
         }
         Insert: {
+          avg_unit_price?: number | null
+          base_tax_rate?: number | null
+          combined_tax_rate?: number | null
           company_id: string
           created_at?: string
           customers?: number
           demand_score?: number
           id?: string
+          net_revenue?: number | null
           resolved_for: string
           revenue?: number
+          sales_tax_rate?: number | null
+          tax_amount?: number | null
         }
         Update: {
+          avg_unit_price?: number | null
+          base_tax_rate?: number | null
+          combined_tax_rate?: number | null
           company_id?: string
           created_at?: string
           customers?: number
           demand_score?: number
           id?: string
+          net_revenue?: number | null
           resolved_for?: string
           revenue?: number
+          sales_tax_rate?: number | null
+          tax_amount?: number | null
         }
         Relationships: [
           {
