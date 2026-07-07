@@ -52,7 +52,7 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
       const [demand, tx, cityTax, employees, inventory, shifts] = await Promise.all([
         (supabase as any)
           .from("company_demand_log")
-          .select("resolved_for, customers, revenue, demand_score")
+          .select("resolved_for, customers, revenue, demand_score, avg_unit_price, base_tax_rate, sales_tax_rate, combined_tax_rate, tax_amount, net_revenue")
           .eq("company_id", companyId)
           .gte("resolved_for", sinceDate)
           .order("resolved_for", { ascending: true }),
@@ -180,6 +180,42 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
     }
     return Array.from(map.values());
   }, [data]);
+
+  const revenueTaxBreakdown = useMemo(() => {
+    if (!data) return [] as any[];
+    return (data.demand as any[])
+      .slice()
+      .sort((a, b) => (a.resolved_for > b.resolved_for ? 1 : -1))
+      .map((d: any) => {
+        const rev = Number(d.revenue) || 0;
+        const tax = Number(d.tax_amount) || 0;
+        const net = d.net_revenue != null ? Number(d.net_revenue) : rev - tax;
+        return {
+          date: String(d.resolved_for).slice(0, 10),
+          customers: Number(d.customers) || 0,
+          avgUnitPrice: Number(d.avg_unit_price) || 0,
+          gross: rev,
+          baseTaxRate: Number(d.base_tax_rate) || 0,
+          salesTaxRate: Number(d.sales_tax_rate) || 0,
+          combinedRate: Number(d.combined_tax_rate) || 0,
+          tax,
+          net,
+        };
+      });
+  }, [data]);
+
+  const breakdownTotals = useMemo(() => {
+    return revenueTaxBreakdown.reduce(
+      (acc, r) => {
+        acc.customers += r.customers;
+        acc.gross += r.gross;
+        acc.tax += r.tax;
+        acc.net += r.net;
+        return acc;
+      },
+      { customers: 0, gross: 0, tax: 0, net: 0 }
+    );
+  }, [revenueTaxBreakdown]);
 
   const kpis = useMemo(() => {
     const last7 = daily.slice(-7);
@@ -342,6 +378,119 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Revenue & Tax Breakdown */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Landmark className="h-4 w-4" />
+            Revenue & tax breakdown
+          </CardTitle>
+          <CardDescription className="text-xs">
+            How each day's storefront outcome was priced and taxed — customers × average unit price gives gross,
+            then base corporate tax (from company type) plus city sales tax (mayor law) determine tax and net.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {revenueTaxBreakdown.length === 0 ? (
+            <p className="text-xs text-fm-fg-muted py-6 text-center">
+              No resolved storefront demand yet in this window.
+            </p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={revenueTaxBreakdown} margin={{ top: 8, right: 12, bottom: 0, left: -8 }}>
+                  <CartesianGrid stroke="hsl(var(--fm-border))" strokeDasharray="2 3" vertical={false} />
+                  <XAxis dataKey="date" {...axis} tickFormatter={v => format(new Date(v), "MMM d")} />
+                  <YAxis yAxisId="left" {...axis} tickFormatter={v => `$${fmtCompact(v)}`} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    {...axis}
+                    tickFormatter={v => `${(v * 100).toFixed(0)}%`}
+                    domain={[0, 'auto']}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: number, name: string) => {
+                      if (name === "Combined tax rate" || name === "Avg unit price") {
+                        return name === "Combined tax rate"
+                          ? [`${(value * 100).toFixed(2)}%`, name]
+                          : [fmtCurrency(value), name];
+                      }
+                      return [fmtCurrency(value), name];
+                    }}
+                    labelFormatter={l => format(new Date(l), "PPP")}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Bar yAxisId="left" dataKey="net" name="Net revenue" stackId="rev" fill="hsl(var(--fm-good))" />
+                  <Bar yAxisId="left" dataKey="tax" name="Tax collected" stackId="rev" fill="hsl(var(--fm-bad))" />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="combinedRate"
+                    name="Combined tax rate"
+                    stroke="#f59e0b"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+
+              <div className="grid grid-cols-4 gap-2 text-[11px] rounded-md border border-fm-border bg-fm-panel-2/40 p-2">
+                <div>
+                  <div className="text-fm-fg-muted">Customers</div>
+                  <div className="font-semibold">{fmtCompact(breakdownTotals.customers)}</div>
+                </div>
+                <div>
+                  <div className="text-fm-fg-muted">Gross</div>
+                  <div className="font-semibold">{fmtCurrency(breakdownTotals.gross)}</div>
+                </div>
+                <div>
+                  <div className="text-fm-fg-muted">Tax paid</div>
+                  <div className="font-semibold text-rose-500">{fmtCurrency(breakdownTotals.tax)}</div>
+                </div>
+                <div>
+                  <div className="text-fm-fg-muted">Net</div>
+                  <div className="font-semibold text-emerald-500">{fmtCurrency(breakdownTotals.net)}</div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-[11px] min-w-[560px]">
+                  <thead className="text-fm-fg-muted">
+                    <tr className="border-b border-fm-border">
+                      <th className="text-left font-normal py-1.5 px-2">Date</th>
+                      <th className="text-right font-normal py-1.5 px-2">Cust.</th>
+                      <th className="text-right font-normal py-1.5 px-2">Avg price</th>
+                      <th className="text-right font-normal py-1.5 px-2">Gross</th>
+                      <th className="text-right font-normal py-1.5 px-2">Base tax</th>
+                      <th className="text-right font-normal py-1.5 px-2">City tax</th>
+                      <th className="text-right font-normal py-1.5 px-2">Tax $</th>
+                      <th className="text-right font-normal py-1.5 px-2">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revenueTaxBreakdown.slice().reverse().slice(0, 14).map((r) => (
+                      <tr key={r.date} className="border-b border-fm-border/40">
+                        <td className="py-1 px-2 whitespace-nowrap">{format(new Date(r.date), "MMM d")}</td>
+                        <td className="py-1 px-2 text-right">{r.customers}</td>
+                        <td className="py-1 px-2 text-right">{fmtCurrency(r.avgUnitPrice)}</td>
+                        <td className="py-1 px-2 text-right">{fmtCurrency(r.gross)}</td>
+                        <td className="py-1 px-2 text-right text-fm-fg-muted">{(r.baseTaxRate * 100).toFixed(1)}%</td>
+                        <td className="py-1 px-2 text-right text-fm-fg-muted">{(r.salesTaxRate * 100).toFixed(1)}%</td>
+                        <td className="py-1 px-2 text-right text-rose-500">{fmtCurrency(r.tax)}</td>
+                        <td className="py-1 px-2 text-right text-emerald-500 font-medium">{fmtCurrency(r.net)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
 
       {/* Customers */}
       <div className="grid gap-3 md:grid-cols-2">

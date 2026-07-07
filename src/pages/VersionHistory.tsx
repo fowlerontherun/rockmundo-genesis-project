@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.443",
+    date: "2026-07-07",
+    changes: [
+      { type: 'feature', description: "**Revenue & tax breakdown on storefront demand analytics.** `resolve_company_demand` now persists the per-outcome pricing math it computes (`avg_unit_price`, `base_tax_rate`, `sales_tax_rate`, `combined_tax_rate`, `tax_amount`, `net_revenue`) into `company_demand_log`, and `CompanyAnalytics` renders a new card that visualizes it: a stacked bar of net vs tax per day with the combined effective rate overlaid, totals for customers/gross/tax/net over the window, and a per-day table showing customers, average unit price, gross, base tax %, city sales tax %, tax paid, and net so owners can see exactly how `unit_price` and `base_tax_rate` shaped each day's outcome." },
+    ],
+  },
+  {
     version: "1.1.442",
     date: "2026-07-06",
     changes: [
