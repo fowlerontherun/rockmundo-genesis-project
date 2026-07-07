@@ -52,7 +52,7 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
       const [demand, tx, cityTax, employees, inventory, shifts] = await Promise.all([
         (supabase as any)
           .from("company_demand_log")
-          .select("resolved_for, customers, revenue, demand_score")
+          .select("resolved_for, customers, revenue, demand_score, avg_unit_price, base_tax_rate, sales_tax_rate, combined_tax_rate, tax_amount, net_revenue")
           .eq("company_id", companyId)
           .gte("resolved_for", sinceDate)
           .order("resolved_for", { ascending: true }),
