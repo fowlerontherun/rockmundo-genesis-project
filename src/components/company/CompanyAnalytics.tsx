@@ -181,6 +181,42 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
     return Array.from(map.values());
   }, [data]);
 
+  const revenueTaxBreakdown = useMemo(() => {
+    if (!data) return [] as any[];
+    return (data.demand as any[])
+      .slice()
+      .sort((a, b) => (a.resolved_for > b.resolved_for ? 1 : -1))
+      .map((d: any) => {
+        const rev = Number(d.revenue) || 0;
+        const tax = Number(d.tax_amount) || 0;
+        const net = d.net_revenue != null ? Number(d.net_revenue) : rev - tax;
+        return {
+          date: String(d.resolved_for).slice(0, 10),
+          customers: Number(d.customers) || 0,
+          avgUnitPrice: Number(d.avg_unit_price) || 0,
+          gross: rev,
+          baseTaxRate: Number(d.base_tax_rate) || 0,
+          salesTaxRate: Number(d.sales_tax_rate) || 0,
+          combinedRate: Number(d.combined_tax_rate) || 0,
+          tax,
+          net,
+        };
+      });
+  }, [data]);
+
+  const breakdownTotals = useMemo(() => {
+    return revenueTaxBreakdown.reduce(
+      (acc, r) => {
+        acc.customers += r.customers;
+        acc.gross += r.gross;
+        acc.tax += r.tax;
+        acc.net += r.net;
+        return acc;
+      },
+      { customers: 0, gross: 0, tax: 0, net: 0 }
+    );
+  }, [revenueTaxBreakdown]);
+
   const kpis = useMemo(() => {
     const last7 = daily.slice(-7);
     const prev7 = daily.slice(-14, -7);
