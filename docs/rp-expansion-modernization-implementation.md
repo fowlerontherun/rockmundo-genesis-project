@@ -117,10 +117,10 @@ Evolve current global reputation scores into a graph-based model with multi-cont
 - Contradictory events reduce confidence before score inversion.
 
 ## A.4 API Endpoints
-- `GET /reputation/:entityId/overview`
-- `GET /reputation/:entityId/timeline?context=...`
-- `POST /reputation/events` (internal service only)
-- `GET /reputation/:entityId/explain/:edgeId`
+- `GET /v2/reputation/:entityId/overview`
+- `GET /v2/reputation/:entityId/timeline?context=...`
+- `POST /v2/reputation/events` (internal service only)
+- `GET /v2/reputation/:entityId/explain/:edgeId`
 
 ## A.5 Frontend
 - Reputation radar by context.
@@ -600,7 +600,7 @@ Each service owns write-path business rules and emits domain events. Read models
 - [ ] Create DDL migrations for `reputation_entities`, `reputation_edges`, `reputation_events_v2`.
 - [ ] Backfill legacy reputation table to graph edges.
 - [ ] Implement edge decay scheduler.
-- [ ] Build `GET /reputation/:id/overview` endpoint.
+- [ ] Build `GET /v2/reputation/:id/overview` endpoint.
 - [ ] Add explainability drawer component.
 
 ## 21.2 Governance
@@ -722,7 +722,7 @@ A release wave is considered complete when:
     }
   ],
   "intensity": 0.0,
-  "public_visibility": "private|friends|city|global",
+  "visibility_scope": "private|friends|city|global",
   "effects": {
     "reputation": [],
     "economy": [],
