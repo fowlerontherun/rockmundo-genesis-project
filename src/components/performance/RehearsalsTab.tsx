@@ -59,7 +59,6 @@ export function RehearsalsTab() {
           throw new Error('Band data not found');
         }
         
-        console.log('Band data loaded:', { name: bandData.name, balance: bandData.band_balance });
         setUserBand(bandData);
 
         // Load scheduled rehearsals
