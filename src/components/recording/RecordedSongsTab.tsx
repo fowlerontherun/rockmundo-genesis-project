@@ -25,13 +25,20 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
   const { data: recordedSongs, isLoading } = useQuery({
     queryKey: ["recorded-songs-list", userId, bandId],
     queryFn: async () => {
-      // Get all songs with status = 'recorded' for this user
-      const { data: songs, error: songsError } = await supabase
+      // Get recorded songs visible in this context. Band recordings use band_id so
+      // current members can see the band's recorded catalog even when another member
+      // authored the original song; solo view remains scoped to the current user.
+      let songQuery = supabase
         .from("songs")
         .select("*, bands(name, artist_name)")
-        .eq("user_id", userId)
         .eq("status", "recorded")
         .order("updated_at", { ascending: false });
+
+      songQuery = bandId
+        ? songQuery.eq("band_id", bandId)
+        : songQuery.eq("user_id", userId).is("band_id", null);
+
+      const { data: songs, error: songsError } = await songQuery;
 
       if (songsError) throw songsError;
 

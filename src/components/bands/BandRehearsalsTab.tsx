@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarClock, Music2, DollarSign } from "lucide-react";
+import { CalendarClock, Music2, DollarSign, AlertCircle } from "lucide-react";
 
 interface BandRehearsalsTabProps {
   bandId: string;
@@ -66,12 +66,14 @@ function getStatusBadge(status: string) {
 export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
   const [loading, setLoading] = useState(true);
   const [rehearsals, setRehearsals] = useState<BandRehearsal[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchRehearsals = async () => {
       setLoading(true);
+      setErrorMessage(null);
       try {
         const { data, error } = await supabase
           .from("band_rehearsals")
@@ -92,6 +94,7 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
         console.error("Failed to load rehearsal schedule", error);
         if (isMounted) {
           setRehearsals([]);
+          setErrorMessage(error instanceof Error ? error.message : "Unable to load rehearsals.");
         }
       } finally {
         if (isMounted) {
@@ -167,6 +170,20 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
           </Card>
         ))}
       </div>
+    );
+  }
+
+
+  if (errorMessage) {
+    return (
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" /> Rehearsals unavailable
+          </CardTitle>
+          <CardDescription>{errorMessage}</CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 

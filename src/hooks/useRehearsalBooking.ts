@@ -110,6 +110,10 @@ export function useRehearsalBooking() {
   const [isBooking, setIsBooking] = useState(false);
 
   const bookRehearsal = async (params: BookRehearsalParams) => {
+    if (isBooking) {
+      throw new Error('A rehearsal booking is already in progress.');
+    }
+
     setIsBooking(true);
     
     try {
@@ -169,22 +173,28 @@ export function useRehearsalBooking() {
           .eq('id', params.bandId);
       }
 
-      // Create scheduled activity entries for ALL band members
-      await createBandScheduledActivities({
-        bandId: params.bandId,
-        activityType: 'rehearsal',
-        scheduledStart: params.scheduledStart,
-        scheduledEnd,
-        title: `Band Rehearsal - ${params.roomName}`,
-        location: params.roomLocation,
-        linkedRehearsalId: rehearsalData.id,
-        metadata: {
-          rehearsalId: rehearsalData.id,
-          roomId: params.roomId,
-          songId: params.songId,
-          setlistId: params.setlistId,
-        },
-      });
+      // Create scheduled activity entries for ALL band members. If this fails, rollback
+      // the rehearsal row so we do not leave a booked rehearsal that does not block members.
+      try {
+        await createBandScheduledActivities({
+          bandId: params.bandId,
+          activityType: 'rehearsal',
+          scheduledStart: params.scheduledStart,
+          scheduledEnd,
+          title: `Band Rehearsal - ${params.roomName}`,
+          location: params.roomLocation,
+          linkedRehearsalId: rehearsalData.id,
+          metadata: {
+            rehearsalId: rehearsalData.id,
+            roomId: params.roomId,
+            songId: params.songId,
+            setlistId: params.setlistId,
+          },
+        });
+      } catch (scheduleError) {
+        await supabase.from('band_rehearsals').delete().eq('id', rehearsalData.id);
+        throw scheduleError;
+      }
 
       // Log activity - use the profile context from band membership
       // logGameActivity accepts userId which maps to profile in character-isolated context
@@ -221,7 +231,7 @@ export function useRehearsalBooking() {
       }
 
       toast({
-        title: 'Rehearsal Booked!',
+          title: 'Rehearsal Booked!',
         description: `${params.duration}-hour rehearsal scheduled at ${params.roomName}`,
       });
 
@@ -234,7 +244,7 @@ export function useRehearsalBooking() {
     } catch (error) {
       console.error('Failed to book rehearsal:', error);
       toast({
-        title: 'Booking Failed',
+          title: 'Booking Failed',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });

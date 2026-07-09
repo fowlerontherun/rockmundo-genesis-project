@@ -271,8 +271,7 @@ export const useCreateRecordingSession = () => {
       const orchestraCost = orchestraOption?.cost || 0;
       const totalCost = studioCost + producerCost + orchestraCost;
 
-      const scheduledEnd = new Date();
-      scheduledEnd.setHours(scheduledEnd.getHours() + input.duration_hours);
+      const scheduledEnd = sessionEnd;
 
       // If band_id is provided, check band balance and insert earnings (trigger handles balance)
       if (input.band_id) {
@@ -346,6 +345,7 @@ export const useCreateRecordingSession = () => {
           total_cost: totalCost,
           quality_improvement: finalQuality - song.quality_score,
           status: 'in_progress',
+          scheduled_start: now.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
           city_id: studioInfo?.city_id || null,
         } as any)
@@ -376,22 +376,28 @@ export const useCreateRecordingSession = () => {
       const studioName = studioData?.name || 'Recording Studio';
 
       if (input.band_id) {
-        // Band session - schedule for ALL band members
-        await createBandScheduledActivities({
-          bandId: input.band_id,
-          activityType: 'recording',
-          scheduledStart: now,
-          scheduledEnd: sessionEnd,
-          title: 'Recording Session',
-          description: `Recording at ${studioName}`,
-          location: studioName,
-          linkedRecordingId: sessionData.id,
-          metadata: {
-            sessionId: sessionData.id,
-            studioId: input.studio_id,
-            songId: input.song_id,
-          },
-        });
+        // Band session - schedule for ALL band members. Roll back the session row if
+        // schedule fan-out fails so no orphaned band recording remains.
+        try {
+          await createBandScheduledActivities({
+            bandId: input.band_id,
+            activityType: 'recording',
+            scheduledStart: now,
+            scheduledEnd: sessionEnd,
+            title: 'Recording Session',
+            description: `Recording at ${studioName}`,
+            location: studioName,
+            linkedRecordingId: sessionData.id,
+            metadata: {
+              sessionId: sessionData.id,
+              studioId: input.studio_id,
+              songId: input.song_id,
+            },
+          });
+        } catch (scheduleError) {
+          await supabase.from('recording_sessions').delete().eq('id', sessionData.id);
+          throw scheduleError;
+        }
       } else {
         // Solo artist - schedule just for the user
         await createScheduledActivity({

@@ -203,6 +203,25 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     return [];
   }
   
+  // Remove any existing rows for this linked band event before inserting. This keeps
+  // retries/idempotent UI submissions from creating duplicate member blocks.
+  if (params.linkedRehearsalId || params.linkedRecordingId || params.linkedGigId) {
+    let deleteQuery = supabase
+      .from('player_scheduled_activities' as any)
+      .delete()
+      .contains('metadata', { band_id: params.bandId });
+
+    if (params.linkedRehearsalId) deleteQuery = deleteQuery.eq('linked_rehearsal_id', params.linkedRehearsalId);
+    if (params.linkedRecordingId) deleteQuery = deleteQuery.eq('linked_recording_id', params.linkedRecordingId);
+    if (params.linkedGigId) deleteQuery = deleteQuery.eq('linked_gig_id', params.linkedGigId);
+
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError) {
+      console.error('Failed to clear existing band scheduled activities:', deleteError);
+      throw new Error('Failed to prepare band member schedules');
+    }
+  }
+
   // Create activity for each band member
   const insertData = validMembers.map(userId => ({
     user_id: userId,
@@ -210,6 +229,7 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     activity_type: params.activityType,
     scheduled_start: params.scheduledStart.toISOString(),
     scheduled_end: params.scheduledEnd.toISOString(),
+    duration_minutes: Math.max(0, Math.round((params.scheduledEnd.getTime() - params.scheduledStart.getTime()) / 60000)),
     title: params.title,
     description: params.description || null,
     location: params.location || null,

@@ -166,14 +166,38 @@ export function useScheduledActivities(date: Date, userId?: string) {
         rehearsals = bandRehearsals || [];
       }
 
-      // Fetch recordings
-      const { data: recordings } = await supabase
-        .from('recording_sessions')
-        .select('*, city_studios(name), songs:song_id(title)')
-        .eq('user_id', userId)
-        .gte('scheduled_start', dayStart.toISOString())
-        .lte('scheduled_start', dayEnd.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed']);
+      // Fetch recordings. Solo recordings are scoped to the user; band recordings are
+      // visible to active current members only via userBandIds.
+      const recordingQueries = [
+        supabase
+          .from('recording_sessions')
+          .select('*, city_studios(name), songs:song_id(title), bands:band_id(name)')
+          .eq('user_id', userId)
+          .is('band_id', null)
+          .gte('scheduled_start', dayStart.toISOString())
+          .lte('scheduled_start', dayEnd.toISOString())
+          .in('status', ['scheduled', 'in_progress', 'completed']),
+      ];
+
+      if (userBandIds.length > 0) {
+        recordingQueries.push(
+          supabase
+            .from('recording_sessions')
+            .select('*, city_studios(name), songs:song_id(title), bands:band_id(name)')
+            .in('band_id', userBandIds)
+            .gte('scheduled_start', dayStart.toISOString())
+            .lte('scheduled_start', dayEnd.toISOString())
+            .in('status', ['scheduled', 'in_progress', 'completed']),
+        );
+      }
+
+      const recordingResults = await Promise.all(recordingQueries);
+      recordingResults.forEach(({ error }) => {
+        if (error) throw error;
+      });
+      const recordings = Array.from(
+        new Map(recordingResults.flatMap(({ data }) => data || []).map((recording: any) => [recording.id, recording])).values(),
+      );
 
       // TODO(beta): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
 
@@ -246,7 +270,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           };
         }),
         ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: activeProfile.id, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name || 'Band'}`, location: r.rehearsal_rooms?.location || r.rehearsal_rooms?.name, linked_rehearsal_id: r.id })),
-        ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: activeProfile.id, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title || 'Studio session'}`, location: s.city_studios?.name, linked_recording_id: s.id })),
+        ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: activeProfile.id, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: s.band_id ? `Band Recording: ${s.songs?.title || 'Studio session'}` : `Recording: ${s.songs?.title || 'Studio session'}`, location: s.city_studios?.name, linked_recording_id: s.id, metadata: s.band_id ? { band_id: s.band_id, is_band_activity: true } : undefined })),
         ...(travelLegs || []).map((t: any) => ({
           id: t.id,
           user_id: userId,
