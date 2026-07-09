@@ -69,7 +69,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const dayEnd = endOfDay(date);
 
       // Fetch scheduled activities filtered by profile_id for character isolation
-      const { data: scheduledData } = await (supabase as any)
+      const { data: scheduledData, error: scheduledError } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('profile_id', activeProfile.id)
@@ -77,19 +77,15 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
+      if (scheduledError) throw scheduledError;
+
       // Fetch active work shifts from profile_activity_statuses
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-      
       let workShifts: any[] = [];
-      if (profile) {
+      if (activeProfile) {
         const { data: activeWorkShifts } = await supabase
           .from('profile_activity_statuses')
           .select('*, metadata')
-          .eq('profile_id', profile.id)
+          .eq('profile_id', activeProfile.id)
           .eq('activity_type', 'work_shift')
           .gte('ends_at', dayStart.toISOString())
           .lte('started_at', dayEnd.toISOString());
@@ -117,7 +113,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const { data: userBands } = await supabase
         .from('band_members')
         .select('band_id')
-        .eq('user_id', userId);
+        .eq('profile_id', activeProfile.id)
+        .eq('member_status', 'active');
       
       const userBandIds = userBands?.map(b => b.band_id) || [];
 
@@ -151,7 +148,6 @@ export function useScheduledActivities(date: Date, userId?: string) {
             const gigDate = new Date(g.scheduled_date).toISOString().split('T')[0];
             return gigDate === dateString;
           });
-          console.log(`📅 Fetched ${filteredGigs.length} gigs for ${dateString}`);
           gigs = filteredGigs;
         }
       }
@@ -177,6 +173,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .gte('scheduled_start', dayStart.toISOString())
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      // TODO(beta): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
 
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
@@ -214,7 +212,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           .map((r: any) => ({
             id: `release_${r.id}`,
             user_id: userId,
-            profile_id: userId,
+            profile_id: activeProfile.id,
             activity_type: 'release_manufacturing' as const,
             scheduled_start: new Date(new Date(r.manufacturing_complete_at).setHours(12, 0, 0, 0)).toISOString(),
             scheduled_end: new Date(new Date(r.manufacturing_complete_at).setHours(13, 0, 0, 0)).toISOString(),
@@ -235,7 +233,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           return { 
             id: g.id, 
             user_id: userId, 
-            profile_id: userId, 
+            profile_id: activeProfile.id, 
             activity_type: 'gig' as const, 
             scheduled_start: g.scheduled_date, 
             scheduled_end: gigEnd.toISOString(), 
@@ -246,12 +244,12 @@ export function useScheduledActivities(date: Date, userId?: string) {
             metadata: g.tour_id ? { tour_id: g.tour_id, tour_name: g.tours?.name } : undefined,
           };
         }),
-        ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: userId, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name}`, linked_rehearsal_id: r.id })),
-        ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: userId, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title}`, linked_recording_id: s.id })),
+        ...(rehearsals || []).map((r: any) => ({ id: r.id, user_id: userId, profile_id: activeProfile.id, activity_type: 'rehearsal' as const, scheduled_start: r.scheduled_start, scheduled_end: r.scheduled_end, status: r.status, title: `Rehearsal: ${r.bands?.name || 'Band'}`, location: r.rehearsal_rooms?.location || r.rehearsal_rooms?.name, linked_rehearsal_id: r.id })),
+        ...(recordings || []).map((s: any) => ({ id: s.id, user_id: userId, profile_id: activeProfile.id, activity_type: 'recording' as const, scheduled_start: s.scheduled_start, scheduled_end: s.scheduled_end, status: s.status, title: `Recording: ${s.songs?.title || 'Studio session'}`, location: s.city_studios?.name, linked_recording_id: s.id })),
         ...(travelLegs || []).map((t: any) => ({
           id: t.id,
           user_id: userId,
-          profile_id: userId,
+          profile_id: activeProfile.id,
           activity_type: 'travel' as const,
           scheduled_start: t.departure_date,
           scheduled_end: t.arrival_date,

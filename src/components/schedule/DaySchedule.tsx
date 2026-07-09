@@ -1,18 +1,15 @@
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, addHours, isSameHour, isPast } from "date-fns";
-import { 
-  Clock, Play, CheckCircle, Plus, X, ArrowRight,
-  Music, Guitar, Headphones, Briefcase, GraduationCap,
-  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard, Eye
+import { format, differenceInMinutes } from "date-fns";
+import {
+  Clock, ExternalLink, Music, Guitar, Headphones, Briefcase, GraduationCap,
+  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useScheduledActivities, useStartActivity, useCompleteActivity, useDeleteScheduledActivity, type ActivityType } from "@/hooks/useScheduledActivities";
-import { ScheduleActivityDialog } from "./ScheduleActivityDialog";
-import { GigDetailsDialog } from "./GigDetailsDialog";
-import { formatTimeInCityTimezone, getCityTimeLabel } from "@/utils/timezoneUtils";
+import { useScheduledActivities, type ActivityType, type ScheduledActivity } from "@/hooks/useScheduledActivities";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
 interface DayScheduleProps {
   date: Date;
@@ -69,292 +66,89 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   other: "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300",
 };
 
-type ActivityPosition = 'start' | 'middle' | 'end' | 'single';
+const TYPE_LABELS: Record<ActivityType, string> = {
+  songwriting: "Songwriting", gig: "Gig", rehearsal: "Rehearsal", busking: "Busking", recording: "Recording",
+  travel: "Travel", work: "Work", university: "Education", reading: "Reading", mentorship: "Mentorship",
+  youtube_video: "Video", health: "Health", skill_practice: "Practice", open_mic: "Open mic",
+  pr_appearance: "PR", film_production: "Film", festival_attendance: "Festival", festival_performance: "Festival gig",
+  release_manufacturing: "Release", release_promo: "Promotion", teaching: "Teaching", other: "Other",
+};
+
+function getDetailHref(activity: ScheduledActivity) {
+  if (activity.linked_gig_id) return `/gigs/perform/${activity.linked_gig_id}`;
+  if (activity.linked_rehearsal_id) return "/rehearsals";
+  if (activity.linked_recording_id) return "/recording-studio";
+  if (activity.activity_type === "travel") return "/tour-manager";
+  if (activity.activity_type === "work") return "/employment";
+  if (activity.activity_type === "university" || activity.activity_type === "teaching") return "/education";
+  return null;
+}
+
+function formatDuration(activity: ScheduledActivity) {
+  if (activity.duration_minutes) return `${activity.duration_minutes} min`;
+  if (!activity.scheduled_end) return null;
+  const minutes = differenceInMinutes(new Date(activity.scheduled_end), new Date(activity.scheduled_start));
+  if (minutes <= 0) return null;
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
 
 export function DaySchedule({ date, userId }: DayScheduleProps) {
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [gigDetailsOpen, setGigDetailsOpen] = useState(false);
-  const [selectedGigId, setSelectedGigId] = useState<string | null>(null);
-  
-  const { data: activities = [] } = useScheduledActivities(date, userId);
-  const startActivity = useStartActivity();
-  const completeActivity = useCompleteActivity();
-  const deleteActivity = useDeleteScheduledActivity();
-
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
-  // Updated to show activities in ALL hours they span
-  const getActivitiesForHour = (hour: number) => {
-    return activities.filter(activity => {
-      const activityStart = new Date(activity.scheduled_start);
-      const activityEnd = new Date(activity.scheduled_end);
-      
-      // Create hour boundaries for comparison
-      const hourStart = new Date(date);
-      hourStart.setHours(hour, 0, 0, 0);
-      const hourEnd = new Date(date);
-      hourEnd.setHours(hour + 1, 0, 0, 0);
-      
-      // Activity overlaps this hour if it starts before hour ends AND ends after hour starts
-      return activityStart < hourEnd && activityEnd > hourStart;
-    });
-  };
-
-  // Determine where in the activity duration this hour falls
-  const getActivityPosition = (activity: typeof activities[0], hour: number): ActivityPosition => {
-    const activityStart = new Date(activity.scheduled_start);
-    const activityEnd = new Date(activity.scheduled_end);
-    const startHour = activityStart.getHours();
-    
-    // Calculate end hour (handle midnight crossing)
-    let endHour = activityEnd.getHours();
-    if (activityEnd.getMinutes() === 0 && endHour > 0) {
-      // If ends exactly on the hour (e.g., 14:00), the last visible hour is the previous one
-      endHour = endHour - 1;
-    }
-    
-    // Single-hour activity
-    if (startHour === hour && (endHour === hour || (endHour === startHour))) {
-      return 'single';
-    }
-    
-    if (hour === startHour) return 'start';
-    if (hour === endHour) return 'end';
-    return 'middle';
-  };
-
-  const handleAddActivity = (hour: number) => {
-    // Check if this hour is blocked by work
-    const hourActivities = getActivitiesForHour(hour);
-    const hasWorkShift = hourActivities.some(a => a.metadata?.auto_scheduled);
-    if (hasWorkShift) {
-      return; // Don't allow adding activities during work hours
-    }
-    setSelectedHour(hour);
-    setScheduleDialogOpen(true);
-  };
-
-  const handleStart = async (activityId: string) => {
-    await startActivity.mutateAsync(activityId);
-  };
-
-  const handleComplete = async (activityId: string) => {
-    await completeActivity.mutateAsync(activityId);
-  };
-
-  const handleDelete = async (activityId: string) => {
-    if (confirm('Delete this activity?')) {
-      await deleteActivity.mutateAsync(activityId);
-    }
-  };
-
-  const handleViewGigDetails = (activity: typeof activities[0]) => {
-    const gigId = activity.metadata?.gig_id as string;
-    if (gigId) {
-      setSelectedGigId(gigId);
-      setGigDetailsOpen(true);
-    }
-  };
-
-  const getHourStatus = (hour: number) => {
-    const hourDate = addHours(new Date(date).setHours(hour, 0, 0, 0), 0);
-    if (isPast(hourDate) && !isSameHour(hourDate, new Date())) return 'past';
-    if (isSameHour(hourDate, new Date())) return 'current';
-    return 'future';
-  };
-
-  // Get display time with timezone support
-  const getDisplayTime = (activity: typeof activities[0]) => {
-    const metadata = activity.metadata as Record<string, any> | null;
-    const venueTimezone = metadata?.venue_timezone;
-    const venueCityName = metadata?.venue_city_name;
-    
-    if (venueTimezone) {
-      const localTime = formatTimeInCityTimezone(activity.scheduled_start, venueTimezone);
-      const cityLabel = venueCityName ? getCityTimeLabel(venueCityName) : 'Local';
-      return { time: localTime, label: cityLabel, hasTimezone: true };
-    }
-    
-    return { 
-      time: format(new Date(activity.scheduled_start), 'h:mm a'), 
-      label: null, 
-      hasTimezone: false 
-    };
-  };
-
-  // Get position badge for multi-hour activities
-  const getPositionBadge = (position: ActivityPosition) => {
-    switch (position) {
-      case 'start':
-        return (
-          <Badge variant="outline" className="text-xs shrink-0 bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300">
-            Starts
-          </Badge>
-        );
-      case 'middle':
-        return (
-          <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-        );
-      case 'end':
-        return (
-          <Badge variant="outline" className="text-xs shrink-0 bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-300">
-            Ends
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
+  const { data: activities = [], isLoading, error, refetch } = useScheduledActivities(date, userId);
 
   return (
-    <>
-      <Card>
-        <CardHeader className="pb-2 md:pb-3">
-          <CardTitle className="text-sm md:text-lg">{format(date, 'EEEE, MMMM d, yyyy')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-0.5 md:space-y-1 p-3 md:p-6">
-          {hours.map(hour => {
-            const hourActivities = getActivitiesForHour(hour);
-            const status = getHourStatus(hour);
-            
-            return (
-              <div
-                key={hour}
-                className={cn(
-                  "flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded border transition-colors",
-                  status === 'current' && "bg-primary/5 border-primary/20",
-                  status === 'past' && "opacity-60",
-                  hourActivities.length === 0 && "hover:bg-accent/50"
-                )}
-              >
-                <div className="w-12 md:w-16 text-xs md:text-sm font-medium text-muted-foreground">
-                  {format(addHours(new Date().setHours(hour, 0, 0, 0), 0), 'HH:mm')}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  {hourActivities.length === 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 md:h-8 w-full justify-start text-xs"
-                      onClick={() => handleAddActivity(hour)}
-                    >
-                      <Plus className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
-                      <span className="text-muted-foreground">Add</span>
-                    </Button>
-                  ) : (
-                    <div className="space-y-1">
-                      {hourActivities.map(activity => {
-                        const Icon = ACTIVITY_ICONS[activity.activity_type as ActivityType];
-                        const colorClass = ACTIVITY_COLORS[activity.activity_type as ActivityType];
-                        const isAutoScheduled = activity.metadata?.auto_scheduled;
-                        const position = getActivityPosition(activity, hour);
-                        const displayTime = getDisplayTime(activity);
-                        
-                        return (
-                          <div
-                            key={`${activity.id}-${hour}`}
-                            className={cn(
-                              "flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded border text-xs md:text-sm",
-                              colorClass,
-                              isAutoScheduled && "opacity-80",
-                              position === 'middle' && "border-dashed opacity-70"
-                            )}
-                          >
-                            <Icon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate flex items-center gap-1.5">
-                                {activity.title}
-                                {getPositionBadge(position)}
-                              </div>
-                              {activity.location && position !== 'middle' && (
-                                <div className="text-xs text-muted-foreground truncate hidden md:block">
-                                  {activity.location}
-                                  {displayTime.hasTimezone && (
-                                    <span className="ml-1 text-primary/70">
-                                      ({displayTime.time} {displayTime.label})
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            {position !== 'middle' && (
-                              <>
-                                <Badge variant="outline" className="text-xs shrink-0 hidden md:inline-flex">
-                                  {activity.status}
-                                </Badge>
-                                <div className="flex gap-0.5 md:gap-1 shrink-0">
-                                  {activity.status === 'scheduled' && status !== 'past' && position === 'start' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 md:h-7 px-1.5 md:px-2"
-                                      onClick={() => handleStart(activity.id)}
-                                    >
-                                      <Play className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                    </Button>
-                                  )}
-                                  {activity.status === 'in_progress' && position === 'start' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 md:h-7 px-1.5 md:px-2"
-                                      onClick={() => handleComplete(activity.id)}
-                                    >
-                                      <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                    </Button>
-                                  )}
-                                  {activity.activity_type === 'gig' && activity.metadata?.gig_id && position === 'start' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 md:h-7 px-1.5 md:px-2"
-                                      onClick={() => handleViewGigDetails(activity)}
-                                      title="View gig details"
-                                    >
-                                      <Eye className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                    </Button>
-                                  )}
-                                  {!isAutoScheduled && position === 'start' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 md:h-7 px-1.5 md:px-2 text-destructive"
-                                      onClick={() => handleDelete(activity.id)}
-                                    >
-                                      <X className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
+    <Card>
+      <CardHeader className="pb-2 md:pb-3">
+        <CardTitle className="text-sm md:text-lg">{format(date, 'EEEE, MMMM d, yyyy')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 p-3 md:p-6">
+        {isLoading ? (
+          <PageLoadingState title="Loading schedule" description="Checking your booked activities..." />
+        ) : error ? (
+          <PageErrorState title="Schedule could not be loaded" description="Your booked activities are temporarily unavailable." onRetry={() => void refetch()} />
+        ) : activities.length === 0 ? (
+          <PageEmptyState title="No activities booked yet." description="Booked rehearsals, gigs, recording sessions, and other scheduled activities will appear here." />
+        ) : (
+          <div className="space-y-2">
+            {activities.map((activity) => {
+              const Icon = ACTIVITY_ICONS[activity.activity_type] ?? Clock;
+              const href = getDetailHref(activity);
+              const duration = formatDuration(activity);
+              return (
+                <div key={activity.id} className={cn("rounded-lg border p-3", ACTIVITY_COLORS[activity.activity_type])}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 gap-3">
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-sm font-semibold md:text-base">{activity.title}</h3>
+                          <Badge variant="outline" className="bg-background/50 text-xs">{TYPE_LABELS[activity.activity_type] ?? activity.activity_type}</Badge>
+                          {activity.status && <Badge variant="secondary" className="text-xs capitalize">{activity.status.replace('_', ' ')}</Badge>}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span><Clock className="mr-1 inline h-3 w-3" />{format(new Date(activity.scheduled_start), 'h:mm a')}</span>
+                          {activity.scheduled_end && <span>Ends {format(new Date(activity.scheduled_end), 'h:mm a')}{duration ? ` · ${duration}` : ''}</span>}
+                          {activity.location && <span><MapPin className="mr-1 inline h-3 w-3" />{activity.location}</span>}
+                        </div>
+                        {activity.description && <p className="text-xs text-muted-foreground">{activity.description}</p>}
+                      </div>
                     </div>
-                  )}
+                    {href && (
+                      <Button asChild size="sm" variant="outline" className="shrink-0 bg-background/50">
+                        <Link to={href} aria-label={`Open details for ${activity.title}`}>
+                          Details <ExternalLink className="ml-1 h-3 w-3" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      <ScheduleActivityDialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
-        date={date}
-        selectedHour={selectedHour}
-      />
-
-      {selectedGigId && (
-        <GigDetailsDialog
-          open={gigDetailsOpen}
-          onOpenChange={setGigDetailsOpen}
-          gigId={selectedGigId}
-        />
-      )}
-    </>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

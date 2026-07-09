@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -12,8 +11,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const Schedule = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
 
@@ -23,18 +21,10 @@ const Schedule = () => {
   return (
     <FMPageScaffold
       title="Schedule"
-      subtitle="Plan and manage your activities"
+      subtitle="Read-only view of your booked activities"
       backTo="/dashboard"
       backLabel="Back to Dashboard"
       icon={Calendar}
-      headerActions={
-        <div className="flex gap-1.5 flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/songwriting')}>Songwriting</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>Performance</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>Education</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>Life</Button>
-        </div>
-      }
     >
 
       <GigLocationWarning />
@@ -85,7 +75,7 @@ const Schedule = () => {
       </div>
 
       {viewMode === 'day' ? (
-        <DaySchedule date={currentDate} userId={profileId ?? undefined} />
+        <DaySchedule date={currentDate} userId={userId ?? undefined} />
       ) : (
         <Tabs defaultValue={format(weekDays[0], 'yyyy-MM-dd')} className="w-full">
           <TabsList className="w-full grid grid-cols-7 h-auto">
@@ -102,7 +92,7 @@ const Schedule = () => {
           </TabsList>
           {weekDays.map(day => (
             <TabsContent key={day.toISOString()} value={format(day, 'yyyy-MM-dd')}>
-              <DaySchedule date={day} userId={profileId ?? undefined} />
+              <DaySchedule date={day} userId={userId ?? undefined} />
             </TabsContent>
           ))}
         </Tabs>
