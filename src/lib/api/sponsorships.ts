@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertNonEmptyString, throwDbError } from "@/lib/db-errors";
 
 export interface SponsorshipBrand {
   id: string;
@@ -66,73 +67,70 @@ export async function fetchSponsorshipBrands(): Promise<SponsorshipBrand[]> {
     .select('*')
     .eq('is_active', true)
     .order('wealth_tier', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throwDbError(error, { operation: 'list', table: 'sponsorship_brands' });
   return data || [];
 }
 
 export async function fetchSponsorshipOffers(bandId: string): Promise<SponsorshipOffer[]> {
+  const validBandId = assertNonEmptyString(bandId, 'bandId');
   const { data, error } = await supabase
     .from('sponsorship_offers')
-    .select(`
-      *,
-      brand:sponsorship_brands(*)
-    `)
-    .eq('band_id', bandId)
+    .select(`*, brand:sponsorship_brands(*)`)
+    .eq('band_id', validBandId)
     .order('created_at', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throwDbError(error, { operation: 'list', table: 'sponsorship_offers', filters: { bandId: validBandId }, rlsHint: 'Verify offer RLS is scoped to the selected band.' });
   return data || [];
 }
 
 export async function fetchSponsorshipContracts(bandId: string): Promise<SponsorshipContract[]> {
+  const validBandId = assertNonEmptyString(bandId, 'bandId');
   const { data, error } = await supabase
     .from('sponsorship_contracts')
-    .select(`
-      *,
-      brand:sponsorship_brands(*)
-    `)
-    .eq('band_id', bandId)
+    .select(`*, brand:sponsorship_brands(*)`)
+    .eq('band_id', validBandId)
     .order('created_at', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throwDbError(error, { operation: 'list', table: 'sponsorship_contracts', filters: { bandId: validBandId }, rlsHint: 'Verify contract RLS is scoped to the selected band.' });
   return data || [];
 }
 
 export async function fetchContractPayments(contractId: string): Promise<SponsorshipPayment[]> {
+  const validContractId = assertNonEmptyString(contractId, 'contractId');
   const { data, error } = await supabase
     .from('sponsorship_payments')
     .select('*')
-    .eq('contract_id', contractId)
+    .eq('contract_id', validContractId)
     .order('week_number', { ascending: true });
-  
-  if (error) throw error;
+
+  if (error) throwDbError(error, { operation: 'list', table: 'sponsorship_payments', filters: { contractId: validContractId }, rlsHint: 'Verify payment RLS follows the parent contract ownership.' });
   return data || [];
 }
 
 export async function acceptOffer(offerId: string): Promise<SponsorshipContract> {
-  // Get the offer
+  const validOfferId = assertNonEmptyString(offerId, "offerId");
   const { data: offer, error: offerError } = await supabase
     .from('sponsorship_offers')
     .select('*')
-    .eq('id', offerId)
-    .single();
-  
-  if (offerError || !offer) throw offerError || new Error('Offer not found');
-  
-  // Calculate weekly payment
+    .eq('id', validOfferId)
+    .maybeSingle();
+
+  if (offerError) throwDbError(offerError, { operation: 'fetch', table: 'sponsorship_offers', filters: { offerId: validOfferId }, rlsHint: 'A null row can mean not found or hidden by RLS.' });
+  if (!offer) throw new Error(`Sponsorship offer ${validOfferId} was not found or is not visible`);
+  if (offer.status !== 'pending') throw new Error(`Sponsorship offer ${validOfferId} is ${offer.status}, not pending`);
+  if (!Number.isFinite(offer.term_weeks) || offer.term_weeks <= 0) throw new Error(`Sponsorship offer ${validOfferId} has invalid term_weeks`);
+  if (!Number.isFinite(offer.total_value) || offer.total_value < 0) throw new Error(`Sponsorship offer ${validOfferId} has invalid total_value`);
+
   const weeklyPayment = Math.floor(offer.total_value / offer.term_weeks);
-  
-  // Calculate dates
   const startDate = new Date();
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + (offer.term_weeks * 7));
-  
-  // Create the contract
+
   const { data: contract, error: contractError } = await supabase
     .from('sponsorship_contracts')
     .insert({
-      offer_id: offerId,
+      offer_id: validOfferId,
       brand_id: offer.brand_id,
       band_id: offer.band_id,
       total_value: offer.total_value,
@@ -149,61 +147,41 @@ export async function acceptOffer(offerId: string): Promise<SponsorshipContract>
     })
     .select()
     .single();
-  
-  if (contractError) throw contractError;
-  
-  // Create payment schedule
+
+  if (contractError) throwDbError(contractError, { operation: 'insert', table: 'sponsorship_contracts', filters: { offerId: validOfferId, bandId: offer.band_id, brandId: offer.brand_id }, rlsHint: 'Verify offer_id, brand_id, and band_id FKs exist and contract insert RLS permits this band.' });
+
   const payments = [];
   for (let week = 1; week <= offer.term_weeks; week++) {
     const scheduledDate = new Date(startDate);
     scheduledDate.setDate(scheduledDate.getDate() + (week * 7));
-    
-    payments.push({
-      contract_id: contract.id,
-      band_id: offer.band_id,
-      amount: weeklyPayment,
-      week_number: week,
-      status: 'scheduled',
-      scheduled_at: scheduledDate.toISOString(),
-    });
+    payments.push({ contract_id: contract.id, band_id: offer.band_id, amount: weeklyPayment, week_number: week, status: 'scheduled', scheduled_at: scheduledDate.toISOString() });
   }
-  
-  const { error: paymentsError } = await supabase
-    .from('sponsorship_payments')
-    .insert(payments);
-  
-  if (paymentsError) throw paymentsError;
-  
-  // Update offer status
-  await supabase
-    .from('sponsorship_offers')
-    .update({ status: 'accepted' })
-    .eq('id', offerId);
-  
+
+  const { error: paymentsError } = await supabase.from('sponsorship_payments').insert(payments);
+  if (paymentsError) throwDbError(paymentsError, { operation: 'insert', table: 'sponsorship_payments', filters: { contractId: contract.id, bandId: offer.band_id }, rlsHint: 'Verify sponsorship_payments contract_id and band_id FKs are valid.' });
+
+  const { error: updateOfferError } = await supabase.from('sponsorship_offers').update({ status: 'accepted' }).eq('id', validOfferId);
+  if (updateOfferError) throwDbError(updateOfferError, { operation: 'update', table: 'sponsorship_offers', filters: { offerId: validOfferId }, rlsHint: 'Contract exists but offer status update failed; check offer update RLS.' });
+
   return contract;
 }
 
 export async function rejectOffer(offerId: string): Promise<void> {
-  const { error } = await supabase
-    .from('sponsorship_offers')
-    .update({ status: 'declined' })
-    .eq('id', offerId);
-  
-  if (error) throw error;
+  const validOfferId = assertNonEmptyString(offerId, "offerId");
+  const { error } = await supabase.from('sponsorship_offers').update({ status: 'declined' }).eq('id', validOfferId);
+  if (error) throwDbError(error, { operation: 'update', table: 'sponsorship_offers', filters: { offerId: validOfferId }, rlsHint: 'Verify the current user can update this offer through RLS.' });
 }
 
 export async function terminateContract(contractId: string): Promise<void> {
-  const { error } = await supabase
-    .from('sponsorship_contracts')
-    .update({ status: 'terminated' })
-    .eq('id', contractId);
-  
-  if (error) throw error;
-  
-  // Cancel pending payments
-  await supabase
+  const validContractId = assertNonEmptyString(contractId, "contractId");
+  const { error } = await supabase.from('sponsorship_contracts').update({ status: 'terminated' }).eq('id', validContractId);
+  if (error) throwDbError(error, { operation: 'update', table: 'sponsorship_contracts', filters: { contractId: validContractId }, rlsHint: 'Verify contract ownership RLS permits termination.' });
+
+  const { error: cancelPaymentsError } = await supabase
     .from('sponsorship_payments')
     .update({ status: 'cancelled' })
-    .eq('contract_id', contractId)
+    .eq('contract_id', validContractId)
     .eq('status', 'scheduled');
+
+  if (cancelPaymentsError) throwDbError(cancelPaymentsError, { operation: 'update', table: 'sponsorship_payments', filters: { contractId: validContractId, status: 'scheduled' }, rlsHint: 'Contract was terminated but scheduled payment cancellation failed; check child-row RLS.' });
 }
