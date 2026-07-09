@@ -35,6 +35,7 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   release_manufacturing: { path: '/release-manager', icon: Headphones, label: 'Release Manufacturing', description: 'Your release is being manufactured' },
   release_promo: { path: '/release-manager', icon: Star, label: 'Release Promo', description: 'Promotional tour for a release' },
   teaching: { path: '/teaching', icon: GraduationCap, label: 'Teaching Session', description: 'Teach a skill to a friend for bonus XP' },
+  jam_session: { path: '/jam-sessions', icon: Users, label: 'Jam Session', description: 'Book a collaborative jam session' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
 

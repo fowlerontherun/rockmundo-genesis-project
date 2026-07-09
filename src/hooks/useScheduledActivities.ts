@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, addDays } from "date-fns";
+import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export type ActivityType = 
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
   | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' 
-  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'other';
+  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 
@@ -334,6 +335,9 @@ export function useCreateScheduledActivity() {
 
       if (!profile) throw new Error('Profile not found');
 
+      const bookingError = validateBookingWindow(data.scheduled_start, data.scheduled_end);
+      if (bookingError) throw new Error(bookingError);
+
       // Check for conflicts
       const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
         p_user_id: user.id,
@@ -353,6 +357,7 @@ export function useCreateScheduledActivity() {
           activity_type: data.activity_type,
           scheduled_start: data.scheduled_start.toISOString(),
           scheduled_end: data.scheduled_end.toISOString(),
+          duration_minutes: getDurationMinutes(data.scheduled_start, data.scheduled_end),
           title: data.title,
           description: data.description,
           location: data.location,

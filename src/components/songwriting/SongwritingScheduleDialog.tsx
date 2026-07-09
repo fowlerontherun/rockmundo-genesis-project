@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { addDurationHours, buildScheduledDateTime, validateBookingWindow } from "@/utils/activityBookingTime";
 
 interface SongwritingScheduleDialogProps {
   open: boolean;
@@ -31,11 +31,13 @@ export function SongwritingScheduleDialog({
       return;
     }
 
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(parseInt(hour), 0, 0, 0);
-
-    const scheduledEnd = new Date(scheduledStart);
-    scheduledEnd.setHours(scheduledStart.getHours() + parseInt(duration));
+    const scheduledStart = buildScheduledDateTime(date, parseInt(hour));
+    const scheduledEnd = addDurationHours(scheduledStart, Number(duration));
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) {
+      toast.error(bookingError);
+      return;
+    }
 
     try {
       await createScheduledActivity({
@@ -68,7 +70,7 @@ export function SongwritingScheduleDialog({
               mode="single"
               selected={date}
               onSelect={setDate}
-              disabled={(date) => date < new Date()}
+              disabled={(day) => day < new Date(new Date().setHours(0, 0, 0, 0))}
               className="rounded-md border"
             />
           </div>

@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { addDurationHours, buildScheduledDateTime, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export default function SongwritingBooking() {
   const navigate = useNavigate();
@@ -69,9 +70,13 @@ export default function SongwritingBooking() {
     }
 
     const [hours] = timeSlot.split(":").map(Number);
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(hours, 0, 0, 0);
-    const scheduledEnd = new Date(scheduledStart.getTime() + 60 * 60 * 1000); // 1 hour
+    const scheduledStart = buildScheduledDateTime(date, hours);
+    const scheduledEnd = addDurationHours(scheduledStart, 1);
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) {
+      toast({ title: "Choose a Future Time", description: bookingError, variant: "destructive" });
+      return;
+    }
 
     // Get project details
     const project = projects.find(p => p.id === selectedProjectId);

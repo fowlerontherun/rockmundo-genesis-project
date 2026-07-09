@@ -15,6 +15,7 @@ import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { addDurationHours, buildScheduledDateTime, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export default function EducationBooking() {
   const navigate = useNavigate();
@@ -69,9 +70,13 @@ export default function EducationBooking() {
     }
 
     const [hours] = timeSlot.split(":").map(Number);
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(hours, 0, 0, 0);
-    const scheduledEnd = new Date(scheduledStart.getTime() + 60 * 60 * 1000);
+    const scheduledStart = buildScheduledDateTime(date, hours);
+    const scheduledEnd = addDurationHours(scheduledStart, 1);
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) {
+      toast({ title: "Choose a Future Time", description: bookingError, variant: "destructive" });
+      return;
+    }
 
     // Check for conflicts
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);

@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { usePracticeSkill } from "@/hooks/useSkillPractice";
-import { addHours, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
+import { setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
+import { validateFutureBooking } from "@/utils/activityBookingTime";
+import { toast } from "sonner";
 
 interface SchedulePracticeDialogProps {
   open: boolean;
@@ -36,6 +38,12 @@ export function SchedulePracticeDialog({
     practiceDate = setMinutes(practiceDate, 0);
     practiceDate = setSeconds(practiceDate, 0);
     practiceDate = setMilliseconds(practiceDate, 0);
+
+    const bookingError = validateFutureBooking(practiceDate);
+    if (bookingError) {
+      toast.error(bookingError);
+      return;
+    }
 
     practiceSkill.mutate(
       {
@@ -71,7 +79,7 @@ export function SchedulePracticeDialog({
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
-              disabled={(date) => date < new Date()}
+              disabled={(day) => day < new Date(new Date().setHours(0, 0, 0, 0))}
               className="rounded-md border"
             />
           </div>
