@@ -9,12 +9,13 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Users, TrendingUp, MessageCircle, Target, Calendar, DollarSign } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
 const FanManagement = () => {
   const { profileId } = useActiveProfile();
   const { t } = useTranslation();
 
-  const { campaigns, segments, interactions, isLoading } = useFanManagement(profileId ?? undefined);
+  const { campaigns, segments, interactions, isLoading, isError, error, refetch } = useFanManagement(profileId ?? undefined);
 
   const activeCampaigns = campaigns.filter((c) => c.status === "active");
   const totalReach = campaigns.reduce((sum, c) => sum + c.reach, 0);
@@ -31,8 +32,21 @@ const FanManagement = () => {
       icon={Users}
       backTo="/hub/career"
     >
-
-
+      {!profileId ? (
+        <PageEmptyState
+          title="Choose a character to manage fans"
+          description="Fan campaigns, segments, and interactions will appear once a profile is active."
+        />
+      ) : isError ? (
+        <PageErrorState
+          title="Couldn’t load fan management"
+          description={error instanceof Error ? error.message : "Supabase could not return your fan data."}
+          onRetry={refetch}
+        />
+      ) : isLoading ? (
+        <PageLoadingState title="Loading fan management" description="Pulling campaigns, audience segments, and recent fan activity..." />
+      ) : (
+        <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -96,7 +110,7 @@ const FanManagement = () => {
           ) : campaigns.length === 0 ? (
             <Card>
               <CardContent className="p-6">
-                <p className="text-muted-foreground">No campaigns yet.</p>
+                <PageEmptyState title="No campaigns yet" description="Launch your first fan campaign to start building reach and engagement." />
               </CardContent>
             </Card>
           ) : (
@@ -168,7 +182,7 @@ const FanManagement = () => {
           {segments.length === 0 ? (
             <Card>
               <CardContent className="p-6">
-                <p className="text-muted-foreground">No fan segments created yet.</p>
+                <PageEmptyState title="No fan segments yet" description="Create fan segments to target messages by audience behavior." />
               </CardContent>
             </Card>
           ) : (
@@ -201,7 +215,7 @@ const FanManagement = () => {
             </CardHeader>
             <CardContent>
               {interactions.length === 0 ? (
-                <p className="text-muted-foreground">No recent interactions.</p>
+                <PageEmptyState title="No recent interactions" description="Fan replies and engagement events will appear here." />
               ) : (
                 <div className="space-y-3">
                   {interactions.slice(0, 10).map((interaction) => (
@@ -235,6 +249,8 @@ const FanManagement = () => {
           </Card>
         </TabsContent>
       </Tabs>
+        </>
+      )}
     </FMPageScaffold>
   );
 };

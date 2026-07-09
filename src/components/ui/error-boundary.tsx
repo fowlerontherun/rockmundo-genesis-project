@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { PageErrorState } from '@/components/ui/page-state';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -38,26 +37,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       }
 
       return (
-        <Card className="max-w-md mx-auto mt-8">
-          <CardHeader>
-            <CardTitle>Something went wrong</CardTitle>
-            <CardDescription>
-              An error occurred while rendering this component.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {this.state.error && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                <p className="text-sm text-destructive">
-                  {this.state.error.message}
-                </p>
-              </div>
-            )}
-            <Button onClick={this.resetError} variant="outline" className="w-full">
-              Try again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mx-auto mt-8 max-w-2xl p-4">
+          <PageErrorState
+            title="This page hit a bad note"
+            description={this.state.error?.message || "We couldn't render this page. Try again or refresh the browser."}
+            onRetry={this.resetError}
+          />
+        </div>
       );
     }
 

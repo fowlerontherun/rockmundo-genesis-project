@@ -49,7 +49,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch all active festivals
-  const { data: festivals = [], isLoading: festivalsLoading } = useQuery({
+  const festivalsQuery = useQuery({
     queryKey: FESTIVALS_QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -66,7 +66,7 @@ export const useFestivals = (userId?: string, bandId?: string) => {
   });
 
   // Fetch user/band festival participations
-  const { data: participations = [], isLoading: participationsLoading } = useQuery({
+  const participationsQuery = useQuery({
     queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId),
     queryFn: async () => {
       if (!bandId) return [];
@@ -310,11 +310,18 @@ export const useFestivals = (userId?: string, bandId?: string) => {
     },
   });
 
+  const festivals = festivalsQuery.data ?? [];
+  const participations = participationsQuery.data ?? [];
+
   return {
     festivals,
-    festivalsLoading,
+    festivalsLoading: festivalsQuery.isLoading,
+    festivalsError: festivalsQuery.error,
+    refetchFestivals: festivalsQuery.refetch,
     participations,
-    participationsLoading,
+    participationsLoading: participationsQuery.isLoading,
+    participationsError: participationsQuery.error,
+    refetchParticipations: participationsQuery.refetch,
     fetchFestivalLineup,
     applyToFestival,
     withdrawFromFestival,
