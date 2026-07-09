@@ -1,3 +1,5 @@
+import { clampPercent } from "@/utils/number";
+
 /**
  * Media Cycle System (v1.0.936)
  * Media attention follows predictable cycles: hype → peak → decline → dormant.
@@ -52,8 +54,8 @@ function getMediaPhase(intensity: number, fatigue: number): MediaCycleState["pha
  * Get current media cycle state.
  */
 export function getMediaCycleState(intensity: number, fatigue: number): MediaCycleState {
-  const clampedIntensity = Math.max(0, Math.min(100, intensity));
-  const clampedFatigue = Math.max(0, Math.min(100, fatigue));
+  const clampedIntensity = clampPercent(intensity);
+  const clampedFatigue = clampPercent(fatigue);
   const phase = getMediaPhase(clampedIntensity, clampedFatigue);
 
   // Coverage multiplier: high intensity + low fatigue = best coverage
@@ -98,8 +100,8 @@ export function applyMediaEvent(
   const fatigueReduction = currentFatigue > 60 ? 0.5 : currentFatigue > 30 ? 0.75 : 1.0;
   const effectiveIntensityChange = Math.round(event.intensityChange * fatigueReduction);
   
-  const newIntensity = Math.max(0, Math.min(100, currentIntensity + effectiveIntensityChange));
-  const newFatigue = Math.max(0, Math.min(100, currentFatigue + event.fatigueChange));
+  const newIntensity = clampPercent(currentIntensity + effectiveIntensityChange);
+  const newFatigue = clampPercent(currentFatigue + event.fatigueChange);
 
   return { newIntensity, newFatigue, event };
 }

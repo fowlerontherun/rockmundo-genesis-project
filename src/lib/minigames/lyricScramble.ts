@@ -1,7 +1,5 @@
+import { clamp } from "@/utils/number";
 import type { MinigameAttemptResult, MinigameSimulationInput } from "./types";
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
 
 interface LyricPrompt {
   phrase: string;

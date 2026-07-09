@@ -1,3 +1,4 @@
+import { clamp } from "@/utils/number";
 import type { Coordinates } from "./worldTravel";
 
 export interface MapProjectionOptions {
@@ -6,7 +7,6 @@ export interface MapProjectionOptions {
   padding?: number;
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const normalizeLongitude = (value: number) => {
   if (!Number.isFinite(value)) {

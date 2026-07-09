@@ -1,4 +1,5 @@
 import type { Tables } from "@/lib/supabase-types";
+import { clampPercent } from "@/utils/number";
 
 type Profile = Tables<"profiles">;
 
@@ -132,7 +133,7 @@ export function updateProfileHealth(
   healthGain: number = 0
 ): Partial<Profile> {
   const currentHealth = profile.health ?? 100;
-  const newHealth = Math.max(0, Math.min(100, currentHealth - healthDrain + healthGain));
+  const newHealth = clampPercent(currentHealth - healthDrain + healthGain);
   
   return {
     health: newHealth,
