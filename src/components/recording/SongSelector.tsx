@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Music, TrendingUp, Disc3, CheckCircle2, Search, Filter } from "lucide-react";
+import { Music, TrendingUp, Disc3, CheckCircle2, Search, Filter, AlertTriangle } from "lucide-react";
 import { getRehearsalLevel, formatRehearsalTime, REHEARSAL_LEVELS } from "@/utils/rehearsalLevels";
 
 interface SongSelectorProps {
@@ -28,7 +28,7 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
   const [recordedFilter, setRecordedFilter] = useState<string>("all");
   const [rehearsalFilter, setRehearsalFilter] = useState<string>("all");
 
-  const { data: songs, isLoading } = useQuery({
+  const { data: songs, isLoading, error } = useQuery({
     queryKey: ['recordable-songs', userId, bandId],
     queryFn: async () => {
       // Get songs with their recording history
@@ -60,11 +60,13 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
       let recordingHistory: Record<string, { count: number; versions: string[] }> = {};
 
       if (songIds.length > 0) {
-        const { data: recordings } = await supabase
+        const { data: recordings, error: recordingsError } = await supabase
           .from('recording_sessions')
           .select('song_id, recording_version, status')
           .in('song_id', songIds)
           .eq('status', 'completed');
+
+        if (recordingsError) throw recordingsError;
 
         if (recordings) {
           for (const rec of recordings) {
@@ -126,6 +128,16 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading songs...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 space-y-3">
+        <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+        <p className="font-medium text-destructive">Could not load songs for recording.</p>
+        <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Please try again before booking a studio session."}</p>
+      </div>
+    );
   }
 
   if (!songs || songs.length === 0) {

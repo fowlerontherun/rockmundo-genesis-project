@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown } from "lucide-react";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
@@ -22,16 +22,21 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
   const [genreFilter, setGenreFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  const { data: recordedSongs, isLoading } = useQuery({
+  const { data: recordedSongs, isLoading, error } = useQuery({
     queryKey: ["recorded-songs-list", userId, bandId],
     queryFn: async () => {
       // Get all songs with status = 'recorded' for this user
-      const { data: songs, error: songsError } = await supabase
+      let songsQuery = supabase
         .from("songs")
         .select("*, bands(name, artist_name)")
-        .eq("user_id", userId)
         .eq("status", "recorded")
         .order("updated_at", { ascending: false });
+
+      songsQuery = bandId
+        ? songsQuery.eq("band_id", bandId)
+        : songsQuery.eq("user_id", userId).is("band_id", null);
+
+      const { data: songs, error: songsError } = await songsQuery;
 
       if (songsError) throw songsError;
 
@@ -137,6 +142,18 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading recorded songs...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+        <div>
+          <p className="font-medium text-destructive">Could not load recorded songs</p>
+          <p className="text-sm text-muted-foreground mt-2">{error instanceof Error ? error.message : "Please try again from the Recording Studio."}</p>
+        </div>
+      </div>
+    );
   }
 
   if (!recordedSongs || recordedSongs.length === 0) {

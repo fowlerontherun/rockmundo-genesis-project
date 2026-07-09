@@ -53,12 +53,13 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     queryKey: ["user-active-band", profileId],
     queryFn: async () => {
       if (!profileId) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(*)")
         .eq("profile_id", profileId)
         .limit(1)
-        .single();
+        .maybeSingle();
+      if (error) throw error;
       return data?.bands || null;
     },
     enabled: !!profileId,
@@ -69,11 +70,12 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     queryKey: ["band-home-info", userBand?.id],
     queryFn: async () => {
       if (!userBand?.home_city_id) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("cities")
         .select("country, region")
         .eq("id", userBand.home_city_id)
-        .single();
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!userBand?.home_city_id,
@@ -114,10 +116,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching active contract:", error);
-        return null;
-      }
+      if (error) throw error;
       return data;
     },
     enabled: open,
@@ -144,10 +143,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         p_band_id: userBand?.id || null,
         p_user_id: userBand ? null : userId
       });
-      if (error) {
-        console.error("Error checking greatest hits eligibility:", error);
-        return { eligible: false, reason: "Error checking eligibility" };
-      }
+      if (error) throw error;
       return data as { eligible: boolean; released_song_count: number; reason: string | null };
     },
     enabled: !!userId
@@ -184,6 +180,12 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
   const createRelease = useMutation({
     mutationFn: async () => {
+      if (!title.trim()) throw new Error("Release title is required");
+      if (!artistName.trim()) throw new Error("Artist name is required");
+      if (selectedSongs.length === 0) throw new Error("Select at least one recorded song before creating a release");
+      if (selectedFormats.length === 0) throw new Error("Select at least one release format");
+      if (selectedTerritories.length === 0) throw new Error("Select at least one release territory");
+
       // Calculate total cost including territory distribution
       const formatCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
       const totalCost = formatCost + territoryCost;
@@ -269,8 +271,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           user_id: userBand ? null : userId,
           band_id: userBand?.id || null,
           release_type: releaseType === "greatest_hits" ? "album" : releaseType,
-          title,
-          artist_name: artistName,
+          title: title.trim(),
+          artist_name: artistName.trim(),
           release_status: "manufacturing",
           total_cost: bandPays + labelPays,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
@@ -307,7 +309,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           .insert(territoryInserts);
 
         if (territoryError) {
-          console.error("Error saving territories:", territoryError);
+          throw territoryError;
         }
       }
 
@@ -453,7 +455,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   };
 
   const handleNext = () => {
-    if (step === 1 && (!title || !artistName)) {
+    if (step === 1 && (!title.trim() || !artistName.trim())) {
       toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
       return;
     }
@@ -542,7 +544,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
               )}
             </div>
 
-            <Button onClick={handleNext} className="w-full">Next: Select Songs</Button>
+            <Button onClick={handleNext} disabled={createRelease.isPending} className="w-full">Next: Select Songs</Button>
           </div>
         )}
 
