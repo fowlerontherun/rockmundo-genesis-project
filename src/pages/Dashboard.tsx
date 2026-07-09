@@ -11,7 +11,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, Heart, Zap, MapPin, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles, Bell } from "lucide-react";
+import { User, Trophy, Calendar, Heart, Zap, MapPin, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles, Bell, Target } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
@@ -38,6 +38,7 @@ import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecom
 import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
+import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Heart }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -87,6 +88,125 @@ const KeyStatusPanel = ({ profile, currentCity }: { profile: any; currentCity: a
     </CardContent>
   </Card>
 );
+
+
+const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string }) => {
+  const profileId = profile?.id;
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard-player-goals", profileId, userId],
+    enabled: !!profileId && !!userId,
+    staleTime: 60_000,
+    queryFn: async (): Promise<PlayerGoalInput> => {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const nowIso = now.toISOString();
+      const client: any = supabase;
+
+      const [songsResult, membershipsResult, activitiesResult] = await Promise.all([
+        client.from("songs").select("id, status").eq("profile_id", profileId),
+        client.from("band_members").select("band_id").eq("profile_id", profileId).eq("member_status", "active"),
+        client
+          .from("player_scheduled_activities")
+          .select("id, activity_type, scheduled_start, status")
+          .eq("profile_id", profileId)
+          .gte("scheduled_start", nowIso)
+          .in("status", ["scheduled", "in_progress"]),
+      ]);
+
+      if (songsResult.error) throw songsResult.error;
+      if (membershipsResult.error) throw membershipsResult.error;
+      if (activitiesResult.error) throw activitiesResult.error;
+
+      const bandIds = (membershipsResult.data || []).map((membership: any) => membership.band_id).filter(Boolean);
+      let releasesQuery = client.from("releases").select("id, release_status, user_id, band_id");
+      if (bandIds.length > 0 && userId) {
+        releasesQuery = releasesQuery.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+      } else if (userId) {
+        releasesQuery = releasesQuery.eq("user_id", userId);
+      } else if (bandIds.length > 0) {
+        releasesQuery = releasesQuery.in("band_id", bandIds);
+      }
+
+      const [releasesResult, rehearsalsResult] = await Promise.all([
+        releasesQuery,
+        bandIds.length > 0
+          ? client
+              .from("band_rehearsals")
+              .select("id, scheduled_start, status")
+              .in("band_id", bandIds)
+              .gte("scheduled_start", weekAgo)
+          : { data: [], error: null },
+      ]);
+
+      if (releasesResult.error) throw releasesResult.error;
+      if (rehearsalsResult.error) throw rehearsalsResult.error;
+
+      const songs = songsResult.data || [];
+      const releases = releasesResult.data || [];
+      const activities = activitiesResult.data || [];
+      const rehearsals = rehearsalsResult.data || [];
+
+      return {
+        draftSongs: songs.filter((song: any) => song.status === "draft").length,
+        recordedSongs: songs.filter((song: any) => ["recorded", "released"].includes(song.status)).length,
+        releasedMusic: releases.filter((release: any) => release.release_status === "released").length + songs.filter((song: any) => song.status === "released").length,
+        upcomingRehearsals: rehearsals.filter((rehearsal: any) => new Date(rehearsal.scheduled_start) >= now && rehearsal.status !== "cancelled").length,
+        recentRehearsals: rehearsals.filter((rehearsal: any) => new Date(rehearsal.scheduled_start) < now && rehearsal.status === "completed").length,
+        upcomingActivities: activities.length,
+        health: profile?.health ?? 100,
+        energy: profile?.energy ?? 100,
+        fans: profile?.fans ?? profile?.fan_count ?? 0,
+        fame: profile?.fame ?? 0,
+      };
+    },
+  });
+
+  const goals = data ? generatePlayerGoals(data) : [];
+
+  return (
+    <Card>
+      <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Target className="h-4 w-4 text-primary" />
+            Goals & Progress
+          </CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Short-term goals generated from your current songs, releases, schedule, wellness, and audience.</p>
+        </div>
+        <Button asChild size="sm" variant="outline"><Link to="/song-manager">Catalog</Link></Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <PageLoadingState title="Loading goals" description="Checking your next best milestones..." />
+        ) : error ? (
+          <PageErrorState title="Goals could not be loaded" description="Your dashboard is still available while goals refresh." onRetry={() => void refetch()} />
+        ) : goals.length === 0 ? (
+          <PageEmptyState title="No goals available" description="Play a little more and your next goals will appear here." />
+        ) : goals.map((goal) => {
+          const pct = Math.min(100, Math.round((goal.current / goal.target) * 100));
+          return (
+            <div key={goal.id} className="rounded-lg border bg-card/50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">{goal.title}</h3>
+                    {goal.completed && <Badge variant="secondary">Ready</Badge>}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{goal.description}</p>
+                </div>
+                <Button asChild size="sm" variant={goal.completed ? "outline" : "default"} className="shrink-0"><Link to={goal.href}>{goal.cta}</Link></Button>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">{goal.progressLabel}</p>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+};
 
 const UpcomingSchedulePanel = ({ currentDate, userId }: { currentDate: Date; userId?: string }) => (
   <Card>
@@ -319,6 +439,7 @@ const Dashboard = () => {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
             <div className="space-y-4">
               <TodaysBriefing profile={profile} userId={user?.id} />
+              <GoalsProgressPanel profile={profile} userId={user?.id} />
               <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
               <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
             </div>
