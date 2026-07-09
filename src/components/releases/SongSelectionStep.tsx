@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Music2, Disc3, Album, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Music2, Disc3, Album, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { ReleaseType } from "./ReleaseTypeSelector";
 
 export interface SongSelection {
@@ -73,46 +73,48 @@ export function SongSelectionStep({
         p_band_id: bandId,
         p_user_id: bandId ? null : userId
       });
-      if (error) {
-        console.error("Error fetching songs on releases:", error);
-        return [];
-      }
+      if (error) throw error;
       return data || [];
     }
   });
 
-  const { data: songs } = useQuery({
+  const { data: songs, isLoading, error } = useQuery({
     queryKey: ["available-songs-versions", userId, bandId, releaseType],
     queryFn: async () => {
       let allSongs: any[] = [];
 
       if (bandId) {
         // Get band songs
-        const { data: bandSongs } = await supabase
+        const { data: bandSongs, error: bandSongsError } = await supabase
           .from("songs")
           .select("*")
           .eq("band_id", bandId)
           .eq("status", "recorded")
           .order("created_at", { ascending: false });
         
+        if (bandSongsError) throw bandSongsError;
         allSongs = bandSongs || [];
 
         // Also get songs from band members
-        const { data: bandMembers } = await supabase
+        const { data: bandMembers, error: bandMembersError } = await supabase
           .from("band_members")
           .select("user_id")
           .eq("band_id", bandId);
 
+        if (bandMembersError) throw bandMembersError;
+
         if (bandMembers && bandMembers.length > 0) {
           const memberUserIds = bandMembers.map(m => m.user_id).filter(Boolean);
           if (memberUserIds.length > 0) {
-            const { data: memberSongs } = await supabase
+            const { data: memberSongs, error: memberSongsError } = await supabase
               .from("songs")
               .select("*")
               .in("user_id", memberUserIds)
               .is("band_id", null)
               .eq("status", "recorded")
               .order("created_at", { ascending: false });
+
+            if (memberSongsError) throw memberSongsError;
 
             if (memberSongs) {
               const existingIds = new Set(allSongs.map(s => s.id));
@@ -126,23 +128,26 @@ export function SongSelectionStep({
         }
       } else {
         // Get user's solo songs
-        const { data: userSongs } = await supabase
+        const { data: userSongs, error: userSongsError } = await supabase
           .from("songs")
           .select("*")
           .eq("user_id", userId)
+          .is("band_id", null)
           .eq("status", "recorded")
           .order("created_at", { ascending: false });
         
+        if (userSongsError) throw userSongsError;
         allSongs = userSongs || [];
       }
 
       // For greatest hits, only show songs that have been released
       if (isGreatestHits) {
-        const { data: releasedSongIds } = await supabase
+        const { data: releasedSongIds, error: releasedSongIdsError } = await supabase
           .from("release_songs")
           .select("song_id, releases!release_songs_release_id_fkey!inner(release_status)")
           .eq("releases.release_status", "released");
         
+        if (releasedSongIdsError) throw releasedSongIdsError;
         const releasedIds = new Set(releasedSongIds?.map(rs => rs.song_id) || []);
         allSongs = allSongs.filter(s => releasedIds.has(s.id));
       }
@@ -152,13 +157,14 @@ export function SongSelectionStep({
       let recordingSessions: any[] = [];
 
       if (songIds.length > 0) {
-        const { data: sessions } = await supabase
+        const { data: sessions, error: sessionsError } = await supabase
           .from("recording_sessions")
           .select("id, song_id, recording_version, quality_improvement, completed_at")
           .in("song_id", songIds)
           .eq("status", "completed")
           .order("completed_at", { ascending: false });
 
+        if (sessionsError) throw sessionsError;
         recordingSessions = sessions || [];
       }
 
@@ -329,7 +335,18 @@ export function SongSelectionStep({
           </Alert>
         )}
 
-        {!songs || songs.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin" />
+            <p>Loading recorded songs...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-destructive" />
+            <p className="font-medium text-destructive">Could not load recorded songs</p>
+            <p className="text-sm mt-1">{error instanceof Error ? error.message : "Please try again before creating a release."}</p>
+          </div>
+        ) : !songs || songs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Music2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium">
