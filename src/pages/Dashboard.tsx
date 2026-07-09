@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
@@ -12,7 +11,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles } from "lucide-react";
+import { User, Trophy, Calendar, Heart, Zap, MapPin, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles, Bell } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
@@ -36,8 +35,131 @@ import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWidget";
 import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
 import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
+import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
+
+const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Heart }) => (
+  <div className="rounded-lg border bg-card/50 p-3">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Icon className="h-3.5 w-3.5 text-primary" />
+      {label}
+    </div>
+    <p className="mt-1 text-lg font-semibold text-foreground">{value}</p>
+  </div>
+);
+
+const KeyStatusPanel = ({ profile, currentCity }: { profile: any; currentCity: any }) => (
+  <Card>
+    <CardHeader className="pb-3">
+      <CardTitle className="flex items-center gap-2 text-base">
+        <ActivityIcon className="h-4 w-4 text-primary" />
+        Key Character/Band Status
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {!profile ? (
+        <PageLoadingState title="Loading character status" description="Fetching your active character snapshot..." />
+      ) : (
+        <>
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16 border-2 border-primary/30 flex-shrink-0">
+              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
+              <AvatarFallback className="text-xl"><User className="h-8 w-8" /></AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "Unknown"}</h2>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                {profile?.age && <span>Age {profile.age}</span>}
+                {profile?.gender && <span className="capitalize">{profile.gender}</span>}
+                {currentCity ? <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{currentCity.name}, {currentCity.country}</span> : null}
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatusMetric label="Health" value={`${profile?.health ?? 100}%`} icon={Heart} />
+            <StatusMetric label="Energy" value={`${profile?.energy ?? 100}%`} icon={Zap} />
+            <StatusMetric label="Fame" value={profile?.fame ?? 0} icon={Star} />
+            <StatusMetric label="Level" value={profile?.level ?? 1} icon={Trophy} />
+          </div>
+        </>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const UpcomingSchedulePanel = ({ currentDate, userId }: { currentDate: Date; userId?: string }) => (
+  <Card>
+    <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Calendar className="h-4 w-4 text-primary" />
+          Upcoming Schedule
+        </CardTitle>
+      </div>
+      <Button asChild size="sm" variant="outline"><Link to="/schedule">Open full schedule</Link></Button>
+    </CardHeader>
+    <CardContent>
+      {!userId ? <PageLoadingState title="Loading schedule" description="Preparing your upcoming activities..." /> : <DaySchedule date={currentDate} userId={userId} />}
+    </CardContent>
+  </Card>
+);
+
+const NotificationsPanel = ({ userId, profileId }: { userId?: string; profileId?: string }) => {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard-command-notifications", userId, profileId],
+    enabled: !!userId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const [inboxResult, notificationsResult] = await Promise.all([
+        supabase
+          .from("player_inbox")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId!)
+          .eq("is_read", false)
+          .eq("is_archived", false),
+        supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId!)
+          .is("read_at", null),
+      ]);
+      if (inboxResult.error) throw inboxResult.error;
+      if (notificationsResult.error) throw notificationsResult.error;
+      return { inbox: inboxResult.count ?? 0, notifications: notificationsResult.count ?? 0 };
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-4 w-4 text-primary" />
+            Notifications
+          </CardTitle>
+        </div>
+        <Button asChild size="sm" variant="outline"><Link to="/inbox">Open inbox</Link></Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <PageLoadingState title="Loading notifications" description="Checking inbox and alert queues..." />
+        ) : error ? (
+          <PageErrorState title="Notifications could not be loaded" description="Your inbox is still available from the main navigation." onRetry={() => void refetch()} />
+        ) : (data?.inbox ?? 0) + (data?.notifications ?? 0) === 0 ? (
+          <PageEmptyState title="No notifications waiting" description="New inbox items, alerts, and character messages will appear here." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <StatusMetric label="Unread inbox" value={data?.inbox ?? 0} icon={Bell} />
+            <StatusMetric label="Unread alerts" value={data?.notifications ?? 0} icon={Bell} />
+          </div>
+        )}
+        <CharacterUnreadWidget />
+      </CardContent>
+    </Card>
+  );
+};
+
 const Dashboard = () => {
   const {
     user
@@ -194,50 +316,18 @@ const Dashboard = () => {
         {/* Profile Tab — identity only */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
-          <TodaysBriefing profile={profile} userId={user?.id} />
-          <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
-          <CharacterUnreadWidget />
-
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/30 flex-shrink-0">
-                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
-                  <AvatarFallback className="text-2xl">
-                    <User className="h-10 w-10" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">
-                    {profile?.display_name || profile?.username || "Unknown"}
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
-                    {profile?.age && <span>Age {profile.age}</span>}
-                    {profile?.gender && <span className="capitalize">{profile.gender}</span>}
-                    {currentCity && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {currentCity.name}, {currentCity.country}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-2">
-                    <div className="flex items-center gap-1.5">
-                      <Heart className="h-3.5 w-3.5 text-destructive" />
-                      <Progress value={profile?.health || 100} className="h-1.5 w-16" />
-                      <span className="text-xs text-muted-foreground">{profile?.health || 100}%</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-warning" />
-                      <Progress value={profile?.energy || 100} className="h-1.5 w-16" />
-                      <span className="text-xs text-muted-foreground">{profile?.energy || 100}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
+            <div className="space-y-4">
+              <TodaysBriefing profile={profile} userId={user?.id} />
+              <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
+              <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
+            </div>
+            <div className="space-y-4">
+              <NotificationsPanel userId={user?.id} profileId={profile?.id} />
+              <WorldNewsList limit={4} showViewAllLink />
+              <KeyStatusPanel profile={profile} currentCity={currentCity} />
+            </div>
+          </div>
 
           <Collapsible>
             <CollapsibleTrigger asChild>
