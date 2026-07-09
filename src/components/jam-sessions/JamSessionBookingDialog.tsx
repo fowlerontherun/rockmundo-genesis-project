@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,16 +15,44 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, MapPin, Clock, Music, Users, DollarSign, Loader2 } from "lucide-react";
-import { REHEARSAL_SLOTS, FacilitySlot, getSlotTimeRange } from "@/utils/facilitySlots";
+import {
+  CalendarIcon,
+  MapPin,
+  Clock,
+  Music,
+  Users,
+  DollarSign,
+  Loader2,
+} from "lucide-react";
+import {
+  REHEARSAL_SLOTS,
+  FacilitySlot,
+  getSlotTimeRange,
+} from "@/utils/facilitySlots";
+import {
+  getErrorMessage,
+  validateDurationHours,
+  validateFutureOrTodayDate,
+  validateRequired,
+} from "@/utils/formValidation";
 import { useJamSessionBooking } from "@/hooks/useJamSessionBooking";
 import { MUSIC_GENRES } from "@/data/genres";
 import { useRehearsalRoomAvailability } from "@/hooks/useRehearsalRoomAvailability";
@@ -54,12 +87,17 @@ export const JamSessionBookingDialog = ({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [durationHours, setDurationHours] = useState(2);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Fetch cities
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: async () => {
-      const { data } = await supabase.from("cities").select("id, name, country").order("name");
+      const { data } = await supabase
+        .from("cities")
+        .select("id, name, country")
+        .order("name");
       return data || [];
     },
   });
@@ -82,62 +120,102 @@ export const JamSessionBookingDialog = ({
       const client = supabase as any;
       let query = client
         .from("rehearsal_rooms")
-        .select("id, name, hourly_rate, quality_rating, equipment_quality, capacity, city_id, city:cities(id, name)");
-      
+        .select(
+          "id, name, hourly_rate, quality_rating, equipment_quality, capacity, city_id, city:cities(id, name)",
+        );
+
       if (selectedCityId && selectedCityId !== "all") {
         query = query.eq("city_id", selectedCityId);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
-      
+
       return (data || []) as RoomWithCity[];
     },
     enabled: open,
   });
 
   // Check slot availability for the selected room and date
-  const { data: slotAvailability, isLoading: loadingSlots } = useRehearsalRoomAvailability(
-    selectedRoomId,
-    selectedDate,
-    undefined, // No band ID for jam sessions
-    !!selectedRoomId
-  );
+  const { data: slotAvailability, isLoading: loadingSlots } =
+    useRehearsalRoomAvailability(
+      selectedRoomId,
+      selectedDate,
+      undefined, // No band ID for jam sessions
+      !!selectedRoomId,
+    );
 
-  const selectedRoom = rooms.find(r => r.id === selectedRoomId);
+  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
   const totalCost = selectedRoom ? selectedRoom.hourly_rate * durationHours : 0;
   const estimatedCostPerPerson = Math.ceil(totalCost / maxParticipants);
   const canAfford = (profile?.cash || 0) >= totalCost;
 
   // Check if consecutive slots are available for the duration
   const slotsNeeded = Math.ceil(durationHours / 2);
-  
+
   const canBookSlot = (slotId: string): boolean => {
     if (!slotAvailability) return false;
-    
-    const slotIndex = REHEARSAL_SLOTS.findIndex(s => s.id === slotId);
+
+    const slotIndex = REHEARSAL_SLOTS.findIndex((s) => s.id === slotId);
     if (slotIndex === -1) return false;
 
     for (let i = 0; i < slotsNeeded; i++) {
       const checkSlot = REHEARSAL_SLOTS[slotIndex + i];
       if (!checkSlot) return false;
-      
-      const availability = slotAvailability.find(a => a.slot.id === checkSlot.id);
+
+      const availability = slotAvailability.find(
+        (a) => a.slot.id === checkSlot.id,
+      );
       if (!availability?.isAvailable) return false;
     }
     return true;
   };
 
-  const canBook = name.trim() && 
-    genre && 
-    selectedRoomId && 
-    selectedSlotId && 
-    canBookSlot(selectedSlotId) && 
-    canAfford;
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    const checks = [
+      ["name", validateRequired(name, "Session name")],
+      ["genre", validateRequired(genre, "Genre")],
+      ["room", validateRequired(selectedRoomId, "Rehearsal room")],
+      ["date", validateFutureOrTodayDate(selectedDate)],
+      ["duration", validateDurationHours(durationHours, 2, 6)],
+      ["slot", validateRequired(selectedSlotId, "Time slot")],
+    ] as const;
+
+    checks.forEach(([key, result]) => {
+      if (!result.valid && result.message) errors[key] = result.message;
+    });
+
+    if (selectedSlotId && !canBookSlot(selectedSlotId)) {
+      errors.slot =
+        "Choose an available future time slot for the full duration.";
+    }
+
+    if (!canAfford) {
+      errors.balance = "You do not have enough cash for this booking.";
+    }
+
+    if (isPrivate && !accessCode.trim()) {
+      errors.accessCode = "Add an access code for private sessions.";
+    }
+
+    setFieldErrors(errors);
+    setFormError(Object.values(errors)[0] ?? "");
+    return Object.keys(errors).length === 0;
+  };
+
+  const canBook =
+    name.trim() &&
+    genre &&
+    selectedRoomId &&
+    selectedSlotId &&
+    canBookSlot(selectedSlotId) &&
+    canAfford &&
+    (!isPrivate || accessCode.trim());
 
   const handleBook = async () => {
-    if (!canBook || !selectedDate) return;
+    if (isBooking || !validateForm()) return;
 
     try {
       const sessionId = await bookJamSession({
@@ -168,14 +246,18 @@ export const JamSessionBookingDialog = ({
       setAccessCode("");
       setSelectedRoomId("");
       setSelectedSlotId("");
-      
+
       onOpenChange(false);
       onSuccess?.(sessionId);
-    } catch (error: any) {
-      console.error("Booking failed:", error);
+    } catch (error: unknown) {
+      const message = getErrorMessage(
+        error,
+        "Something went wrong while booking the jam session.",
+      );
+      setFormError(message);
       toast({
         title: "Booking Failed",
-        description: error.message || "Something went wrong while booking the jam session.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -199,28 +281,48 @@ export const JamSessionBookingDialog = ({
             {/* Session Details */}
             <div className="space-y-4">
               <h3 className="font-semibold">Session Details</h3>
-              
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Session Name *</Label>
+                  <Label htmlFor="jam-name">Session Name *</Label>
                   <Input
+                    id="jam-name"
                     placeholder="Late Night Groove"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, name: "" }));
+                    }}
+                    aria-invalid={!!fieldErrors.name}
+                    aria-describedby={
+                      fieldErrors.name ? "jam-name-error" : undefined
+                    }
                   />
+                  {fieldErrors.name && (
+                    <p id="jam-name-error" className="text-sm text-destructive">
+                      {fieldErrors.name}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Genre *</Label>
                   <Select value={genre} onValueChange={setGenre}>
-                    <SelectTrigger>
+                    <SelectTrigger aria-invalid={!!fieldErrors.genre}>
                       <SelectValue placeholder="Select genre" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MUSIC_GENRES.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                      {MUSIC_GENRES.map((g) => (
+                        <SelectItem key={g} value={g}>
+                          {g}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {fieldErrors.genre && (
+                    <p className="text-sm text-destructive">
+                      {fieldErrors.genre}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -262,7 +364,9 @@ export const JamSessionBookingDialog = ({
                     min={0}
                     max={100}
                     value={skillRequirement}
-                    onChange={(e) => setSkillRequirement(Number(e.target.value))}
+                    onChange={(e) =>
+                      setSkillRequirement(Number(e.target.value))
+                    }
                   />
                 </div>
               </div>
@@ -270,19 +374,36 @@ export const JamSessionBookingDialog = ({
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <Label>Private Session</Label>
-                  <p className="text-xs text-muted-foreground">Require access code to join</p>
+                  <p className="text-xs text-muted-foreground">
+                    Require access code to join
+                  </p>
                 </div>
                 <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
               </div>
 
               {isPrivate && (
                 <div className="space-y-2">
-                  <Label>Access Code</Label>
+                  <Label htmlFor="jam-access-code">Access Code</Label>
                   <Input
+                    id="jam-access-code"
                     placeholder="e.g. GROOVE2025"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
+                    aria-invalid={!!fieldErrors.accessCode}
+                    aria-describedby={
+                      fieldErrors.accessCode
+                        ? "jam-access-code-error"
+                        : undefined
+                    }
                   />
+                  {fieldErrors.accessCode && (
+                    <p
+                      id="jam-access-code-error"
+                      className="text-sm text-destructive"
+                    >
+                      {fieldErrors.accessCode}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -296,7 +417,14 @@ export const JamSessionBookingDialog = ({
                   <MapPin className="h-4 w-4" />
                   Filter by City
                 </Label>
-                <Select value={selectedCityId} onValueChange={(v) => { setSelectedCityId(v); setSelectedRoomId(""); setSelectedSlotId(""); }}>
+                <Select
+                  value={selectedCityId}
+                  onValueChange={(v) => {
+                    setSelectedCityId(v);
+                    setSelectedRoomId("");
+                    setSelectedSlotId("");
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a city..." />
                   </SelectTrigger>
@@ -318,22 +446,36 @@ export const JamSessionBookingDialog = ({
                     No rehearsal rooms available.
                   </p>
                 ) : (
-                  <RadioGroup value={selectedRoomId} onValueChange={(v) => { setSelectedRoomId(v); setSelectedSlotId(""); }}>
+                  <RadioGroup
+                    value={selectedRoomId}
+                    onValueChange={(v) => {
+                      setSelectedRoomId(v);
+                      setSelectedSlotId("");
+                    }}
+                  >
                     <div className="grid gap-2">
                       {rooms.slice(0, 6).map((room) => (
                         <div
                           key={room.id}
                           className={cn(
-                            'flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer',
-                            selectedRoomId === room.id && 'border-primary bg-primary/5'
+                            "flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer",
+                            selectedRoomId === room.id &&
+                              "border-primary bg-primary/5",
                           )}
-                          onClick={() => { setSelectedRoomId(room.id); setSelectedSlotId(""); }}
+                          onClick={() => {
+                            setSelectedRoomId(room.id);
+                            setSelectedSlotId("");
+                          }}
                         >
                           <RadioGroupItem value={room.id} />
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center justify-between">
-                              <Label className="font-semibold cursor-pointer">{room.name}</Label>
-                              <Badge variant="outline">${room.hourly_rate}/hr</Badge>
+                              <Label className="font-semibold cursor-pointer">
+                                {room.name}
+                              </Label>
+                              <Badge variant="outline">
+                                ${room.hourly_rate}/hr
+                              </Badge>
                             </div>
                             {room.city && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -363,7 +505,10 @@ export const JamSessionBookingDialog = ({
                       </Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
                             {format(selectedDate, "PPP")}
                           </Button>
                         </PopoverTrigger>
@@ -383,7 +528,13 @@ export const JamSessionBookingDialog = ({
                         <Clock className="h-4 w-4" />
                         Duration
                       </Label>
-                      <Select value={durationHours.toString()} onValueChange={(v) => { setDurationHours(Number(v)); setSelectedSlotId(""); }}>
+                      <Select
+                        value={durationHours.toString()}
+                        onValueChange={(v) => {
+                          setDurationHours(Number(v));
+                          setSelectedSlotId("");
+                        }}
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -407,7 +558,7 @@ export const JamSessionBookingDialog = ({
                         {REHEARSAL_SLOTS.map((slot) => {
                           const available = canBookSlot(slot.id);
                           const isSelected = selectedSlotId === slot.id;
-                          
+
                           return (
                             <Button
                               key={slot.id}
@@ -417,7 +568,7 @@ export const JamSessionBookingDialog = ({
                               onClick={() => setSelectedSlotId(slot.id)}
                               className={cn(
                                 !available && "opacity-50 cursor-not-allowed",
-                                isSelected && "ring-2 ring-primary"
+                                isSelected && "ring-2 ring-primary",
                               )}
                             >
                               {slot.name}
@@ -441,7 +592,9 @@ export const JamSessionBookingDialog = ({
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Room Rate</span>
-                    <span>${selectedRoom.hourly_rate}/hr × {durationHours}hrs</span>
+                    <span>
+                      ${selectedRoom.hourly_rate}/hr × {durationHours}hrs
+                    </span>
                   </div>
                   <div className="flex justify-between font-semibold">
                     <span>Total Cost</span>
@@ -459,7 +612,8 @@ export const JamSessionBookingDialog = ({
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  You pay the full amount upfront. Cost is split as musicians join.
+                  You pay the full amount upfront. Cost is split as musicians
+                  join.
                 </p>
               </div>
             )}
@@ -467,7 +621,16 @@ export const JamSessionBookingDialog = ({
         </ScrollArea>
 
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {formError && (
+            <p className="mr-auto text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isBooking}
+          >
             Cancel
           </Button>
           <Button onClick={handleBook} disabled={!canBook || isBooking}>
