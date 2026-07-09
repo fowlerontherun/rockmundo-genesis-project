@@ -1,61 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchAllRadioContent,
+  fetchPlayableRadioContent,
+  radioContentKeys,
+  type RadioContent,
+} from "@/services/radioContentService";
 
-export interface RadioContent {
-  id: string;
-  content_type: 'jingle' | 'advert';
-  title: string;
-  script: string;
-  audio_url: string | null;
-  audio_status: string;
-  voice_id: string | null;
-  category: string | null;
-  brand_name: string | null;
-  humor_style: string | null;
-  duration_seconds: number | null;
-  play_weight: number;
-  is_active: boolean;
-  created_at: string;
-}
+export type { RadioContent } from "@/services/radioContentService";
 
 export const useRadioContent = () => {
   return useQuery({
-    queryKey: ["rm-radio-content"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("radio_content")
-        .select("*")
-        .eq("is_active", true)
-        .eq("audio_status", "completed")
-        .not("audio_url", "is", null);
-
-      if (error) {
-        console.error("[useRadioContent] Error fetching radio content:", error);
-        return [];
-      }
-
-      return (data || []) as RadioContent[];
-    },
+    queryKey: radioContentKeys.active,
+    queryFn: fetchPlayableRadioContent,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
 export const useAllRadioContent = () => {
   return useQuery({
-    queryKey: ["rm-radio-content-all"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("radio_content")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("[useAllRadioContent] Error fetching radio content:", error);
-        return [];
-      }
-
-      return (data || []) as RadioContent[];
-    },
+    queryKey: radioContentKeys.all,
+    queryFn: fetchAllRadioContent,
     staleTime: 30 * 1000, // 30 seconds for admin
   });
 };
@@ -73,5 +37,5 @@ export const getRandomContent = (content: RadioContent[]): RadioContent | null =
     }
   }
 
-  return weightedArray[Math.floor(Math.random() * weightedArray.length)];
+  return weightedArray[Math.floor(Math.random() * weightedArray.length)] ?? null;
 };

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSeasonalWeatherPattern } from "@/services/weatherService";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import type { WeatherCondition, Weather } from "@/utils/weatherSystem";
 
@@ -35,14 +35,9 @@ export function useWeather(cityId: string | null | undefined) {
         return { condition: "sunny", temperature: 20, emoji: "☀️" };
       }
 
-      const { data, error } = await supabase
-        .from("seasonal_weather_patterns")
-        .select("*")
-        .eq("city_id", cityId)
-        .eq("season", calendar.season)
-        .maybeSingle();
+      const weatherPattern = await fetchSeasonalWeatherPattern(cityId, calendar.season);
 
-      if (error || !data) {
+      if (!weatherPattern?.weather_conditions || weatherPattern.avg_temperature_celsius == null) {
         return { condition: "sunny", temperature: 20, emoji: "☀️" };
       }
 
@@ -55,7 +50,7 @@ export function useWeather(cityId: string | null | undefined) {
 
       const random = seededRandom(Math.abs(seedNum));
 
-      const conditions = data.weather_conditions as Record<WeatherCondition, number>;
+      const conditions = weatherPattern.weather_conditions;
       let cumulative = 0;
       let selectedCondition: WeatherCondition = "sunny";
 
@@ -69,7 +64,7 @@ export function useWeather(cityId: string | null | undefined) {
 
       // Add some temperature variance based on seed
       const tempVariance = seededRandom(Math.abs(seedNum + 1)) * 6 - 3; // ±3°C
-      const temperature = Math.round(data.avg_temperature_celsius + tempVariance);
+      const temperature = Math.round(weatherPattern.avg_temperature_celsius + tempVariance);
 
       return {
         condition: selectedCondition,
