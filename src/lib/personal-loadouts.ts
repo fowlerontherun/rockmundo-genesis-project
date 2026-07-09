@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertNonEmptyString, throwDbError } from "@/lib/db-errors";
 
 const db = supabase as any;
 
@@ -66,6 +67,8 @@ const mapLoadout = (row: PersonalLoadoutQueryRow): PersonalLoadoutWithGear => ({
 export const listPersonalLoadoutsByCharacter = async (
   characterId: string
 ): Promise<PersonalLoadoutWithGear[]> => {
+  const validCharacterId = assertNonEmptyString(characterId, "characterId");
+
   const { data, error } = await db
     .from("personal_loadouts")
     .select(
@@ -73,11 +76,11 @@ export const listPersonalLoadoutsByCharacter = async (
         items:personal_loadout_items (*, gear:gear_items (*)),
         pedal_slots:personal_loadout_pedal_slots (*, gear:gear_items (*))`
     )
-    .eq("character_id", characterId)
+    .eq("character_id", validCharacterId)
     .order("created_at", { ascending: true });
 
   if (error) {
-    throw error;
+    throwDbError(error, { operation: "list", table: "personal_loadouts", filters: { characterId: validCharacterId }, rlsHint: "Verify RLS allows the current user to read this character." });
   }
 
   return (data as PersonalLoadoutQueryRow[] | null)?.map(mapLoadout) ?? [];
@@ -86,6 +89,8 @@ export const listPersonalLoadoutsByCharacter = async (
 const fetchPersonalLoadoutById = async (
   loadoutId: string
 ): Promise<PersonalLoadoutWithGear | null> => {
+  const validLoadoutId = assertNonEmptyString(loadoutId, "loadoutId");
+
   const { data, error } = await db
     .from("personal_loadouts")
     .select(
@@ -93,11 +98,11 @@ const fetchPersonalLoadoutById = async (
         items:personal_loadout_items (*, gear:gear_items (*)),
         pedal_slots:personal_loadout_pedal_slots (*, gear:gear_items (*))`
     )
-    .eq("id", loadoutId)
-    .single();
+    .eq("id", validLoadoutId)
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
-    throw error;
+  if (error) {
+    throwDbError(error, { operation: "fetch", table: "personal_loadouts", filters: { loadoutId: validLoadoutId }, rlsHint: "A null row can mean not found or hidden by RLS." });
   }
 
   if (!data) {
@@ -115,10 +120,11 @@ const insertLoadoutItems = async (
     return;
   }
 
+  const validLoadoutId = assertNonEmptyString(loadoutId, "loadoutId");
   const payload = items.map((item) => ({
-    loadout_id: loadoutId,
-    gear_item_id: item.gearItemId,
-    slot_kind: item.slotKind,
+    loadout_id: validLoadoutId,
+    gear_item_id: assertNonEmptyString(item.gearItemId, "items[].gearItemId"),
+    slot_kind: assertNonEmptyString(item.slotKind, "items[].slotKind"),
     notes: item.notes ?? null,
   }));
 
@@ -127,7 +133,7 @@ const insertLoadoutItems = async (
     .insert(payload);
 
   if (error) {
-    throw error;
+    throwDbError(error, { operation: "insert", table: "personal_loadout_items", filters: { loadoutId: validLoadoutId }, rlsHint: "Verify loadout_id and gear_item_id foreign keys are visible and valid." });
   }
 };
 
@@ -139,10 +145,11 @@ const insertPedalSlots = async (
     return;
   }
 
+  const validLoadoutId = assertNonEmptyString(loadoutId, "loadoutId");
   const payload = pedalSlots.map((slot) => ({
-    loadout_id: loadoutId,
+    loadout_id: validLoadoutId,
     slot_number: slot.slotNumber,
-    slot_type: slot.slotType,
+    slot_type: assertNonEmptyString(slot.slotType, "pedalSlots[].slotType"),
     gear_item_id: slot.gearItemId ?? null,
     notes: slot.notes ?? null,
   }));
@@ -152,7 +159,7 @@ const insertPedalSlots = async (
     .insert(payload);
 
   if (error) {
-    throw error;
+    throwDbError(error, { operation: "insert", table: "personal_loadout_pedal_slots", filters: { loadoutId: validLoadoutId }, rlsHint: "Verify loadout_id and optional gear_item_id foreign keys are visible and valid." });
   }
 };
 
@@ -175,8 +182,8 @@ export const createPersonalLoadout = async (
     .from("personal_loadouts")
     .insert([
       {
-        character_id: characterId,
-        name,
+        character_id: assertNonEmptyString(characterId, "characterId"),
+        name: assertNonEmptyString(name, "name"),
         role: role ?? null,
         scenario: scenario ?? null,
         primary_instrument: primaryInstrument ?? null,
@@ -188,7 +195,7 @@ export const createPersonalLoadout = async (
     .single();
 
   if (error) {
-    throw error;
+    throwDbError(error, { operation: "insert", table: "personal_loadouts", filters: { characterId }, rlsHint: "Verify RLS allows inserts for this character and required FKs exist." });
   }
 
   const loadoutId = (data as PersonalLoadoutRecord).id;
@@ -208,10 +215,12 @@ export const updatePersonalLoadout = async (
   input: UpdatePersonalLoadoutInput
 ): Promise<PersonalLoadoutWithGear | null> => {
   const { characterId, loadoutId, changes, items, pedalSlots } = input;
+  const validCharacterId = assertNonEmptyString(characterId, "characterId");
+  const validLoadoutId = assertNonEmptyString(loadoutId, "loadoutId");
 
   const updatePayload: Record<string, unknown> = {};
   if (changes) {
-    if (changes.name !== undefined) updatePayload.name = changes.name;
+    if (changes.name !== undefined) updatePayload.name = assertNonEmptyString(changes.name, "changes.name");
     if (changes.role !== undefined) updatePayload.role = changes.role ?? null;
     if (changes.scenario !== undefined) updatePayload.scenario = changes.scenario ?? null;
     if (changes.primaryInstrument !== undefined) updatePayload.primary_instrument = changes.primaryInstrument ?? null;
@@ -223,11 +232,11 @@ export const updatePersonalLoadout = async (
     const { error } = await db
       .from("personal_loadouts")
       .update(updatePayload)
-      .eq("id", loadoutId)
-      .eq("character_id", characterId);
+      .eq("id", validLoadoutId)
+      .eq("character_id", validCharacterId);
 
     if (error) {
-      throw error;
+      throwDbError(error, { operation: "update", table: "personal_loadouts", filters: { loadoutId: validLoadoutId, characterId: validCharacterId }, rlsHint: "A zero-row update can indicate RLS or ownership mismatch." });
     }
   }
 
@@ -235,10 +244,10 @@ export const updatePersonalLoadout = async (
     const { error: deleteError } = await db
       .from("personal_loadout_items")
       .delete()
-      .eq("loadout_id", loadoutId);
+      .eq("loadout_id", validLoadoutId);
 
     if (deleteError) {
-      throw deleteError;
+      throwDbError(deleteError, { operation: "delete", table: "personal_loadout_items", filters: { loadoutId: validLoadoutId }, rlsHint: "Verify child rows are covered by loadout ownership RLS." });
     }
 
     await insertLoadoutItems(loadoutId, items);
@@ -248,14 +257,14 @@ export const updatePersonalLoadout = async (
     const { error: deleteError } = await db
       .from("personal_loadout_pedal_slots")
       .delete()
-      .eq("loadout_id", loadoutId);
+      .eq("loadout_id", validLoadoutId);
 
     if (deleteError) {
-      throw deleteError;
+      throwDbError(deleteError, { operation: "delete", table: "personal_loadout_pedal_slots", filters: { loadoutId: validLoadoutId }, rlsHint: "Verify child rows are covered by loadout ownership RLS." });
     }
 
     await insertPedalSlots(loadoutId, pedalSlots);
   }
 
-  return fetchPersonalLoadoutById(loadoutId);
+  return fetchPersonalLoadoutById(validLoadoutId);
 };
