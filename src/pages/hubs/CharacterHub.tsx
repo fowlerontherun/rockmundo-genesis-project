@@ -1,6 +1,6 @@
 import { CategoryHub } from "@/components/CategoryHub";
 import {
-  User, Users, ShoppingCart, Guitar, HeartPulse, History, BookOpen,
+  User, Users, ShoppingCart, Guitar, HeartPulse, History, BookOpen, GraduationCap, Sparkles,
   Palette, Skull, Crown, Scissors, Package, Home, Car, Heart,
 } from "lucide-react";
 
@@ -18,6 +18,13 @@ export default function CharacterHub() {
             { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store", imagePrompt: "A colorful shop displaying character skins, outfits, and accessories" },
             { icon: Palette, labelKey: "nav.tattooParlour", path: "/tattoo-parlour", imagePrompt: "A tattoo parlour with flash art on walls and rock-themed designs" },
             { icon: Scissors, labelKey: "nav.clothingShop", path: "/clothing-shop", imagePrompt: "A boutique clothing shop with stage outfits and racks of rock fashion" },
+          ],
+        },
+        {
+          label: "Progression",
+          tiles: [
+            { icon: Sparkles, labelKey: "nav.skills", path: "/skills", imagePrompt: "A personal progression screen with branching music skill trees, XP meters, and practice plans" },
+            { icon: GraduationCap, labelKey: "nav.education", path: "/education", imagePrompt: "A music school classroom with instruments, chalkboard, and students" },
             { icon: HeartPulse, labelKey: "nav.wellness", path: "/wellness", imagePrompt: "A wellness dashboard showing health and energy meters with a spa scene" },
           ],
         },

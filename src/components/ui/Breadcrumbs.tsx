@@ -66,6 +66,7 @@ const LABELS: Record<string, string> = {
   finances: "Finances",
   employment: "Jobs",
   education: "Education",
+  skills: "Skills",
   wellness: "Wellness",
   travel: "Travel",
   city: "City",

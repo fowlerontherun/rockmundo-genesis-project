@@ -19,7 +19,6 @@ import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/u
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
-import { SkillsAttributesTab } from "@/components/dashboard/SkillsAttributesTab";
 import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
 import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
@@ -286,8 +285,6 @@ const Dashboard = () => {
   } = useAuth();
   const {
     profile,
-    skillProgress,
-    attributes,
     currentCity
   } = useGameData();
   const { t } = useTranslation();
@@ -361,18 +358,6 @@ const Dashboard = () => {
     enabled: !!profile?.id
   });
 
-  // Filter skills with XP > 0
-  const trainedSkills = skillProgress?.filter(skill => (skill.current_xp || 0) > 0) || [];
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  };
-  const calculateSkillProgress = (currentXp: number, level: number) => {
-    const currentLevelXp = Math.pow(level, 2) * 100;
-    const nextLevelXp = Math.pow(level + 1, 2) * 100;
-    const progressInLevel = currentXp - currentLevelXp;
-    const xpNeededForLevel = nextLevelXp - currentLevelXp;
-    return progressInLevel / xpNeededForLevel * 100;
-  };
 
   return <StandardPageLayout
       title={t('dashboard.title')}
@@ -401,7 +386,7 @@ const Dashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-7 gap-1">
+          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-6 gap-1">
             <TabsTrigger value="profile" className="flex-shrink-0">
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
@@ -417,10 +402,6 @@ const Dashboard = () => {
             <TabsTrigger value="behavior" className="flex-shrink-0">
               <Flame className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Lifestyle</span>
-            </TabsTrigger>
-            <TabsTrigger value="skills" className="flex-shrink-0">
-              <Zap className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t('nav.skills')}</span>
             </TabsTrigger>
             <TabsTrigger value="schedule" className="flex-shrink-0">
               <Calendar className="h-4 w-4 sm:mr-2" />
@@ -520,12 +501,6 @@ const Dashboard = () => {
         <TabsContent value="behavior" className="space-y-4">
           <BehaviorSettingsTab />
         </TabsContent>
-
-        {/* Skills & Attributes Tab */}
-        <TabsContent value="skills" className="space-y-4">
-          <SkillsAttributesTab profile={profile} />
-        </TabsContent>
-
 
         {/* Schedule Tab */}
         <TabsContent value="schedule" className="space-y-4">
