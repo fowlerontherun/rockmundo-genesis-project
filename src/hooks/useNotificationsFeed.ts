@@ -113,6 +113,8 @@ export function useNotificationsFeed() {
     notifications,
     unreadCount,
     isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
     markRead: markRead.mutate,
     markAllRead: markAllRead.mutate,
     dismiss: dismiss.mutate,
