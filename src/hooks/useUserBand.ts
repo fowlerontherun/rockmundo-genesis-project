@@ -28,7 +28,11 @@ export function useUserBand() {
         .limit(1)
         .maybeSingle();
 
-      if (memberError || !membership) return null;
+      if (memberError) {
+        throw new Error(`Failed to load active band membership: ${memberError.message}`);
+      }
+
+      if (!membership) return null;
 
       const { data: band, error: bandError } = await supabase
         .from("bands")
@@ -37,7 +41,11 @@ export function useUserBand() {
         .eq("status", "active")
         .single();
 
-      if (bandError || !band) return null;
+      if (bandError) {
+        throw new Error(`Failed to load active band: ${bandError.message}`);
+      }
+
+      if (!band) return null;
 
       return {
         id: band.id,

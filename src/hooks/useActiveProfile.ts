@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getActiveProfile } from "@/services/profileService";
 import { useAuth } from "@/hooks/use-auth-context";
 
 /**
@@ -15,16 +15,7 @@ export function useActiveProfile() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
+      return getActiveProfile(user.id);
     },
     enabled: !!user?.id,
     staleTime: 60 * 1000, // 1 minute
