@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, formatDistanceToNow, isAfter } from "date-fns";
-import { AlertTriangle, Bell, CalendarClock, HeartPulse, Inbox, Music2, Radio, TrendingUp, Users, Zap } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, ExternalLink, HeartPulse, Inbox, Music2, Radio, TrendingUp, Users, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { supabase } from "@/integrations/supabase/client";
+import { getNotificationPreview } from "@/lib/notificationModels";
 
 interface TodaysBriefingProps {
   profile: any;
@@ -21,6 +22,8 @@ type BriefingItem = {
   href?: string;
   tone?: "default" | "warning" | "good";
   icon: typeof CalendarClock;
+  meta?: string;
+  actionLabel?: string | null;
 };
 
 const todayIso = () => new Date().toISOString();
@@ -64,9 +67,11 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
           .eq("is_archived", false),
         supabase
           .from("notifications")
-          .select("id", { count: "exact", head: true })
+          .select("id, user_id, profile_id, category, type, title, message, action_path, metadata, read_at, created_at", { count: "exact" })
           .eq("user_id", userId)
-          .is("read_at", null),
+          .is("read_at", null)
+          .order("created_at", { ascending: false })
+          .limit(5),
         supabase
           .from("song_releases")
           .select("id, release_date, release_type, platform_name, total_streams, band_id, user_id")
@@ -101,6 +106,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         activities: activitiesResult.data ?? [],
         unreadInbox: inboxResult.count ?? 0,
         unreadNotifications: notificationsResult.count ?? 0,
+        notificationPreviews: notificationsResult.data ?? [],
         releases: (releasesResult.data ?? []).filter((release: any) =>
           release.user_id === userId || (release.band_id && bandIds.includes(release.band_id))
         ),
@@ -130,7 +136,18 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
     });
 
     if ((data?.unreadInbox ?? 0) > 0) next.push({ id: "inbox", title: "Unread inbox", description: `${data?.unreadInbox} unread message${data?.unreadInbox === 1 ? "" : "s"} waiting.`, href: "/inbox", icon: Inbox });
-    if ((data?.unreadNotifications ?? 0) > 0) next.push({ id: "notifications", title: "New notifications", description: `${data?.unreadNotifications} unread notification${data?.unreadNotifications === 1 ? "" : "s"}.`, href: "/notifications", icon: Bell });
+    getNotificationPreview((data?.notificationPreviews ?? []) as any).forEach((notification) => {
+      next.push({
+        id: `notification-${notification.id}`,
+        title: notification.title,
+        description: notification.body,
+        href: notification.action_path ?? "/inbox",
+        tone: notification.priority === "urgent" || notification.priority === "high" ? "warning" : "default",
+        icon: Bell,
+        meta: `${notification.categoryLabel} · ${notification.priority} · ${formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}`,
+        actionLabel: notification.actionLabel ?? "Open inbox",
+      });
+    });
 
     data?.chartEntries?.slice(0, 2).forEach((entry: any) => {
       const song = Array.isArray(entry.songs) ? entry.songs[0] : entry.songs;
@@ -186,14 +203,14 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
               const Icon = item.icon;
               const row = <div className={`flex h-full items-start gap-3 rounded-md border p-3 transition-colors hover:bg-accent/40 ${item.tone === "warning" ? "border-warning/40 bg-warning/5" : item.tone === "good" ? "border-green-500/30 bg-green-500/5" : "bg-card/50"}`}>
                 <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${item.tone === "warning" ? "text-warning" : item.tone === "good" ? "text-green-500" : "text-primary"}`} />
-                <div className="min-w-0 flex-1"><p className="text-sm font-medium leading-tight">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.description}</p></div>
+                <div className="min-w-0 flex-1"><p className="text-sm font-medium leading-tight">{item.title}</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>{item.meta && <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{item.meta}</p>}{item.actionLabel && <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">{item.actionLabel}<ExternalLink className="h-3 w-3" /></p>}</div>
                 {item.tone === "warning" && <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
               </div>;
               return item.href ? <Link key={item.id} to={item.href}>{row}</Link> : <div key={item.id}>{row}</div>;
             })}
           </div>
         )}
-        {items.length > 0 && <div className="mt-3 flex justify-end"><Button asChild size="sm" variant="outline"><Link to="/schedule">Open schedule</Link></Button></div>}
+        {items.length > 0 && <div className="mt-3 flex justify-end"><Button asChild size="sm" variant="outline"><Link to="/inbox">Open inbox</Link></Button></div>}
       </CardContent>
     </Card>
   );
