@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 const fmtNum = (n: number | null | undefined) =>
   Number(n ?? 0).toLocaleString();
@@ -166,6 +167,8 @@ const WorldPulse = () => {
       icon={Globe}
       backTo="/hub/world-social"
     >
+      <WorldNewsList limit={8} showViewAllLink={false} />
+
       <Tabs defaultValue="trending" className="w-full">
         <TabsList>
           <TabsTrigger value="trending">Trending artists</TabsTrigger>
