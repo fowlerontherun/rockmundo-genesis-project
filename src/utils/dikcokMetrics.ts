@@ -1,3 +1,5 @@
+import { clamp } from "@/utils/number";
+
 export interface DikCokOutcomeInput {
   followers: number;
   bandFame: number;
@@ -12,7 +14,6 @@ export interface DikCokOutcome {
   velocity: "Niche" | "Stable" | "Trending" | "Exploding";
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export const calculateDikCokOutcome = (
   input: DikCokOutcomeInput,

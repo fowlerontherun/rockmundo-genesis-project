@@ -2,6 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/lib/supabase-types";
+import { clampScore } from "@/utils/number";
 import type {
   CharacterOrigin,
   PersonalityTrait,
@@ -194,7 +195,6 @@ export const updatePlayerReputation = async (
   if (!current) throw new Error("Player reputation not found");
 
   // Calculate new values and clamp to -100 to 100
-  const clamp = (val: number) => Math.max(-100, Math.min(100, val));
   
   const updates: Partial<PlayerReputation> = {
     last_updated_at: new Date().toISOString(),
@@ -216,7 +216,7 @@ export const updatePlayerReputation = async (
   for (const change of changes) {
     const currentKey = `${change.axis}_score` as keyof PlayerReputation;
     const currentValue = current[currentKey] as number;
-    const newValue = clamp(currentValue + change.change);
+    const newValue = clampScore(currentValue + change.change);
 
     updates[currentKey as 'authenticity_score' | 'attitude_score' | 'reliability_score' | 'creativity_score'] = newValue;
 
@@ -360,11 +360,9 @@ export const updateNPCRelationship = async (
 
   if (fetchError) throw fetchError;
 
-  const clamp = (val: number) => Math.max(-100, Math.min(100, val));
-
-  const newAffinity = clamp(current.affinity_score + (updates.affinity_change ?? 0));
-  const newTrust = clamp(current.trust_score + (updates.trust_change ?? 0));
-  const newRespect = clamp(current.respect_score + (updates.respect_change ?? 0));
+  const newAffinity = clampScore(current.affinity_score + (updates.affinity_change ?? 0));
+  const newTrust = clampScore(current.trust_score + (updates.trust_change ?? 0));
+  const newRespect = clampScore(current.respect_score + (updates.respect_change ?? 0));
 
   // Determine relationship stage based on affinity
   const determineStage = (affinity: number): string => {

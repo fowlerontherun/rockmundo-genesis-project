@@ -1,3 +1,5 @@
+import { clampPercent } from "@/utils/number";
+
 /**
  * Equipment Degradation System (v1.0.936)
  * Equipment wears down with use, affecting performance quality.
@@ -42,7 +44,7 @@ function getConditionLabel(condition: number): DegradationState["conditionLabel"
  * Get equipment degradation state from current condition.
  */
 export function getEquipmentCondition(condition: number): DegradationState {
-  const clamped = Math.max(0, Math.min(100, condition));
+  const clamped = clampPercent(condition);
   const label = getConditionLabel(clamped);
   const t = clamped / 100;
 

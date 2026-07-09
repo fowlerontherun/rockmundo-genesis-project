@@ -1,3 +1,4 @@
+import { clamp } from "@/utils/number";
 import type { MinigameAttemptResult, MinigameSimulationInput } from "./types";
 
 interface RhythmBeat {
@@ -6,8 +7,6 @@ interface RhythmBeat {
   timingWindow: number;
 }
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
 
 const BASE_PATTERN_LENGTH = 6;
 const MAX_PATTERN_LENGTH = 16;

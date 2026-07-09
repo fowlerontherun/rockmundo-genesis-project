@@ -1,3 +1,5 @@
+import { clampScore } from "@/utils/number";
+
 /**
  * Public Image & Reputation System (v1.0.931)
  * A composite reputation score affected by media interactions, scandals, charity, and behavior.
@@ -66,7 +68,7 @@ const TIER_CONFIG: Record<ReputationTier, { label: string; gateMultiplier: numbe
  * Calculate reputation state from a raw score.
  */
 export function getReputationState(score: number): ReputationState {
-  const clamped = Math.max(-100, Math.min(100, score));
+  const clamped = clampScore(score);
   const tier = getTier(clamped);
   const config = TIER_CONFIG[tier];
   return { score: clamped, tier, ...config };
@@ -77,7 +79,7 @@ export function getReputationState(score: number): ReputationState {
  */
 export function applyReputationEvent(currentScore: number, eventKey: string): { newScore: number; change: number } {
   const change = REPUTATION_EVENTS[eventKey] ?? 0;
-  const newScore = Math.max(-100, Math.min(100, currentScore + change));
+  const newScore = clampScore(currentScore + change);
   return { newScore, change };
 }
 

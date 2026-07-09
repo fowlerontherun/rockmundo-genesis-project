@@ -1,3 +1,5 @@
+import { clampScore } from "@/utils/number";
+
 /**
  * Fan Sentiment System (v1.0.953)
  * Tracks how fans feel about the band beyond raw numbers.
@@ -30,7 +32,7 @@ function getSentimentMood(score: number): FanSentiment["mood"] {
  * Get fan sentiment state from raw score.
  */
 export function getFanSentiment(score: number): FanSentiment {
-  const clamped = Math.max(-100, Math.min(100, score));
+  const clamped = clampScore(score);
   const mood = getSentimentMood(clamped);
   const t = (clamped + 100) / 200; // 0 to 1
 
@@ -83,7 +85,7 @@ export const SENTIMENT_EVENTS: Record<string, number> = {
  */
 export function applySentimentEvent(currentScore: number, eventKey: string): { newScore: number; change: number } {
   const change = SENTIMENT_EVENTS[eventKey] ?? 0;
-  const newScore = Math.max(-100, Math.min(100, currentScore + change));
+  const newScore = clampScore(currentScore + change);
   return { newScore, change };
 }
 
@@ -121,5 +123,5 @@ export function estimateSentimentFromActivity(
   // Scandals
   score -= scandalCount * 15;
   
-  return Math.max(-100, Math.min(100, Math.round(score)));
+  return clampScore(Math.round(score));
 }
