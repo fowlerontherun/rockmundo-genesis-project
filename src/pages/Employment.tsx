@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SectionCard, StandardStatusBadge } from "@/components/ui/standard-components";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -482,13 +483,7 @@ export default function Employment() {
 
           <TabsContent value="jobs" className="space-y-4 mt-4">
             {/* Filters */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Filter className="h-4 w-4" /> Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <SectionCard title="Filters" icon={Filter}>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label>City</Label>
@@ -551,8 +546,7 @@ export default function Employment() {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </SectionCard>
 
             {/* Job Results */}
             <div className="flex items-center justify-between">
@@ -573,16 +567,16 @@ export default function Employment() {
                           <CardTitle className="text-lg">{job.title}</CardTitle>
                           <CardDescription className="text-xs">{job.company_name}</CardDescription>
                         </div>
-                        <Badge variant="outline" className="text-xs">
+                        <StandardStatusBadge tone="muted">
                           {job.category?.replace("_", " ")}
-                        </Badge>
+                        </StandardStatusBadge>
                       </div>
                       {job.cities && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
                           {job.cities.name}, {job.cities.country}
                           {job.city_id === currentCityId && (
-                            <Badge variant="secondary" className="ml-1 text-[10px] px-1">Your City</Badge>
+                            <StandardStatusBadge tone="info" className="ml-1 text-[10px] px-1">Your City</StandardStatusBadge>
                           )}
                         </p>
                       )}
@@ -660,7 +654,7 @@ export default function Employment() {
                           <MapPin className="h-3 w-3" />
                           {currentJob.cities.name}, {currentJob.cities.country}
                           {currentJob.city_id !== currentCityId && (
-                            <Badge variant="destructive" className="ml-1 text-[10px]">Not in city!</Badge>
+                            <StandardStatusBadge tone="danger" className="ml-1 text-[10px]">Not in city!</StandardStatusBadge>
                           )}
                         </p>
                       )}
@@ -812,9 +806,9 @@ export default function Employment() {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-green-600">${shift.earnings}</p>
-                          <Badge variant={shift.status === "completed" ? "default" : "secondary"} className="text-xs">
+                          <StandardStatusBadge tone={shift.status === "completed" ? "success" : "muted"}>
                             {shift.status}
-                          </Badge>
+                          </StandardStatusBadge>
                         </div>
                       </div>
                     ))}

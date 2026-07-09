@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MetricCardGrid } from "@/components/ui/standard-components";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -151,45 +152,14 @@ export default function PublicRelations() {
     >
       <div className="space-y-6">
         {/* Stats Cards */}
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <Card className="bg-card/50 backdrop-blur">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Pending Offers</span>
-              </div>
-              <p className="mt-1 text-2xl font-bold">{prStats?.pendingOffers || 0}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span className="text-xs text-muted-foreground">Fame Gained</span>
-              </div>
-              <p className="mt-1 text-2xl font-bold">{(prStats?.totalFameGained || 0).toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-500" />
-                <span className="text-xs text-muted-foreground">Total Reach</span>
-              </div>
-              <p className="mt-1 text-2xl font-bold">{(prStats?.totalReach || 0).toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-amber-500" />
-                <span className="text-xs text-muted-foreground">PR Earnings</span>
-              </div>
-              <p className="mt-1 text-2xl font-bold">${(prStats?.totalEarnings || 0).toLocaleString()}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <MetricCardGrid
+          items={[
+            { label: "Pending Offers", value: prStats?.pendingOffers || 0, icon: Megaphone },
+            { label: "Fame Gained", value: (prStats?.totalFameGained || 0).toLocaleString(), icon: TrendingUp, tone: "success" },
+            { label: "Total Reach", value: (prStats?.totalReach || 0).toLocaleString(), icon: Users, tone: "info" },
+            { label: "PR Earnings", value: `$${(prStats?.totalEarnings || 0).toLocaleString()}`, icon: DollarSign, tone: "warning" },
+          ]}
+        />
 
         {/* Band Stats Bar */}
         <Card className="bg-card/50 backdrop-blur">
