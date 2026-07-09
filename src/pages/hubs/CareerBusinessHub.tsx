@@ -1,7 +1,7 @@
 import { CategoryHub } from "@/components/CategoryHub";
 import {
   Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone,
-  Building, Headphones, Scissors, ShoppingCart, GraduationCap, BookOpen, Film, Heart, Landmark,
+  Building, Headphones, Scissors, ShoppingCart, BookOpen, Film, Heart, Landmark,
 } from "lucide-react";
 
 export default function CareerBusinessHub() {
@@ -21,10 +21,9 @@ export default function CareerBusinessHub() {
           ],
         },
         {
-          label: "Work & Learn",
+          label: "Work & Teaching",
           tiles: [
             { icon: Briefcase, labelKey: "nav.employment", path: "/employment", imagePrompt: "A job board with music industry positions: producer, roadie, DJ, sound engineer" },
-            { icon: GraduationCap, labelKey: "nav.education", path: "/education", imagePrompt: "A music school classroom with instruments, chalkboard, and students" },
             { icon: BookOpen, labelKey: "nav.teaching", path: "/teaching", imagePrompt: "A music teacher in front of students with a guitar and music theory board" },
           ],
         },
