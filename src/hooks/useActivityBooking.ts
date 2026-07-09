@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { evaluateGate } from "@/lib/api/wellnessActivities";
 import type { ActivityType } from "./useScheduledActivities";
+import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 // Map our ActivityType union → the wellness gate's activity_type vocabulary.
 // `null` = intentionally bypass the gate (wellness/recovery actions themselves,
@@ -31,6 +32,7 @@ const WELLNESS_GATE_MAP: Record<ActivityType, string | null> = {
   release_manufacturing: null,
   release_promo: null,
   teaching: null,
+  jam_session: "jam",
   other: null,
 };
 
@@ -133,10 +135,9 @@ export async function checkTimeSlotAvailable(
  * Create a scheduled activity entry
  */
 export async function createScheduledActivity(params: BookingParams): Promise<string> {
-  // Validate that the scheduled start is in the future
-  const now = new Date();
-  if (params.scheduledStart <= now) {
-    throw new Error('Cannot book activities in the past. Please select a future time slot.');
+  const bookingError = validateBookingWindow(params.scheduledStart, params.scheduledEnd);
+  if (bookingError) {
+    throw new Error(bookingError);
   }
 
   let userId = params.userId;
@@ -185,6 +186,7 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
       activity_type: params.activityType,
       scheduled_start: params.scheduledStart.toISOString(),
       scheduled_end: params.scheduledEnd.toISOString(),
+      duration_minutes: getDurationMinutes(params.scheduledStart, params.scheduledEnd),
       title: params.title,
       description: params.description,
       location: params.location,

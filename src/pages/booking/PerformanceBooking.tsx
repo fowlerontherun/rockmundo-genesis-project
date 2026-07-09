@@ -18,6 +18,7 @@ import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { addDurationHours, buildScheduledDateTime, getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export default function PerformanceBooking() {
   const navigate = useNavigate();
@@ -167,10 +168,14 @@ export default function PerformanceBooking() {
     }
 
     const [hours] = timeSlot.split(":").map(Number);
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(hours, 0, 0, 0);
     const durationHours = parseInt(duration);
-    const scheduledEnd = new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000);
+    const scheduledStart = buildScheduledDateTime(date, hours);
+    const scheduledEnd = addDurationHours(scheduledStart, durationHours);
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) {
+      toast({ title: "Choose a Future Time", description: bookingError, variant: "destructive" });
+      return;
+    }
 
     // Check for conflicts
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
@@ -223,6 +228,7 @@ export default function PerformanceBooking() {
           activity_type: "rehearsal",
           scheduled_start: scheduledStart.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
+          duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
           status: "scheduled",
           title: "Band Rehearsal",
           metadata: {
@@ -273,10 +279,14 @@ export default function PerformanceBooking() {
     }
 
     const [hours] = timeSlot.split(":").map(Number);
-    const scheduledStart = new Date(date);
-    scheduledStart.setHours(hours, 0, 0, 0);
     const durationHours = parseInt(duration);
-    const scheduledEnd = new Date(scheduledStart.getTime() + durationHours * 60 * 60 * 1000);
+    const scheduledStart = buildScheduledDateTime(date, hours);
+    const scheduledEnd = addDurationHours(scheduledStart, durationHours);
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) {
+      toast({ title: "Choose a Future Time", description: bookingError, variant: "destructive" });
+      return;
+    }
 
     // Check for conflicts
     const conflict = await checkConflicts(scheduledStart, scheduledEnd);
@@ -301,6 +311,7 @@ export default function PerformanceBooking() {
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
+      duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
       status: "scheduled",
       title: `${activityType === "gig" ? "Gig" : activityType === "busking" ? "Busking" : "Songwriting"}`,
       metadata,

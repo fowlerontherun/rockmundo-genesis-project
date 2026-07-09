@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { REHEARSAL_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
+import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export interface BookJamSessionParams {
   name: string;
@@ -97,7 +98,7 @@ export const useJamSessionBooking = () => {
       activity_type: "jam_session",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
-      duration_minutes: Math.round((scheduledEnd.getTime() - scheduledStart.getTime()) / 60000),
+      duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
       status: "scheduled",
       title: `Jam Session: ${sessionName}`,
       location: cityName || "Rehearsal Room",
@@ -137,6 +138,8 @@ export const useJamSessionBooking = () => {
 
       const { start: scheduledStart } = getSlotTimeRange(slot, params.selectedDate);
       const scheduledEnd = new Date(scheduledStart.getTime() + params.durationHours * 60 * 60 * 1000);
+      const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+      if (bookingError) throw new Error(bookingError);
 
       // Check for activity conflicts
       const { hasConflict, conflictTitle } = await checkActivityConflict(

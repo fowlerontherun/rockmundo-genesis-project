@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, differenceInMinutes } from "date-fns";
+import { format } from "date-fns";
 import {
   Clock, ExternalLink, Music, Guitar, Headphones, Briefcase, GraduationCap,
   BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard
@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useScheduledActivities, type ActivityType, type ScheduledActivity } from "@/hooks/useScheduledActivities";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
+import { formatDurationMinutes, getDisplayDurationMinutes } from "@/utils/activityBookingTime";
 
 interface DayScheduleProps {
   date: Date;
@@ -38,6 +39,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   release_manufacturing: Headphones,
   release_promo: Star,
   teaching: GraduationCap,
+  jam_session: Users,
   other: Clock,
 };
 
@@ -63,6 +65,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   release_manufacturing: "bg-sky-500/10 border-sky-500/30 text-sky-700 dark:text-sky-300",
   release_promo: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300",
   teaching: "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300",
+  jam_session: "bg-violet-500/10 border-violet-500/30 text-violet-700 dark:text-violet-300",
   other: "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300",
 };
 
@@ -71,7 +74,7 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   travel: "Travel", work: "Work", university: "Education", reading: "Reading", mentorship: "Mentorship",
   youtube_video: "Video", health: "Health", skill_practice: "Practice", open_mic: "Open mic",
   pr_appearance: "PR", film_production: "Film", festival_attendance: "Festival", festival_performance: "Festival gig",
-  release_manufacturing: "Release", release_promo: "Promotion", teaching: "Teaching", other: "Other",
+  release_manufacturing: "Release", release_promo: "Promotion", teaching: "Teaching", jam_session: "Jam session", other: "Other",
 };
 
 function getDetailHref(activity: ScheduledActivity) {
@@ -85,14 +88,7 @@ function getDetailHref(activity: ScheduledActivity) {
 }
 
 function formatDuration(activity: ScheduledActivity) {
-  if (activity.duration_minutes) return `${activity.duration_minutes} min`;
-  if (!activity.scheduled_end) return null;
-  const minutes = differenceInMinutes(new Date(activity.scheduled_end), new Date(activity.scheduled_start));
-  if (minutes <= 0) return null;
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+  return formatDurationMinutes(getDisplayDurationMinutes(activity));
 }
 
 export function DaySchedule({ date, userId }: DayScheduleProps) {
