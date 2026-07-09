@@ -27,7 +27,7 @@ import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 
 type AuthTab = "login" | "signup" | "forgot";
 
-const BETA_CODE = "BETAV2UAG26";
+
 
 interface StatusMessage {
   message: string;
@@ -72,7 +72,6 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
-    betaCode: "",
   });
 
   const [signupData, setSignupData] = useState({
@@ -211,13 +210,6 @@ const Auth = () => {
     setError("");
     setStatus(null);
     setUnverifiedEmail("");
-    if (loginData.betaCode.trim().toUpperCase() !== BETA_CODE) {
-      setError(
-        "Invalid Beta code. Please enter the correct Beta access code to sign in.",
-      );
-      setLoading(false);
-      return;
-    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
@@ -501,10 +493,11 @@ const Auth = () => {
         <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
           <AlertCircle className="h-4 w-4 text-primary" />
           <AlertDescription className="space-y-1 text-left">
-            <p className="font-semibold">Thank you for playing Beta V1!</p>
+            <p className="font-semibold">Open Play Test — Friday 17 July</p>
             <p className="text-sm text-muted-foreground">
-              Beta V2 will be available in August with a full world reset. Enter
-              your Beta code below to sign in.
+              A 1-week public play test kicks off Friday 17 July 2026. Sign in
+              or create an account below — no Beta code required. Join the
+              Discord for live updates.
             </p>
           </AlertDescription>
         </Alert>
@@ -749,32 +742,6 @@ const Auth = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="login-beta-code"
-                          className="font-oswald text-sm"
-                        >
-                          Beta Access Code
-                        </Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="login-beta-code"
-                            type="text"
-                            placeholder="Enter your Beta code"
-                            autoComplete="off"
-                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
-                            value={loginData.betaCode}
-                            onChange={(e) =>
-                              setLoginData({
-                                ...loginData,
-                                betaCode: e.target.value,
-                              })
-                            }
-                            required
-                          />
-                        </div>
-                      </div>
 
                       <Button
                         type="submit"

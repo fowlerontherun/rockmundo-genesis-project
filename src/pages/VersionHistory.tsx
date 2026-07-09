@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.444",
+    date: "2026-07-09",
+    changes: [
+      { type: 'improvement', description: "**Beta codes removed & July 17th play test announcement.** Removed the mandatory Beta access code from the sign-in form (`Auth.tsx`) — existing accounts can now log in with just email + password. Replaced the Beta V2 registration banner and dialog on the landing page with a new announcement banner promoting the 1-week open play test starting **Friday 17 July 2026**, with a direct Discord CTA for updates." },
+    ],
+  },
+  {
     version: "1.1.443",
     date: "2026-07-07",
     changes: [
