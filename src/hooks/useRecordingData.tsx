@@ -86,10 +86,7 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
 
       const { data, error } = await query;
       
-      if (error) {
-        console.error('Error fetching producers:', error);
-        throw error;
-      }
+      if (error) throw error;
       return (data || []) as RecordingProducer[];
     },
   });
@@ -110,10 +107,7 @@ export const useRecordingSessions = (profileId: string) => {
         .eq('profile_id', profileId)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching recording sessions:', error);
-        throw error;
-      }
+      if (error) throw error;
       return (data || []) as any as RecordingSession[];
     },
   });

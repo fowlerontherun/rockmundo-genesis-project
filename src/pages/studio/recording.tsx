@@ -39,6 +39,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { format, formatDistanceToNow } from "date-fns";
 
 const statusBadgeStyles: Record<RecordingStatus, string> = {
@@ -117,7 +118,7 @@ export default function StudioRecordingDashboard() {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const { profileId } = useActiveProfile();
-  const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
+  const { data: sessions, isLoading, error: sessionsError, refetch: refetchSessions } = useRecordingSessions(profileId || "");
   const queryClient = useQueryClient();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
@@ -141,7 +142,6 @@ export default function StudioRecordingDashboard() {
       queryClient.invalidateQueries({ queryKey: ["recording-sessions", userId] });
     },
     onError: (error: Error) => {
-      console.error("Failed to update recording session status", error);
       toast.error(error.message ?? "Unable to update session status.");
     },
     onSettled: () => setPendingAction(null),
@@ -162,7 +162,6 @@ export default function StudioRecordingDashboard() {
       queryClient.invalidateQueries({ queryKey: ["recording-sessions", userId] });
     },
     onError: (error: Error) => {
-      console.error("Failed to advance recording session stage", error);
       toast.error(error.message ?? "Unable to advance the session stage.");
     },
     onSettled: () => setPendingAction(null),
@@ -352,24 +351,18 @@ export default function StudioRecordingDashboard() {
     >
 
       {isLoading ? (
-        <Card className="border-dashed">
-          <CardContent className="flex items-center gap-3 py-12 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Loading your recording sessions...
-          </CardContent>
-        </Card>
+        <PageLoadingState title="Loading recording sessions" description="Checking your studio pipeline and collaborator status..." />
+      ) : sessionsError ? (
+        <PageErrorState
+          title="Recording sessions could not be loaded"
+          description="The studio desk could not reach your recording data. Try again in a moment."
+          onRetry={() => void refetchSessions()}
+        />
       ) : !sessions || sessions.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="space-y-4 py-12 text-center">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">No recording sessions scheduled yet</h2>
-              <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                Launch a new studio booking from the Recording Studio page to start tracking your production workflow.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          title="No recording sessions scheduled yet"
+          description="Launch a new studio booking from the Recording Studio page to start tracking your production workflow."
+        />
       ) : (
         <div className="grid gap-6">{sessions.map(renderSessionCard)}</div>
       )}

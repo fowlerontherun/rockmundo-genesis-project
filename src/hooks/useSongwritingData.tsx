@@ -112,7 +112,7 @@ export const useSongwritingData = (profileId?: string | null) => {
   const queryClient = useQueryClient();
 
   // Fetch themes
-  const { data: songThemes = [], isLoading: isLoadingThemes } = useQuery({
+  const { data: songThemes = [], isLoading: isLoadingThemes, error: themesError, refetch: refetchThemes } = useQuery({
     queryKey: ['song-themes'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -126,7 +126,7 @@ export const useSongwritingData = (profileId?: string | null) => {
   });
 
   // Fetch chord progressions
-  const { data: chordProgressions = [], isLoading: isLoadingChordProgressions } = useQuery({
+  const { data: chordProgressions = [], isLoading: isLoadingChordProgressions, error: chordProgressionsError, refetch: refetchChordProgressions } = useQuery({
     queryKey: ['chord-progressions'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -140,7 +140,7 @@ export const useSongwritingData = (profileId?: string | null) => {
   });
 
   // Fetch projects with sessions and auto-unlock expired locks
-  const { data: projects = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
+  const { data: projects = [], isLoading: isLoadingProjects, error: projectsError, refetch: refetchProjects } = useQuery({
     queryKey: ['songwriting-projects', profileId],
     enabled: !!profileId,
     queryFn: async () => {
@@ -185,7 +185,7 @@ export const useSongwritingData = (profileId?: string | null) => {
               .update({ is_locked: false, locked_until: null })
               .eq('id', p.id)
           )
-        ).catch(err => console.error('Background unlock failed:', err));
+        ).catch(() => undefined);
       }
       
       // Order sessions by created_at DESC - mark expired locks as unlocked in UI immediately
@@ -681,5 +681,10 @@ export const useSongwritingData = (profileId?: string | null) => {
     completeSession,
     convertToSong,
     refetchProjects,
+    projectsError,
+    themesError,
+    chordProgressionsError,
+    refetchThemes,
+    refetchChordProgressions,
   };
 };

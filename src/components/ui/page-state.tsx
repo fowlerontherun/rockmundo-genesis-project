@@ -16,7 +16,7 @@ type PageStateProps = {
 
 export function PageLoadingState({ title = "Loading", description = "Getting everything ready...", className }: Partial<PageStateProps>) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card className={cn("overflow-hidden", className)} role="status" aria-live="polite" aria-busy="true">
       <CardContent className="space-y-5 p-6">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -69,7 +69,7 @@ export function PageErrorState({
   retryLabel = "Try again",
 }: PageErrorStateProps) {
   return (
-    <Alert variant="destructive" className={cn("bg-destructive/10", className)}>
+    <Alert variant="destructive" className={cn("bg-destructive/10", className)} role="alert">
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="mt-2 flex flex-col gap-3">
