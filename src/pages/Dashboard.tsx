@@ -35,6 +35,7 @@ import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
 import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWidget";
 import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
+import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
 
 import { Link } from "react-router-dom";
 const Dashboard = () => {
@@ -194,6 +195,7 @@ const Dashboard = () => {
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
           <TodaysBriefing profile={profile} userId={user?.id} />
+          <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
           <CharacterUnreadWidget />
 
 
