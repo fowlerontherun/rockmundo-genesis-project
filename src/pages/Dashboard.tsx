@@ -508,29 +508,9 @@ const Dashboard = () => {
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <CardTitle>{t('nav.schedule')}</CardTitle>
-                <div className="flex gap-2 flex-wrap">
-                  <Link to="/booking/songwriting">
-                    <Button size="sm" variant="outline" className="text-xs sm:text-sm">
-                      <span className="hidden sm:inline">{t('nav.songwriting')}</span>
-                      <span className="sm:hidden">{t('dashboard.write', 'Write')}</span>
-                    </Button>
-                  </Link>
-                  <Link to="/booking/performance">
-                    <Button size="sm" variant="outline">
-                      {t('nav.perform')}
-                    </Button>
-                  </Link>
-                  <Link to="/booking/education">
-                    <Button size="sm" variant="outline">
-                      {t('nav.education')}
-                    </Button>
-                  </Link>
-                  <Link to="/booking/work">
-                    <Button size="sm" variant="outline">
-                      {t('dashboard.life', 'Life')}
-                    </Button>
-                  </Link>
-                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/schedule">Open full schedule</Link>
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
