@@ -15,6 +15,7 @@ import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from 
 import { User, Trophy, Users, Calendar, Heart, Zap, Coins, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
@@ -100,13 +101,17 @@ const Dashboard = () => {
     enabled: !!profile?.id
   });
   const {
-    data: achievements
+    data: achievements,
+    isLoading: achievementsLoading,
+    error: achievementsError,
+    refetch: refetchAchievements,
   } = useQuery({
     queryKey: ["player-achievements", profile?.id],
     queryFn: async (): Promise<any[]> => {
       if (!profile?.id) return [];
       const client: any = supabase;
       const result = await client.from("player_achievements").select("*, achievements(*)").eq("profile_id", profile.id);
+      if (result.error) throw result.error;
       return result.data || [];
     },
     enabled: !!profile?.id
@@ -404,9 +409,23 @@ const Dashboard = () => {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
-              {!achievements || achievements.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                  {t('dashboard.noAchievements', 'No achievements unlocked yet. Keep playing to earn achievements!')}
-                </p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {achievementsLoading ? (
+                <PageLoadingState
+                  title="Loading achievements"
+                  description="Checking your latest milestones..."
+                />
+              ) : achievementsError ? (
+                <PageErrorState
+                  title="Achievements could not be loaded"
+                  description="Your milestone list is temporarily unavailable."
+                  onRetry={() => void refetchAchievements()}
+                />
+              ) : !achievements || achievements.length === 0 ? (
+                <PageEmptyState
+                  title="No achievements unlocked yet"
+                  description={t('dashboard.noAchievements', 'Keep playing to earn achievements!')}
+                />
+              ) : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {achievements.map((achievement: any) => <div key={achievement.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
                       <div className="flex items-start gap-3">
                         <div className="text-3xl">{achievement.achievements?.icon || "🏆"}</div>

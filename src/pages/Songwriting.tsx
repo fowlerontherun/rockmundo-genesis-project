@@ -105,6 +105,7 @@ import {
 } from "lucide-react";
 import logger from "@/lib/logger";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
 interface Song {
   id: string;
@@ -550,6 +551,11 @@ const Songwriting = () => {
     completeSession,
     convertToSong,
     refetchProjects,
+    projectsError,
+    themesError,
+    chordProgressionsError,
+    refetchThemes,
+    refetchChordProgressions,
   } = useSongwritingData(profile?.id);
 
   // Map attributes to required format
@@ -1627,9 +1633,27 @@ const Songwriting = () => {
   if (isLoadingProjects && projectsList.length === 0) {
     return (
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">{t("common.loading")}</div>
-        </div>
+        <PageLoadingState
+          title="Loading songwriting projects"
+          description="Tuning up your ideas, themes, and current writing sessions..."
+        />
+      </div>
+    );
+  }
+
+  if (projectsError || themesError || chordProgressionsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <PageErrorState
+          title="Songwriting could not be loaded"
+          description="We could not load your writing desk. Your songs are safe — retry when the connection settles."
+          onRetry={() => {
+            void refetchProjects();
+            void refetchThemes();
+            void refetchChordProgressions();
+            void fetchSongs();
+          }}
+        />
       </div>
     );
   }
@@ -2498,22 +2522,22 @@ const Songwriting = () => {
       )}
 
       {filteredProjects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Music className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No songwriting projects yet
-            </h3>
-            <p className="text-muted-foreground text-center mb-4 max-w-md">
-              Capture a new concept, set creative targets, and let focus sprints
-              carry you to a finished song.
-            </p>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Start your first project
-            </Button>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          title={projectsList.length === 0 ? "No songwriting projects yet" : "No projects match these filters"}
+          description={
+            projectsList.length === 0
+              ? "Capture a new concept, set creative targets, and let focus sprints carry you to a finished song."
+              : "Clear a filter or switch status views to bring more writing projects back into the setlist."
+          }
+          action={
+            projectsList.length === 0 ? (
+              <Button onClick={handleOpenCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Start your first project
+              </Button>
+            ) : null
+          }
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => {
