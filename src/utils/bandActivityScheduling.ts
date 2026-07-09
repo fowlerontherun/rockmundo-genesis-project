@@ -18,6 +18,12 @@ export interface BandActivityParams {
   linkedGigId?: string;
 }
 
+interface ProfileSummary {
+  user_id: string;
+  display_name: string | null;
+  username: string | null;
+}
+
 interface ConflictInfo {
   userId: string;
   userName?: string;
@@ -85,8 +91,8 @@ export async function getBandMemberDetails(bandId: string): Promise<{ userId: st
     // Don't throw - just use fallback names
   }
   
-  const profileMap = new Map(
-    (profiles || []).map(p => [p.user_id, p])
+  const profileMap = new Map<string, ProfileSummary>(
+    ((profiles || []) as ProfileSummary[]).map(p => [p.user_id, p])
   );
   
   return userIds.map(userId => {
