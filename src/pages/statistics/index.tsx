@@ -8,6 +8,8 @@ import { usePlayerStatistics } from "@/hooks/usePlayerStatistics";
 import { Trophy, Music, TrendingUp, Star, Award, Target } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
+type AchievementCategoryProgress = { unlocked: number; total: number };
+
 const PlayerStatistics = () => {
   const { profileId } = useActiveProfile();
   const {
@@ -88,7 +90,7 @@ const PlayerStatistics = () => {
               <CardDescription>{completionPercentage}% complete</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(progressByCategory).map(([category, progress]) => (
+              {Object.entries(progressByCategory as Record<string, AchievementCategoryProgress>).map(([category, progress]) => (
                 <div key={category}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">{category}</span>

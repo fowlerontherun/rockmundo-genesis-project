@@ -84,7 +84,9 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
     .select('id, user_id')
     .in('user_id', userIds);
 
-  const profileMap = new Map(profiles?.map(p => [p.user_id, p.id]) || []);
+  const profileMap = new Map<string, string>(
+    ((profiles || []) as { user_id: string; id: string }[]).map(p => [p.user_id, p.id])
+  );
 
   // Fetch existing gig count for each member (for milestone checks)
   const { data: existingGigXp } = await supabase
