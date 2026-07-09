@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bell, ChevronRight, History, Calendar } from "lucide-react";
+import { Bell, History, Calendar } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
 
 export const BottomActionBar = () => {
@@ -52,15 +52,6 @@ export const BottomActionBar = () => {
         </span>
         <span className="text-[10px] text-fm-fg-muted/70">© 2026</span>
       </div>
-
-      <Button
-        size="sm"
-        className="h-8 gap-2 bg-fm-accent hover:bg-fm-accent/90 text-fm-bg font-semibold tracking-wide text-xs"
-        onClick={() => navigate("/gigs")}
-      >
-        Continue
-        <ChevronRight className="h-4 w-4" />
-      </Button>
     </footer>
   );
 };
