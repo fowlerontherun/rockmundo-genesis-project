@@ -39,7 +39,7 @@ export const useFanManagement = (profileId?: string) => {
   const queryClient = useQueryClient();
 
   // Fetch campaigns
-  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+  const campaignsQuery = useQuery({
     queryKey: ["fan-campaigns", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -57,7 +57,7 @@ export const useFanManagement = (profileId?: string) => {
   });
 
   // Fetch segments
-  const { data: segments = [], isLoading: segmentsLoading } = useQuery({
+  const segmentsQuery = useQuery({
     queryKey: ["fan-segments", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -75,7 +75,7 @@ export const useFanManagement = (profileId?: string) => {
   });
 
   // Fetch interactions
-  const { data: interactions = [], isLoading: interactionsLoading } = useQuery({
+  const interactionsQuery = useQuery({
     queryKey: ["fan-interactions", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -139,11 +139,22 @@ export const useFanManagement = (profileId?: string) => {
     },
   });
 
+  const campaigns = campaignsQuery.data ?? [];
+  const segments = segmentsQuery.data ?? [];
+  const interactions = interactionsQuery.data ?? [];
+
   return {
     campaigns,
     segments,
     interactions,
-    isLoading: campaignsLoading || segmentsLoading || interactionsLoading,
+    isLoading: campaignsQuery.isLoading || segmentsQuery.isLoading || interactionsQuery.isLoading,
+    isError: campaignsQuery.isError || segmentsQuery.isError || interactionsQuery.isError,
+    error: campaignsQuery.error || segmentsQuery.error || interactionsQuery.error,
+    refetch: () => {
+      void campaignsQuery.refetch();
+      void segmentsQuery.refetch();
+      void interactionsQuery.refetch();
+    },
     createCampaign: createCampaign.mutate,
     createSegment: createSegment.mutate,
     isCreatingCampaign: createCampaign.isPending,

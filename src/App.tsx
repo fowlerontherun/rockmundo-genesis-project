@@ -15,6 +15,8 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES } from "./config/fmNavigation";
+import ErrorBoundary from "@/components/ui/error-boundary";
+import { PageLoadingState } from "@/components/ui/page-state";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -391,13 +393,19 @@ function App() {
                       <Sonner />
                       <BrowserRouter>
                         <PageTitle />
-              <Suspense
-                fallback={
-                  <div className="flex h-screen w-full items-center justify-center">
-                    <p className="text-lg font-semibold">Loading page...</p>
-                  </div>
-                }
-              >
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen w-full bg-background p-4 md:p-8">
+                      <div className="mx-auto max-w-6xl">
+                        <PageLoadingState
+                          title="Loading page"
+                          description="Tuning the amps and loading the latest Rockmundo data..."
+                        />
+                      </div>
+                    </div>
+                  }
+                >
                 <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
@@ -710,7 +718,8 @@ function App() {
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </Suspense>
+                </Suspense>
+              </ErrorBoundary>
                 </BrowserRouter>
                     </TooltipProvider>
                   </BandCrewCatalogProvider>

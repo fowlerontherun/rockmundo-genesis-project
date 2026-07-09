@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
 const performanceSlots = [
   { value: "opening", label: "Opening Act (6:00 PM)" },
@@ -353,7 +354,11 @@ export default function Festivals() {
     performAtFestival,
     isApplying,
     isWithdrawing,
-    isPerforming
+    isPerforming,
+    festivalsError,
+    refetchFestivals,
+    participationsError,
+    refetchParticipations
   } = useFestivals(userId, band?.id);
 
   const [activeAction, setActiveAction] = useState<{ type: "apply" | "withdraw" | "perform" | null; id: string | null }>({
@@ -462,13 +467,15 @@ export default function Festivals() {
         {/* Upcoming Festivals Tab */}
         <TabsContent value="upcoming" className="space-y-4">
           {festivalsLoading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading festivals...</div>
+            <PageLoadingState title="Loading festivals" description="Checking upcoming stages, slots, and applications..." />
+          ) : festivalsError ? (
+            <PageErrorState
+              title="Couldn’t load festivals"
+              description={festivalsError instanceof Error ? festivalsError.message : "Supabase could not return upcoming festivals."}
+              onRetry={() => void refetchFestivals()}
+            />
           ) : festivals.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12 text-muted-foreground">
-                No upcoming festivals available.
-              </CardContent>
-            </Card>
+            <PageEmptyState title="No upcoming festivals" description="The calendar is quiet right now. Check back soon for new festival slots." />
           ) : (
             <div className="grid gap-4">
               {festivals.map((festival) => {
@@ -503,7 +510,13 @@ export default function Festivals() {
         {/* My Performances Tab */}
         <TabsContent value="my-performances" className="space-y-4">
           {participationsLoading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading performances...</div>
+            <PageLoadingState title="Loading performances" description="Reviewing your festival applications and set times..." />
+          ) : participationsError ? (
+            <PageErrorState
+              title="Couldn’t load your performances"
+              description={participationsError instanceof Error ? participationsError.message : "Supabase could not return your festival registrations."}
+              onRetry={() => void refetchParticipations()}
+            />
           ) : participations.filter(p => p.status !== "withdrawn").length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">

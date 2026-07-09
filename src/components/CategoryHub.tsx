@@ -1,5 +1,6 @@
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { PageEmptyState } from "@/components/ui/page-state";
 import {
   FeaturedTile,
   SectionBand,
@@ -54,6 +55,13 @@ export const CategoryHub = ({
 
   return (
     <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
+      {allGroups.length === 0 && (
+        <PageEmptyState
+          title="Nothing is on the setlist yet"
+          description="This hub is ready, but there are no destinations configured for it right now."
+        />
+      )}
+
       {featuredTile && (
         <div className={hasRealStats ? "grid gap-3 lg:grid-cols-[1fr_280px]" : ""}>
           <FeaturedTile
