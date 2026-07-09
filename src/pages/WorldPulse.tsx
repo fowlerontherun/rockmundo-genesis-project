@@ -17,6 +17,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { WorldNewsList } from "@/components/world/WorldNewsList";
+import { WorldActivitySnapshot } from "@/components/world/WorldActivitySnapshot";
 
 const fmtNum = (n: number | null | undefined) =>
   Number(n ?? 0).toLocaleString();
@@ -167,6 +168,7 @@ const WorldPulse = () => {
       icon={Globe}
       backTo="/hub/world-social"
     >
+      <WorldActivitySnapshot />
       <WorldNewsList limit={8} showViewAllLink={false} />
 
       <Tabs defaultValue="trending" className="w-full">
