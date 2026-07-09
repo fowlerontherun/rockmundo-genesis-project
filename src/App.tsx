@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
@@ -14,6 +14,7 @@ import { TutorialProvider } from "./contexts/TutorialContext";
 import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
+import { FM_MODULES } from "./config/fmNavigation";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -268,7 +269,6 @@ const NarrativeStoryPage = lazyWithRetry(
 const EurovisionPage = lazyWithRetry(() => import("./pages/Eurovision"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
-const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
@@ -302,7 +302,6 @@ const CasinoSlots = lazyWithRetry(() => import("./pages/casino/Slots"));
 const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
-const WorldSocialHub = lazyWithRetry(() => import("./pages/hubs/WorldSocialHub"));
 const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
 const SocialHubLanding = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
 const MediaHub = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
@@ -317,6 +316,64 @@ const BlindBoxInventory = lazyWithRetry(() => import("./pages/BlindBoxInventory"
 const ChildDetail = lazyWithRetry(() => import("./pages/family/ChildDetail"));
 const FamilyTimeline = lazyWithRetry(() => import("./pages/family/FamilyTimeline"));
 const queryClient = new QueryClient();
+
+const ROUTE_TITLES = new Map<string, string>([
+  ["/", "Welcome"],
+  ["/auth", "Sign In"],
+  ["/about", "About"],
+  ["/song/:songId", "Song"],
+  ["/bands/:bandId/management", "Band Management"],
+  ["/gigs/perform/:gigId", "Perform Gig"],
+  ["/streaming/:platformId", "Streaming Platform"],
+  ["/cities/:cityId", "City"],
+  ["/cities/:cityId/election", "City Election"],
+  ["/cities/:cityId/mayor-dashboard", "Mayor Dashboard"],
+  ["/release/:id", "Release"],
+  ["/events/narratives/:storyId", "Narrative Event"],
+  ["/player/:playerId", "Player Profile"],
+  ["/band/:bandId", "Band Profile"],
+  ["/labels/:labelId/manage", "Label Management"],
+  ["/company/:companyId", "Company"],
+  ["/security-firm/:companyId", "Security Firm"],
+  ["/merch-factory/:companyId", "Merch Factory"],
+  ["/logistics-company/:companyId", "Logistics Company"],
+  ["/venue-business/:venueId", "Venue Business"],
+  ["/rehearsal-studio-business/:studioId", "Rehearsal Studio Business"],
+  ["/recording-studio-business/:studioId", "Recording Studio Business"],
+  ["/family/child/:childId", "Child Detail"],
+]);
+
+for (const module of FM_MODULES) {
+  for (const link of [
+    ...module.subTabs,
+    ...module.sidebar.flatMap((section) => section.items),
+    ...(module.quickActions ?? []),
+  ]) {
+    ROUTE_TITLES.set(link.path.split("?")[0], link.label);
+  }
+}
+
+const getRouteTitle = (pathname: string) => {
+  const exactTitle = ROUTE_TITLES.get(pathname);
+  if (exactTitle) return exactTitle;
+
+  for (const [route, title] of ROUTE_TITLES) {
+    if (matchPath({ path: route, end: true }, pathname)) return title;
+  }
+
+  return "Rockmundo";
+};
+
+const PageTitle = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const title = getRouteTitle(pathname);
+    document.title = title === "Rockmundo" ? title : `${title} | Rockmundo`;
+  }, [pathname]);
+
+  return null;
+};
 
 function App() {
   return (
@@ -333,6 +390,7 @@ function App() {
                       <Toaster />
                       <Sonner />
                       <BrowserRouter>
+                        <PageTitle />
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -500,7 +558,6 @@ function App() {
                     <Route path="skin-store" element={<SkinStore />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="labels/:labelId/manage" element={<LabelManagement />} />
-                    <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="world-companies" element={<WorldCompanies />} />
                     <Route path="companies/directory" element={<WorldCompanies />} />
                     <Route path="company/:companyId" element={<CompanyDetail />} />
@@ -523,7 +580,6 @@ function App() {
                     <Route path="hub/character" element={<CharacterHub />} />
                     <Route path="hub/music" element={<MusicHubPage />} />
                     <Route path="hub/band-live" element={<BandLiveHub />} />
-                    <Route path="hub/world-social" element={<WorldSocialHub />} />
                     <Route path="hub/career-business" element={<CareerBusinessHub />} />
                     <Route path="social" element={<SocialHubUnified />} />
                     <Route path="landmarks" element={<CityLandmarks />} />
@@ -636,11 +692,6 @@ function App() {
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
                     <Route path="admin/pov-clips" element={<POVClipAdmin />} />
                     <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
-                    <Route path="employment" element={<Employment />} />
-                    <Route path="music-videos" element={<MusicVideos />} />
-                    <Route path="gig-booking" element={<GigBooking />} />
-                    <Route path="jam-sessions" element={<JamSessions />} />
-                    <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
@@ -648,11 +699,8 @@ function App() {
                     <Route path="nightclub/:clubId" element={<NightClubDetail />} />
                     <Route path="nightclub-management" element={<NightclubManagement />} />
                     <Route path="crafting" element={<CraftingWorkshop />} />
-                    <Route path="inventory" element={<InventoryManager />} />
-                    <Route path="gear" element={<MyGear />} />
                     <Route path="tattoo-parlour" element={<TattooParlour />} />
-                    <Route path="gear-shop" element={<MyGear />} />
-                    <Route path="merchandise" element={<Merchandise />} />
+                    <Route path="gear-shop" element={<EnhancedEquipmentStore />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="progression" element={<ProgressionPanel />} />
                     <Route path="hall-of-immortals" element={<HallOfImmortals />} />
