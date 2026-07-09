@@ -43,6 +43,7 @@ export const FMSidebar = () => {
         onClick={() => navigate("/")}
         className="h-11 flex items-center gap-2 px-2.5 border-b border-fm-border hover:bg-fm-panel-2 transition-colors"
         title="Rockmundo home"
+        aria-label="Go to Rockmundo home"
       >
         <img src={logo} alt="Rockmundo" className="h-7 w-7 object-contain shrink-0" />
         {!collapsed && (
@@ -62,6 +63,8 @@ export const FMSidebar = () => {
           onClick={toggleCollapsed}
           className="ml-auto p-1 rounded-[6px] hover:bg-fm-panel-2 text-fm-fg-muted"
           title={collapsed ? "Expand" : "Collapse"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
         >
           {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
         </button>
@@ -75,6 +78,7 @@ export const FMSidebar = () => {
               <button
                 onClick={() => toggleGroup(group.label)}
                 className="w-full flex items-center justify-between px-3 py-1 text-[11px] text-fm-fg-muted hover:text-fm-fg"
+                aria-expanded={!!openGroups[group.label]}
               >
                 <span>{group.label}</span>
                 {openGroups[group.label] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -90,6 +94,7 @@ export const FMSidebar = () => {
                       key={item.path}
                       onClick={() => navigate(item.path)}
                       title={collapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
                         "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
                         active

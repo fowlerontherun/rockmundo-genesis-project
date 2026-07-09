@@ -28,12 +28,18 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
         data-fm-module={mod.id}
         className="fm-shell fm-module-themed flex flex-col h-screen w-screen overflow-hidden bg-fm-bg text-fm-fg"
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-fm-accent focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        >
+          Skip to main content
+        </a>
         <TopStatusBar />
         <ModuleTabs />
         <SubTabs />
         <div className="flex-1 flex min-h-0">
           <FMSidebar />
-          <main className="relative flex-1 overflow-auto bg-fm-bg">
+          <main id="main-content" tabIndex={-1} className="relative flex-1 overflow-auto bg-fm-bg">
             {/* Themed background layer — module-specific, low opacity */}
             <div aria-hidden className="fm-module-bg pointer-events-none absolute inset-0" />
             {/* Brand watermark — barely-there Rockmundo wordmark */}

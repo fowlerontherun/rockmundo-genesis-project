@@ -13,7 +13,7 @@ interface PageLayoutProps {
  */
 export const PageLayout = ({ children, className }: PageLayoutProps) => {
   return (
-    <div className={cn("w-full px-2 py-3 space-y-4", className)}>
+    <div className={cn("w-full px-2 py-3 sm:px-3 lg:px-4 space-y-4", className)}>
       {children}
     </div>
   );

@@ -24,7 +24,7 @@ export const ModuleTabs = () => {
   };
 
   return (
-    <nav className="h-11 flex items-stretch bg-fm-panel border-b border-fm-border px-2 gap-1">
+    <nav className="h-11 flex items-stretch bg-fm-panel border-b border-fm-border px-2 gap-1 overflow-x-auto fm-scrollbar-thin" aria-label="Primary modules">
       {modules.map((mod) => {
         const Icon = mod.icon;
         const isActive = mod.id === active.id;
@@ -32,8 +32,9 @@ export const ModuleTabs = () => {
           <button
             key={mod.id}
             onClick={() => openModule(mod.id, mod.rootPath)}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "relative my-1.5 px-3 flex items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
+              "relative my-1.5 px-3 flex shrink-0 items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
               isActive
                 ? "text-fm-accent"
                 : "text-fm-fg-muted hover:text-fm-fg",

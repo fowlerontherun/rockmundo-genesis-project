@@ -81,9 +81,9 @@ const Layout = () => {
 
   if (authLoading || (dataLoading && user)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-stage">
+      <div className="flex h-screen items-center justify-center bg-gradient-stage" role="status" aria-live="polite" aria-busy="true">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-32 w-32 animate-spin rounded-full border-b-2 border-primary"></div>
+          <div className="mx-auto mb-4 h-32 w-32 animate-spin rounded-full border-b-2 border-primary" aria-hidden="true"></div>
           <p className="text-lg font-oswald">Loading Rockmundo...</p>
         </div>
       </div>

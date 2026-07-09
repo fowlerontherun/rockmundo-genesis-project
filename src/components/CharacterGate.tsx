@@ -46,9 +46,9 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-stage p-6">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-stage p-6" role="status" aria-live="polite" aria-busy="true">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-24 w-24 animate-spin rounded-full border-b-2 border-primary"></div>
+          <div className="mx-auto mb-4 h-24 w-24 animate-spin rounded-full border-b-2 border-primary" aria-hidden="true"></div>
           <p className="text-lg font-oswald">Loading your profile...</p>
         </div>
       </div>

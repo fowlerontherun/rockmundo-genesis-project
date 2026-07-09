@@ -25,7 +25,7 @@ const StatPip = ({ icon: Icon, label, value, tone = "neutral" }: {
     neutral: "text-fm-accent",
   }[tone];
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-fm-border bg-fm-panel-2">
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] border border-fm-border bg-fm-panel-2" aria-label={`${label}: ${value}`}>
       <Icon className={`h-3.5 w-3.5 ${toneClass}`} />
       <span className="text-[11px] text-fm-fg-muted">{label}</span>
       <span className="text-[12px] font-medium tabular-nums text-fm-fg">{value}</span>
@@ -61,6 +61,7 @@ export const TopStatusBar = () => {
         onClick={() => navigate("/")}
         className="group flex items-center gap-2.5 pr-1 -ml-1 pl-1 py-1 rounded-md hover:bg-fm-panel-2 transition-colors"
         title="Rockmundo home"
+        aria-label="Go to Rockmundo home"
       >
         <img
           src={logo}
@@ -82,6 +83,7 @@ export const TopStatusBar = () => {
       <button
         className="flex items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
         onClick={() => navigate("/hub/character")}
+        aria-label={`Open character hub for ${name}`}
       >
         <User className="h-4 w-4 text-fm-accent" />
         <span className="text-sm font-semibold text-fm-fg">{name}</span>
@@ -89,7 +91,7 @@ export const TopStatusBar = () => {
 
       <div className="h-6 w-px bg-fm-border" />
 
-      <div className="text-[12px] text-fm-fg-muted flex items-center gap-2">
+      <div className="hidden md:flex text-[12px] text-fm-fg-muted items-center gap-2" aria-label={`Game date: ${dateStr}`}>
         <span>Game date</span>
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
@@ -97,20 +99,22 @@ export const TopStatusBar = () => {
 
       <div className="flex-1" />
 
-      <StatPip icon={DollarSign} label="Cash" value={`$${Number(cash).toLocaleString()}`} tone="good" />
-      <StatPip icon={Flame} label="Fame" value={Number(fame).toLocaleString()} tone="warn" />
-      <StatPip
-        icon={Heart}
-        label="Health"
-        value={`${health}%`}
-        tone={health >= 70 ? "good" : health >= 40 ? "warn" : "bad"}
-      />
-      <StatPip
-        icon={Zap}
-        label="Energy"
-        value={`${energy}%`}
-        tone={energy >= 70 ? "good" : energy >= 40 ? "warn" : "bad"}
-      />
+      <div className="hidden xl:flex items-center gap-1.5">
+        <StatPip icon={DollarSign} label="Cash" value={`$${Number(cash).toLocaleString()}`} tone="good" />
+        <StatPip icon={Flame} label="Fame" value={Number(fame).toLocaleString()} tone="warn" />
+        <StatPip
+          icon={Heart}
+          label="Health"
+          value={`${health}%`}
+          tone={health >= 70 ? "good" : health >= 40 ? "warn" : "bad"}
+        />
+        <StatPip
+          icon={Zap}
+          label="Energy"
+          value={`${energy}%`}
+          tone={energy >= 70 ? "good" : energy >= 40 ? "warn" : "bad"}
+        />
+      </div>
 
       <div className="h-6 w-px bg-fm-border mx-1" />
 
@@ -122,7 +126,7 @@ export const TopStatusBar = () => {
       <ThemeSwitcher />
       <LanguageSwitcher />
       <HowToPlayDialog />
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout} title="Sign out">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout} title="Sign out" aria-label="Sign out">
         <LogOut className="h-4 w-4" />
       </Button>
     </header>
