@@ -103,42 +103,6 @@ const Landing = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Beta V2 registration
-  const [betaOpen, setBetaOpen] = useState(false);
-  const [betaEmail, setBetaEmail] = useState("");
-  const [betaName, setBetaName] = useState("");
-  const [betaDiscord, setBetaDiscord] = useState("");
-  const [betaLoading, setBetaLoading] = useState(false);
-  const [betaError, setBetaError] = useState("");
-  const [betaDone, setBetaDone] = useState(false);
-
-  const handleBetaRegister = async (e: FormEvent) => {
-    e.preventDefault();
-    setBetaError("");
-    setBetaLoading(true);
-    const { error: insertError } = await (supabase as any)
-      .from("beta_v2_signups")
-      .insert({
-        email: betaEmail.trim().toLowerCase(),
-        display_name: betaName.trim() || null,
-        discord_handle: betaDiscord.trim() || null,
-        source: "landing",
-      });
-    setBetaLoading(false);
-    if (insertError) {
-      if (insertError.code === "23505") {
-        setBetaError("That email is already registered for Beta V2.");
-      } else {
-        setBetaError(insertError.message);
-      }
-      return;
-    }
-    setBetaDone(true);
-    toast({
-      title: "You're on the list",
-      description: "We'll send your Beta V2 code before launch.",
-    });
-  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -232,10 +196,11 @@ const Landing = () => {
             <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
             <span>
               <span className="font-semibold text-primary mr-1.5">
-                Beta V1 has finished
+                Open Play Test · Friday 17 July
               </span>
               <span className="text-foreground/90">
-                Beta V2 launches in August. Check Discord for more info.
+                A 1-week public play test starts Friday 17 July 2026 — no Beta
+                code needed. Check Discord for details.
               </span>
             </span>
           </div>
@@ -249,17 +214,6 @@ const Landing = () => {
               <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="h-3.5 w-3.5 mr-1" /> Discord
               </a>
-            </Button>
-            <Button
-              size="sm"
-              className="h-7 px-2.5 font-oswald tracking-wide text-[10px]"
-              onClick={() => {
-                setBetaDone(false);
-                setBetaError("");
-                setBetaOpen(true);
-              }}
-            >
-              <Mail className="h-3.5 w-3.5 mr-1" /> Register for Beta V2
             </Button>
           </div>
         </div>
