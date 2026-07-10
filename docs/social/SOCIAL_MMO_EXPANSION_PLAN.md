@@ -391,16 +391,19 @@ Safety is a core feature, not an afterthought.
 - Add this plan and follow-up technical design documents only.
 
 ### Phase 1: Visibility and Discovery Foundations
-- Add improved profile social metadata and privacy settings.
-- Add availability flags such as looking for band, hiring, open to gigs, seeking mentor, or open to collaboration.
-- Add discovery filters for players, bands, companies, venues, jobs, and communities.
-- Add non-invasive notification improvements for invitations and applications.
+- ✅ First-slice profile privacy/contact settings are implemented.
+- ✅ Shared social safety primitives and guarded direct-contact writes now cover direct-message sends, friend-request sends, and social-invite sends/responses.
+- ✅ Non-invasive notification improvements now exist for friend requests and social invites with deduped actionable routes.
+- Availability flags such as looking for band, hiring, open to gigs, seeking mentor, or open to collaboration remain pending.
+- Discovery filters for players, bands, companies, venues, jobs, and communities remain pending.
+- Public-safe profile/search projections remain the next dependency before richer discovery expansion.
 
 ### Phase 2: Safety and Trust Foundations
-- Add block/mute/report coverage across all social surfaces.
-- Add invite cooldowns and permission checks.
-- Add audit logging for social actions and contract-like offers.
-- Add admin/moderator review views before launching high-impact systems.
+- ✅ Dedicated block/mute/report/audit primitives are implemented for the first social safety slice.
+- ✅ Invite permission checks and duplicate pending handling now exist for social invites.
+- ✅ Audit logging exists for migrated denied direct-contact actions.
+- Expand block/mute/report coverage across Twaater, realtime chat, recruitment, gifts, and remaining social surfaces.
+- Add broader rate limits and admin/moderator review views before launching high-impact systems.
 
 ### Phase 3: Band and Company Cooperation
 - Add band roles, permissions, and contribution history.

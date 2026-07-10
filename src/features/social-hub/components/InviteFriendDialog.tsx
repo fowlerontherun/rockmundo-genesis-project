@@ -55,7 +55,13 @@ export function InviteFriendDialog({
   const [message, setMessage] = useState("");
   const create = useCreateInvite();
 
+  const trimmedMessage = message.trim();
+  const isMessageTooLong = trimmedMessage.length > 280;
+  const isPastTime = scheduledAt ? new Date(scheduledAt).getTime() < Date.now() - 5 * 60 * 1000 : false;
+  const canSubmit = !create.isPending && !isMessageTooLong && !isPastTime;
+
   const submit = () => {
+    if (!canSubmit) return;
     create.mutate(
       {
         from_profile_id: myProfileId,
@@ -83,9 +89,9 @@ export function InviteFriendDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>What kind of invite?</Label>
+            <Label htmlFor="social-invite-kind">What kind of invite?</Label>
             <Select value={kind} onValueChange={(v) => setKind(v as SocialInviteKind)}>
-              <SelectTrigger>
+              <SelectTrigger id="social-invite-kind" aria-label="Invite type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -98,29 +104,36 @@ export function InviteFriendDialog({
             </Select>
           </div>
           <div>
-            <Label>When?</Label>
+            <Label htmlFor="social-invite-time">When?</Label>
             <Input
+              id="social-invite-time"
+              aria-invalid={isPastTime}
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
             />
           </div>
           <div>
-            <Label>Message (optional)</Label>
+            <Label htmlFor="social-invite-message">Message (optional)</Label>
             <Textarea
+              id="social-invite-message"
+              aria-invalid={isMessageTooLong}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="A short note…"
               maxLength={280}
             />
+            <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+              {trimmedMessage.length}/280 characters{isPastTime ? " · Choose a future time" : ""}
+            </p>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={create.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={create.isPending}>
-            Send invite
+          <Button onClick={submit} disabled={!canSubmit} aria-busy={create.isPending}>
+            {create.isPending ? "Sending…" : "Send invite"}
           </Button>
         </DialogFooter>
       </DialogContent>
