@@ -60,7 +60,7 @@ Other players should become the most valuable content in RockMundo because they 
 - **Friends and follows**
   - Add clear distinction between mutual friends, one-way follows, blocked users, bandmates, company colleagues, mentors, mentees, contractors, and rivals.
   - Provide friend activity summaries such as upcoming gigs, new releases, job openings, contract requests, and major achievements.
-  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions. Initial owner-managed settings now exist; player search now uses a public-safe projection with profile-visibility/block filtering; direct-message sends enforce DM permission and blocks server-side; friend-request creation now enforces block checks, duplicate handling, cooldowns, and notification deduplication server-side; full enforcement across other reads/writes remains a follow-up.
+  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions. Initial owner-managed settings now exist; player search and player profile detail now use public-safe projections with profile-visibility/block filtering; direct-message sends enforce DM permission and blocks server-side; friend-request creation now enforces block checks, duplicate handling, cooldowns, and notification deduplication server-side; full enforcement across other reads/writes remains a follow-up.
 
 - **Direct messages and group conversations**
   - Support one-to-one messages for negotiation, mentoring, hiring, and social play.
@@ -396,7 +396,7 @@ Safety is a core feature, not an afterthought.
 - ✅ Non-invasive notification improvements now exist for friend requests and social invites with deduped actionable routes.
 - Availability flags such as looking for band, hiring, open to gigs, seeking mentor, or open to collaboration remain pending.
 - Discovery filters for players, bands, companies, venues, jobs, and communities remain pending.
-- Public-safe player search projection is now in place; profile detail and richer discovery projections remain dependencies before richer recruitment expansion.
+- Public-safe player search and profile-detail projections are now in place; richer discovery and recruitment-specific projections remain dependencies before richer recruitment expansion.
 
 ### Phase 2: Safety and Trust Foundations
 - ✅ Dedicated block/mute/report/audit primitives are implemented for the first social safety slice.

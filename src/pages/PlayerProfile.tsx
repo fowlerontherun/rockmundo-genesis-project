@@ -7,28 +7,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  User, Music, Calendar, MapPin, Heart, Zap, Star, Trophy,
-  Crown, Shield, Flame, Clock, TrendingUp, Users, UserPlus, UserMinus, Send
+  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, Send, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
-import { NominateButton } from "@/components/elections/NominateButton";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
+import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
-  const [activeTab, setActiveTab] = useState("profile");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedBand, setSelectedBand] = useState("");
   const [instrumentRole, setInstrumentRole] = useState("Guitar");
@@ -38,7 +34,7 @@ export default function PlayerProfile() {
   const queryClient = useQueryClient();
 
   // Get current user
-  const { data: currentUser } = useQuery({
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -52,51 +48,11 @@ export default function PlayerProfile() {
     },
   });
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["player-profile-full", playerId],
-    queryFn: async () => {
-      if (!playerId) throw new Error("No player ID");
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select(`
-          id, user_id, username, display_name, avatar_url, bio, created_at,
-          age, gender, level, fame, fans, health, energy, experience,
-          total_hours_played, is_vip, generation_number, current_city_id,
-          is_imprisoned, is_traveling, current_activity
-        `)
-        .eq("id", playerId)
-        .single();
-
-      if (profileError) throw profileError;
-      if (!profileData) return null;
-
-      const [cityResult, membershipsResult, reputationResult] = await Promise.all([
-        profileData.current_city_id
-          ? supabase.from("cities").select("id, name, country, music_scene").eq("id", profileData.current_city_id).single()
-          : Promise.resolve({ data: null }),
-        supabase
-          .from("band_members")
-          .select(`
-            id, instrument_role, vocal_role, role, joined_at, band_id,
-            bands!band_members_band_id_fkey(id, name, genre, fame, chemistry_level)
-          `)
-          .eq("user_id", profileData.user_id),
-        supabase
-          .from("player_attributes")
-          .select("charisma, stage_presence, creative_insight, crowd_engagement, musical_ability, musicality, physical_endurance, looks, mental_focus, rhythm_sense, social_reach, technical_mastery, vocal_talent")
-          .eq("profile_id", profileData.id)
-          .maybeSingle(),
-      ]);
-
-      return {
-        ...profileData,
-        city: cityResult.data,
-        band_members: membershipsResult.data || [],
-        attributes: reputationResult.data,
-      };
-    },
-    enabled: !!playerId,
+  const { data: profile, isLoading, isError, error } = useQuery({
+    queryKey: ["public-player-profile-detail", playerId, currentUser?.id],
+    queryFn: () => getPublicProfileDetail(playerId, currentUser?.id),
+    enabled: !!playerId && !!currentUser?.id,
+    retry: false,
   });
 
   // Friendship status
@@ -127,25 +83,6 @@ export default function PlayerProfile() {
       return data?.map((m: any) => m.bands).filter(Boolean) || [];
     },
     enabled: !!currentUser?.user_id,
-  });
-
-  // Open election in this player's current city (for nominating them)
-  const { data: openElection } = useQuery({
-    queryKey: ["open-election-for-nominee", (profile as any)?.current_city_id],
-    queryFn: async () => {
-      const cityId = (profile as any)?.current_city_id;
-      if (!cityId) return null;
-      const { data } = await supabase
-        .from("city_elections")
-        .select("id, status")
-        .eq("city_id", cityId)
-        .in("status", ["nomination", "campaign"] as any)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!(profile as any)?.current_city_id,
   });
 
   // Send friend request
@@ -217,37 +154,47 @@ export default function PlayerProfile() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  // Skills query
-  const { data: skills, isLoading: skillsLoading } = useQuery({
-    queryKey: ["player-skills", playerId],
-    queryFn: async () => {
-      if (!playerId) return [];
-      const { data: progressData } = await supabase
-        .from("skill_progress")
-        .select("skill_slug, current_level, current_xp, required_xp, last_practiced_at")
-        .eq("profile_id", playerId)
-        .order("current_level", { ascending: false });
-      if (!progressData || progressData.length === 0) return [];
-      const slugs = progressData.map(s => s.skill_slug);
-      const { data: definitions } = await supabase
-        .from("skill_definitions")
-        .select("slug, display_name")
-        .in("slug", slugs);
-      const nameMap = new Map(definitions?.map(d => [d.slug, d.display_name]) || []);
-      return progressData.map(s => ({
-        ...s,
-        display_name: nameMap.get(s.skill_slug) || s.skill_slug.replace(/_/g, " "),
-      }));
-    },
-    enabled: !!playerId && activeTab === "skills",
-  });
-
-  if (isLoading) {
+  if (isCurrentUserLoading || isLoading) {
     return (
       <FMPageScaffold title="Player Profile" icon={User} backTo="/players/search">
         <Card><CardContent className="p-6">
           <p className="text-center text-muted-foreground">Loading profile...</p>
         </CardContent></Card>
+      </FMPageScaffold>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <FMPageScaffold title="Player Profile" icon={User} backTo="/players/search">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center" role="alert" aria-live="polite">
+            <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+            <div>
+              <p className="font-medium">Sign in required</p>
+              <p className="text-sm text-muted-foreground">Sign in with an active player profile to view player profiles.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
+  if (isError) {
+    return (
+      <FMPageScaffold title="Player Profile" icon={User} backTo="/players/search">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center" role="alert" aria-live="polite">
+            <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+            <div>
+              <p className="font-medium">Profile unavailable</p>
+              <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "This player profile is not available."}</p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/players/search">Back to player search</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
@@ -271,7 +218,7 @@ export default function PlayerProfile() {
     { icon: Star, label: "Level", value: profile.level || 1 },
     { icon: TrendingUp, label: "Fame", value: (profile.fame || 0).toLocaleString() },
     { icon: Users, label: "Fans", value: (profile.fans || 0).toLocaleString() },
-    { icon: Clock, label: "Hours Played", value: (profile.total_hours_played || 0).toLocaleString() },
+    { icon: Music, label: "Bands", value: profile.bands.length.toLocaleString() },
   ];
 
   return (
@@ -293,14 +240,6 @@ export default function PlayerProfile() {
                     <h1 className="text-2xl font-bold">
                       {profile.display_name || profile.username}
                     </h1>
-                    {profile.is_vip && (
-                      <Badge variant="default" className="gap-1">
-                        <Crown className="h-3 w-3" /> VIP
-                      </Badge>
-                    )}
-                    {profile.generation_number && profile.generation_number > 1 && (
-                      <Badge variant="secondary">Gen {profile.generation_number}</Badge>
-                    )}
                   </div>
                   {profile.display_name && (
                     <p className="text-muted-foreground text-sm">@{profile.username}</p>
@@ -329,15 +268,6 @@ export default function PlayerProfile() {
                       <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}>
                         <UserMinus className="h-4 w-4 mr-1" /> Remove Friend
                       </Button>
-                    )}
-
-                    {/* Nominate for Mayor */}
-                    {openElection?.id && currentUser?.id !== playerId && (
-                      <NominateButton
-                        electionId={openElection.id}
-                        nomineeProfileId={playerId!}
-                        nomineeName={profile.display_name || profile.username}
-                      />
                     )}
 
                     {/* Invite to band */}
@@ -412,12 +342,10 @@ export default function PlayerProfile() {
 
               {/* Meta row */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                {profile.age && <span>Age {profile.age}</span>}
-                {profile.gender && <span className="capitalize">{profile.gender}</span>}
-                {profile.city && (
+                {profile.city_name && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    {profile.city.name}, {profile.city.country}
+                    {profile.city_name}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
@@ -426,30 +354,7 @@ export default function PlayerProfile() {
                 </span>
               </div>
 
-              {/* Vitals */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <Heart className="h-3.5 w-3.5 text-destructive" />
-                  <Progress value={profile.health || 100} className="h-1.5 w-20" />
-                  <span className="text-xs text-muted-foreground">{profile.health || 100}%</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-warning" />
-                  <Progress value={profile.energy || 100} className="h-1.5 w-20" />
-                  <span className="text-xs text-muted-foreground">{profile.energy || 100}%</span>
-                </div>
-              </div>
-
               {profile.bio && <p className="text-sm">{profile.bio}</p>}
-
-              {/* Status badges */}
-              <div className="flex gap-2 flex-wrap">
-                {profile.is_imprisoned && <Badge variant="destructive"><Shield className="h-3 w-3 mr-1" />Imprisoned</Badge>}
-                {profile.is_traveling && <Badge variant="secondary"><MapPin className="h-3 w-3 mr-1" />Traveling</Badge>}
-                {profile.current_activity && (
-                  <Badge variant="outline">{profile.current_activity}</Badge>
-                )}
-              </div>
             </div>
           </div>
         </CardContent>
@@ -473,32 +378,7 @@ export default function PlayerProfile() {
         })}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="skills">Skills</TabsTrigger>
-        </TabsList>
-
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-4">
-          {/* Attributes */}
-          {profile.attributes && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">Attributes</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {Object.entries(profile.attributes).map(([key, value]) => (
-                    <div key={key} className="text-center p-2 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
-                      <p className="text-lg font-bold">{String(value)}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+      <div className="space-y-4">
           {/* Bands */}
           <Card>
             <CardHeader>
@@ -507,20 +387,20 @@ export default function PlayerProfile() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!profile.band_members || profile.band_members.length === 0 ? (
+              {!profile.bands || profile.bands.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Not a member of any bands yet.</p>
               ) : (
                 <div className="space-y-4">
-                  {profile.band_members.map((membership: any, idx: number) => (
+                  {profile.bands.map((membership: any, idx: number) => (
                     <div key={membership.id}>
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Link to={`/band/${membership.bands?.id}`} className="font-medium hover:underline">
-                              {membership.bands?.name}
+                            <Link to={`/band/${membership.id}`} className="font-medium hover:underline">
+                              {membership.name}
                             </Link>
-                            {membership.bands?.genre && (
-                              <Badge variant="secondary">{membership.bands.genre}</Badge>
+                            {membership.genre && (
+                              <Badge variant="secondary">{membership.genre}</Badge>
                             )}
                             <Badge variant={membership.role === "leader" ? "default" : "outline"}>
                               {membership.role}
@@ -531,8 +411,8 @@ export default function PlayerProfile() {
                             {membership.vocal_role && ` / ${membership.vocal_role}`}
                           </div>
                           <div className="flex gap-4 text-xs text-muted-foreground">
-                            <span>Fame: {membership.bands?.fame || 0}</span>
-                            <span>Chemistry: {membership.bands?.chemistry_level || 0}</span>
+                            <span>Fame: {membership.fame || 0}</span>
+                            <span>Chemistry: {membership.chemistry_level || 0}</span>
                           </div>
                         </div>
                         {membership.joined_at && (
@@ -541,7 +421,7 @@ export default function PlayerProfile() {
                           </div>
                         )}
                       </div>
-                      {idx < profile.band_members.length - 1 && <Separator className="mt-4" />}
+                      {idx < profile.bands.length - 1 && <Separator className="mt-4" />}
                     </div>
                   ))}
                 </div>
@@ -549,71 +429,18 @@ export default function PlayerProfile() {
             </CardContent>
           </Card>
 
-          {/* City Info */}
-          {profile.city && (
+          {profile.city_name && (
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="h-5 w-5" /> Location
+                <MapPin className="h-5 w-5" /> Public Location
               </CardTitle></CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{profile.city.name}, {profile.city.country}</p>
-                    {profile.city.music_scene && (
-                      <p className="text-sm text-muted-foreground">Music Scene: {profile.city.music_scene}</p>
-                    )}
-                  </div>
-                </div>
+                <p className="font-medium">{profile.city_name}</p>
+                <p className="text-sm text-muted-foreground">Shown because this player allows their city to appear on public profiles.</p>
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        {/* Skills Tab */}
-        <TabsContent value="skills" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Flame className="h-5 w-5" /> Skills
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {skillsLoading ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Loading skills...</p>
-              ) : !skills || skills.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No skills trained yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {skills.map(skill => {
-                    const level = skill.current_level || 0;
-                    const xp = skill.current_xp || 0;
-                    const reqXp = skill.required_xp || 100;
-                    const xpPct = reqXp > 0 ? Math.min((xp / reqXp) * 100, 100) : 0;
-
-                    return (
-                      <div key={skill.skill_slug} className="flex items-center gap-3">
-                        <div className="w-40 sm:w-52 flex-shrink-0">
-                          <p className="text-sm font-medium capitalize truncate">{skill.display_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {xp}/{reqXp} XP
-                            {skill.last_practiced_at && (
-                              <> · Last: {format(new Date(skill.last_practiced_at), "MMM d")}</>
-                            )}
-                          </p>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0 w-12 justify-center">
-                          Lv {level}
-                        </Badge>
-                        <Progress value={xpPct} className="h-2 flex-1" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </FMPageScaffold>
   );
 }
