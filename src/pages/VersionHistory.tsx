@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.446",
+    date: "2026-07-10",
+    changes: [
+      { type: 'improvement', description: "**Skills page redesigned.** Replaced the flat tab bar on `/skills` with three prominent card-style tabs (Practice Skills, Skill Tree, Attributes) so each mode is obvious at a glance. Practice Skills is now the default tab. Existing 1-hour practice booking (5 XP per session, cap 5/day) is unchanged." },
+    ],
+  },
+  {
     version: "1.1.445",
     date: "2026-07-10",
     changes: [
