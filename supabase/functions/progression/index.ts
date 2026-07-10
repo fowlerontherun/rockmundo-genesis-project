@@ -204,6 +204,7 @@ serve(async (req) => {
           params.category,
           params.action_key,
           params.metadata,
+          params.event_id,
         );
         break;
 
