@@ -72,9 +72,9 @@ export const CompactSkillRow = ({
   const hasProgress = level > 0 || xp > 0;
 
   const trainMutation = useMutation({
-    mutationFn: () => spendSkillXp({ skillSlug: skill.slug, amount: cost }),
-    onSuccess: () => {
-      toast.success(`${skill.display_name} trained!`);
+    mutationFn: (amount: number) => spendSkillXp({ skillSlug: skill.slug, amount }),
+    onSuccess: (_data, amount) => {
+      toast.success(`${skill.display_name} trained (+${amount} SXP)`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
       onTrain?.();
     },
@@ -82,6 +82,8 @@ export const CompactSkillRow = ({
       toast.error(error.message || "Failed to train skill");
     }
   });
+
+  const canMax = xpBalance > cost && !isMaxed;
 
   const unlearnMutation = useMutation({
     mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
