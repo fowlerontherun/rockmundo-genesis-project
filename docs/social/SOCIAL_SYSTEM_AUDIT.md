@@ -210,7 +210,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 - Bands can be created and managed through band manager/components.
 - `bands`, `band_members`, roles, instrument/vocal roles, leader/founder concepts, status, chemistry/cohesion, finances, repertoire, gigs, riders, vehicles, gear, and chat surfaces exist.
-- `band_invitations` supports band invitations with role/salary/status/responded timestamps. Policies allow band leaders to create/update/delete and invitees to accept.
+- ✅ `band_invitations` supports band invitations with role/salary/status/responded timestamps. Invitation creation now has a guarded `send_band_invitation` RPC that resolves inviter/invitee identity server-side, checks leader/founder authority, target invite privacy, block state, existing membership, duplicate pending invitations, audit logging, and notification deduplication. Invitation response/acceptance still uses legacy direct updates/inserts and remains partial.
 - `band_applications` supports applications with applicant profile, instrument/vocal role, message, status, responded timestamp, uniqueness per band/applicant, applicant self-view, and leader response policies.
 - `bands.is_recruiting` exists.
 - Band browser/search lets players discover bands; band ratings and profiles exist.
@@ -218,17 +218,17 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 ### Partial / fragmented
 
-- Invitation policies are broad in one migration: invitations are viewable by everyone. This may be acceptable for public recruiting but is risky for private invitations.
-- Band leader checks vary by schema (`bands.leader_id`, `band_members.role IN ('leader','Founder')`), which may create inconsistent authorization semantics.
+- Invitation creation is now server-authoritative, but historical invitation read/update policies still need cleanup; one historical migration made invitations viewable by everyone, which remains risky for private invitations until policy hardening is completed.
+- Band invitation creation now standardizes leader/founder checks through `can_manage_band_invitations`, but other band actions still vary by schema (`bands.leader_id`, `band_members.role IN ('leader','Founder')`) and need separate permission migration.
 - Auditions are not first-class. Applications include role/message but not scheduled auditions, audition media, votes, or review history.
 - Band roles exist but are not yet a complete permission matrix for finances, bookings, releases, contracts, chat moderation, invites, applications, and public announcements.
-- Band recruitment does not appear block-aware or rate-limited.
+- Band invitation creation is now block-aware and duplicate-pending-idempotent; applications, invitation responses, auditions, and broader recruitment actions still lack complete block/cooldown/rate-limit coverage.
 
 ### Missing / risks
 
 - No structured audition flow.
 - No recruitment-specific search/matching over missing instruments, skill thresholds, city, genre, schedule, language, or availability.
-- No anti-spam cooldowns for invites/applications.
+- No full anti-spam cooldowns for invites/applications; guarded invitation creation prevents duplicate pending invites but does not add a time-window rate limiter.
 - No invite/application report flow or evidence retention.
 - No membership history archive with role changes and join/leave reasons as a canonical profile/band career timeline.
 
@@ -370,7 +370,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 | Player search/profile detail | Medium-High | Basic search and profile detail now use public-safe RPC/projection reads with block and profile-visibility checks; richer discovery filters remain pending.
 | Recruitment search | Low-Medium | Band search exists; matching filters missing.
 | Band creation | Medium | Implemented.
-| Band invites | Medium | Implemented; policies/privacy need review.
+| Band invites | Medium | Partial; creation is guarded server-side with privacy/block/duplicate checks, while response/read policies still need review.
 | Band applications | Medium | Implemented; auditions/matching missing.
 | Auditions | Low | Not first-class.
 
@@ -379,7 +379,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 1. **Social permission design PR:** ✅ First slice implemented in `docs/social/implementation/PHASE_1_PR_01.md`, `src/features/social-privacy/*`, and `supabase/migrations/20260710120000_add_profile_privacy_settings.sql`. It adds owner-managed profile privacy/contact settings plus shared helper functions for owner checks, block checks, and DM eligibility. Remaining slices: migrate profile/search/DM/recruitment reads and writes to enforce these settings end-to-end.
 2. **Safety schema PR:** Add shared block/mute/report/audit primitives with no major UI exposure.
 3. **Profile projection PR:** ✅ Search and detail slices implemented via `public_safe_profiles`, `search_public_profiles`, and `get_public_profile_detail`. Remaining slice: migrate richer discovery/recruitment reads.
-4. **Communication guard PR:** ✅ Direct-message send guards, friend-request send guards, and social-invite send/respond guards are implemented in Phase 1 PRs 03–05. Remaining slices: add broader rate limits and migrate Twaater DMs/follows, chat, recruitment writes, gifts, and friendship response/removal lifecycle operations.
+4. **Communication guard PR:** ✅ Direct-message send guards, friend-request send guards, and social-invite send/respond guards are implemented in Phase 1 PRs 03–05. Remaining slices: add broader rate limits and migrate Twaater DMs/follows, chat, remaining recruitment writes/responses, gifts, and friendship response/removal lifecycle operations.
 5. **Recruitment metadata PR:** Add opt-in availability fields and band recruiting metadata behind privacy settings.
 6. **Admin moderation PR:** Add unified social reports and evidence review console.
 7. **Only after the above:** Add richer social features such as group conversations, attachments, auditions, job applications, reputation, and social recommendations.

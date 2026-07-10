@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { fetchPrimaryProfileForUser } from '@/integrations/supabase/friends';
+import { sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
 
 interface InviteFriendToBandProps {
   bandId: string;
@@ -176,19 +177,16 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('band_invitations')
-        .insert({
-          band_id: bandId,
-          inviter_user_id: currentUserId,
-          invited_user_id: selectedFriend,
-          instrument_role: instrumentRole,
-          vocal_role: vocalRole || null,
-          message: message || null,
-          status: 'pending',
-        });
+      const friend = friends.find((candidate) => candidate.profile.user_id === selectedFriend);
+      if (!friend) throw new Error('Please select a friend to invite');
 
-      if (error) throw error;
+      await sendBandInvitation({
+        bandId,
+        targetProfileId: friend.profile.id,
+        instrumentRole,
+        vocalRole: vocalRole || null,
+        message,
+      });
 
       toast({
         title: 'Invitation sent!',
@@ -205,7 +203,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
       console.error('Error sending invitation:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send invitation',
+        description: friendlyBandInvitationError(error),
         variant: 'destructive',
       });
     } finally {

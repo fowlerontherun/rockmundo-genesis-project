@@ -119,9 +119,10 @@ Other players should become the most valuable content in RockMundo because they 
 **Implementation approach**
 1. Add documentation and UI labels for existing band responsibilities.
 2. Add role metadata and permission checks in small PRs.
-3. Add contribution logs for existing band actions.
-4. Add objective templates using existing gig, song, rehearsal, and media systems.
-5. Add collaboration contracts after the generic contract framework is stable.
+3. Guard band invitation creation before deeper collaboration work; the first server-authoritative invitation creation slice now exists with leader/founder checks, target invite privacy, block checks, duplicate-pending idempotency, audit logging, and notification deduplication.
+4. Add contribution logs for existing band actions.
+5. Add objective templates using existing gig, song, rehearsal, and media systems.
+6. Add collaboration contracts after the generic contract framework is stable.
 
 ### Companies, Hiring, and Player Labor Markets
 

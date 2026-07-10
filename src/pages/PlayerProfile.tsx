@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
+import { sendBandInvitation, friendlyBandInvitationError } from "@/services/bandInvitations";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -131,17 +132,14 @@ export default function PlayerProfile() {
   // Invite to band
   const inviteToBand = useMutation({
     mutationFn: async () => {
-      if (!currentUser?.user_id || !profile?.user_id || !selectedBand) throw new Error("Missing data");
-      const { error } = await supabase.from("band_invitations").insert({
-        band_id: selectedBand,
-        inviter_user_id: currentUser.user_id,
-        invited_user_id: profile.user_id,
-        instrument_role: instrumentRole,
-        vocal_role: vocalRole === "None" ? null : vocalRole,
-        message: inviteMessage || null,
-        status: "pending",
+      if (!profile?.id || !selectedBand) throw new Error("Missing data");
+      await sendBandInvitation({
+        bandId: selectedBand,
+        targetProfileId: profile.id,
+        instrumentRole,
+        vocalRole: vocalRole === "None" ? null : vocalRole,
+        message: inviteMessage,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "Band invitation sent!" });
@@ -151,7 +149,7 @@ export default function PlayerProfile() {
       setVocalRole("None");
       setInviteMessage("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyBandInvitationError(e), variant: "destructive" }),
   });
 
   if (isCurrentUserLoading || isLoading) {
