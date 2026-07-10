@@ -60,7 +60,7 @@ Other players should become the most valuable content in RockMundo because they 
 - **Friends and follows**
   - Add clear distinction between mutual friends, one-way follows, blocked users, bandmates, company colleagues, mentors, mentees, contractors, and rivals.
   - Provide friend activity summaries such as upcoming gigs, new releases, job openings, contract requests, and major achievements.
-  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions.
+  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions. Initial owner-managed settings now exist; full enforcement across reads/writes remains a follow-up.
 
 - **Direct messages and group conversations**
   - Support one-to-one messages for negotiation, mentoring, hiring, and social play.

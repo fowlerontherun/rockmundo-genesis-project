@@ -85,7 +85,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 ### Missing / risks
 
-- No global `profile_privacy_settings` or equivalent visibility matrix was found for city, online status, activity, relationship state, contact permissions, achievements, band/company history, or service availability.
+- ✅ `profile_privacy_settings` now covers the first visibility/contact slice for profile, city, activity, online status, relationship details, DM permission, and band/company invite opt-ins. Remaining gaps: achievements, band/company history, service availability, and full read/write enforcement across all social surfaces.
 - No block-aware profile access layer was found. A blocked player may still be able to discover/view public profile information unless blocked status is manually checked in every surface.
 - No explicit “public profile safe projection” view/API separates public-safe fields from private profile state.
 - No clear audit trail for profile edits, display-name/handle changes, or profile moderation actions outside Twaater-specific tooling.
@@ -343,7 +343,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 | Music catalogue/genres | Medium | Songs/releases/charts exist; profile/social projection partial.
 | Skills offered/services | Low | Skills exist; services offered are not first-class.
 | Activity history | Low-Medium | Logs/feeds exist, no unified privacy-aware social timeline.
-| Privacy controls | Low | Core blocker.
+| Privacy controls | Low-Medium | First owner-managed profile privacy/contact settings slice exists; enforcement across profile/search/DM/recruitment is still pending.
 | Friend requests/friendships | Medium | Implemented, needs rate/block integration.
 | Removing friends | Medium | Delete/cancel flows exist.
 | Blocking | Low-Medium | Enum exists; not cross-system.
@@ -376,7 +376,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 ## 10. Recommended Next PR Sequence
 
-1. **Social permission design PR:** Document visibility scopes, block/mute/report semantics, and public-safe profile fields.
+1. **Social permission design PR:** ✅ First slice implemented in `docs/social/implementation/PHASE_1_PR_01.md`, `src/features/social-privacy/*`, and `supabase/migrations/20260710120000_add_profile_privacy_settings.sql`. It adds owner-managed profile privacy/contact settings plus shared helper functions for owner checks, block checks, and DM eligibility. Remaining slices: migrate profile/search/DM/recruitment reads and writes to enforce these settings end-to-end.
 2. **Safety schema PR:** Add shared block/mute/report/audit primitives with no major UI exposure.
 3. **Profile projection PR:** Add safe profile views/RPCs and migrate search/profile reads to them.
 4. **Communication guard PR:** Add send guards and rate limits for DMs, friend requests, invites, Twaater DMs/follows, and chat.
