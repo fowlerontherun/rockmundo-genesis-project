@@ -45,6 +45,10 @@ function InviteRow({
           </p>
         )}
         {invite.message && <p className="mt-1 text-xs">{invite.message}</p>}
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {outgoing ? "Sent by you" : "Received by you"} · {format(new Date(invite.created_at), "PPp")}
+          {invite.responded_at ? ` · Updated ${format(new Date(invite.responded_at), "PPp")}` : ""}
+        </p>
       </div>
       {!outgoing && invite.status === "pending" && (
         <div className="flex flex-col gap-1">
@@ -53,6 +57,7 @@ function InviteRow({
             variant="default"
             onClick={() => respond.mutate({ id: invite.id, status: "accepted" })}
             disabled={respond.isPending}
+            aria-label={`Accept ${INVITE_KIND_LABELS[invite.kind]} invite`}
           >
             <Check className="h-3 w-3 mr-1" /> Accept
           </Button>
@@ -61,6 +66,7 @@ function InviteRow({
             variant="outline"
             onClick={() => respond.mutate({ id: invite.id, status: "declined" })}
             disabled={respond.isPending}
+            aria-label={`Decline ${INVITE_KIND_LABELS[invite.kind]} invite`}
           >
             <X className="h-3 w-3 mr-1" /> Decline
           </Button>
@@ -72,6 +78,7 @@ function InviteRow({
           variant="outline"
           onClick={() => respond.mutate({ id: invite.id, status: "cancelled" })}
           disabled={respond.isPending}
+          aria-label={`Cancel ${INVITE_KIND_LABELS[invite.kind]} invite`}
         >
           Cancel
         </Button>
@@ -94,6 +101,16 @@ export function InvitesInbox({ profileId }: { profileId: string | null | undefin
     [incoming.data],
   );
 
+  if (!profileId) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          Sign in with an active player profile to view invites.
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (incoming.isLoading || outgoing.isLoading) {
     return (
       <div className="flex h-40 items-center justify-center text-muted-foreground">
@@ -102,8 +119,18 @@ export function InvitesInbox({ profileId }: { profileId: string | null | undefin
     );
   }
 
+  if (incoming.isError || outgoing.isError) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-destructive" role="alert">
+          We could not load your invites. Please try again.
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2" aria-live="polite">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

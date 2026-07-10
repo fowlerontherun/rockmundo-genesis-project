@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { respondSocialInvite, sendSocialInvite } from "@/features/social-hub/services/socialInvites";
 
 export type SocialInviteKind =
   | "gig"
@@ -100,7 +101,7 @@ export function useInviteRealtime(profileId?: string | null) {
 }
 
 export interface CreateInviteInput {
-  from_profile_id: string;
+  from_profile_id?: string;
   to_profile_id: string;
   kind: SocialInviteKind;
   scheduled_at?: string | null;
@@ -113,17 +114,19 @@ export function useCreateInvite() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateInviteInput) => {
-      const { data, error } = await (supabase as any)
-        .from("social_invites")
-        .insert(input)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return data as SocialInviteRow;
+      return sendSocialInvite({
+        toProfileId: input.to_profile_id,
+        kind: input.kind,
+        scheduledAt: input.scheduled_at,
+        locationCityId: input.location_city_id,
+        refId: input.ref_id,
+        message: input.message,
+      });
     },
     onSuccess: (row) => {
       toast.success(`${INVITE_KIND_LABELS[row.kind]} invite sent`);
       queryClient.invalidateQueries({ queryKey: ["social-invites-out", row.from_profile_id] });
+      queryClient.invalidateQueries({ queryKey: ["social-invites-in", row.to_profile_id] });
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Failed to send invite");
@@ -135,15 +138,18 @@ export function useRespondInvite() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: { id: string; status: SocialInviteStatus }) => {
-      const { error } = await (supabase as any)
-        .from("social_invites")
-        .update({ status: params.status, responded_at: new Date().toISOString() })
-        .eq("id", params.id);
-      if (error) throw error;
+      return respondSocialInvite(params.id, params.status);
     },
-    onSuccess: () => {
+    onSuccess: (row) => {
+      const action = row.status === "cancelled" ? "cancelled" : row.status;
+      toast.success(`Invite ${action}`);
       queryClient.invalidateQueries({ queryKey: ["social-invites-in"] });
       queryClient.invalidateQueries({ queryKey: ["social-invites-out"] });
+      queryClient.invalidateQueries({ queryKey: ["social-invites-in", row.to_profile_id] });
+      queryClient.invalidateQueries({ queryKey: ["social-invites-out", row.from_profile_id] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? "Failed to update invite");
     },
   });
 }
