@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
+import { sendBandInvitation, friendlyBandInvitationError } from "@/services/bandInvitations";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -149,7 +150,7 @@ export default function PlayerProfile() {
       setVocalRole("None");
       setInviteMessage("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: friendlyBandInvitationError(e), variant: "destructive" }),
   });
 
   if (isCurrentUserLoading || isLoading) {

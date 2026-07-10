@@ -370,7 +370,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 | Player search/profile detail | Medium-High | Basic search and profile detail now use public-safe RPC/projection reads with block and profile-visibility checks; richer discovery filters remain pending.
 | Recruitment search | Low-Medium | Band search exists; matching filters missing.
 | Band creation | Medium | Implemented.
-| Band invites | Medium | Implemented; policies/privacy need review.
+| Band invites | Medium | Partial; creation is guarded server-side with privacy/block/duplicate checks, while response/read policies still need review.
 | Band applications | Medium | Implemented; auditions/matching missing.
 | Auditions | Low | Not first-class.
 
@@ -379,7 +379,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 1. **Social permission design PR:** ✅ First slice implemented in `docs/social/implementation/PHASE_1_PR_01.md`, `src/features/social-privacy/*`, and `supabase/migrations/20260710120000_add_profile_privacy_settings.sql`. It adds owner-managed profile privacy/contact settings plus shared helper functions for owner checks, block checks, and DM eligibility. Remaining slices: migrate profile/search/DM/recruitment reads and writes to enforce these settings end-to-end.
 2. **Safety schema PR:** Add shared block/mute/report/audit primitives with no major UI exposure.
 3. **Profile projection PR:** ✅ Search and detail slices implemented via `public_safe_profiles`, `search_public_profiles`, and `get_public_profile_detail`. Remaining slice: migrate richer discovery/recruitment reads.
-4. **Communication guard PR:** ✅ Direct-message send guards, friend-request send guards, and social-invite send/respond guards are implemented in Phase 1 PRs 03–05. Remaining slices: add broader rate limits and migrate Twaater DMs/follows, chat, recruitment writes, gifts, and friendship response/removal lifecycle operations.
+4. **Communication guard PR:** ✅ Direct-message send guards, friend-request send guards, and social-invite send/respond guards are implemented in Phase 1 PRs 03–05. Remaining slices: add broader rate limits and migrate Twaater DMs/follows, chat, remaining recruitment writes/responses, gifts, and friendship response/removal lifecycle operations.
 5. **Recruitment metadata PR:** Add opt-in availability fields and band recruiting metadata behind privacy settings.
 6. **Admin moderation PR:** Add unified social reports and evidence review console.
 7. **Only after the above:** Add richer social features such as group conversations, attachments, auditions, job applications, reputation, and social recommendations.

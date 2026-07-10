@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { fetchPrimaryProfileForUser } from '@/integrations/supabase/friends';
+import { sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
 
 interface InviteFriendToBandProps {
   bandId: string;
@@ -200,7 +201,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
       console.error('Error sending invitation:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send invitation',
+        description: friendlyBandInvitationError(error),
         variant: 'destructive',
       });
     } finally {
