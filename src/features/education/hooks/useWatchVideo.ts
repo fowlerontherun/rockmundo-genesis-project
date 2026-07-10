@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { awardActionXp } from "@/utils/progression";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const STORAGE_KEY_PREFIX = "video_watch_history_";
@@ -92,10 +93,24 @@ export const useWatchVideo = () => {
         throw new Error("Not authenticated");
       }
       
-      // Get profile
+      const transactionRef = `education-video:${profileId}:${videoId}:${Math.floor(Date.now() / COOLDOWN_MS)}`;
+
+      await awardActionXp({
+        amount: XP_PER_VIDEO,
+        category: "education",
+        actionKey: "youtube_video",
+        uniqueEventId: transactionRef,
+        metadata: {
+          video_id: videoId,
+          video_name: videoName,
+          skill_slug: skillSlug?.toLowerCase() || null,
+        },
+      });
+
+      // Get profile after the authoritative XP transaction succeeds.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, experience, user_id")
+        .select("id")
         .eq("id", profileId)
         .single();
       
@@ -103,24 +118,22 @@ export const useWatchVideo = () => {
         throw new Error("Could not load profile");
       }
       
-      // Award general XP to profile
-      await supabase
-        .from("profiles")
-        .update({ experience: (profile.experience || 0) + XP_PER_VIDEO })
-        .eq("id", profile.id);
-      
       // Award skill XP if skill is linked
       if (skillSlug) {
         const validSkills = ["guitar", "bass", "drums", "vocals", "performance", "songwriting"];
         const normalizedSkill = skillSlug.toLowerCase();
         
         if (validSkills.includes(normalizedSkill)) {
-          const { data: existingProgress } = await supabase
+          const { data: existingProgress, error: skillLoadError } = await supabase
             .from("skill_progress")
             .select("id, current_xp, current_level, required_xp")
             .eq("profile_id", profile.id)
             .eq("skill_slug", normalizedSkill)
             .maybeSingle();
+
+          if (skillLoadError) {
+            throw new Error(skillLoadError.message || "Could not load skill progress");
+          }
           
           if (existingProgress) {
             let newXp = existingProgress.current_xp + XP_PER_VIDEO;
@@ -134,7 +147,7 @@ export const useWatchVideo = () => {
               requiredXp = Math.floor(requiredXp * 1.5);
             }
             
-            await supabase
+            const { error: skillUpdateError } = await supabase
               .from("skill_progress")
               .update({
                 current_xp: newXp,
@@ -143,9 +156,13 @@ export const useWatchVideo = () => {
                 last_practiced_at: new Date().toISOString(),
               })
               .eq("id", existingProgress.id);
+
+            if (skillUpdateError) {
+              throw new Error(skillUpdateError.message || "Could not update skill progress");
+            }
           } else {
             // Create new skill progress
-            await supabase.from("skill_progress").insert({
+            const { error: skillInsertError } = await supabase.from("skill_progress").insert({
               profile_id: profile.id,
               skill_slug: normalizedSkill,
               current_xp: XP_PER_VIDEO,
@@ -153,19 +170,13 @@ export const useWatchVideo = () => {
               required_xp: 100,
               last_practiced_at: new Date().toISOString(),
             });
+
+            if (skillInsertError) {
+              throw new Error(skillInsertError.message || "Could not create skill progress");
+            }
           }
         }
       }
-      
-      // Log to experience ledger
-      await supabase.from("experience_ledger").insert({
-        user_id: profile.user_id,
-        profile_id: profile.id,
-        activity_type: "youtube_video",
-        xp_amount: XP_PER_VIDEO,
-        skill_slug: skillSlug?.toLowerCase() || null,
-        metadata: { video_id: videoId, video_name: videoName },
-      });
       
       // Record watch timestamp per profile
       const history = getWatchHistory(profileId);

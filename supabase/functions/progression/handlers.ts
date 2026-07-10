@@ -564,11 +564,32 @@ export async function handleAwardActionXp(
   category: string = "performance",
   actionKey: string = "gameplay_action",
   metadata: Record<string, unknown> = {},
+  eventId?: string,
 ): Promise<ProfileState> {
   const profileId = profileState.profile.id;
 
   if (amount <= 0) {
     throw new Error("XP amount must be positive");
+  }
+
+  const transactionRef = typeof eventId === "string" && eventId.trim().length > 0 ? eventId.trim() : undefined;
+
+  if (transactionRef) {
+    const { data: existingLedger, error: existingLedgerError } = await client
+      .from("experience_ledger")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("activity_type", actionKey)
+      .eq("metadata->>transaction_ref", transactionRef)
+      .maybeSingle();
+
+    if (existingLedgerError && existingLedgerError.code !== "PGRST116") {
+      throw new Error(existingLedgerError.message || "Failed to verify XP transaction");
+    }
+
+    if (existingLedger) {
+      return await fetchProfileState(client, profileId);
+    }
   }
 
   // Calculate health drain if metadata includes duration
@@ -625,12 +646,13 @@ export async function handleAwardActionXp(
         action_key: actionKey,
         health_drain: healthDrain,
         pending_daily_process: true,
+        transaction_ref: transactionRef ?? null,
         ...metadata,
       },
     });
 
   if (ledgerError) {
-    console.error("Failed to log XP in ledger:", ledgerError);
+    throw new Error(ledgerError.message || "Failed to log XP in ledger");
   }
 
   return await fetchProfileState(client, profileId);
