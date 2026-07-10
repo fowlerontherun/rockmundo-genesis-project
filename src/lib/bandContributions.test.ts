@@ -16,9 +16,9 @@ const base = (id: string, profileId: string, type: string): BandContributionEven
 
 describe("band contribution display helpers", () => {
   it("maps supported contribution types to player-facing labels", () => {
-    expect(getContributionDisplay("rehearsal_attendance").label).toBe("Rehearsal attendance");
+    expect(getContributionDisplay("rehearsal_attendance").label).toBe("Attended rehearsal");
     expect(getContributionDisplay("recording_participation").label).toBe("Recording participation");
-    expect(getContributionDisplay("gig_performance").label).toBe("Gig performance");
+    expect(getContributionDisplay("gig_performance").label).toBe("Performed at gig");
   });
 
   it("uses a safe fallback for unsupported future contribution types", () => {

@@ -29,9 +29,9 @@ export type BandContributionEvent = {
 };
 
 export const contributionTypeDisplay = {
-  rehearsal_attendance: { label: "Rehearsal attendance", shortLabel: "Rehearsals", icon: CalendarCheck },
+  rehearsal_attendance: { label: "Attended rehearsal", shortLabel: "Rehearsals", icon: CalendarCheck },
   recording_participation: { label: "Recording participation", shortLabel: "Recordings", icon: Disc3 },
-  gig_performance: { label: "Gig performance", shortLabel: "Gigs", icon: Mic2 },
+  gig_performance: { label: "Performed at gig", shortLabel: "Gigs", icon: Mic2 },
 } as const;
 
 export function getContributionDisplay(type: BandContributionType) {
