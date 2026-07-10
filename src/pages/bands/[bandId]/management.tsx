@@ -4,12 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BandRosterTab } from "@/components/bands/BandRosterTab";
 import { BandRehearsalsTab } from "@/components/bands/BandRehearsalsTab";
 import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
+import { BandContributionsTab } from "@/components/bands/BandContributionsTab";
 import { Card, CardContent } from "@/components/ui/card";
 
 const tabConfig = [
   { value: "roster", label: "Roster", description: "Manage lineup, roles, and leadership readiness." },
   { value: "rehearsals", label: "Rehearsals", description: "Oversee rehearsal cadence, costs, and preparation." },
   { value: "finances", label: "Finances", description: "Track band earnings, balance, and transactions." },
+  { value: "contributions", label: "Contributions", description: "Review recent participation history without rewards or rankings." },
 ] as const;
 
 export default function BandManagementPage() {
@@ -61,6 +63,10 @@ export default function BandManagementPage() {
 
         <TabsContent value="finances" className="space-y-6">
           <BandFinancesTab bandId={bandId} />
+        </TabsContent>
+
+        <TabsContent value="contributions" className="space-y-6">
+          <BandContributionsTab bandId={bandId} />
         </TabsContent>
       </Tabs>
     </div>

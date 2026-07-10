@@ -399,3 +399,13 @@ Guarded RPC verification now covers `submit_band_application`, `respond_band_app
 Route verification now has shared unit coverage for applicant notifications to band profile routes, manager stale `?tab=applications` normalization, final-state recruitment notifications, missing/deleted destination handling, and invitation-route preservation. Full authenticated browser navigation remains a P1 follow-up because the repository does not currently provide Playwright authenticated fixtures.
 
 Confirmed remaining gaps are product decisions rather than security blockers: global one-band membership/application policy, role-specific vacancies, recruitment cooldowns, auditions, matching, applicant scoring, and recruitment rewards. Database tests are documented as a separate local Supabase command and are not yet wired into default CI.
+
+## Phase 4 PR 01 Update — Band Contribution Tracking
+
+- ✅ Added a dedicated `band_contribution_events` foundation for immutable, server-authoritative band participation history.
+- ✅ Initial contribution sources are limited to completed band rehearsals, completed band recording sessions, and completed gig outcomes. Jam-session and songwriting contribution events remain unresolved until band-scoped authoritative source data is clearer.
+- ✅ Contribution history is read-only to normal clients and visible only to authenticated current active members of the relevant band. Former/inactive members, unrelated users, and unauthenticated users are denied by default.
+- ✅ Idempotency is enforced with a source-based unique constraint so repeated completion processing does not create duplicate contribution rows.
+- ✅ The Band Management UI now exposes neutral recent contribution history and count summaries without XP, rewards, chemistry, achievements, leaderboards, or penalties.
+- ✅ Unit/component coverage was added for display mapping, safe fallback labels, summaries, empty/loading/error states, and rendering recent contributions.
+- ⚠️ Rehearsal and gig events currently credit active members at completion time because participant-level attendance records were not found. This is a shared-progression foundation, not a reward source yet.
