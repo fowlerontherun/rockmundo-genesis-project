@@ -81,6 +81,14 @@ Deno.serve(async (req) => {
         });
       }
 
+      await supabaseAdmin.from("admin_action_audit").insert({
+        actor_user_id: user.id,
+        action: "admin_boost_plays",
+        target_table: "song_plays",
+        target_id: songId,
+        metadata: { songId, amount },
+      });
+
       console.log(`Admin ${user.id} boosted song ${songId} with ${amount} plays`);
       return new Response(JSON.stringify({ success: true, added: amount }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -386,6 +394,14 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      await supabaseAdmin.from("admin_action_audit").insert({
+        actor_user_id: user.id,
+        action: "admin_release_pump",
+        target_table: "releases",
+        target_id: releaseId,
+        metadata: { releaseId, amount, saleType, grossRevenue, netRevenue },
+      });
 
       return new Response(JSON.stringify({
         success: true,

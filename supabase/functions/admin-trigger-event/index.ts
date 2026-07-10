@@ -11,10 +11,44 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const authHeader = req.headers.get("Authorization");
+
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "No authorization header" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabaseUser = createClient(
+    supabaseUrl,
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: isAdmin, error: roleError } = await supabaseUser.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+
+    if (roleError || isAdmin !== true) {
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { userId, eventId, category } = await req.json();
 
     if (!userId) {
@@ -120,7 +154,15 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
-    console.log(`[admin-trigger-event] Triggered event "${selectedEvent.title}" for user ${userId}`);
+    await supabase.from("admin_action_audit").insert({
+      actor_user_id: user.id,
+      action: "admin_trigger_event",
+      target_table: "player_events",
+      target_id: playerEvent.id,
+      metadata: { userId, eventId: selectedEvent.id, category },
+    });
+
+    console.log(`[admin-trigger-event] Admin ${user.id} triggered event "${selectedEvent.title}" for user ${userId}`);
 
     return new Response(
       JSON.stringify({
