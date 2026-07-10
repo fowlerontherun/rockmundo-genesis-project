@@ -210,7 +210,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 - Bands can be created and managed through band manager/components.
 - `bands`, `band_members`, roles, instrument/vocal roles, leader/founder concepts, status, chemistry/cohesion, finances, repertoire, gigs, riders, vehicles, gear, and chat surfaces exist.
-- ✅ `band_invitations` supports band invitations with role/salary/status/responded timestamps. Invitation creation now has a guarded `send_band_invitation` RPC that resolves inviter/invitee identity server-side, checks leader/founder authority, target invite privacy, block state, existing membership, duplicate pending invitations, audit logging, and notification deduplication. Invitation response/acceptance still uses legacy direct updates/inserts and remains partial.
+- ✅ `band_invitations` creation now uses the guarded `send_band_invitation` RPC for new client flows, with server-side actor resolution, invite permission checks, target privacy/block checks, active-member rejection, duplicate pending invite idempotency, validation constraints, denied-attempt audit logging, and notification dedupe. Invitation responses still use legacy update/member-insert flows.
 - `band_applications` supports applications with applicant profile, instrument/vocal role, message, status, responded timestamp, uniqueness per band/applicant, applicant self-view, and leader response policies.
 - `bands.is_recruiting` exists.
 - Band browser/search lets players discover bands; band ratings and profiles exist.
@@ -218,17 +218,17 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 ### Partial / fragmented
 
-- Invitation creation is now server-authoritative, but historical invitation read/update policies still need cleanup; one historical migration made invitations viewable by everyone, which remains risky for private invitations until policy hardening is completed.
-- Band invitation creation now standardizes leader/founder checks through `can_manage_band_invitations`, but other band actions still vary by schema (`bands.leader_id`, `band_members.role IN ('leader','Founder')`) and need separate permission migration.
+- Invitation policies are broad in one migration: invitations are viewable by everyone. This may be acceptable for public recruiting but is risky for private invitations.
+- Band leader checks vary across older schema surfaces, but invitation creation now has a dedicated `can_manage_band_invitations` helper for the first guarded recruitment write. Other band actions still need migration.
 - Auditions are not first-class. Applications include role/message but not scheduled auditions, audition media, votes, or review history.
 - Band roles exist but are not yet a complete permission matrix for finances, bookings, releases, contracts, chat moderation, invites, applications, and public announcements.
-- Band invitation creation is now block-aware and duplicate-pending-idempotent; applications, invitation responses, auditions, and broader recruitment actions still lack complete block/cooldown/rate-limit coverage.
+- Band invitation creation is now block-aware and duplicate-pending idempotent. Band applications, invitation responses, auditions, and broader recruitment rate limits remain unresolved.
 
 ### Missing / risks
 
 - No structured audition flow.
 - No recruitment-specific search/matching over missing instruments, skill thresholds, city, genre, schedule, language, or availability.
-- No full anti-spam cooldowns for invites/applications; guarded invitation creation prevents duplicate pending invites but does not add a time-window rate limiter.
+- No broad anti-spam cooldowns for invites/applications beyond duplicate pending band invitation idempotency.
 - No invite/application report flow or evidence retention.
 - No membership history archive with role changes and join/leave reasons as a canonical profile/band career timeline.
 

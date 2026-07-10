@@ -403,11 +403,11 @@ Safety is a core feature, not an afterthought.
 - ✅ Dedicated block/mute/report/audit primitives are implemented for the first social safety slice.
 - ✅ Invite permission checks and duplicate pending handling now exist for social invites.
 - ✅ Audit logging exists for migrated denied direct-contact actions.
-- Expand block/mute/report coverage across Twaater, realtime chat, recruitment, gifts, and remaining social surfaces.
+- Expand block/mute/report coverage across Twaater, realtime chat, band application/response flows, gifts, and remaining social surfaces; guarded band invitation creation now covers the first recruitment write slice.
 - Add broader rate limits and admin/moderator review views before launching high-impact systems.
 
 ### Phase 3: Band and Company Cooperation
-- Add band roles, permissions, and contribution history.
+- Add broader band roles, permissions, and contribution history; guarded band invitation creation now has the first server-authoritative recruitment permission helper.
 - Add company hiring profiles and job boards.
 - Add simple application flows with safe messaging constraints.
 - Add task templates tied to existing systems.

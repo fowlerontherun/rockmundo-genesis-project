@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendBandInvitation } from "@/services/bandInvitations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -132,7 +133,7 @@ export default function PlayerProfile() {
   // Invite to band
   const inviteToBand = useMutation({
     mutationFn: async () => {
-      if (!profile?.id || !selectedBand) throw new Error("Missing data");
+      if (!currentUser?.user_id || !profile?.user_id || !selectedBand) throw new Error("Missing data");
       await sendBandInvitation({
         bandId: selectedBand,
         targetProfileId: profile.id,
@@ -282,9 +283,9 @@ export default function PlayerProfile() {
                           </DialogHeader>
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <Label>Band</Label>
+                              <Label htmlFor="profile-band-invite-band">Band</Label>
                               <Select value={selectedBand} onValueChange={setSelectedBand}>
-                                <SelectTrigger><SelectValue placeholder="Select a band" /></SelectTrigger>
+                                <SelectTrigger id="profile-band-invite-band"><SelectValue placeholder="Select a band" /></SelectTrigger>
                                 <SelectContent>
                                   {myBands.map((band: any) => (
                                     <SelectItem key={band.id} value={band.id}>{band.name}</SelectItem>
@@ -293,9 +294,9 @@ export default function PlayerProfile() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Instrument Role</Label>
+                              <Label htmlFor="profile-band-invite-instrument">Instrument Role</Label>
                               <Select value={instrumentRole} onValueChange={setInstrumentRole}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger id="profile-band-invite-instrument"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {INSTRUMENTS.map(i => (
                                     <SelectItem key={i} value={i}>{i}</SelectItem>
@@ -304,9 +305,9 @@ export default function PlayerProfile() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Vocal Role</Label>
+                              <Label htmlFor="profile-band-invite-vocal">Vocal Role</Label>
                               <Select value={vocalRole} onValueChange={setVocalRole}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger id="profile-band-invite-vocal"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {VOCAL_ROLES.map(v => (
                                     <SelectItem key={v} value={v}>{v}</SelectItem>
@@ -315,13 +316,19 @@ export default function PlayerProfile() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Message (optional)</Label>
+                              <Label htmlFor="profile-band-invite-message">Message (optional)</Label>
                               <Textarea
+                                id="profile-band-invite-message"
+                                maxLength={500}
+                                aria-describedby="profile-band-invite-message-help"
                                 value={inviteMessage}
                                 onChange={e => setInviteMessage(e.target.value)}
                                 placeholder="Hey, want to join our band?"
                                 rows={2}
                               />
+                              <p id="profile-band-invite-message-help" className="text-xs text-muted-foreground">
+                                {inviteMessage.trim().length}/500 characters
+                              </p>
                             </div>
                             <Button
                               className="w-full"
