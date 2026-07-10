@@ -150,7 +150,7 @@ export const CompactSkillRow = ({
       {/* Train button */}
       {!isLocked && (
         <Button
-          onClick={() => trainMutation.mutate()}
+          onClick={() => trainMutation.mutate(cost)}
           disabled={!canAfford || isMaxed || trainMutation.isPending}
           size="sm"
           variant="outline"
@@ -162,6 +162,20 @@ export const CompactSkillRow = ({
               {cost}
             </>
           )}
+        </Button>
+      )}
+
+      {/* Max / spend-all button */}
+      {!isLocked && canMax && (
+        <Button
+          onClick={() => trainMutation.mutate(xpBalance)}
+          disabled={trainMutation.isPending}
+          size="sm"
+          variant="default"
+          className="h-7 text-xs px-2 flex-shrink-0"
+          title={`Spend all ${xpBalance} available SXP on this skill`}
+        >
+          All ({xpBalance})
         </Button>
       )}
 
