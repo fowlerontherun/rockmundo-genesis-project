@@ -17,7 +17,7 @@ const event = {
   source_entity_type: "band_rehearsal",
   source_entity_id: "rehearsal-1",
   occurred_at: "2026-07-10T10:00:00Z",
-  metadata: { label: "Completed band rehearsal" },
+  metadata: { label: "Completed band rehearsal", accuracy: "verified_participant" },
   created_at: "2026-07-10T10:00:01Z",
   profiles: { id: "profile-1", username: "riley", display_name: "Riley Riff", avatar_url: null },
 };
@@ -34,6 +34,7 @@ describe("BandContributionsTab", () => {
     expect(screen.getAllByText("Riley Riff").length).toBeGreaterThan(0);
     expect(screen.getByText("Rehearsal attendance")).toBeInTheDocument();
     expect(screen.getByText("Member summary")).toBeInTheDocument();
+    expect(screen.getByText("Verified participation")).toBeInTheDocument();
   });
 
   it("renders empty state", () => {

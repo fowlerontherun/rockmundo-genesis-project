@@ -7,6 +7,7 @@ import { useBandContributions } from "@/hooks/useBandContributions";
 import {
   getContributionDisplay,
   getContributionSourceLabel,
+  isVerifiedContribution,
   summarizeContributions,
   type BandContributionEvent,
 } from "@/lib/bandContributions";
@@ -75,7 +76,7 @@ export function BandContributionsTab({ bandId }: BandContributionsTabProps) {
         <Card>
           <CardHeader>
             <CardTitle>Band activity</CardTitle>
-            <CardDescription>Last 50 meaningful contribution events.</CardDescription>
+            <CardDescription>Last 50 contribution events. Based on recorded participation where source data supports it.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <div className="rounded-lg border p-3">
@@ -98,7 +99,7 @@ export function BandContributionsTab({ bandId }: BandContributionsTabProps) {
         <Card>
           <CardHeader>
             <CardTitle>Member summary</CardTitle>
-            <CardDescription>Counts only, not a ranking or reward calculation.</CardDescription>
+            <CardDescription>Based on recorded participation. Counts only, not a ranking or reward calculation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {summary.byMember.map(({ profileId, profile, count }) => {
@@ -120,7 +121,7 @@ export function BandContributionsTab({ bandId }: BandContributionsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Recent contributions</CardTitle>
-          <CardDescription>Read-only participation history visible to current band members.</CardDescription>
+          <CardDescription>Read-only participation history visible to current band members. Verified labels mean participant records were used.</CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="space-y-3" aria-label="Recent band contribution events">
@@ -135,7 +136,7 @@ export function BandContributionsTab({ bandId }: BandContributionsTabProps) {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{name}</p>
                       <p className="flex items-center gap-2 text-sm text-muted-foreground"><Icon className="h-4 w-4" aria-hidden="true" />{display.label}</p>
-                      <p className="text-xs text-muted-foreground">{getContributionSourceLabel(event)}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{getContributionSourceLabel(event)}</span>{isVerifiedContribution(event) ? <Badge variant="outline">Verified participation</Badge> : null}</div>
                     </div>
                   </div>
                   <time className="text-sm text-muted-foreground" dateTime={event.occurred_at}>{formatTimestamp(event.occurred_at)}</time>

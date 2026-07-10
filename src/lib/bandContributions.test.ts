@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getContributionDisplay, getContributionSourceLabel, summarizeContributions, type BandContributionEvent } from "./bandContributions";
+import { getContributionDisplay, getContributionSourceLabel, isVerifiedContribution, summarizeContributions, type BandContributionEvent } from "./bandContributions";
 
 const base = (id: string, profileId: string, type: string): BandContributionEvent => ({
   id,
@@ -28,6 +28,12 @@ describe("band contribution display helpers", () => {
   it("prefers safe metadata labels and falls back to source type", () => {
     expect(getContributionSourceLabel(base("1", "profile-1", "rehearsal_attendance"))).toBe("Completed band rehearsal");
     expect(getContributionSourceLabel({ metadata: {}, source_entity_type: "gig_outcome" })).toBe("Gig Outcome");
+  });
+
+  it("detects verified participant metadata", () => {
+    expect(isVerifiedContribution({ metadata: { accuracy: "verified_participant" } })).toBe(true);
+    expect(isVerifiedContribution({ metadata: { accuracy: "legacy_member_completion" } })).toBe(false);
+    expect(isVerifiedContribution({ metadata: null })).toBe(false);
   });
 
   it("summarizes total, member, and type counts without ranking semantics", () => {
