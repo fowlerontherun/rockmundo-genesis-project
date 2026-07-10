@@ -119,7 +119,7 @@ Other players should become the most valuable content in RockMundo because they 
 **Implementation approach**
 1. Add documentation and UI labels for existing band responsibilities.
 2. Add role metadata and permission checks in small PRs.
-3. Guard band invitation creation/response and band application submission/approval/rejection/withdrawal before deeper collaboration work; the invitation lifecycle and application lifecycle now have server-authoritative RPCs with leader/founder recruitment checks where applicable, applicant-owned withdrawal, block checks, duplicate-membership idempotency, audit logging, and notification deduplication/status updates, final-state notification display polish, and narrow applicant/manager application history.
+3. Guard band invitation creation/response and band application submission/approval/rejection/withdrawal before deeper collaboration work; the invitation lifecycle and application lifecycle now have server-authoritative RPCs with leader/founder recruitment checks where applicable, applicant-owned withdrawal, block checks, duplicate-membership idempotency, audit logging, notification deduplication/status updates, final-state notification display polish, narrow applicant/manager application history, and a local Supabase recruitment RLS/RPC verification harness.
 4. Add contribution logs for existing band actions.
 5. Add objective templates using existing gig, song, rehearsal, and media systems.
 6. Add collaboration contracts after the generic contract framework is stable.

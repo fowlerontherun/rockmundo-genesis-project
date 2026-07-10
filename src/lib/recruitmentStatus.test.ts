@@ -9,6 +9,7 @@ describe("recruitment status mapping", () => {
     expect(RECRUITMENT_STATUS.withdrawn).toMatchObject({ label: "Withdrawn", actionable: false, final: true });
     expect(RECRUITMENT_STATUS.cancelled).toMatchObject({ label: "Cancelled", actionable: false, final: true });
     expect(RECRUITMENT_STATUS.declined).toMatchObject({ label: "Declined", actionable: false, final: true });
+    expect(RECRUITMENT_STATUS.expired).toMatchObject({ label: "Expired", actionable: false, final: true });
   });
 
   it("uses a safe non-actionable fallback for unsupported statuses", () => {
