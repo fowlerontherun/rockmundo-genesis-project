@@ -18,7 +18,7 @@ export type BandContributionEvent = {
   source_entity_type: string;
   source_entity_id: string;
   occurred_at: string;
-  metadata: { label?: string; [key: string]: unknown } | null;
+  metadata: { label?: string; accuracy?: string; source_detail?: string; [key: string]: unknown } | null;
   created_at: string;
   profiles: {
     id: string;
@@ -51,6 +51,10 @@ export function getContributionSourceLabel(event: Pick<BandContributionEvent, "m
     .split("_")
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
+}
+
+export function isVerifiedContribution(event: Pick<BandContributionEvent, "metadata">) {
+  return event.metadata?.accuracy === "verified_participant";
 }
 
 export function summarizeContributions(events: BandContributionEvent[]) {

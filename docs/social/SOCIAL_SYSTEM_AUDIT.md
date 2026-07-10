@@ -409,3 +409,15 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 - ✅ The Band Management UI now exposes neutral recent contribution history and count summaries without XP, rewards, chemistry, achievements, leaderboards, or penalties.
 - ✅ Unit/component coverage was added for display mapping, safe fallback labels, summaries, empty/loading/error states, and rendering recent contributions.
 - ⚠️ Rehearsal and gig events currently credit active members at completion time because participant-level attendance records were not found. This is a shared-progression foundation, not a reward source yet.
+
+## Phase 4 PR 02 Update — Contribution Source Accuracy
+
+- ✅ Added a small server-side contribution-source adapter for completed band recording sessions.
+- ✅ Recording participation now uses verified participant records where available: the session owner/profile plus distinct `production_tracks` uploaders for the completed band session.
+- ✅ Contribution insertion now checks active band membership at the contribution time using `joined_at` where the schema supports it.
+- ✅ The Contributions tab now labels verified participant-sourced events neutrally and states summaries are based on recorded participation.
+- ⚠️ Rehearsal participation remains band-completion based because no authoritative rehearsal attendee, RSVP, invitation, or attendance-status table was found.
+- ⚠️ Gig participation remains band-outcome based because no authoritative performer lineup or member attendance table was found.
+- ⚠️ Jam participation remains excluded: `jam_session_outcomes` is participant-level, but jam sessions are not authoritatively tied to exactly one band.
+- ⚠️ Songwriting contribution remains excluded: completed band-owned accepted co-author credit is not clearly represented by the audited schema.
+- ✅ RLS/privacy posture is unchanged: contribution events remain read-only to normal clients and visible only to current active members of the band.
