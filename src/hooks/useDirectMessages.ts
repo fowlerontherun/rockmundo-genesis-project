@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
 
 export interface DirectMessageRow {
   id: string;
@@ -65,15 +66,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       if (!channelId || !myProfileId || !otherProfileId) {
         throw new Error("Missing channel");
       }
-      const trimmed = body.trim();
-      if (!trimmed) throw new Error("Message is empty");
-      const { error } = await (supabase as any).from("direct_messages").insert({
-        channel_id: channelId,
-        sender_profile_id: myProfileId,
-        recipient_profile_id: otherProfileId,
-        body: trimmed.slice(0, 2000),
-      });
-      if (error) throw error;
+      await sendDirectMessageService(otherProfileId, body);
     },
   });
 
