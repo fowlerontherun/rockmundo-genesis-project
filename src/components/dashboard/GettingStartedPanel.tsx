@@ -32,7 +32,7 @@ interface OnboardingStep {
   optional?: boolean;
 }
 
-function buildSteps(profile: any, snapshot: OnboardingSnapshot): OnboardingStep[] {
+export function buildSteps(profile: any, snapshot: OnboardingSnapshot): OnboardingStep[] {
   const hasProfileBasics = Boolean(profile?.display_name || profile?.username) && Boolean(profile?.age || profile?.gender || profile?.city_id);
   const hasSkills = snapshot.skillRows > 0;
   const hasSong = snapshot.songCount > 0;
