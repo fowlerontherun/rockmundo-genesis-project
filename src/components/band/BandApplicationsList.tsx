@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Check, X, ClipboardList, User, ExternalLink } from 'lucide-react';
 import { respondBandApplication, type BandApplicationDecision } from '@/services/bandApplications';
+import { getRecruitmentStatusMeta, isRecruitmentActionable } from '@/lib/recruitmentStatus';
+import { format } from 'date-fns';
 
 interface BandApplicationsListProps {
   bandId: string;
@@ -31,6 +33,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           message,
           status,
           created_at,
+          responded_at,
           applicant_profile_id,
           profiles:applicant_profile_id(
             id,
@@ -40,7 +43,8 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           )
         `)
         .eq('band_id', bandId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (error) throw error;
       return data;
     },
@@ -65,7 +69,16 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
     },
   });
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Band Applications</CardTitle>
+          <CardDescription>Loading recruitment history...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
   if (isError) {
     return (
       <Card role="alert">
@@ -76,7 +89,16 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
       </Card>
     );
   }
-  if (!applications || applications.length === 0) return null;
+  if (!applications || applications.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Band Applications</CardTitle>
+          <CardDescription>No application history yet.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -85,10 +107,13 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           <ClipboardList className="h-5 w-5" />
           <CardTitle>Band Applications</CardTitle>
         </div>
-        <CardDescription>{applications.filter((app: any) => app.status === 'pending').length} pending application(s)</CardDescription>
+        <CardDescription>{applications.filter((app: any) => isRecruitmentActionable(app.status)).length} pending application(s) • newest first • showing latest 50</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {applications.map((app: any) => (
+        {applications.map((app: any) => {
+          const status = getRecruitmentStatusMeta(app.status);
+          const applicantName = app.profiles?.display_name || app.profiles?.username || 'Unknown applicant';
+          return (
           <div key={app.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
             <div 
               className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
@@ -101,28 +126,29 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
               </Avatar>
               <div className="min-w-0">
                 <p className="font-medium text-primary underline-offset-2 hover:underline flex items-center gap-1">
-                  {app.profiles?.display_name || app.profiles?.username || 'Unknown'}
+                  {applicantName}
                   <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </p>
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-xs">{app.instrument_role}</Badge>
-                  <Badge variant={app.status === 'pending' ? 'secondary' : 'outline'} className="text-xs capitalize">{app.status}</Badge>
+                  <Badge variant={status.badgeVariant} className="text-xs">{status.label}</Badge>
                   {app.vocal_role && app.vocal_role !== 'None' && (
                     <Badge variant="outline" className="text-xs">{app.vocal_role}</Badge>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">Submitted {app.created_at ? format(new Date(app.created_at), 'MMM d, yyyy') : 'recently'}{app.responded_at ? ` • Resolved ${format(new Date(app.responded_at), 'MMM d, yyyy')}` : ''}</p>
                 {app.message && (
                   <p className="text-xs text-muted-foreground mt-1 max-w-[300px] truncate">{app.message}</p>
                 )}
               </div>
             </div>
-            {app.status === 'pending' ? (
+            {status.actionable ? (
               <div className="flex gap-2 self-end sm:self-center">
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-destructive"
-                  aria-label={`Reject application from ${app.profiles?.display_name || app.profiles?.username || 'applicant'}`}
+                  aria-label={`Reject application from ${applicantName}`}
                   onClick={() => respondMutation.mutate({ applicationId: app.id, decision: 'reject' })}
                   disabled={respondMutation.isPending}
                 >
@@ -130,7 +156,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
                 </Button>
                 <Button
                   size="sm"
-                  aria-label={`Approve application from ${app.profiles?.display_name || app.profiles?.username || 'applicant'}`}
+                  aria-label={`Approve application from ${applicantName}`}
                   onClick={() => respondMutation.mutate({ applicationId: app.id, decision: 'approve' })}
                   disabled={respondMutation.isPending}
                 >
@@ -139,10 +165,11 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
                 </Button>
               </div>
             ) : (
-              <Badge variant="outline" className="self-end capitalize sm:self-center">{app.status}</Badge>
+              <Badge variant={status.badgeVariant} className="self-end sm:self-center">{status.label} • read-only</Badge>
             )}
           </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

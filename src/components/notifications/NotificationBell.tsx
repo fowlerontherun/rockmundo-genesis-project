@@ -51,10 +51,11 @@ export const NotificationBell = () => {
   };
 
   const handleClick = (n: PersistedNotification) => {
+    const display = normalizeNotification(n);
     if (!n.read_at) markRead(n.id);
-    if (n.action_path) {
+    if (display.routePath) {
       setOpen(false);
-      navigate(n.action_path);
+      navigate(display.routePath);
     }
   };
 
@@ -132,6 +133,7 @@ export const NotificationBell = () => {
                           <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] capitalize", PRIORITY_BADGE[display.priority])}>{display.priority}</Badge>
                           <span>{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</span>
                           <span>{isRead ? "Read" : "Unread"}</span>
+                          {display.statusLabel && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">Status: {display.statusLabel}</Badge>}
                         </div>
                         {display.actionLabel && (
                           <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">

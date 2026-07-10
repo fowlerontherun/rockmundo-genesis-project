@@ -101,6 +101,6 @@ describe("BandApplicationsList", () => {
 
     expect(screen.queryByRole("button", { name: /approve application/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /reject application/i })).not.toBeInTheDocument();
-    expect(screen.getAllByText("accepted").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Accepted/).length).toBeGreaterThan(0);
   });
 });
