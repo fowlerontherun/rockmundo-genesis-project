@@ -120,7 +120,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 ### Missing / risks
 
 - No global relationship type model distinguishes friend, follower, blocked, muted, ignored, bandmate, company colleague, mentor, mentee, contractor, rival, family, or romantic partner for permission checks.
-- No anti-spam cooldowns were found on friend requests at the database level.
+- ✅ Friend-request sends now use a server-authoritative `send_friend_request` RPC with block checks, idempotent pending-request handling, recipient notification deduplication, denied-attempt audit records, and a seven-day recently-declined resend cooldown. Remaining gaps: accept/decline/remove/block lifecycle writes still need dedicated RPCs and broader social rate limiting remains unresolved.
 - No block-aware routing protection for shared group contexts (band/company/chat) was found.
 - No social-graph recommendations should be added until block/privacy foundations exist.
 
@@ -158,7 +158,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 - No global report queue for DMs, inbox messages, chat messages, profile content, band/company listings, invitations, and contracts.
 - No message retention/evidence bundle policy was found outside Twaater-specific moderation.
-- ✅ Direct-message sends now use the shared `can_profile_receive_dm` guard through a server-authoritative `send_direct_message` RPC and guarded insert policy. Remaining gaps: social invites, friend requests, Twaater messages/follows/mentions, realtime chat, band recruitment, gifts, and other communication surfaces still need consistent block/mute/report enforcement.
+- ✅ Direct-message sends now use the shared `can_profile_receive_dm` guard through a server-authoritative `send_direct_message` RPC and guarded insert policy. ✅ Friend-request sends now use `send_friend_request` with shared block checks, duplicate handling, cooldowns, notification dedupe, and denied-attempt audit logging. Remaining gaps: social invites, Twaater messages/follows/mentions, realtime chat, band recruitment, gifts, and other communication surfaces still need consistent block/mute/report enforcement.
 - No attachment limit/schema, malware/content validation, or moderation workflow for future attachments.
 - No company chat identified as a first-class communication channel.
 - No clear SSE-specific implementation; realtime appears primarily Supabase Realtime channels/subscriptions.
@@ -344,7 +344,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 | Skills offered/services | Low | Skills exist; services offered are not first-class.
 | Activity history | Low-Medium | Logs/feeds exist, no unified privacy-aware social timeline.
 | Privacy controls | Low-Medium | First owner-managed profile privacy/contact settings slice exists; direct-message sends now enforce DM permission server-side. Profile/search/recruitment reads and other writes remain pending. |
-| Friend requests/friendships | Medium | Implemented, needs rate/block integration.
+| Friend requests/friendships | Medium | Request creation is now block-aware and server-authoritative; accept/decline/remove/block lifecycle writes and broader rate limiting remain partial.
 | Removing friends | Medium | Delete/cancel flows exist.
 | Blocking | Low-Medium | Dedicated safety primitives exist and direct-message sends now use the shared block guard. Other write surfaces still need migration. |
 | Ignoring/muting | Low | Not global.
@@ -379,7 +379,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 1. **Social permission design PR:** ✅ First slice implemented in `docs/social/implementation/PHASE_1_PR_01.md`, `src/features/social-privacy/*`, and `supabase/migrations/20260710120000_add_profile_privacy_settings.sql`. It adds owner-managed profile privacy/contact settings plus shared helper functions for owner checks, block checks, and DM eligibility. Remaining slices: migrate profile/search/DM/recruitment reads and writes to enforce these settings end-to-end.
 2. **Safety schema PR:** Add shared block/mute/report/audit primitives with no major UI exposure.
 3. **Profile projection PR:** Add safe profile views/RPCs and migrate search/profile reads to them.
-4. **Communication guard PR:** ✅ First direct-message send guard slice implemented in `docs/social/implementation/PHASE_1_PR_03.md`, `src/features/direct-messages/*`, and `supabase/migrations/20260710150000_guard_direct_message_sends.sql`. Remaining slices: add rate limits and migrate friend requests, social invites, Twaater DMs/follows, chat, and recruitment writes.
+4. **Communication guard PR:** ✅ First direct-message send guard slice implemented in `docs/social/implementation/PHASE_1_PR_03.md`, `src/features/direct-messages/*`, and `supabase/migrations/20260710150000_guard_direct_message_sends.sql`. Remaining slices: add broader rate limits and migrate social invites, Twaater DMs/follows, chat, recruitment writes, and friendship response/removal lifecycle operations.
 5. **Recruitment metadata PR:** Add opt-in availability fields and band recruiting metadata behind privacy settings.
 6. **Admin moderation PR:** Add unified social reports and evidence review console.
 7. **Only after the above:** Add richer social features such as group conversations, attachments, auditions, job applications, reputation, and social recommendations.

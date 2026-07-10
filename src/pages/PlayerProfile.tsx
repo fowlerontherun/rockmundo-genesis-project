@@ -21,6 +21,7 @@ import {
 import { format } from "date-fns";
 import { NominateButton } from "@/components/elections/NominateButton";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { sendFriendRequest } from "@/integrations/supabase/friends";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -151,12 +152,7 @@ export default function PlayerProfile() {
   const sendRequest = useMutation({
     mutationFn: async () => {
       if (!currentUser?.id || !playerId) throw new Error("Missing IDs");
-      const { error } = await supabase.from("friendships").insert({
-        requestor_id: currentUser.id,
-        addressee_id: playerId,
-        status: "pending",
-      });
-      if (error) throw error;
+      await sendFriendRequest({ requestorProfileId: currentUser.id, addresseeProfileId: playerId });
     },
     onSuccess: () => {
       toast({ title: "Friend request sent!" });

@@ -87,27 +87,50 @@ export const fetchProfilesByIds = async (
   }, {});
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function validateFriendRequestInput(addresseeProfileId: string | null | undefined) {
+  if (!addresseeProfileId || !UUID_RE.test(addresseeProfileId)) {
+    throw new Error("Choose a valid player to add as a friend.");
+  }
+
+  return addresseeProfileId;
+}
+
+function friendlyFriendRequestError(message?: string) {
+  if (!message) return "We couldn't send that friend request. Please try again.";
+  if (/not available for friend requests|permission denied|row-level security|42501/i.test(message)) {
+    return "This player is not available for friend requests.";
+  }
+  if (/active player profile|not authenticated|jwt|auth/i.test(message)) {
+    return "Sign in with an active player profile before sending friend requests.";
+  }
+  if (/already friends/i.test(message)) return "You are already friends with this player.";
+  if (/declined recently|42901/i.test(message)) {
+    return "That friend request was declined recently. Please wait before trying again.";
+  }
+  if (/not found/i.test(message)) return "That player could not be found.";
+  return message;
+}
+
 export const sendFriendRequest = async ({
-  requestorProfileId,
   addresseeProfileId,
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
-  const payload: Database["public"]["Tables"]["friendships"]["Insert"] = {
-    requestor_id: requestorProfileId,
-    addressee_id: addresseeProfileId,
-    status: "pending",
-  };
-
-  const { data, error } = await supabase
-    .from("friendships")
-    .insert(payload)
-    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
-    .single();
+  const targetProfileId = validateFriendRequestInput(addresseeProfileId);
+  const { data, error } = await (supabase as any).rpc("send_friend_request", {
+    target_profile_id: targetProfileId,
+  });
 
   if (error) {
-    throw error;
+    throw new Error(friendlyFriendRequestError(error.message));
   }
 
   return data as FriendshipRow;
+};
+
+export const __friendRequestTestUtils = {
+  friendlyFriendRequestError,
+  validateFriendRequestInput,
 };
 
 export const deleteFriendship = async (friendshipId: string): Promise<void> => {
