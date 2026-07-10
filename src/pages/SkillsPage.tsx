@@ -189,7 +189,7 @@ const SkillsPage = () => {
           <SkillTree />
         </TabsContent>
 
-        <TabsContent value="list" className="mt-6">
+        <TabsContent value="practice" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Practice Skills</CardTitle>
