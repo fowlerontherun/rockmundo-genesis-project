@@ -96,20 +96,36 @@ export const useRecordingSessions = (profileId: string) => {
   return useQuery({
     queryKey: ['recording-sessions', profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!profileId) return [];
+
+      const { data: membershipRows, error: membershipError } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('profile_id', profileId)
+        .eq('member_status', 'active');
+
+      if (membershipError) throw membershipError;
+
+      const bandIds = (membershipRows || []).map(row => row.band_id).filter(Boolean);
+      let query = supabase
         .from('recording_sessions')
         .select(`
           *,
           city_studios (name, quality_rating),
           recording_producers (name, tier),
           songs (title, genre)
-        `)
-        .eq('profile_id', profileId)
-        .order('created_at', { ascending: false });
+        `);
+
+      query = bandIds.length > 0
+        ? query.or(`profile_id.eq.${profileId},band_id.in.(${bandIds.join(',')})`)
+        : query.eq('profile_id', profileId);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       return (data || []) as any as RecordingSession[];
     },
+    enabled: !!profileId,
   });
 };
 
@@ -271,8 +287,7 @@ export const useCreateRecordingSession = () => {
       const orchestraCost = orchestraOption?.cost || 0;
       const totalCost = studioCost + producerCost + orchestraCost;
 
-      const scheduledEnd = new Date();
-      scheduledEnd.setHours(scheduledEnd.getHours() + input.duration_hours);
+      const sessionScheduledEnd = sessionEnd;
 
       // If band_id is provided, check band balance and insert earnings (trigger handles balance)
       if (input.band_id) {
@@ -345,8 +360,9 @@ export const useCreateRecordingSession = () => {
           duration_hours: input.duration_hours,
           total_cost: totalCost,
           quality_improvement: finalQuality - song.quality_score,
-          status: 'in_progress',
-          scheduled_end: scheduledEnd.toISOString(),
+          status: input.scheduled_start ? 'scheduled' : 'in_progress',
+          scheduled_start: now.toISOString(),
+          scheduled_end: sessionScheduledEnd.toISOString(),
           city_id: studioInfo?.city_id || null,
         } as any)
         .select()

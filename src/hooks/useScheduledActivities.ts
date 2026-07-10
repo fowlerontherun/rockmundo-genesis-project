@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, addDays } from "date-fns";
 import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
+import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
 
 export type ActivityType = 
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
@@ -271,7 +272,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
         (ws: any) => !existingWorkIds.has(ws.metadata?.shift_history_id)
       );
       
-      const allActivities = [...activities, ...uniqueWorkShifts];
+      const allActivities = withoutDuplicateBandScheduleActivities([...activities, ...uniqueWorkShifts]);
 
       return allActivities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
     },
