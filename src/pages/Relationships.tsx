@@ -76,6 +76,7 @@ import { FamilyDashboard } from "@/components/family/FamilyDashboard";
 import { StreakBanner } from "@/features/relationships/components/StreakBanner";
 import { FriendActivityFeed } from "@/features/relationships/components/FriendActivityFeed";
 import { BestFriendsLeaderboard } from "@/features/relationships/components/BestFriendsLeaderboard";
+import { SocialPrivacySettingsCard } from "@/features/social-privacy/components/SocialPrivacySettingsCard";
 import { WeeklyRecapCard } from "@/features/relationships/components/WeeklyRecapCard";
 import { CoopSuggestionsCard } from "@/features/relationships/components/CoopSuggestionsCard";
 import { CoopQuestActivityLog } from "@/features/relationships/components/CoopQuestActivityLog";
@@ -2177,6 +2178,7 @@ export default function RelationshipsPage() {
                       </p>
                     </div>
                   ))}
+                  <SocialPrivacySettingsCard profileId={profileId ?? activeProfileId} isProfileLoading={!gameData && !activeProfileId} />
                   {privacyControls.map((control) => (
                     <div
                       key={control.name}
