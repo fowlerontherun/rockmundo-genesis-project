@@ -169,7 +169,7 @@ export const HierarchicalSkillNode = ({
                 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => trainMutation.mutate()}
+                    onClick={() => trainMutation.mutate(cost)}
                     disabled={!canAfford || isMaxed || trainMutation.isPending || isLocked}
                     className="flex-1 h-7 text-xs"
                     size="sm"
@@ -181,6 +181,18 @@ export const HierarchicalSkillNode = ({
                       </>
                     )}
                   </Button>
+                  {canMax && (
+                    <Button
+                      onClick={() => trainMutation.mutate(xpBalance)}
+                      disabled={trainMutation.isPending || isLocked}
+                      className="h-7 text-xs px-2"
+                      size="sm"
+                      variant="secondary"
+                      title={`Spend all ${xpBalance} available SXP on this skill`}
+                    >
+                      All ({xpBalance})
+                    </Button>
+                  )}
                   {hasProgress && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
