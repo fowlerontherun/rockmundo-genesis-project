@@ -211,7 +211,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 - Bands can be created and managed through band manager/components.
 - `bands`, `band_members`, roles, instrument/vocal roles, leader/founder concepts, status, chemistry/cohesion, finances, repertoire, gigs, riders, vehicles, gear, and chat surfaces exist.
 - ✅ `band_invitations` creation now uses the guarded `send_band_invitation` RPC for new client flows, with server-side actor resolution, invite permission checks, target privacy/block checks, active-member rejection, duplicate pending invite idempotency, validation constraints, denied-attempt audit logging, and notification dedupe. Invitation responses now use the guarded `respond_band_invitation` RPC, and leader/founder cancellation has the guarded `cancel_band_invitation` RPC; response creates membership idempotently and updates related notifications.
-- `band_applications` supports applications with applicant profile, instrument/vocal role, message, status, responded timestamp, uniqueness per band/applicant, applicant self-view, and leader response policies.
+- ✅ `band_applications` supports applications with applicant profile, instrument/vocal role, message, status, responded timestamp, uniqueness per band/applicant, and applicant self-view. Approval/rejection now uses the guarded `respond_band_application` RPC with server-side actor resolution, pending/final-state checks, leader/founder recruitment authorization, former-member exclusion through active membership checks, applicant self-approval denial, block checks, duplicate active-membership prevention, safe default member role creation, notification dedupe, and audit logging.
 - `bands.is_recruiting` exists.
 - Band browser/search lets players discover bands; band ratings and profiles exist.
 - Collaboration invite hooks and cross-band collaboration utilities exist for adjacent collaboration concepts.
@@ -219,10 +219,10 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 ### Partial / fragmented
 
 - Invitation policies are broad in one migration: invitations are viewable by everyone. This may be acceptable for public recruiting but is risky for private invitations.
-- Band leader checks vary across older schema surfaces, but invitation creation/cancellation now use the dedicated `can_manage_band_invitations` helper for the first guarded recruitment lifecycle. Other band actions still need migration.
+- Band leader checks vary across older schema surfaces, but invitation creation/cancellation and application approval/rejection now use the dedicated `can_manage_band_invitations` helper. The helper now requires current active leader/founder membership unless the actor is the band `leader_id`. Other band actions still need migration.
 - Auditions are not first-class. Applications include role/message but not scheduled auditions, audition media, votes, or review history.
 - Band roles exist but are not yet a complete permission matrix for finances, bookings, releases, contracts, chat moderation, invites, applications, and public announcements.
-- Band invitation creation and response are now block-aware, duplicate-pending/duplicate-membership guarded, and server-authoritative. Band applications, auditions, leader-side cancellation UI, and broader recruitment rate limits remain unresolved.
+- Band invitation creation/response and band application approval/rejection are now block-aware, duplicate-membership guarded, and server-authoritative. Application submission, auditions, leader-side invitation cancellation UI, and broader recruitment rate limits remain unresolved.
 
 ### Missing / risks
 
