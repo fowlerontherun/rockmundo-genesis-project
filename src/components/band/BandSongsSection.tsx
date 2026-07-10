@@ -24,7 +24,7 @@ interface BandSong {
 }
 
 export function BandSongsSection({ bandId, bandName }: BandSongsSectionProps) {
-  const { data: songs, isLoading } = useQuery({
+  const { data: songs, isLoading, error } = useQuery({
     queryKey: ["band-songs", bandId],
     queryFn: async () => {
       // Get songs with play counts
@@ -79,6 +79,24 @@ export function BandSongsSection({ bandId, bandName }: BandSongsSectionProps) {
           {[1, 2, 3].map(i => (
             <Skeleton key={i} className="h-20 w-full" />
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Music className="h-5 w-5" />
+            Songs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive text-center py-8">
+            Failed to load band songs: {error instanceof Error ? error.message : "Unknown error"}
+          </p>
         </CardContent>
       </Card>
     );

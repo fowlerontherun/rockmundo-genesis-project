@@ -30,6 +30,34 @@ interface ConflictInfo {
   activityTitle: string;
 }
 
+export interface ScheduleLikeActivity {
+  id: string;
+  activity_type?: string | null;
+  linked_rehearsal_id?: string | null;
+  linked_recording_id?: string | null;
+  metadata?: Record<string, any> | null;
+}
+
+function getBandActivityKey(activity: ScheduleLikeActivity): string | null {
+  if (activity.linked_rehearsal_id) return `rehearsal:${activity.linked_rehearsal_id}`;
+  if (activity.linked_recording_id) return `recording:${activity.linked_recording_id}`;
+  const metadata = activity.metadata || {};
+  if (metadata.rehearsalId) return `rehearsal:${metadata.rehearsalId}`;
+  if (metadata.sessionId && activity.activity_type === 'recording') return `recording:${metadata.sessionId}`;
+  return null;
+}
+
+export function withoutDuplicateBandScheduleActivities<T extends ScheduleLikeActivity>(activities: T[]): T[] {
+  const seen = new Set<string>();
+  return activities.filter((activity) => {
+    const key = getBandActivityKey(activity);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Get all active REAL band member user IDs (players only, not touring/hired members)
  * Only includes members with user_id (real players) - excludes NPC touring members
@@ -202,9 +230,40 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     console.warn('No valid profiles found for band members');
     return [];
   }
+
+  let existingQuery = supabase
+    .from('player_scheduled_activities' as any)
+    .select('user_id')
+    .in('user_id', validMembers)
+    .eq('activity_type', params.activityType)
+    .neq('status', 'cancelled');
+
+  if (params.linkedRehearsalId) {
+    existingQuery = existingQuery.eq('linked_rehearsal_id', params.linkedRehearsalId);
+  } else if (params.linkedRecordingId) {
+    existingQuery = existingQuery.eq('linked_recording_id', params.linkedRecordingId);
+  } else {
+    existingQuery = existingQuery
+      .eq('scheduled_start', params.scheduledStart.toISOString())
+      .eq('scheduled_end', params.scheduledEnd.toISOString())
+      .contains('metadata', { band_id: params.bandId });
+  }
+
+  const { data: existingActivities, error: existingError } = await existingQuery;
+  if (existingError) {
+    console.error('Failed to check existing band scheduled activities:', existingError);
+    throw new Error('Failed to verify existing band schedule entries');
+  }
+
+  const alreadyScheduled = new Set((existingActivities || []).map((activity: any) => activity.user_id));
+  const membersToSchedule = validMembers.filter(userId => !alreadyScheduled.has(userId));
+
+  if (membersToSchedule.length === 0) {
+    return [];
+  }
   
   // Create activity for each band member
-  const insertData = validMembers.map(userId => ({
+  const insertData = membersToSchedule.map(userId => ({
     user_id: userId,
     profile_id: profileMap.get(userId),
     activity_type: params.activityType,

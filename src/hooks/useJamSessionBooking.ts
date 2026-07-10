@@ -51,14 +51,16 @@ export const useJamSessionBooking = () => {
     startTime: Date,
     endTime: Date
   ): Promise<{ hasConflict: boolean; conflictTitle?: string }> => {
-    const { data: conflicts } = await supabase
+    const { data: conflicts, error } = await supabase
       .from("player_scheduled_activities")
       .select("title")
       .eq("profile_id", userId)
       .in("status", ["scheduled", "in_progress"])
-      .lte("scheduled_start", endTime.toISOString())
-      .gte("scheduled_end", startTime.toISOString())
+      .lt("scheduled_start", endTime.toISOString())
+      .gt("scheduled_end", startTime.toISOString())
       .limit(1);
+
+    if (error) throw new Error(error.message || "Failed to check schedule conflicts");
 
     if (conflicts && conflicts.length > 0) {
       return { hasConflict: true, conflictTitle: conflicts[0].title };
@@ -92,7 +94,7 @@ export const useJamSessionBooking = () => {
     scheduledEnd: Date,
     cityName?: string
   ) => {
-    await (supabase as any).from("player_scheduled_activities").insert({
+    const { error } = await (supabase as any).from("player_scheduled_activities").insert({
       user_id: userId,
       profile_id: profileId,
       activity_type: "jam_session",
@@ -105,6 +107,8 @@ export const useJamSessionBooking = () => {
       linked_jam_session_id: sessionId,
       metadata: { jam_session_id: sessionId },
     });
+
+    if (error) throw new Error(error.message || "Failed to add jam session to schedule");
   };
 
   // Check jam session availability for a room and date
@@ -127,7 +131,7 @@ export const useJamSessionBooking = () => {
 
   const bookJamSession = async (params: BookJamSessionParams): Promise<string> => {
     if (!profile) throw new Error("Profile not found");
-    if (!profile) throw new Error("Profile not found");
+    if (isBooking) throw new Error("Booking already in progress");
 
     setIsBooking(true);
 
@@ -254,7 +258,6 @@ export const useJamSessionBooking = () => {
 
   const joinJamSession = async (sessionId: string): Promise<void> => {
     if (!profile) throw new Error("Profile not found");
-    if (!profile) throw new Error("Profile not found");
 
     // Get session details with city info
     const { data: session } = await supabase
@@ -368,7 +371,6 @@ export const useJamSessionBooking = () => {
   };
 
   const leaveJamSession = async (sessionId: string): Promise<void> => {
-    if (!profile) throw new Error("Profile not found");
     if (!profile) throw new Error("Profile not found");
 
     // Get session details
