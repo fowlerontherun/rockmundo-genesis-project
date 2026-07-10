@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRehearsalBooking } from "@/hooks/useRehearsalBooking";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { RehearsalParticipantsSection } from "@/components/social/ParticipantStatusList";
 
 interface Rehearsal {
   id: string;
@@ -539,6 +540,12 @@ const Rehearsals = () => {
                         </div>
                       </div>
                     </div>
+
+                    <Separator />
+                    <RehearsalParticipantsSection
+                      rehearsalId={rehearsal.id}
+                      completed={rehearsal.status === "completed"}
+                    />
 
                     {rehearsal.status === "completed" && (
                       <>

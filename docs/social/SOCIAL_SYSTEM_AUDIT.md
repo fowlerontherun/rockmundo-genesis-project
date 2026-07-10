@@ -432,3 +432,12 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 - RLS permits active band members to read operational participant/lineup data; no broad direct client mutation policies were added.
 - Existing schedule records remain the schedule source; participant/lineup rows are evidence for contribution and future per-member schedule display.
 - Test coverage now includes a database harness note for participant/lineup idempotency and contribution adapter cases; full execution requires local Supabase database tooling.
+
+### Phase 4 PR 04 update — participant and lineup visibility
+
+- ✅ Existing rehearsal cards now expose read-only participant status from `band_rehearsal_participants` with Expected, Attended, Missed, loading, error, empty, and older-event unavailable states. RSVP and attendance editing remain unresolved.
+- ✅ Existing gig detail surfaces now expose read-only lineup status from `gig_performers` with Selected, Performed, Missed, loading, error, empty, and older-event unavailable states. Manager lineup editing, substitutes, and session musicians remain unresolved.
+- ✅ Schedule integration remains detail-based: no duplicate schedule records were introduced and participant/lineup lists are not fetched for every schedule item.
+- ✅ Contribution source clarity improved through neutral action labels for attended rehearsals and performed gigs, without rankings, rewards, XP, chemistry, goals, achievements, or leaderboards.
+- ✅ Privacy posture remains current-active-band-member-only through the existing participant/performer RLS policies; no public gig lineup exposure or direct participant mutation policy was added.
+- ✅ Automated coverage was added for shared status mapping, rehearsal/gig read-only UI states, no edit controls, safe unsupported status fallback, and contribution labels.

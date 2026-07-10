@@ -22,6 +22,7 @@ import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { GigPerformersSection } from "@/components/social/ParticipantStatusList";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -550,6 +551,11 @@ export default function PerformGig() {
         }
         return null;
       })()}
+
+      <GigPerformersSection
+        gigId={gig.id}
+        completedOrCancelled={gig.status === 'completed' || gig.status === 'cancelled'}
+      />
 
       {/* Preparation Checklist */}
       {setlistSongs.length > 0 && (
