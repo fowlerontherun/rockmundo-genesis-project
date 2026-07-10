@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,14 +103,15 @@ const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string
       const client: any = supabase;
 
       const [songsResult, membershipsResult, activitiesResult] = await Promise.all([
-        client.from("songs").select("id, status").eq("profile_id", profileId),
+        client.from("songs").select("id, status").eq("profile_id", profileId).limit(500),
         client.from("band_members").select("band_id").eq("profile_id", profileId).eq("member_status", "active"),
         client
           .from("player_scheduled_activities")
           .select("id, activity_type, scheduled_start, status")
           .eq("profile_id", profileId)
           .gte("scheduled_start", nowIso)
-          .in("status", ["scheduled", "in_progress"]),
+          .in("status", ["scheduled", "in_progress"])
+          .limit(50),
       ]);
 
       if (songsResult.error) throw songsResult.error;
@@ -118,7 +119,7 @@ const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string
       if (activitiesResult.error) throw activitiesResult.error;
 
       const bandIds = (membershipsResult.data || []).map((membership: any) => membership.band_id).filter(Boolean);
-      let releasesQuery = client.from("releases").select("id, release_status, user_id, band_id");
+      let releasesQuery = client.from("releases").select("id, release_status, user_id, band_id").limit(200);
       if (bandIds.length > 0 && userId) {
         releasesQuery = releasesQuery.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
       } else if (userId) {
@@ -135,6 +136,7 @@ const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string
               .select("id, scheduled_start, status")
               .in("band_id", bandIds)
               .gte("scheduled_start", weekAgo)
+              .limit(50)
           : { data: [], error: null },
       ]);
 
@@ -296,52 +298,12 @@ const Dashboard = () => {
   const [surveyDismissed, setSurveyDismissed] = useState(false);
   const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
-  const weekStart = startOfWeek(currentDate, {
+  const weekStart = useMemo(() => startOfWeek(currentDate, {
     weekStartsOn: 1
-  });
-  const weekDays = Array.from({
+  }), [currentDate]);
+  const weekDays = useMemo(() => Array.from({
     length: 7
-  }, (_, i) => addDays(weekStart, i));
-  const {
-    data: friendships
-  } = useQuery({
-    queryKey: ["dashboard-friendships", profile?.id],
-    queryFn: async () => {
-      if (!profile?.id) return [];
-      
-      // Fetch friendships using profile IDs (requestor_id, addressee_id)
-      const { data: friendshipsData } = await supabase
-        .from("friendships")
-        .select("id, requestor_id, addressee_id, status")
-        .or(`requestor_id.eq.${profile.id},addressee_id.eq.${profile.id}`)
-        .eq("status", "accepted")
-        .limit(10);
-      
-      if (!friendshipsData || friendshipsData.length === 0) return [];
-      
-      // Get all other profile IDs
-      const otherProfileIds = friendshipsData.map(f => 
-        f.requestor_id === profile.id ? f.addressee_id : f.requestor_id
-      );
-      
-      // Fetch those profiles
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username, display_name, avatar_url, fame, level")
-        .in("id", otherProfileIds);
-      
-      // Map profiles to friendships
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
-      
-      return friendshipsData.map(f => ({
-        ...f,
-        friendProfile: profileMap.get(
-          f.requestor_id === profile.id ? f.addressee_id : f.requestor_id
-        ) ?? null
-      }));
-    },
-    enabled: !!profile?.id
-  });
+  }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const {
     data: achievements,
     isLoading: achievementsLoading,
@@ -352,11 +314,17 @@ const Dashboard = () => {
     queryFn: async (): Promise<any[]> => {
       if (!profile?.id) return [];
       const client: any = supabase;
-      const result = await client.from("player_achievements").select("*, achievements(*)").eq("profile_id", profile.id);
+      const result = await client
+        .from("player_achievements")
+        .select("id, unlocked_at, achievements(name, description, icon)")
+        .eq("profile_id", profile.id)
+        .order("unlocked_at", { ascending: false })
+        .limit(30);
       if (result.error) throw result.error;
       return result.data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!profile?.id && activeTab === "activity",
+    staleTime: 60_000,
   });
 
 

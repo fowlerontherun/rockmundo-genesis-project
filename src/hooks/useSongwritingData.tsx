@@ -117,7 +117,7 @@ export const useSongwritingData = (profileId?: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('song_themes')
-        .select('*')
+        .select('id, name, description, mood')
         .order('name');
       
       if (error) throw error;
@@ -131,7 +131,7 @@ export const useSongwritingData = (profileId?: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('chord_progressions')
-        .select('*')
+        .select('id, name, progression, difficulty')
         .order('name');
       
       if (error) throw error;
@@ -149,9 +149,9 @@ export const useSongwritingData = (profileId?: string | null) => {
       const { data, error } = await supabase
         .from('songwriting_projects')
         .select(`
-          *,
-          song_themes (*),
-          chord_progressions (*),
+          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at, effort_hours,
+          song_themes (id, name, description, mood),
+          chord_progressions (id, name, progression, difficulty),
           songwriting_sessions (
             id,
             project_id,
@@ -166,7 +166,8 @@ export const useSongwritingData = (profileId?: string | null) => {
           )
         `)
         .eq('profile_id', profileId)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(100);
       
       if (error) throw error;
       
@@ -249,7 +250,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       toast({ title: "Project Created", description: "New songwriting project started!" });
     },
     onError: (error) => {
@@ -270,7 +271,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       toast({ title: "Project Updated" });
     },
     onError: (error) => {
@@ -290,7 +291,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       toast({ title: "Project Deleted" });
     },
     onError: (error) => {
@@ -394,7 +395,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       toast({ title: "Session Started", description: "1-hour session in progress" });
     }
@@ -515,7 +516,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return { sessionId, musicGain, lyricsGain, xpEarned };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       toast({ title: "Session Completed", description: "Progress saved!" });
     },
     onError: (error) => {
@@ -541,7 +542,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       
       const { data: project } = await supabase
         .from('songwriting_projects')
-        .select('*')
+        .select('id, title, lyrics, initial_lyrics, genres, quality_score, song_rating, creative_brief')
         .eq('id', projectId)
         .single();
       
@@ -627,7 +628,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return song;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       toast({ title: "Song Created!", description: "Added to your catalog" });
     },
     onError: (error) => {
@@ -653,7 +654,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects", profileId] });
       toast({ title: "Session paused successfully" });
     },
     onError: (error) => {
