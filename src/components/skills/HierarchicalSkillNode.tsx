@@ -77,12 +77,12 @@ export const HierarchicalSkillNode = ({
   const isMaxed = level >= maxLevel;
 
   const trainMutation = useMutation({
-    mutationFn: () => spendSkillXp({
+    mutationFn: (amount: number) => spendSkillXp({
       skillSlug: skill.slug,
-      amount: cost
+      amount,
     }),
-    onSuccess: () => {
-      toast.success(`${skill.display_name} trained!`);
+    onSuccess: (_data, amount) => {
+      toast.success(`${skill.display_name} trained (+${amount} SXP)`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
       onTrain?.();
     },
@@ -90,6 +90,8 @@ export const HierarchicalSkillNode = ({
       toast.error(error.message || "Failed to train skill");
     }
   });
+
+  const canMax = xpBalance > cost && !isMaxed;
 
   const unlearnMutation = useMutation({
     mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
@@ -167,7 +169,7 @@ export const HierarchicalSkillNode = ({
                 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => trainMutation.mutate()}
+                    onClick={() => trainMutation.mutate(cost)}
                     disabled={!canAfford || isMaxed || trainMutation.isPending || isLocked}
                     className="flex-1 h-7 text-xs"
                     size="sm"
@@ -179,6 +181,18 @@ export const HierarchicalSkillNode = ({
                       </>
                     )}
                   </Button>
+                  {canMax && (
+                    <Button
+                      onClick={() => trainMutation.mutate(xpBalance)}
+                      disabled={trainMutation.isPending || isLocked}
+                      className="h-7 text-xs px-2"
+                      size="sm"
+                      variant="secondary"
+                      title={`Spend all ${xpBalance} available SXP on this skill`}
+                    >
+                      All ({xpBalance})
+                    </Button>
+                  )}
                   {hasProgress && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

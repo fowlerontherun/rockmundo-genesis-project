@@ -72,9 +72,9 @@ export const CompactSkillRow = ({
   const hasProgress = level > 0 || xp > 0;
 
   const trainMutation = useMutation({
-    mutationFn: () => spendSkillXp({ skillSlug: skill.slug, amount: cost }),
-    onSuccess: () => {
-      toast.success(`${skill.display_name} trained!`);
+    mutationFn: (amount: number) => spendSkillXp({ skillSlug: skill.slug, amount }),
+    onSuccess: (_data, amount) => {
+      toast.success(`${skill.display_name} trained (+${amount} SXP)`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
       onTrain?.();
     },
@@ -82,6 +82,8 @@ export const CompactSkillRow = ({
       toast.error(error.message || "Failed to train skill");
     }
   });
+
+  const canMax = xpBalance > cost && !isMaxed;
 
   const unlearnMutation = useMutation({
     mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
@@ -148,7 +150,7 @@ export const CompactSkillRow = ({
       {/* Train button */}
       {!isLocked && (
         <Button
-          onClick={() => trainMutation.mutate()}
+          onClick={() => trainMutation.mutate(cost)}
           disabled={!canAfford || isMaxed || trainMutation.isPending}
           size="sm"
           variant="outline"
@@ -160,6 +162,20 @@ export const CompactSkillRow = ({
               {cost}
             </>
           )}
+        </Button>
+      )}
+
+      {/* Max / spend-all button */}
+      {!isLocked && canMax && (
+        <Button
+          onClick={() => trainMutation.mutate(xpBalance)}
+          disabled={trainMutation.isPending}
+          size="sm"
+          variant="default"
+          className="h-7 text-xs px-2 flex-shrink-0"
+          title={`Spend all ${xpBalance} available SXP on this skill`}
+        >
+          All ({xpBalance})
         </Button>
       )}
 
