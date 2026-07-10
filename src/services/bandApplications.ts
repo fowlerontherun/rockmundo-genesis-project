@@ -7,12 +7,13 @@ export interface BandApplicationResult {
   instrument_role: string;
   vocal_role: string | null;
   message: string | null;
-  status: string;
+  status: BandApplicationStatus | string;
   created_at: string;
   responded_at: string | null;
 }
 
 export type BandApplicationDecision = "approve" | "reject";
+export type BandApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export const BAND_APPLICATION_MESSAGE_MAX_LENGTH = 500;
 export const BAND_APPLICATION_ROLES = [
@@ -95,6 +96,26 @@ export async function respondBandApplication(applicationId: string, decision: Ba
   }
   if (!data) {
     throw new Error("Band application response could not be saved.");
+  }
+  return data as BandApplicationResult;
+}
+
+
+export function normalizeBandApplicationWithdrawalInput(applicationId: string | undefined | null) {
+  return { applicationId: assertUuid(applicationId, "Choose a valid band application.") };
+}
+
+export async function withdrawBandApplication(applicationId: string): Promise<BandApplicationResult> {
+  const normalized = normalizeBandApplicationWithdrawalInput(applicationId);
+  const { data, error } = await (supabase.rpc as any)("withdraw_band_application", {
+    application_id: normalized.applicationId,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to withdraw band application.");
+  }
+  if (!data) {
+    throw new Error("Band application withdrawal could not be saved.");
   }
   return data as BandApplicationResult;
 }

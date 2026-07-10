@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,10 @@ import { Users, TrendingUp, Music, User } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
 import { BandApplicationDialog } from "@/components/band/BandApplicationDialog";
+import { withdrawBandApplication } from "@/services/bandApplications";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -18,7 +22,9 @@ export default function BandProfile() {
   const { t } = useTranslation();
   const { bandId } = useParams();
   const { profileId } = useActiveProfile();
-  const [submittedApplication, setSubmittedApplication] = useState<{ id: string; status: string } | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [submittedApplication, setSubmittedApplication] = useState<any | null>(null);
 
   const { data: band, isLoading } = useQuery({
     queryKey: ["band-profile", bandId],
@@ -75,10 +81,9 @@ export default function BandProfile() {
       if (!bandId || !profileId) return null;
       const { data } = await supabase
         .from("band_applications")
-        .select("id, status")
+        .select("id, status, created_at, instrument_role, vocal_role, responded_at")
         .eq("band_id", bandId)
         .eq("applicant_profile_id", profileId)
-        .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -112,7 +117,20 @@ export default function BandProfile() {
   }
 
   const activeApplication = submittedApplication || existingApplication;
-  const canApply = band.is_recruiting && !isMember && !activeApplication && profileId;
+  const canApply = band.is_recruiting && !isMember && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected") && profileId;
+  const withdrawMutation = useMutation({
+    mutationFn: async (applicationId: string) => withdrawBandApplication(applicationId),
+    onSuccess: (application) => {
+      setSubmittedApplication(application);
+      toast({ title: "Application withdrawn", description: `Your application to ${band.name} has been withdrawn.` });
+      queryClient.invalidateQueries({ queryKey: ["band-application", bandId, profileId] });
+      queryClient.invalidateQueries({ queryKey: ["band-profile", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band-applications", bandId] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Unable to withdraw application", description: error?.message || "Try again or refresh before withdrawing.", variant: "destructive" });
+    },
+  });
 
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
@@ -171,13 +189,50 @@ export default function BandProfile() {
                     bandId={band.id}
                     bandName={band.name}
                     profileId={profileId!}
-                    onSubmitted={(application) => setSubmittedApplication({ id: application.id, status: application.status })}
+                    onSubmitted={(application) => setSubmittedApplication(application)}
                   />
                 )}
                 {activeApplication && (
-                  <Badge variant="outline" className="text-xs">
-                    {activeApplication.status === 'pending' ? 'Application Pending' : `Application ${activeApplication.status}`}
-                  </Badge>
+                  <div className="w-full rounded-lg border bg-muted/30 p-3 sm:max-w-md" aria-live="polite">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-foreground">Application to {band.name}</span>
+                          <Badge variant={activeApplication.status === 'pending' ? 'secondary' : 'outline'} className="capitalize">
+                            {activeApplication.status}
+                          </Badge>
+                        </div>
+                        <p>Submitted {activeApplication.created_at ? format(new Date(activeApplication.created_at), "MMM d, yyyy") : "recently"}</p>
+                        <p>Requested role: {activeApplication.instrument_role || "Not specified"}{activeApplication.vocal_role ? ` / ${activeApplication.vocal_role}` : ""}</p>
+                      </div>
+                      {activeApplication.status === 'pending' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="outline" className="shrink-0 text-destructive" disabled={withdrawMutation.isPending}>
+                              {withdrawMutation.isPending ? "Withdrawing..." : "Withdraw application"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Withdraw application?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This withdraws your pending application to {band.name}. It does not guarantee an immediate future reapplication if cooldown rules are introduced later.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={withdrawMutation.isPending}>Keep application</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => withdrawMutation.mutate(activeApplication.id)}
+                                disabled={withdrawMutation.isPending}
+                              >
+                                Withdraw application
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

@@ -4,6 +4,8 @@ import {
   normalizeBandApplicationSubmissionInput,
   respondBandApplication,
   submitBandApplication,
+  normalizeBandApplicationWithdrawalInput,
+  withdrawBandApplication,
 } from "../bandApplications";
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -103,5 +105,29 @@ describe("band application service", () => {
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as never);
 
     await expect(respondBandApplication(validApplicationId, "approve")).rejects.toThrow("could not be saved");
+  });
+
+  it("normalizes withdrawal input and rejects invalid application IDs", async () => {
+    expect(normalizeBandApplicationWithdrawalInput(` ${validApplicationId} `)).toEqual({ applicationId: validApplicationId });
+    await expect(withdrawBandApplication("bad-id")).rejects.toThrow("valid band application");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("calls guarded withdrawal RPC", async () => {
+    const row = { id: validApplicationId, band_id: validBandId, status: "withdrawn" };
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
+
+    await expect(withdrawBandApplication(validApplicationId)).resolves.toBe(row);
+    expect(supabase.rpc).toHaveBeenCalledWith("withdraw_band_application", {
+      application_id: validApplicationId,
+    });
+  });
+
+  it("surfaces withdrawal backend failures and empty responses", async () => {
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: { message: "Only pending band applications can be withdrawn." } } as never);
+    await expect(withdrawBandApplication(validApplicationId)).rejects.toThrow("Only pending");
+
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as never);
+    await expect(withdrawBandApplication(validApplicationId)).rejects.toThrow("withdrawal could not be saved");
   });
 });
