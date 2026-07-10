@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ export default function BandProfile() {
   const { t } = useTranslation();
   const { bandId } = useParams();
   const { profileId } = useActiveProfile();
+  const [submittedApplication, setSubmittedApplication] = useState<{ id: string; status: string } | null>(null);
 
   const { data: band, isLoading } = useQuery({
     queryKey: ["band-profile", bandId],
@@ -76,6 +78,9 @@ export default function BandProfile() {
         .select("id, status")
         .eq("band_id", bandId)
         .eq("applicant_profile_id", profileId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       return data;
     },
@@ -106,7 +111,8 @@ export default function BandProfile() {
     );
   }
 
-  const canApply = band.is_recruiting && !isMember && !existingApplication && profileId;
+  const activeApplication = submittedApplication || existingApplication;
+  const canApply = band.is_recruiting && !isMember && !activeApplication && profileId;
 
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
@@ -165,11 +171,12 @@ export default function BandProfile() {
                     bandId={band.id}
                     bandName={band.name}
                     profileId={profileId!}
+                    onSubmitted={(application) => setSubmittedApplication({ id: application.id, status: application.status })}
                   />
                 )}
-                {existingApplication && (
+                {activeApplication && (
                   <Badge variant="outline" className="text-xs">
-                    {existingApplication.status === 'pending' ? 'Application Pending' : `Application ${existingApplication.status}`}
+                    {activeApplication.status === 'pending' ? 'Application Pending' : `Application ${activeApplication.status}`}
                   </Badge>
                 )}
               </div>

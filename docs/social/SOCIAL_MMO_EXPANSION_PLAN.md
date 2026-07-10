@@ -119,7 +119,7 @@ Other players should become the most valuable content in RockMundo because they 
 **Implementation approach**
 1. Add documentation and UI labels for existing band responsibilities.
 2. Add role metadata and permission checks in small PRs.
-3. Guard band invitation creation/response and band application approval/rejection before deeper collaboration work; the invitation lifecycle and application response path now have server-authoritative RPCs with leader/founder recruitment checks, block checks, duplicate-membership idempotency, audit logging, and notification deduplication/status updates.
+3. Guard band invitation creation/response and band application submission/approval/rejection before deeper collaboration work; the invitation lifecycle and application lifecycle now have server-authoritative RPCs with leader/founder recruitment checks, block checks, duplicate-membership idempotency, audit logging, and notification deduplication/status updates.
 4. Add contribution logs for existing band actions.
 5. Add objective templates using existing gig, song, rehearsal, and media systems.
 6. Add collaboration contracts after the generic contract framework is stable.
@@ -403,13 +403,13 @@ Safety is a core feature, not an afterthought.
 - ✅ Dedicated block/mute/report/audit primitives are implemented for the first social safety slice.
 - ✅ Invite permission checks and duplicate pending handling now exist for social invites.
 - ✅ Audit logging exists for migrated denied direct-contact actions.
-- Expand block/mute/report coverage across Twaater, realtime chat, application submission, gifts, and remaining social surfaces; guarded band invitation creation/response and application approval/rejection now cover core recruitment membership-entry decisions.
+- Expand block/mute/report coverage across Twaater, realtime chat, gifts, and remaining social surfaces; guarded band invitation creation/response and application submission/approval/rejection now cover core recruitment membership-entry decisions.
 - Add broader rate limits and admin/moderator review views before launching high-impact systems.
 
 ### Phase 3: Band and Company Cooperation
-- Add broader band roles, permissions, and contribution history; guarded band invitation creation/response and application approval/rejection now share the first server-authoritative recruitment permission and membership-entry helper path.
+- Add broader band roles, permissions, and contribution history; guarded band invitation creation/response and application submission/approval/rejection now share the first server-authoritative recruitment permission and membership-entry helper path.
 - Add company hiring profiles and job boards.
-- Add guarded application submission with safe messaging constraints; application approval/rejection is now guarded, but submission still needs its own server-authoritative entry point.
+- Guarded application submission with safe messaging constraints is now in place; remaining recruitment expansion should define withdrawal, vacancies, and auditions without bypassing the RPC lifecycle.
 - Add task templates tied to existing systems.
 
 ### Phase 4: Contracts and Escrow
