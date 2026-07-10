@@ -156,11 +156,29 @@ const SkillsPage = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="attributes" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="attributes">Attributes</TabsTrigger>
-          <TabsTrigger value="tree">Skill Tree</TabsTrigger>
-          <TabsTrigger value="list">Practice Skills</TabsTrigger>
+      <Tabs defaultValue="practice" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-auto gap-2 bg-transparent p-0">
+          {[
+            { value: "practice", icon: Dumbbell, label: "Practice Skills", desc: "Book 1-hour sessions (+5 XP)" },
+            { value: "tree", icon: GitBranch, label: "Skill Tree", desc: "Unlock & level up abilities" },
+            { value: "attributes", icon: Gauge, label: "Attributes", desc: "Spend AP on core stats" },
+          ].map(({ value, icon: Icon, label, desc }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className={cn(
+                "flex flex-col items-start gap-1 h-auto p-4 rounded-lg border border-border bg-card text-left",
+                "data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:shadow-md",
+                "hover:border-primary/60 transition-colors"
+              )}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <Icon className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-base">{label}</span>
+              </div>
+              <span className="text-xs text-muted-foreground font-normal">{desc}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="attributes" className="mt-6">
