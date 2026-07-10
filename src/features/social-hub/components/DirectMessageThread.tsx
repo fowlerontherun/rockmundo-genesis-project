@@ -33,7 +33,7 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
   }, [messages.length]);
 
   const handleSend = () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() || sendMessage.isPending) return;
     sendMessage.mutate(draft, { onSuccess: () => setDraft("") });
   };
 
@@ -57,6 +57,16 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
         </div>
       )}
       <CardContent className="flex-1 overflow-hidden">
+        {sendMessage.isSuccess && (
+          <p className="mb-2 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700" role="status">
+            Message sent.
+          </p>
+        )}
+        {sendMessage.isError && (
+          <p className="mb-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+            {sendMessage.error instanceof Error ? sendMessage.error.message : "We couldn't send that message."}
+          </p>
+        )}
         <ScrollArea className="h-[360px]" ref={scrollRef}>
           <div className="space-y-2 pr-3">
             {isLoading ? (
@@ -94,14 +104,17 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={`Message ${otherDisplayName}`}
+          aria-label={`Message ${otherDisplayName}`}
+          maxLength={2000}
+          disabled={sendMessage.isPending}
           className="min-h-[72px]"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
           }}
         />
         <div className="flex w-full justify-between text-xs text-muted-foreground">
-          <span>⌘/Ctrl + Enter to send</span>
-          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim()} size="sm">
+          <span>⌘/Ctrl + Enter to send · {draft.trim().length}/2,000</span>
+          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>
