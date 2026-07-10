@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   normalizeBandApplicationResponseInput,
+  normalizeBandApplicationSubmissionInput,
   respondBandApplication,
+  submitBandApplication,
 } from "../bandApplications";
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -17,6 +19,44 @@ const validBandId = "11111111-1111-4111-8111-111111111111";
 
 describe("band application service", () => {
   beforeEach(() => vi.clearAllMocks());
+
+
+  it("normalizes valid submission input", () => {
+    expect(normalizeBandApplicationSubmissionInput(` ${validBandId} `, "Guitar", "  Ready to rehearse.  ")).toEqual({
+      bandId: validBandId,
+      requestedRole: "Guitar",
+      message: "Ready to rehearse.",
+    });
+  });
+
+  it("rejects invalid submission input before calling the backend", async () => {
+    expect(() => normalizeBandApplicationSubmissionInput("bad-id", "Guitar", "")).toThrow("valid band");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "leader", "")).toThrow("valid instrument");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "Guitar", "<b>hi</b>")).toThrow("plain text");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "Guitar", "x".repeat(501))).toThrow("500 characters");
+    await expect(submitBandApplication("bad-id", "Guitar", "")).rejects.toThrow("valid band");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("calls guarded submission RPC for application requests", async () => {
+    const row = { id: validApplicationId, band_id: validBandId, status: "pending", instrument_role: "Guitar" };
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
+
+    await expect(submitBandApplication(validBandId, "Guitar", " Let me join. ")).resolves.toBe(row);
+    expect(supabase.rpc).toHaveBeenCalledWith("submit_band_application", {
+      band_id: validBandId,
+      requested_role: "Guitar",
+      message: "Let me join.",
+    });
+  });
+
+  it("surfaces submission backend failures and empty responses", async () => {
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: { message: "This band is not accepting applications right now." } } as never);
+    await expect(submitBandApplication(validBandId, "Guitar", "")).rejects.toThrow("not accepting applications");
+
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as never);
+    await expect(submitBandApplication(validBandId, "Guitar", "")).rejects.toThrow("could not be submitted");
+  });
 
   it("normalizes valid response input and rejects invalid decisions", () => {
     expect(normalizeBandApplicationResponseInput(` ${validApplicationId} `, "approve")).toEqual({

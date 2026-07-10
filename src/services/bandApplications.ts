@@ -14,7 +14,25 @@ export interface BandApplicationResult {
 
 export type BandApplicationDecision = "approve" | "reject";
 
+export const BAND_APPLICATION_MESSAGE_MAX_LENGTH = 500;
+export const BAND_APPLICATION_ROLES = [
+  "Guitar",
+  "Bass",
+  "Drums",
+  "Vocals",
+  "Keyboard",
+  "Rhythm Guitar",
+  "Lead Guitar",
+  "Saxophone",
+  "Trumpet",
+  "Violin",
+  "Other",
+] as const;
+
+export type BandApplicationRole = (typeof BAND_APPLICATION_ROLES)[number];
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HTML_PATTERN = /<[^>]*>/;
 
 function assertUuid(value: string | undefined | null, message: string): string {
   const normalized = value?.trim();
@@ -22,6 +40,39 @@ function assertUuid(value: string | undefined | null, message: string): string {
     throw new Error(message);
   }
   return normalized;
+}
+
+export function normalizeBandApplicationSubmissionInput(bandId: string | undefined | null, requestedRole: string, message: string) {
+  const normalizedBandId = assertUuid(bandId, "Choose a valid band before applying.");
+  const normalizedRole = requestedRole.trim() || "Guitar";
+  if (!BAND_APPLICATION_ROLES.includes(normalizedRole as BandApplicationRole)) {
+    throw new Error("Choose a valid instrument role.");
+  }
+  const trimmedMessage = message.trim();
+  if (trimmedMessage.length > BAND_APPLICATION_MESSAGE_MAX_LENGTH) {
+    throw new Error(`Band application messages must be ${BAND_APPLICATION_MESSAGE_MAX_LENGTH} characters or fewer.`);
+  }
+  if (HTML_PATTERN.test(trimmedMessage)) {
+    throw new Error("Band application messages must be plain text.");
+  }
+  return { bandId: normalizedBandId, requestedRole: normalizedRole, message: trimmedMessage };
+}
+
+export async function submitBandApplication(bandId: string, requestedRole: string, message: string): Promise<BandApplicationResult> {
+  const normalized = normalizeBandApplicationSubmissionInput(bandId, requestedRole, message);
+  const { data, error } = await (supabase.rpc as any)("submit_band_application", {
+    band_id: normalized.bandId,
+    requested_role: normalized.requestedRole,
+    message: normalized.message,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to submit band application.");
+  }
+  if (!data) {
+    throw new Error("Band application could not be submitted.");
+  }
+  return data as BandApplicationResult;
 }
 
 export function normalizeBandApplicationResponseInput(applicationId: string, decision: BandApplicationDecision) {
