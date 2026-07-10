@@ -184,7 +184,10 @@ const SkillsPage = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No skills available to practice yet.</p>
-                  <p className="text-sm mt-2">Train via education, gigs, or activities to reach level 1.</p>
+                  <p className="text-sm mt-2">Start with education or a music activity to unlock a level 1 skill.</p>
+                  <Button asChild size="sm" className="mt-4">
+                    <a href="/education">Find starter lessons</a>
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">

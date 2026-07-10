@@ -48,7 +48,7 @@ export function ManagerRecommendationsPanel({ profile, userId }: ManagerRecommen
       if (bandIdsResult.error) throw bandIdsResult.error;
       const bandIds = (bandIdsResult.data ?? []).map((row: any) => row.band_id).filter(Boolean);
 
-      const [songsResult, recordingsResult, messagesResult, activitiesResult, rehearsalsResult] = await Promise.all([
+      const [completedSongsResult, recordingsResult, messagesResult, activitiesResult, rehearsalsResult, totalSongsResult] = await Promise.all([
         supabase
           .from("songs")
           .select("id", { count: "exact", head: true })
@@ -85,16 +85,23 @@ export function ManagerRecommendationsPanel({ profile, userId }: ManagerRecommen
               .gte("scheduled_start", todayIso())
               .lte("scheduled_start", addDays(now, 14).toISOString())
           : Promise.resolve({ data: [], count: 0, error: null }),
+        supabase
+          .from("songs")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", profileId)
+          .or("archived.is.null,archived.eq.false"),
       ]);
 
-      const failed = [songsResult, recordingsResult, messagesResult, activitiesResult, rehearsalsResult].find((result: any) => result.error);
+      const failed = [completedSongsResult, recordingsResult, messagesResult, activitiesResult, rehearsalsResult, totalSongsResult].find((result: any) => result.error);
       if (failed?.error) throw failed.error;
 
       return {
-        songsReadyToRecord: songsResult.count ?? 0,
+        songsReadyToRecord: completedSongsResult.count ?? 0,
         recordingsReadyToRelease: recordingsResult.count ?? 0,
         unreadImportantMessages: messagesResult.count ?? 0,
         upcomingActivities: activitiesResult.data ?? [],
+        upcomingActivitiesCount: activitiesResult.count ?? activitiesResult.data?.length ?? 0,
+        totalSongs: totalSongsResult.count ?? 0,
         needsBandRehearsal: bandIds.length > 0 && (rehearsalsResult.count ?? 0) === 0,
       };
     },
