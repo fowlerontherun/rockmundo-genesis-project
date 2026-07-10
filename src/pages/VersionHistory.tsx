@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.447",
+    date: "2026-07-10",
+    changes: [
+      { type: 'improvement', description: "**Spend-all XP button on skills.** Added a secondary 'All (N)' button next to the standard Train button on both `CompactSkillRow` and `HierarchicalSkillNode`. It sends the player's entire available SXP balance to a single skill in one call — the progression edge function already applies escalating level thresholds, so multi-level jumps happen server-side in one shot. Button only appears when the wallet balance exceeds the next level cost and the skill isn't maxed." },
+    ],
+  },
+  {
     version: "1.1.446",
     date: "2026-07-10",
     changes: [
