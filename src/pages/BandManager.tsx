@@ -21,6 +21,7 @@ import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { BandApplicationsList } from '@/components/band/BandApplicationsList';
+import { BandInvitations } from '@/components/band/BandInvitations';
 
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
@@ -210,7 +211,10 @@ export default function BandManager() {
         icon={Users}
         backTo="/hub/band-live"
       >
-        <BandCreationForm onBandCreated={loadUserBands} />
+        <div className="space-y-4">
+          <BandInvitations />
+          <BandCreationForm onBandCreated={loadUserBands} />
+        </div>
       </FMPageScaffold>
     );
   }
@@ -332,6 +336,8 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
+          <BandInvitations />
+
           {/* Pending Applications (Leader only) */}
           {isLeader && selectedBand.status === 'active' && (
             <BandApplicationsList 

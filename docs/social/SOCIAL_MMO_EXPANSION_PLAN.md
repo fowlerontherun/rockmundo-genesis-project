@@ -119,7 +119,7 @@ Other players should become the most valuable content in RockMundo because they 
 **Implementation approach**
 1. Add documentation and UI labels for existing band responsibilities.
 2. Add role metadata and permission checks in small PRs.
-3. Guard band invitation creation before deeper collaboration work; the first server-authoritative invitation creation slice now exists with leader/founder checks, target invite privacy, block checks, duplicate-pending idempotency, audit logging, and notification deduplication.
+3. Guard band invitation creation and response before deeper collaboration work; the first server-authoritative invitation lifecycle now exists with leader/founder creation/cancellation checks, target invite privacy, block checks, duplicate-pending and duplicate-membership idempotency, audit logging, and notification deduplication/status updates.
 4. Add contribution logs for existing band actions.
 5. Add objective templates using existing gig, song, rehearsal, and media systems.
 6. Add collaboration contracts after the generic contract framework is stable.
@@ -403,11 +403,11 @@ Safety is a core feature, not an afterthought.
 - ✅ Dedicated block/mute/report/audit primitives are implemented for the first social safety slice.
 - ✅ Invite permission checks and duplicate pending handling now exist for social invites.
 - ✅ Audit logging exists for migrated denied direct-contact actions.
-- Expand block/mute/report coverage across Twaater, realtime chat, band application/response flows, gifts, and remaining social surfaces; guarded band invitation creation now covers the first recruitment write slice.
+- Expand block/mute/report coverage across Twaater, realtime chat, band application flows, gifts, and remaining social surfaces; guarded band invitation creation and response now cover the first end-to-end recruitment invitation lifecycle.
 - Add broader rate limits and admin/moderator review views before launching high-impact systems.
 
 ### Phase 3: Band and Company Cooperation
-- Add broader band roles, permissions, and contribution history; guarded band invitation creation now has the first server-authoritative recruitment permission helper.
+- Add broader band roles, permissions, and contribution history; guarded band invitation creation/response now has the first server-authoritative recruitment permission and membership-entry helper path.
 - Add company hiring profiles and job boards.
 - Add simple application flows with safe messaging constraints.
 - Add task templates tied to existing systems.

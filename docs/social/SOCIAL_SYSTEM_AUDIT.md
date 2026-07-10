@@ -13,7 +13,7 @@ The most important Phase 0 findings are:
 2. **Friendship exists, but block/follow/mute semantics are fragmented.** `friendships` includes a `blocked` enum state, Twaater has one-way follows, and DMs/invites exist, but block enforcement is not consistently integrated across DMs, invites, profiles, recruitment, Twaater mentions, or chat.
 3. **Communication is fragmented across Inbox, DMs, Twaater DMs, Twaater posts/replies, ChatWindow, band chat, and social invites.** Unread counts and realtime updates exist in places, but there is no single permission/muting/moderation/rate-limit layer.
 4. **Presence is count-oriented, not social-discovery-oriented.** There are Supabase presence hooks for online counts and realtime chat presence, but no public availability flags such as looking for band, members, producer, work, or services.
-5. **Band recruitment exists.** Bands have creation/management, invitations, applications, member roles, band search/browser, and recruiting flags. Missing pieces include auditions, structured recruitment search filters, block-aware invitation/application flows, and richer permission matrices.
+5. **Band recruitment exists.** Bands have creation/management, guarded invitation creation/response, applications, member roles, band search/browser, and recruiting flags. Missing pieces include auditions, structured recruitment search filters, guarded application flows, and richer permission matrices. See `docs/social/implementation/PHASE_2_REVIEW.md` for the Phase 2 closure review.
 6. **Company and employment systems exist, but social labor-market safeguards are immature.** There are companies, employees, public storefronts, reviews, shifts, jobs, and player employment. They do not yet provide a full contract-backed hiring pipeline with escrow, dispute handling, labor analytics, or block/report protections.
 7. **Moderation/admin coverage is partial.** Twaater moderation/admin exists, and reports are present in the Twaater schema, but general profile/DM/chat/invite/band/company report queues and evidence bundles are not unified.
 8. **Security posture is mixed.** Several tables use RLS participant checks, but some public read policies are intentionally broad (profiles, storefronts, shifts, reviews, band invitations) and need explicit privacy/abuse review before the MMO social expansion builds on them.
@@ -210,7 +210,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 - Bands can be created and managed through band manager/components.
 - `bands`, `band_members`, roles, instrument/vocal roles, leader/founder concepts, status, chemistry/cohesion, finances, repertoire, gigs, riders, vehicles, gear, and chat surfaces exist.
-- ✅ `band_invitations` creation now uses the guarded `send_band_invitation` RPC for new client flows, with server-side actor resolution, invite permission checks, target privacy/block checks, active-member rejection, duplicate pending invite idempotency, validation constraints, denied-attempt audit logging, and notification dedupe. Invitation responses still use legacy update/member-insert flows.
+- ✅ `band_invitations` creation now uses the guarded `send_band_invitation` RPC for new client flows, with server-side actor resolution, invite permission checks, target privacy/block checks, active-member rejection, duplicate pending invite idempotency, validation constraints, denied-attempt audit logging, and notification dedupe. Invitation responses now use the guarded `respond_band_invitation` RPC, and leader/founder cancellation has the guarded `cancel_band_invitation` RPC; response creates membership idempotently and updates related notifications.
 - `band_applications` supports applications with applicant profile, instrument/vocal role, message, status, responded timestamp, uniqueness per band/applicant, applicant self-view, and leader response policies.
 - `bands.is_recruiting` exists.
 - Band browser/search lets players discover bands; band ratings and profiles exist.
@@ -219,16 +219,16 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 ### Partial / fragmented
 
 - Invitation policies are broad in one migration: invitations are viewable by everyone. This may be acceptable for public recruiting but is risky for private invitations.
-- Band leader checks vary across older schema surfaces, but invitation creation now has a dedicated `can_manage_band_invitations` helper for the first guarded recruitment write. Other band actions still need migration.
+- Band leader checks vary across older schema surfaces, but invitation creation/cancellation now use the dedicated `can_manage_band_invitations` helper for the first guarded recruitment lifecycle. Other band actions still need migration.
 - Auditions are not first-class. Applications include role/message but not scheduled auditions, audition media, votes, or review history.
 - Band roles exist but are not yet a complete permission matrix for finances, bookings, releases, contracts, chat moderation, invites, applications, and public announcements.
-- Band invitation creation is now block-aware and duplicate-pending idempotent. Band applications, invitation responses, auditions, and broader recruitment rate limits remain unresolved.
+- Band invitation creation and response are now block-aware, duplicate-pending/duplicate-membership guarded, and server-authoritative. Band applications, auditions, leader-side cancellation UI, and broader recruitment rate limits remain unresolved.
 
 ### Missing / risks
 
 - No structured audition flow.
 - No recruitment-specific search/matching over missing instruments, skill thresholds, city, genre, schedule, language, or availability.
-- No broad anti-spam cooldowns for invites/applications beyond duplicate pending band invitation idempotency.
+- No broad anti-spam cooldowns for invites/applications beyond duplicate pending band invitation idempotency and response idempotency.
 - No invite/application report flow or evidence retention.
 - No membership history archive with role changes and join/leave reasons as a canonical profile/band career timeline.
 
