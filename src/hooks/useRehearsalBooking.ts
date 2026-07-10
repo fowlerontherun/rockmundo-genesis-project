@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -108,12 +108,14 @@ export function useRehearsalBooking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
+  const bookingInFlightRef = useRef(false);
 
   const bookRehearsal = async (params: BookRehearsalParams) => {
-    if (isBooking) {
+    if (bookingInFlightRef.current) {
       throw new Error('A rehearsal booking is already in progress.');
     }
 
+    bookingInFlightRef.current = true;
     setIsBooking(true);
     
     try {
@@ -231,7 +233,7 @@ export function useRehearsalBooking() {
       }
 
       toast({
-          title: 'Rehearsal Booked!',
+        title: 'Rehearsal Booked!',
         description: `${params.duration}-hour rehearsal scheduled at ${params.roomName}`,
       });
 
@@ -244,12 +246,13 @@ export function useRehearsalBooking() {
     } catch (error) {
       console.error('Failed to book rehearsal:', error);
       toast({
-          title: 'Booking Failed',
+        title: 'Booking Failed',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
       throw error;
     } finally {
+      bookingInFlightRef.current = false;
       setIsBooking(false);
     }
   };
