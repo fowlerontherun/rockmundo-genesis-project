@@ -66,7 +66,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 - `profiles` table stores core public identity and progression: `user_id`, `username`, `display_name`, `avatar_url`, `bio`, `level`, `experience`, `cash`, `fame`, timestamps; later migrations extend profiles with demographics, age, city/location, avatar, health, clothing/loadout, etc.
 - `PlayerProfile` fetches public profile fields including username/display name/avatar/bio, created date, age/gender, level/fame/fans/health/energy/experience, total hours, VIP/generation, current city, imprisonment/travel/activity, memberships, reputation, songs, achievements, skills, and activity-like tabs.
-- `PlayerSearch` lets users search profiles by username/display name and displays avatar, bio, fame/fans/level, city name, and bands.
+- ✅ `PlayerSearch` now uses the server-authoritative `search_public_profiles` RPC and `public_safe_profiles` projection for username/display-name search, returning safe summary fields, privacy-allowed city, and band badges while filtering blocked/private profiles. `PlayerProfile` detail pages still need migration.
 - Achievements are backed by `achievements` and `player_achievements`; profile UI surfaces unlocked achievements.
 - Career history is partially represented through gigs, bands, releases/songs, activity logs, jobs/employment, charts, awards, and profile/statistics pages, but it is not normalized into a single public career-history model.
 - Current band information is available through `band_members` joins and band profile/browser/search pages.
@@ -78,7 +78,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 ### Partial / fragmented
 
-- **Public vs private data boundaries are implicit.** The app queries many profile fields directly from public pages. Database RLS/policies need a field-by-field review for future privacy-sensitive attributes such as online status, current activity, city, health, relationship status, and direct-message availability.
+- **Public vs private data boundaries are partially explicit.** Player search now uses a public-safe projection and RPC, but profile detail and other discovery surfaces still query broader profile data directly. Database RLS/policies still need a field-by-field review for future privacy-sensitive attributes such as online status, current activity, city, health, relationship status, and direct-message availability.
 - **Reputation appears in multiple systems** (profile reputation hook, company reputation, Twaater fame, band ratings, public-image utilities) without a unified social reputation taxonomy.
 - **Skills offered/services offered are not first-class profile metadata.** Services can be inferred from skills, company shifts, producer profiles, mentors, jobs, and storefronts, but players cannot publish a coherent “services offered” profile.
 - **Career history is scattered.** Band memberships, releases, gigs, jobs, achievements, and awards are independent surfaces rather than a canonical career timeline.
@@ -86,8 +86,8 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 ### Missing / risks
 
 - ✅ `profile_privacy_settings` now covers the first visibility/contact slice for profile, city, activity, online status, relationship details, DM permission, and band/company invite opt-ins. Remaining gaps: achievements, band/company history, service availability, and full read/write enforcement across all social surfaces.
-- No block-aware profile access layer was found. A blocked player may still be able to discover/view public profile information unless blocked status is manually checked in every surface.
-- No explicit “public profile safe projection” view/API separates public-safe fields from private profile state.
+- ✅ Player search now filters blocked pairs through `can_view_public_profile_summary`; remaining profile detail and other discovery routes still need block-aware migration.
+- ✅ `public_safe_profiles` and `search_public_profiles` now separate player-search summary fields from private profile state. Remaining gaps: profile detail, richer discovery, and recruitment-specific projections.
 - No clear audit trail for profile edits, display-name/handle changes, or profile moderation actions outside Twaater-specific tooling.
 
 ### Recommended Phase 1 foundations
@@ -367,7 +367,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 | Online status | Low-Medium | Presence counts exist, not privacy-aware per-player status.
 | Last active | Low | No clear public/private model.
 | Looking-for states | Low | Band recruiting/storefront hiring partial; player availability missing.
-| Player search | Medium | Basic profile search exists.
+| Player search | Medium-High | Basic search now uses a public-safe RPC/projection with block and profile-visibility checks; richer discovery filters remain pending.
 | Recruitment search | Low-Medium | Band search exists; matching filters missing.
 | Band creation | Medium | Implemented.
 | Band invites | Medium | Implemented; policies/privacy need review.
@@ -378,7 +378,7 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 
 1. **Social permission design PR:** ✅ First slice implemented in `docs/social/implementation/PHASE_1_PR_01.md`, `src/features/social-privacy/*`, and `supabase/migrations/20260710120000_add_profile_privacy_settings.sql`. It adds owner-managed profile privacy/contact settings plus shared helper functions for owner checks, block checks, and DM eligibility. Remaining slices: migrate profile/search/DM/recruitment reads and writes to enforce these settings end-to-end.
 2. **Safety schema PR:** Add shared block/mute/report/audit primitives with no major UI exposure.
-3. **Profile projection PR:** Add safe profile views/RPCs and migrate search/profile reads to them.
+3. **Profile projection PR:** ✅ First slice implemented for player search via `public_safe_profiles` and `search_public_profiles`. Remaining slice: migrate profile detail and richer discovery reads.
 4. **Communication guard PR:** ✅ Direct-message send guards, friend-request send guards, and social-invite send/respond guards are implemented in Phase 1 PRs 03–05. Remaining slices: add broader rate limits and migrate Twaater DMs/follows, chat, recruitment writes, gifts, and friendship response/removal lifecycle operations.
 5. **Recruitment metadata PR:** Add opt-in availability fields and band recruiting metadata behind privacy settings.
 6. **Admin moderation PR:** Add unified social reports and evidence review console.

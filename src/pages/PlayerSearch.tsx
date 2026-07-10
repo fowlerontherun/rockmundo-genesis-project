@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,25 +14,9 @@ import { resolveRelationshipPairKey } from "@/features/relationships/api";
 import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { searchPublicProfiles, type PublicProfileSearchResult } from "@/services/publicProfileSearch";
 
-interface PlayerProfile {
-  id: string;
-  user_id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  fame: number;
-  fans: number;
-  level: number;
-  total_hours_played: number | null;
-  city_name: string | null;
-  bands?: Array<{
-    name: string;
-    genre: string | null;
-  }>;
-}
-
+type PlayerProfile = PublicProfileSearchResult;
 type FriendState = "none" | "friends" | "pending_sent" | "pending_received";
 
 export default function PlayerSearch() {
@@ -44,34 +27,12 @@ export default function PlayerSearch() {
   const { friendships, sendRequest, acceptRequest } = useFriendships(profile?.id);
   const { toast } = useToast();
 
-  const { data: players, isLoading } = useQuery({
-    queryKey: ["player-search", debouncedQuery],
+  const { data: players, isLoading, isError, error } = useQuery({
+    queryKey: ["player-search", debouncedQuery, profile?.id],
     queryFn: async () => {
       if (!debouncedQuery || debouncedQuery.length < 2) return [];
 
-      const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("id, username, display_name, avatar_url, bio, user_id, fame, fans, level, total_hours_played, current_city_id, cities!profiles_current_city_id_fkey(name)")
-        .or(`username.ilike.%${debouncedQuery}%,display_name.ilike.%${debouncedQuery}%`)
-        .limit(20);
-
-      if (error) throw error;
-      if (!profiles) return [];
-
-      // Fetch band memberships separately
-      const playerIds = profiles.map(p => p.user_id);
-      const { data: memberships } = await supabase
-        .from("band_members")
-        .select("user_id, bands!band_members_band_id_fkey(name, genre)")
-        .in("user_id", playerIds);
-
-      return profiles.map(profile => ({
-        ...profile,
-        city_name: (profile as any).cities?.name ?? null,
-        bands: memberships
-          ?.filter((m: any) => m.user_id === profile.user_id)
-          .map((m: any) => m.bands) || []
-      })) as PlayerProfile[];
+      return searchPublicProfiles(debouncedQuery, profile?.id);
     },
     enabled: debouncedQuery.length >= 2,
   });
@@ -148,7 +109,7 @@ export default function PlayerSearch() {
               placeholder="Search by username or display name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
             />
             <Button onClick={handleSearch} disabled={searchQuery.length < 2}>
               <Search className="h-4 w-4" />
@@ -160,12 +121,22 @@ export default function PlayerSearch() {
       {isLoading && (
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">Searching...</p>
+            <p className="text-center text-muted-foreground" aria-live="polite">Searching public-safe musician profiles...</p>
           </CardContent>
         </Card>
       )}
 
-      {!isLoading && debouncedQuery.length >= 2 && players && players.length === 0 && (
+      {isError && (
+        <Card role="alert">
+          <CardContent className="p-6">
+            <p className="text-center text-destructive">
+              {error instanceof Error ? error.message : "Player search is unavailable right now. Please try again."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !isError && debouncedQuery.length >= 2 && players && players.length === 0 && (
         <Card>
           <CardContent className="p-6">
             <p className="text-center text-muted-foreground">No players found matching your search.</p>
@@ -173,7 +144,7 @@ export default function PlayerSearch() {
         </Card>
       )}
 
-      {players && players.length > 0 && (
+      {!isError && players && players.length > 0 && (
         <div className="space-y-3">
           {players.map((player) => {
             const isSelf = profile?.id === player.id;
@@ -220,12 +191,6 @@ export default function PlayerSearch() {
                           <Badge variant="outline" className="text-xs flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {player.city_name}
-                          </Badge>
-                        )}
-                        {player.total_hours_played != null && player.total_hours_played > 0 && (
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {Math.round(player.total_hours_played)}h played
                           </Badge>
                         )}
                       </div>
