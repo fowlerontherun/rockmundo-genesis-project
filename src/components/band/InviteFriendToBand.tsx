@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { sendBandInvitation } from '@/services/bandInvitations';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
@@ -176,19 +177,13 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('band_invitations')
-        .insert({
-          band_id: bandId,
-          inviter_user_id: currentUserId,
-          invited_user_id: selectedFriend,
-          instrument_role: instrumentRole,
-          vocal_role: vocalRole || null,
-          message: message || null,
-          status: 'pending',
-        });
-
-      if (error) throw error;
+      await sendBandInvitation({
+        bandId,
+        targetProfileId: selectedFriend,
+        instrumentRole,
+        vocalRole: vocalRole === 'None' ? null : vocalRole || null,
+        message,
+      });
 
       toast({
         title: 'Invitation sent!',
@@ -236,7 +231,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
             </div>
           ) : friends.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No available friends to invite. Either you have no friends or they're already in the band.
+              No available friends to invite. Friends who are already members or have pending invites are hidden.
             </p>
           ) : (
             <>
@@ -248,7 +243,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
                     {friends.map((friend) => (
-                      <SelectItem key={friend.id} value={friend.profile.user_id}>
+                      <SelectItem key={friend.id} value={friend.profile.id}>
                         {friend.profile.display_name} (@{friend.profile.username})
                       </SelectItem>
                     ))}
@@ -292,11 +287,16 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                 <Label htmlFor="message">Personal Message (Optional)</Label>
                 <Textarea
                   id="message"
+                  maxLength={500}
+                  aria-describedby="band-invite-message-help"
                   placeholder="Add a personal message to your invitation..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={3}
                 />
+                <p id="band-invite-message-help" className="text-xs text-muted-foreground">
+                  {message.trim().length}/500 characters
+                </p>
               </div>
             </>
           )}
