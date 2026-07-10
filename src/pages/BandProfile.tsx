@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
 import { BandApplicationDialog } from "@/components/band/BandApplicationDialog";
 import { withdrawBandApplication } from "@/services/bandApplications";
+import { getRecruitmentStatusMeta } from "@/lib/recruitmentStatus";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -21,6 +22,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 export default function BandProfile() {
   const { t } = useTranslation();
   const { bandId } = useParams();
+  const navigate = useNavigate();
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,6 +77,22 @@ export default function BandProfile() {
   );
 
   // Check if user already applied
+  const { data: applicationHistory, isLoading: isApplicationHistoryLoading, isError: isApplicationHistoryError } = useQuery({
+    queryKey: ["band-application-history", profileId],
+    queryFn: async () => {
+      if (!profileId) return [];
+      const { data, error } = await supabase
+        .from("band_applications")
+        .select("id, status, created_at, responded_at, instrument_role, vocal_role, band_id, bands:band_id(id, name)")
+        .eq("applicant_profile_id", profileId)
+        .order("created_at", { ascending: false })
+        .limit(25);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+
   const { data: existingApplication } = useQuery({
     queryKey: ["band-application", bandId, profileId],
     queryFn: async () => {
@@ -117,6 +135,7 @@ export default function BandProfile() {
   }
 
   const activeApplication = submittedApplication || existingApplication;
+  const activeApplicationStatus = getRecruitmentStatusMeta(activeApplication?.status);
   const canApply = band.is_recruiting && !isMember && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected") && profileId;
   const withdrawMutation = useMutation({
     mutationFn: async (applicationId: string) => withdrawBandApplication(applicationId),
@@ -126,6 +145,7 @@ export default function BandProfile() {
       queryClient.invalidateQueries({ queryKey: ["band-application", bandId, profileId] });
       queryClient.invalidateQueries({ queryKey: ["band-profile", bandId] });
       queryClient.invalidateQueries({ queryKey: ["band-applications", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band-application-history", profileId] });
     },
     onError: (error: any) => {
       toast({ title: "Unable to withdraw application", description: error?.message || "Try again or refresh before withdrawing.", variant: "destructive" });
@@ -198,8 +218,8 @@ export default function BandProfile() {
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-foreground">Application to {band.name}</span>
-                          <Badge variant={activeApplication.status === 'pending' ? 'secondary' : 'outline'} className="capitalize">
-                            {activeApplication.status}
+                          <Badge variant={activeApplicationStatus.badgeVariant}>
+                            {activeApplicationStatus.label}
                           </Badge>
                         </div>
                         <p>Submitted {activeApplication.created_at ? format(new Date(activeApplication.created_at), "MMM d, yyyy") : "recently"}</p>
@@ -290,6 +310,60 @@ export default function BandProfile() {
           )}
         </CardContent>
       </Card>
+
+
+      {profileId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>My Application History</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isApplicationHistoryLoading ? (
+              <p className="text-sm text-muted-foreground">Loading your recruitment history...</p>
+            ) : isApplicationHistoryError ? (
+              <p className="text-sm text-destructive">Your recruitment history could not be loaded.</p>
+            ) : !applicationHistory || applicationHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">You have not applied to any bands yet.</p>
+            ) : (
+              applicationHistory.map((application: any) => {
+                const status = getRecruitmentStatusMeta(application.status);
+                const bandName = application.bands?.name || "Unknown band";
+                return (
+                  <div key={application.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="link" className="h-auto p-0 font-semibold" onClick={() => navigate(`/bands/${application.band_id}`)}>
+                          {bandName}
+                        </Button>
+                        <Badge variant={status.badgeVariant}>{status.label}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Requested role: {application.instrument_role || "Not specified"}{application.vocal_role ? ` / ${application.vocal_role}` : ""}</p>
+                      <p className="text-xs text-muted-foreground">Submitted {application.created_at ? format(new Date(application.created_at), "MMM d, yyyy") : "recently"}{application.responded_at ? ` • Resolved ${format(new Date(application.responded_at), "MMM d, yyyy")}` : ""}</p>
+                    </div>
+                    {application.status === "pending" && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="self-start text-destructive sm:self-center" disabled={withdrawMutation.isPending}>Withdraw</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Withdraw application?</AlertDialogTitle>
+                            <AlertDialogDescription>This withdraws your pending application to {bandName}.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={withdrawMutation.isPending}>Keep application</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => withdrawMutation.mutate(application.id)} disabled={withdrawMutation.isPending}>Withdraw application</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Songs Section */}
       <BandSongsSection bandId={band.id} bandName={band.name} />
