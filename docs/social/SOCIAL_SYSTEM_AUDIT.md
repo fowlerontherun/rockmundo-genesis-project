@@ -441,3 +441,13 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 - ✅ Contribution source clarity improved through neutral action labels for attended rehearsals and performed gigs, without rankings, rewards, XP, chemistry, goals, achievements, or leaderboards.
 - ✅ Privacy posture remains current-active-band-member-only through the existing participant/performer RLS policies; no public gig lineup exposure or direct participant mutation policy was added.
 - ✅ Automated coverage was added for shared status mapping, rehearsal/gig read-only UI states, no edit controls, safe unsupported status fallback, and contribution labels.
+
+
+### Phase 4 PR 05 update — attendance and lineup rules design
+
+- ✅ Added the canonical attendance and lineup product-rules document for rehearsal RSVP, attendance finalisation, gig lineup selection, performer confirmation, lock windows, contribution eligibility, privacy, disputes, audit, RLS/backend design, UI plan, anti-abuse analysis, and implementation sequencing.
+- ✅ Repository verification confirms current participant/lineup rows are read-only to clients, have only `invited`/`attended`/`missed` and `selected`/`performed`/`missed` statuses, and currently auto-finalise still-provisional rows on completion/outcome capture.
+- ⚠️ Mutation features remain incomplete by design: no RSVP RPC, lineup editor, substitution RPC, correction/dispute table, absence-reason field, or manager finalisation UI is marked complete.
+- ⚠️ Identified permission needs before implementation: authoritative leader/founder/officer checks, own-row response checks, former-member historical self-read rules, denied-attempt logging, and admin/support override policy.
+- ⚠️ Identified privacy/dispute gaps: optional private absence reasons, correction windows, dispute resolver conflict rules, contribution correction records, and notification privacy/deduplication are still unimplemented.
+- 📌 Planned order is PR 06 rehearsal self-response, PR 07 rehearsal finalisation, PR 08 gig lineup management, PR 09 performer confirmation/lineup lock, and PR 10 correction/dispute review.
