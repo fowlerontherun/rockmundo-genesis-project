@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.445",
+    date: "2026-07-10",
+    changes: [
+      { type: 'fix', description: "**Skills tile image on Character hub.** Added the missing `/hub-tiles/skills.png` artwork so the Skills tile in the Character hub renders its illustrated background (branching neon skill tree with instruments) instead of falling back to the plain icon placeholder." },
+    ],
+  },
+  {
     version: "1.1.444",
     date: "2026-07-09",
     changes: [
