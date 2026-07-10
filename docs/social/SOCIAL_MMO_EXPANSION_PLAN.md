@@ -60,7 +60,7 @@ Other players should become the most valuable content in RockMundo because they 
 - **Friends and follows**
   - Add clear distinction between mutual friends, one-way follows, blocked users, bandmates, company colleagues, mentors, mentees, contractors, and rivals.
   - Provide friend activity summaries such as upcoming gigs, new releases, job openings, contract requests, and major achievements.
-  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions. Initial owner-managed settings now exist; direct-message sends now enforce DM permission and blocks server-side, while full enforcement across other reads/writes remains a follow-up.
+  - Allow privacy controls for online status, current city, current activity, relationship status, and direct-message permissions. Initial owner-managed settings now exist; direct-message sends enforce DM permission and blocks server-side; friend-request creation now enforces block checks, duplicate handling, cooldowns, and notification deduplication server-side; full enforcement across other reads/writes remains a follow-up.
 
 - **Direct messages and group conversations**
   - Support one-to-one messages for negotiation, mentoring, hiring, and social play.
@@ -85,7 +85,7 @@ Other players should become the most valuable content in RockMundo because they 
 1. Inventory existing profile, notification, and social media surfaces.
 2. Add read-only relationship indicators before adding new write actions.
 3. Introduce server-side social relationship records and privacy checks.
-4. Migrate messaging incrementally onto block/report/moderation foundations; one-to-one direct-message sends now use the shared server-side guard.
+4. Migrate messaging incrementally onto block/report/moderation foundations; one-to-one direct-message sends and friend-request creation now use shared server-side guards.
 5. Connect conversations to existing game objects such as bands, companies, gigs, and contracts.
 
 ### Bands, Crews, and Artist Collaboration
