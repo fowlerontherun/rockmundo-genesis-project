@@ -77,12 +77,12 @@ export const HierarchicalSkillNode = ({
   const isMaxed = level >= maxLevel;
 
   const trainMutation = useMutation({
-    mutationFn: () => spendSkillXp({
+    mutationFn: (amount: number) => spendSkillXp({
       skillSlug: skill.slug,
-      amount: cost
+      amount,
     }),
-    onSuccess: () => {
-      toast.success(`${skill.display_name} trained!`);
+    onSuccess: (_data, amount) => {
+      toast.success(`${skill.display_name} trained (+${amount} SXP)`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
       onTrain?.();
     },
@@ -90,6 +90,8 @@ export const HierarchicalSkillNode = ({
       toast.error(error.message || "Failed to train skill");
     }
   });
+
+  const canMax = xpBalance > cost && !isMaxed;
 
   const unlearnMutation = useMutation({
     mutationFn: () => unlearnSkill({ skillSlug: skill.slug }),
