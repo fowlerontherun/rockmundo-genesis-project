@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { respondBandInvitation } from "@/services/bandInvitations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { Users, Mail } from "lucide-react";
+import { CheckCircle2, Mail, Users, XCircle } from "lucide-react";
 
 interface BandInvitation {
   id: string;
@@ -21,14 +22,14 @@ interface BandInvitation {
 }
 
 export const BandInvitations = () => {
-  const { profileId } = useActiveProfile();
+  const { userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: invitations, isLoading } = useQuery({
-    queryKey: ["band-invitations", profileId],
+    queryKey: ["band-invitations", userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
       
       const { data, error } = await supabase
         .from("band_invitations")
@@ -41,83 +42,33 @@ export const BandInvitations = () => {
           created_at,
           bands(name, genre)
         `)
-        .eq("invited_user_id", profileId)
+        .eq("invited_user_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as BandInvitation[];
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
-  const acceptInviteMutation = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const invitation = invitations?.find((i) => i.id === invitationId);
-      if (!invitation || !profileId) throw new Error("Invalid invitation");
-
-      // Get auth user ID for RLS compliance
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Update invitation status
-      const { error: inviteError } = await supabase
-        .from("band_invitations")
-        .update({ status: "accepted", responded_at: new Date().toISOString() })
-        .eq("id", invitationId);
-
-      if (inviteError) throw inviteError;
-
-      // Add member to band — user_id must be auth UID for RLS, profile_id is the character
-      const { error: memberError } = await supabase
-        .from("band_members")
-        .insert({
-          band_id: invitation.band_id,
-          user_id: user.id,
-          profile_id: profileId,
-          role: "member",
-          instrument_role: invitation.instrument_role,
-          vocal_role: invitation.vocal_role,
-        });
-
-      if (memberError) throw memberError;
+  const responseMutation = useMutation({
+    mutationFn: async ({ invitationId, status }: { invitationId: string; status: "accepted" | "declined" }) => {
+      return respondBandInvitation(invitationId, status);
     },
-    onSuccess: () => {
+    onSuccess: (invitation) => {
+      const accepted = invitation.status === "accepted";
       toast({
-        title: "Invitation Accepted",
-        description: "You've successfully joined the band!",
+        title: accepted ? "Invitation Accepted" : "Invitation Declined",
+        description: accepted ? "You've successfully joined the band!" : "You've declined the band invitation.",
       });
       queryClient.invalidateQueries({ queryKey: ["band-invitations"] });
       queryClient.invalidateQueries({ queryKey: ["band-members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-bands"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const declineInviteMutation = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const { error } = await supabase
-        .from("band_invitations")
-        .update({ status: "declined", responded_at: new Date().toISOString() })
-        .eq("id", invitationId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Invitation Declined",
-        description: "You've declined the band invitation.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["band-invitations"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
+        title: "Band invitation response failed",
         description: error.message,
         variant: "destructive",
       });
@@ -134,14 +85,33 @@ export const BandInvitations = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="space-y-2" role="status" aria-live="polite">
+            <div className="h-4 w-44 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-64 animate-pulse rounded bg-muted" />
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!invitations || invitations.length === 0) {
+  if (!userId) {
     return null;
+  }
+
+  if (!invitations || invitations.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Band Invitations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No pending band invitations right now.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -157,7 +127,7 @@ export const BandInvitations = () => {
           {invitations.map((invitation) => (
             <div
               key={invitation.id}
-              className="flex items-start justify-between rounded-lg border bg-card p-4"
+              className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
             >
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2">
@@ -177,20 +147,26 @@ export const BandInvitations = () => {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex w-full gap-2 sm:w-auto" aria-label={`Respond to invitation from ${invitation.bands.name}`}>
                 <Button
                   size="sm"
-                  onClick={() => acceptInviteMutation.mutate(invitation.id)}
-                  disabled={acceptInviteMutation.isPending}
+                  className="flex-1 sm:flex-none"
+                  onClick={() => responseMutation.mutate({ invitationId: invitation.id, status: "accepted" })}
+                  disabled={responseMutation.isPending}
+                  aria-label={`Accept invitation from ${invitation.bands.name}`}
                 >
-                  Accept
+                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                  {responseMutation.isPending ? "Saving..." : "Accept"}
                 </Button>
                 <Button
                   size="sm"
+                  className="flex-1 sm:flex-none"
                   variant="outline"
-                  onClick={() => declineInviteMutation.mutate(invitation.id)}
-                  disabled={declineInviteMutation.isPending}
+                  onClick={() => responseMutation.mutate({ invitationId: invitation.id, status: "declined" })}
+                  disabled={responseMutation.isPending}
+                  aria-label={`Decline invitation from ${invitation.bands.name}`}
                 >
+                  <XCircle className="mr-1 h-4 w-4" />
                   Decline
                 </Button>
               </div>

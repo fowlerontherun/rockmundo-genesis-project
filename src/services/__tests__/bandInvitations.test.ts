@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeBandInvitationInput, sendBandInvitation } from "../bandInvitations";
+import {
+  cancelBandInvitation,
+  normalizeBandInvitationInput,
+  normalizeBandInvitationResponseInput,
+  respondBandInvitation,
+  sendBandInvitation,
+} from "../bandInvitations";
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -11,13 +17,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 const validBandId = "11111111-1111-4111-8111-111111111111";
 const validProfileId = "22222222-2222-4222-8222-222222222222";
+const validInvitationId = "33333333-3333-4333-8333-333333333333";
 
 describe("band invitation service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("normalizes valid input", () => {
+  it("normalizes valid send input", () => {
     expect(normalizeBandInvitationInput({
       bandId: ` ${validBandId} `,
       targetProfileId: validProfileId,
@@ -42,17 +49,18 @@ describe("band invitation service", () => {
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid role input before calling the backend", async () => {
+  it("rejects overlong invite messages before calling the backend", async () => {
     await expect(sendBandInvitation({
       bandId: validBandId,
       targetProfileId: validProfileId,
-      instrumentRole: "",
-    })).rejects.toThrow("instrument role");
+      instrumentRole: "Guitar",
+      message: "x".repeat(281),
+    })).rejects.toThrow("280 characters");
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
-  it("calls the guarded RPC and returns the invitation", async () => {
-    const row = { id: "33333333-3333-4333-8333-333333333333", band_id: validBandId, status: "pending" };
+  it("calls the guarded send RPC and returns the invitation", async () => {
+    const row = { id: validInvitationId, band_id: validBandId, status: "pending" };
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
 
     await expect(sendBandInvitation({
@@ -72,23 +80,49 @@ describe("band invitation service", () => {
     });
   });
 
-  it("surfaces backend permission and duplicate/idempotency errors", async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: { message: "This player is not available for band invitations." } } as never);
-
-    await expect(sendBandInvitation({
-      bandId: validBandId,
-      targetProfileId: validProfileId,
-      instrumentRole: "Guitar",
-    })).rejects.toThrow("not available");
+  it("normalizes valid response input and rejects invalid response status", () => {
+    expect(normalizeBandInvitationResponseInput(` ${validInvitationId} `, "accepted")).toEqual({
+      invitationId: validInvitationId,
+      status: "accepted",
+    });
+    expect(() => normalizeBandInvitationResponseInput(validInvitationId, "cancelled" as never)).toThrow("accept or decline");
   });
 
-  it("rejects empty backend responses", async () => {
+  it("rejects invalid invitation IDs before response RPC calls", async () => {
+    await expect(respondBandInvitation("bad-id", "accepted")).rejects.toThrow("valid band invitation");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("calls guarded response RPC for accepts and returns idempotent data", async () => {
+    const row = { id: validInvitationId, band_id: validBandId, status: "accepted" };
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
+
+    await expect(respondBandInvitation(validInvitationId, "accepted")).resolves.toBe(row);
+    expect(supabase.rpc).toHaveBeenCalledWith("respond_band_invitation", {
+      invitation_id: validInvitationId,
+      response_status: "accepted",
+    });
+  });
+
+  it("surfaces backend response permission and duplicate-action errors", async () => {
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: { message: "This band invitation is no longer pending." } } as never);
+
+    await expect(respondBandInvitation(validInvitationId, "declined")).rejects.toThrow("no longer pending");
+  });
+
+  it("rejects empty response RPC results", async () => {
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as never);
 
-    await expect(sendBandInvitation({
-      bandId: validBandId,
-      targetProfileId: validProfileId,
-      instrumentRole: "Guitar",
-    })).rejects.toThrow("could not be created");
+    await expect(respondBandInvitation(validInvitationId, "accepted")).rejects.toThrow("could not be saved");
+  });
+
+  it("calls guarded cancel RPC and returns cancellation state", async () => {
+    const row = { id: validInvitationId, band_id: validBandId, status: "cancelled" };
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
+
+    await expect(cancelBandInvitation(validInvitationId)).resolves.toBe(row);
+    expect(supabase.rpc).toHaveBeenCalledWith("cancel_band_invitation", {
+      invitation_id: validInvitationId,
+    });
   });
 });
