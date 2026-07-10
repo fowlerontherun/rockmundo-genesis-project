@@ -421,3 +421,14 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 - ⚠️ Jam participation remains excluded: `jam_session_outcomes` is participant-level, but jam sessions are not authoritatively tied to exactly one band.
 - ⚠️ Songwriting contribution remains excluded: completed band-owned accepted co-author credit is not clearly represented by the audited schema.
 - ✅ RLS/privacy posture is unchanged: contribution events remain read-only to normal clients and visible only to current active members of the band.
+
+
+### Phase 4 PR 03 update — rehearsal attendance and gig lineup foundations
+
+- Added private `band_rehearsal_participants` rows for future rehearsal bookings. Current gameplay has no RSVP flow, so active members are invited by default and only completion marks attendance.
+- Added private `gig_performers` rows for future gig bookings. Current gameplay has no lineup editor, so active non-touring player members are selected by default and only gig outcome processing marks performance.
+- Rehearsal contribution capture now reads attended participant rows instead of crediting every active member at completion.
+- Gig contribution capture now reads performed lineup rows instead of crediting every active member at outcome insertion.
+- RLS permits active band members to read operational participant/lineup data; no broad direct client mutation policies were added.
+- Existing schedule records remain the schedule source; participant/lineup rows are evidence for contribution and future per-member schedule display.
+- Test coverage now includes a database harness note for participant/lineup idempotency and contribution adapter cases; full execution requires local Supabase database tooling.
