@@ -72,7 +72,7 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
     queryFn: async () => {
       let query = supabase
         .from('recording_producers')
-        .select('*')
+        .select('id, name, specialty_genre, quality_bonus, mixing_skill, arrangement_skill, cost_per_hour, tier, bio, past_works')
         .order('tier', { ascending: false })
         .order('quality_bonus', { ascending: false });
 
@@ -110,7 +110,7 @@ export const useRecordingSessions = (profileId: string) => {
       let query = supabase
         .from('recording_sessions')
         .select(`
-          *,
+          id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, stage, scheduled_start, scheduled_end, started_at, completed_at, session_data, total_takes, quality_gain, notes, engineer_id, engineer_name, created_at, updated_at,
           city_studios (name, quality_rating),
           recording_producers (name, tier),
           songs (title, genre)
@@ -120,7 +120,9 @@ export const useRecordingSessions = (profileId: string) => {
         ? query.or(`profile_id.eq.${profileId},band_id.in.(${bandIds.join(',')})`)
         : query.eq('profile_id', profileId);
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       if (error) throw error;
       return (data || []) as any as RecordingSession[];
