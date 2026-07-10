@@ -26,6 +26,7 @@ import { PlayerStaffBonusCard } from "@/components/company/PlayerStaffBonusCard"
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
 import { CompanyJobListings } from "@/components/company/CompanyJobListings";
+import { CompanyWeeklyFinancePanel } from "@/components/company/CompanyWeeklyFinancePanel";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
@@ -402,6 +403,7 @@ const CompanyDetailContent = () => {
 
 
         <TabsContent value="finances" className="space-y-4">
+          <CompanyWeeklyFinancePanel companyId={company.id} />
           {/* Finance Actions */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
