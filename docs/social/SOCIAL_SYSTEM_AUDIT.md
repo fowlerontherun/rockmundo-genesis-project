@@ -387,3 +387,15 @@ This document intentionally distinguishes **implemented**, **partial**, **fragme
 ## 11. Tiny Corrective Code Changes
 
 None. This PR only adds this audit/planning document.
+
+## Phase 3 PR 05 Recruitment Verification Update
+
+Recruitment RLS now has a repeatable local Supabase SQL harness at `supabase/tests/recruitment_rls_harness.sql`. The harness verifies applicant-owned history visibility, current leader/founder manager visibility, ordinary/former/unrelated/anonymous denial, private message visibility boundaries, guarded RPC access, direct insert/update denial, membership idempotency, notification dedupe, and message-free notification metadata.
+
+A verified RLS defect was corrected: the historical manager select policy on `band_applications` did not require active membership and used case-sensitive role checks. The corrective migration `20260711000000_tighten_band_application_select_policy.sql` now delegates manager visibility to `can_manage_band_invitations`, limiting private application history to current band leaders/founders.
+
+Guarded RPC verification now covers `submit_band_application`, `respond_band_application`, and `withdraw_band_application` for eligible actors, unauthenticated users, ordinary members, former members, unrelated users, duplicate retries, direct-write attempts, block guards, invalid roles, overlong messages, final-state retries, and safe membership role defaults.
+
+Route verification now has shared unit coverage for applicant notifications to band profile routes, manager stale `?tab=applications` normalization, final-state recruitment notifications, missing/deleted destination handling, and invitation-route preservation. Full authenticated browser navigation remains a P1 follow-up because the repository does not currently provide Playwright authenticated fixtures.
+
+Confirmed remaining gaps are product decisions rather than security blockers: global one-band membership/application policy, role-specific vacancies, recruitment cooldowns, auditions, matching, applicant scoring, and recruitment rewards. Database tests are documented as a separate local Supabase command and are not yet wired into default CI.

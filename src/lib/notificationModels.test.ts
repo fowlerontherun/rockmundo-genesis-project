@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeNotification } from "./notificationModels";
+import { getNotificationRoute, normalizeNotification } from "./notificationModels";
 import type { PersistedNotification } from "@/hooks/useNotificationsFeed";
 
-const base = (metadata: Record<string, unknown> = {}, action_path = "/bands/band-1?tab=applications"): PersistedNotification => ({
+const base = (metadata: Record<string, unknown> = {}, action_path: string | null = "/bands/band-1?tab=applications"): PersistedNotification => ({
   id: "n1",
   user_id: "u1",
   profile_id: "p1",
@@ -32,6 +32,23 @@ describe("notification recruitment normalization", () => {
     const display = normalizeNotification(base({ band_application_status: status }));
     expect(display.statusLabel).toBe(label);
     expect(display.routePath).toBe("/bands/band-1");
+  });
+
+  it("normalizes stale legacy application routes when band metadata exists", () => {
+    const display = normalizeNotification(base({}, "/bands/band-1?tab=applications"));
+    expect(display.routePath).toBe("/bands/band-1");
+  });
+
+  it("keeps a controlled null route when a deleted band notification has no destination", () => {
+    const display = normalizeNotification(base({ band_id: undefined }, null));
+    expect(display.routePath).toBeNull();
+    expect(display.actionLabel).toBeNull();
+    expect(display.statusLabel).toBe("Pending");
+  });
+
+  it("routes applicant notifications to the band profile and manager notifications to recruitment context", () => {
+    expect(getNotificationRoute(base({ band_application_status: "accepted" }, "/bands/band-1"))).toBe("/bands/band-1");
+    expect(getNotificationRoute(base({ band_application_status: "pending" }, "/bands/band-1?tab=applications"))).toBe("/bands/band-1");
   });
 
   it("shows invitation final status without inventing actions", () => {
