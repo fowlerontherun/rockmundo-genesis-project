@@ -58,6 +58,15 @@ const AdminDashboard = () => {
     },
   });
 
+  const { data: betaHealth, isLoading: betaHealthLoading, error: betaHealthError } = useQuery({
+    queryKey: ["admin-beta-health-overview"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("admin_get_beta_health_overview");
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
   const { data: cronJobs } = useQuery({
     queryKey: ["admin-cron-status"],
     queryFn: async () => {
@@ -162,6 +171,68 @@ const AdminDashboard = () => {
               />
               <Label htmlFor="nav-style-toggle" className="text-sm">Horizontal</Label>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Beta Health Overview */}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-primary" />
+              Beta Health Overview
+            </CardTitle>
+            <CardDescription>Lightweight support signals from existing logs, activity statuses, economy totals, and cron runs.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {betaHealthError ? (
+              <p className="text-sm text-destructive">{(betaHealthError as Error).message}</p>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    ["Active players 24h", betaHealth?.active_players_24h],
+                    ["New profiles 24h", betaHealth?.new_profiles_24h],
+                    ["Stuck activities", betaHealth?.stuck_activity_statuses],
+                    ["Failed cron 24h", betaHealth?.failed_recent_cron_jobs],
+                    ["Recent errors", betaHealth?.recent_activity_errors],
+                    ["Active activities", betaHealth?.active_activity_statuses],
+                    ["Admin actions 24h", betaHealth?.recent_admin_actions],
+                    ["Total cash", betaHealth?.total_cash != null ? `$${Number(betaHealth.total_cash).toLocaleString()}` : undefined],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      {betaHealthLoading ? <Skeleton className="mt-2 h-6 w-16" /> : <p className="text-xl font-semibold">{value ?? 0}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold">Latest error-like events</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {betaHealth?.latest_errors?.length ? betaHealth.latest_errors.map((event: any) => (
+                        <div key={event.id} className="rounded border p-2 text-xs">
+                          <div className="font-medium">{event.activity_category}/{event.activity_type}</div>
+                          <div className="text-muted-foreground">{event.description}</div>
+                          <div className="text-muted-foreground">{new Date(event.created_at).toLocaleString()} · user {event.user_id ?? "—"}</div>
+                        </div>
+                      )) : <p className="text-sm text-muted-foreground">No recent error-like events.</p>}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold">Latest cron/job status</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {betaHealth?.latest_cron_jobs?.length ? betaHealth.latest_cron_jobs.map((job: any) => (
+                        <div key={job.id} className="rounded border p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2"><span className="font-medium">{job.job_name}</span><Badge variant={job.status === "success" ? "default" : "destructive"}>{job.status}</Badge></div>
+                          <div className="text-muted-foreground">{new Date(job.started_at).toLocaleString()}</div>
+                          {job.error_message ? <div className="text-destructive">{job.error_message}</div> : null}
+                        </div>
+                      )) : <p className="text-sm text-muted-foreground">No cron/job rows available.</p>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
