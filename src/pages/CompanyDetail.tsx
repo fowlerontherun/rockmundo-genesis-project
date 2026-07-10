@@ -25,7 +25,7 @@ import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { PlayerStaffBonusCard } from "@/components/company/PlayerStaffBonusCard";
 import { EmpireDashboard } from "@/components/company/EmpireDashboard";
 import { CompanySharesPanel } from "@/components/company/CompanySharesPanel";
-import { CompanyJobListings } from "@/components/company/CompanyJobListings";
+import { CompanyRecruitmentLifecycle } from "@/components/company/CompanyRecruitmentLifecycle";
 import { CompanyWeeklyFinancePanel } from "@/components/company/CompanyWeeklyFinancePanel";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
@@ -191,7 +191,7 @@ const CompanyDetailContent = () => {
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="jobs">
             <Briefcase className="h-3.5 w-3.5 mr-1" />
-            Jobs
+            Recruitment
           </TabsTrigger>
           <TabsTrigger value="storefront">Storefront</TabsTrigger>
           <TabsTrigger value="analytics">
@@ -382,7 +382,7 @@ const CompanyDetailContent = () => {
 
 
         <TabsContent value="jobs" className="space-y-4">
-          <CompanyJobListings
+          <CompanyRecruitmentLifecycle
             companyId={company.id}
             companyName={company.name}
             headquartersCityId={company.headquarters_city_id}

@@ -9,7 +9,7 @@ import { SectionCard, StandardStatusBadge } from "@/components/ui/standard-compo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, CalendarCheck, Filter, MapPin, Search, Building2, History } from "lucide-react";
+import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, CalendarCheck, Filter, MapPin, Search, Building2, History, Send, CheckCircle2, XCircle } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -195,6 +195,83 @@ export default function Employment() {
       if (error) throw error;
       return (data ?? []) as JobRow[];
     },
+  });
+
+
+  const { data: companyVacancies = [] } = useQuery({
+    queryKey: ["company-marketplace-vacancies", profile?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("company_vacancies") as any)
+        .select("*, companies:company_id(name, company_type, reputation_score, quality_score), cities:location_city_id(name, country), company_job_applications(id,status,applicant_profile_id,suitability_score,offer_expires_at,employment_id)")
+        .eq("status", "open")
+        .order("weekly_wage", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: myCompanyApplications = [] } = useQuery({
+    queryKey: ["my-company-applications", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await (supabase.from("company_job_applications") as any)
+        .select("*, company_vacancies(job_title, weekly_wage, staff_category, employment_type, companies:company_id(name))")
+        .eq("applicant_profile_id", profile.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  const { data: companyEmployment = [] } = useQuery({
+    queryKey: ["my-company-employment", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await (supabase.from("company_employees") as any)
+        .select("*, companies:company_id(name, company_type)")
+        .eq("profile_id", profile.id)
+        .order("hired_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  const applyToCompanyVacancyMutation = useMutation({
+    mutationFn: async (vacancyId: string) => {
+      const { error } = await (supabase as any).rpc("apply_to_company_vacancy", { p_vacancy_id: vacancyId, p_message: "I would like to be considered for this role." });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["company-marketplace-vacancies"] }); queryClient.invalidateQueries({ queryKey: ["my-company-applications"] }); toast({ title: "Application submitted", description: "The company can now review your application." }); },
+    onError: (error: any) => toast({ title: "Could not apply", description: error.message, variant: "destructive" }),
+  });
+
+  const withdrawCompanyApplicationMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      const { error } = await (supabase as any).rpc("withdraw_company_application", { p_application_id: applicationId });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["my-company-applications"] }); toast({ title: "Application withdrawn" }); },
+    onError: (error: any) => toast({ title: "Could not withdraw", description: error.message, variant: "destructive" }),
+  });
+
+  const respondToOfferMutation = useMutation({
+    mutationFn: async ({ applicationId, accept }: { applicationId: string; accept: boolean }) => {
+      const { error } = await (supabase as any).rpc("respond_to_company_offer", { p_application_id: applicationId, p_accept: accept });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["my-company-applications"] }); queryClient.invalidateQueries({ queryKey: ["my-company-employment"] }); toast({ title: "Offer updated" }); },
+    onError: (error: any) => toast({ title: "Could not respond", description: error.message, variant: "destructive" }),
+  });
+
+  const resignCompanyEmploymentMutation = useMutation({
+    mutationFn: async (employeeId: string) => {
+      const { error } = await (supabase as any).rpc("resign_company_employment", { p_employee_id: employeeId });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["my-company-employment"] }); toast({ title: "Employment ended", description: "Your resignation has been recorded." }); },
+    onError: (error: any) => toast({ title: "Could not resign", description: error.message, variant: "destructive" }),
   });
 
   const { data: activityStatus } = useQuery({
@@ -546,6 +623,55 @@ export default function Employment() {
                     </div>
                   </div>
                 </div>
+            </SectionCard>
+
+            <SectionCard title="Company Vacancies" icon={Building2}>
+              {!profile ? (
+                <Card className="p-6 text-center text-muted-foreground">Sign in to view suitability, applications, offers, and employment history.</Card>
+              ) : companyVacancies.length === 0 ? (
+                <Card className="p-6 text-center text-muted-foreground">No open company vacancies match the current marketplace.</Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {companyVacancies.map((vacancy: any) => {
+                    const mine = (vacancy.company_job_applications ?? []).find((app: any) => app.applicant_profile_id === profile?.id);
+                    const score = mine?.suitability_score ?? 60;
+                    const rating = score >= 85 ? "Excellent match" : score >= 70 ? "Good match" : score >= 45 ? "Partial match" : "Poor match";
+                    return (
+                      <Card key={vacancy.id} className="flex flex-col">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <CardTitle className="text-lg">{vacancy.job_title}</CardTitle>
+                              <CardDescription>{vacancy.companies?.name} • {vacancy.companies?.company_type}</CardDescription>
+                            </div>
+                            <StandardStatusBadge tone={mine ? "info" : "muted"}>{mine ? mine.status : rating}</StandardStatusBadge>
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><MapPin className="h-3 w-3" />{vacancy.cities?.name ?? "Remote/unspecified"}</p>
+                        </CardHeader>
+                        <CardContent className="flex-1 space-y-3">
+                          <p className="text-sm text-muted-foreground line-clamp-2">{vacancy.description || "No description supplied."}</p>
+                          <div className="grid grid-cols-2 gap-2 text-sm"><span className="font-semibold">${vacancy.weekly_wage}/week</span><span>{vacancy.positions_available - vacancy.positions_filled} open</span><span>{vacancy.staff_category?.replaceAll("_", " ")}</span><span>{vacancy.employment_type?.replaceAll("_", " ")}</span></div>
+                          <div className="text-xs text-muted-foreground">Suitability: {rating}. Reasons consider location, listed skill requirements, reputation, and employment conflicts.</div>
+                          <Button className="w-full" size="sm" onClick={() => applyToCompanyVacancyMutation.mutate(vacancy.id)} disabled={!profile || !!mine || applyToCompanyVacancyMutation.isPending}>
+                            <Send className="h-4 w-4 mr-2" />{mine ? "Already applied" : "Apply to company"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard title="Applications, Offers & Company Employment" icon={CheckCircle2}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card><CardHeader><CardTitle className="text-base">Applications and offers</CardTitle></CardHeader><CardContent className="space-y-2">
+                  {myCompanyApplications.length === 0 ? <p className="text-sm text-muted-foreground">No company applications yet.</p> : myCompanyApplications.map((app: any) => <div key={app.id} className="rounded-lg border p-3 space-y-2"><div className="flex items-center justify-between"><div><p className="font-medium">{app.company_vacancies?.job_title}</p><p className="text-xs text-muted-foreground">{app.company_vacancies?.companies?.name} • ${app.company_vacancies?.weekly_wage}/week</p></div><Badge>{app.status}</Badge></div><div className="flex gap-2 flex-wrap">{['pending','application_submitted'].includes(app.status) && <AlertDialog><AlertDialogTrigger asChild><Button size="sm" variant="outline">Withdraw</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Withdraw application?</AlertDialogTitle><AlertDialogDescription>This keeps your history but removes the pending application from review.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => withdrawCompanyApplicationMutation.mutate(app.id)}>Withdraw</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}{app.status === 'offer_made' && <><Button size="sm" onClick={() => respondToOfferMutation.mutate({ applicationId: app.id, accept: true })}><CheckCircle2 className="h-4 w-4 mr-1" />Accept</Button><Button size="sm" variant="destructive" onClick={() => respondToOfferMutation.mutate({ applicationId: app.id, accept: false })}><XCircle className="h-4 w-4 mr-1" />Decline</Button></>}</div></div>)}
+                </CardContent></Card>
+                <Card><CardHeader><CardTitle className="text-base">Company employment history</CardTitle></CardHeader><CardContent className="space-y-2">
+                  {companyEmployment.length === 0 ? <p className="text-sm text-muted-foreground">No company employment history.</p> : companyEmployment.map((emp: any) => <div key={emp.id} className="rounded-lg border p-3 flex items-center justify-between gap-2"><div><p className="font-medium">{emp.job_title ?? emp.role}</p><p className="text-xs text-muted-foreground">{emp.companies?.name} • ${emp.weekly_wage ?? emp.salary}/week • unpaid ${emp.unpaid_wages ?? 0}</p></div><div className="flex items-center gap-2"><Badge variant={emp.status === 'active' ? 'default' : 'secondary'}>{emp.contract_status}</Badge>{emp.status === 'active' && <AlertDialog><AlertDialogTrigger asChild><Button size="sm" variant="destructive">Resign</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Resign from this company?</AlertDialogTitle><AlertDialogDescription>Your final employment date is today. Future wages and performance contribution stop after resignation; unpaid wage history remains visible.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => resignCompanyEmploymentMutation.mutate(emp.id)}>Resign</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></div>)}
+                </CardContent></Card>
+              </div>
             </SectionCard>
 
             {/* Job Results */}
