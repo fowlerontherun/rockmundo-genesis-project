@@ -34,6 +34,7 @@ import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
 import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWidget";
 import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
 import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
+import { GettingStartedPanel } from "@/components/dashboard/GettingStartedPanel";
 import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
@@ -180,7 +181,7 @@ const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string
         ) : error ? (
           <PageErrorState title="Goals could not be loaded" description="Your dashboard is still available while goals refresh." onRetry={() => void refetch()} />
         ) : goals.length === 0 ? (
-          <PageEmptyState title="No goals available" description="Play a little more and your next goals will appear here." />
+          <PageEmptyState title="Start your first music goal" description="Write a song or book an activity and your dashboard goals will update around that progress." action={<Button asChild size="sm"><Link to="/booking/songwriting">Start songwriting</Link></Button>} />
         ) : goals.map((goal) => {
           const pct = Math.min(100, Math.round((goal.current / goal.target) * 100));
           return (
@@ -417,6 +418,7 @@ const Dashboard = () => {
         {/* Profile Tab — identity only */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
+          <GettingStartedPanel profile={profile} userId={user?.id} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
             <div className="space-y-4">
               <TodaysBriefing profile={profile} userId={user?.id} />

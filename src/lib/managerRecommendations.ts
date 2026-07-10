@@ -16,6 +16,8 @@ export interface ManagerRecommendationInput {
   } | null;
   songsReadyToRecord?: number;
   recordingsReadyToRelease?: number;
+  totalSongs?: number;
+  upcomingActivitiesCount?: number;
   needsBandRehearsal?: boolean;
   unreadImportantMessages?: number;
   upcomingActivities?: Array<{
@@ -44,6 +46,30 @@ export function buildManagerRecommendations(input: ManagerRecommendationInput): 
   const recordingsReadyToRelease = input.recordingsReadyToRelease ?? 0;
   const unreadImportantMessages = input.unreadImportantMessages ?? 0;
   const upcomingActivities = input.upcomingActivities ?? [];
+  const totalSongs = input.totalSongs ?? songsReadyToRecord + recordingsReadyToRelease;
+  const upcomingActivitiesCount = input.upcomingActivitiesCount ?? upcomingActivities.length;
+
+  if (totalSongs === 0) {
+    recommendations.push({
+      id: "first-song",
+      title: "Write your first song",
+      reason: "You need original material before recording, releases, setlists, and many gig opportunities become useful.",
+      suggestedAction: "Start a songwriting booking and create your first draft.",
+      href: "/booking/songwriting",
+      priority: "high",
+    });
+  }
+
+  if (totalSongs > 0 && upcomingActivitiesCount === 0) {
+    recommendations.push({
+      id: "first-activity",
+      title: "Book your next activity",
+      reason: "Your schedule has no upcoming activity, so there is no clear next time-based action.",
+      suggestedAction: "Open the schedule and book practice, education, work, rehearsal, or recording when eligible.",
+      href: "/schedule",
+      priority: "medium",
+    });
+  }
 
   if (health <= 35 || energy <= 35) {
     const isCritical = health <= 20 || energy <= 20;
@@ -74,7 +100,7 @@ export function buildManagerRecommendations(input: ManagerRecommendationInput): 
       title: "Release finished recordings",
       reason: `${pluralize(recordingsReadyToRelease, "recorded song")} ${recordingsReadyToRelease === 1 ? "is" : "are"} ready to turn into momentum.`,
       suggestedAction: "Create a single, EP, or album release while the material is fresh.",
-      href: "/releases",
+      href: "/release-manager",
       priority: "high",
     });
   }
