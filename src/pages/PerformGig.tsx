@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, AlertCircle } from 'lucide-react';
 import { TopDownGigViewer } from '@/components/gig-viewer/TopDownGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
@@ -17,7 +17,7 @@ import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
-import { format, differenceInMinutes, differenceInDays, isBefore, addMinutes } from 'date-fns';
+import { format, differenceInMinutes, differenceInDays, isBefore } from 'date-fns';
 import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
@@ -49,7 +49,6 @@ export default function PerformGig() {
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
-  const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
   const [bandSetlists, setBandSetlists] = useState<any[]>([]);
   // Viewer mode removed — single top-down viewer
 
@@ -148,17 +147,10 @@ export default function PerformGig() {
       }
 
       if (existingOutcome) {
-        const now = new Date();
-        const completedAt = gigData.completed_at ? new Date(gigData.completed_at) : null;
-        
-        // Only show outcome if gig completed more than 10 minutes ago
-        const canShowOutcome = completedAt && differenceInMinutes(now, completedAt) >= 10;
-        
-        if (canShowOutcome) {
+        if ((gigData as any).result_ready_at) {
           setOutcome(existingOutcome);
-          setShowOutcome(false); // Don't auto-show, let user click to view
+          setShowOutcome(false);
         } else {
-          // Outcome exists but it's too soon - keep showing live view
           setOutcome(null);
           setShowOutcome(false);
         }
@@ -198,72 +190,20 @@ export default function PerformGig() {
     
     const now = new Date();
     const scheduledDate = new Date(gig.scheduled_date);
-    const completedAt = gig.completed_at ? new Date(gig.completed_at) : null;
     
     // Show live viewer if gig starts within 10 minutes
     const isWithin10MinutesOfStart = differenceInMinutes(scheduledDate, now) <= 10 && isBefore(now, scheduledDate);
     
     // Show live viewer if gig is in progress
-    const isInProgress = gig.status === 'in_progress' || gig.status === 'ready_for_completion';
+    const isInProgress = ['in_progress', 'ready_for_completion', 'processing_outcome'].includes(gig.status || '');
     
-    // Show live viewer if gig completed less than 10 minutes ago
-    const isRecentlyCompleted = completedAt && differenceInMinutes(now, completedAt) < 10;
-    
-    return isWithin10MinutesOfStart || isInProgress || isRecentlyCompleted;
+    return isWithin10MinutesOfStart || isInProgress;
   }, [gig]);
 
   // Use realtime gig advancement only when showing live viewer
   // Always call the hook unconditionally to avoid React hooks violations
   const isAdvancementEnabled = shouldShowLiveViewer && !showOutcome;
   useRealtimeGigAdvancement(gigId || null, isAdvancementEnabled);
-
-  // Auto-refresh when the 10-minute window elapses after completion
-  useEffect(() => {
-    if (!gig?.completed_at) return;
-    
-    const completedAt = new Date(gig.completed_at);
-    const tenMinutesAfter = addMinutes(completedAt, 10);
-    const now = new Date();
-    
-    // If we're before the 10-minute mark, set a timer to reload at that time
-    if (isBefore(now, tenMinutesAfter)) {
-      const msUntilRefresh = tenMinutesAfter.getTime() - now.getTime();
-      
-      const timer = setTimeout(() => {
-        console.log('[PerformGig] 10 minutes elapsed since completion, reloading to show report');
-        loadGig();
-      }, msUntilRefresh);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [gig?.completed_at, loadGig]);
-
-  // Update countdown timer for report availability
-  useEffect(() => {
-    if (!gig?.completed_at || outcome) {
-      setTimeUntilReport(null);
-      return;
-    }
-    
-    const updateCountdown = () => {
-      const completedAt = new Date(gig.completed_at!);
-      const tenMinutesAfter = addMinutes(completedAt, 10);
-      const now = new Date();
-      
-      if (isBefore(now, tenMinutesAfter)) {
-        const minutesLeft = Math.ceil(differenceInMinutes(tenMinutesAfter, now));
-        const secondsLeft = Math.ceil((tenMinutesAfter.getTime() - now.getTime()) / 1000) % 60;
-        setTimeUntilReport(`${minutesLeft}:${secondsLeft.toString().padStart(2, '0')}`);
-      } else {
-        setTimeUntilReport(null);
-      }
-    };
-    
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    
-    return () => clearInterval(interval);
-  }, [gig?.completed_at, outcome]);
 
   const handleGigComplete = async () => {
     // Reload to show outcome
@@ -609,7 +549,7 @@ export default function PerformGig() {
         </Card>
       )}
 
-      {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
+      {/* Real-time Performance Viewer - read-only observer of authoritative server progress */}
       {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Watch Performance</h3>
@@ -629,22 +569,10 @@ export default function PerformGig() {
               Processing Results
             </CardTitle>
             <CardDescription>
-              The gig just wrapped up! We're processing the performance data and will have your report ready in a few minutes.
+The gig is processing its authoritative result. Refresh to check whether the report is ready.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Final reports are typically available 10 minutes after the performance ends.
-            </p>
-            {timeUntilReport && (
-              <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50">
-                <Clock className="h-4 w-4 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Report Ready In</p>
-                  <p className="text-2xl font-bold text-primary">{timeUntilReport}</p>
-                </div>
-              </div>
-            )}
             <Button 
               variant="outline" 
               onClick={loadGig}
@@ -665,7 +593,7 @@ export default function PerformGig() {
               Performance Completed
             </CardTitle>
             <CardDescription>
-              Review the detailed report or rewatch the performance.
+              Review the detailed report. Replay rendering remains unavailable until a later phase.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

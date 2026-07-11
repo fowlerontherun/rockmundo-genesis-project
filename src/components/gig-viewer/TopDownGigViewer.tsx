@@ -531,7 +531,7 @@ export const TopDownGigViewer = ({ gigId, onComplete }: TopDownGigViewerProps) =
             onClick={handleSkipToOutcome}
           >
             <FastForward className="h-3.5 w-3.5" />
-            Skip to Outcome
+            Skip Viewer
           </Button>
         </div>
       </CardHeader>

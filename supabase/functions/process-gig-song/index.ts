@@ -518,6 +518,25 @@ serve(async (req) => {
       throw new Error('Gig not found');
     }
 
+    if (!['in_progress', 'ready_for_completion'].includes(gig.status)) {
+      throw new Error(`gig_not_processable:${gig.status}`);
+    }
+
+    const { data: existingPerformance } = await supabaseClient
+      .from('gig_song_performances')
+      .select('*')
+      .eq('gig_outcome_id', outcomeId)
+      .eq('position', position)
+      .maybeSingle();
+
+    if (existingPerformance) {
+      console.log(`[process-gig-song] duplicate_song_processing_prevented gig_id=${gigId} position=${position}`);
+      return new Response(
+        JSON.stringify({ success: true, performance: existingPerformance, duplicate: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
     const bandId = gig.band_id;
     const venueCapacity = gig.venues.capacity || 100;
 
@@ -593,6 +612,10 @@ serve(async (req) => {
         .single();
 
       if (perfError) {
+        if (perfError.code === '23505') {
+          const { data: existing } = await supabaseClient.from('gig_song_performances').select('*').eq('gig_outcome_id', outcomeId).eq('position', position).single();
+          return new Response(JSON.stringify({ success: true, performance: existing, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+        }
         console.error('[process-gig-song] Insert error:', perfError);
         throw perfError;
       }
@@ -710,7 +733,13 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (perfError) throw perfError;
+    if (perfError) {
+      if (perfError.code === '23505') {
+        const { data: existing } = await supabaseClient.from('gig_song_performances').select('*').eq('gig_outcome_id', outcomeId).eq('position', position).single();
+        return new Response(JSON.stringify({ success: true, performance: existing, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+      }
+      throw perfError;
+    }
 
     return new Response(
       JSON.stringify({ success: true, performance }),

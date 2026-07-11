@@ -263,3 +263,8 @@ Client currently owns:
 - `PerformGig` now requests the canonical DTO with a stable React Query key and passes it to the existing report.
 - `GigOutcomeReport` retains its current layout through a temporary DTO-to-legacy adapter pending PR 03.
 - Remaining factual gap: member reward cards and the broader report card wall are not yet fully DTO-native.
+
+
+## Phase 5 PR 04 implementation update
+
+Server-authoritative gig progression is implemented through a guarded start RPC, server catch-up worker processing, exactly-once song position uniqueness, result-ready timestamps, and a read-only viewer hook. See `docs/gigs/implementation/PHASE_5_PR_04.md`.

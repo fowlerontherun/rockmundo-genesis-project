@@ -66,10 +66,10 @@ serve(async (req) => {
 
     for (const gig of inProgressGigs || []) {
       try {
-        // Get setlist songs count and total duration
+        // Get setlist songs and process every due position using server time.
         const { data: setlistSongs, error: songsError } = await supabaseClient
           .from('setlist_songs')
-          .select('id, song_id, songs!inner(id, duration_seconds)')
+          .select('id, song_id, performance_item_id, item_type, songs(id, duration_seconds)')
           .eq('setlist_id', gig.setlist_id)
           .order('position');
 
@@ -78,41 +78,49 @@ serve(async (req) => {
           continue;
         }
 
-        const totalSongs = setlistSongs.length;
-        const currentPosition = gig.current_song_position || 0;
+        const { data: outcome } = await supabaseClient
+          .from('gig_outcomes')
+          .select('id')
+          .eq('gig_id', gig.id)
+          .single();
+        if (!outcome) continue;
 
-        // Calculate total duration
-        const totalDuration = setlistSongs.reduce((sum, ss) => {
-          return sum + (ss.songs?.duration_seconds || 180);
-        }, 0);
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(gig.started_at).getTime()) / 1000));
+        let cumulative = 0;
+        let duePositions = 0;
+        for (const row of setlistSongs as any[]) {
+          const duration = Math.max(1, Number(row.songs?.duration_seconds || 180));
+          if (elapsedSeconds >= cumulative) duePositions++;
+          cumulative += duration;
+        }
 
-        // Calculate elapsed time since start
-        const startedAt = new Date(gig.started_at);
-        const now = new Date();
-        const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+        const { data: existing } = await supabaseClient
+          .from('gig_song_performances')
+          .select('position')
+          .eq('gig_outcome_id', outcome.id);
+        const existingPositions = new Set((existing || []).map((p: any) => p.position));
 
-        console.log(`[auto-complete-gigs] Gig ${gig.id}: position ${currentPosition}/${totalSongs}, elapsed ${elapsedSeconds}s, total duration ${totalDuration}s`);
-
-        // Check if all songs should be processed
-        if (elapsedSeconds >= totalDuration) {
-          console.log(`[auto-complete-gigs] Gig ${gig.id} duration exceeded, completing...`);
-
-          // Just complete the gig directly - the complete-gig function handles everything
-          console.log(`[auto-complete-gigs] Completing gig ${gig.id} (all songs should be done)`);
-
-          // Complete the gig
-          console.log(`[auto-complete-gigs] Completing gig ${gig.id}`);
-          
-          const { error: completeError } = await supabaseClient.functions.invoke('complete-gig', {
-            body: { gigId: gig.id }
+        for (let position = 0; position < Math.min(duePositions, setlistSongs.length); position++) {
+          if (existingPositions.has(position)) continue;
+          const item: any = setlistSongs[position];
+          console.log(`[auto-complete-gigs] song_processing_started gig_id=${gig.id} position=${position}`);
+          const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
+            body: { gigId: gig.id, outcomeId: outcome.id, songId: item.song_id, performanceItemId: item.performance_item_id, itemType: item.item_type, position }
           });
+          if (processError) console.error(`[auto-complete-gigs] song processing failed`, processError);
+          else processedCount++;
+        }
 
-          if (completeError) {
-            console.error(`[auto-complete-gigs] Error completing gig:`, completeError);
-          } else {
-            completedCount++;
-            console.log(`[auto-complete-gigs] ✅ Completed gig ${gig.id}`);
-          }
+        await supabaseClient
+          .from('gigs')
+          .update({ current_song_position: Math.min(duePositions, setlistSongs.length) })
+          .eq('id', gig.id);
+
+        if (elapsedSeconds >= cumulative) {
+          console.log(`[auto-complete-gigs] completion_started gig_id=${gig.id}`);
+          const { error: completeError } = await supabaseClient.functions.invoke('complete-gig', { body: { gigId: gig.id } });
+          if (completeError) console.error(`[auto-complete-gigs] Error completing gig:`, completeError);
+          else { completedCount++; console.log(`[auto-complete-gigs] completion_succeeded gig_id=${gig.id}`); }
         }
       } catch (error) {
         console.error(`[auto-complete-gigs] Error processing gig ${gig.id}:`, error);

@@ -517,3 +517,8 @@ Cover:
 | Public spectators for other bands? | Deferred | Not in first implementation. |
 | Non-member replay of completed gigs? | Deferred | No until ACL defined. |
 | Hide setlist surprises until performed? | Required before PR 04 | Preserve hidden future songs if product wants surprise; otherwise show band-owned setlist. |
+
+
+## Phase 5 PR 04 implementation update
+
+Server-authoritative gig progression is implemented through a guarded start RPC, server catch-up worker processing, exactly-once song position uniqueness, result-ready timestamps, and a read-only viewer hook. See `docs/gigs/implementation/PHASE_5_PR_04.md`.

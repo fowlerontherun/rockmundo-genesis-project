@@ -46,7 +46,7 @@ serve(async (req) => {
       throw new Error('Gig outcome not found');
     }
 
-    if (gig.status === 'completed' || outcome.completed_at) {
+    if (gig.status === 'completed' || gig.result_ready_at || outcome.completed_at) {
       if (gig.status !== 'completed') {
         await supabaseClient
           .from('gigs')
@@ -67,6 +67,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
+
+    await supabaseClient.from('gigs').update({ status: 'processing_outcome' }).eq('id', gigId).in('status', ['in_progress','ready_for_completion']);
 
     // Get all song performances already recorded
     const { data: existingPerformances, error: perfError } = await supabaseClient
@@ -945,14 +947,8 @@ serve(async (req) => {
       console.log(`Member rewards: ${coreMembers.length} core got +${personalFamePerCore} fame / +${personalFansPerCore} fans each, ${touringMembers.length} touring got +${personalFameTouring} fame each`);
     }
 
-    // Mark gig as completed
-    const { error: gigUpdateError } = await supabaseClient
-      .from('gigs')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', gigId);
+    // Mark gig as completed and make the authoritative result readable.
+    const { error: gigUpdateError } = await supabaseClient.rpc('mark_gig_result_ready', { p_gig_id: gigId });
 
     if (gigUpdateError) throw gigUpdateError;
 
