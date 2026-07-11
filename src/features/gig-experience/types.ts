@@ -97,7 +97,7 @@ export interface GigExperienceDTO {
   progression: GigExperienceProgressionDTO;
   analysis: GigExperienceAnalysisDTO;
   lessons: { worked: string[]; heldBack: string[]; recommendations: string[] };
-  viewer: { ready: boolean; outcomeId: string | null; resultReadyAt: string | null; replayAvailable: boolean };
+  viewer: { ready: boolean; outcomeId: string | null; resultReadyAt: string | null; replayAvailable: boolean; replay?: { viewerVersion: number | null; durationMs: number | null; generationStatus: string | null } };
 }
 
 export interface GigExperienceValidationError { field: string; message: string }
