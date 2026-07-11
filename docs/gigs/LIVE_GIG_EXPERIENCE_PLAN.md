@@ -539,3 +539,7 @@ Crowd entry is now implemented as a read-only presentation layer. Weighted visua
 ## Phase 5 PR 09 implemented story-layer facts
 
 The replay viewer now has a factual song-story layer. `StoryEngine` derives song lifecycle phases, crowd-energy mood labels, one deterministic turning point, highlights, encore/finale/result states, and commentary from canonical replay events plus `GigExperienceDTO` metrics. The UI includes a current-song panel, SVG crowd mood graph with seekable points, expanded song timeline, song/highlight/result skip controls, Canvas crowd reactions, and result reveal overlay. No browser-side outcome, reward, setlist, or replay-fact mutation was introduced.
+
+## Phase 5 PR 10 release gate status
+
+The Live Gig Experience 1.0 viewer now has release-hardening guardrails: canonical replay payloads are capped at 240 events and 128 KB serialized event JSON, message parameters are bounded, malformed event arrays fail safely, and stale service-role replay generation claims can be recovered after a 15-minute timeout. No new canonical detailed event categories were added in PR 10 because performer mistakes, recoveries, equipment incidents, singalongs, and explicit solos do not yet have reliable server-authoritative event sources. The plan remains to add those only after authoritative source rows/fields exist. Analytics instrumentation is deferred because no approved app-level analytics capture helper was found.

@@ -1,4 +1,4 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
 import { validateGigViewerReplay } from "./schema";
 import type { GigViewerEvent, GigViewerReplay, StagePosition } from "./types";
 
@@ -71,7 +71,14 @@ export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Pr
   const replay: GigViewerReplay = { id: input.replayId, gigId: input.gig.id, gigOutcomeId: input.outcomeId, viewerVersion, eventSchemaVersion: GIG_EVENT_SCHEMA_VERSION, simulationSeed: seed, durationMs: offset, generatedAt: input.generatedAt, events, checksum: await checksumReplayEvents(events), status: "ready" };
   const validation = validateGigViewerReplay(replay);
   if (!validation.valid) throw new Error(`INVALID_REPLAY:${validation.errors.join(";")}`);
+  assertReplayPayloadWithinBudget(replay);
   return replay;
+}
+
+function assertReplayPayloadWithinBudget(replay: GigViewerReplay) {
+  if (replay.events.length > GIG_REPLAY_MAX_EVENTS) throw new Error("REPLAY_EVENT_LIMIT_EXCEEDED");
+  const bytes = new TextEncoder().encode(JSON.stringify({ events: replay.events })).length;
+  if (bytes > GIG_REPLAY_MAX_PAYLOAD_BYTES) throw new Error("REPLAY_PAYLOAD_LIMIT_EXCEEDED");
 }
 
 function allocateSongDurations(songs: ReplaySongInput[]) { const out = new Map<number, number>(); if (!songs.length) return out; const base = Math.max(8_000, (GIG_REPLAY_TARGET_DURATION_MS - 71_000) / songs.length); const best = songs.reduce((a, b) => (b.performanceScore ?? -1) > (a.performanceScore ?? -1) ? b : a, songs[0]); const worst = songs.reduce((a, b) => (b.performanceScore ?? 999) < (a.performanceScore ?? 999) ? b : a, songs[0]); let totalWeight = 0; const weights = songs.map((s, i) => { let w = 1; if (i === 0 || i === songs.length - 1) w += 0.35; if (s === best || s === worst) w += 0.25; totalWeight += w; return w; }); songs.forEach((s, i) => out.set(s.position, Math.max(6_000, Math.round(base * songs.length * weights[i] / totalWeight)))); return out; }

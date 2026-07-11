@@ -1434,3 +1434,7 @@ Phase 5 PR 05 — Typed Gig Event Schema and Replay Storage: complete. Canonical
 ## Phase 5 PR 06 status — Complete
 
 Phase 5 PR 06 adds the first read-only stored replay viewer shell. Completed gigs now open a stored replay lazily, validate the existing replay hook result, render a responsive HTML Canvas venue foundation, show deterministic static crowd and performer layouts from the stored simulation seed, play canonical event offsets locally with fixed speed controls, provide a synchronized accessible text timeline, support reduced motion, and preserve report access for every failure/fallback state.
+
+## Phase 5 PR 10 — Viewer Release Hardening and Phase Review
+
+Phase 5 PR 10 is implemented as the release-hardening and review pass. It adds explicit replay payload budgets, validation for malformed and oversized event payloads, service-role recovery for stale or failed replay generation, schema compatibility tests, and the formal Phase 5 review. No balance, score, reward, progression, audio, spectator, 3D, physics, or fabricated event changes were introduced. Detailed mistake/recovery/equipment/singalong/solo replay events remain intentionally unsupported until authoritative source data exists. Beta readiness is documented as **Ready with prerequisites** because database reset, SQL harnesses, browser/mobile/a11y tests, and dependency-backed checks were not runnable in the current container.
