@@ -6,7 +6,7 @@
 
 - **Rehearsal participation:** keep automatic inclusion for active player band members at booking, but add player-owned RSVP before final attendance controls.
 - **Rehearsal RSVP:** support only `invited`, `confirmed`, `declined`, `attended`, and `missed` for beta. Treat `declined` as availability communication, not punishment.
-- **Rehearsal attendance confirmation:** after the rehearsal, authorised managers finalise `attended` or `missed`; completion may auto-mark still-expected members attended only until explicit finalisation RPCs exist.
+- **Rehearsal attendance confirmation:** after the rehearsal, authorised managers finalise `attended` or `missed` through the guarded `finalise_rehearsal_attendance` RPC; completion contribution capture now credits only rows already finalised as `attended`.
 - **Gig lineup selection:** move from automatic lineup seeding to manager-selected player performers before performance. Keep NPC/touring/session complexity out of beta unless already represented by active player membership.
 - **Gig performer confirmation:** support `selected`, `confirmed`, `declined`, `performed`, and `missed` for beta; model substitution as removal plus selecting another eligible performer, not as a separate graph.
 - **Missed attendance:** `missed` is an operational final status, not an automatic penalty, reputation hit, XP loss, chemistry change, or harassment signal.
@@ -33,10 +33,10 @@ This design rejects beta rewards, penalties, contribution scores, XP changes, ch
 - `bandActivityScheduling` intentionally fetches active real player members only (`user_id` present and `is_touring_member = false`) for schedule blocking and conflict checks.
 - PR 03 added `band_rehearsal_participants` with `invited`, `attended`, and `missed`; rows are private to active band members through RLS.
 - Rehearsal participant rows are automatically seeded on rehearsal insert for active members with a profile. Current seeding does not exclude touring members.
-- Rehearsal completion calls `capture_contributions_for_rehearsal`, seeds missing rows, changes remaining `invited` rows to `attended`, and creates contribution events for `attended` only.
+- Rehearsal completion calls `capture_contributions_for_rehearsal`, seeds missing rows, and creates contribution events for rows already finalised as `attended` only; it no longer auto-promotes remaining `invited` rows to `attended`.
 - Existing schedule records are `player_scheduled_activities` linked to `linked_rehearsal_id`; they are the schedule source. Participant rows are evidence, not duplicate schedules.
 - Cancellation behaviour is partial: seeding skips cancelled rehearsals, schedule status supports `cancelled`, but no participant cancellation lifecycle or RSVP release flow exists.
-- Read-only UI exists on rehearsal cards through participant detail hooks and shared status display; Phase 4 PR 06 adds player-owned rehearsal self-response controls for the active user's own row before the one-hour RSVP deadline. Manager attendance mutation UI does not exist.
+- Read-only UI exists on rehearsal cards through participant detail hooks and shared status display; Phase 4 PR 06 adds player-owned rehearsal self-response controls for the active user's own row before the one-hour RSVP deadline. Manager attendance mutation UI now exists narrowly on the rehearsal participant surface for authorised managers after the rehearsal is eligible for finalisation.
 
 ### Gigs
 

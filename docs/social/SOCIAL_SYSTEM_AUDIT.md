@@ -454,3 +454,14 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 
 
 Phase 4 PR 06 status update: Rehearsal participant and gig lineup details are surfaced on existing pages. Rehearsal participants can now confirm or decline only their own provisional rehearsal row before the one-hour lock deadline; gig lineup response and manager finalisation controls remain absent.
+
+
+## Phase 4 PR 07 audit update — rehearsal attendance finalisation
+
+- Added guarded manager-owned rehearsal attendance finalisation through `finalise_rehearsal_attendance`. Current active leader/founder/co-leader/manager roles are allowed through existing manager helper semantics; ordinary, former, unrelated, and unauthenticated users are denied by the RPC.
+- Attendance lifecycle now supports player RSVP before the deadline and manager finalisation after rehearsal end or source completion. `declined` remains read-only during manager finalisation, and final `attended`/`missed` rows cannot be reversed in this PR.
+- Rehearsal contribution capture now creates `rehearsal_attendance` only for participant rows already finalised as `attended`; missed and declined rows do not contribute, and completion no longer silently marks invited rows attended.
+- Missed participant notifications are deduped by rehearsal, participant, and final state. Attended notifications are intentionally suppressed.
+- Audit coverage records successful rehearsal finalisation, participant attended/missed markings, and denied attempts for permission, timing, cancellation, invalid payload, wrong participant, and final/declined conflicts.
+- RLS remains unchanged for direct participant mutation; clients use only the SECURITY DEFINER RPC with safe `search_path` and narrow authenticated execute grant.
+- Participant DB harness documents PR 07 RPC coverage markers; full integration validation requires a running Supabase database.

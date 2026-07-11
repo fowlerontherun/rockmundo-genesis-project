@@ -555,3 +555,12 @@ The expansion should be considered successful when:
 - Moderation tools are strong enough to support increased interaction.
 - The player economy has more trusted services, jobs, and interdependence.
 - Players perceive other players as the most valuable content in RockMundo.
+
+
+## Phase 4 PR 07 status update
+
+- Rehearsal attendance finalisation MVP is implemented: authorised current band managers can finalise invited/confirmed participant rows as `attended` or `missed` after rehearsal end or completion through a guarded batch RPC.
+- Declined rehearsal rows remain declined; final attended/missed rows are idempotent for same-state retries and cannot be reversed yet.
+- Rehearsal contribution creation is now tied to final `attended` rows only, with manager-finalisation metadata and existing idempotency.
+- The existing rehearsal page exposes narrow manager controls without changing ordinary member RSVP behaviour.
+- Corrections, disputes, absence reasons, gig lineup management, rewards, penalties, XP, chemistry, and attendance analytics remain deferred.
