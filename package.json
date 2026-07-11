@@ -16,7 +16,15 @@
     "test:recruitment:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for recruitment DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/recruitment_rls_harness.sql'",
     "test:contributions:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for contribution DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/band_contribution_events_harness.sql'",
     "test:participants:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for participant DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rehearsal_gig_participants_harness.sql'",
-    "test:corrections:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for correction DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rehearsal_attendance_corrections_harness.sql'"
+    "test:corrections:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for correction DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rehearsal_attendance_corrections_harness.sql'",
+    "test:gig-experience:unit": "vitest run src/features/gig-experience/__tests__/GigExperienceService.test.ts src/features/gig-experience/components/**/*.test.tsx",
+    "test:gig-experience:replay": "vitest run src/features/gig-experience/events/__tests__/schema.test.ts",
+    "test:gig-experience:viewer": "vitest run src/features/gig-experience/viewer/tests/engine.test.ts src/features/gig-experience/viewer/tests/performerLifecycle.test.ts src/features/gig-experience/viewer/tests/storyEngine.test.ts",
+    "test:gig-experience:component": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
+    "test:gig-experience:browser": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
+    "test:gig-experience:a11y": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
+    "test:gig-experience:release": "node scripts/gigs/run-release-gate.mjs",
+    "test:gig-experience:db": "bash scripts/gigs/run-db-gate.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

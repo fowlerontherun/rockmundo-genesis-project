@@ -36,11 +36,11 @@ RLS protects replay reads via outcome visibility. Normal clients cannot insert, 
 - Viewer-engine tests: venue, entity layout, playback, crowd lifecycle, performer lifecycle, and story engine coverage exists.
 - SQL harnesses: Phase 5 harnesses exist for replay storage/RLS/grants; a clean run was not executed here.
 - Edge Function tests: static review only in this environment.
-- Browser smoke tests: not run; no Playwright script is configured.
-- Accessibility tests: static audit only; automated browser/a11y not run.
-- Mobile tests: not run.
+- Browser smoke tests: deterministic jsdom/RTL surrogate release-gate coverage is configured; real Playwright browser execution remains a beta prerequisite.
+- Accessibility tests: semantic RTL assertions are configured; real axe/browser accessibility execution remains a beta prerequisite.
+- Mobile tests: deterministic viewport surrogate coverage is configured; real device/browser mobile execution remains a beta prerequisite.
 - Concurrency tests: SQL/function design supports idempotency; live concurrent DB run not executed.
-- Checks run: `npm run typecheck` passed. Checks not completed: dependency-backed lint/build/Vitest, browser/mobile/a11y tests, and Supabase reset/harnesses because local dependency installation failed and Supabase CLI was unavailable.
+- PR 11 adds `npm run test:gig-experience:release` and `npm run test:gig-experience:db` so release checks are repeatable. In this container, dependency-backed gates and clean Supabase reset were not passed because scoped package fetches/Supabase CLI were unavailable.
 
 ## Performance Status
 
@@ -56,7 +56,7 @@ No established app-level analytics capture helper was found, so no lifecycle ana
 
 - Run and pass clean Supabase reset/migration/SQL harnesses.
 - Run and pass dependency-backed lint, production build, and unit/component/viewer tests after dependency installation succeeds; keep `npm run typecheck` green.
-- Run browser smoke, mobile viewport, and automated accessibility coverage.
+- Run real Playwright browser smoke, mobile viewport, and automated axe accessibility coverage in a provisioned environment; keep the new surrogate coverage green.
 
 ### P1 high-value improvements
 

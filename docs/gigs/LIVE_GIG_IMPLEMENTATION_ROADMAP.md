@@ -1438,3 +1438,7 @@ Phase 5 PR 06 adds the first read-only stored replay viewer shell. Completed gig
 ## Phase 5 PR 10 — Viewer Release Hardening and Phase Review
 
 Phase 5 PR 10 is implemented as the release-hardening and review pass. It adds explicit replay payload budgets, validation for malformed and oversized event payloads, service-role recovery for stale or failed replay generation, schema compatibility tests, and the formal Phase 5 review. No balance, score, reward, progression, audio, spectator, 3D, physics, or fabricated event changes were introduced. Detailed mistake/recovery/equipment/singalong/solo replay events remain intentionally unsupported until authoritative source data exists. Beta readiness is documented as **Ready with prerequisites** because database reset, SQL harnesses, browser/mobile/a11y tests, and dependency-backed checks were not runnable in the current container.
+
+### Phase 5 PR 11 release-gate update
+
+PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experience:release` and `npm run test:gig-experience:db`), a consolidated SQL schema/RLS/RPC harness, CI wiring, and deterministic browser/mobile/accessibility surrogate tests. Real Supabase reset, Playwright/axe browser execution, and performance profiling remain prerequisites before declaring beta ready.
