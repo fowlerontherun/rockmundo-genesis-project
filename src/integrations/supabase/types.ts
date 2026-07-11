@@ -7594,6 +7594,146 @@ export type Database = {
         }
         Relationships: []
       }
+      company_vacancies: {
+        Row: {
+          closes_at: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          employment_type: string
+          expected_activity_level: string
+          id: string
+          is_permanent: boolean
+          job_title: string
+          location_city_id: string | null
+          minimum_skill_levels: Json
+          positions_available: number
+          positions_filled: number
+          preferred_skills: Json
+          required_skills: Json
+          staff_category: string
+          status: string
+          updated_at: string
+          weekly_wage: number
+        }
+        Insert: {
+          closes_at?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          employment_type?: string
+          expected_activity_level?: string
+          id?: string
+          is_permanent?: boolean
+          job_title: string
+          location_city_id?: string | null
+          minimum_skill_levels?: Json
+          positions_available?: number
+          positions_filled?: number
+          preferred_skills?: Json
+          required_skills?: Json
+          staff_category: string
+          status?: string
+          updated_at?: string
+          weekly_wage?: number
+        }
+        Update: {
+          closes_at?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          employment_type?: string
+          expected_activity_level?: string
+          id?: string
+          is_permanent?: boolean
+          job_title?: string
+          location_city_id?: string | null
+          minimum_skill_levels?: Json
+          positions_available?: number
+          positions_filled?: number
+          preferred_skills?: Json
+          required_skills?: Json
+          staff_category?: string
+          status?: string
+          updated_at?: string
+          weekly_wage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_vacancies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vacancies_location_city_id_fkey"
+            columns: ["location_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_weekly_finance_records: {
+        Row: {
+          balance_after: number
+          company_id: string
+          created_at: string
+          gross_revenue: number
+          id: string
+          net_profit: number
+          performance_modifiers: Json
+          processing_status: string
+          staff_wage_costs: number
+          total_costs: number
+          unpaid_amount: number
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          balance_after?: number
+          company_id: string
+          created_at?: string
+          gross_revenue?: number
+          id?: string
+          net_profit?: number
+          performance_modifiers?: Json
+          processing_status?: string
+          staff_wage_costs?: number
+          total_costs?: number
+          unpaid_amount?: number
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          balance_after?: number
+          company_id?: string
+          created_at?: string
+          gross_revenue?: number
+          id?: string
+          net_profit?: number
+          performance_modifiers?: Json
+          processing_status?: string
+          staff_wage_costs?: number
+          total_costs?: number
+          unpaid_amount?: number
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_weekly_finance_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_clauses: {
         Row: {
           clause_key: string
