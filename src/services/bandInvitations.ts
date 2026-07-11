@@ -115,3 +115,12 @@ export async function cancelBandInvitation(invitationId: string): Promise<BandIn
   }
   return data as BandInvitationResult;
 }
+
+export function friendlyBandInvitationError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (!message) return "Something went wrong sending that band invitation.";
+  if (/duplicate|already/i.test(message)) return "That musician already has a pending invitation.";
+  if (/not.*friend/i.test(message)) return "You can only invite friends to your band.";
+  if (/uuid|invalid/i.test(message)) return "That invitation target isn't valid.";
+  return message;
+}
