@@ -31,6 +31,8 @@ export interface GigExperienceHeadlineDTO {
   bestSongTitle: ReportMetric<string>;
 }
 
+export interface GigExperienceSongAudioDTO { available: boolean; sourceType: "generated_full" | "preview" | "fixture" | "none"; url: string | null; durationSeconds: number | null; generationStatus: string | null; permissionState: "allowed" | "denied" | "public" | "admin_demo"; reasonUnavailable?: string }
+
 export interface GigExperienceSongDTO {
   id: string;
   songId: string | null;
@@ -38,6 +40,7 @@ export interface GigExperienceSongDTO {
   title: string;
   performanceScore: ReportMetric<number>;
   crowdResponse: ReportMetric<string>;
+  audio?: GigExperienceSongAudioDTO;
   contributions: {
     songQuality: ReportMetric<number>;
     rehearsal: ReportMetric<number>;
