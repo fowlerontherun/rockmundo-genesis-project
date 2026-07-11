@@ -49,3 +49,52 @@ describe("playback", () => {
     clock.restart(); expect(clock.position()).toBe(0);
   });
 });
+import { buildCrowdPlan, reconstructCrowdState, representedWeights, selectCrowdEntityCap } from "../engine/CrowdLifecycle";
+import { pointInRect } from "../engine/Viewport";
+
+describe("animated crowd lifecycle", () => {
+  const crowdReplay: GigViewerReplay = { ...replay, durationMs: 20000, events: [event(0, 0, { type: "venue_open", entranceIds: ["main"], lightLevel: .4 }), event(1, 1000, { type: "crowd_fill", targetDensity: .5, zoneIds: ["front"], enteringCount: 50 }), event(2, 9000, { type: "song_start", songId: "s1", title: "Song", position: 1, montage: false }), event(3, 20000)] };
+  it("builds exact represented weights without overstatement", () => {
+    expect(representedWeights(0, 100)).toEqual([]);
+    expect(representedWeights(7, 100).reduce((a, b) => a + b, 0)).toBe(7);
+    const odd = representedWeights(503, 100);
+    expect(odd).toHaveLength(100);
+    expect(odd.reduce((a, b) => a + b, 0)).toBe(503);
+    expect(Math.max(...odd)).toBe(6);
+    expect(representedWeights(10_001, 300).reduce((a, b) => a + b, 0)).toBe(10_001);
+  });
+  it("centralizes caps by device mode", () => {
+    expect(selectCrowdEntityCap({ reducedMotion: true, width: 1400 })).toBeLessThanOrEqual(40);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 390 })).toBe(60);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 800 })).toBe(140);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 1300 })).toBe(200);
+  });
+  it("assigns entrances and target positions deterministically inside audience bounds", () => {
+    const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 503, capacity: 1500, size: { width: 900, height: 500 } });
+    const again = buildCrowdPlan({ replay: crowdReplay, attendance: 503, capacity: 1500, size: { width: 900, height: 500 } });
+    expect(plan.baseEntities).toEqual(again.baseEntities);
+    expect(new Set(plan.baseEntities.map((e) => e.entranceId)).size).toBeGreaterThan(1);
+    const preset = scaleVenuePreset(selectVenuePreset({ capacity: 1500 }), { width: 900, height: 500 });
+    plan.baseEntities.forEach((e) => { expect(pointInRect(e.target, preset.audience)).toBe(true); expect(pointInRect(e.target, preset.stage)).toBe(false); });
+  });
+  it("clusters low attendance toward front before sold-out plans use more zones", () => {
+    const low = buildCrowdPlan({ replay: crowdReplay, attendance: 50, capacity: 1500, size: { width: 900, height: 500 } });
+    const full = buildCrowdPlan({ replay: crowdReplay, attendance: 1500, capacity: 1500, size: { width: 900, height: 500 } });
+    expect(new Set(low.baseEntities.map((e) => e.targetZoneId)).size).toBeLessThan(new Set(full.baseEntities.map((e) => e.targetZoneId)).size);
+    expect(low.baseEntities.every((e) => e.targetZoneId.startsWith("front"))).toBe(true);
+  });
+  it("reconstructs spawn, movement, settling, seeking, and reduced motion deterministically", () => {
+    const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 120, capacity: 250, size: { width: 640, height: 360 } });
+    const start = reconstructCrowdState(plan, 0);
+    const mid = reconstructCrowdState(plan, 4500);
+    const late = reconstructCrowdState(plan, 15000);
+    expect(start.diagnostics.settledCount).toBe(0);
+    expect(mid.diagnostics.movingCount).toBeGreaterThan(0);
+    expect(late.diagnostics.settledCount).toBe(plan.baseEntities.length);
+    expect(reconstructCrowdState(plan, 4500)).toEqual(mid);
+    expect(reconstructCrowdState(plan, 1000).diagnostics.entityCount).toBe(plan.baseEntities.length);
+    const reduced = reconstructCrowdState(plan, 4500, true);
+    expect(reduced.entities.some((e) => e.visible && e.x !== e.target.x)).toBe(false);
+    expect(reduced.milestones.some((m) => m.label.includes("half"))).toBe(true);
+  });
+});

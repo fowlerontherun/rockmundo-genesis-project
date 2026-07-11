@@ -956,8 +956,13 @@ Create one typed, authoritative read model for the gig result.
 - legacy outcomes produce controlled states;
 - tests cover current, legacy, missing-song, zero-attendance, and sold-out gigs.
 
+### Implementation evidence
+
+- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
+- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+
 ### Risk
-Medium.
+Medium; remaining risk is visual polish/path realism, not outcome correctness.
 
 ---
 
@@ -986,8 +991,13 @@ Replace the card wall with a clear three-level report.
 - missing data displays correctly;
 - no extra child report queries.
 
+### Implementation evidence
+
+- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
+- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+
 ### Risk
-Medium.
+Medium; remaining risk is visual polish/path realism, not outcome correctness.
 
 ---
 
@@ -1082,6 +1092,8 @@ Medium-high.
 
 ## Phase 5 PR 07 — Crowd Entry and Venue Filling
 
+**Status: Complete in Phase 5 PR 07.**
+
 ### Objective
 Show fans entering and filling the venue.
 
@@ -1103,8 +1115,13 @@ Show fans entering and filling the venue.
 - sold-out and low-attendance gigs look distinct;
 - mobile performance remains acceptable.
 
+### Implementation evidence
+
+- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
+- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+
 ### Risk
-Medium.
+Medium; remaining risk is visual polish/path realism, not outcome correctness.
 
 ---
 
@@ -1129,8 +1146,13 @@ Render the band entering and performing.
 - missing profile or role does not break the viewer;
 - performer visibility respects existing access rules.
 
+### Implementation evidence
+
+- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
+- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+
 ### Risk
-Medium.
+Medium; remaining risk is visual polish/path realism, not outcome correctness.
 
 ---
 

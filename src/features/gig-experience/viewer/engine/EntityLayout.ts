@@ -3,7 +3,9 @@ import type { GigExperienceDTO } from "../../types";
 import type { Point, Rect, Size } from "./Viewport";
 import { pointInRect } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
+import { selectCrowdEntityCap } from "./CrowdLifecycle";
 
+export { representedWeights, selectCrowdEntityCap as entityCap } from "./CrowdLifecycle";
 export interface CrowdEntity { id: string; x: number; y: number; weight: number }
 export interface PerformerEntity { id: string; name: string; role: string; initials: string; x: number; y: number; visible: boolean }
 export interface EntityLayout { crowd: CrowdEntity[]; performers: PerformerEntity[]; attendance: number; capacity: number; presetName: string }
@@ -12,12 +14,6 @@ function hashSeed(seed: string) { let h = 2166136261; for (let i = 0; i < seed.l
 function mulberry32(seed: number) { return () => { let t = seed += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 export function deterministicRandom(seed: string) { return mulberry32(hashSeed(seed)); }
 
-export function entityCap({ reducedMotion, width, highDensity = false }: { reducedMotion: boolean; width: number; highDensity?: boolean }) {
-  if (reducedMotion) return 40;
-  if (width < 480) return 60;
-  if (width < 760) return 100;
-  return highDensity ? 300 : 200;
-}
 
 export function buildEntityLayout({ replay, experience, size, reducedMotion = false }: { replay: GigViewerReplay; experience?: GigExperienceDTO | null; size: Size; reducedMotion?: boolean }): EntityLayout {
   const capacity = Math.max(0, experience?.gig.venue.capacity ?? 0);
@@ -25,7 +21,7 @@ export function buildEntityLayout({ replay, experience, size, reducedMotion = fa
   const preset = scaleVenuePreset(selectVenuePreset({ capacity }), size);
   const rand = deterministicRandom(`${replay.simulationSeed}:${preset.name}:${Math.round(size.width)}x${Math.round(size.height)}`);
   const fillRatio = capacity > 0 ? Math.min(1, attendance / capacity) : 0;
-  const cap = entityCap({ reducedMotion, width: size.width, highDensity: fillRatio > .9 && capacity > 2000 });
+  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, attendanceRatio: fillRatio, highPerformance: fillRatio > .9 && capacity > 2000 });
   const visualCount = attendance <= 0 ? 0 : Math.max(1, Math.min(cap, Math.round(Math.sqrt(attendance) * fillRatio * 7 + cap * fillRatio * .45)));
   const crowd: CrowdEntity[] = [];
   for (let i = 0; i < visualCount; i++) {

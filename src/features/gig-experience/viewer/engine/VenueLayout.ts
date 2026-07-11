@@ -2,6 +2,7 @@ import type { Rect, Point, Size } from "./Viewport";
 import { scaleRect, scalePoint } from "./Viewport";
 
 export type VenuePresetName = "small" | "medium" | "large";
+export type ScaledVenuePreset = VenuePreset;
 export interface VenuePreset { name: VenuePresetName; bounds: Rect; stage: Rect; audience: Rect; entrances: Point[]; backstage: Point; performerSlots: Record<string, Point>; crowdZones: Rect[]; barriers: Rect[]; labelSafe: Rect }
 
 export const VENUE_PRESETS: Record<VenuePresetName, VenuePreset> = {

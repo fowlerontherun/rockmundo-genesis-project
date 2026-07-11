@@ -530,3 +530,7 @@ Implemented event contract: viewer version 1/event schema version 1 stores typed
 ## Phase 5 PR 06 implemented viewer facts
 
 The initial 2D viewer is now a read-only HTML Canvas shell backed by stored `gig_viewer_replays`. It does not regenerate events in the browser. The completed gig page lazy-loads the full replay payload only after the player chooses Replay Gig, while the outcome report remains available independently. The Canvas uses normalized small/medium/large venue presets, deterministic seed-based crowd/performer layout, local playback controls, an accessible synchronized text timeline, and reduced-motion mode.
+
+## Phase 5 PR 07 implemented crowd-entry facts
+
+Crowd entry is now implemented as a read-only presentation layer. Weighted visual entities exactly sum to authoritative attendance while respecting centralized device/reduced-motion caps. Entities are deterministically assigned to venue entrances and prioritized audience sub-zones so low attendance clusters near the front and higher attendance fills more of the room. Replay offset reconstructs queued, entering, moving, settling, and waiting states without frame history; reduced motion uses static target-position updates and preserves text milestones.
