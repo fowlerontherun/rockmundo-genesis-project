@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.448",
+    date: "2026-07-11",
+    changes: [
+      { type: 'fix', description: "**Typed `company_vacancies` and `company_weekly_finance_records`.** Created the two missing tables (plus `company_job_applications`, needed for the vacancy applicants embed) with proper columns, indexes, GRANTs, and RLS. Removed the `(supabase as any)` casts in `Employment.tsx`, `CompanyRecruitmentLifecycle.tsx`, and `CompanyWeeklyFinancePanel.tsx` so the queries are fully typed by Supabase's generated types." },
+    ],
+  },
+  {
     version: "1.1.447",
     date: "2026-07-10",
     changes: [
