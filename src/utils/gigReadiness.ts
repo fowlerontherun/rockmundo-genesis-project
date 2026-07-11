@@ -14,6 +14,9 @@ export interface GigReadinessInput {
   healthScore?: number | null;
   requiredPerformers?: number | null;
   assignedPerformers?: number | null;
+  additionalFactors?: ReadinessFactor[];
+  additionalBlockingIssues?: string[];
+  additionalWarnings?: string[];
 }
 
 export const GIG_READINESS_WEIGHTS = {
@@ -89,7 +92,12 @@ export function calculateGigReadiness(input: GigReadinessInput): ReadinessResult
     ['fatigueHealth', 'Fatigue and health', fatigueHealthScore, 'Current member condition is included when profile data is available.'],
     ['performers', 'Required performers', performerScore, input.requiredPerformers ? `${input.assignedPerformers ?? 0}/${input.requiredPerformers} performers assigned.` : 'No required performer template is configured yet.'],
   ];
-  const factors = defs.map(([key, label, score, explanation]) => ({ key, label, score: Math.round(clamp(score)), weight: GIG_READINESS_WEIGHTS[key], status: statusFor(score), explanation }));
+  const baseFactors = defs.map(([key, label, score, explanation]) => ({ key, label, score: Math.round(clamp(score)), weight: GIG_READINESS_WEIGHTS[key], status: statusFor(score), explanation }));
+  const additionalFactors = input.additionalFactors ?? [];
+  const totalWeight = baseFactors.reduce((sum, f) => sum + f.weight, 0) + additionalFactors.reduce((sum, f) => sum + f.weight, 0);
+  const factors = [...baseFactors, ...additionalFactors].map((f) => ({ ...f, score: Math.round(clamp(f.score)), weight: totalWeight > 0 ? f.weight / totalWeight : f.weight }));
+  blockingIssues.push(...(input.additionalBlockingIssues ?? []));
+  warnings.push(...(input.additionalWarnings ?? []));
   const finalScore = Math.round(clamp(factors.reduce((sum, f) => sum + f.score * f.weight, 0)));
   return { score: finalScore, rating: ratingForReadiness(finalScore), factors, blockingIssues, warnings };
 }

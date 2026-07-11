@@ -38,6 +38,7 @@ import { getFanSentiment } from "./fanSentiment";
 import { getMediaCycleState, applyMediaEvent } from "./mediaCycle";
 import { degradeEquipment } from "./equipmentDegradation";
 import { calculateGigReadiness, calculateReadinessPerformanceModifier } from "./gigReadiness";
+import { calculateGigPreparationOutcomeModifiers } from "./gigCrewEquipment";
 
 interface GigExecutionData {
   gigId: string;
@@ -72,7 +73,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   }
 
   // Fetch all necessary data in parallel
-  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes, recentGigsRes, venueInfoRes] = await Promise.all([
+  const [equipmentRes, crewRes, rehearsalsRes, bandRes, membersRes, merchRes, behaviorRes, recentGigsRes, venueInfoRes, prepCrewRes, prepEquipmentRes] = await Promise.all([
     supabase.from('band_stage_equipment').select('*').eq('band_id', bandId),
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
@@ -89,10 +90,18 @@ export async function executeGigPerformance(data: GigExecutionData) {
     supabase.from('gigs').select('scheduled_date').eq('band_id', bandId).eq('status', 'completed').order('scheduled_date', { ascending: false }).limit(10),
     // Fetch venue info for weather impact (outdoor check)
     supabase.from('gigs').select('venue_id, venues!gigs_venue_id_fkey(venue_type, city_id, cities!venues_city_id_fkey(name))').eq('id', gigId).single(),
+    (supabase as any).from('gig_crew_assignments').select('*').eq('gig_id', gigId).eq('assignment_status', 'accepted'),
+    (supabase as any).from('gig_equipment_loadouts').select('*').eq('gig_id', gigId),
   ]);
 
   const equipment = equipmentRes.data || [];
   const crew = crewRes.data || [];
+  const prepCrew = (prepCrewRes as any).data || [];
+  const prepEquipment = (prepEquipmentRes as any).data || [];
+  const prepOutcomeModifiers = calculateGigPreparationOutcomeModifiers({
+    crew: prepCrew.map((c: any) => ({ role: c.crew_role, workerType: c.worker_type, status: c.assignment_status, baseAbility: c.effectiveness_score, attendance: c.attendance_status, fee: Number(c.agreed_fee || 0), coveredByEmployment: c.fee_covered_by_employment })),
+    equipment: prepEquipment.map((e: any) => ({ equipmentRole: e.equipment_role, quality: e.quality_score, condition: e.condition_score, isPrimary: e.is_primary, isSpare: e.is_spare, rentalCost: Number(e.rental_cost || 0) })),
+  });
   const rehearsals = rehearsalsRes.data || [];
   const band = bandRes.data;
   const members = membersRes.data || [];
@@ -131,7 +140,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
     ? equipment.reduce((sum, eq) => sum + eq.quality_rating, 0) / equipment.length
     : 40;
 
-  const equipmentQuality = Math.min(100, baseEquipmentQuality + gearEffects.equipmentQualityBonus);
+  const prepEquipmentQuality = prepEquipment.length > 0 ? prepEquipment.reduce((sum: number, eq: any) => sum + (eq.quality_score || 50), 0) / prepEquipment.length : 0;
+  const equipmentQuality = Math.min(100, baseEquipmentQuality + prepEquipmentQuality * 0.25 + gearEffects.equipmentQualityBonus);
 
   // Calculate crew skill level factoring in star ratings and cohesion
   const crewSkillLevel = crew.length > 0
@@ -300,7 +310,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
     
     // Apply tour fatigue and bounded gig preparation readiness modifiers.
-    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier * (1 + readinessModifier);
+    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier * (1 + readinessModifier + prepOutcomeModifiers.soundQualityModifier);
 
     // Apply encore fame bonus (last song = encore)
     const isEncore = index === setlistSongs.length - 1;
@@ -346,7 +356,10 @@ export async function executeGigPerformance(data: GigExecutionData) {
   };
 
   // Calculate costs
-  const crewCosts = crew.reduce((sum, c) => sum + c.salary_per_gig, 0);
+  const { data: prepLedger } = await (supabase as any).rpc('process_gig_preparation_costs_and_rewards', { p_gig_id: gigId });
+  const prepCrewCosts = Number(prepLedger?.crew_costs || 0);
+  const prepRentalCosts = Number(prepLedger?.rental_costs || 0);
+  const crewCosts = crew.reduce((sum, c) => sum + c.salary_per_gig, 0) + prepCrewCosts;
   const equipmentWearCost = equipment.reduce((sum, eq) => {
     const wearRate = 0.02; // 2% depreciation per gig
     return sum + (eq.purchase_cost || 0) * wearRate;
@@ -357,7 +370,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const bandTicketShare = Math.round(grossTicketRevenue * 0.5); // Band gets 50%
   const venueTicketShare = grossTicketRevenue - bandTicketShare; // Venue gets 50%
   const totalRevenue = bandTicketShare + merchSales.totalRevenue;
-  const netProfit = totalRevenue - crewCosts - equipmentWearCost;
+  const totalEquipmentCost = equipmentWearCost + prepRentalCosts;
+  const netProfit = totalRevenue - crewCosts - totalEquipmentCost;
 
   // Calculate fame gained (with behavior modifier + media cycle coverage)
   const behaviorMods = getBehaviorModifiers(stageBehavior);
@@ -406,8 +420,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         total_revenue: totalRevenue,
         venue_cost: 0,
         crew_cost: crewCosts,
-        equipment_cost: Math.round(equipmentWearCost),
-        total_costs: crewCosts + Math.round(equipmentWearCost),
+        equipment_cost: Math.round(totalEquipmentCost),
+        total_costs: crewCosts + Math.round(totalEquipmentCost),
         net_profit: Math.round(netProfit),
         performance_grade: gradeData.grade,
         equipment_quality_avg: equipmentQuality,
@@ -428,6 +442,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_score: readiness.score,
         readiness_modifier: Number(readinessModifier.toFixed(4)),
         readiness_breakdown: readiness as any,
+        crew_equipment_breakdown: prepOutcomeModifiers as any,
+        equipment_failures: prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] as any : [] as any,
       })
       .eq('id', existingOutcome.id)
       .select()
@@ -449,8 +465,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         total_revenue: totalRevenue,
         venue_cost: 0,
         crew_cost: crewCosts,
-        equipment_cost: Math.round(equipmentWearCost),
-        total_costs: crewCosts + Math.round(equipmentWearCost),
+        equipment_cost: Math.round(totalEquipmentCost),
+        total_costs: crewCosts + Math.round(totalEquipmentCost),
         net_profit: Math.round(netProfit),
         performance_grade: gradeData.grade,
         equipment_quality_avg: equipmentQuality,
@@ -471,6 +487,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_score: readiness.score,
         readiness_modifier: Number(readinessModifier.toFixed(4)),
         readiness_breakdown: readiness as any,
+        crew_equipment_breakdown: prepOutcomeModifiers as any,
+        equipment_failures: prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] as any : [] as any,
       })
       .select()
       .single();
@@ -612,7 +630,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
         venue_ticket_share: venueTicketShare,
         merch_sales: merchSales.totalRevenue,
         crew_costs: crewCosts,
-        equipment_wear: Math.round(equipmentWearCost)
+        equipment_wear: Math.round(equipmentWearCost),
+        equipment_rentals: prepRentalCosts,
+        gig_preparation: prepOutcomeModifiers
       }
     });
 
