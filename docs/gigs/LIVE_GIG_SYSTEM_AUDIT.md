@@ -267,3 +267,7 @@ Client currently owns:
 ## Phase 5 PR 03 implementation update
 
 Phase 5 PR 03 rebuilds `GigOutcomeReport` around the canonical `GigExperienceDTO` presentation boundary. The report now prioritises a headline result, a chronological performance story, lessons for the next gig, and collapsed detailed analysis. Legacy outcome props are still supported through a DTO-shaped adapter inside the report component. No gig calculations, rewards, progression rules, replay implementation, Canvas viewer, or historical migrations were changed.
+
+## Phase 5 PR 04 factual update
+
+The current implementation now includes a server-authoritative gig lifecycle hardening pass. `start_gig_authoritative` owns guarded manual starts, `auto-complete-gigs` advances due setlist positions, `process-gig-song` is idempotent per outcome position, `claim_gig_completion` serializes completion, and `result_ready_at` determines report availability. The former realtime advancement hook is retained only as a compatibility alias to a read-only subscription/refetch hook.

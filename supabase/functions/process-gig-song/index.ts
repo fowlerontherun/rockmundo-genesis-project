@@ -518,6 +518,35 @@ serve(async (req) => {
       throw new Error('Gig not found');
     }
 
+    if (["cancelled", "completed", "failed"].includes(gig.status)) {
+      throw new Error(`Cannot process song for gig in status ${gig.status}`);
+    }
+
+    const { data: canonicalOutcome, error: canonicalOutcomeError } = await supabaseClient
+      .from('gig_outcomes')
+      .select('id')
+      .eq('gig_id', gigId)
+      .single();
+
+    if (canonicalOutcomeError || !canonicalOutcome || canonicalOutcome.id !== outcomeId) {
+      throw new Error('Outcome does not belong to gig');
+    }
+
+    const { data: existingPerformance } = await supabaseClient
+      .from('gig_song_performances')
+      .select('*')
+      .eq('gig_outcome_id', outcomeId)
+      .eq('position', position)
+      .maybeSingle();
+
+    if (existingPerformance) {
+      console.log('[process-gig-song] Duplicate position prevented:', { gigId, outcomeId, position });
+      return new Response(
+        JSON.stringify({ success: true, performance: existingPerformance, duplicate: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
     const bandId = gig.band_id;
     const venueCapacity = gig.venues.capacity || 100;
 
@@ -593,9 +622,21 @@ serve(async (req) => {
         .single();
 
       if (perfError) {
+        if (perfError.code === '23505') {
+          const { data: duplicate } = await supabaseClient
+            .from('gig_song_performances')
+            .select('*')
+            .eq('gig_outcome_id', outcomeId)
+            .eq('position', position)
+            .single();
+          console.log('[process-gig-song] Concurrent duplicate performance item prevented:', { gigId, outcomeId, position });
+          return new Response(JSON.stringify({ success: true, performance: duplicate, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+        }
         console.error('[process-gig-song] Insert error:', perfError);
         throw perfError;
       }
+
+      await supabaseClient.rpc('mark_gig_position_processed', { p_gig_id: gigId, p_position: position });
 
       return new Response(
         JSON.stringify({ success: true, performance, isPerformanceItem: true }),
@@ -710,7 +751,21 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (perfError) throw perfError;
+    if (perfError) {
+      if (perfError.code === '23505') {
+        const { data: duplicate } = await supabaseClient
+          .from('gig_song_performances')
+          .select('*')
+          .eq('gig_outcome_id', outcomeId)
+          .eq('position', position)
+          .single();
+        console.log('[process-gig-song] Concurrent duplicate song prevented:', { gigId, outcomeId, position });
+        return new Response(JSON.stringify({ success: true, performance: duplicate, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+      }
+      throw perfError;
+    }
+
+    await supabaseClient.rpc('mark_gig_position_processed', { p_gig_id: gigId, p_position: position });
 
     return new Response(
       JSON.stringify({ success: true, performance }),
