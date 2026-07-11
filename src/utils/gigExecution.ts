@@ -39,6 +39,7 @@ import { getMediaCycleState, applyMediaEvent } from "./mediaCycle";
 import { degradeEquipment } from "./equipmentDegradation";
 import { calculateGigReadiness, calculateReadinessPerformanceModifier } from "./gigReadiness";
 import { calculateGigPreparationOutcomeModifiers } from "./gigCrewEquipment";
+import { summarizePreshowPerformanceModifiers, type PreshowConsequence } from './gigPreshow';
 
 interface GigExecutionData {
   gigId: string;
@@ -98,6 +99,13 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const crew = crewRes.data || [];
   const prepCrew = (prepCrewRes as any).data || [];
   const prepEquipment = (prepEquipmentRes as any).data || [];
+  const preshowDecisionRows = await (supabase as any)
+    .from('gig_preshow_decisions')
+    .select('outcome_snapshot, gig_preshow_incidents!inner(gig_id,status,severity,title,incident_type)')
+    .eq('gig_preshow_incidents.gig_id', gigId);
+  const preshowConsequences = ((preshowDecisionRows as any).data || []).map((row: any) => row.outcome_snapshot?.consequence || row.outcome_snapshot).filter(Boolean) as PreshowConsequence[];
+  const preshowOutcomeModifiers = summarizePreshowPerformanceModifiers(preshowConsequences);
+
   const prepOutcomeModifiers = calculateGigPreparationOutcomeModifiers({
     crew: prepCrew.map((c: any) => ({ role: c.crew_role, workerType: c.worker_type, status: c.assignment_status, baseAbility: c.effectiveness_score, attendance: c.attendance_status, fee: Number(c.agreed_fee || 0), coveredByEmployment: c.fee_covered_by_employment })),
     equipment: prepEquipment.map((e: any) => ({ equipmentRole: e.equipment_role, quality: e.quality_score, condition: e.condition_score, isPrimary: e.is_primary, isSpare: e.is_spare, rentalCost: Number(e.rental_cost || 0) })),
@@ -245,7 +253,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
   const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
-  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier * sentiment.ticketDemandMod;
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier * weatherImpact.attendanceMultiplier * sentiment.ticketDemandMod * (1 + preshowOutcomeModifiers.attendanceModifier);
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
@@ -310,7 +318,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
     
     // Apply tour fatigue and bounded gig preparation readiness modifiers.
-    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier * (1 + readinessModifier + prepOutcomeModifiers.soundQualityModifier);
+    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier * (1 + readinessModifier + prepOutcomeModifiers.soundQualityModifier + preshowOutcomeModifiers.performanceModifier + preshowOutcomeModifiers.soundQualityModifier + preshowOutcomeModifiers.productionModifier);
 
     // Apply encore fame bonus (last song = encore)
     const isEncore = index === setlistSongs.length - 1;
@@ -442,8 +450,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_score: readiness.score,
         readiness_modifier: Number(readinessModifier.toFixed(4)),
         readiness_breakdown: readiness as any,
-        crew_equipment_breakdown: prepOutcomeModifiers as any,
-        equipment_failures: prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] as any : [] as any,
+        crew_equipment_breakdown: { ...prepOutcomeModifiers, preshow: preshowOutcomeModifiers } as any,
+        equipment_failures: [ ...(prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] : []), ...preshowOutcomeModifiers.flags.map((flag) => ({ type: flag, severity: 'minor', explanation: 'Pre-show incident consequence carried into performance.' })) ] as any,
       })
       .eq('id', existingOutcome.id)
       .select()
@@ -487,8 +495,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_score: readiness.score,
         readiness_modifier: Number(readinessModifier.toFixed(4)),
         readiness_breakdown: readiness as any,
-        crew_equipment_breakdown: prepOutcomeModifiers as any,
-        equipment_failures: prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] as any : [] as any,
+        crew_equipment_breakdown: { ...prepOutcomeModifiers, preshow: preshowOutcomeModifiers } as any,
+        equipment_failures: [ ...(prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] : []), ...preshowOutcomeModifiers.flags.map((flag) => ({ type: flag, severity: 'minor', explanation: 'Pre-show incident consequence carried into performance.' })) ] as any,
       })
       .select()
       .single();
@@ -632,7 +640,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         crew_costs: crewCosts,
         equipment_wear: Math.round(equipmentWearCost),
         equipment_rentals: prepRentalCosts,
-        gig_preparation: prepOutcomeModifiers
+        gig_preparation: { ...prepOutcomeModifiers, preshow: preshowOutcomeModifiers }
       }
     });
 
