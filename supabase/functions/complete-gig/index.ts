@@ -491,6 +491,26 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    // Preserve the latest player-visible pre-gig forecast once for later forecast-vs-actual analytics.
+    try {
+      const { data: latestForecast } = await supabaseClient
+        .from('gig_forecast_snapshots')
+        .select('forecast, calculation_version')
+        .eq('gig_id', gigId)
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestForecast?.forecast) {
+        await supabaseClient.rpc('preserve_final_gig_forecast_snapshot', {
+          p_gig_id: gigId,
+          p_forecast: latestForecast.forecast,
+          p_version: latestForecast.calculation_version || 1,
+        });
+      }
+    } catch (forecastError) {
+      console.warn('Could not preserve final gig forecast snapshot', forecastError);
+    }
+
     // Update band stats including total fans
     const newChemistry = Math.max(0, Math.min(100, (gig.bands.chemistry_level || 50) + chemistryChange));
     const newFame = clampInt4(Math.max(0, (gig.bands.fame || 0) + fameGained));

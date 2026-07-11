@@ -191,3 +191,93 @@ Incident probability considers production complexity, crew skill, setup-time fit
 ### Extension points
 
 Future PRs can add transport/load-in forecasting, reusable production templates, weather-aware outdoor production, live-performance incident events and richer venue production staff without replacing these per-gig plans.
+
+## Phase 4: gig forecasting and final preparation review
+
+Phase 4 adds an explainable final review layer for upcoming gigs. It does not replace gig resolution. Forecasts use the same preparation foundations as resolution where available: `gigReadiness.ts` for readiness and setlist pressure, `gigCrewEquipment.ts` for crew effectiveness/equipment reliability/cost inputs, and `gigStageProduction.ts` for production quality, soundcheck costs and setup risks. Randomness is not consumed during forecasting; instead, the review returns low/likely/high ranges whose width is controlled by confidence.
+
+### Architecture inspected
+
+- Readiness is calculated centrally by `calculateGigReadiness` and extended by `calculateCrewEquipmentReadiness`.
+- Setlists are stored in `gig_setlists` and `gig_setlist_items`; the preparation UI saves through `save_gig_setlist`.
+- Crew assignments and equipment loadouts are stored in `gig_crew_assignments` and `gig_equipment_loadouts`; costs flow into `gig_preparation_cost_ledger`.
+- Production and soundcheck plans are stored in `gig_production_plans` and `gig_soundcheck_plans`; package balance constants live in `gigStageProduction.ts`.
+- Venue capacity, prestige, type and production capability fields are read through the existing gig/venue relation.
+- Gig resolution already processes preparation ledger rows once, applies readiness, crew/equipment, production and soundcheck modifiers, and stores outcome breakdowns on `gig_outcomes`.
+- Historical outcomes remain in `gig_outcomes`, with replay/review systems reading attendance, revenue, profit, rating and preparation breakdowns.
+- RLS patterns restrict gig preparation reads and writes to band members/managers; the forecast snapshot table follows the same band membership visibility model.
+
+### Forecast snapshot and invalidation
+
+Forecasts can be generated reproducibly from current server-loaded gig data and may also be stored in `gig_forecast_snapshots` with a calculation version and input fingerprint. The client final review recalculates from the latest loaded preparation queries and invalidates those queries after setlist, crew, equipment, production and soundcheck changes. Server consumers should regenerate before presenting a final review and must not let an old persisted snapshot override current preparation data.
+
+Meaningful inputs include setlist rows, rehearsals, performer readiness, crew assignments, equipment loadouts, production plan, soundcheck plan, ticket price, ticket sales, venue data, local popularity/promotion data where present and gig schedule/status.
+
+### Attendance demand
+
+Attendance is capped by venue capacity and already-sold tickets form the lower floor. The current formula is:
+
+`likely = clampToCapacity(max(soldTickets, capacity * (0.18 + demandScore / 118) * largeVenuePenalty * pricePressure * repeatPenalty * readinessLift))`
+
+Where:
+
+- `demandScore = localPopularity * 0.36 + globalFame * 0.20 + genreAffinity * 0.14 + venueQuality * 0.11 + promotionScore * 0.12 + readinessScore * 0.07`.
+- `largeVenuePenalty` makes high-capacity rooms harder to sell through.
+- `pricePressure` suppresses demand above the baseline ticket price.
+- `repeatPenalty` reduces demand for repeated local gigs when that data is available.
+- `readinessLift` uses the existing readiness performance modifier at a modest pre-sale influence.
+
+Missing local popularity or promotion data is recorded as an assumption rather than inventing a new city-demand system.
+
+### Revenue, costs and break-even
+
+Ticket revenue is `attendanceRange * ticketPrice`. Merchandise revenue is `attendanceRange * merchandiseSpendPerAttendee * merchandiseMargin` when merchandise details are not more specific. Fixed fees, appearance fees or other guaranteed income are represented as the `other` revenue range and `guaranteedIncome`.
+
+Committed costs are the sum of venue hire, crew fees not covered by employment, equipment rental, production cost, soundcheck cost and other existing expenses. Crew/equipment/production/soundcheck inputs reuse the same preparation rows that resolution charges through the ledger, avoiding double counting.
+
+Break-even attendance is:
+
+`ceil(max(0, committedCosts - guaranteedIncome) / variableIncomePerAttendee)`
+
+where `variableIncomePerAttendee = ticketPrice + merchandiseSpendPerAttendee * merchandiseMargin`.
+
+### Performance-quality forecast
+
+Performance quality blends readiness, performer skill, song quality, band chemistry, crew effectiveness, equipment quality, production quality, venue acoustics and soundcheck benefit. Fatigue and equipment failure risk reduce the likely value. The output is a 0-100 low/likely/high range plus a broad rating label, not an exact future review score.
+
+### Fan satisfaction forecast
+
+Fan satisfaction derives from expected performance quality, attendance density, song popularity, venue quality, genre fit, ticket value and readiness. It intentionally avoids hidden incident rolls and only reports ranges and positive/negative contributors.
+
+### Crowd-energy forecast
+
+Crowd energy derives from satisfaction, attendance density, song popularity, production audience impact, performer skill and encore configuration. The review exposes opening, mid-set, closing, encore-potential and overall ranges without simulating every song.
+
+### Confidence
+
+Confidence starts from a neutral baseline and is raised by high readiness, substantial sold tickets and comparable historical data. It is reduced by missing equipment, unconfirmed/conflicted crew, no soundcheck, high production setup risk, long time remaining, critical risks and incomplete data. Confidence changes range width only; it does not improve the likely outcome.
+
+### Risks, strengths, checklist and go/no-go status
+
+Risks and strengths are scored with impact weights, sorted by expected impact and linked to preparation sections. Risks cover blocking readiness issues, missing equipment, poor condition, incompatible production, invalid soundcheck, expensive tickets, low sell-through, high loss risk and performer fatigue. Strengths cover strong local popularity, high readiness, reliable equipment, strong production fit, near sell-out attendance and profitable margins.
+
+The final checklist covers setlist, performers, crew, equipment, production, soundcheck, finance and schedule. Items have `complete`, `warning`, `missing`, `blocked` or `not_applicable` status, a blocking flag and a linked section.
+
+Go/no-go status is calculated as:
+
+- `not_ready` if any blocking checklist item exists.
+- `ready_with_risks` if no blockers remain but significant warnings or high/critical risks remain.
+- `ready` if critical preparation is complete with only minor warnings.
+- `fully_prepared` when readiness is high and no meaningful warnings remain.
+
+There is no manual bypass for blocking validation.
+
+### Historical snapshot behaviour
+
+At resolution, the edge function attempts to copy the latest valid `gig_forecast_snapshots.forecast` into `gig_outcomes.final_forecast_snapshot` using `preserve_final_gig_forecast_snapshot`. The function only writes when the outcome does not already have a final forecast, so repeated idempotent completion calls do not overwrite the snapshot. Historical gigs without forecasts remain readable because the new outcome columns are nullable.
+
+### Security and limitations
+
+Forecast inputs are intended to be calculated server-side or from RLS-protected preparation queries; clients must not be trusted for finance, popularity, quality or attendance values. Forecast snapshots are visible only to band members and writable only by band leaders/managers. The forecast does not expose random seeds, hidden rolls or private worker details beyond existing authorised preparation views.
+
+Known limitations: local demand, promotion, competing events, performer health and city genre affinity are included only when the existing data is available. No weather, competitor event simulation, automated cancellation, ticket-price automation or management-skill progression is introduced in this phase.
