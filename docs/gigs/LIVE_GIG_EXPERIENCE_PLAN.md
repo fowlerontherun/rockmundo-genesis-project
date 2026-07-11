@@ -543,3 +543,7 @@ The replay viewer now has a factual song-story layer. `StoryEngine` derives song
 ## Phase 5 PR 10 release gate status
 
 The Live Gig Experience 1.0 viewer now has release-hardening guardrails: canonical replay payloads are capped at 240 events and 128 KB serialized event JSON, message parameters are bounded, malformed event arrays fail safely, and stale service-role replay generation claims can be recovered after a 15-minute timeout. No new canonical detailed event categories were added in PR 10 because performer mistakes, recoveries, equipment incidents, singalongs, and explicit solos do not yet have reliable server-authoritative event sources. The plan remains to add those only after authoritative source rows/fields exist. Analytics instrumentation is deferred because no approved app-level analytics capture helper was found.
+
+### Phase 5 PR 11 release-gate update
+
+PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experience:release` and `npm run test:gig-experience:db`), a consolidated SQL schema/RLS/RPC harness, CI wiring, and deterministic browser/mobile/accessibility surrogate tests. Real Supabase reset, Playwright/axe browser execution, and performance profiling remain prerequisites before declaring beta ready.
