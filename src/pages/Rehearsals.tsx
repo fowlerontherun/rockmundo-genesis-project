@@ -3,10 +3,23 @@ import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, Music2, DollarSign, Plus, Clock, CalendarPlus } from "lucide-react";
+import {
+  Calendar,
+  Music2,
+  DollarSign,
+  Plus,
+  Clock,
+  CalendarPlus,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -50,46 +63,63 @@ const Rehearsals = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { bookRehearsal, isBooking } = useRehearsalBooking();
-  const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
+  const [activeTab, setActiveTab] = useState<"upcoming" | "completed">(
+    "upcoming",
+  );
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [selectedBand, setSelectedBand] = useState<any>(null);
 
   // Fetch all user's bands using the same approach as RecordingStudio
-  const { data: userBands = [], isLoading: isLoadingBands, error: bandsError } = useQuery({
+  const {
+    data: userBands = [],
+    isLoading: isLoadingBands,
+    error: bandsError,
+  } = useQuery({
     queryKey: ["user-bands", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      
-      console.log('[Rehearsals] Profile ID:', profileId);
-      console.log('[Rehearsals] Fetching bands for profile:', profileId);
-      
+
+      console.log("[Rehearsals] Profile ID:", profileId);
+      console.log("[Rehearsals] Fetching bands for profile:", profileId);
+
       // Use explicit FK relationship to avoid ambiguity
       const { data, error } = await supabase
         .from("band_members")
-        .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, chemistry_level, status)')
+        .select(
+          "band_id, role, member_status, bands!band_members_band_id_fkey(id, name, band_balance, chemistry_level, status)",
+        )
         .eq("profile_id", profileId)
-        .eq('is_touring_member', false);
-      
+        .eq("is_touring_member", false);
+
       if (error) {
-        console.error('[Rehearsals] Error fetching user bands:', error);
+        console.error("[Rehearsals] Error fetching user bands:", error);
         throw error;
       }
-      
-      console.log('[Rehearsals] Raw band data:', data);
-      
+
+      console.log("[Rehearsals] Raw band data:", data);
+
       // Extract bands objects and filter out null/undefined
-      const bands = data
-        ?.map((membership: any) => membership.bands)
-        .filter(Boolean) || [];
-      
-      console.log('[Rehearsals] Found bands:', bands.length, bands);
+      const bands =
+        data
+          ?.map((membership: any) =>
+            membership.bands
+              ? {
+                  ...membership.bands,
+                  membershipRole: membership.role,
+                  memberStatus: membership.member_status,
+                }
+              : null,
+          )
+          .filter(Boolean) || [];
+
+      console.log("[Rehearsals] Found bands:", bands.length, bands);
       return bands;
     },
     enabled: !!profileId,
   });
-  
+
   if (bandsError) {
-    console.error('[Rehearsals] Bands query error:', bandsError);
+    console.error("[Rehearsals] Bands query error:", bandsError);
   }
 
   const bandIds = userBands.map((b: any) => b.id);
@@ -102,7 +132,7 @@ const Rehearsals = () => {
         .from("rehearsal_rooms")
         .select("*, city:cities(id, name)")
         .order("quality_rating", { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -116,7 +146,7 @@ const Rehearsals = () => {
         .from("cities")
         .select("id, name")
         .order("name");
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -127,55 +157,62 @@ const Rehearsals = () => {
     queryKey: ["band-songs", selectedBand?.id],
     queryFn: async () => {
       if (!selectedBand?.id) return [];
-      
-      console.log('[Rehearsals] Fetching songs for band:', selectedBand.id);
-      
+
+      console.log("[Rehearsals] Fetching songs for band:", selectedBand.id);
+
       // Get band member user IDs
       const { data: members } = await supabase
         .from("band_members")
         .select("user_id")
         .eq("band_id", selectedBand.id);
-      
-      const userIds = (members?.map(m => m.user_id).filter(Boolean) || []) as string[];
-      console.log('[Rehearsals] Band member user IDs:', userIds);
-      
+
+      const userIds = (members?.map((m) => m.user_id).filter(Boolean) ||
+        []) as string[];
+      console.log("[Rehearsals] Band member user IDs:", userIds);
+
       // Fetch songs owned by band members
       let allSongs: any[] = [];
-      
+
       if (userIds.length > 0) {
         const { data: memberSongs, error: memberError } = await supabase
           .from("songs")
           .select("*")
           .in("user_id", userIds)
           .eq("archived", false);
-        
+
         if (memberError) {
-          console.error('[Rehearsals] Error fetching member songs:', memberError);
+          console.error(
+            "[Rehearsals] Error fetching member songs:",
+            memberError,
+          );
         } else {
           allSongs = memberSongs || [];
         }
       }
-      
+
       // Also fetch songs with band_id matching (in case songs are band-owned)
       const { data: bandOwnedSongs, error: bandError } = await supabase
         .from("songs")
         .select("*")
         .eq("band_id", selectedBand.id)
         .eq("archived", false);
-      
+
       if (bandError) {
-        console.error('[Rehearsals] Error fetching band-owned songs:', bandError);
+        console.error(
+          "[Rehearsals] Error fetching band-owned songs:",
+          bandError,
+        );
       } else if (bandOwnedSongs) {
         // Merge, avoiding duplicates
-        const existingIds = new Set(allSongs.map(s => s.id));
+        const existingIds = new Set(allSongs.map((s) => s.id));
         for (const song of bandOwnedSongs) {
           if (!existingIds.has(song.id)) {
             allSongs.push(song);
           }
         }
       }
-      
-      console.log('[Rehearsals] Total songs found:', allSongs.length, allSongs);
+
+      console.log("[Rehearsals] Total songs found:", allSongs.length, allSongs);
       return allSongs;
     },
     enabled: !!selectedBand?.id,
@@ -186,10 +223,11 @@ const Rehearsals = () => {
     queryKey: ["all-rehearsals", bandIds],
     queryFn: async () => {
       if (bandIds.length === 0) return [];
-      
+
       const { data, error } = await supabase
         .from("band_rehearsals")
-        .select(`
+        .select(
+          `
           *,
           rehearsal_rooms:rehearsal_room_id (
             name,
@@ -202,10 +240,11 @@ const Rehearsals = () => {
           bands:band_id (
             name
           )
-        `)
+        `,
+        )
         .in("band_id", bandIds)
         .order("scheduled_start", { ascending: false });
-      
+
       if (error) throw error;
       return (data || []) as Rehearsal[];
     },
@@ -217,10 +256,11 @@ const Rehearsals = () => {
     queryKey: ["band-song-familiarity", bandIds],
     queryFn: async () => {
       if (bandIds.length === 0) return [];
-      
+
       const { data, error } = await supabase
         .from("band_song_familiarity")
-        .select(`
+        .select(
+          `
           *,
           songs (
             title
@@ -228,9 +268,10 @@ const Rehearsals = () => {
           bands (
             name
           )
-        `)
+        `,
+        )
         .in("band_id", bandIds);
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -238,45 +279,56 @@ const Rehearsals = () => {
   });
 
   const now = new Date();
-  const upcomingRehearsals = rehearsals.filter(r => 
-    new Date(r.scheduled_start) >= now && r.status !== "completed"
+  const upcomingRehearsals = rehearsals.filter(
+    (r) => new Date(r.scheduled_start) >= now && r.status !== "completed",
   );
-  const completedRehearsals = rehearsals.filter(r => 
-    new Date(r.scheduled_start) < now || r.status === "completed"
+  const completedRehearsals = rehearsals.filter(
+    (r) => new Date(r.scheduled_start) < now || r.status === "completed",
   );
 
-  const displayRehearsals = activeTab === "upcoming" ? upcomingRehearsals : completedRehearsals;
+  const displayRehearsals =
+    activeTab === "upcoming" ? upcomingRehearsals : completedRehearsals;
 
   // Calculate stats
-  const totalSpent = completedRehearsals.reduce((sum, r) => sum + r.total_cost, 0);
-  const upcomingCost = upcomingRehearsals.reduce((sum, r) => sum + r.total_cost, 0);
-  const avgChemistryGain = completedRehearsals.length > 0
-    ? completedRehearsals.reduce((sum, r) => sum + (r.chemistry_gain || 0), 0) / completedRehearsals.length
-    : 0;
+  const totalSpent = completedRehearsals.reduce(
+    (sum, r) => sum + r.total_cost,
+    0,
+  );
+  const upcomingCost = upcomingRehearsals.reduce(
+    (sum, r) => sum + r.total_cost,
+    0,
+  );
+  const avgChemistryGain =
+    completedRehearsals.length > 0
+      ? completedRehearsals.reduce(
+          (sum, r) => sum + (r.chemistry_gain || 0),
+          0,
+        ) / completedRehearsals.length
+      : 0;
 
   const handleBookRehearsal = async (
-    roomId: string, 
-    duration: number, 
-    songId: string | null, 
-    setlistId: string | null, 
-    scheduledStart: Date
+    roomId: string,
+    duration: number,
+    songId: string | null,
+    setlistId: string | null,
+    scheduledStart: Date,
   ) => {
     if (!selectedBand) return;
 
-    const room = rooms.find(r => r.id === roomId);
+    const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
     const totalCost = room.hourly_rate * duration;
     const currentBalance = selectedBand.band_balance || 0;
 
     if (currentBalance < totalCost) {
-          toast({
-            title: t('rehearsals.insufficientFunds'),
-            description: `${t('rehearsals.rehearsalCost')} $${totalCost.toFixed(2)} ${t('rehearsals.bandBalance')} $${currentBalance.toFixed(2)}.`,
-            variant: "destructive",
-          });
-          return;
-        }
+      toast({
+        title: t("rehearsals.insufficientFunds"),
+        description: `${t("rehearsals.rehearsalCost")} $${totalCost.toFixed(2)} ${t("rehearsals.bandBalance")} $${currentBalance.toFixed(2)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
     const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
@@ -295,7 +347,7 @@ const Rehearsals = () => {
         xpEarned,
         familiarityGained,
         roomName: room.name,
-        roomLocation: room.location || '',
+        roomLocation: room.location || "",
       });
 
       setShowBookingDialog(false);
@@ -321,36 +373,40 @@ const Rehearsals = () => {
 
   return (
     <FMPageScaffold
-      title={t('rehearsals.title')}
-      subtitle={t('rehearsals.subtitle')}
+      title={t("rehearsals.title")}
+      subtitle={t("rehearsals.subtitle")}
       icon={Music2}
       backTo="/hub/band-live"
     >
       <div className="flex flex-col gap-4">
-        
-      {/* Prominent action card */}
-      {isLoadingBands ? (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-4 text-center text-muted-foreground">
-            {t('rehearsals.loadingBands')}
-          </CardContent>
-        </Card>
-      ) : userBands.length > 0 ? (
-        <Card className="bg-primary/5 border-primary/20">
+        {/* Prominent action card */}
+        {isLoadingBands ? (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4 text-center text-muted-foreground">
+              {t("rehearsals.loadingBands")}
+            </CardContent>
+          </Card>
+        ) : userBands.length > 0 ? (
+          <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex flex-col gap-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{t('rehearsals.readyToRehearse')}</h3>
+                  <h3 className="font-semibold text-lg">
+                    {t("rehearsals.readyToRehearse")}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    {t('rehearsals.bookSessionOrPlan')}
+                    {t("rehearsals.bookSessionOrPlan")}
                   </p>
                 </div>
                 <div className="space-y-2">
                   {userBands.map((band: any) => (
-                    <div key={band.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between p-3 bg-background rounded-lg border">
+                    <div
+                      key={band.id}
+                      className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between p-3 bg-background rounded-lg border"
+                    >
                       <span className="font-medium">{band.name}</span>
                       <div className="flex gap-2 w-full sm:w-auto">
-                        <Button 
+                        <Button
                           size="sm"
                           onClick={() => {
                             setSelectedBand(band);
@@ -359,7 +415,7 @@ const Rehearsals = () => {
                           className="w-full sm:w-auto"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          {t('rehearsals.bookRehearsal')}
+                          {t("rehearsals.bookRehearsal")}
                         </Button>
                       </div>
                     </div>
@@ -371,8 +427,12 @@ const Rehearsals = () => {
         ) : (
           <Card className="bg-muted/50 border-muted">
             <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground mb-2">{t('rehearsals.notInBand')}</p>
-              <p className="text-sm text-muted-foreground">{t('rehearsals.joinOrCreateBand')}</p>
+              <p className="text-muted-foreground mb-2">
+                {t("rehearsals.notInBand")}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t("rehearsals.joinOrCreateBand")}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -382,52 +442,66 @@ const Rehearsals = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('rehearsals.upcoming')}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("rehearsals.upcoming")}
+            </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingRehearsals.length}</div>
+            <div className="text-2xl font-bold">
+              {upcomingRehearsals.length}
+            </div>
             <p className="text-xs text-muted-foreground">
-              ${upcomingCost.toFixed(2)} {t('rehearsals.committed')}
+              ${upcomingCost.toFixed(2)} {t("rehearsals.committed")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('rehearsals.completed')}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("rehearsals.completed")}
+            </CardTitle>
             <Music2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedRehearsals.length}</div>
+            <div className="text-2xl font-bold">
+              {completedRehearsals.length}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {t('rehearsals.sessionsTotal')}
+              {t("rehearsals.sessionsTotal")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('rehearsals.totalSpent')}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("rehearsals.totalSpent")}
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              {t('rehearsals.allTimeRehearsals')}
+              {t("rehearsals.allTimeRehearsals")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('rehearsals.avgChemistry')}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("rehearsals.avgChemistry")}
+            </CardTitle>
             <Music2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{avgChemistryGain.toFixed(1)}</div>
+            <div className="text-2xl font-bold">
+              +{avgChemistryGain.toFixed(1)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {t('rehearsals.perSession')}
+              {t("rehearsals.perSession")}
             </p>
           </CardContent>
         </Card>
@@ -437,8 +511,10 @@ const Rehearsals = () => {
       {familiarityData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{t('rehearsals.songFamiliarity')}</CardTitle>
-            <CardDescription>{t('rehearsals.trackFamiliarity')}</CardDescription>
+            <CardTitle>{t("rehearsals.songFamiliarity")}</CardTitle>
+            <CardDescription>
+              {t("rehearsals.trackFamiliarity")}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {familiarityData.slice(0, 5).map((fam: any) => (
@@ -446,9 +522,13 @@ const Rehearsals = () => {
                 <div className="flex items-center justify-between text-sm">
                   <div>
                     <span className="font-medium">{fam.songs?.title}</span>
-                    <span className="text-muted-foreground ml-2">- {fam.bands?.name}</span>
+                    <span className="text-muted-foreground ml-2">
+                      - {fam.bands?.name}
+                    </span>
                   </div>
-                  <span className="font-semibold">{fam.familiarity_percentage}%</span>
+                  <span className="font-semibold">
+                    {fam.familiarity_percentage}%
+                  </span>
                 </div>
                 <Progress value={fam.familiarity_percentage} />
               </div>
@@ -461,10 +541,10 @@ const Rehearsals = () => {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="upcoming">
-            {t('rehearsals.upcoming')} ({upcomingRehearsals.length})
+            {t("rehearsals.upcoming")} ({upcomingRehearsals.length})
           </TabsTrigger>
           <TabsTrigger value="completed">
-            {t('rehearsals.completed')} ({completedRehearsals.length})
+            {t("rehearsals.completed")} ({completedRehearsals.length})
           </TabsTrigger>
         </TabsList>
 
@@ -472,15 +552,15 @@ const Rehearsals = () => {
           {isLoading ? (
             <Card>
               <CardContent className="p-12 text-center text-muted-foreground">
-                {t('rehearsals.loadingRehearsals')}
+                {t("rehearsals.loadingRehearsals")}
               </CardContent>
             </Card>
           ) : displayRehearsals.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center text-muted-foreground">
-                {activeTab === "upcoming" 
-                  ? t('rehearsals.noUpcoming')
-                  : t('rehearsals.noCompleted')}
+                {activeTab === "upcoming"
+                  ? t("rehearsals.noUpcoming")
+                  : t("rehearsals.noCompleted")}
               </CardContent>
             </Card>
           ) : (
@@ -494,7 +574,8 @@ const Rehearsals = () => {
                           {rehearsal.bands?.name || "Unknown Band"}
                         </CardTitle>
                         <CardDescription>
-                          {rehearsal.rehearsal_rooms?.name || "Unknown Venue"} - {rehearsal.rehearsal_rooms?.location}
+                          {rehearsal.rehearsal_rooms?.name || "Unknown Venue"} -{" "}
+                          {rehearsal.rehearsal_rooms?.location}
                         </CardDescription>
                       </div>
                       {getStatusBadge(rehearsal.status)}
@@ -505,35 +586,45 @@ const Rehearsals = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          {t('gigs.date')}
+                          {t("gigs.date")}
                         </div>
                         <div className="font-medium">
-                          {format(new Date(rehearsal.scheduled_start), "MMM d, yyyy")}
+                          {format(
+                            new Date(rehearsal.scheduled_start),
+                            "MMM d, yyyy",
+                          )}
                         </div>
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          {t('gigs.time')}
+                          {t("gigs.time")}
                         </div>
                         <div className="font-medium">
-                          {format(new Date(rehearsal.scheduled_start), "h:mm a")} - {format(new Date(rehearsal.scheduled_end), "h:mm a")}
+                          {format(
+                            new Date(rehearsal.scheduled_start),
+                            "h:mm a",
+                          )}{" "}
+                          -{" "}
+                          {format(new Date(rehearsal.scheduled_end), "h:mm a")}
                         </div>
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <DollarSign className="h-3 w-3" />
-                          {t('rehearsals.cost')}
+                          {t("rehearsals.cost")}
                         </div>
-                        <div className="font-medium">${rehearsal.total_cost.toFixed(2)}</div>
+                        <div className="font-medium">
+                          ${rehearsal.total_cost.toFixed(2)}
+                        </div>
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Music2 className="h-3 w-3" />
-                          {t('music.songs')}
+                          {t("music.songs")}
                         </div>
                         <div className="font-medium truncate">
                           {rehearsal.songs?.title || "General Practice"}
@@ -547,6 +638,20 @@ const Rehearsals = () => {
                       completed={rehearsal.status === "completed"}
                       status={rehearsal.status}
                       scheduledStart={rehearsal.scheduled_start}
+                      scheduledEnd={rehearsal.scheduled_end}
+                      isManager={userBands.some(
+                        (band: any) =>
+                          band.id === rehearsal.band_id &&
+                          band.memberStatus !== "inactive" &&
+                          [
+                            "leader",
+                            "founder",
+                            "co-leader",
+                            "manager",
+                          ].includes(
+                            String(band.membershipRole || "").toLowerCase(),
+                          ),
+                      )}
                     />
 
                     {rehearsal.status === "completed" && (
@@ -554,19 +659,25 @@ const Rehearsals = () => {
                         <Separator />
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div className="space-y-1">
-                            <div className="text-muted-foreground">Chemistry Gain</div>
+                            <div className="text-muted-foreground">
+                              Chemistry Gain
+                            </div>
                             <div className="font-semibold text-green-600">
                               +{rehearsal.chemistry_gain || 0}
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-muted-foreground">Familiarity</div>
+                            <div className="text-muted-foreground">
+                              Familiarity
+                            </div>
                             <div className="font-semibold text-blue-600">
                               +{rehearsal.familiarity_gained || 0} min
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-muted-foreground">XP Earned</div>
+                            <div className="text-muted-foreground">
+                              XP Earned
+                            </div>
                             <div className="font-semibold text-purple-600">
                               {rehearsal.xp_earned || 0} XP
                             </div>
