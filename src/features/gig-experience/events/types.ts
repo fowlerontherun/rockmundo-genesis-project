@@ -12,7 +12,7 @@ export type GigVisualPayload =
   | { type: "crowd_fill"; targetDensity: number; zoneIds: string[]; enteringCount: number }
   | { type: "crowd_reaction"; reaction: "still" | "bounce" | "jump" | "wave" | "disperse"; intensity: number; zoneIds?: string[] }
   | { type: "performer_enter"; performerId: string; displayName: string; roleOrInstrument: string; startPosition: StagePosition }
-  | { type: "performer_move"; performerId: string; targetPosition: StagePosition; movementStyle: "walk" | "rush" | "step_forward" }
+  | { type: "performer_move"; performerId: string; targetPosition: StagePosition; movementStyle: "walk" | "rush" | "step_forward" | "return_to_position" | "hold" }
   | { type: "song_start"; songId: string | null; title: string; position: number; montage: boolean }
   | { type: "spotlight"; performerId?: string; stageZone?: string; intensity: number }
   | { type: "moment_effect"; effect: "pulse" | "ring" | "trail" | "confetti"; targetId?: string; intensity: number }
