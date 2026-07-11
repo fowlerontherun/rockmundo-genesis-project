@@ -144,3 +144,50 @@ The original setlist, rehearsal, chemistry and performer factors remain intact a
 - Venue-provided gear catalogs and company service charge rules.
 - Detailed live arrangement instrumentation per song.
 - Per-song equipment failure resolution and post-gig repair workflows.
+
+## Phase 3: stage production and soundcheck preparation
+
+Phase 3 keeps production and soundcheck planning attached to scheduled gigs. It adds `gig_production_plans` and `gig_soundcheck_plans`, extends venue capability fields where existing venue quality/capacity/prestige were too coarse, and reuses the gig preparation ledger so crew, rental, production and soundcheck costs are charged once during gig resolution rather than when players configure the plan.
+
+### Production-plan model and packages
+
+`gig_production_plans` stores one plan per upcoming gig with the selected lighting, visual, effects, backdrop, decoration, crowd-screen and setup tier. The backend recalculates estimated setup minutes, cost, compatibility and quality snapshots whenever the plan is saved.
+
+Implemented package tiers:
+
+- Lighting: venue basic, standard lighting, enhanced rig, professional show and arena spectacle.
+- Visuals: none, static backdrop, branded projection, LED visuals and full synchronised show.
+- Effects: none, haze, smoke effects, limited pyrotechnics and full pyrotechnic package.
+- Stage setup: minimal, standard, expanded, headline and festival-scale setup.
+
+Each package has a central cost, setup-time, recommended crew, audience-impact and reliability-risk definition in `gigStageProduction.ts` so UI, readiness and tests share the same balance constants.
+
+### Venue capability rules
+
+Production validation derives capability from existing venue capacity, prestige and type, then uses optional venue fields for stage size, lighting rig quality, electrical capacity, ceiling height, indoor/outdoor status, pyrotechnic permission, smoke/haze permission, screen/projection support, setup access, curfew, house production and venue technicians. Unsupported choices are rejected server-side by `save_gig_production_plan` and surfaced as compatibility warnings in the preparation UI.
+
+### Cost and quality formulas
+
+Production cost is the sum of selected package hire, effects/safety consumables, setup charges and additional stage crew. House production can cover basic lighting client-side; the database estimate remains authoritative for chargeable costs. Costs enter `gig_preparation_cost_ledger` with `production_hire` and `soundcheck_fee` rows and are protected by unique source rows to remain idempotent.
+
+Production quality is capped from package ambition, venue compatibility, crew capability, equipment reliability, setup-time fit and overall readiness. Complexity above crew capability applies a penalty, so an oversized package in a weak venue scores worse than a modest compatible setup. The result returns score, rating, audience impact, reliability, setup risk, cost efficiency and explainable factors.
+
+### Soundcheck types and scheduling
+
+`gig_soundcheck_plans` stores none, line check, short soundcheck, standard soundcheck or full production soundcheck. Each type defines duration, cost, crew need, sound-quality benefit, equipment-failure risk reduction, fatigue and setup reliability. Soundchecks are validated against venue/setup access and the gig start time; a selected start after the latest valid start is rejected server-side.
+
+### Setup timeline
+
+The preparation timeline is derived per gig from venue access, crew arrival, unload, stage setup, lighting/setup work, soundcheck, doors open, band call, performance start and curfew markers. The UI flags insufficient access and scheduling conflicts without creating a tour-wide logistics planner.
+
+### Readiness and outcome integration
+
+Readiness now accepts production/soundcheck factors for plan completeness, venue compatibility, setup sufficiency, production crew coverage, soundcheck validity and complexity reliability. The same central readiness result remains bounded 0-100.
+
+Gig resolution processes production and soundcheck costs through the existing ledger, applies capped audience/sound/fatigue modifiers, stores `production_breakdown`, `soundcheck_breakdown` and deterministic `production_incidents`, and keeps repeated completion calls idempotent by returning existing outcomes before recalculating.
+
+Incident probability considers production complexity, crew skill, setup-time fit and soundcheck risk reduction. Incidents currently include delayed setup and lighting cue failure with severity, proportional impact and mitigation text; no interactive incident decisions are introduced yet.
+
+### Extension points
+
+Future PRs can add transport/load-in forecasting, reusable production templates, weather-aware outdoor production, live-performance incident events and richer venue production staff without replacing these per-gig plans.

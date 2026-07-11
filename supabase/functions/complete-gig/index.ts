@@ -156,7 +156,7 @@ serve(async (req) => {
     console.log(`[complete-gig] Total performances for final calculation: ${performances.length}`);
 
     // Calculate overall rating (average of all songs) - max is 25
-    const avgRating = performances.reduce((sum, p) => sum + (p.performance_score || 0), 0) / performances.length;
+    let avgRating = performances.reduce((sum, p) => sum + (p.performance_score || 0), 0) / performances.length;
 
     // Calculate averages for each factor
     const avgEquipment = performances.reduce((sum, p) => sum + (p.equipment_contrib || 0), 0) / performances.length;
@@ -282,9 +282,35 @@ serve(async (req) => {
       console.log(`Merch sales: ${merchItemsSold} items, $${merchRevenue} revenue, $${merchCost} cost`);
     }
 
+    // Calculate production/soundcheck preparation costs exactly once through the shared ledger.
+    const { data: prepLedger } = await supabaseClient.rpc('process_gig_preparation_costs_and_rewards', { p_gig_id: gigId });
+    const productionCost = Math.round(Number((prepLedger as any)?.production_costs || 0));
+    const soundcheckCost = Math.round(Number((prepLedger as any)?.soundcheck_costs || 0));
+    const prepCrewCost = Math.round(Number((prepLedger as any)?.crew_costs || 0));
+    const prepRentalCost = Math.round(Number((prepLedger as any)?.rental_costs || 0));
+
+    const { data: productionPlan } = await supabaseClient.from('gig_production_plans').select('*').eq('gig_id', gigId).maybeSingle();
+    const { data: soundcheckPlan } = await supabaseClient.from('gig_soundcheck_plans').select('*').eq('gig_id', gigId).maybeSingle();
+    const productionComplexity = Number((productionPlan as any)?.cost_breakdown?.complexity || 15);
+    const productionSetupMinutes = Number((productionPlan as any)?.estimated_setup_minutes || 20);
+    const venueSetupAccess = Number((gig.venues as any)?.setup_access_minutes || 120);
+    const soundcheckType = String((soundcheckPlan as any)?.soundcheck_type || 'none');
+    const soundcheckBenefit: Record<string, number> = { none: 0, line_check: 4, short_soundcheck: 8, standard_soundcheck: 13, full_production_soundcheck: 18 };
+    const soundcheckRiskReduction: Record<string, number> = { none: 0, line_check: 4, short_soundcheck: 8, standard_soundcheck: 13, full_production_soundcheck: 20 };
+    const soundcheckFatigue: Record<string, number> = { none: 0, line_check: 1, short_soundcheck: 2, standard_soundcheck: 4, full_production_soundcheck: 7 };
+    const setupFit = Math.max(0, Math.min(1.2, venueSetupAccess / Math.max(1, productionSetupMinutes)));
+    const productionScore = Math.max(0, Math.min(100, 55 + ((productionPlan as any)?.estimated_cost || 0) / 120 - productionComplexity * 0.25 + avgCrew * 1.2 + (setupFit - 1) * 30));
+    const audienceProductionBonus = Math.max(-0.04, Math.min(0.08, (productionScore - 55) / 700));
+    const soundcheckBonus = Math.max(-0.02, Math.min(0.06, (soundcheckBenefit[soundcheckType] || 0) / 300));
+    const fatiguePenalty = Math.min(0.02, (soundcheckFatigue[soundcheckType] || 0) / 450);
+    const productionIncidentRisk = Math.max(2, Math.min(65, productionComplexity * 0.4 + Math.max(0, 1 - setupFit) * 35 + Math.max(0, 55 - avgCrew) * 0.3 - (soundcheckRiskReduction[soundcheckType] || 0)));
+    const incidentRoll = ((gigId || '').split('').reduce((sum: number, ch: string) => sum + ch.charCodeAt(0), 0) % 100);
+    const productionIncidents = incidentRoll < productionIncidentRisk ? [{ type: productionComplexity > 70 ? 'delayed_setup' : 'lighting_cue_failure', severity: productionIncidentRisk > 45 ? 'major' : 'minor', impact: Math.round(Math.min(12, productionIncidentRisk / 6)), mitigation: (soundcheckBenefit[soundcheckType] || 0) >= 13 ? 'Caught during soundcheck and partially mitigated.' : 'Crew worked around it during the show.' }] : [];
+    avgRating = Math.max(0, Math.min(25, avgRating * (1 + audienceProductionBonus + soundcheckBonus - fatiguePenalty - (productionIncidents[0]?.impact || 0) / 250)));
+
     // Calculate costs (ensure integers for database)
-    const crewCost = Math.floor(avgCrew * 5); // Crew cost based on skill
-    const equipmentCost = Math.floor(avgEquipment * 2); // Wear and tear
+    const crewCost = Math.floor(avgCrew * 5) + prepCrewCost; // Crew cost based on skill plus prep ledger
+    const equipmentCost = Math.floor(avgEquipment * 2) + prepRentalCost + productionCost + soundcheckCost; // Wear, rentals, production and soundcheck
     const totalCosts = crewCost + equipmentCost + merchCost;
 
     // === CITY ECONOMY MODIFIER (v1.0.932) ===
@@ -456,6 +482,9 @@ serve(async (req) => {
         dedicated_fans_gained: dedicatedFans,
         superfans_gained: superfans,
         tout_attendance_reduction: toutAttendanceReduction,
+        production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
+        soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
+        production_incidents: productionIncidents,
         completed_at: new Date().toISOString()
       })
       .eq('id', outcome.id);
@@ -961,6 +990,9 @@ serve(async (req) => {
       .from('gigs')
       .update({
         status: 'completed',
+        production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
+        soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
+        production_incidents: productionIncidents,
         completed_at: new Date().toISOString(),
         result_ready_at: new Date().toISOString()
       })
