@@ -1446,3 +1446,7 @@ PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experienc
 ## Phase 5 PR 12 factual update
 
 Phase 5 PR 12 adds the protected Admin Gig Viewer Demo at `/admin/gig-viewer-demo` and optional, opt-in setlist audio for completed replay presentation. Audio is presentation-only: it resolves approved full generated song audio before approved preview audio, uses deterministic excerpts during compressed viewer song segments, mutes/stops outside normal speed, and does not alter gig outcomes, rewards, progression, or canonical replay events. Fixture presets and read-only replay inspection support admin testing without database mutation.
+
+### Phase 5 PR 13 verification gate update
+
+PR 13 wires the real-browser verification gate for the admin Gig Viewer Demo, setlist audio activation/cleanup, playback-speed audio policy, mobile viewports, axe accessibility checks, no-mutation interception, and CI separation for frontend/browser/database jobs. The phase remains **Not complete** and beta readiness remains **Not ready** until clean install, Playwright/axe, and Supabase SQL gates execute successfully in a provisioned environment.

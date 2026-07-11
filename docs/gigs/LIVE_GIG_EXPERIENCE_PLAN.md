@@ -551,3 +551,7 @@ PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experienc
 ## Phase 5 PR 12 update — optional audio and admin testing
 
 The viewer now supports optional setlist audio as an enhancement, not a dependency. Players must explicitly enable audio; muted/no-audio replay remains complete through Canvas, timeline, commentary, graph, and report. Admins have a dedicated fixture demo and real replay inspector for testing viewer states, diagnostics, presets, reduced motion, and audio availability without creating gigs or changing records.
+
+### PR 13 browser and accessibility verification plan
+
+The live gig viewer now has a dedicated Playwright gate plan covering deterministic admin-demo fixtures, browser media activation, normal-speed-only audio, seek/cleanup lifecycle, mobile layout, keyboard-only operation, reduced-motion execution, axe accessibility checks, and read-only/no-mutation request interception. No new gig mechanics or scoring changes are introduced by this verification gate.

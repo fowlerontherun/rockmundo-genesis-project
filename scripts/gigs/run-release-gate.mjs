@@ -6,8 +6,11 @@ const steps = [
   ['gig DTO/report unit tests', ['npm','run','test:gig-experience:unit']],
   ['replay schema/generator tests', ['npm','run','test:gig-experience:replay']],
   ['viewer engine tests', ['npm','run','test:gig-experience:viewer']],
+  ['audio controller/source tests', ['npm','run','test:gig-experience:audio']],
   ['component tests', ['npm','run','test:gig-experience:component']],
-  ['browser smoke/mobile/a11y surrogate tests', ['npm','run','test:gig-experience:browser']],
+  ['jsdom browser surrogate tests', ['npm','run','test:gig-experience:a11y:unit']],
+  ['Playwright browser suite', ['npm','run','test:gig-experience:e2e']],
+  ['axe accessibility suite', ['npm','run','test:gig-experience:a11y']],
 ];
 for (const [label, cmd] of steps) {
   console.log(`\n==> ${label}: ${cmd.join(' ')}`);

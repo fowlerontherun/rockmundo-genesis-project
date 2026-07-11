@@ -98,3 +98,11 @@ Gig preparation improvements should be next after release-gate verification, bec
 Implemented: a protected `/admin/gig-viewer-demo` tool now provides deterministic local fixture replay presets, audio diagnostics, and a read-only stored replay metadata inspector. The completed gig viewer now has opt-in setlist audio controls backed by a dedicated presentation-only audio controller, deterministic excerpt calculation, normal-speed-only playback, local preferences, hidden-tab pause, and result/non-song cleanup. Audio descriptors are added narrowly to the gig experience song read model from approved `extended_audio_url` / `audio_url` evidence without changing outcomes, rewards, progression, replay facts, or historical migrations.
 
 Remaining limitations: real browser autoplay/mobile/axe profiling still requires provisioned browser tooling; the inspector intentionally hides raw replay payloads and signed/private URL details; fixture audio uses approved local/demo assets and never generates music.
+
+## Phase 5 PR 13 status — Real browser, audio, and admin demo verification gate
+
+Phase status: Not complete.
+
+Beta readiness: Not ready.
+
+PR 13 adds the missing Playwright/axe dependency declarations, browser configuration, admin-demo browser coverage, audio lifecycle checks, mobile viewport checks, keyboard-flow checks, no-mutation request interception, release-gate wiring, and hardened CI jobs. Local validation did not produce a clean gate: `npm ci --legacy-peer-deps` was blocked by environment proxy/DNS behaviour, and the real browser, axe, and Supabase gates were therefore not executed to completion. Skipped P0 checks are not counted as passed.
