@@ -280,3 +280,7 @@ Phase 5 PR 05 status: completed gigs now request an idempotent service-role cano
 ## Phase 5 PR 06 viewer/replay status
 
 Stored replay reads now have a frontend viewer shell for completed replay-ready gigs. The shell supports controlled loading, generating, unavailable, failed, unsupported, malformed, access-denied/network, cancelled, empty, and completed states. Rendering is read-only and isolated from gig progression, rewards, song scoring, completion, and replay generation.
+
+## Phase 5 PR 07 viewer/crowd status
+
+The Canvas viewer now includes deterministic animated crowd entry and venue filling. The system derives presentation-only crowd entities from stored replay seed, canonical event offsets, attendance, capacity, venue preset, viewport size, and reduced-motion preference. It does not mutate replay rows, gig outcomes, rewards, progression, or historical migrations. Accessible status text reports attendance, capacity, fill percentage, crowd phase, and occupied zones.
