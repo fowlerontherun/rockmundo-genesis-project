@@ -306,3 +306,7 @@ PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experienc
 ## Phase 5 PR 12 audit update
 
 Song audio evidence remains centered on `songs.audio_url`, `songs.extended_audio_url`, `songs.audio_generation_status`, and `songs.duration_seconds`, with generated assets stored through the public `music` bucket and existing player components using explicit HTML audio controls. The gig viewer now consumes a safe per-song audio descriptor and a presentation-only controller. Audio is opt-in, deterministic, normal-speed only, and unavailable sources do not block visual replay or reports. The new admin demo is protected by the existing admin route guard and uses local fixture presets plus narrow read-only replay metadata queries.
+
+### PR 13 release-gate audit finding
+
+Repository configuration now points Playwright at a deterministic built-app preview server and splits CI into frontend, browser/a11y, and Supabase SQL jobs. The local npm environment reported proxy configuration from environment variables, no committed `.npmrc`, public npm lockfile URLs, and DNS/proxy failures during clean install attempts; this supports an environment-specific registry/proxy issue rather than a repository-private registry requirement.

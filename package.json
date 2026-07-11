@@ -21,11 +21,14 @@
     "test:gig-experience:replay": "vitest run src/features/gig-experience/events/__tests__/schema.test.ts",
     "test:gig-experience:viewer": "vitest run src/features/gig-experience/viewer/tests/engine.test.ts src/features/gig-experience/viewer/tests/performerLifecycle.test.ts src/features/gig-experience/viewer/tests/storyEngine.test.ts src/features/gig-experience/viewer/audio/audioSourceResolver.test.ts",
     "test:gig-experience:component": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
-    "test:gig-experience:browser": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
-    "test:gig-experience:a11y": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
+    "test:gig-experience:browser": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx && npm run test:gig-experience:e2e",
+    "test:gig-experience:a11y": "playwright test tests/gig-experience/a11y.spec.ts --project=chromium",
     "test:gig-experience:release": "node scripts/gigs/run-release-gate.mjs",
     "test:gig-experience:db": "bash scripts/gigs/run-db-gate.sh",
-    "test:gig-experience:audio": "vitest run src/features/gig-experience/viewer/audio/audioSourceResolver.test.ts"
+    "test:gig-experience:audio": "vitest run src/features/gig-experience/viewer/audio/audioSourceResolver.test.ts",
+    "test:gig-experience:e2e": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium",
+    "test:gig-experience:e2e:headed": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium --headed",
+    "test:gig-experience:a11y:unit": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -119,6 +122,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "@playwright/test": "^1.49.1",
+    "@axe-core/playwright": "^4.10.2"
   }
 }
