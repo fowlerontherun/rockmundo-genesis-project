@@ -474,3 +474,13 @@ Rehearsal attendance correction requests are now implemented for final `attended
 ## Phase 4 PR 09 status
 
 - Attendance corrections now have authoritative per-participant finaliser references, server-side original-finaliser conflict enforcement, sole-resolver exception auditing, legacy-null fallback handling, read-only correction history, and a repeatable correction SQL harness. Gig lineup management remains not complete.
+
+## Phase 4 PR 10 release-gate audit update
+
+- Rehearsal attendance verification remains blocked at the database release gate: PR 10 could not run `supabase start`, `supabase db reset`, or SQL harnesses because the Supabase CLI is unavailable in the validation environment.
+- Correction verification improved at the repository level: `supabase/tests/rehearsal_attendance_corrections_harness.sql` now contains executable assertions for schema prerequisites, RPC presence, authenticated-only correction grants, anonymous execute denial, RLS enablement, voided contribution filtering/index expectations, static private-text leakage checks, and fixture-capability prerequisites.
+- Conflict enforcement remains implemented in the correction hardening migration, but full database proof of second-manager/original-finaliser/sole-resolver/former-manager/unrelated-user paths still requires a reset database run.
+- RLS/RPC status is not signed off for beta until the expanded harness executes successfully against a clean reset database.
+- Privacy status is partially verified by code/static review: affected frontend correction queries use narrow selects, and the harness now checks that correction reasons/notes are not copied into audit, contribution, or notification metadata. Runtime RLS privacy still needs database execution.
+- Contribution correction remains designed as append-only void/restore semantics with voided rows excluded from summaries, but reset-database execution is required before release sign-off.
+- Confirmed unresolved gap: migration-order review found that Phase 4 attendance/correction migrations reference `band_rehearsal_participants` before the later-dated migration that creates it. This is a P0 release-gate blocker for clean reset verification.
