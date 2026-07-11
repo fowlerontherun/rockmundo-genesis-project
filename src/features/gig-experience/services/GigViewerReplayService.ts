@@ -11,13 +11,12 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     .from("gig_viewer_replays")
     .select("id,gig_id,gig_outcome_id,viewer_version,event_schema_version,simulation_seed,duration_ms,event_payload,generated_at,generation_status,checksum")
     .eq("gig_id", gigId)
-    .eq("viewer_version", GIG_VIEWER_VERSION)
     .order("generated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(5);
   if (error) throw error;
-  if (!data) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
-  const row = data as ReplayRow;
+  const rows = (data ?? []) as ReplayRow[];
+  if (!rows.length) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
+  const row = rows.find((candidate) => candidate.viewer_version === GIG_VIEWER_VERSION) ?? rows[0];
   if (row.generation_status === "generating") return { state: "generating", replay: null };
   if (row.generation_status === "failed") return { state: "failed", replay: null };
   if (row.generation_status === "legacy_unavailable") return { state: "unavailable", replay: null, reason: "legacy_unavailable" };

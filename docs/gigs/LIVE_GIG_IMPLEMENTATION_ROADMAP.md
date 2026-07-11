@@ -1402,3 +1402,7 @@ Phase 5 PR 04 is implemented in this branch: gig viewing has been converted to a
 ## Phase 5 PR 05 update
 
 Phase 5 PR 05 — Typed Gig Event Schema and Replay Storage: complete. Canonical replay events, storage, service-role generation, typed validation, frontend replay read service, and documentation are implemented.
+
+## Phase 5 PR 06 status — Complete
+
+Phase 5 PR 06 adds the first read-only stored replay viewer shell. Completed gigs now open a stored replay lazily, validate the existing replay hook result, render a responsive HTML Canvas venue foundation, show deterministic static crowd and performer layouts from the stored simulation seed, play canonical event offsets locally with fixed speed controls, provide a synchronized accessible text timeline, support reduced motion, and preserve report access for every failure/fallback state.
