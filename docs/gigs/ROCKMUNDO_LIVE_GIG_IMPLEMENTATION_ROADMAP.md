@@ -933,6 +933,8 @@ Deferred post-beta:
 
 ## Phase 5 PR 02 — Canonical Outcome DTO and Summary Service
 
+**Status: Complete in Phase 5 PR 02.**
+
 ### Objective
 Create one typed, authoritative read model for the gig result.
 
@@ -1384,8 +1386,8 @@ The phase is complete when:
 
 The next implementation PR should be:
 
-> **Phase 5 PR 02 — Canonical Outcome DTO and Summary Service**
+> **Phase 5 PR 03 — Outcome Report Information Architecture Rebuild**
 
-This should be completed before any new viewer rendering work.
+Phase 5 PR 02 is complete; the next step is to rebuild the report hierarchy on top of the canonical DTO before adding new viewer rendering work.
 
 The new 2D viewer will only be trustworthy if it is driven by a stable, typed, authoritative gig outcome model.

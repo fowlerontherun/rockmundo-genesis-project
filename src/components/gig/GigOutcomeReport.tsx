@@ -28,6 +28,8 @@ import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 import { getBehavior } from "@/utils/stageBehaviors";
 import { BandMemberPerformanceCard } from "./BandMemberPerformanceCard";
 import { MemberRewardsCard } from "./MemberRewardsCard";
+import type { GigExperienceDTO } from "@/features/gig-experience/types";
+import { metricValue } from "@/features/gig-experience/reportMetric";
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 interface SongPerformance {
@@ -110,6 +112,7 @@ interface Props {
   stageBehaviorUsed?: string | null;
   bandId?: string | null;
   gigId?: string | null;
+  experience?: GigExperienceDTO | null;
 }
 
 export const GigOutcomeReport = ({
@@ -133,10 +136,23 @@ export const GigOutcomeReport = ({
   stageBehaviorUsed,
   bandId,
   gigId,
+  experience,
 }: Props) => {
-  if (!outcome) return null;
+  const adaptedOutcome = experience ? adaptExperienceForLegacyReport(experience) : outcome;
+  const effectiveVenueName = experience?.gig.venue.name ?? venueName;
+  const effectiveVenueCapacity = experience?.gig.venue.capacity ?? venueCapacity;
+  const effectiveSongs = experience ? experience.songs.map((song) => ({ id: song.songId ?? song.id, title: song.title })) : songs;
+  const effectiveBandId = experience?.gig.bandId ?? bandId;
+  const effectiveGigId = experience?.gig.id ?? gigId;
+  if (!adaptedOutcome) return null;
+  outcome = adaptedOutcome;
+  venueName = effectiveVenueName;
+  venueCapacity = effectiveVenueCapacity;
+  songs = effectiveSongs;
+  bandId = effectiveBandId;
+  gigId = effectiveGigId;
 
-  const safeNumber = (value: number | string | null | undefined) => {
+  const legacyDisplayNumber = (value: number | string | null | undefined) => {
     if (typeof value === "number" && Number.isFinite(value)) {
       return value;
     }
@@ -152,38 +168,38 @@ export const GigOutcomeReport = ({
   };
 
   const formatCurrency = (value: number | string | null | undefined) => {
-    const numericValue = safeNumber(value);
+    const numericValue = legacyDisplayNumber(value);
     return integerFormatter.format(numericValue);
   };
 
-  const overallRating = safeNumber(outcome.overall_rating);
-  const ticketRevenue = safeNumber(outcome.ticket_revenue);
-  const merchSales = safeNumber(outcome.merch_sales);
-  const totalRevenue = safeNumber(outcome.total_revenue);
-  const crewCosts = safeNumber(outcome.crew_costs);
-  const equipmentWearCost = safeNumber(outcome.equipment_wear_cost);
-  const netProfit = safeNumber(outcome.net_profit);
-  const actualAttendance = safeNumber(outcome.actual_attendance);
-  const attendancePercentage = safeNumber(outcome.attendance_percentage);
-  const fameGained = safeNumber(outcome.fame_gained);
-  const chemistryImpact = safeNumber(outcome.chemistry_impact);
+  const overallRating = legacyDisplayNumber(outcome.overall_rating);
+  const ticketRevenue = legacyDisplayNumber(outcome.ticket_revenue);
+  const merchSales = legacyDisplayNumber(outcome.merch_sales);
+  const totalRevenue = legacyDisplayNumber(outcome.total_revenue);
+  const crewCosts = legacyDisplayNumber(outcome.crew_costs);
+  const equipmentWearCost = legacyDisplayNumber(outcome.equipment_wear_cost);
+  const netProfit = legacyDisplayNumber(outcome.net_profit);
+  const actualAttendance = legacyDisplayNumber(outcome.actual_attendance);
+  const attendancePercentage = legacyDisplayNumber(outcome.attendance_percentage);
+  const fameGained = legacyDisplayNumber(outcome.fame_gained);
+  const chemistryImpact = legacyDisplayNumber(outcome.chemistry_impact);
 
   const breakdown = {
-    equipment_quality: safeNumber(outcome.breakdown_data?.equipment_quality ?? outcome.equipment_quality_avg),
-    crew_skill: safeNumber(outcome.breakdown_data?.crew_skill ?? outcome.crew_skill_avg),
-    band_chemistry: safeNumber(outcome.breakdown_data?.band_chemistry ?? outcome.band_chemistry_level),
-    member_skills: safeNumber(outcome.breakdown_data?.member_skills ?? outcome.member_skill_avg),
-    merch_items_sold: safeNumber(outcome.breakdown_data?.merch_items_sold ?? outcome.merch_items_sold),
+    equipment_quality: legacyDisplayNumber(outcome.breakdown_data?.equipment_quality ?? outcome.equipment_quality_avg),
+    crew_skill: legacyDisplayNumber(outcome.breakdown_data?.crew_skill ?? outcome.crew_skill_avg),
+    band_chemistry: legacyDisplayNumber(outcome.breakdown_data?.band_chemistry ?? outcome.band_chemistry_level),
+    member_skills: legacyDisplayNumber(outcome.breakdown_data?.member_skills ?? outcome.member_skill_avg),
+    merch_items_sold: legacyDisplayNumber(outcome.breakdown_data?.merch_items_sold ?? outcome.merch_items_sold),
   };
 
 
   const buildFallbackGearEffects = (): GearModifierEffects => {
-    const attendanceBonus = safeNumber(outcome.social_buzz_impact);
-    const reliabilityBonus = safeNumber(outcome.audience_memory_impact);
-    const revenueBonus = safeNumber(outcome.promoter_modifier);
-    const fameBonus = safeNumber(outcome.venue_loyalty_bonus);
-    const equipmentBonus = safeNumber(outcome.band_synergy_modifier);
-    const breakdownRisk = safeNumber(outcome.gear_effects?.breakdownRiskPercent);
+    const attendanceBonus = legacyDisplayNumber(outcome.social_buzz_impact);
+    const reliabilityBonus = legacyDisplayNumber(outcome.audience_memory_impact);
+    const revenueBonus = legacyDisplayNumber(outcome.promoter_modifier);
+    const fameBonus = legacyDisplayNumber(outcome.venue_loyalty_bonus);
+    const equipmentBonus = legacyDisplayNumber(outcome.band_synergy_modifier);
+    const breakdownRisk = legacyDisplayNumber(outcome.gear_effects?.breakdownRiskPercent);
 
     const derived: GearModifierEffects = {
       ...EMPTY_GEAR_EFFECTS,
@@ -625,7 +641,7 @@ export const GigOutcomeReport = ({
               gigId={gigId}
               bandId={bandId}
               fameGained={fameGained}
-              newFansTotal={safeNumber(fanConversion?.newFansGained ?? (outcome as any).fans_gained ?? 0)}
+              newFansTotal={legacyDisplayNumber(fanConversion?.newFansGained ?? (outcome as any).fans_gained ?? 0)}
             />
           )}
 
@@ -785,3 +801,48 @@ export const GigOutcomeReport = ({
     </Dialog>
   );
 };
+
+
+function adaptExperienceForLegacyReport(experience: GigExperienceDTO): GigOutcome {
+  return {
+    overall_rating: metricValue(experience.headline.overallRating, 0),
+    actual_attendance: metricValue(experience.headline.attendance, 0),
+    attendance_percentage: experience.gig.venue.capacity > 0 ? (metricValue(experience.headline.attendance, 0) / experience.gig.venue.capacity) * 100 : 0,
+    ticket_revenue: metricValue(experience.finances.ticketRevenue, 0),
+    merch_sales: metricValue(experience.finances.merchRevenue, 0),
+    total_revenue: metricValue(experience.finances.totalRevenue, 0),
+    crew_costs: metricValue(experience.finances.crewCosts, 0),
+    equipment_wear_cost: metricValue(experience.finances.equipmentWearCost, 0),
+    net_profit: metricValue(experience.finances.netProfit, 0),
+    fame_gained: metricValue(experience.progression.fameGained, 0),
+    chemistry_impact: metricValue(experience.progression.chemistryChange, 0),
+    equipment_quality_avg: metricValue(experience.analysis.equipmentQuality, 0),
+    crew_skill_avg: metricValue(experience.analysis.crewSkill, 0),
+    band_chemistry_level: metricValue(experience.analysis.bandChemistry, 0),
+    member_skill_avg: metricValue(experience.analysis.memberSkills, 0),
+    merch_items_sold: metricValue(experience.finances.merchItemsSold, 0),
+    stage_behavior_used: experience.analysis.stageBehaviorUsed.status === "available" ? experience.analysis.stageBehaviorUsed.value : null,
+    gear_effects: experience.analysis.gearEffects ? {
+      equipmentQualityBonus: experience.analysis.gearEffects.equipmentQualityBonus,
+      attendanceBonusPercent: experience.analysis.gearEffects.attendanceBonusPercent,
+      reliabilitySwingReductionPercent: experience.analysis.gearEffects.reliabilitySwingReductionPercent,
+      breakdownRiskPercent: experience.analysis.gearEffects.breakdownRiskPercent,
+      revenueBonusPercent: experience.analysis.gearEffects.revenueBonusPercent,
+      fameBonusPercent: experience.analysis.gearEffects.fameBonusPercent,
+      breakdown: experience.analysis.gearEffects.breakdown,
+    } : undefined,
+    gig_song_performances: experience.songs.map((song) => ({
+      song_id: song.songId ?? song.id,
+      position: song.position,
+      performance_score: metricValue(song.performanceScore, 0),
+      song_quality_contrib: metricValue(song.contributions.songQuality, 0),
+      rehearsal_contrib: metricValue(song.contributions.rehearsal, 0),
+      chemistry_contrib: metricValue(song.contributions.chemistry, 0),
+      equipment_contrib: metricValue(song.contributions.equipment, 0),
+      crew_contrib: metricValue(song.contributions.crew, 0),
+      member_skill_contrib: metricValue(song.contributions.memberSkill, 0),
+      crowd_response: metricValue(song.crowdResponse, "mixed"),
+      song_title: song.title,
+    })),
+  };
+}

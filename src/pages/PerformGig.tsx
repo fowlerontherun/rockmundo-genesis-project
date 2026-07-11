@@ -23,6 +23,7 @@ import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { GigPerformersSection } from "@/components/social/ParticipantStatusList";
+import { useGigExperience } from "@/features/gig-experience/hooks";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -51,6 +52,9 @@ export default function PerformGig() {
   const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
   const [bandSetlists, setBandSetlists] = useState<any[]>([]);
   // Viewer mode removed — single top-down viewer
+
+  const gigExperienceQuery = useGigExperience(gigId || null, !!gigId && !!profileId);
+  const gigExperience = gigExperienceQuery.data ?? null;
 
   const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
@@ -151,27 +155,7 @@ export default function PerformGig() {
         const canShowOutcome = completedAt && differenceInMinutes(now, completedAt) >= 10;
         
         if (canShowOutcome) {
-          const transformedOutcome = {
-            ...existingOutcome,
-            breakdown_data: {
-              equipment_quality: existingOutcome.equipment_quality_avg || 0,
-              crew_skill: existingOutcome.crew_skill_avg || 0,
-              band_chemistry: existingOutcome.band_chemistry_level || 0,
-              member_skills: existingOutcome.member_skill_avg || 0,
-              merch_items_sold: existingOutcome.merch_items_sold || 0
-            },
-            chemistry_impact: existingOutcome.chemistry_change || 0,
-            equipment_wear_cost: existingOutcome.equipment_cost || 0,
-            gear_effects: {
-              equipmentQualityBonus: existingOutcome.band_synergy_modifier || 0,
-              attendanceBonusPercent: existingOutcome.social_buzz_impact || 0,
-              reliabilitySwingReductionPercent: existingOutcome.audience_memory_impact || 0,
-              revenueBonusPercent: existingOutcome.promoter_modifier || 0,
-              fameBonusPercent: existingOutcome.venue_loyalty_bonus || 0,
-              breakdown: (existingOutcome as any).gear_effects?.breakdown,
-            }
-          };
-          setOutcome(transformedOutcome);
+          setOutcome(existingOutcome);
           setShowOutcome(false); // Don't auto-show, let user click to view
         } else {
           // Outcome exists but it's too soon - keep showing live view
@@ -709,6 +693,7 @@ export default function PerformGig() {
         isOpen={!!outcome && showOutcome}
         onClose={() => setShowOutcome(false)}
         outcome={outcome}
+        experience={gigExperience}
         venueName={gig.venues?.name || 'Unknown Venue'}
         venueCapacity={gig.venues?.capacity || 0}
         songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
