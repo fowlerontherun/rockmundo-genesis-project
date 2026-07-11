@@ -517,3 +517,7 @@ Cover:
 | Public spectators for other bands? | Deferred | Not in first implementation. |
 | Non-member replay of completed gigs? | Deferred | No until ACL defined. |
 | Hide setlist surprises until performed? | Required before PR 04 | Preserve hidden future songs if product wants surprise; otherwise show band-owned setlist. |
+
+## Phase 5 PR 04 implemented model update
+
+The live viewer plan should assume that browser sessions do not advance songs or complete gigs. Viewer surfaces read canonical gig status, current song position, song-performance rows, and `result_ready_at`. “Skip” actions are presentation-only until the server exposes a ready result.

@@ -46,11 +46,15 @@ serve(async (req) => {
       throw new Error('Gig outcome not found');
     }
 
-    if (gig.status === 'completed' || outcome.completed_at) {
+    if (gig.status === 'cancelled' || gig.status === 'failed') {
+      throw new Error(`Cannot complete gig in status ${gig.status}`);
+    }
+
+    if (gig.status === 'completed' || outcome.completed_at || gig.result_ready_at) {
       if (gig.status !== 'completed') {
         await supabaseClient
           .from('gigs')
-          .update({ status: 'completed', completed_at: outcome.completed_at || new Date().toISOString() })
+          .update({ status: 'completed', completed_at: outcome.completed_at || new Date().toISOString(), result_ready_at: gig.result_ready_at || outcome.completed_at || new Date().toISOString() })
           .eq('id', gigId);
       }
 
@@ -66,6 +70,13 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
+    }
+
+    const { data: claim, error: claimError } = await supabaseClient.rpc('claim_gig_completion', { p_gig_id: gigId });
+    if (claimError) throw claimError;
+    if (claim?.alreadyCompleted || claim?.alreadyProcessing) {
+      console.log('[complete-gig] Duplicate completion prevented:', { gigId, claim });
+      return new Response(JSON.stringify({ success: true, alreadyCompleted: Boolean(claim?.alreadyCompleted), processing: Boolean(claim?.alreadyProcessing), resultReadyAt: gig.result_ready_at || outcome.completed_at }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
     }
 
     // Get all song performances already recorded
@@ -950,7 +961,8 @@ serve(async (req) => {
       .from('gigs')
       .update({
         status: 'completed',
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        result_ready_at: new Date().toISOString()
       })
       .eq('id', gigId);
 
@@ -1052,6 +1064,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
+        resultReadyAt: new Date().toISOString(),
         outcome: {
           overall_rating: avgRating,
           net_profit: netProfit,

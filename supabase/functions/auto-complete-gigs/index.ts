@@ -93,6 +93,26 @@ serve(async (req) => {
 
         console.log(`[auto-complete-gigs] Gig ${gig.id}: position ${currentPosition}/${totalSongs}, elapsed ${elapsedSeconds}s, total duration ${totalDuration}s`);
 
+        let dueDuration = 0;
+        for (let position = 0; position < totalSongs; position++) {
+          const song = setlistSongs[position];
+          if (elapsedSeconds >= dueDuration && position >= currentPosition) {
+            const { data: outcome } = await supabaseClient
+              .from('gig_outcomes')
+              .select('id')
+              .eq('gig_id', gig.id)
+              .single();
+            if (outcome?.id) {
+              const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
+                body: { gigId: gig.id, outcomeId: outcome.id, songId: song.song_id, position }
+              });
+              if (processError) console.error(`[auto-complete-gigs] Error processing song ${position}:`, processError);
+              else processedCount++;
+            }
+          }
+          dueDuration += (song.songs?.duration_seconds || 180);
+        }
+
         // Check if all songs should be processed
         if (elapsedSeconds >= totalDuration) {
           console.log(`[auto-complete-gigs] Gig ${gig.id} duration exceeded, completing...`);
