@@ -1,4 +1,4 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants";
 import type { GigViewerEvent, GigViewerEventType, GigVisualPayload, GigViewerReplay } from "./types";
 
 export interface GigReplayValidationResult { valid: boolean; errors: string[] }
@@ -33,8 +33,12 @@ export function validateGigViewerReplay(replay: GigViewerReplay): GigReplayValid
   if (!isSupportedReplayVersion(replay.viewerVersion, replay.eventSchemaVersion)) errors.push("unsupported version");
   if (!statuses.has(replay.status)) errors.push("invalid status");
   if (replay.durationMs <= 0) errors.push("duration must be positive");
-  if (!Array.isArray(replay.events)) errors.push("events must be an array");
+  if (!Array.isArray(replay.events)) {
+    errors.push("events must be an array");
+    return { valid: false, errors };
+  }
   if (replay.events.length === 0) errors.push("events are required");
+  if (replay.events.length > GIG_REPLAY_MAX_EVENTS) errors.push(`event count exceeds maximum ${GIG_REPLAY_MAX_EVENTS}`);
   const seenIds = new Set<string>();
   const seenSequences = new Set<number>();
   let previousOffset = -1;
@@ -68,6 +72,7 @@ export function validateEvent(event: GigViewerEvent, errors: string[] = [], inde
   for (const value of [event.crowdEnergyBefore, event.crowdEnergyAfter]) if (value != null && (value < 0 || value > 100)) errors.push(`event ${index} invalid crowd energy`);
   if (!event.messageKey) errors.push(`event ${index} missing message key`);
   if (!event.messageParams || Object.values(event.messageParams).some((v) => typeof v !== "string" && typeof v !== "number")) errors.push(`event ${index} invalid message params`);
+  if (event.messageParams && Object.values(event.messageParams).some((v) => String(v).length > GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH)) errors.push(`event ${index} message params exceed maximum length`);
   if (!isPayloadValid(event.visualPayload)) errors.push(`event ${index} invalid payload`);
   const allowed = eventTypes.has(event.eventType) ? eventPayloadTypes[event.eventType] : [];
   if (event.visualPayload && allowed && !allowed.includes(event.visualPayload.type)) errors.push(`event ${index} payload ${event.visualPayload.type} not allowed for ${event.eventType}`);
