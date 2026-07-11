@@ -1,6 +1,6 @@
 # Live Gig System Audit
 
-Phase 5 PR 01 documents the existing RockMundo gig journey, viewer, outcome report, and data model. It does not implement the future viewer, change balance, add migrations, or replace completion logic.
+Phase 5 PR 01 documented the existing RockMundo gig journey, viewer, outcome report, and data model. Phase 5 PR 02 adds a canonical `GigExperienceDTO` and summary service without changing balance, adding migrations, redesigning the viewer, or replacing completion logic.
 
 ## Repository evidence reviewed
 
@@ -191,9 +191,9 @@ Assumptions requiring player telemetry:
 - Too many cards receive equal visual weight.
 - Financial, impact, enhanced metrics, fan growth, XP, member rewards, and setlist cards duplicate player questions.
 - Rating uses a 0-25 scale while enhanced metrics converts to percentage and chemistry often uses 0-100 elsewhere.
-- `safeNumber` silently turns missing values into zero, hiding absent/legacy data.
-- `PerformGig` converts flat columns into `breakdown_data` and `gear_effects`, mixing authoritative database fields with compatibility presentation.
-- `GigOutcomeReport` may query song performances after outcome loading, and child cards query member/reward data separately, creating avoidable extra requests.
+- Historically, `safeNumber` silently turned missing values into zero, hiding absent/legacy data; Phase 5 PR 02 introduces `ReportMetric<T>` for the canonical DTO while the preserved report UI still has temporary adapter fallbacks.
+- Historically, `PerformGig` converted flat columns into `breakdown_data` and `gear_effects`; Phase 5 PR 02 moves the new canonical compatibility mapping into `GigExperienceService`.
+- `GigOutcomeReport` can now consume `GigExperienceDTO`, but some child cards still own legacy member/reward fetching until PR 03 removes or replaces them.
 - Several values are client-derived or fallback formulas rather than explicit server-authored report facts.
 - Moment highlights and fan/XP/venue relationship props are optional and usually absent from the `PerformGig` path.
 
@@ -253,3 +253,13 @@ Client currently owns:
 | Can multiple tabs cause duplicate advancement? | Yes, duplicate client advancement calls are possible. Final completion is guarded/idempotent, but per-song advancement still needs server-side idempotency guarantees for the future. |
 | Can players see report immediately through another route? | Likely yes. Gig history/news components render `GigOutcomeReport` from `gig_outcomes` without the `PerformGig` ten-minute discard gate. |
 | Are outcomes generated before, during, or after viewer? | An outcome row may be found during live progression; final authoritative totals are generated/updated by `complete-gig` after songs are processed or backfilled. |
+
+
+## Phase 5 PR 02 implementation status
+
+- Added `GigExperienceDTO` with `gig`, `headline`, `songs`, `performers`, `finances`, `progression`, `analysis`, `lessons`, and `viewer` sections.
+- Added `ReportMetric<T>` states for `available`, `processing`, `legacy_missing`, and `not_applicable`.
+- Added `GigExperienceService` as the canonical outcome summary assembler and validator.
+- `PerformGig` now requests the canonical DTO with a stable React Query key and passes it to the existing report.
+- `GigOutcomeReport` retains its current layout through a temporary DTO-to-legacy adapter pending PR 03.
+- Remaining factual gap: member reward cards and the broader report card wall are not yet fully DTO-native.
