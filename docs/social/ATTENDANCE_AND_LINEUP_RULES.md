@@ -385,3 +385,11 @@ Rehearsal attendance correction requests are now implemented for final `attended
 ## Phase 4 PR 09 status
 
 - Attendance corrections now have authoritative per-participant finaliser references, server-side original-finaliser conflict enforcement, sole-resolver exception auditing, legacy-null fallback handling, read-only correction history, and a repeatable correction SQL harness. Gig lineup management remains not complete.
+
+## Phase 4 PR 10 release-gate status
+
+- Phase 4 PR 10 reviewed the rehearsal attendance correction lifecycle as a release gate before gig-lineup mutation work.
+- The correction SQL harness was expanded with executable assertions for required tables/columns/RPCs, authenticated-only correction grants, anonymous execute denial, RLS enablement, voided contribution filtering/index expectations, privacy static checks, and fixture-capability prerequisites.
+- Local Supabase reset and SQL harness execution were not completed in the PR 10 environment because the Supabase CLI was unavailable.
+- Static migration-order review found a blocker: the Phase 4 attendance/correction migrations dated `20260711...` reference `band_rehearsal_participants`, but the migration that creates that table is dated `20290711030000` and sorts later. This must be corrected and verified before beta release-gate approval.
+- Phase 4 is therefore not complete, and gig-lineup mutation should not begin until a clean reset and participant/correction harness run pass.
