@@ -547,3 +547,7 @@ The Live Gig Experience 1.0 viewer now has release-hardening guardrails: canonic
 ### Phase 5 PR 11 release-gate update
 
 PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experience:release` and `npm run test:gig-experience:db`), a consolidated SQL schema/RLS/RPC harness, CI wiring, and deterministic browser/mobile/accessibility surrogate tests. Real Supabase reset, Playwright/axe browser execution, and performance profiling remain prerequisites before declaring beta ready.
+
+## Phase 5 PR 12 update — optional audio and admin testing
+
+The viewer now supports optional setlist audio as an enhancement, not a dependency. Players must explicitly enable audio; muted/no-audio replay remains complete through Canvas, timeline, commentary, graph, and report. Admins have a dedicated fixture demo and real replay inspector for testing viewer states, diagnostics, presets, reduced motion, and audio availability without creating gigs or changing records.

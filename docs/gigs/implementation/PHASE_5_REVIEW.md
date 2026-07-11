@@ -92,3 +92,9 @@ Prerequisites are: pass the unverified database, dependency-backed, browser, mob
 ## Recommended Next Area
 
 Gig preparation improvements should be next after release-gate verification, because preparation increases player agency before the now-readable and replayable outcome.
+
+## Phase 5 PR 12 status — Admin demo and optional setlist audio
+
+Implemented: a protected `/admin/gig-viewer-demo` tool now provides deterministic local fixture replay presets, audio diagnostics, and a read-only stored replay metadata inspector. The completed gig viewer now has opt-in setlist audio controls backed by a dedicated presentation-only audio controller, deterministic excerpt calculation, normal-speed-only playback, local preferences, hidden-tab pause, and result/non-song cleanup. Audio descriptors are added narrowly to the gig experience song read model from approved `extended_audio_url` / `audio_url` evidence without changing outcomes, rewards, progression, replay facts, or historical migrations.
+
+Remaining limitations: real browser autoplay/mobile/axe profiling still requires provisioned browser tooling; the inspector intentionally hides raw replay payloads and signed/private URL details; fixture audio uses approved local/demo assets and never generates music.

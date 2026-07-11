@@ -3,12 +3,13 @@ import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 import { EMPTY_GEAR_EFFECTS, type GearModifierEffects } from "@/utils/gearModifiers";
 import type { Database } from "@/lib/supabase-types";
 import type { GigExperienceDTO, GigExperienceValidationError } from "../types";
+import { resolveSongAudioDescriptor } from "../viewer/audio/audioSourceResolver";
 import { metricAvailable, metricLegacyMissing, metricNotApplicable, nullableNumberMetric, metricValue } from "../reportMetric";
 
 type GigRow = Database["public"]["Tables"]["gigs"]["Row"] & { venues?: Database["public"]["Tables"]["venues"]["Row"] | null };
 type OutcomeRow = Database["public"]["Tables"]["gig_outcomes"]["Row"];
 type SongPerfRow = Database["public"]["Tables"]["gig_song_performances"]["Row"];
-type SetlistSongRow = { song_id: string; position: number; songs?: { id: string; title: string | null; genre?: string | null; quality_score?: number | null } | null };
+type SetlistSongRow = { song_id: string; position: number; songs?: { id: string; title: string | null; genre?: string | null; quality_score?: number | null; audio_url?: string | null; extended_audio_url?: string | null; audio_generation_status?: string | null; duration_seconds?: number | null } | null };
 type PerformerRow = { id: string; profile_id: string; role_or_instrument: string | null; lineup_status: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
 
 const outcomeSelect = "id,gig_id,band_id,venue_id,venue_name,venue_capacity,completed_at,created_at,overall_rating,performance_grade,actual_attendance,attendance_percentage,ticket_revenue,merch_revenue,total_revenue,crew_cost,equipment_cost,venue_cost,total_costs,net_profit,fame_gained,new_followers,casual_fans_gained,dedicated_fans_gained,superfans_gained,fan_conversions,chemistry_change,total_xp_awarded,equipment_quality_avg,crew_skill_avg,band_chemistry_level,member_skill_avg,merch_items_sold,crowd_energy_peak,stage_behavior_used,band_synergy_modifier,social_buzz_impact,audience_memory_impact,promoter_modifier,venue_loyalty_bonus,highlight_moments,xp_breakdown";
@@ -34,7 +35,7 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
       ? supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type").eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
     gig?.setlist_id
-      ? supabase.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score)").eq("setlist_id", gig.setlist_id).order("position")
+      ? supabase.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds)").eq("setlist_id", gig.setlist_id).order("position")
       : Promise.resolve({ data: [] as SetlistSongRow[], error: null }),
     (supabase as any).from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
     (supabase as any).from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
@@ -59,12 +60,14 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const venue = gig.venues;
   const capacity = venue?.capacity ?? outcome?.venue_capacity ?? 0;
   const setlistTitles = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, row.songs?.title ?? "Unknown Song"]));
+  const setlistAudio = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, resolveSongAudioDescriptor(row.songs, "allowed")]));
   const songPerformances = [...(input.songPerformances ?? [])].sort((a, b) => a.position - b.position);
   const songs = songPerformances.map((row) => ({
     id: row.id,
     songId: row.song_id ?? null,
     position: row.position,
     title: row.song_title ?? (row.song_id ? setlistTitles.get(row.song_id) : undefined) ?? row.performance_item_name ?? "Unknown Song",
+    audio: row.song_id ? setlistAudio.get(row.song_id) : resolveSongAudioDescriptor(null, "allowed"),
     performanceScore: nullableNumberMetric(row.performance_score, "Song score missing from legacy performance row"),
     crowdResponse: row.crowd_response ? metricAvailable(row.crowd_response) : metricLegacyMissing("Crowd response missing from legacy performance row"),
     contributions: {

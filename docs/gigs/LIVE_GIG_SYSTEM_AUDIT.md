@@ -302,3 +302,7 @@ Current live-gig route: the gig detail page continues to use `PerformGig` and re
 ### Phase 5 PR 11 release-gate update
 
 PR 11 adds repeatable Phase 5 release-gate commands (`npm run test:gig-experience:release` and `npm run test:gig-experience:db`), a consolidated SQL schema/RLS/RPC harness, CI wiring, and deterministic browser/mobile/accessibility surrogate tests. Real Supabase reset, Playwright/axe browser execution, and performance profiling remain prerequisites before declaring beta ready.
+
+## Phase 5 PR 12 audit update
+
+Song audio evidence remains centered on `songs.audio_url`, `songs.extended_audio_url`, `songs.audio_generation_status`, and `songs.duration_seconds`, with generated assets stored through the public `music` bucket and existing player components using explicit HTML audio controls. The gig viewer now consumes a safe per-song audio descriptor and a presentation-only controller. Audio is opt-in, deterministic, normal-speed only, and unavailable sources do not block visual replay or reports. The new admin demo is protected by the existing admin route guard and uses local fixture presets plus narrow read-only replay metadata queries.
