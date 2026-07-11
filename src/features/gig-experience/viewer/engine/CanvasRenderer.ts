@@ -4,6 +4,7 @@ import type { DerivedPlaybackState } from "./PlaybackController";
 import { buildCrowdPlan, reconstructCrowdState, type CrowdLayoutPlan } from "./CrowdLifecycle";
 import { buildEntityLayout, type EntityLayout } from "./EntityLayout";
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan } from "./PerformerLifecycle";
+import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEngine";
 import type { Size } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
 
@@ -14,12 +15,14 @@ export class CanvasRenderer {
   private layout: EntityLayout | null = null;
   private crowdPlan: CrowdLayoutPlan | null = null;
   private performerPlan: PerformerPlan | null = null;
+  private storyModel: StoryModel;
   private lastFrameMs = 0;
 
   constructor(private canvas: HTMLCanvasElement, private replay: GigViewerReplay, private experience: GigExperienceDTO | null, private reducedMotion: boolean) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
+    this.storyModel = buildStoryModel(replay, experience);
   }
 
   resize(size: Size) {
@@ -43,6 +46,7 @@ export class CanvasRenderer {
     const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity }), size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
+    const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
 
     ctx.clearRect(0, 0, size.width, size.height);
     ctx.fillStyle = "#111827";
@@ -70,15 +74,19 @@ export class CanvasRenderer {
       const alpha = c.state === "queued" ? .22 : c.state === "entering" ? .58 : c.state === "settling" ? .72 : .82;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = c.state === "queued" ? "#cbd5e1" : i % 3 === 0 ? "#60a5fa" : i % 3 === 1 ? "#a78bfa" : "#f472b6";
+      const zoneAmp = c.targetZoneId?.startsWith("front") ? 1.15 : c.targetZoneId?.startsWith("rear") ? .55 : .85;
+      const activity = this.reducedMotion ? 0 : (storySnapshot.reaction === "still" ? 0 : storySnapshot.reaction === "sway" ? 1.2 : storySnapshot.reaction === "bounce" ? 2.2 : storySnapshot.reaction === "jump" ? 3.6 : storySnapshot.reaction === "wave" ? 2.8 : storySnapshot.reaction === "cheer_pulse" ? 4 : storySnapshot.reaction === "disappointed_settling" ? .7 : 0) * zoneAmp;
+      const ry = c.y - Math.abs(Math.sin(state.positionMs / 180 + i)) * activity;
+      const radius = c.radius + (storySnapshot.reaction === "cheer_pulse" && !this.reducedMotion ? Math.sin(state.positionMs / 120 + i) * .6 : 0);
       ctx.beginPath();
-      if (c.state === "entering" || c.state === "moving_to_zone") ctx.rect(c.x - c.radius, c.y - c.radius, c.radius * 2, c.radius * 2); else ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+      if (c.state === "entering" || c.state === "moving_to_zone") ctx.rect(c.x - radius, ry - radius, radius * 2, radius * 2); else ctx.arc(c.x, ry, Math.max(1, radius), 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
 
     performers.forEach((p) => {
       if (!p.visible) return;
-      const focus = state.performerFocusId === p.id || p.activeMoveEventId === state.activeEvent?.id;
+      const focus = state.performerFocusId === p.id || storySnapshot.performerFocusId === p.id || p.activeMoveEventId === state.activeEvent?.id;
       ctx.fillStyle = p.lifecycleState === "waiting_backstage" ? "#cbd5e1" : p.lifecycleState === "exiting" ? "#fca5a5" : "#f8fafc";
       ctx.strokeStyle = focus ? "#fde047" : "#111827";
       ctx.lineWidth = focus ? 4 : 2;
@@ -96,6 +104,7 @@ export class CanvasRenderer {
       ctx.font = "12px sans-serif"; ctx.fillText(`${crowd.phaseLabel} ${Math.round(crowd.fillProgress * 100)}%`, preset.labelSafe.x + 10, preset.labelSafe.y + 42);
       if (import.meta.env.DEV) { this.lastFrameMs = performance.now() - start; ctx.textAlign = "right"; ctx.fillText(`${crowd.diagnostics.entityCount} crowd · ${performers.filter((p) => p.visible).length} performers · ${this.lastFrameMs.toFixed(1)}ms`, preset.labelSafe.x + preset.labelSafe.width - 10, preset.labelSafe.y + 42); }
     }
+    if (storySnapshot.finaleActive && !this.reducedMotion && storySnapshot.crowdEnergy >= 85) { ctx.globalAlpha = .75; ctx.fillStyle = "#facc15"; for (let i = 0; i < 20; i++) ctx.fillRect((i * 37 + state.positionMs / 20) % size.width, 30 + (i % 5) * 20, 3, 8); ctx.globalAlpha = 1; }
     if (state.activeEvent?.visualPayload.type === "result_reveal") {
       ctx.fillStyle = "rgba(22, 163, 74, .86)"; ctx.fillRect(size.width * .25, size.height * .42, size.width * .5, 52); ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 18px sans-serif"; ctx.fillText("Result ready", size.width / 2, size.height * .42 + 31);
     }
