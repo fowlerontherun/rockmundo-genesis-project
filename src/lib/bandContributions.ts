@@ -20,6 +20,8 @@ export type BandContributionEvent = {
   occurred_at: string;
   metadata: { label?: string; accuracy?: string; source_detail?: string; [key: string]: unknown } | null;
   created_at: string;
+  voided_at?: string | null;
+  voided_by_correction_request_id?: string | null;
   profiles: {
     id: string;
     username: string | null;
@@ -61,7 +63,7 @@ export function summarizeContributions(events: BandContributionEvent[]) {
   const byMember = new Map<string, { profile: BandContributionEvent["profiles"]; count: number }>();
   const byType = new Map<string, number>();
 
-  events.forEach((event) => {
+  events.filter((event) => !event.voided_at).forEach((event) => {
     const member = byMember.get(event.profile_id) ?? { profile: event.profiles, count: 0 };
     member.count += 1;
     byMember.set(event.profile_id, member);
@@ -69,7 +71,7 @@ export function summarizeContributions(events: BandContributionEvent[]) {
   });
 
   return {
-    total: events.length,
+    total: events.filter((event) => !event.voided_at).length,
     byMember: Array.from(byMember.entries()).map(([profileId, value]) => ({ profileId, ...value })),
     byType: Array.from(byType.entries()).map(([type, count]) => ({ type: type as BandContributionType, count })),
   };

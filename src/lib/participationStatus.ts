@@ -38,3 +38,19 @@ export function getRehearsalParticipantStatusDisplay(status: string | null | und
 export function getGigLineupStatusDisplay(status: string | null | undefined): StatusDisplay {
   return status ? gigLineupStatus[status] ?? fallback : fallback;
 }
+
+
+export type CorrectionRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export const rehearsalAttendanceCorrectionStatus = {
+  pending: { label: "Pending review", final: false, actionable: true, badgeVariant: "secondary" },
+  approved: { label: "Approved", final: true, actionable: false, badgeVariant: "default" },
+  rejected: { label: "Rejected", final: true, actionable: false, badgeVariant: "destructive" },
+  cancelled: { label: "Cancelled", final: true, actionable: false, badgeVariant: "outline" },
+} satisfies Record<CorrectionRequestStatus, { label: string; final: boolean; actionable: boolean; badgeVariant: ParticipationBadgeVariant }>;
+
+export function getRehearsalAttendanceCorrectionStatusDisplay(status: string | null | undefined) {
+  return status && status in rehearsalAttendanceCorrectionStatus
+    ? rehearsalAttendanceCorrectionStatus[status as CorrectionRequestStatus]
+    : { label: "Status unavailable", final: false, actionable: false, badgeVariant: "outline" as ParticipationBadgeVariant };
+}

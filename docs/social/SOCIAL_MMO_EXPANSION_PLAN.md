@@ -564,3 +564,8 @@ The expansion should be considered successful when:
 - Rehearsal contribution creation is now tied to final `attended` rows only, with manager-finalisation metadata and existing idempotency.
 - The existing rehearsal page exposes narrow manager controls without changing ordinary member RSVP behaviour.
 - Corrections, disputes, absence reasons, gig lineup management, rewards, penalties, XP, chemistry, and attendance analytics remain deferred.
+
+
+### Phase 4 PR 08 implementation status — rehearsal attendance corrections
+
+Rehearsal attendance correction requests are now implemented for final `attended` ↔ `missed` rows only. Affected participants can open one pending request within the 24-hour database-enforced correction window; authorised current managers or admin/support resolvers can approve or reject through guarded RPCs. The workflow preserves append-only audit history, keeps request reasons and resolution notes private, sends deduped resolver/requester notifications, and corrects rehearsal contribution eligibility by inserting missed-to-attended events idempotently or voiding attended-to-missed events without deleting the original contribution row. Gig lineup management, performer confirmation, gig disputes, absence reasons, rewards, penalties, XP, chemistry, reputation, attendance percentages, and reliability scoring remain out of scope.
