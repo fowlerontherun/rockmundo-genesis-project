@@ -36,12 +36,10 @@ CREATE INDEX IF NOT EXISTS gig_performers_band_profile_idx ON public.gig_perform
 ALTER TABLE public.band_rehearsal_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gig_performers ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Active band members can view rehearsal participants" ON public.band_rehearsal_participants;
 CREATE POLICY "Active band members can view rehearsal participants"
 ON public.band_rehearsal_participants FOR SELECT TO authenticated
 USING (public.is_active_band_member(band_id, auth.uid()));
 
-DROP POLICY IF EXISTS "Active band members can view gig performers" ON public.gig_performers;
 CREATE POLICY "Active band members can view gig performers"
 ON public.gig_performers FOR SELECT TO authenticated
 USING (public.is_active_band_member(band_id, auth.uid()));

@@ -484,3 +484,13 @@ Rehearsal attendance correction requests are now implemented for final `attended
 - Privacy status is partially verified by code/static review: affected frontend correction queries use narrow selects, and the harness now checks that correction reasons/notes are not copied into audit, contribution, or notification metadata. Runtime RLS privacy still needs database execution.
 - Contribution correction remains designed as append-only void/restore semantics with voided rows excluded from summaries, but reset-database execution is required before release sign-off.
 - Confirmed unresolved gap: migration-order review found that Phase 4 attendance/correction migrations reference `band_rehearsal_participants` before the later-dated migration that creates it. This is a P0 release-gate blocker for clean reset verification.
+
+## Phase 4 PR 11 migration-order repair audit update
+
+- Migration integrity has a forward-compatible repair in the repository: early bootstrap migrations now place the contribution-source adapters and rehearsal participant/gig performer foundations before the 2026 RSVP/finalisation/correction chain, while preserving the original later migration filenames for unverified deployment-ledger compatibility.
+- Clean reset status remains **not passed in this container** because Supabase CLI, Docker, and `psql` are unavailable here; `npx supabase --version` also failed with an npm registry 403, so the gate is repaired statically but not proven by a real reset.
+- Attendance lifecycle database verification remains blocked on executing the repaired chain in a local Supabase database. The participant table ordering defect is addressed, and the RSVP harness-compatible RPC wrapper now exists.
+- Correction verification remains blocked on live harness execution. Static review confirms correction tables, finaliser fields, contribution voiding fields, and correction RPC ordering now have their prerequisite participant/contribution foundations earlier in the migration sequence.
+- RLS/RPC verification remains a required live gate. Static review confirms operational functions use `SECURITY DEFINER` with fixed `search_path = public`, public execution revocation, and authenticated grants where defined; the late participant/performer policy definitions now tolerate early bootstrap creation.
+- Contribution correction remains append-only/voiding-oriented; no production contribution rows are deleted by the repair.
+- Remaining blocker: a real `supabase start`, `supabase db reset`, migration status check, contribution harness, participant harness, recruitment harness, correction harness, and type regeneration still must pass before Phase 4 can be signed off or gig-lineup mutation can begin.
