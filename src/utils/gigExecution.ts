@@ -37,6 +37,7 @@ import type { WeatherCondition } from "./weatherSystem";
 import { getFanSentiment } from "./fanSentiment";
 import { getMediaCycleState, applyMediaEvent } from "./mediaCycle";
 import { degradeEquipment } from "./equipmentDegradation";
+import { calculateGigReadiness, calculateReadinessPerformanceModifier } from "./gigReadiness";
 
 interface GigExecutionData {
   gigId: string;
@@ -59,6 +60,15 @@ export async function executeGigPerformance(data: GigExecutionData) {
   if (setlistError) throw setlistError;
   if (!setlistSongs || setlistSongs.length === 0) {
     throw new Error('No songs in setlist');
+  }
+
+  const { data: gigPrepSetlist } = await (supabase as any)
+    .from('gig_setlists')
+    .select('id,total_duration_seconds,gig_setlist_items(id)')
+    .eq('gig_id', gigId)
+    .maybeSingle();
+  if (!gigPrepSetlist || (gigPrepSetlist.gig_setlist_items || []).length === 0) {
+    throw new Error('A saved gig preparation setlist is required before resolving this performance.');
   }
 
   // Fetch all necessary data in parallel
@@ -248,6 +258,20 @@ export async function executeGigPerformance(data: GigExecutionData) {
     }
   }
 
+  const readiness = calculateGigReadiness({
+    setlistSongs: setlistSongs.map((song: any) => ({
+      id: song.song_id,
+      durationSeconds: song.songs?.duration_seconds ?? 180,
+      rehearsalLevel: rehearsals.find((r: any) => r.song_id === song.song_id)?.rehearsal_level || 0,
+    })),
+    slotDurationSeconds: 7200,
+    bandChemistry,
+    fatigueScore: fatigueState.performanceModifier * 100,
+    requiredPerformers: 1,
+    assignedPerformers: members.length,
+  });
+  const readinessModifier = calculateReadinessPerformanceModifier(readiness.score);
+
   const songPerformances = setlistSongs.map((song, index) => {
     const rehearsal = rehearsals.find(r => r.song_id === song.song_id);
     const rehearsalLevel = rehearsal?.rehearsal_level || 0;
@@ -275,8 +299,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
     // Apply chemistry bonus to performance score
     let chemistryBoostedScore = applyChemistryToPerformance(result.score, bandChemistry);
     
-    // Apply tour fatigue modifier
-    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier;
+    // Apply tour fatigue and bounded gig preparation readiness modifiers.
+    chemistryBoostedScore = chemistryBoostedScore * fatigueState.performanceModifier * (1 + readinessModifier);
 
     // Apply encore fame bonus (last song = encore)
     const isEncore = index === setlistSongs.length - 1;
@@ -401,6 +425,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
         promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
         venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2)),
         stage_behavior_used: stageBehavior,
+        readiness_score: readiness.score,
+        readiness_modifier: Number(readinessModifier.toFixed(4)),
+        readiness_breakdown: readiness as any,
       })
       .eq('id', existingOutcome.id)
       .select()
@@ -441,6 +468,9 @@ export async function executeGigPerformance(data: GigExecutionData) {
         promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
         venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2)),
         stage_behavior_used: stageBehavior,
+        readiness_score: readiness.score,
+        readiness_modifier: Number(readinessModifier.toFixed(4)),
+        readiness_breakdown: readiness as any,
       })
       .select()
       .single();

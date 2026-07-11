@@ -8,6 +8,7 @@ import { format, differenceInDays, differenceInHours } from "date-fns";
 import { MapPin, Clock, Users, Ticket, Music, DollarSign, Calendar, TrendingDown, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GigSetlistDisplay } from "@/components/gig/GigSetlistDisplay";
+import { GigPreparationPanel } from "@/components/gig/GigPreparationPanel";
 import { TicketPriceAdjuster } from "@/components/gig/TicketPriceAdjuster";
 import { TicketSalesDisplay } from "@/components/gig/TicketSalesDisplay";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -249,6 +250,16 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId
                 <p className="text-sm text-muted-foreground">Loading setlist information...</p>
               )}
             </div>
+
+            <Separator />
+            {bandId && (
+              <GigPreparationPanel
+                gigId={gigId}
+                bandId={bandId}
+                status={gig.status}
+                scheduledDate={gig.scheduled_date}
+              />
+            )}
 
             {/* Action Button */}
             {hoursUntilGig <= 1 && hoursUntilGig > 0 && (
