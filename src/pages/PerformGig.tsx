@@ -13,6 +13,7 @@ import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 import { GigSetlistDisplay } from '@/components/gig/GigSetlistDisplay';
+import { GigPreparationPanel } from '@/components/gig/GigPreparationPanel';
 import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
 import { useLiveGigState } from '@/hooks/useLiveGigState';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
@@ -255,6 +256,21 @@ export default function PerformGig() {
       }
     }
     
+    const { data: prepSetlist, error: prepError } = await (supabase as any)
+      .from('gig_setlists')
+      .select('id,gig_setlist_items(id)')
+      .eq('gig_id', gigId)
+      .maybeSingle();
+
+    if (prepError || !prepSetlist || (prepSetlist.gig_setlist_items || []).length === 0) {
+      toast({
+        title: 'Setlist required',
+        description: 'Save a valid gig preparation setlist before starting this performance.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     startGigMutation.mutate(gigId, {
       onSuccess: () => {
         // Reload gig data after starting
@@ -403,6 +419,15 @@ export default function PerformGig() {
             />
           </CardContent>
         </Card>
+      )}
+
+      {gig.status === 'scheduled' && (
+        <GigPreparationPanel
+          gigId={gig.id}
+          bandId={gig.band_id}
+          status={gig.status}
+          scheduledDate={gig.scheduled_date}
+        />
       )}
 
       {/* Ticket Price Adjuster - shown for scheduled gigs with poor sales */}
