@@ -201,7 +201,7 @@ export default function Employment() {
   const { data: companyVacancies = [] } = useQuery({
     queryKey: ["company-marketplace-vacancies", profile?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("company_vacancies") as any)
+      const { data, error } = await supabase.from("company_vacancies")
         .select("*, companies:company_id(name, company_type, reputation_score, quality_score), cities:location_city_id(name, country), company_job_applications(id,status,applicant_profile_id,suitability_score,offer_expires_at,employment_id)")
         .eq("status", "open")
         .order("weekly_wage", { ascending: false });

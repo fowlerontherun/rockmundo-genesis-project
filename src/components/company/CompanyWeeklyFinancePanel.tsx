@@ -14,7 +14,7 @@ export function CompanyWeeklyFinancePanel({ companyId }: CompanyWeeklyFinancePan
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["company-weekly-finance-records", companyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("company_weekly_finance_records") as any)
+      const { data, error } = await supabase.from("company_weekly_finance_records")
         .select("*")
         .eq("company_id", companyId)
         .order("week_start", { ascending: false })

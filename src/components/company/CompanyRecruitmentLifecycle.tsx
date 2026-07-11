@@ -52,7 +52,7 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, headquarte
   const { data: vacancies = [], isLoading } = useQuery({
     queryKey: ["company-vacancies", companyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("company_vacancies") as any)
+      const { data, error } = await supabase.from("company_vacancies")
         .select("*, cities:location_city_id(name, country), company_job_applications(id,status,suitability_score,created_at,applicant_profile_id,message, profiles:applicant_profile_id(display_name,avatar_url))")
         .eq("company_id", companyId)
         .order("updated_at", { ascending: false });
