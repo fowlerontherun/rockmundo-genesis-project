@@ -958,8 +958,9 @@ Create one typed, authoritative read model for the gig result.
 
 ### Implementation evidence
 
-- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
-- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+- Complete in `docs/gigs/implementation/PHASE_5_PR_08.md`.
+- Added a presentation-only performer lifecycle with backstage staging, deterministic entrance ordering, role-normalized stage slots, bounded movement zones, idle performance movement, performer-move event overrides, band-exit hiding, reduced-motion reconstruction, and an accessible performer companion panel.
+- The implementation uses existing replay events plus a narrow compatible movement-style type extension and does not change outcomes, rewards, progression, or database migrations.
 
 ### Risk
 Medium; remaining risk is visual polish/path realism, not outcome correctness.
@@ -993,8 +994,9 @@ Replace the card wall with a clear three-level report.
 
 ### Implementation evidence
 
-- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
-- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+- Complete in `docs/gigs/implementation/PHASE_5_PR_08.md`.
+- Added a presentation-only performer lifecycle with backstage staging, deterministic entrance ordering, role-normalized stage slots, bounded movement zones, idle performance movement, performer-move event overrides, band-exit hiding, reduced-motion reconstruction, and an accessible performer companion panel.
+- The implementation uses existing replay events plus a narrow compatible movement-style type extension and does not change outcomes, rewards, progression, or database migrations.
 
 ### Risk
 Medium; remaining risk is visual polish/path realism, not outcome correctness.
@@ -1117,8 +1119,9 @@ Show fans entering and filling the venue.
 
 ### Implementation evidence
 
-- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
-- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+- Complete in `docs/gigs/implementation/PHASE_5_PR_08.md`.
+- Added a presentation-only performer lifecycle with backstage staging, deterministic entrance ordering, role-normalized stage slots, bounded movement zones, idle performance movement, performer-move event overrides, band-exit hiding, reduced-motion reconstruction, and an accessible performer companion panel.
+- The implementation uses existing replay events plus a narrow compatible movement-style type extension and does not change outcomes, rewards, progression, or database migrations.
 
 ### Risk
 Medium; remaining risk is visual polish/path realism, not outcome correctness.
@@ -1148,8 +1151,9 @@ Render the band entering and performing.
 
 ### Implementation evidence
 
-- Added a presentation-only crowd lifecycle with deterministic weighted entities, entrance assignment, zone fill ordering, spawn schedules, movement projection, reduced-motion static projection, and accessible crowd status.
-- The implementation uses existing replay events and does not change replay schema, outcomes, rewards, progression, or database migrations.
+- Complete in `docs/gigs/implementation/PHASE_5_PR_08.md`.
+- Added a presentation-only performer lifecycle with backstage staging, deterministic entrance ordering, role-normalized stage slots, bounded movement zones, idle performance movement, performer-move event overrides, band-exit hiding, reduced-motion reconstruction, and an accessible performer companion panel.
+- The implementation uses existing replay events plus a narrow compatible movement-style type extension and does not change outcomes, rewards, progression, or database migrations.
 
 ### Risk
 Medium; remaining risk is visual polish/path realism, not outcome correctness.

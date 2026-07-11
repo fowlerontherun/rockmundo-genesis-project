@@ -284,3 +284,8 @@ Stored replay reads now have a frontend viewer shell for completed replay-ready 
 ## Phase 5 PR 07 viewer/crowd status
 
 The Canvas viewer now includes deterministic animated crowd entry and venue filling. The system derives presentation-only crowd entities from stored replay seed, canonical event offsets, attendance, capacity, venue preset, viewport size, and reduced-motion preference. It does not mutate replay rows, gig outcomes, rewards, progression, or historical migrations. Accessible status text reports attendance, capacity, fill percentage, crowd phase, and occupied zones.
+
+
+## Phase 5 PR 08 viewer/performer status
+
+The Canvas viewer now includes presentation-only band entrance, stage positioning, performer movement, and band exit reconstruction. Performer roles are normalized centrally; stage slots, backstage queue points, movement zones, idle offsets, direct `performer_move` overrides, and exit hiding are derived deterministically from replay data, viewport size, venue preset, and reduced-motion preference. The accessible replay UI includes a semantic performer list with names, role/instrument labels, lifecycle state, stage location, and focus state. No gig outcome, reward, progression, Supabase mutation, or historical migration changed.

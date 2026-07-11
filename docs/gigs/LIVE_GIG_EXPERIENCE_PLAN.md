@@ -159,7 +159,7 @@ Inputs may include current song score, previous momentum, attendance density, ba
 
 ## Band entities and stage positions
 
-Band members are larger coloured circles with initials, instrument icon, or short label. Use `gig_performers` and band role/instrument data when available, falling back to band members and generic roles.
+Band members are now rendered as larger Canvas counters with initials and short role labels, backed by a presentation-only performer lifecycle. The viewer uses authoritative replay performer data and `gig_performers` experience data when available, normalizes role/instrument strings centrally, stages performers backstage, animates deterministic entrance/exit paths, applies bounded idle movement, and exposes a semantic performer companion list. It does not infer absent performers from current band membership.
 
 Predictable positions:
 

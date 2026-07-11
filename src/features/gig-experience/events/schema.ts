@@ -81,7 +81,7 @@ function isPayloadValid(payload: GigVisualPayload | undefined): payload is GigVi
     case "crowd_fill": return payload.targetDensity >= 0 && payload.targetDensity <= 1 && Array.isArray(payload.zoneIds) && payload.enteringCount >= 0;
     case "crowd_reaction": return ["still", "bounce", "jump", "wave", "disperse"].includes(payload.reaction) && payload.intensity >= 0 && payload.intensity <= 1;
     case "performer_enter": return !!payload.performerId && !!payload.displayName && !!payload.startPosition;
-    case "performer_move": return !!payload.performerId && !!payload.targetPosition && ["walk", "rush", "step_forward"].includes(payload.movementStyle);
+    case "performer_move": return !!payload.performerId && !!payload.targetPosition && ["walk", "rush", "step_forward", "return_to_position", "hold"].includes(payload.movementStyle);
     case "song_start": return typeof payload.title === "string" && Number.isInteger(payload.position) && typeof payload.montage === "boolean";
     case "spotlight": return payload.intensity >= 0 && payload.intensity <= 1;
     case "moment_effect": return ["pulse", "ring", "trail", "confetti"].includes(payload.effect) && payload.intensity >= 0 && payload.intensity <= 1;
