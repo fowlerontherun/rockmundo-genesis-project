@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let rehearsalQuery: any;
 let gigQuery: any;
+let correctionsQuery: any;
 
 vi.mock("@/hooks/useParticipationDetails", () => ({
   useRehearsalParticipants: () => rehearsalQuery,
   useGigPerformers: () => gigQuery,
+  useRehearsalAttendanceCorrectionRequests: () => correctionsQuery,
 }));
 
 import { GigPerformersSection, RehearsalParticipantsSection } from "./ParticipantStatusList";
@@ -18,6 +20,7 @@ const gigRow = { id: "gp-1", gig_id: "gig-1", band_id: "band-1", profile_id: "pr
 beforeEach(() => {
   rehearsalQuery = { data: [rehearsalRow], isLoading: false, isError: false, error: null };
   gigQuery = { data: [gigRow], isLoading: false, isError: false, error: null };
+  correctionsQuery = { data: [], isLoading: false, isError: false, error: null };
 });
 
 describe("RehearsalParticipantsSection", () => {
@@ -55,6 +58,49 @@ describe("RehearsalParticipantsSection", () => {
     rehearsalQuery = { data: undefined, isLoading: true, isError: false, error: null };
     rerender(<RehearsalParticipantsSection rehearsalId="reh-1" />);
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+  it("renders manager correction history and conflict guidance", () => {
+    rehearsalQuery.data = [{ ...rehearsalRow, participation_status: "attended" }];
+    correctionsQuery.data = [
+      {
+        id: "corr-1",
+        rehearsal_id: "reh-1",
+        participant_id: "rp-1",
+        band_id: "band-1",
+        requester_profile_id: "profile-1",
+        current_status: "attended",
+        requested_status: "missed",
+        request_reason: "Marked the wrong rehearsal",
+        status: "pending",
+        created_at: new Date().toISOString(),
+        resolved_at: null,
+        resolved_by_profile_id: null,
+        resolution_note: null,
+        profiles: profile,
+        eligibility: { denial_reason: "original_finaliser_conflict", can_resolve: false },
+      },
+      {
+        id: "corr-2",
+        rehearsal_id: "reh-1",
+        participant_id: "rp-1",
+        band_id: "band-1",
+        requester_profile_id: "profile-1",
+        current_status: "missed",
+        requested_status: "attended",
+        request_reason: null,
+        status: "approved",
+        created_at: new Date().toISOString(),
+        resolved_at: new Date().toISOString(),
+        resolved_by_profile_id: "manager-2",
+        resolution_note: "verified",
+        sole_resolver_exception: true,
+        profiles: profile,
+      },
+    ];
+    render(<RehearsalParticipantsSection rehearsalId="reh-1" isManager />);
+    expect(screen.getByText(/Another authorised manager must resolve this request/i)).toBeInTheDocument();
+    expect(screen.getByText(/Correction history/i)).toBeInTheDocument();
+    expect(screen.getByText(/sole-resolver exception/i)).toBeInTheDocument();
   });
 });
 

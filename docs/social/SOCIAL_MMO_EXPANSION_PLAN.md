@@ -569,3 +569,7 @@ The expansion should be considered successful when:
 ### Phase 4 PR 08 implementation status — rehearsal attendance corrections
 
 Rehearsal attendance correction requests are now implemented for final `attended` ↔ `missed` rows only. Affected participants can open one pending request within the 24-hour database-enforced correction window; authorised current managers or admin/support resolvers can approve or reject through guarded RPCs. The workflow preserves append-only audit history, keeps request reasons and resolution notes private, sends deduped resolver/requester notifications, and corrects rehearsal contribution eligibility by inserting missed-to-attended events idempotently or voiding attended-to-missed events without deleting the original contribution row. Gig lineup management, performer confirmation, gig disputes, absence reasons, rewards, penalties, XP, chemistry, reputation, attendance percentages, and reliability scoring remain out of scope.
+
+## Phase 4 PR 09 status
+
+- Attendance corrections now have authoritative per-participant finaliser references, server-side original-finaliser conflict enforcement, sole-resolver exception auditing, legacy-null fallback handling, read-only correction history, and a repeatable correction SQL harness. Gig lineup management remains not complete.

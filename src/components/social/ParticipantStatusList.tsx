@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Users } from "lucide-react";
+import { AlertCircle, ShieldAlert, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -202,6 +202,16 @@ function ParticipantRow({
               {REHEARSAL_RSVP_LOCK_MINUTES / 60} hour before rehearsal.
             </p>
           ) : null}
+          {kind === "rehearsal" && isOwnRehearsalRow && FINAL_REHEARSAL_STATUSES.has((row as RehearsalParticipant).participation_status) ? (
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>Current authoritative status: {status.label}.</p>
+              {(row as RehearsalParticipant).finalised_at ? (
+                <p>Finalised {(row as RehearsalParticipant).finalised_by_profile_id ? "by a manager" : "by legacy process"} on {new Date((row as RehearsalParticipant).finalised_at as string).toLocaleString()}.</p>
+              ) : (
+                <p>Finaliser unknown for this legacy row.</p>
+              )}
+            </div>
+          ) : null}
           {message ? (
             <p
               className="text-xs text-muted-foreground"
@@ -222,9 +232,10 @@ function ParticipantRow({
         </Badge>
 
         {correction ? (
-          <div className="max-w-sm rounded-md border border-dashed p-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-            Correction request: {getRehearsalAttendanceCorrectionStatusDisplay(correction.status).label}
-            {correction.status === "pending" ? ` — ${correction.current_status} → ${correction.requested_status}` : ""}
+          <div className="max-w-sm space-y-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+            <p>Correction request: {getRehearsalAttendanceCorrectionStatusDisplay(correction.status).label}</p>
+            <p>{correction.current_status} → {correction.requested_status} · requested {new Date(correction.created_at).toLocaleString()}</p>
+            {correction.resolved_at ? <p>Resolved {new Date(correction.resolved_at).toLocaleString()}.</p> : null}
           </div>
         ) : null}
         {canRequestCorrection ? (
@@ -530,6 +541,7 @@ function ManagerCorrectionRequests({ rehearsalId, requests }: { rehearsalId: str
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const pending = requests.filter((request) => request.status === "pending");
+  const history = requests.filter((request) => request.status !== "pending");
   const mutation = useMutation({
     mutationFn: async ({ id, decision }: { id: string; decision: "approve" | "reject" }) => {
       const { data, error } = await (supabase as any).rpc("resolve_rehearsal_attendance_correction", {
@@ -567,6 +579,8 @@ function ManagerCorrectionRequests({ rehearsalId, requests }: { rehearsalId: str
       <ul className="space-y-2">
         {pending.map((request) => {
           const requesterName = nameFor({ profiles: request.profiles ?? null });
+          const blockedByConflict = request.eligibility?.denial_reason === "original_finaliser_conflict";
+          const soleResolver = Boolean(request.eligibility?.sole_resolver_exception_available);
           return (
             <li key={request.id} className="space-y-2 rounded-md bg-muted/30 p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -576,20 +590,39 @@ function ManagerCorrectionRequests({ rehearsalId, requests }: { rehearsalId: str
                 </div>
                 <Badge variant={getRehearsalAttendanceCorrectionStatusDisplay(request.status).badgeVariant}>{getRehearsalAttendanceCorrectionStatusDisplay(request.status).label}</Badge>
               </div>
+              {blockedByConflict ? <div className="flex items-center gap-2 rounded border border-destructive/40 bg-destructive/5 p-2 text-sm text-destructive"><ShieldAlert className="h-4 w-4" />Another authorised manager must resolve this request.</div> : null}
+              {soleResolver ? <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-muted-foreground">Sole-resolver exception available: approval or rejection will be specially audited.</div> : null}
               {request.request_reason ? <p className="break-words rounded border bg-background p-2 text-sm">{request.request_reason}</p> : <p className="text-sm text-muted-foreground">No reason provided.</p>}
               <Label htmlFor={`${request.id}-resolution-note`}>Private resolution note (optional)</Label>
               <Textarea id={`${request.id}-resolution-note`} value={notes[request.id] ?? ""} maxLength={280} disabled={mutation.isPending} onChange={(event) => setNotes((current) => ({ ...current, [request.id]: event.target.value }))} />
               <div className="flex flex-col gap-2 sm:flex-row">
                 <AlertDialog>
-                  <AlertDialogTrigger asChild><Button size="sm" disabled={mutation.isPending}>Approve</Button></AlertDialogTrigger>
-                  <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Approve correction?</AlertDialogTitle><AlertDialogDescription>This updates final attendance and applies contribution correction semantics.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction disabled={mutation.isPending} onClick={(event) => { event.preventDefault(); mutation.mutate({ id: request.id, decision: "approve" }); }}>Approve correction</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                  <AlertDialogTrigger asChild><Button size="sm" disabled={mutation.isPending || blockedByConflict}>Approve</Button></AlertDialogTrigger>
+                  <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Approve correction?</AlertDialogTitle><AlertDialogDescription>{soleResolver ? "This sole-resolver decision will be specially audited." : "This updates final attendance and applies contribution correction semantics."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction disabled={mutation.isPending} onClick={(event) => { event.preventDefault(); mutation.mutate({ id: request.id, decision: "approve" }); }}>Approve correction</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                 </AlertDialog>
-                <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate({ id: request.id, decision: "reject" })}>Reject</Button>
+                <Button size="sm" variant="outline" disabled={mutation.isPending || blockedByConflict} onClick={() => mutation.mutate({ id: request.id, decision: "reject" })}>Reject</Button>
               </div>
             </li>
           );
         })}
       </ul>
+      {history.length > 0 ? (
+        <div className="space-y-2">
+          <h5 className="text-sm font-medium">Correction history</h5>
+          <ul className="space-y-2">
+            {history.map((request) => (
+              <li key={request.id} className="rounded-md border p-2 text-sm">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{nameFor({ profiles: request.profiles ?? null })}: {request.current_status} → {request.requested_status}</span>
+                  <Badge variant={getRehearsalAttendanceCorrectionStatusDisplay(request.status).badgeVariant}>{getRehearsalAttendanceCorrectionStatusDisplay(request.status).label}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">Requested {new Date(request.created_at).toLocaleString()}{request.resolved_at ? ` · resolved ${new Date(request.resolved_at).toLocaleString()}` : ""}{request.sole_resolver_exception ? " · sole-resolver exception" : ""}</p>
+                {request.resolution_note ? <p className="mt-1 break-words rounded bg-muted/30 p-2 text-xs">Manager note: {request.resolution_note}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -674,7 +707,7 @@ function ParticipantStatusCard({
                 rehearsalStatus={rehearsalStatus}
                 scheduledStart={scheduledStart}
                 scheduledEnd={scheduledEnd}
-                correction={corrections.find((correction) => correction.participant_id === row.id && correction.status === "pending")}
+                correction={corrections.find((correction) => correction.participant_id === row.id)}
               />
             ))}
           </ul>
