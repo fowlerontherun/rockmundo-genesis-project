@@ -1162,6 +1162,8 @@ Medium; remaining risk is visual polish/path realism, not outcome correctness.
 
 ## Phase 5 PR 09 — Song Timeline, Crowd Energy, Commentary, Highlights and Finale
 
+**Status: Complete in PR 09.** The viewer now derives a deterministic song story from stored replay offsets, shows the current song, crowd mood graph, factual commentary, highlights, local song/highlight/result seek controls, finale state, and result reveal overlay.
+
 ### Objective
 Tell the story of the performance.
 
@@ -1192,10 +1194,10 @@ High.
 
 ---
 
-## Phase 5 PR 10 — Controls, Reconnect, Replay, Accessibility and Analytics
+## Phase 5 PR 10 — Canonical Incident Detail, Analytics Wiring, Smoke Coverage and Phase Review
 
 ### Objective
-Complete the viewer experience and close Phase 5.
+Complete the remaining viewer instrumentation/detail gaps and close Phase 5.
 
 ### Scope
 

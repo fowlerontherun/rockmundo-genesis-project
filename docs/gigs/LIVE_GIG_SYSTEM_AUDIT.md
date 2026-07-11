@@ -289,3 +289,8 @@ The Canvas viewer now includes deterministic animated crowd entry and venue fill
 ## Phase 5 PR 08 viewer/performer status
 
 The Canvas viewer now includes presentation-only band entrance, stage positioning, performer movement, and band exit reconstruction. Performer roles are normalized centrally; stage slots, backstage queue points, movement zones, idle offsets, direct `performer_move` overrides, and exit hiding are derived deterministically from replay data, viewport size, venue preset, and reduced-motion preference. The accessible replay UI includes a semantic performer list with names, role/instrument labels, lifecycle state, stage location, and focus state. No gig outcome, reward, progression, Supabase mutation, or historical migration changed.
+
+
+## Phase 5 PR 09 viewer/story status
+
+The Canvas replay now reconstructs the performance story from stored replay offsets. Song segments expose intro/performance/peak/ending/completed phases, score badges from authoritative DTO data, energy before/after, best/weakest/opener/finale flags, and a single positive-delta turning point when meaningful. The DOM companion UI adds current-song status, factual commentary with duplicate suppression, a crowd mood graph, grouped song timeline, local skip controls, and a result reveal overlay. Canvas crowd reactions are presentation-only and remain bounded by canonical energy/reaction events, viewport, reduced-motion preference, and existing entity caps. No Supabase writes, historical migrations, authoritative outcome calculations, reward logic, or song-score generation changed.

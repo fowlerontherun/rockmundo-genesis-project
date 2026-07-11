@@ -534,3 +534,8 @@ The initial 2D viewer is now a read-only HTML Canvas shell backed by stored `gig
 ## Phase 5 PR 07 implemented crowd-entry facts
 
 Crowd entry is now implemented as a read-only presentation layer. Weighted visual entities exactly sum to authoritative attendance while respecting centralized device/reduced-motion caps. Entities are deterministically assigned to venue entrances and prioritized audience sub-zones so low attendance clusters near the front and higher attendance fills more of the room. Replay offset reconstructs queued, entering, moving, settling, and waiting states without frame history; reduced motion uses static target-position updates and preserves text milestones.
+
+
+## Phase 5 PR 09 implemented story-layer facts
+
+The replay viewer now has a factual song-story layer. `StoryEngine` derives song lifecycle phases, crowd-energy mood labels, one deterministic turning point, highlights, encore/finale/result states, and commentary from canonical replay events plus `GigExperienceDTO` metrics. The UI includes a current-song panel, SVG crowd mood graph with seekable points, expanded song timeline, song/highlight/result skip controls, Canvas crowd reactions, and result reveal overlay. No browser-side outcome, reward, setlist, or replay-fact mutation was introduced.
