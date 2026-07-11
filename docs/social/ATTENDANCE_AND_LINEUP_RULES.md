@@ -36,7 +36,7 @@ This design rejects beta rewards, penalties, contribution scores, XP changes, ch
 - Rehearsal completion calls `capture_contributions_for_rehearsal`, seeds missing rows, changes remaining `invited` rows to `attended`, and creates contribution events for `attended` only.
 - Existing schedule records are `player_scheduled_activities` linked to `linked_rehearsal_id`; they are the schedule source. Participant rows are evidence, not duplicate schedules.
 - Cancellation behaviour is partial: seeding skips cancelled rehearsals, schedule status supports `cancelled`, but no participant cancellation lifecycle or RSVP release flow exists.
-- Read-only UI exists on rehearsal cards through participant detail hooks and shared status display; no RSVP or manager attendance mutation UI exists.
+- Read-only UI exists on rehearsal cards through participant detail hooks and shared status display; Phase 4 PR 06 adds player-owned rehearsal self-response controls for the active user's own row before the one-hour RSVP deadline. Manager attendance mutation UI does not exist.
 
 ### Gigs
 

@@ -451,3 +451,6 @@ Confirmed remaining gaps are product decisions rather than security blockers: gl
 - ⚠️ Identified permission needs before implementation: authoritative leader/founder/officer checks, own-row response checks, former-member historical self-read rules, denied-attempt logging, and admin/support override policy.
 - ⚠️ Identified privacy/dispute gaps: optional private absence reasons, correction windows, dispute resolver conflict rules, contribution correction records, and notification privacy/deduplication are still unimplemented.
 - 📌 Planned order is PR 06 rehearsal self-response, PR 07 rehearsal finalisation, PR 08 gig lineup management, PR 09 performer confirmation/lineup lock, and PR 10 correction/dispute review.
+
+
+Phase 4 PR 06 status update: Rehearsal participant and gig lineup details are surfaced on existing pages. Rehearsal participants can now confirm or decline only their own provisional rehearsal row before the one-hour lock deadline; gig lineup response and manager finalisation controls remain absent.

@@ -14,6 +14,7 @@ export type RehearsalParticipant = {
   band_id: string;
   profile_id: string;
   participation_status: string;
+  responded_at: string | null;
   profiles: PublicParticipantProfile | null;
 };
 
@@ -36,7 +37,7 @@ export function useRehearsalParticipants(rehearsalId: string | null | undefined,
     queryFn: async (): Promise<RehearsalParticipant[]> => {
       const { data, error } = await (supabase as any)
         .from("band_rehearsal_participants")
-        .select(`id, rehearsal_id, band_id, profile_id, participation_status, profiles:profiles!band_rehearsal_participants_profile_id_fkey(${profileSelect})`)
+        .select(`id, rehearsal_id, band_id, profile_id, participation_status, responded_at, profiles:profiles!band_rehearsal_participants_profile_id_fkey(${profileSelect})`)
         .eq("rehearsal_id", rehearsalId)
         .order("participation_status", { ascending: true })
         .order("created_at", { ascending: true });

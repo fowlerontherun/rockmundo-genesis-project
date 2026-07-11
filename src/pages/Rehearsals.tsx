@@ -545,6 +545,8 @@ const Rehearsals = () => {
                     <RehearsalParticipantsSection
                       rehearsalId={rehearsal.id}
                       completed={rehearsal.status === "completed"}
+                      status={rehearsal.status}
+                      scheduledStart={rehearsal.scheduled_start}
                     />
 
                     {rehearsal.status === "completed" && (
