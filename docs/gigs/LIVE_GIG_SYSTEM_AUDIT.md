@@ -263,3 +263,7 @@ Client currently owns:
 - `PerformGig` now requests the canonical DTO with a stable React Query key and passes it to the existing report.
 - `GigOutcomeReport` retains its current layout through a temporary DTO-to-legacy adapter pending PR 03.
 - Remaining factual gap: member reward cards and the broader report card wall are not yet fully DTO-native.
+
+## Phase 5 PR 03 implementation update
+
+Phase 5 PR 03 rebuilds `GigOutcomeReport` around the canonical `GigExperienceDTO` presentation boundary. The report now prioritises a headline result, a chronological performance story, lessons for the next gig, and collapsed detailed analysis. Legacy outcome props are still supported through a DTO-shaped adapter inside the report component. No gig calculations, rewards, progression rules, replay implementation, Canvas viewer, or historical migrations were changed.
