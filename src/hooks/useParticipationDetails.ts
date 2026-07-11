@@ -65,3 +65,36 @@ export function useGigPerformers(gigId: string | null | undefined, enabled = tru
     },
   });
 }
+
+export type RehearsalAttendanceCorrectionRequest = {
+  id: string;
+  rehearsal_id: string;
+  participant_id: string;
+  band_id: string;
+  requester_profile_id: string;
+  current_status: "attended" | "missed";
+  requested_status: "attended" | "missed";
+  request_reason: string | null;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by_profile_id: string | null;
+  resolution_note: string | null;
+  profiles?: PublicParticipantProfile | null;
+};
+
+export function useRehearsalAttendanceCorrectionRequests(rehearsalId: string | null | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["rehearsal-attendance-corrections", rehearsalId],
+    enabled: enabled && !!rehearsalId,
+    queryFn: async (): Promise<RehearsalAttendanceCorrectionRequest[]> => {
+      const { data, error } = await (supabase as any)
+        .from("rehearsal_attendance_correction_requests")
+        .select(`id, rehearsal_id, participant_id, band_id, requester_profile_id, current_status, requested_status, request_reason, status, created_at, resolved_at, resolved_by_profile_id, resolution_note, profiles:profiles!rehearsal_attendance_correction_requests_requester_profile_id_fkey(${profileSelect})`)
+        .eq("rehearsal_id", rehearsalId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as RehearsalAttendanceCorrectionRequest[];
+    },
+  });
+}

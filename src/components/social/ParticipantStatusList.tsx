@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Users } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   getGigLineupStatusDisplay,
+  getRehearsalAttendanceCorrectionStatusDisplay,
   getRehearsalParticipantStatusDisplay,
 } from "@/lib/participationStatus";
 import {
@@ -39,8 +41,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   useGigPerformers,
+  useRehearsalAttendanceCorrectionRequests,
   useRehearsalParticipants,
   type GigPerformer,
+  type RehearsalAttendanceCorrectionRequest,
   type RehearsalParticipant,
 } from "@/hooks/useParticipationDetails";
 
@@ -69,16 +73,21 @@ function ParticipantRow({
   activeProfileId,
   rehearsalStatus,
   scheduledStart,
+  scheduledEnd,
+  correction,
 }: {
   row: RehearsalParticipant | GigPerformer;
   kind: Kind;
   activeProfileId?: string | null;
   rehearsalStatus?: string;
   scheduledStart?: string;
+  scheduledEnd?: string;
+  correction?: RehearsalAttendanceCorrectionRequest;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [message, setMessage] = useState<string | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
   const status =
     kind === "rehearsal"
       ? getRehearsalParticipantStatusDisplay(
@@ -93,6 +102,14 @@ function ParticipantRow({
   const deadline = scheduledStart
     ? getRehearsalRsvpDeadline(scheduledStart)
     : null;
+  const correctionDeadline = scheduledEnd ? new Date(new Date(scheduledEnd).getTime() + 24 * 60 * 60 * 1000) : null;
+  const canRequestCorrection =
+    isOwnRehearsalRow &&
+    FINAL_REHEARSAL_STATUSES.has((row as RehearsalParticipant).participation_status) &&
+    !correction &&
+    correctionDeadline !== null &&
+    Date.now() <= correctionDeadline.getTime();
+  const oppositeStatus = (row as RehearsalParticipant).participation_status === "attended" ? "missed" : "attended";
   const canRespond =
     isOwnRehearsalRow &&
     scheduledStart &&
@@ -101,6 +118,28 @@ function ParticipantRow({
       (row as RehearsalParticipant).participation_status,
       scheduledStart,
     );
+
+  const correctionMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await (supabase as any).rpc(
+        "request_rehearsal_attendance_correction",
+        { participant_id: row.id, requested_status: oppositeStatus, reason: correctionReason },
+      );
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      setMessage("Correction request submitted for manager review.");
+      setCorrectionReason("");
+      toast({ title: "Correction requested", description: "A manager will review your attendance correction." });
+      queryClient.invalidateQueries({ queryKey: ["rehearsal-attendance-corrections", (row as RehearsalParticipant).rehearsal_id] });
+    },
+    onError: (error: any) => {
+      const description = error?.message || "Please try again later.";
+      setMessage(description);
+      toast({ title: "Unable to request correction", description, variant: "destructive" });
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: async (response: "confirmed" | "declined") => {
@@ -181,6 +220,42 @@ function ParticipantRow({
         >
           {status.label}
         </Badge>
+
+        {correction ? (
+          <div className="max-w-sm rounded-md border border-dashed p-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+            Correction request: {getRehearsalAttendanceCorrectionStatusDisplay(correction.status).label}
+            {correction.status === "pending" ? ` — ${correction.current_status} → ${correction.requested_status}` : ""}
+          </div>
+        ) : null}
+        {canRequestCorrection ? (
+          <div className="space-y-2 rounded-md border p-2" aria-busy={correctionMutation.isPending}>
+            <p className="text-xs text-muted-foreground">Correction window closes {correctionDeadline?.toLocaleString()}.</p>
+            <Label htmlFor={`${row.id}-correction-reason`}>Correction reason (optional)</Label>
+            <Textarea
+              id={`${row.id}-correction-reason`}
+              value={correctionReason}
+              onChange={(event) => setCorrectionReason(event.target.value)}
+              maxLength={280}
+              placeholder={`Request change to ${oppositeStatus}`}
+              disabled={correctionMutation.isPending}
+            />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" disabled={correctionMutation.isPending || correctionReason.includes("<") || correctionReason.includes(">")}>Request correction</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Request attendance correction?</AlertDialogTitle>
+                  <AlertDialogDescription>This asks a manager to review changing your final status to {oppositeStatus}. Attendance will not change immediately.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={correctionMutation.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction disabled={correctionMutation.isPending} onClick={(event) => { event.preventDefault(); correctionMutation.mutate(); }}>Submit request</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        ) : null}
         {canRespond ? (
           <div
             className="flex flex-col gap-2 sm:flex-row"
@@ -448,6 +523,77 @@ function ManagerAttendanceFinalisation({
   );
 }
 
+
+function ManagerCorrectionRequests({ rehearsalId, requests }: { rehearsalId: string; requests: RehearsalAttendanceCorrectionRequest[] }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const pending = requests.filter((request) => request.status === "pending");
+  const mutation = useMutation({
+    mutationFn: async ({ id, decision }: { id: string; decision: "approve" | "reject" }) => {
+      const { data, error } = await (supabase as any).rpc("resolve_rehearsal_attendance_correction", {
+        correction_request_id: id,
+        decision,
+        resolution_note: notes[id] || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      setMessage(`Correction ${variables.decision === "approve" ? "approved" : "rejected"}.`);
+      toast({ title: "Correction resolved", description: "The requester was notified." });
+      queryClient.invalidateQueries({ queryKey: ["rehearsal-attendance-corrections", rehearsalId] });
+      queryClient.invalidateQueries({ queryKey: ["rehearsal-participants", rehearsalId] });
+      queryClient.invalidateQueries({ queryKey: ["band-contribution-events"] });
+    },
+    onError: (error: any) => {
+      const description = error?.message || "Please try again later.";
+      setMessage(description);
+      toast({ title: "Unable to resolve correction", description, variant: "destructive" });
+    },
+  });
+
+  if (requests.length === 0) return null;
+
+  return (
+    <section className="space-y-3 rounded-lg border p-3" aria-label="Attendance correction requests" aria-busy={mutation.isPending}>
+      <div className="space-y-1">
+        <h4 className="font-medium">Attendance correction requests</h4>
+        <p className="text-sm text-muted-foreground">Private correction reasons are visible only to the requester, authorised resolvers, and support.</p>
+      </div>
+      {message ? <p className="text-sm text-muted-foreground" role="status" aria-live="polite">{message}</p> : null}
+      {pending.length === 0 ? <p className="text-sm text-muted-foreground">No pending correction requests.</p> : null}
+      <ul className="space-y-2">
+        {pending.map((request) => {
+          const requesterName = nameFor({ profiles: request.profiles ?? null });
+          return (
+            <li key={request.id} className="space-y-2 rounded-md bg-muted/30 p-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="break-words text-sm font-medium">{requesterName}</p>
+                  <p className="text-xs text-muted-foreground">{request.current_status} → {request.requested_status} · submitted {new Date(request.created_at).toLocaleString()}</p>
+                </div>
+                <Badge variant={getRehearsalAttendanceCorrectionStatusDisplay(request.status).badgeVariant}>{getRehearsalAttendanceCorrectionStatusDisplay(request.status).label}</Badge>
+              </div>
+              {request.request_reason ? <p className="break-words rounded border bg-background p-2 text-sm">{request.request_reason}</p> : <p className="text-sm text-muted-foreground">No reason provided.</p>}
+              <Label htmlFor={`${request.id}-resolution-note`}>Private resolution note (optional)</Label>
+              <Textarea id={`${request.id}-resolution-note`} value={notes[request.id] ?? ""} maxLength={280} disabled={mutation.isPending} onChange={(event) => setNotes((current) => ({ ...current, [request.id]: event.target.value }))} />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild><Button size="sm" disabled={mutation.isPending}>Approve</Button></AlertDialogTrigger>
+                  <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Approve correction?</AlertDialogTitle><AlertDialogDescription>This updates final attendance and applies contribution correction semantics.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction disabled={mutation.isPending} onClick={(event) => { event.preventDefault(); mutation.mutate({ id: request.id, decision: "approve" }); }}>Approve correction</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                </AlertDialog>
+                <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate({ id: request.id, decision: "reject" })}>Reject</Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function ParticipantStatusCard({
   title,
   description,
@@ -462,6 +608,7 @@ function ParticipantStatusCard({
   scheduledStart,
   scheduledEnd,
   isManager,
+  corrections = [],
 }: {
   title: string;
   description: string;
@@ -476,6 +623,7 @@ function ParticipantStatusCard({
   scheduledStart?: string;
   scheduledEnd?: string;
   isManager?: boolean;
+  corrections?: RehearsalAttendanceCorrectionRequest[];
 }) {
   if (isLoading)
     return (
@@ -525,20 +673,26 @@ function ParticipantStatusCard({
                 activeProfileId={activeProfileId}
                 rehearsalStatus={rehearsalStatus}
                 scheduledStart={scheduledStart}
+                scheduledEnd={scheduledEnd}
+                correction={corrections.find((correction) => correction.participant_id === row.id && correction.status === "pending")}
               />
             ))}
           </ul>
         )}
         {kind === "rehearsal" && isManager ? (
-          <ManagerAttendanceFinalisation
-            rehearsalId={
-              (rows[0] as RehearsalParticipant | undefined)?.rehearsal_id ?? ""
-            }
-            status={rehearsalStatus}
-            scheduledStart={scheduledStart}
-            scheduledEnd={scheduledEnd}
-            rows={rows as RehearsalParticipant[]}
-          />
+          <>
+            <ManagerCorrectionRequests
+              rehearsalId={(rows[0] as RehearsalParticipant | undefined)?.rehearsal_id ?? ""}
+              requests={corrections}
+            />
+            <ManagerAttendanceFinalisation
+              rehearsalId={(rows[0] as RehearsalParticipant | undefined)?.rehearsal_id ?? ""}
+              status={rehearsalStatus}
+              scheduledStart={scheduledStart}
+              scheduledEnd={scheduledEnd}
+              rows={rows as RehearsalParticipant[]}
+            />
+          </>
         ) : null}
       </CardContent>
     </Card>
@@ -552,6 +706,7 @@ export function RehearsalParticipantsSection({
   scheduledStart,
   scheduledEnd,
   isManager,
+  corrections = [],
 }: {
   rehearsalId: string;
   completed?: boolean;
@@ -559,8 +714,10 @@ export function RehearsalParticipantsSection({
   scheduledStart?: string;
   scheduledEnd?: string;
   isManager?: boolean;
+  corrections?: RehearsalAttendanceCorrectionRequest[];
 }) {
   const query = useRehearsalParticipants(rehearsalId);
+  const correctionsQuery = useRehearsalAttendanceCorrectionRequests(rehearsalId);
   const { profileId } = useActiveProfile();
   return (
     <ParticipantStatusCard
@@ -581,6 +738,7 @@ export function RehearsalParticipantsSection({
       scheduledStart={scheduledStart}
       scheduledEnd={scheduledEnd}
       isManager={isManager}
+      corrections={correctionsQuery.data ?? []}
     />
   );
 }

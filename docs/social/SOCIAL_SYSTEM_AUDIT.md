@@ -465,3 +465,8 @@ Phase 4 PR 06 status update: Rehearsal participant and gig lineup details are su
 - Audit coverage records successful rehearsal finalisation, participant attended/missed markings, and denied attempts for permission, timing, cancellation, invalid payload, wrong participant, and final/declined conflicts.
 - RLS remains unchanged for direct participant mutation; clients use only the SECURITY DEFINER RPC with safe `search_path` and narrow authenticated execute grant.
 - Participant DB harness documents PR 07 RPC coverage markers; full integration validation requires a running Supabase database.
+
+
+### Phase 4 PR 08 implementation status — rehearsal attendance corrections
+
+Rehearsal attendance correction requests are now implemented for final `attended` ↔ `missed` rows only. Affected participants can open one pending request within the 24-hour database-enforced correction window; authorised current managers or admin/support resolvers can approve or reject through guarded RPCs. The workflow preserves append-only audit history, keeps request reasons and resolution notes private, sends deduped resolver/requester notifications, and corrects rehearsal contribution eligibility by inserting missed-to-attended events idempotently or voiding attended-to-missed events without deleting the original contribution row. Gig lineup management, performer confirmation, gig disputes, absence reasons, rewards, penalties, XP, chemistry, reputation, attendance percentages, and reliability scoring remain out of scope.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGigLineupStatusDisplay, getRehearsalParticipantStatusDisplay } from "./participationStatus";
+import { getGigLineupStatusDisplay, getRehearsalAttendanceCorrectionStatusDisplay, getRehearsalParticipantStatusDisplay } from "./participationStatus";
 
 describe("participation status mappings", () => {
   it("maps rehearsal statuses", () => {
@@ -16,8 +16,16 @@ describe("participation status mappings", () => {
     expect(getGigLineupStatusDisplay("missed")).toMatchObject({ label: "Missed", final: true });
   });
 
+  it("maps correction request statuses", () => {
+    expect(getRehearsalAttendanceCorrectionStatusDisplay("pending")).toMatchObject({ label: "Pending review", final: false, actionable: true });
+    expect(getRehearsalAttendanceCorrectionStatusDisplay("approved")).toMatchObject({ label: "Approved", final: true });
+    expect(getRehearsalAttendanceCorrectionStatusDisplay("rejected")).toMatchObject({ label: "Rejected", final: true });
+    expect(getRehearsalAttendanceCorrectionStatusDisplay("cancelled")).toMatchObject({ label: "Cancelled", final: true });
+  });
+
   it("returns a safe fallback for unsupported values", () => {
     expect(getRehearsalParticipantStatusDisplay("future")).toMatchObject({ label: "Status unavailable", semantic: "unknown" });
     expect(getGigLineupStatusDisplay(undefined)).toMatchObject({ label: "Status unavailable", semantic: "unknown" });
+    expect(getRehearsalAttendanceCorrectionStatusDisplay("future")).toMatchObject({ label: "Status unavailable", actionable: false });
   });
 });
