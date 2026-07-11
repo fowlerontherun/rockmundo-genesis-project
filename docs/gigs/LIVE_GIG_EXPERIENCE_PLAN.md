@@ -526,3 +526,7 @@ The live viewer plan should assume that browser sessions do not advance songs or
 ## Phase 5 PR 05 update
 
 Implemented event contract: viewer version 1/event schema version 1 stores typed replay events in `gig_viewer_replays`, using message keys/params plus discriminated visual payloads rather than final English commentary.
+
+## Phase 5 PR 06 implemented viewer facts
+
+The initial 2D viewer is now a read-only HTML Canvas shell backed by stored `gig_viewer_replays`. It does not regenerate events in the browser. The completed gig page lazy-loads the full replay payload only after the player chooses Replay Gig, while the outcome report remains available independently. The Canvas uses normalized small/medium/large venue presets, deterministic seed-based crowd/performer layout, local playback controls, an accessible synchronized text timeline, and reduced-motion mode.

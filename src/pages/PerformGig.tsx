@@ -24,6 +24,7 @@ import { calculateDailySalesRate } from '@/utils/ticketSalesSimulation';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { GigPerformersSection } from "@/components/social/ParticipantStatusList";
 import { useGigExperience } from "@/features/gig-experience/hooks";
+import { GigViewerShell } from "@/features/gig-experience/viewer/GigViewerShell";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -45,6 +46,7 @@ export default function PerformGig() {
   const [bandFame, setBandFame] = useState(0);
   const [bandTotalFans, setBandTotalFans] = useState(0);
   const [showOutcome, setShowOutcome] = useState(false);
+  const [showReplay, setShowReplay] = useState(false);
   // const [show3DViewer, setShow3DViewer] = useState(false); // Removed - using inline viewer
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -562,16 +564,22 @@ export default function PerformGig() {
               Outcome recorded on {format(new Date(gig.updated_at || gig.scheduled_date), 'PPP p')}.
             </div>
             
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button variant="outline" onClick={() => navigate('/gig-booking')}>
                 Back to Schedule
               </Button>
+              {gigExperience?.viewer.replayAvailable ? (
+                <Button variant="secondary" onClick={() => setShowReplay(true)}>Replay Gig</Button>
+              ) : gigExperience?.viewer.replay?.generationStatus === "generating" ? (
+                <Button variant="outline" disabled>Replay Processing</Button>
+              ) : (
+                <Button variant="outline" disabled>Replay Unavailable</Button>
+              )}
               <Button onClick={() => setShowOutcome(true)}>
                 View Report
               </Button>
             </div>
-            
-            <TopDownGigViewer gigId={gig.id} />
+            <GigViewerShell gigId={gig.id} experience={gigExperience} open={showReplay} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
           </CardContent>
         </Card>
       )}

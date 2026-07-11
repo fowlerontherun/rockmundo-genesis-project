@@ -276,3 +276,7 @@ The current implementation now includes a server-authoritative gig lifecycle har
 ## Phase 5 PR 05 update
 
 Phase 5 PR 05 status: completed gigs now request an idempotent service-role canonical viewer replay after `result_ready_at`; replay payloads are stored separately from outcomes and can fail without blocking reports.
+
+## Phase 5 PR 06 viewer/replay status
+
+Stored replay reads now have a frontend viewer shell for completed replay-ready gigs. The shell supports controlled loading, generating, unavailable, failed, unsupported, malformed, access-denied/network, cancelled, empty, and completed states. Rendering is read-only and isolated from gig progression, rewards, song scoring, completion, and replay generation.
