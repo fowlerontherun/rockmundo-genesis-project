@@ -3,8 +3,10 @@ import { getGigLineupStatusDisplay, getRehearsalParticipantStatusDisplay } from 
 
 describe("participation status mappings", () => {
   it("maps rehearsal statuses", () => {
-    expect(getRehearsalParticipantStatusDisplay("invited")).toMatchObject({ label: "Expected", final: false });
-    expect(getRehearsalParticipantStatusDisplay("attended")).toMatchObject({ label: "Attended", final: true });
+    expect(getRehearsalParticipantStatusDisplay("invited")).toMatchObject({ label: "Expected", final: false, selfResponseAvailable: true });
+    expect(getRehearsalParticipantStatusDisplay("confirmed")).toMatchObject({ label: "Confirmed", final: false, selfResponseAvailable: true });
+    expect(getRehearsalParticipantStatusDisplay("declined")).toMatchObject({ label: "Declined", final: false, selfResponseAvailable: true });
+    expect(getRehearsalParticipantStatusDisplay("attended")).toMatchObject({ label: "Attended", final: true, selfResponseAvailable: false });
     expect(getRehearsalParticipantStatusDisplay("missed")).toMatchObject({ label: "Missed", final: true });
   });
 
