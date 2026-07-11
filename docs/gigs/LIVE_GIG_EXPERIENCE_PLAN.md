@@ -521,3 +521,8 @@ Cover:
 ## Phase 5 PR 04 implemented model update
 
 The live viewer plan should assume that browser sessions do not advance songs or complete gigs. Viewer surfaces read canonical gig status, current song position, song-performance rows, and `result_ready_at`. “Skip” actions are presentation-only until the server exposes a ready result.
+
+
+## Phase 5 PR 05 update
+
+Implemented event contract: viewer version 1/event schema version 1 stores typed replay events in `gig_viewer_replays`, using message keys/params plus discriminated visual payloads rather than final English commentary.

@@ -970,6 +970,20 @@ serve(async (req) => {
 
     console.log(`Gig ${gigId} completed successfully. Rating: ${avgRating.toFixed(1)}, Profit: $${netProfit}, New Fans: ${newFansTotal}`);
 
+    // Phase 5 PR 05: generate the canonical viewer replay after the authoritative
+    // completion/result_ready_at update commits. Replay generation is idempotent and
+    // non-critical: a failure must not roll back rewards or block the result report.
+    try {
+      const { error: replayError } = await supabaseClient.functions.invoke('generate-gig-viewer-replay', { body: { gigId } });
+      if (replayError) {
+        console.error('[complete-gig] Viewer replay generation failed (non-critical):', replayError);
+      } else {
+        console.log('[complete-gig] Viewer replay generation requested', { gigId });
+      }
+    } catch (replayErr) {
+      console.error('[complete-gig] Viewer replay generation error (non-critical):', replayErr);
+    }
+
     // Create inbox messages for ALL active band members (not just the leader)
     try {
       const venueName = gig.venues?.name || 'Unknown Venue';

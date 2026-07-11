@@ -1397,3 +1397,8 @@ The new 2D viewer will only be trustworthy if it is driven by a stable, typed, a
 ## Phase 5 PR 04 implementation status
 
 Phase 5 PR 04 is implemented in this branch: gig viewing has been converted to a read-only observer model, manual starts route through a guarded server RPC, song rows are protected by authoritative per-position uniqueness, the scheduled worker catches up due positions without a mounted viewer, completion uses a server-side claim step, and result access is controlled by `gigs.result_ready_at` instead of a fixed ten-minute UI delay.
+
+
+## Phase 5 PR 05 update
+
+Phase 5 PR 05 — Typed Gig Event Schema and Replay Storage: complete. Canonical replay events, storage, service-role generation, typed validation, frontend replay read service, and documentation are implemented.

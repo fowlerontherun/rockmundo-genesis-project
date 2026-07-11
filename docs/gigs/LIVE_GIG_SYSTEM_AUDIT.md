@@ -271,3 +271,8 @@ Phase 5 PR 03 rebuilds `GigOutcomeReport` around the canonical `GigExperienceDTO
 ## Phase 5 PR 04 factual update
 
 The current implementation now includes a server-authoritative gig lifecycle hardening pass. `start_gig_authoritative` owns guarded manual starts, `auto-complete-gigs` advances due setlist positions, `process-gig-song` is idempotent per outcome position, `claim_gig_completion` serializes completion, and `result_ready_at` determines report availability. The former realtime advancement hook is retained only as a compatibility alias to a read-only subscription/refetch hook.
+
+
+## Phase 5 PR 05 update
+
+Phase 5 PR 05 status: completed gigs now request an idempotent service-role canonical viewer replay after `result_ready_at`; replay payloads are stored separately from outcomes and can fail without blocking reports.

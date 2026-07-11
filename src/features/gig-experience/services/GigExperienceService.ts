@@ -29,7 +29,7 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
   if (outcomeError) throw outcomeError;
 
   const outcomeId = outcome?.id ?? null;
-  const [songPerfsRes, setlistSongsRes, performersRes] = await Promise.all([
+  const [songPerfsRes, setlistSongsRes, performersRes, replayDescriptorRes] = await Promise.all([
     outcomeId
       ? supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type").eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
@@ -37,10 +37,12 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
       ? supabase.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score)").eq("setlist_id", gig.setlist_id).order("position")
       : Promise.resolve({ data: [] as SetlistSongRow[], error: null }),
     (supabase as any).from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
+    (supabase as any).from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (songPerfsRes.error) throw songPerfsRes.error;
   if (setlistSongsRes.error) throw setlistSongsRes.error;
   if (performersRes.error) throw performersRes.error;
+  if (replayDescriptorRes.error && replayDescriptorRes.error.code !== "42P01") throw replayDescriptorRes.error;
 
   return mapGigExperience({
     gig: gig as unknown as GigRow,
@@ -48,10 +50,11 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
     songPerformances: (songPerfsRes.data ?? []) as SongPerfRow[],
     setlistSongs: (setlistSongsRes.data ?? []) as unknown as SetlistSongRow[],
     performers: (performersRes.data ?? []) as PerformerRow[],
+    replayDescriptor: replayDescriptorRes.data ?? null,
   });
 }
 
-export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[] }): GigExperienceDTO {
+export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
   const capacity = venue?.capacity ?? outcome?.venue_capacity ?? 0;
@@ -88,7 +91,7 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     progression: { fameGained: outcome ? nullableNumberMetric(outcome.fame_gained, "Fame gain missing") : metricLegacyMissing("Outcome is not ready"), chemistryChange: outcome ? nullableNumberMetric(outcome.chemistry_change, "Chemistry change missing") : metricLegacyMissing("Outcome is not ready"), totalXpAwarded: outcome ? nullableNumberMetric(outcome.total_xp_awarded, "XP summary missing") : metricLegacyMissing("Outcome is not ready"), fansGained: fans, fanConversions: outcome ? nullableNumberMetric(outcome.fan_conversions, "Fan conversion count missing") : metricLegacyMissing("Outcome is not ready") },
     analysis: { equipmentQuality: outcome ? nullableNumberMetric(outcome.equipment_quality_avg, "Equipment breakdown missing") : metricLegacyMissing("Outcome is not ready"), crewSkill: outcome ? nullableNumberMetric(outcome.crew_skill_avg, "Crew breakdown missing") : metricLegacyMissing("Outcome is not ready"), bandChemistry: outcome ? nullableNumberMetric(outcome.band_chemistry_level, "Band chemistry breakdown missing") : metricLegacyMissing("Outcome is not ready"), memberSkills: outcome ? nullableNumberMetric(outcome.member_skill_avg, "Member skills breakdown missing") : metricLegacyMissing("Outcome is not ready"), crowdEnergyPeak: outcome ? nullableNumberMetric(outcome.crowd_energy_peak, "Crowd energy peak missing") : metricLegacyMissing("Outcome is not ready"), stageBehaviorUsed: outcome?.stage_behavior_used ? metricAvailable(outcome.stage_behavior_used) : metricNotApplicable("No stage behaviour was recorded"), gearEffects: outcome ? mapGearEffects(outcome) : null, warnings: buildWarnings(outcome, songs.length, input.performers?.length ?? 0) },
     lessons: buildLessons(metricValue(rating, 0), metricValue(outcome ? nullableNumberMetric(outcome.actual_attendance, "") : metricAvailable(0), 0), capacity, metricValue(outcome ? nullableNumberMetric(outcome.net_profit, "") : metricAvailable(0), 0)),
-    viewer: { ready: !!outcome, outcomeId: outcome?.id ?? null, resultReadyAt: outcome?.completed_at ?? gig.completed_at ?? null, replayAvailable: songs.length > 0 },
+    viewer: { ready: !!outcome, outcomeId: outcome?.id ?? null, resultReadyAt: outcome?.completed_at ?? gig.completed_at ?? null, replayAvailable: input.replayDescriptor?.generation_status === "ready", replay: input.replayDescriptor ? { viewerVersion: input.replayDescriptor.viewer_version, durationMs: input.replayDescriptor.duration_ms, generationStatus: input.replayDescriptor.generation_status } : { viewerVersion: null, durationMs: null, generationStatus: outcome ? "legacy_unavailable" : null } },
   };
   const validationErrors = validateGigExperience(dto);
   if (validationErrors.length > 0) throw new Error(`Invalid gig experience DTO: ${validationErrors.map((e) => `${e.field} ${e.message}`).join(", ")}`);
