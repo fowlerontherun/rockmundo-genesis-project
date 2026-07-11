@@ -159,3 +159,19 @@ GRANT EXECUTE ON FUNCTION public.respond_to_rehearsal_invitation(uuid, text) TO 
 GRANT EXECUTE ON FUNCTION public.rehearsal_rsvp_deadline(timestamptz) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_rehearsal_response_open(timestamptz, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_rehearsal_participant_final(text) TO authenticated;
+
+
+CREATE OR REPLACE FUNCTION public.respond_to_rehearsal_participation(
+  participant_id uuid,
+  response text
+)
+RETURNS public.band_rehearsal_participants
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.respond_to_rehearsal_invitation(participant_id, response);
+$$;
+
+REVOKE ALL ON FUNCTION public.respond_to_rehearsal_participation(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.respond_to_rehearsal_participation(uuid, text) TO authenticated;

@@ -393,3 +393,7 @@ Rehearsal attendance correction requests are now implemented for final `attended
 - Local Supabase reset and SQL harness execution were not completed in the PR 10 environment because the Supabase CLI was unavailable.
 - Static migration-order review found a blocker: the Phase 4 attendance/correction migrations dated `20260711...` reference `band_rehearsal_participants`, but the migration that creates that table is dated `20290711030000` and sorts later. This must be corrected and verified before beta release-gate approval.
 - Phase 4 is therefore not complete, and gig-lineup mutation should not begin until a clean reset and participant/correction harness run pass.
+
+## Phase 4 PR 11 implementation-status note
+
+The migration-order defect that placed `band_rehearsal_participants` after the RSVP/finalisation/correction migrations has been repaired in the repository with earlier bootstrap migrations and idempotent late policy handling. This is a schema-order repair only: it does not add gig lineup mutation, performer confirmation, rewards, penalties, XP, chemistry, reputation, or scoring. A real clean Supabase reset and SQL harness execution remain required before these rules are considered database-gate verified.
