@@ -6739,6 +6739,67 @@ export type Database = {
           },
         ]
       }
+      company_job_applications: {
+        Row: {
+          applicant_profile_id: string
+          created_at: string
+          employment_id: string | null
+          id: string
+          message: string | null
+          offer_expires_at: string | null
+          status: string
+          suitability_score: number
+          updated_at: string
+          vacancy_id: string
+        }
+        Insert: {
+          applicant_profile_id: string
+          created_at?: string
+          employment_id?: string | null
+          id?: string
+          message?: string | null
+          offer_expires_at?: string | null
+          status?: string
+          suitability_score?: number
+          updated_at?: string
+          vacancy_id: string
+        }
+        Update: {
+          applicant_profile_id?: string
+          created_at?: string
+          employment_id?: string | null
+          id?: string
+          message?: string | null
+          offer_expires_at?: string | null
+          status?: string
+          suitability_score?: number
+          updated_at?: string
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_job_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_job_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_job_applications_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "company_vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_kpis: {
         Row: {
           company_id: string
