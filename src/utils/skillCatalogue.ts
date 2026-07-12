@@ -88,6 +88,12 @@ export interface CanonicalSkill {
   progression_curve_key: string;
   display_order: number;
   icon_key: string | null;
+  supports_mastery?: boolean;
+  mastery_category?: string | null;
+  mastery_rank_cap?: number | null;
+  mastery_curve_key?: string | null;
+  mastery_unlock_requirements?: unknown[];
+  mastery_display_order?: number | null;
 }
 export interface SkillAttributeLink {
   skill_slug: string;
@@ -172,6 +178,12 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     progression_curve_key: "foundation_fast",
     display_order: 10,
     icon_key: "guitar",
+    supports_mastery: true,
+    mastery_category: "instrument",
+    mastery_rank_cap: 4,
+    mastery_curve_key: "mastery_professional",
+    mastery_unlock_requirements: [{ type: "primary_skill_level", sourceKey: "guitar", requiredValue: 100 }],
+    mastery_display_order: 10,
   },
   {
     id: "vocals",
@@ -190,6 +202,12 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     progression_curve_key: "foundation_fast",
     display_order: 20,
     icon_key: "mic",
+    supports_mastery: true,
+    mastery_category: "vocal",
+    mastery_rank_cap: 4,
+    mastery_curve_key: "mastery_professional",
+    mastery_unlock_requirements: [{ type: "primary_skill_level", sourceKey: "vocals", requiredValue: 100 }],
+    mastery_display_order: 20,
   },
   {
     id: "drums",
@@ -262,6 +280,12 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     progression_curve_key: "foundation_fast",
     display_order: 60,
     icon_key: "pen",
+    supports_mastery: true,
+    mastery_category: "creative",
+    mastery_rank_cap: 4,
+    mastery_curve_key: "mastery_elite",
+    mastery_unlock_requirements: [{ type: "primary_skill_level", sourceKey: "songwriting", requiredValue: 100 }],
+    mastery_display_order: 30,
   },
   {
     id: "composition",
