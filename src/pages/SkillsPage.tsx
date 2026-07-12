@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkillTree } from "@/components/SkillTree";
 import { useGameData } from "@/hooks/useGameData";
@@ -12,20 +6,10 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  TrendingUp,
-  Target,
-  Award,
-  Zap,
-  Calendar,
-  AlertCircle,
-  Dumbbell,
-  GitBranch,
-  Gauge,
-  Sparkles,
-} from "lucide-react";
+import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle, Dumbbell, GitBranch, Gauge, Sparkles, Search, Star, RotateCcw, ListChecks, Users, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
@@ -35,428 +19,107 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
 import { useTranslation } from "@/hooks/useTranslation";
 import { usePlayerAttributesQuery } from "@/hooks/usePlayerAttributesQuery";
-import {
-  calculateSkillOverviewStats,
-  getSkillDisplayProgress,
-  SKILL_PRACTICE_CONFIG,
-} from "@/utils/skillProgressDisplay";
-import {
-  useSkillCatalogue,
-  useProfileSkillAvailability,
-  useSkillCatalogueRelationships,
-} from "@/hooks/useSkillCatalogue";
-import {
-  getAttributeLabel,
-  calculateWeightedLearningMultiplier,
-} from "@/utils/skillCatalogue";
+import { calculateSkillOverviewStats, SKILL_PRACTICE_CONFIG } from "@/utils/skillProgressDisplay";
+import { useSkillCatalogue, useProfileSkillAvailability, useSkillCatalogueRelationships } from "@/hooks/useSkillCatalogue";
+import { getAttributeLabel, calculateWeightedLearningMultiplier, SKILL_ROLE_KEYS, SKILL_SYSTEM_KEYS, type SkillRoleKey } from "@/utils/skillCatalogue";
+import { buildRecommendations, buildSkillDashboardRows, filterAndSortSkillRows, summarizeRoleReadiness, type LockFilter, type SkillSortKey } from "@/utils/skillsProgressionDashboard";
 
-const formatReset = (value?: string | null) =>
-  value ? new Date(value).toLocaleString() : "the next daily reset";
+const formatReset = (value?: string | null) => value ? new Date(value).toLocaleString() : "the next daily reset";
+const roleLabel = (role: string) => role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).replace("Dj", "DJ");
+const systemLabel = (system: string) => ({ live_gig: "Gigs", social_media: "Social" }[system] ?? roleLabel(system));
+const trackEvent = (name: string, payload: Record<string, unknown> = {}) => window.dispatchEvent(new CustomEvent("progression:telemetry", { detail: { name, ...payload } }));
 
 const SkillsPage = () => {
   const { t } = useTranslation();
   const { profileId } = useActiveProfile();
-  const {
-    skillProgress,
-    loading,
-    error,
-    xpWallet,
-    profile,
-    dailyXpGrant,
-    refetch,
-  } = useGameData();
-  const [selectedSkill, setSelectedSkill] = useState<{
-    slug: string;
-    name: string;
-  } | null>(null);
+  const { skillProgress, loading, error, xpWallet, profile, dailyXpGrant, refetch } = useGameData();
+  const [params, setParams] = useSearchParams();
+  const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);
+  const [detailsSlug, setDetailsSlug] = useState(params.get("skill") ?? "");
+  const [compare, setCompare] = useState<string[]>([]);
+  const [favourites, setFavourites] = useState<string[]>(() => JSON.parse(sessionStorage.getItem(`skill-favourites:${profileId ?? "anon"}`) ?? "[]"));
+  const [activeTab, setActiveTab] = useState(params.get("tab") ?? "overview");
+  const [selectedRole, setSelectedRole] = useState<SkillRoleKey | "all">((params.get("role") as SkillRoleKey) || "all");
+  const [search, setSearch] = useState(params.get("q") ?? "");
+  const [category, setCategory] = useState(params.get("category") ?? "all");
+  const [subcategory, setSubcategory] = useState(params.get("subcategory") ?? "all");
+  const [system, setSystem] = useState(params.get("system") ?? "all");
+  const [lock, setLock] = useState<LockFilter>((params.get("state") as LockFilter) || "all");
+  const [sort, setSort] = useState<SkillSortKey>((params.get("sort") as SkillSortKey) || "recommended");
+  const [plannerGoal, setPlannerGoal] = useState<SkillRoleKey | "all">((params.get("goal") as SkillRoleKey) || "lead_guitarist");
+
   const attributesQuery = usePlayerAttributesQuery(profile?.id ?? profileId);
-  const restrictionsQuery = useSkillPracticeRestrictions(
-    profileId ?? undefined,
-  );
+  const restrictionsQuery = useSkillPracticeRestrictions(profileId ?? undefined);
   const restrictions = restrictionsQuery.data;
   const catalogueQuery = useSkillCatalogue();
-  const availabilityQuery = useProfileSkillAvailability(
-    profile?.id ?? profileId,
-  );
+  const availabilityQuery = useProfileSkillAvailability(profile?.id ?? profileId);
   const relationships = useSkillCatalogueRelationships();
-
   const skillXpBalance = xpWallet?.skill_xp_balance ?? xpWallet?.xp_balance;
-  const skillXpLifetime = xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp;
   const attributePointsBalance = xpWallet?.attribute_points_balance;
   const attributePointsSpent = attributesQuery.data?.attribute_points_spent;
-  const streak = xpWallet?.stipend_claim_streak ?? 0;
-  const lastClaimDate =
-    xpWallet?.last_stipend_claim_date ?? dailyXpGrant?.created_at;
+  const stats = useMemo(() => calculateSkillOverviewStats(skillProgress ?? []), [skillProgress]);
 
-  const stats = useMemo(
-    () => calculateSkillOverviewStats(skillProgress ?? []),
-    [skillProgress],
-  );
-  const xpCardLabel =
-    stats.lifetimeXp === null ? "Current Level XP" : "Lifetime Skill XP";
-  const xpCardValue = stats.lifetimeXp ?? stats.currentLevelXp;
-  const catalogueBySlug = useMemo(
-    () =>
-      new Map((catalogueQuery.data ?? []).map((skill) => [skill.slug, skill])),
-    [catalogueQuery.data],
-  );
-  const availabilityBySlug = useMemo(
-    () =>
-      new Map((availabilityQuery.data ?? []).map((item) => [item.slug, item])),
-    [availabilityQuery.data],
-  );
-  const practiceableSkills = useMemo(
-    () =>
-      (skillProgress ?? []).filter(
-        (skill) => getSkillDisplayProgress(skill).can_practice,
-      ),
-    [skillProgress],
-  );
+  useEffect(() => { trackEvent("skills_page_opened"); }, []);
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (activeTab !== "overview") next.set("tab", activeTab);
+    if (selectedRole !== "all") next.set("role", selectedRole);
+    if (search) next.set("q", search);
+    if (category !== "all") next.set("category", category);
+    if (subcategory !== "all") next.set("subcategory", subcategory);
+    if (system !== "all") next.set("system", system);
+    if (lock !== "all") next.set("state", lock);
+    if (sort !== "recommended") next.set("sort", sort);
+    if (detailsSlug) next.set("skill", detailsSlug);
+    setParams(next, { replace: true });
+  }, [activeTab, selectedRole, search, category, subcategory, system, lock, sort, detailsSlug, setParams]);
+  useEffect(() => { sessionStorage.setItem(`skill-favourites:${profileId ?? "anon"}`, JSON.stringify(favourites)); }, [favourites, profileId]);
 
-  const refreshProgressionData = async () => {
-    await Promise.all([attributesQuery.refetch(), refetch()]);
-  };
-
-  const retryAll = () => {
-    refetch();
-    attributesQuery.refetch();
-    restrictionsQuery.refetch();
-  };
-
+  const rows = useMemo(() => buildSkillDashboardRows({ catalogue: catalogueQuery.data ?? [], progress: (skillProgress ?? []) as any[], availability: availabilityQuery.data ?? [], ...relationships, favourites, selectedRole }), [catalogueQuery.data, skillProgress, availabilityQuery.data, relationships, favourites, selectedRole]);
+  const filteredRows = useMemo(() => filterAndSortSkillRows(rows, { search, category, subcategory, role: selectedRole, system, lock, sort }), [rows, search, category, subcategory, selectedRole, system, lock, sort]);
+  const readiness = useMemo(() => selectedRole === "all" ? null : summarizeRoleReadiness(selectedRole, rows), [selectedRole, rows]);
+  const recommendations = useMemo(() => buildRecommendations(rows, selectedRole), [rows, selectedRole]);
+  const detail = rows.find((row) => row.catalogue.slug === detailsSlug);
+  const categories = Array.from(new Set(rows.map((r) => r.catalogue.category))).sort();
+  const subcategories = Array.from(new Set(rows.map((r) => r.catalogue.subcategory).filter(Boolean) as string[])).sort();
+  const highest = rows.filter((r) => r.progress.is_unlocked).sort((a, b) => b.progress.current_level - a.progress.current_level).slice(0, 4);
+  const closest = rows.filter((r) => r.progress.is_unlocked && !r.progress.is_max_level).sort((a, b) => b.progress.progress_percent - a.progress.progress_percent).slice(0, 4);
+  const refreshProgressionData = async () => { await Promise.all([attributesQuery.refetch(), refetch(), availabilityQuery.refetch()]); };
+  const resetFilters = () => { setSearch(""); setCategory("all"); setSubcategory("all"); setSystem("all"); setLock("all"); setSort("recommended"); trackEvent("skills_filters_reset"); };
+  const toggleFavourite = (slug: string) => setFavourites((current) => current.includes(slug) ? current.filter((s) => s !== slug) : current.length >= 5 ? current : [...current, slug]);
   const tabs = [
-    {
-      value: "practice",
-      icon: Dumbbell,
-      label: t("skills.tabs.practice", "Practice Skills"),
-      desc: `Book ${SKILL_PRACTICE_CONFIG.durationOptionsHours.join("/")}-hour sessions (+${SKILL_PRACTICE_CONFIG.baseXpReward} XP)`,
-    },
-    {
-      value: "tree",
-      icon: GitBranch,
-      label: t("skills.tabs.tree", "Skill Tree"),
-      desc: t("skills.tabs.treeDesc", "Unlock and level up abilities"),
-    },
-    {
-      value: "attributes",
-      icon: Gauge,
-      label: t("skills.tabs.attributes", "Attributes"),
-      desc: t("skills.tabs.attributesDesc", "Spend AP on core stats"),
-    },
-  ];
+    ["overview", Sparkles, t("skills.tabs.overview", "Overview"), t("skills.tabs.overviewDesc", "Plan your next progression move")],
+    ["skills", ListChecks, t("skills.tabs.skills", "Skills"), t("skills.tabs.skillsDesc", "Search, filter and inspect skills")],
+    ["tree", GitBranch, t("skills.tabs.tree", "Skill Tree"), t("skills.tabs.treeDesc", "Unlock and level up abilities")],
+    ["attributes", Gauge, t("skills.tabs.attributes", "Attributes"), t("skills.tabs.attributesDesc", "Spend AP on core stats")],
+    ["practice", Dumbbell, t("skills.tabs.practice", "Practice"), `Book ${SKILL_PRACTICE_CONFIG.durationOptionsHours.join("/")}-hour sessions`],
+  ] as const;
 
-  return (
-    <FMPageScaffold
-      title={t("skills.title", "Skills & Attributes")}
-      subtitle={t(
-        "skills.subtitle",
-        "Master your craft and unlock new abilities",
-      )}
-      icon={Sparkles}
-      backTo="/hub/character"
-    >
-      {(error || attributesQuery.error || restrictionsQuery.error) && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between gap-3">
-            <span>
-              {t(
-                "skills.errors.loadFailed",
-                "Some progression data failed to load. Values are not being replaced with zero.",
-              )}
-            </span>
-            <Button size="sm" variant="outline" onClick={retryAll}>
-              {t("common.retry", "Retry")}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+  const SkillCard = ({ row }: { row: typeof rows[number] }) => {
+    const learningBonus = calculateWeightedLearningMultiplier(row.catalogue.slug, attributesQuery.data as any, row.attributeLinks);
+    return <Card className="overflow-hidden"><CardHeader><div className="flex items-start justify-between gap-2"><div><CardTitle className="text-base">{row.catalogue.name}</CardTitle><CardDescription>{row.catalogue.category}{row.catalogue.subcategory ? ` • ${row.catalogue.subcategory}` : ""}</CardDescription></div><Button variant="ghost" size="sm" aria-label={`${row.isFavourite ? "Untrack" : "Track"} ${row.catalogue.name}`} disabled={!row.progress.is_unlocked && row.availability?.status === "hidden"} onClick={() => { toggleFavourite(row.catalogue.slug); trackEvent("skill_favourited", { skill: row.catalogue.slug }); }}><Star className={cn("h-4 w-4", row.isFavourite && "fill-yellow-400 text-yellow-500")} /></Button></div></CardHeader><CardContent className="space-y-3"><div className="flex flex-wrap gap-2"><Badge>Level {row.progress.current_level}/{row.catalogue.max_level}</Badge><Badge variant="outline">{row.availability?.status?.replace(/_/g, " ") ?? (row.progress.is_unlocked ? "unlocked" : "locked")}</Badge>{row.roleLinks.slice(0,2).map((r) => <Badge key={r.role_key} variant="secondary">{roleLabel(r.role_key)}</Badge>)}</div><Progress value={row.progress.progress_percent} aria-label={`${row.catalogue.name} progress ${Math.round(row.progress.progress_percent)} percent`} /><p className="text-sm text-muted-foreground">{row.progress.xp_into_level}/{row.progress.xp_required_for_next_level ?? "Max"} XP to next level • learning bonus +{learningBonus.boostPercent}%</p><p className="text-sm">Systems: {row.systemLinks.map((s) => systemLabel(s.system_key)).slice(0, 4).join(", ") || "General progression"}</p>{row.availability?.blockedReason && <p className="text-sm text-destructive" role="status">Locked: {row.availability.blockedReason.message}</p>}<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setDetailsSlug(row.catalogue.slug); trackEvent("skill_details_opened", { skill: row.catalogue.slug }); }}>Details</Button><Button size="sm" variant="outline" disabled={!row.progress.can_practice || !restrictions?.canPractice} onClick={() => { setSelectedSkill({ slug: row.catalogue.slug, name: row.catalogue.name }); trackEvent("practice_started_from_recommendation", { skill: row.catalogue.slug }); }}><Calendar className="mr-2 h-4 w-4" />Practice</Button><Button size="sm" variant="ghost" disabled={compare.length >= 3 && !compare.includes(row.catalogue.slug)} onClick={() => setCompare((c) => c.includes(row.catalogue.slug) ? c.filter((s) => s !== row.catalogue.slug) : [...c, row.catalogue.slug])}>Compare</Button></div></CardContent></Card>;
+  };
 
-      {loading || !xpWallet ? (
-        <Card>
-          <CardContent className="pt-6">
-            {loading
-              ? t("skills.loading.wallet", "Loading XP wallet…")
-              : t("skills.empty.wallet", "XP wallet row is missing.")}
-          </CardContent>
-        </Card>
-      ) : (
-        <XpWalletDisplay
-          skillXpBalance={skillXpBalance ?? 0}
-          skillXpLifetime={skillXpLifetime ?? 0}
-          attributePointsBalance={attributePointsBalance ?? 0}
-          attributePointsSpent={attributePointsSpent ?? 0}
-          streak={streak}
-        />
-      )}
+  return <FMPageScaffold title={t("skills.title", "Skills & Attributes")} subtitle={t("skills.subtitle", "Master your craft and unlock new abilities")} icon={Sparkles} backTo="/hub/character">
+    {(error || attributesQuery.error || restrictionsQuery.error || catalogueQuery.error || availabilityQuery.error) && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{t("skills.errors.loadFailed", "Some progression data failed to load. Values are not being replaced with zero.")}</span><Button size="sm" variant="outline" onClick={() => { refetch(); attributesQuery.refetch(); restrictionsQuery.refetch(); catalogueQuery.refetch(); availabilityQuery.refetch(); }}>{t("common.retry", "Retry")}</Button></AlertDescription></Alert>}
+    {loading || !xpWallet ? <Card><CardContent className="pt-6">{loading ? t("skills.loading.wallet", "Loading XP wallet…") : t("skills.empty.wallet", "XP wallet row is missing.")}</CardContent></Card> : <XpWalletDisplay skillXpBalance={skillXpBalance ?? 0} skillXpLifetime={xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp ?? 0} attributePointsBalance={attributePointsBalance ?? 0} attributePointsSpent={attributePointsSpent ?? 0} streak={xpWallet?.stipend_claim_streak ?? 0} />}
+    <DailyStipendCard lastClaimDate={xpWallet?.last_stipend_claim_date ?? dailyXpGrant?.created_at} streak={xpWallet?.stipend_claim_streak ?? 0} />
+    {restrictionsQuery.isLoading ? <Alert><Target className="h-4 w-4" /><AlertDescription>{t("skills.loading.practice", "Checking practice availability…")}</AlertDescription></Alert> : restrictions && <Alert variant={restrictions.canPractice ? "default" : "destructive"}><Target className="h-4 w-4" /><AlertDescription>{restrictions.canPractice ? `Practice sessions today: ${restrictions.sessionsUsed}/${restrictions.maxDailySessions} — ${restrictions.sessionsRemaining} remaining.` : restrictions.reason} Next reset: {formatReset(restrictions.nextResetAt)}</AlertDescription></Alert>}
 
-      <DailyStipendCard lastClaimDate={lastClaimDate} streak={streak} />
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full"><TabsList className="grid w-full grid-cols-2 gap-2 bg-transparent p-0 h-auto md:grid-cols-5">{tabs.map(([value, Icon, label, desc]) => <TabsTrigger key={value} value={value} aria-label={label} className={cn("flex min-h-20 flex-col items-start gap-1 rounded-lg border bg-card p-3 text-left", "data-[state=active]:border-primary data-[state=active]:bg-primary/10")}><div className="flex items-center gap-2"><Icon className="h-4 w-4 text-primary" /><span className="font-semibold">{label}</span></div><span className="text-xs text-muted-foreground">{desc}</span></TabsTrigger>)}</TabsList>
 
-      {restrictionsQuery.isLoading && (
-        <Alert>
-          <Target className="h-4 w-4" />
-          <AlertDescription>
-            {t("skills.loading.practice", "Checking practice availability…")}
-          </AlertDescription>
-        </Alert>
-      )}
-      {restrictions && !restrictions.canPractice && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {restrictions.reason} Next reset:{" "}
-            {formatReset(restrictions.nextResetAt)}
-          </AlertDescription>
-        </Alert>
-      )}
-      {restrictions?.canPractice && (
-        <Alert>
-          <Target className="h-4 w-4" />
-          <AlertDescription>
-            Practice sessions today: {restrictions.sessionsUsed}/
-            {restrictions.maxDailySessions} — {restrictions.sessionsRemaining}{" "}
-            remaining. Next reset: {formatReset(restrictions.nextResetAt)}
-          </AlertDescription>
-        </Alert>
-      )}
+      <TabsContent value="overview" className="mt-6 space-y-6"><div className="grid gap-4 md:grid-cols-4">{[{label:"Skill XP", value: skillXpBalance?.toLocaleString() ?? "—", icon:TrendingUp},{label:"Attribute Points", value: attributePointsBalance?.toLocaleString() ?? "—", icon:Zap},{label:"Skills Unlocked", value:stats.unlockedCount, icon:Target},{label:"Average Level", value:stats.averageLevel.toFixed(1), icon:Award}].map(({label,value,icon:Icon}) => <Card key={label}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">{label}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{value}</div></CardContent></Card>)}</div><Card><CardHeader><CardTitle>Development focus</CardTitle><CardDescription>Choose a temporary focus for role guidance. This does not create permanent role data.</CardDescription></CardHeader><CardContent><select aria-label="Development focus" className="w-full rounded-md border bg-background p-2 md:w-80" value={selectedRole} onChange={(e) => { setSelectedRole(e.target.value as SkillRoleKey | "all"); trackEvent("role_focus_selected", { role: e.target.value }); }}><option value="all">No role focus</option>{SKILL_ROLE_KEYS.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></CardContent></Card>{readiness && <Card><CardHeader><CardTitle>{roleLabel(readiness.role)} readiness: {readiness.band}</CardTitle><CardDescription>{readiness.score}% based on canonical role-to-skill mappings.</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-3"><div><h3 className="font-semibold">Strengths</h3>{readiness.strengths.length ? readiness.strengths.map((r) => <p key={r.catalogue.slug} className="text-sm">{r.catalogue.name} L{r.progress.current_level}</p>) : <p className="text-sm text-muted-foreground">No role strengths yet. Start with a foundation skill.</p>}</div><div><h3 className="font-semibold">Important gaps</h3>{readiness.gaps.map((r) => <p key={r.catalogue.slug} className="text-sm">{r.catalogue.name}: target +{r.gap} levels</p>)}</div><div><h3 className="font-semibold">Expected impact</h3><p className="text-sm">Supports {readiness.impact.join(", ") || "general progression"}; useful attributes include {readiness.usefulAttributes.map(getAttributeLabel).join(", ") || "core attributes"}.</p></div></CardContent></Card>}<div className="grid gap-4 lg:grid-cols-3"><Card><CardHeader><CardTitle>Recommended next actions</CardTitle></CardHeader><CardContent className="space-y-3">{recommendations.length ? recommendations.map((rec) => <div key={rec.id} className="rounded-md border p-3"><p className="font-medium">{rec.title}</p><p className="text-sm text-muted-foreground">{rec.reason}</p></div>) : <p className="text-sm text-muted-foreground">No recommendations are available. Try selecting a development focus.</p>}</CardContent></Card><Card><CardHeader><CardTitle>Highest skills</CardTitle></CardHeader><CardContent>{highest.length ? highest.map((r) => <p key={r.catalogue.slug} className="text-sm">{r.catalogue.name}: level {r.progress.current_level}</p>) : <p className="text-sm text-muted-foreground">Unlock your first starter skill through education.</p>}</CardContent></Card><Card><CardHeader><CardTitle>Closest level-ups</CardTitle></CardHeader><CardContent>{closest.length ? closest.map((r) => <p key={r.catalogue.slug} className="text-sm">{r.catalogue.name}: {Math.round(r.progress.progress_percent)}%</p>) : <p className="text-sm text-muted-foreground">No near-level skills yet.</p>}</CardContent></Card></div><div className="grid gap-4 lg:grid-cols-3"><Card><CardHeader><CardTitle>Progression planner</CardTitle><CardDescription>Estimates use current balances and normal activity assumptions, not exact dates.</CardDescription></CardHeader><CardContent className="space-y-3"><select aria-label="Progression goal" className="w-full rounded-md border bg-background p-2" value={plannerGoal} onChange={(e) => { setPlannerGoal(e.target.value as SkillRoleKey); trackEvent("progression_goal_selected", { goal: e.target.value }); }}>{SKILL_ROLE_KEYS.map((r) => <option key={r} value={r}>Become a competent {roleLabel(r)}</option>)}</select>{summarizeRoleReadiness(plannerGoal as SkillRoleKey, rows).gaps.slice(0,4).map((r, i) => <p key={r.catalogue.slug} className="text-sm">{i + 1}. Train {r.catalogue.name} toward level {r.progress.current_level + r.gap}. Routes: {r.unlockRoutes.map((u) => u.route_type.replace(/_/g," ")).join(", ") || "practice/education"}.</p>)}</CardContent></Card><Card><CardHeader><CardTitle><Users className="mr-2 inline h-4 w-4" />Band skill gaps</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">Bandmate coverage is shown only when privacy-safe summaries are available. For now, your best contribution is improving current role gaps and non-duplicated specialist skills.</p></CardContent></Card><Card><CardHeader><CardTitle><Activity className="mr-2 inline h-4 w-4" />Recent progress & goals</CardTitle></CardHeader><CardContent><p className="text-sm">Long-term goals: first competent role, first advanced skill, first specialist unlock, five role-relevant skills at target level.</p><p className="mt-2 text-sm text-muted-foreground">Recent progression history will use the bounded ledger when available.</p></CardContent></Card></div></TabsContent>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {[
-          {
-            label: xpCardLabel,
-            value: xpCardValue.toLocaleString(),
-            icon: TrendingUp,
-          },
-          {
-            label: "Skills Unlocked",
-            value: stats.unlockedCount,
-            icon: Target,
-          },
-          {
-            label: "Average Level",
-            value: stats.averageLevel.toFixed(1),
-            icon: Award,
-          },
-          {
-            label: "Can Practice",
-            value: stats.practiceableCount,
-            icon: Zap,
-            note: `Meets level ${SKILL_PRACTICE_CONFIG.minimumSkillLevel}+ and server rules`,
-          },
-        ].map(({ label, value, icon: Icon, note }) => (
-          <Card key={label}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{label}</CardTitle>
-              <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{value}</div>
-              {note && <p className="text-xs text-muted-foreground">{note}</p>}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <TabsContent value="skills" className="mt-6 space-y-4"><Card><CardHeader><CardTitle>Skill catalogue</CardTitle><CardDescription>Search, filter, sort, track, compare, and open details without exposing hidden skills.</CardDescription></CardHeader><CardContent className="grid gap-3 md:grid-cols-4"><label className="md:col-span-2"><span className="text-sm font-medium">Search skills</span><div className="relative"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><input className="w-full rounded-md border bg-background py-2 pl-8 pr-2" value={search} onChange={(e) => { setSearch(e.target.value); trackEvent("skill_searched"); }} placeholder="Search by name, category, or description" /></div></label><label><span className="text-sm font-medium">Category</span><select className="w-full rounded-md border bg-background p-2" value={category} onChange={(e) => { setCategory(e.target.value); trackEvent("skill_filter_used", { filter:"category" }); }}><option value="all">All categories</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select></label><label><span className="text-sm font-medium">Subcategory</span><select className="w-full rounded-md border bg-background p-2" value={subcategory} onChange={(e) => setSubcategory(e.target.value)}><option value="all">All subcategories</option>{subcategories.map((c) => <option key={c} value={c}>{c}</option>)}</select></label><label><span className="text-sm font-medium">System</span><select className="w-full rounded-md border bg-background p-2" value={system} onChange={(e) => setSystem(e.target.value)}><option value="all">All systems</option>{SKILL_SYSTEM_KEYS.map((s) => <option key={s} value={s}>{systemLabel(s)}</option>)}</select></label><label><span className="text-sm font-medium">State</span><select className="w-full rounded-md border bg-background p-2" value={lock} onChange={(e) => setLock(e.target.value as LockFilter)}>{["all","unlocked","locked","trainable","available","favourite","maxed"].map((s) => <option key={s} value={s}>{roleLabel(s)}</option>)}</select></label><label><span className="text-sm font-medium">Sort</span><select className="w-full rounded-md border bg-background p-2" value={sort} onChange={(e) => setSort(e.target.value as SkillSortKey)}>{["recommended","level","closest","recent","alphabetical","role","system","unlock","lowestGap","highestGap"].map((s) => <option key={s} value={s}>{roleLabel(s)}</option>)}</select></label><Button className="self-end" variant="outline" onClick={resetFilters}><RotateCcw className="mr-2 h-4 w-4" />Reset</Button></CardContent></Card>{catalogueQuery.isLoading || loading ? <Card><CardContent className="pt-6">Loading skills without showing misleading zeroes…</CardContent></Card> : filteredRows.length ? <div className="grid gap-4 lg:grid-cols-2">{filteredRows.map((row) => <SkillCard key={row.catalogue.slug} row={row} />)}</div> : <Card><CardContent className="py-8 text-center"><p className="font-medium">No skills match these filters.</p><p className="text-sm text-muted-foreground">Reset filters or choose a broader role/system focus.</p><Button className="mt-3" onClick={resetFilters}>Reset filters</Button></CardContent></Card>}</TabsContent>
 
-      <Tabs defaultValue="practice" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto gap-2 bg-transparent p-0">
-          {tabs.map(({ value, icon: Icon, label, desc }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              aria-label={label}
-              className={cn(
-                "flex flex-col items-start gap-1 h-auto p-4 rounded-lg border border-border bg-card text-left",
-                "data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:shadow-md",
-                "hover:border-primary/60 transition-colors",
-              )}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <Icon className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-base">{label}</span>
-              </div>
-              <span className="text-xs text-muted-foreground font-normal">
-                {desc}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <TabsContent value="tree" className="mt-6">{loading ? <Card><CardContent className="pt-6">{t("skills.loading.skills", "Loading skills…")}</CardContent></Card> : <SkillTree />}</TabsContent>
+      <TabsContent value="attributes" className="mt-6">{attributesQuery.isLoading ? <Card><CardContent className="pt-6">{t("skills.loading.attributes", "Loading attributes…")}</CardContent></Card> : attributesQuery.data ? <AttributePanel attributes={attributesQuery.data} xpBalance={attributePointsBalance ?? 0} onXpSpent={refreshProgressionData} /> : <Card><CardContent className="pt-6">{t("skills.empty.attributes", "Attribute row is missing for this profile.")}</CardContent></Card>}</TabsContent>
+      <TabsContent value="practice" className="mt-6"><Card><CardHeader><CardTitle>Practice Skills</CardTitle><CardDescription>Compare valid practice options. Rewards and restrictions come from server-authoritative practice checks.</CardDescription></CardHeader><CardContent>{filteredRows.filter((r) => r.progress.can_practice).length === 0 ? <div className="py-8 text-center text-muted-foreground"><Target className="mx-auto mb-4 h-12 w-12 opacity-50" /><p>No skills available to practice yet.</p><Button asChild size="sm" className="mt-4"><a href="/education" onClick={() => trackEvent("education_route_opened")}>Find starter lessons</a></Button></div> : <div className="space-y-4">{filteredRows.filter((r) => r.progress.can_practice).map((row) => <SkillCard key={row.catalogue.slug} row={row} />)}</div>}</CardContent></Card></TabsContent>
+    </Tabs>
 
-        <TabsContent value="attributes" className="mt-6">
-          {attributesQuery.isLoading ? (
-            <Card>
-              <CardContent className="pt-6">
-                {t("skills.loading.attributes", "Loading attributes…")}
-              </CardContent>
-            </Card>
-          ) : attributesQuery.data ? (
-            <AttributePanel
-              attributes={attributesQuery.data}
-              xpBalance={attributePointsBalance ?? 0}
-              onXpSpent={refreshProgressionData}
-            />
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                {t(
-                  "skills.empty.attributes",
-                  "Attribute row is missing for this profile.",
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="tree" className="mt-6">
-          {loading ? (
-            <Card>
-              <CardContent className="pt-6">
-                {t("skills.loading.skills", "Loading skills…")}
-              </CardContent>
-            </Card>
-          ) : (
-            <SkillTree />
-          )}
-        </TabsContent>
-
-        <TabsContent value="practice" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Practice Skills</CardTitle>
-              <CardDescription>
-                Schedule practice sessions using the shared practice
-                configuration:{" "}
-                {SKILL_PRACTICE_CONFIG.durationOptionsHours.join("/")}-hour
-                duration, {SKILL_PRACTICE_CONFIG.baseXpReward} XP reward,
-                maximum{" "}
-                {restrictions?.maxDailySessions ??
-                  SKILL_PRACTICE_CONFIG.maxDailySessions}{" "}
-                sessions per server day.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <p>{t("skills.loading.skills", "Loading skills…")}</p>
-              ) : practiceableSkills.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No skills available to practice yet.</p>
-                  <p className="text-sm mt-2">
-                    Starter skills can be unlocked through education and
-                    supported practice or rehearsal activities.
-                  </p>
-                  <Button asChild size="sm" className="mt-4">
-                    <a href="/education">Find starter lessons</a>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {practiceableSkills.map((skill) => {
-                    const display = getSkillDisplayProgress(skill);
-                    const canonical = catalogueBySlug.get(skill.skill_slug);
-                    const name =
-                      canonical?.name ??
-                      `${skill.skill_slug.replace(/_/g, " ")} (legacy)`;
-                    const attrLinks = relationships.attributeLinks.filter(
-                      (link) => link.skill_slug === skill.skill_slug,
-                    );
-                    const availability = availabilityBySlug.get(
-                      skill.skill_slug,
-                    );
-                    const learningBonus = calculateWeightedLearningMultiplier(
-                      skill.skill_slug,
-                      attributesQuery.data as any,
-                      attrLinks,
-                    );
-                    const primaryRole = relationships.roleLinks
-                      .find((link) => link.skill_slug === skill.skill_slug)
-                      ?.role_key.replace(/_/g, " ");
-                    return (
-                      <div
-                        key={skill.skill_slug}
-                        className="border rounded-lg p-4"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold capitalize">
-                                {name}
-                              </h4>
-                              <Badge variant="outline">
-                                Level {display.current_level}
-                              </Badge>
-                              {canonical && (
-                                <Badge variant="secondary">
-                                  {canonical.category}
-                                </Badge>
-                              )}
-                              {availability && (
-                                <Badge variant="outline">
-                                  {availability.status.replace(/_/g, " ")}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                              <span>
-                                {display.xp_into_level}/
-                                {display.xp_required_for_next_level ?? "Max"} XP
-                              </span>
-                              {attrLinks.length > 0 && (
-                                <span>
-                                  Attributes:{" "}
-                                  {attrLinks
-                                    .map(
-                                      (link) =>
-                                        `${getAttributeLabel(link.attribute_key)} ${Math.round(link.weight * 100)}%`,
-                                    )
-                                    .join(", ")}{" "}
-                                  (+{learningBonus.boostPercent}%)
-                                </span>
-                              )}
-                              {primaryRole && <span>Role: {primaryRole}</span>}
-                              {availability?.blockedReason && (
-                                <span className="text-destructive">
-                                  {availability.blockedReason.message}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            aria-label={`Schedule practice for ${name}`}
-                            disabled={!restrictions?.canPractice}
-                            onClick={() =>
-                              setSelectedSkill({ slug: skill.skill_slug, name })
-                            }
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Schedule Practice
-                          </Button>
-                        </div>
-                        <Progress
-                          value={display.progress_percent}
-                          className="h-2"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {selectedSkill && (
-        <SchedulePracticeDialog
-          open={!!selectedSkill}
-          onOpenChange={(open) => !open && setSelectedSkill(null)}
-          skillSlug={selectedSkill.slug}
-          skillName={selectedSkill.name}
-          practiceConfig={restrictions}
-        />
-      )}
-    </FMPageScaffold>
-  );
+    {detail && <Card className="border-primary"><CardHeader><CardTitle>{detail.catalogue.name} details</CardTitle><CardDescription>{detail.catalogue.description}</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><p>Tier: {detail.catalogue.tier} • Max level {detail.catalogue.max_level}</p><p>XP: {detail.progress.xp_into_level}/{detail.progress.xp_required_for_next_level ?? "Max"}</p><p>Prerequisites: {detail.prerequisites.length ? detail.prerequisites.map((p) => `${p.prerequisite_skill_slug} L${p.required_level}`).join(", ") : "All prerequisites completed or none required."}</p><p>Unlock routes: {detail.unlockRoutes.map((u) => u.route_type.replace(/_/g, " ")).join(", ") || "No public route listed."}</p></div><div><p>Relevant roles: {detail.roleLinks.map((r) => roleLabel(r.role_key)).join(", ") || "Generalist"}</p><p>Attributes: {detail.attributeLinks.map((a) => getAttributeLabel(a.attribute_key)).join(", ") || "None listed"}</p><p>Current effects: {detail.systemLinks.map((s) => `${s.usage_type} ${systemLabel(s.system_key)}`).join("; ") || "No implemented gameplay preview exposed."}</p><Button className="mt-2" variant="outline" onClick={() => setDetailsSlug("")}>Close details</Button></div></CardContent></Card>}
+    {compare.length > 0 && <Card><CardHeader><CardTitle>Comparison ({compare.length}/3)</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="w-full text-sm"><thead><tr><th className="text-left">Item</th><th>Level</th><th>Role gap</th><th>Systems</th><th>Training</th></tr></thead><tbody>{rows.filter((r) => compare.includes(r.catalogue.slug)).map((r) => <tr key={r.catalogue.slug}><td>{r.catalogue.name}</td><td className="text-center">{r.progress.current_level}</td><td className="text-center">{r.gap}</td><td>{r.systemLinks.map((s) => systemLabel(s.system_key)).slice(0,2).join(", ")}</td><td>{r.progress.can_practice ? "Practiceable" : r.availability?.status?.replace(/_/g," ")}</td></tr>)}</tbody></table></CardContent></Card>}
+    {selectedSkill && <SchedulePracticeDialog open={!!selectedSkill} onOpenChange={(open) => !open && setSelectedSkill(null)} skillSlug={selectedSkill.slug} skillName={selectedSkill.name} practiceConfig={restrictions} />}
+  </FMPageScaffold>;
 };
-
 export default SkillsPage;
