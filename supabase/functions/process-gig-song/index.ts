@@ -165,6 +165,7 @@ function getBehaviorMods(key: string) {
 // ── Interfaces ──
 
 interface PerformanceFactors {
+  seed?: string;
   songQuality: number;
   rehearsalLevel: number;
   bandChemistry: number;
@@ -185,6 +186,12 @@ interface PerformanceItemFactors {
 }
 
 // ── Performance calculators ──
+
+function seededUnit(seed: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 10000) / 10000;
+}
 
 function calculateSongPerformance(factors: PerformanceFactors) {
   const bMods = getBehaviorMods(factors.stageBehavior || 'standard');
@@ -221,14 +228,16 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (cap >= 40) capacityMultiplier = 0.95;
   else capacityMultiplier = 0.85;
 
-  const variance = 0.85 + Math.random() * (0.30 * bMods.varianceMult);
+  const baseRoll = seededUnit(factors.seed || `${factors.songQuality}:${factors.rehearsalLevel}:${factors.memberSkillAverage}`);
+  const variance = 0.96 + (baseRoll - 0.5) * (0.08 * bMods.varianceMult);
 
   // Random event chance (matching client-side)
   let eventMultiplier = 1.0;
-  const eventRoll = Math.random();
-  if (eventRoll < 0.08) eventMultiplier = 1.15 + Math.random() * 0.10;
-  else if (eventRoll < 0.14) eventMultiplier = 0.80 + Math.random() * 0.10;
-  else if (eventRoll < 0.20) eventMultiplier = 1.08 + Math.random() * 0.07;
+  const eventRoll = seededUnit(`${factors.seed || "gig"}:event`);
+  const eventMagnitude = seededUnit(`${factors.seed || "gig"}:event:magnitude`);
+  if (eventRoll < 0.05) eventMultiplier = 1.06 + eventMagnitude * 0.04;
+  else if (eventRoll < 0.09) eventMultiplier = 0.92 + eventMagnitude * 0.04;
+  else if (eventRoll < 0.14) eventMultiplier = 1.03 + eventMagnitude * 0.03;
 
   // Quality difficulty curve (matching client-side)
   const qualityDifficulty = 0.75 + (normalizedSongQuality / 100) * 0.25;
@@ -720,6 +729,7 @@ serve(async (req) => {
       stageSkillAverage: stageSkillAvg,
       venueCapacityUsed,
       stageBehavior,
+      seed: `${gigId}:${outcomeId}:${songId}:${position}`,
     };
 
     const result = calculateSongPerformance(factors);
