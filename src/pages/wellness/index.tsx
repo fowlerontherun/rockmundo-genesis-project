@@ -22,6 +22,7 @@ import ActivityCard from "@/components/wellness/ActivityCard";
 import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 import NutritionHydrationPanel from "@/components/wellness/NutritionHydrationPanel";
 import { ProfessionalSupportPanel } from "@/components/wellness/ProfessionalSupportPanel";
+import { LifestyleRoutinePanel } from "@/components/wellness/LifestyleRoutinePanel";
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
@@ -69,6 +70,7 @@ const WellnessPage = () => {
     ailments,
     blocks,
     vitals,
+    lifestyle,
     loading,
     error,
     perform,
@@ -169,6 +171,8 @@ const WellnessPage = () => {
       )}
 
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
+
+      <LifestyleRoutinePanel lifestyle={lifestyle} fame={profile?.fame ?? 0} />
 
       <NutritionHydrationPanel vitals={vitals} />
 
