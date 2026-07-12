@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
 import ActivityCard from "@/components/wellness/ActivityCard";
 import AilmentsPanel from "@/components/wellness/AilmentsPanel";
+import NutritionHydrationPanel from "@/components/wellness/NutritionHydrationPanel";
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
@@ -167,6 +168,8 @@ const WellnessPage = () => {
       )}
 
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
+
+      <NutritionHydrationPanel vitals={vitals} />
 
       {blocks.length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5">
