@@ -12,6 +12,7 @@ import {
   type WellnessVitals,
 } from "@/lib/api/wellnessActivities";
 import { supabase } from "@/integrations/supabase/client";
+import { deriveLifestyleProfile, type LifestyleProfile } from "@/lib/wellnessLifestyle";
 
 export interface UseWellnessStateResult {
   catalog: WellnessCatalogEntry[];
@@ -19,6 +20,7 @@ export interface UseWellnessStateResult {
   ailments: PlayerAilment[];
   blocks: WellnessBlock[];
   vitals: WellnessVitals | null;
+  lifestyle: LifestyleProfile | null;
   loading: boolean;
   error: string | null;
   perform: (slug: string) => Promise<{ ok: boolean; ailments: string[] }>;
@@ -31,6 +33,7 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
   const [ailments, setAilments] = useState<PlayerAilment[]>([]);
   const [blocks, setBlocks] = useState<WellnessBlock[]>([]);
   const [vitals, setVitals] = useState<WellnessVitals | null>(null);
+  const [lifestyle, setLifestyle] = useState<LifestyleProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +44,46 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
       .select("health, energy, mood, stress, physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk")
       .eq("id", profileId)
       .maybeSingle();
-    if (data) setVitals(data as WellnessVitals);
+    if (data) {
+      const nextVitals = data as WellnessVitals;
+      setVitals(nextVitals);
+      const { data: lifestyleRow } = await (supabase as any)
+        .from("wellness_lifestyle_profiles")
+        .select("*")
+        .eq("profile_id", profileId)
+        .maybeSingle();
+      if (lifestyleRow) {
+        const { data: traitRows } = await (supabase as any)
+          .from("wellness_lifestyle_traits")
+          .select("trait_slug, trait_name, progress, active, benefits, tradeoffs")
+          .eq("profile_id", profileId)
+          .order("active", { ascending: false });
+        setLifestyle({
+          sleep_consistency: lifestyleRow.sleep_consistency,
+          sleep_debt: lifestyleRow.sleep_debt,
+          activity_balance: lifestyleRow.activity_balance,
+          exercise_consistency: lifestyleRow.exercise_consistency,
+          nutrition_consistency: lifestyleRow.nutrition_consistency,
+          hydration_consistency: lifestyleRow.hydration_consistency,
+          social_activity: lifestyleRow.social_activity,
+          partying_frequency: lifestyleRow.partying_frequency,
+          alcohol_exposure: lifestyleRow.alcohol_exposure,
+          recovery_discipline: lifestyleRow.recovery_discipline,
+          workload_intensity: lifestyleRow.workload_intensity,
+          downtime_quality: lifestyleRow.downtime_quality,
+          routine_stability: lifestyleRow.routine_stability,
+          burnout_pressure: lifestyleRow.burnout_pressure,
+          lifestyle_balance: lifestyleRow.lifestyle_balance,
+          state: lifestyleRow.lifestyle_state,
+          burnout_stage: lifestyleRow.burnout_stage,
+          identity: lifestyleRow.lifestyle_identity,
+          recommendation: lifestyleRow.primary_recommendation,
+          traits: (traitRows ?? []).map((t: any) => ({ slug: t.trait_slug, name: t.trait_name, progress: t.progress, active: t.active, benefit: t.benefits, tradeoff: t.tradeoffs })),
+        });
+      } else {
+        setLifestyle(deriveLifestyleProfile([{ day: new Date().toISOString().slice(0, 10), sleepMinutes: (nextVitals.sleep_quality ?? 72) * 6, restMinutes: Math.max(0, 100 - (nextVitals.fatigue ?? 35)), nutritionScore: nextVitals.nutrition ?? 68, hydrationScore: 65, workloadMinutes: Math.max(0, 100 - (nextVitals.energy ?? 80)) * 5, socialMinutes: nextVitals.happiness ?? nextVitals.mood ?? 70 }]));
+      }
+    }
   }, [profileId]);
 
   const refresh = useCallback(async () => {
@@ -81,5 +123,5 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     [profileId, refresh],
   );
 
-  return { catalog, cooldowns, ailments, blocks, vitals, loading, error, perform, refresh };
+  return { catalog, cooldowns, ailments, blocks, vitals, lifestyle, loading, error, perform, refresh };
 }
