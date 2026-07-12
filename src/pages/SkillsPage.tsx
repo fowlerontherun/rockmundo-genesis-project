@@ -6,263 +6,107 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle, Dumbbell, GitBranch, Gauge } from "lucide-react";
+import { TrendingUp, Target, Award, Zap, Calendar, AlertCircle, Dumbbell, GitBranch, Gauge, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { SchedulePracticeDialog } from "@/components/skills/SchedulePracticeDialog";
 import { XpWalletDisplay } from "@/components/attributes/XpWalletDisplay";
 import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { Sparkles } from "lucide-react";
 import { AttributePanel } from "@/components/attributes/AttributePanel";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/lib/supabase-types";
 import { useTranslation } from "@/hooks/useTranslation";
+import { usePlayerAttributesQuery } from "@/hooks/usePlayerAttributesQuery";
+import { calculateSkillOverviewStats, getSkillDisplayProgress, SKILL_PRACTICE_CONFIG } from "@/utils/skillProgressDisplay";
+
+const formatReset = (value?: string | null) => value ? new Date(value).toLocaleString() : "the next daily reset";
 
 const SkillsPage = () => {
   const { t } = useTranslation();
   const { profileId } = useActiveProfile();
-  const { skillProgress, loading, xpWallet, profile, dailyXpGrant } = useGameData();
+  const { skillProgress, loading, error, xpWallet, profile, dailyXpGrant, refetch } = useGameData();
   const [selectedSkill, setSelectedSkill] = useState<{ slug: string; name: string } | null>(null);
-  const [rawAttributes, setRawAttributes] = useState<Database["public"]["Tables"]["player_attributes"]["Row"] | null>(null);
-  
-  // Get practice restrictions for current date
-  const today = new Date();
-  const { data: restrictions } = useSkillPracticeRestrictions(profileId ?? undefined, today);
+  const attributesQuery = usePlayerAttributesQuery(profile?.id ?? profileId);
+  const restrictionsQuery = useSkillPracticeRestrictions(profileId ?? undefined);
+  const restrictions = restrictionsQuery.data;
 
-  // Fetch full attributes row
-  useEffect(() => {
-    if (profile?.id) {
-      const fetchAttributes = async () => {
-        const { data } = await supabase
-          .from("player_attributes")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .maybeSingle();
-        
-        if (data) {
-          setRawAttributes(data);
-        }
-      };
-      fetchAttributes();
-    }
-  }, [profile?.id]);
-
-  // XP Wallet data - use dual currency columns, fallback to legacy
-  const skillXpBalance = xpWallet?.skill_xp_balance ?? xpWallet?.xp_balance ?? 0;
-  const skillXpLifetime = xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp ?? 0;
-  const attributePointsBalance = xpWallet?.attribute_points_balance ?? 0;
-  const attributePointsSpent = rawAttributes?.attribute_points_spent ?? 0;
+  const skillXpBalance = xpWallet?.skill_xp_balance ?? xpWallet?.xp_balance;
+  const skillXpLifetime = xpWallet?.skill_xp_lifetime ?? xpWallet?.lifetime_xp;
+  const attributePointsBalance = xpWallet?.attribute_points_balance;
+  const attributePointsSpent = attributesQuery.data?.attribute_points_spent;
   const streak = xpWallet?.stipend_claim_streak ?? 0;
   const lastClaimDate = xpWallet?.last_stipend_claim_date ?? dailyXpGrant?.created_at;
 
-  const totalXP = skillProgress?.reduce((sum, skill) => sum + (skill.current_xp || 0), 0) || 0;
-  const skillCount = skillProgress?.length || 0;
-  const avgLevel = skillProgress?.reduce((sum, skill) => sum + (skill.current_level || 0), 0) / (skillCount || 1);
+  const stats = useMemo(() => calculateSkillOverviewStats(skillProgress ?? []), [skillProgress]);
+  const xpCardLabel = stats.lifetimeXp === null ? "Current Level XP" : "Lifetime Skill XP";
+  const xpCardValue = stats.lifetimeXp ?? stats.currentLevelXp;
+  const practiceableSkills = useMemo(
+    () => (skillProgress ?? []).filter((skill) => getSkillDisplayProgress(skill).can_practice),
+    [skillProgress],
+  );
 
-  // Filter skills that can be practiced (level 1 or higher)
-  const practiceableSkills = useMemo(() => {
-    return skillProgress?.filter(skill => skill.current_level >= 1) || [];
-  }, [skillProgress]);
-
-  const handleOpenPracticeDialog = (skillSlug: string, skillName: string) => {
-    setSelectedSkill({ slug: skillSlug, name: skillName });
+  const refreshProgressionData = async () => {
+    await Promise.all([attributesQuery.refetch(), refetch()]);
   };
 
+  const retryAll = () => {
+    refetch();
+    attributesQuery.refetch();
+    restrictionsQuery.refetch();
+  };
+
+  const tabs = [
+    { value: "practice", icon: Dumbbell, label: t("skills.tabs.practice", "Practice Skills"), desc: `Book ${SKILL_PRACTICE_CONFIG.durationOptionsHours.join("/")}-hour sessions (+${SKILL_PRACTICE_CONFIG.baseXpReward} XP)` },
+    { value: "tree", icon: GitBranch, label: t("skills.tabs.tree", "Skill Tree"), desc: t("skills.tabs.treeDesc", "Unlock and level up abilities") },
+    { value: "attributes", icon: Gauge, label: t("skills.tabs.attributes", "Attributes"), desc: t("skills.tabs.attributesDesc", "Spend AP on core stats") },
+  ];
 
   return (
-    <FMPageScaffold
-      title="Skills & Attributes"
-      subtitle="Master your craft and unlock new abilities"
-      icon={Sparkles}
-      backTo="/hub/character"
-    >
-
-
-      <XpWalletDisplay
-        skillXpBalance={skillXpBalance}
-        skillXpLifetime={skillXpLifetime}
-        attributePointsBalance={attributePointsBalance}
-        attributePointsSpent={attributePointsSpent}
-        streak={streak}
-      />
-
-      <DailyStipendCard lastClaimDate={lastClaimDate} streak={streak} />
-
-      {/* Practice Restrictions Alert */}
-      {restrictions && !restrictions.canPractice && (
+    <FMPageScaffold title={t("skills.title", "Skills & Attributes")} subtitle={t("skills.subtitle", "Master your craft and unlock new abilities")} icon={Sparkles} backTo="/hub/character">
+      {(error || attributesQuery.error || restrictionsQuery.error) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{restrictions.reason}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Practice Status */}
-      {restrictions && restrictions.canPractice && (
-        <Alert>
-          <Target className="h-4 w-4" />
-          <AlertDescription>
-            Practice sessions today: {restrictions.todaysPracticeCount}/5
-            {restrictions.todaysPracticeCount < 5 && 
-              ` - You can practice ${5 - restrictions.todaysPracticeCount} more time${5 - restrictions.todaysPracticeCount === 1 ? '' : 's'} today`
-            }
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>{t("skills.errors.loadFailed", "Some progression data failed to load. Values are not being replaced with zero.")}</span>
+            <Button size="sm" variant="outline" onClick={retryAll}>{t("common.retry", "Retry")}</Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Overview Stats */}
+      {loading || !xpWallet ? (
+        <Card><CardContent className="pt-6">{loading ? t("skills.loading.wallet", "Loading XP wallet…") : t("skills.empty.wallet", "XP wallet row is missing.")}</CardContent></Card>
+      ) : (
+        <XpWalletDisplay skillXpBalance={skillXpBalance ?? 0} skillXpLifetime={skillXpLifetime ?? 0} attributePointsBalance={attributePointsBalance ?? 0} attributePointsSpent={attributePointsSpent ?? 0} streak={streak} />
+      )}
+
+      <DailyStipendCard lastClaimDate={lastClaimDate} streak={streak} />
+
+      {restrictionsQuery.isLoading && <Alert><Target className="h-4 w-4" /><AlertDescription>{t("skills.loading.practice", "Checking practice availability…")}</AlertDescription></Alert>}
+      {restrictions && !restrictions.canPractice && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{restrictions.reason} Next reset: {formatReset(restrictions.nextResetAt)}</AlertDescription></Alert>}
+      {restrictions?.canPractice && <Alert><Target className="h-4 w-4" /><AlertDescription>Practice sessions today: {restrictions.sessionsUsed}/{restrictions.maxDailySessions} — {restrictions.sessionsRemaining} remaining. Next reset: {formatReset(restrictions.nextResetAt)}</AlertDescription></Alert>}
+
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalXP.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Skills Unlocked</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{skillCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Level</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgLevel.toFixed(1)}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Can Practice</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{practiceableSkills.length}</div>
-            <p className="text-xs text-muted-foreground">Level 1+ skills</p>
-          </CardContent>
-        </Card>
+        {[{label: xpCardLabel, value: xpCardValue.toLocaleString(), icon: TrendingUp}, {label: "Skills Unlocked", value: stats.unlockedCount, icon: Target}, {label: "Average Level", value: stats.averageLevel.toFixed(1), icon: Award}, {label: "Can Practice", value: stats.practiceableCount, icon: Zap, note: `Meets level ${SKILL_PRACTICE_CONFIG.minimumSkillLevel}+ and server rules`}].map(({label,value,icon:Icon,note}) => (
+          <Card key={label}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{label}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{value}</div>{note && <p className="text-xs text-muted-foreground">{note}</p>}</CardContent></Card>
+        ))}
       </div>
 
       <Tabs defaultValue="practice" className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-auto gap-2 bg-transparent p-0">
-          {[
-            { value: "practice", icon: Dumbbell, label: "Practice Skills", desc: "Book 1-hour sessions (+5 XP)" },
-            { value: "tree", icon: GitBranch, label: "Skill Tree", desc: "Unlock & level up abilities" },
-            { value: "attributes", icon: Gauge, label: "Attributes", desc: "Spend AP on core stats" },
-          ].map(({ value, icon: Icon, label, desc }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className={cn(
-                "flex flex-col items-start gap-1 h-auto p-4 rounded-lg border border-border bg-card text-left",
-                "data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:shadow-md",
-                "hover:border-primary/60 transition-colors"
-              )}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <Icon className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-base">{label}</span>
-              </div>
-              <span className="text-xs text-muted-foreground font-normal">{desc}</span>
-            </TabsTrigger>
-          ))}
+          {tabs.map(({ value, icon: Icon, label, desc }) => <TabsTrigger key={value} value={value} aria-label={label} className={cn("flex flex-col items-start gap-1 h-auto p-4 rounded-lg border border-border bg-card text-left", "data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:shadow-md", "hover:border-primary/60 transition-colors")}><div className="flex items-center gap-2 w-full"><Icon className="h-5 w-5 text-primary" /><span className="font-semibold text-base">{label}</span></div><span className="text-xs text-muted-foreground font-normal">{desc}</span></TabsTrigger>)}
         </TabsList>
 
         <TabsContent value="attributes" className="mt-6">
-          <AttributePanel attributes={rawAttributes} xpBalance={attributePointsBalance} />
+          {attributesQuery.isLoading ? <Card><CardContent className="pt-6">{t("skills.loading.attributes", "Loading attributes…")}</CardContent></Card> : attributesQuery.data ? <AttributePanel attributes={attributesQuery.data} xpBalance={attributePointsBalance ?? 0} onXpSpent={refreshProgressionData} /> : <Card><CardContent className="pt-6">{t("skills.empty.attributes", "Attribute row is missing for this profile.")}</CardContent></Card>}
         </TabsContent>
 
-        <TabsContent value="tree" className="mt-6">
-          <SkillTree />
-        </TabsContent>
+        <TabsContent value="tree" className="mt-6">{loading ? <Card><CardContent className="pt-6">{t("skills.loading.skills", "Loading skills…")}</CardContent></Card> : <SkillTree />}</TabsContent>
 
-        <TabsContent value="practice" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Practice Skills</CardTitle>
-              <CardDescription>
-                Schedule practice sessions to gain XP. Must be level 1+ to practice. 
-                Each session takes 1 hour and grants 5 XP. Maximum 5 sessions per day.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {practiceableSkills.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No skills available to practice yet.</p>
-                  <p className="text-sm mt-2">Start with education or a music activity to unlock a level 1 skill.</p>
-                  <Button asChild size="sm" className="mt-4">
-                    <a href="/education">Find starter lessons</a>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {practiceableSkills.map(skill => {
-                    const requiredXP = Math.floor(100 * Math.pow(1.5, skill.current_level - 1));
-                    const progressPercent = (skill.current_xp / requiredXP) * 100;
-                    const canPracticeThisSkill = restrictions?.canPractice || false;
-
-                    return (
-                      <div key={skill.skill_slug} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold capitalize">
-                                {skill.skill_slug.replace(/_/g, ' ')}
-                              </h4>
-                              <Badge variant="outline">Level {skill.current_level}</Badge>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>{skill.current_xp}/{requiredXP} XP</span>
-                            </div>
-                          </div>
-                          
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!canPracticeThisSkill}
-                            onClick={() => handleOpenPracticeDialog(
-                              skill.skill_slug, 
-                              skill.skill_slug.replace(/_/g, ' ')
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Schedule Practice
-                          </Button>
-                        </div>
-                        <Progress value={progressPercent} className="h-2" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <TabsContent value="practice" className="mt-6"><Card><CardHeader><CardTitle>Practice Skills</CardTitle><CardDescription>Schedule practice sessions using the shared practice configuration: {SKILL_PRACTICE_CONFIG.durationOptionsHours.join("/")}-hour duration, {SKILL_PRACTICE_CONFIG.baseXpReward} XP reward, maximum {restrictions?.maxDailySessions ?? SKILL_PRACTICE_CONFIG.maxDailySessions} sessions per server day.</CardDescription></CardHeader><CardContent>{loading ? <p>{t("skills.loading.skills", "Loading skills…")}</p> : practiceableSkills.length === 0 ? <div className="text-center py-8 text-muted-foreground"><Target className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>No skills available to practice yet.</p><p className="text-sm mt-2">Starter skills can be unlocked through education and supported practice or rehearsal activities.</p><Button asChild size="sm" className="mt-4"><a href="/education">Find starter lessons</a></Button></div> : <div className="space-y-4">{practiceableSkills.map(skill => { const display = getSkillDisplayProgress(skill); const name = skill.skill_slug.replace(/_/g, " "); return <div key={skill.skill_slug} className="border rounded-lg p-4"><div className="flex items-center justify-between mb-3"><div className="flex-1"><div className="flex items-center gap-2 mb-1"><h4 className="font-semibold capitalize">{name}</h4><Badge variant="outline">Level {display.current_level}</Badge></div><div className="flex items-center gap-2 text-sm text-muted-foreground"><span>{display.xp_into_level}/{display.xp_required_for_next_level ?? "Max"} XP</span></div></div><Button size="sm" variant="outline" aria-label={`Schedule practice for ${name}`} disabled={!restrictions?.canPractice} onClick={() => setSelectedSkill({ slug: skill.skill_slug, name })}><Calendar className="mr-2 h-4 w-4" />Schedule Practice</Button></div><Progress value={display.progress_percent} className="h-2" /></div>; })}</div>}</CardContent></Card></TabsContent>
       </Tabs>
 
-      {/* Schedule Practice Dialog */}
-      {selectedSkill && (
-        <SchedulePracticeDialog
-          open={!!selectedSkill}
-          onOpenChange={(open) => !open && setSelectedSkill(null)}
-          skillSlug={selectedSkill.slug}
-          skillName={selectedSkill.name}
-        />
-      )}
+      {selectedSkill && <SchedulePracticeDialog open={!!selectedSkill} onOpenChange={(open) => !open && setSelectedSkill(null)} skillSlug={selectedSkill.slug} skillName={selectedSkill.name} practiceConfig={restrictions} />}
     </FMPageScaffold>
   );
 };

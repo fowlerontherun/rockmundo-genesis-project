@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info, TrendingUp } from "lucide-react";
 import { ATTRIBUTE_MAX_VALUE } from "@/utils/attributeProgression";
+import { clampProgressPercent } from "@/utils/skillProgressDisplay";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { spendAttributeXp } from "@/utils/progression";
 import { toast } from "sonner";
@@ -30,7 +31,7 @@ export const AttributeCard = ({
   const queryClient = useQueryClient();
   const standardCost = 5; // Attributes now cost 5 AP
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
-  const progress = currentValue / ATTRIBUTE_MAX_VALUE * 100;
+  const progress = clampProgressPercent((currentValue / ATTRIBUTE_MAX_VALUE) * 100);
   const canAfford = xpBalance >= cost;
   const isMaxed = currentValue >= ATTRIBUTE_MAX_VALUE;
 
@@ -42,6 +43,7 @@ export const AttributeCard = ({
     onSuccess: () => {
       toast.success(`${label} trained! +${cost} points`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
+      queryClient.invalidateQueries({ queryKey: ["player-attributes"] });
       onXpSpent?.();
     },
     onError: (error: Error) => {
@@ -72,6 +74,7 @@ export const AttributeCard = ({
         <Progress value={progress} className="h-1.5" />
 
         <Button 
+          aria-label={`Train ${label} for ${cost} AP`}
           onClick={() => trainMutation.mutate()} 
           disabled={!canAfford || isMaxed || trainMutation.isPending} 
           className="w-full h-7 text-xs" 

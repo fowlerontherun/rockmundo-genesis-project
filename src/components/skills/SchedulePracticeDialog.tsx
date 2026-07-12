@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { usePracticeSkill } from "@/hooks/useSkillPractice";
+import { type PracticeRestrictions, usePracticeSkill } from "@/hooks/useSkillPractice";
 import { setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
 import { validateFutureBooking } from "@/utils/activityBookingTime";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ interface SchedulePracticeDialogProps {
   onOpenChange: (open: boolean) => void;
   skillSlug: string;
   skillName: string;
+  practiceConfig?: PracticeRestrictions;
 }
 
 export function SchedulePracticeDialog({
@@ -27,6 +28,7 @@ export function SchedulePracticeDialog({
   onOpenChange,
   skillSlug,
   skillName,
+  practiceConfig,
 }: SchedulePracticeDialogProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedHour, setSelectedHour] = useState<number>(9);
@@ -68,7 +70,7 @@ export function SchedulePracticeDialog({
         <DialogHeader>
           <DialogTitle>Schedule Practice: {skillName}</DialogTitle>
           <DialogDescription>
-            Choose when you'd like to practice this skill. Practice sessions last 1 hour.
+            Choose when you'd like to practice this skill. Practice sessions last {practiceConfig?.durationOptionsHours.join("/") ?? 1} hour(s).
           </DialogDescription>
         </DialogHeader>
 
@@ -105,7 +107,7 @@ export function SchedulePracticeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSchedule} disabled={practiceSkill.isPending}>
+          <Button aria-label={`Schedule practice for ${skillName}`} onClick={handleSchedule} disabled={practiceSkill.isPending || practiceConfig?.canPractice === false}>
             {practiceSkill.isPending ? "Scheduling..." : "Schedule Practice"}
           </Button>
         </DialogFooter>

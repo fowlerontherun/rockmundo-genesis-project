@@ -27,7 +27,7 @@ const ATTRIBUTE_CATEGORIES = {
     keys: ["stage_presence", "musicality"] as FullAttributeKey[],
   },
   musical: {
-    title: "Musical Skills",
+    title: "Musical Attributes",
     keys: ["musical_ability", "vocal_talent", "rhythm_sense", "technical_mastery"] as FullAttributeKey[],
   },
 };

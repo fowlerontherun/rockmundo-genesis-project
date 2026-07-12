@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { startOfDay, endOfDay, addHours } from "date-fns";
+import { addHours } from "date-fns";
+import { SKILL_PRACTICE_CONFIG } from "@/utils/skillProgressDisplay";
 import { useCreateScheduledActivity } from "./useScheduledActivities";
 
 interface PracticeSkillData {
@@ -10,31 +11,48 @@ interface PracticeSkillData {
   scheduledStart: Date;
 }
 
-interface PracticeRestrictions {
+export interface PracticeRestrictions {
   canPractice: boolean;
   reason?: string;
   todaysPracticeCount: number;
+  sessionsUsed: number;
+  sessionsRemaining: number;
+  maxDailySessions: number;
+  durationOptionsHours: readonly number[];
+  baseXpReward: number;
+  minimumSkillLevel: number;
+  nextResetAt?: string;
   hasSnookerConflict: boolean;
 }
 
-export function useSkillPracticeRestrictions(userId?: string, currentDate?: Date) {
+export function useSkillPracticeRestrictions(userId?: string) {
   return useQuery({
-    queryKey: ['skill-practice-restrictions', userId, currentDate?.toISOString()],
+    queryKey: ['skill-practice-restrictions', userId],
     queryFn: async (): Promise<PracticeRestrictions> => {
-      if (!userId || !currentDate) {
-        return { canPractice: false, reason: 'Not authenticated', todaysPracticeCount: 0, hasSnookerConflict: false };
+      if (!userId) {
+        return { canPractice: false, reason: 'Not authenticated', todaysPracticeCount: 0, sessionsUsed: 0, sessionsRemaining: 0, maxDailySessions: SKILL_PRACTICE_CONFIG.maxDailySessions, durationOptionsHours: SKILL_PRACTICE_CONFIG.durationOptionsHours, baseXpReward: SKILL_PRACTICE_CONFIG.baseXpReward, minimumSkillLevel: SKILL_PRACTICE_CONFIG.minimumSkillLevel, hasSnookerConflict: false };
       }
 
-      const dayStart = startOfDay(currentDate);
-      const dayEnd = endOfDay(currentDate);
+      let serverNow = new Date();
+      try {
+        const serverTimeResponse = await (supabase as any).rpc("get_server_time");
+        if (serverTimeResponse?.data) serverNow = new Date(String(serverTimeResponse.data));
+      } catch {
+        // Fall back to client formatting only when the server-time RPC is unavailable.
+      }
+      const dayStart = new Date(serverNow);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+      const nextResetAt = dayEnd.toISOString();
 
-      // Get today's scheduled activities
+      // Get today's scheduled activities using server-derived UTC day boundaries.
       const { data: activities, error } = await supabase
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
         .gte('scheduled_start', dayStart.toISOString())
-        .lte('scheduled_start', dayEnd.toISOString())
+        .lt('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress']);
 
       if (error) throw error;
@@ -64,19 +82,26 @@ export function useSkillPracticeRestrictions(userId?: string, currentDate?: Date
       if (hasSnookerConflict) {
         canPractice = false;
         reason = 'Cannot practice while snooker activity is scheduled';
-      } else if (todaysPracticeCount >= 5) {
+      } else if (todaysPracticeCount >= SKILL_PRACTICE_CONFIG.maxDailySessions) {
         canPractice = false;
-        reason = 'Daily practice limit reached (5/5)';
+        reason = `Daily practice limit reached (${todaysPracticeCount}/${SKILL_PRACTICE_CONFIG.maxDailySessions})`;
       }
 
       return {
         canPractice,
         reason,
         todaysPracticeCount,
+        sessionsUsed: todaysPracticeCount,
+        sessionsRemaining: Math.max(0, SKILL_PRACTICE_CONFIG.maxDailySessions - todaysPracticeCount),
+        maxDailySessions: SKILL_PRACTICE_CONFIG.maxDailySessions,
+        durationOptionsHours: SKILL_PRACTICE_CONFIG.durationOptionsHours,
+        baseXpReward: SKILL_PRACTICE_CONFIG.baseXpReward,
+        minimumSkillLevel: SKILL_PRACTICE_CONFIG.minimumSkillLevel,
+        nextResetAt,
         hasSnookerConflict,
       };
     },
-    enabled: !!userId && !!currentDate,
+    enabled: !!userId,
     staleTime: 1000 * 30, // 30 seconds
   });
 }
@@ -108,11 +133,11 @@ export function usePracticeSkill() {
         .eq('skill_slug', skillSlug)
         .maybeSingle();
 
-      if (!skillProgress || skillProgress.current_level < 1) {
+      if (!skillProgress || skillProgress.current_level < SKILL_PRACTICE_CONFIG.minimumSkillLevel) {
         throw new Error('Skill must be at least level 1 to practice');
       }
 
-      const scheduledEnd = addHours(scheduledStart, 1);
+      const scheduledEnd = addHours(scheduledStart, SKILL_PRACTICE_CONFIG.durationOptionsHours[0]);
 
       // Create scheduled activity
       return createActivity.mutateAsync({
@@ -125,7 +150,7 @@ export function usePracticeSkill() {
           isPractice: true,
           skillSlug,
           skillName,
-          xpReward: 5,
+          xpReward: SKILL_PRACTICE_CONFIG.baseXpReward,
         },
       });
     },
@@ -135,7 +160,7 @@ export function usePracticeSkill() {
       queryClient.invalidateQueries({ queryKey: ['skill-practice-restrictions'] });
       
       toast.success('Practice scheduled!', {
-        description: `${variables.skillName} practice booked for 1 hour`,
+        description: `${variables.skillName} practice booked`,
       });
     },
     onError: (error: any) => {
@@ -156,7 +181,7 @@ export function useCompletePracticeSession() {
         body: {
           action: 'spend_skill_xp',
           skill_slug: skillSlug,
-          xp: 5,
+          xp: SKILL_PRACTICE_CONFIG.baseXpReward,
           metadata: {
             activity: 'practice',
             source: 'scheduled_practice',
@@ -185,7 +210,7 @@ export function useCompletePracticeSession() {
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       
       toast.success('Practice completed!', {
-        description: 'Gained 5 XP',
+        description: `Gained ${SKILL_PRACTICE_CONFIG.baseXpReward} XP`,
       });
     },
     onError: (error: any) => {
