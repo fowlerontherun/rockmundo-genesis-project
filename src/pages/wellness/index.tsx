@@ -30,6 +30,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
 import type { WellnessCategory } from "@/lib/api/wellnessActivities";
 import { calculateTravelFatigueEffect, forecastWellnessAfterRecovery, resolveAccommodationRecoveryProfile } from "@/lib/wellnessRecovery";
+import { buildCoreWellnessModifiers, calculateCanonicalReadiness } from "@/lib/wellnessSystem";
 
 const CATEGORIES: {
   key: WellnessCategory;
@@ -87,6 +88,7 @@ const WellnessPage = () => {
   const accommodationPreview = useMemo(() => resolveAccommodationRecoveryProfile({ kind: "home", tier: "standard", isHomeCity: true, occupied: true, quality: 65, upgrades: ["better_bed"] }), []);
   const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, vitals), [vitals]);
   const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(vitals, accommodationPreview, travelPreview, 0), [vitals, accommodationPreview, travelPreview]);
+  const readinessPreview = useMemo(() => calculateCanonicalReadiness({ role: "gig", core: vitals, modifiers: buildCoreWellnessModifiers(vitals, "gig"), confidence: "actual" }), [vitals]);
 
   const grouped = useMemo(() => {
     const g: Record<WellnessCategory, typeof catalog> = {
@@ -173,6 +175,35 @@ const WellnessPage = () => {
       )}
 
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
+
+      <Card className="border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4 text-primary" /> Canonical readiness
+            <Badge variant="outline">{readinessPreview.state.replaceAll("_", " ")}</Badge>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Server-generated explanation preview using the shared modifier pipeline and global caps.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-[160px_1fr]">
+          <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readinessPreview.score} out of 100`}>
+            <p className="text-3xl font-bold">{readinessPreview.score}</p>
+            <p className="text-xs text-muted-foreground">Gig readiness</p>
+          </div>
+          <div className="space-y-2 text-sm">
+            <p>{readinessPreview.explanation.summary}</p>
+            <p className="text-muted-foreground">Recommended action: {readinessPreview.explanation.suggestedAction}</p>
+            <details className="rounded-md border p-3">
+              <summary className="cursor-pointer font-medium">Calculation details</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>Base value: {readinessPreview.explanation.baseValue}</li>
+                <li>Positive contributors: {readinessPreview.explanation.positiveContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Negative contributors: {readinessPreview.explanation.negativeContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Capped contributors: {readinessPreview.explanation.cappedContributors.length}</li>
+              </ul>
+            </details>
+          </div>
+        </CardContent>
+      </Card>
 
       <LifestyleRoutinePanel lifestyle={lifestyle} fame={profile?.fame ?? 0} />
 

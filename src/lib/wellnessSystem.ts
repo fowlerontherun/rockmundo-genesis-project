@@ -166,3 +166,152 @@ export function applyDailyWellnessDrift(values: WellnessCoreValues, sleptMinutes
     burnout_risk: clampWellness(values.burnout_risk + (values.stress > 70 ? 5 : -3) + (values.fatigue > 75 ? 4 : 0)),
   };
 }
+
+export type WellnessModifierCategory = "core" | "strain" | "condition" | "energy" | "sleep" | "nutrition" | "burnout" | "lifestyle" | "travel" | "professional_support" | "career" | "preparation" | "facility" | "safety_cap";
+export type WellnessModifierMode = "additive" | "multiplicative";
+export type WellnessReadinessRole = "gig" | "vocal" | "instrumental" | "rehearsal" | "practice" | "recording" | "songwriting" | "touring" | "travel" | "professional_service" | "mentoring" | "return_from_break" | "comeback";
+export type WellnessReadinessState = "fully_ready" | "ready" | "minor_concerns" | "reduced_readiness" | "high_risk" | "restricted" | "unavailable";
+
+export interface WellnessModifier {
+  id: string;
+  source: string;
+  category: WellnessModifierCategory;
+  target: WellnessReadinessRole | "performance" | "recovery" | "progression" | "career_sustainability" | "burnout_pressure";
+  rawValue: number;
+  cappedValue?: number;
+  stackingGroup: string;
+  priority: number;
+  duration?: { startsAt?: string; endsAt?: string };
+  mode: WellnessModifierMode;
+  mayStack: boolean;
+  explanation: string;
+  diagnosticId: string;
+}
+
+export interface WellnessExplanation {
+  finalResult: number;
+  baseValue: number;
+  positiveContributors: WellnessModifier[];
+  negativeContributors: WellnessModifier[];
+  cappedContributors: WellnessModifier[];
+  ignoredContributors: WellnessModifier[];
+  appliedRestriction?: string;
+  suggestedAction: string;
+  confidence: "actual" | "forecast" | "partial";
+  summary: string;
+}
+
+export interface WellnessReadinessResult {
+  role: WellnessReadinessRole;
+  score: number;
+  state: WellnessReadinessState;
+  performanceModifier: number;
+  risk: number;
+  explanation: WellnessExplanation;
+}
+
+export const WELLNESS_PIPELINE_ORDER: WellnessModifierCategory[] = [
+  "core", "strain", "condition", "energy", "sleep", "nutrition", "burnout", "lifestyle", "travel", "professional_support", "career", "preparation", "facility", "safety_cap",
+];
+
+export const WELLNESS_CANONICAL_BALANCE = {
+  version: "wellness-consolidation-v1",
+  effectiveDate: "2026-07-12",
+  description: "Canonical modifier, readiness and explanation caps for the consolidated Wellness ecosystem.",
+  globalModifierCaps: { positive: 0.12, negative: -0.25, severeNegative: -0.4 },
+  readinessCaps: { min: 0, max: 100, ordinaryPenaltyFloor: 25, ordinaryBonusCeiling: 15 },
+  readinessThresholds: [
+    { state: "fully_ready" as const, min: 90 },
+    { state: "ready" as const, min: 78 },
+    { state: "minor_concerns" as const, min: 64 },
+    { state: "reduced_readiness" as const, min: 48 },
+    { state: "high_risk" as const, min: 30 },
+    { state: "restricted" as const, min: 1 },
+    { state: "unavailable" as const, min: 0 },
+  ],
+  roleRestrictions: {
+    vocal: ["voice_loss", "severe_throat_condition"],
+    instrumental: ["severe_wrist_condition", "severe_hand_condition"],
+    travel: ["travel_locked"],
+    comeback: ["retirement_cooldown"],
+  } as Partial<Record<WellnessReadinessRole, string[]>>,
+  changedValues: ["globalModifierCaps", "readinessThresholds", "pipelineOrder"],
+  appliesTo: "new calculations only; historical outcomes require explicit recalculation",
+  rollback: { previousVersion: "wellness-foundation", requiresRecalculation: false },
+} as const;
+
+const readinessAction = (role: WellnessReadinessRole, score: number) => {
+  if (score >= 78) return `Maintain current recovery before ${role.replaceAll("_", " ")}.`;
+  if (score >= 48) return "Add rest, food, hydration or lighter preparation before committing.";
+  return "Delay demanding activity or use recovery support before proceeding.";
+};
+
+export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): WellnessModifier[] {
+  const seen = new Set<string>();
+  const byGroup = new Map<string, WellnessModifier>();
+  const sorted = [...modifiers].sort((a, b) => WELLNESS_PIPELINE_ORDER.indexOf(a.category) - WELLNESS_PIPELINE_ORDER.indexOf(b.category) || b.priority - a.priority || a.id.localeCompare(b.id));
+  const normalized: WellnessModifier[] = [];
+  for (const modifier of sorted) {
+    if (seen.has(modifier.id)) continue;
+    seen.add(modifier.id);
+    const value = Number.isFinite(modifier.rawValue) ? modifier.rawValue : 0;
+    const cappedValue = Number(Math.max(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, value)).toFixed(4));
+    const withCap = { ...modifier, cappedValue };
+    if (!modifier.mayStack && byGroup.has(modifier.stackingGroup)) {
+      const existing = byGroup.get(modifier.stackingGroup)!;
+      if (Math.abs(cappedValue) > Math.abs(existing.cappedValue ?? existing.rawValue)) {
+        const index = normalized.findIndex((item) => item.id === existing.id);
+        normalized[index] = withCap;
+        byGroup.set(modifier.stackingGroup, withCap);
+      }
+      continue;
+    }
+    normalized.push(withCap);
+    if (!modifier.mayStack) byGroup.set(modifier.stackingGroup, withCap);
+  }
+  return normalized;
+}
+
+export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole; core?: Partial<WellnessCoreValues>; baseValue?: number; modifiers?: WellnessModifier[]; restrictions?: string[]; confidence?: WellnessExplanation["confidence"] }): WellnessReadinessResult {
+  const core = { ...createDefaultWellnessCore(), ...input.core };
+  const overall = calculateOverallWellness(core);
+  const baseValue = clampWellness(input.baseValue ?? Math.round((overall + core.energy + (100 - core.fatigue) + core.sleep_quality) / 4));
+  const normalized = normalizeWellnessModifiers(input.modifiers ?? []);
+  let additive = 0;
+  let multiplier = 1;
+  for (const modifier of normalized) {
+    const value = modifier.cappedValue ?? modifier.rawValue;
+    if (modifier.mode === "multiplicative") multiplier += value;
+    else additive += value * 100;
+  }
+  const positiveTotal = normalized.filter((m) => (m.cappedValue ?? 0) > 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
+  const negativeTotal = normalized.filter((m) => (m.cappedValue ?? 0) < 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
+  const boundedPositive = Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, positiveTotal);
+  const boundedNegative = Math.max(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, negativeTotal);
+  const cappedContributors = normalized.filter((m) => (m.cappedValue ?? m.rawValue) !== m.rawValue || positiveTotal > WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive || negativeTotal < WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative);
+  const restrictedBy = (input.restrictions ?? []).find((r) => WELLNESS_CANONICAL_BALANCE.roleRestrictions[input.role]?.includes(r));
+  const rawScore = restrictedBy ? 0 : baseValue * Math.max(0.6, multiplier) + additive + boundedPositive * 100 + boundedNegative * 100;
+  const score = clampWellness(rawScore);
+  const state = WELLNESS_CANONICAL_BALANCE.readinessThresholds.find((threshold) => score >= threshold.min)?.state ?? "unavailable";
+  const performanceModifier = Number(Math.max(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
+  const summary = `${input.role.replaceAll("_", " ")} readiness is ${score}: ${normalized.slice(0, 3).map((m) => m.explanation).join(", ") || "current wellness is the main input"}.`;
+  return {
+    role: input.role,
+    score,
+    state,
+    performanceModifier,
+    risk: clampWellness(100 - score + Math.max(0, core.burnout_risk - 60) / 2),
+    explanation: { finalResult: score, baseValue, positiveContributors: normalized.filter((m) => (m.cappedValue ?? 0) > 0), negativeContributors: normalized.filter((m) => (m.cappedValue ?? 0) < 0), cappedContributors, ignoredContributors: [], appliedRestriction: restrictedBy, suggestedAction: readinessAction(input.role, score), confidence: input.confidence ?? "actual", summary },
+  };
+}
+
+export function buildCoreWellnessModifiers(core: Partial<WellnessCoreValues>, target: WellnessReadinessRole): WellnessModifier[] {
+  const values = { ...createDefaultWellnessCore(), ...core };
+  const modifiers: WellnessModifier[] = [];
+  if (values.energy >= 80) modifiers.push({ id: `core-energy-good:${target}`, source: "core_wellness", category: "energy", target, rawValue: 0.04, stackingGroup: "energy", priority: 50, mode: "additive", mayStack: false, explanation: "good energy increased readiness", diagnosticId: "wellness.core.energy.good" });
+  if (values.energy < 35) modifiers.push({ id: `core-energy-low:${target}`, source: "core_wellness", category: "energy", target, rawValue: -0.09, stackingGroup: "energy", priority: 60, mode: "additive", mayStack: false, explanation: "low energy reduced readiness", diagnosticId: "wellness.core.energy.low" });
+  if (values.fatigue > 75) modifiers.push({ id: `core-fatigue-high:${target}`, source: "core_wellness", category: "energy", target, rawValue: -0.11, stackingGroup: "fatigue", priority: 60, mode: "additive", mayStack: false, explanation: "high fatigue reduced readiness", diagnosticId: "wellness.core.fatigue.high" });
+  if (values.sleep_quality >= 78) modifiers.push({ id: `core-sleep-good:${target}`, source: "core_wellness", category: "sleep", target, rawValue: 0.03, stackingGroup: "sleep", priority: 40, mode: "additive", mayStack: false, explanation: "quality sleep improved readiness", diagnosticId: "wellness.core.sleep.good" });
+  if (values.burnout_risk > 75) modifiers.push({ id: `core-burnout-high:${target}`, source: "core_wellness", category: "burnout", target, rawValue: -0.1, stackingGroup: "burnout", priority: 70, mode: "additive", mayStack: false, explanation: "burnout pressure reduced readiness", diagnosticId: "wellness.core.burnout.high" });
+  return modifiers;
+}

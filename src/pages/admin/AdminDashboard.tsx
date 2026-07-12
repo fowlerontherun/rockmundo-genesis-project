@@ -9,13 +9,15 @@ import {
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
   Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard,
-  Landmark, Crown, Newspaper
+  Landmark, Crown, Newspaper, HeartPulse
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useNavStyle } from "@/hooks/useNavStyle";
+import { WELLNESS_CANONICAL_BALANCE } from "@/lib/wellnessSystem";
+import { simulateWellnessScenario } from "@/lib/wellnessSimulation";
 
 interface GameStats {
   total_players: number;
@@ -32,6 +34,7 @@ interface GameStats {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { navStyle, setNavStyle, isLoading: navLoading } = useNavStyle();
+  const wellnessSimulation = simulateWellnessScenario("long_tour", 12);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-game-stats"],
@@ -152,6 +155,33 @@ const AdminDashboard = () => {
         </div>
 
         {/* Navigation Style Toggle */}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HeartPulse className="h-5 w-5 text-primary" />
+              Wellness operations
+            </CardTitle>
+            <CardDescription>Read-only canonical balance inspection, simulation smoke output and operational guardrails.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3 text-sm">
+            <div className="rounded-lg border p-3">
+              <p className="font-medium">Active balance profile</p>
+              <p className="text-muted-foreground">{WELLNESS_CANONICAL_BALANCE.version}</p>
+              <p className="text-xs text-muted-foreground">Effective {WELLNESS_CANONICAL_BALANCE.effectiveDate}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="font-medium">Global modifier caps</p>
+              <p className="text-muted-foreground">+{Math.round(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive * 100)}% / {Math.round(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative * 100)}%</p>
+              <p className="text-xs text-muted-foreground">Stacking groups dedupe duplicate effects before caps.</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="font-medium">Simulation smoke</p>
+              <p className="text-muted-foreground">Long tour ends at readiness {wellnessSimulation.steps.at(-1)?.readiness.score ?? "n/a"}</p>
+              <p className="text-xs text-muted-foreground">Deterministic seed 12, no production mutation.</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-primary/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
