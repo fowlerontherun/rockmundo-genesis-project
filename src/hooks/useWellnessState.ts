@@ -38,7 +38,7 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     if (!profileId) return;
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("health, energy, mood, stress")
+      .select("health, energy, mood, stress, physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk")
       .eq("id", profileId)
       .maybeSingle();
     if (data) setVitals(data as WellnessVitals);

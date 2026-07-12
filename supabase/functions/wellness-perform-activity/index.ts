@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     // Verify ownership
     const { data: profile, error: profErr } = await supabase
       .from("profiles")
-      .select("id, user_id, health, energy, mood, stress, cash, fame")
+      .select("id, user_id, health, energy, mood, stress, physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk, cash, fame")
       .eq("id", profile_id)
       .single();
     if (profErr || !profile) return json({ error: "profile not found" }, 404);
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     if (!entry) return json({ error: "activity not found" }, 404);
 
     if ((profile.fame ?? 0) < entry.unlock_min_fame) {
+      console.warn("[wellness_gating_rejection]", { profile_id, catalog_slug, fame: profile.fame, unlock_min_fame: entry.unlock_min_fame });
       return json({ error: `Locked until fame ${entry.unlock_min_fame}` }, 403);
     }
 
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     if (last?.cooldown_until && new Date(last.cooldown_until) > new Date()) {
+      console.warn("[wellness_invalid_booking] cooldown", { profile_id, catalog_slug });
       return json({ error: "On cooldown", cooldown_until: last.cooldown_until }, 429);
     }
 
@@ -73,7 +75,10 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("profile_id", profile_id)
       .gte("performed_at", since.toISOString());
-    if ((dayCount ?? 0) >= 3) return json({ error: "Daily wellness action cap reached (3/day)" }, 429);
+    if ((dayCount ?? 0) >= 3) {
+      console.warn("[wellness_invalid_booking] daily_cap", { profile_id, catalog_slug });
+      return json({ error: "Daily wellness action cap reached (3/day)" }, 429);
+    }
 
     if (entry.category === "indulgence") {
       const { count: indCount } = await supabase
@@ -104,10 +109,18 @@ Deno.serve(async (req) => {
 
     // Apply stat effects
     const eff = entry.stat_effects ?? {};
-    const newHealth = clamp((profile.health ?? 100) + (eff.health ?? 0));
+    const newHealth = clamp((profile.health ?? 100) + (eff.health ?? eff.physical_health ?? 0));
     const newEnergy = clamp((profile.energy ?? 100) + (eff.energy ?? 0) - entry.stamina_cost);
-    const newMood = clamp((profile.mood ?? 70) + (eff.mood ?? 0));
+    const newMood = clamp((profile.mood ?? 70) + (eff.mood ?? eff.happiness ?? 0));
     const newStress = clamp((profile.stress ?? 30) + (eff.stress ?? 0));
+    const newPhysicalHealth = clamp((profile.physical_health ?? profile.health ?? 80) + (eff.physical_health ?? eff.health ?? 0));
+    const newHappiness = clamp((profile.happiness ?? profile.mood ?? 72) + (eff.happiness ?? eff.mood ?? 0));
+    const newFatigue = clamp((profile.fatigue ?? 35) + (eff.fatigue ?? 0));
+    const newSleepQuality = clamp((profile.sleep_quality ?? 72) + (eff.sleep_quality ?? 0));
+    const newNutrition = clamp((profile.nutrition ?? 68) + (eff.nutrition ?? 0));
+    const newFitness = clamp((profile.fitness ?? 55) + (eff.fitness ?? 0));
+    const newMotivation = clamp((profile.motivation ?? profile.mood ?? 72) + (eff.motivation ?? 0));
+    const newBurnoutRisk = clamp((profile.burnout_risk ?? 18) + (eff.burnout_risk ?? 0));
     const cashDelta = Math.floor(entry.cost_cents / 100);
 
     await supabase
@@ -118,6 +131,14 @@ Deno.serve(async (req) => {
         mood: newMood,
         stress: newStress,
         cash: (profile.cash ?? 0) - cashDelta,
+        physical_health: newPhysicalHealth,
+        happiness: newHappiness,
+        fatigue: newFatigue,
+        sleep_quality: newSleepQuality,
+        nutrition: newNutrition,
+        fitness: newFitness,
+        motivation: newMotivation,
+        burnout_risk: newBurnoutRisk,
         last_health_update: new Date().toISOString(),
       })
       .eq("id", profile_id);
@@ -131,7 +152,7 @@ Deno.serve(async (req) => {
       catalog_slug: entry.slug,
       category: entry.category,
       cooldown_until: cooldownUntil,
-      stat_delta: { health: eff.health ?? 0, energy: (eff.energy ?? 0) - entry.stamina_cost, mood: eff.mood ?? 0, stress: eff.stress ?? 0 },
+      stat_delta: { ...eff, health: eff.health ?? eff.physical_health ?? 0, energy: (eff.energy ?? 0) - entry.stamina_cost, mood: eff.mood ?? eff.happiness ?? 0, stress: eff.stress ?? 0 },
       cost_cents: entry.cost_cents,
     });
 
@@ -158,8 +179,10 @@ Deno.serve(async (req) => {
           treatment_required_slug: ailment.treatment, blocks_activity_types: ailment.blocks,
           stat_penalty: ailment.penalty, description: ailment.description,
           source: entry.slug,
+          expected_recovery_at: new Date(Date.now() + ailment.recoveryHours * 3600_000).toISOString(),
         });
         rolled.push(ailment.name);
+        console.info("[wellness_condition_created]", { profile_id, slug });
       }
     }
 
@@ -175,14 +198,16 @@ Deno.serve(async (req) => {
         status: "in_progress",
         title: entry.name,
         description: entry.description,
-        metadata: { wellness_catalog_slug: entry.slug },
+        metadata: { wellness_catalog_slug: entry.slug, expected_benefits: entry.stat_effects },
       });
     }
+
+    console.info("[wellness_activity_completion]", { profile_id, catalog_slug });
 
     return json({
       ok: true,
       cooldown_until: cooldownUntil,
-      new_stats: { health: newHealth, energy: newEnergy, mood: newMood, stress: newStress },
+      new_stats: { health: newHealth, energy: newEnergy, mood: newMood, stress: newStress, physical_health: newPhysicalHealth, happiness: newHappiness, fatigue: newFatigue, sleep_quality: newSleepQuality, nutrition: newNutrition, fitness: newFitness, motivation: newMotivation, burnout_risk: newBurnoutRisk },
       ailments_contracted: rolled,
     });
   } catch (e) {
@@ -198,17 +223,17 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const AILMENT_TEMPLATES: Record<string, { name: string; severity: number; treatment: string; blocks: string[]; penalty: Record<string, number>; description: string }> = {
-  vocal_strain: { name: "Vocal Strain", severity: 2, treatment: "vocal_coach_checkup", blocks: ["gig","tour","recording","performance"], penalty: { performance: -25 }, description: "Your voice is shot. Sing and you''ll make it worse." },
-  sore_throat: { name: "Sore Throat", severity: 1, treatment: "doctor_visit", blocks: ["gig","performance"], penalty: { performance: -10 }, description: "Scratchy throat." },
-  flu: { name: "Flu", severity: 2, treatment: "doctor_visit", blocks: ["gig","tour","recording","work","wellness_fitness","performance"], penalty: { performance: -30 }, description: "Bedridden." },
-  sprained_wrist: { name: "Sprained Wrist", severity: 2, treatment: "physio", blocks: ["gig","recording","wellness_fitness","jam"], penalty: { performance: -20 }, description: "Hard to play." },
-  insomnia: { name: "Insomnia", severity: 1, treatment: "therapy_session", blocks: [], penalty: { energy_regen: -50 }, description: "Energy regen halved." },
-  burnout: { name: "Burnout", severity: 3, treatment: "mental_clinic", blocks: ["gig","tour","recording","jam","work","wellness_fitness","wellness_indulgence","performance"], penalty: { performance: -40 }, description: "Completely fried." },
-  panic_attack: { name: "Panic Episode", severity: 2, treatment: "therapy_session", blocks: ["gig","performance"], penalty: { performance: -25 }, description: "Anxious on stage." },
-  food_poisoning: { name: "Food Poisoning", severity: 2, treatment: "doctor_visit", blocks: ["gig","tour","wellness_fitness","work","performance"], penalty: { performance: -20 }, description: "Don''t stray from the bathroom." },
-  hangover: { name: "Hangover", severity: 1, treatment: "sleep_in", blocks: ["wellness_fitness","work"], penalty: { performance: -15 }, description: "Pounding headache." },
-  back_pain: { name: "Back Pain", severity: 1, treatment: "physio", blocks: ["wellness_fitness"], penalty: { performance: -10 }, description: "Lower back is locked up." },
-  depression_spell: { name: "Depressive Spell", severity: 2, treatment: "therapy_session", blocks: ["wellness_fitness","wellness_indulgence","gig","performance"], penalty: { performance: -25 }, description: "Can''t shake the gloom." },
-  withdrawal: { name: "Withdrawal", severity: 3, treatment: "rehab_intake", blocks: ["gig","tour","recording","jam","work","performance"], penalty: { performance: -35 }, description: "Body is fighting addiction." },
+const AILMENT_TEMPLATES: Record<string, { name: string; severity: number; treatment: string; blocks: string[]; penalty: Record<string, number>; description: string; recoveryHours: number }> = {
+  vocal_strain: { name: "Vocal Strain", severity: 2, treatment: "vocal_coach_checkup", blocks: ["gig","tour","recording","performance"], penalty: { performance: -25 }, description: "Your voice is shot. Sing and you''ll make it worse.", recoveryHours: 72 },
+  sore_throat: { name: "Sore Throat", severity: 1, treatment: "doctor_visit", blocks: ["gig","performance"], penalty: { performance: -10 }, description: "Scratchy throat.", recoveryHours: 72 },
+  flu: { name: "Flu", severity: 2, treatment: "doctor_visit", blocks: ["gig","tour","recording","work","wellness_fitness","performance"], penalty: { performance: -30 }, description: "Bedridden.", recoveryHours: 72 },
+  sprained_wrist: { name: "Sprained Wrist", severity: 2, treatment: "physio", blocks: ["gig","recording","wellness_fitness","jam"], penalty: { performance: -20 }, description: "Hard to play.", recoveryHours: 72 },
+  insomnia: { name: "Insomnia", severity: 1, treatment: "therapy_session", blocks: [], penalty: { energy_regen: -50 }, description: "Energy regen halved.", recoveryHours: 72 },
+  burnout: { name: "Burnout", severity: 3, treatment: "mental_clinic", blocks: ["gig","tour","recording","jam","work","wellness_fitness","wellness_indulgence","performance"], penalty: { performance: -40 }, description: "Completely fried.", recoveryHours: 72 },
+  panic_attack: { name: "Panic Episode", severity: 2, treatment: "therapy_session", blocks: ["gig","performance"], penalty: { performance: -25 }, description: "Anxious on stage.", recoveryHours: 72 },
+  food_poisoning: { name: "Food Poisoning", severity: 2, treatment: "doctor_visit", blocks: ["gig","tour","wellness_fitness","work","performance"], penalty: { performance: -20 }, description: "Don''t stray from the bathroom.", recoveryHours: 72 },
+  hangover: { name: "Hangover", severity: 1, treatment: "sleep_in", blocks: ["wellness_fitness","work"], penalty: { performance: -15 }, description: "Pounding headache.", recoveryHours: 72 },
+  back_pain: { name: "Back Pain", severity: 1, treatment: "physio", blocks: ["wellness_fitness"], penalty: { performance: -10 }, description: "Lower back is locked up.", recoveryHours: 72 },
+  depression_spell: { name: "Depressive Spell", severity: 2, treatment: "therapy_session", blocks: ["wellness_fitness","wellness_indulgence","gig","performance"], penalty: { performance: -25 }, description: "Can''t shake the gloom.", recoveryHours: 72 },
+  withdrawal: { name: "Withdrawal", severity: 3, treatment: "rehab_intake", blocks: ["gig","tour","recording","jam","work","performance"], penalty: { performance: -35 }, description: "Body is fighting addiction.", recoveryHours: 72 },
 };
