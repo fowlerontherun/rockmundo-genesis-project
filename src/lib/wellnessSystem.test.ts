@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDailyWellnessDrift, calculateOverallWellness, createDefaultWellnessCore, getPerformanceModifier, getWellnessState, getWellnessTier, getWellnessWarnings, isWellnessActivityUnlocked, isWellnessStatUnlocked } from "./wellnessSystem";
+import { applyDailyWellnessDrift, calculateOverallWellness, createDefaultWellnessCore, getPerformanceModifier, getWellnessState, getWellnessTier, getWellnessWarnings, isWellnessActivityUnlocked, isWellnessStatUnlocked, validateWellnessScheduleWindow } from "./wellnessSystem";
 
 describe("wellness calculations", () => {
   it("derives excellent and critical overall wellness from underlying stats", () => {
@@ -46,5 +46,22 @@ describe("wellness gating", () => {
   it("rejects locked activity access server config can mirror", () => {
     expect(isWellnessActivityUnlocked("exercise", 0)).toBe(false);
     expect(isWellnessActivityUnlocked("exercise", 100)).toBe(true);
+  });
+});
+
+
+describe("wellness scheduling validation", () => {
+  const now = new Date("2026-07-12T12:00:00Z");
+
+  it("rejects past and invalid wellness bookings", () => {
+    expect(validateWellnessScheduleWindow({ startsAt: new Date("2026-07-12T11:59:00Z"), endsAt: new Date("2026-07-12T13:00:00Z"), now })).toEqual({ ok: false, reason: "past" });
+    expect(validateWellnessScheduleWindow({ startsAt: new Date("2026-07-12T13:00:00Z"), endsAt: new Date("2026-07-12T13:00:00Z"), now })).toEqual({ ok: false, reason: "invalid_duration" });
+  });
+
+  it("rejects active overlaps but allows non-blocking statuses and overlap-enabled activities", () => {
+    const existing = [{ startsAt: new Date("2026-07-12T13:00:00Z"), endsAt: new Date("2026-07-12T14:00:00Z"), status: "scheduled" }];
+    expect(validateWellnessScheduleWindow({ startsAt: new Date("2026-07-12T13:30:00Z"), endsAt: new Date("2026-07-12T14:30:00Z"), existing, now })).toEqual({ ok: false, reason: "overlap" });
+    expect(validateWellnessScheduleWindow({ startsAt: new Date("2026-07-12T13:30:00Z"), endsAt: new Date("2026-07-12T14:30:00Z"), existing, canOverlap: true, now })).toEqual({ ok: true });
+    expect(validateWellnessScheduleWindow({ startsAt: new Date("2026-07-12T13:30:00Z"), endsAt: new Date("2026-07-12T14:30:00Z"), existing: [{ ...existing[0], status: "cancelled" }], now })).toEqual({ ok: true });
   });
 });
