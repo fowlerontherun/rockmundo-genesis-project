@@ -178,8 +178,7 @@ export const SKILL_ATTRIBUTE_MAP: Record<string, AttributeKey> = {
   technical: 'technical_mastery',
 };
 
-export const getAttributeTrainingCost = (currentValue: number) =>
-  Math.ceil(120 + currentValue * 0.85);
+export { getAttributeUpgradeCost as getAttributeTrainingCost } from "./progressionBalance";
 
 export const getAttributeValue = (
   attributes: AttributeSnapshot | null | undefined,

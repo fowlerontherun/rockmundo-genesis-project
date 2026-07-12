@@ -5,6 +5,7 @@ import {
   FULL_ATTRIBUTE_METADATA,
   type FullAttributeKey,
 } from "./attributeProgression";
+import { PROGRESSION_BALANCE, getDiminishingAttributeEffect } from "./progressionBalance";
 
 export const SKILL_TYPES = [
   "foundation",
@@ -168,7 +169,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: true,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "foundation_fast",
     display_order: 10,
     icon_key: "guitar",
   },
@@ -186,7 +187,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: true,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "foundation_fast",
     display_order: 20,
     icon_key: "mic",
   },
@@ -204,7 +205,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: true,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "foundation_fast",
     display_order: 30,
     icon_key: "drums",
   },
@@ -222,7 +223,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: true,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "foundation_fast",
     display_order: 40,
     icon_key: "bass",
   },
@@ -240,7 +241,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: false,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "standard_role",
     display_order: 50,
     icon_key: "stage",
   },
@@ -258,7 +259,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: true,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "foundation_fast",
     display_order: 60,
     icon_key: "pen",
   },
@@ -276,7 +277,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: false,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "specialist",
     display_order: 70,
     icon_key: "music",
   },
@@ -294,7 +295,7 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     is_practiceable: true,
     is_foundational: false,
     max_level: 100,
-    progression_curve_key: "standard_skill",
+    progression_curve_key: "specialist",
     display_order: 80,
     icon_key: "sliders",
   },
@@ -419,27 +420,20 @@ export function calculateWeightedLearningMultiplier(
 ) {
   if (!attributes || links.length === 0)
     return { multiplier: 1, boostPercent: 0, attributeNames: [] };
-  const weighted = links.reduce(
-    (sum, link) =>
-      sum +
-      Math.max(
-        0,
-        Math.min(
-          ATTRIBUTE_MAX_VALUE,
-          Number(attributes[link.attribute_key]) || 0,
-        ),
-      ) *
-        link.weight,
-    0,
-  );
-  const maxBonus = links.reduce(
-    (max, link) => Math.max(max, link.max_bonus),
-    0.5,
-  );
-  const bonus = (weighted / ATTRIBUTE_MAX_VALUE) * maxBonus;
+  const bonus = links.reduce((sum, link) => {
+    const rawValue = Math.max(
+      0,
+      Math.min(ATTRIBUTE_MAX_VALUE, Number(attributes[link.attribute_key]) || 0),
+    );
+    const relationshipCap = link.is_primary
+      ? PROGRESSION_BALANCE.learning.primaryMaxBonus
+      : PROGRESSION_BALANCE.learning.secondaryMaxBonus;
+    return sum + getDiminishingAttributeEffect(rawValue) * relationshipCap * link.weight;
+  }, 0);
+  const cappedBonus = Math.min(bonus, PROGRESSION_BALANCE.learning.totalAttributeBonusCap);
   return {
-    multiplier: Number((1 + bonus).toFixed(3)),
-    boostPercent: Math.round(bonus * 100),
+    multiplier: Number((1 + cappedBonus).toFixed(3)),
+    boostPercent: Math.round(cappedBonus * 100),
     attributeNames: links.map((l) => l.attribute_key),
   };
 }
