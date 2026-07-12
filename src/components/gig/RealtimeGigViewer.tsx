@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Music, Star, Users, Clock, TrendingUp, Zap } from "lucide-react";
+import { Music, Star, Clock, TrendingUp, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import type { Database } from "@/lib/supabase-types";
 import { CrowdEnergyVisualizer } from "./CrowdEnergyVisualizer";
 import { PerformanceNarrative, generateNarrativeEvent } from "./PerformanceNarrative";
+import { LiveGigAudiencePanel } from "./LiveGigAudiencePanel";
 
 type Gig = Database['public']['Tables']['gigs']['Row'];
 type SongPerformance = Database['public']['Tables']['gig_song_performances']['Row'];
@@ -372,6 +373,9 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
         }
         attendance={gig.attendance || gig.estimated_attendance || 0}
       />
+
+      {/* Audience Participation */}
+      <LiveGigAudiencePanel gigId={gig.id} isAudienceView />
 
       {/* Performance Narrative */}
       <PerformanceNarrative events={narrativeEvents} />

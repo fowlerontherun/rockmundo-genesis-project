@@ -1,0 +1,28 @@
+-- Harness assertions for live gig audience participation and social viewing.
+BEGIN;
+SELECT plan(23);
+SELECT has_table('public', 'gig_audience_attendance', 'audience attendance table exists');
+SELECT has_table('public', 'gig_audience_reactions', 'audience reactions table exists');
+SELECT has_table('public', 'gig_audience_segment_aggregates', 'audience aggregate table exists');
+SELECT has_table('public', 'gig_audience_polls', 'audience polls table exists');
+SELECT has_table('public', 'gig_audience_poll_votes', 'audience poll votes table exists');
+SELECT has_table('public', 'gig_audience_ratings', 'audience ratings table exists');
+SELECT has_table('public', 'gig_audience_reward_records', 'audience reward records table exists');
+SELECT col_is_unique('public', 'gig_audience_attendance', ARRAY['gig_id', 'player_id'], 'one attendance record per player per gig');
+SELECT col_is_unique('public', 'gig_audience_poll_votes', ARRAY['poll_id', 'attendance_id'], 'one poll vote per attendance');
+SELECT col_is_unique('public', 'gig_audience_ratings', ARRAY['attendance_id'], 'one rating per attendance');
+SELECT col_is_unique('public', 'gig_audience_reward_records', ARRAY['idempotency_key'], 'reward processing is idempotent');
+SELECT has_index('public', 'gig_audience_reactions', 'idx_gig_audience_reactions_segment', 'reaction segment index exists');
+SELECT has_index('public', 'gig_audience_attendance', 'idx_gig_audience_attendance_player', 'attendance player index exists');
+SELECT has_function('public', 'check_in_gig_audience', ARRAY['uuid','uuid','text'], 'server-side audience check-in exists');
+SELECT has_function('public', 'record_gig_audience_reaction', ARRAY['uuid','text','uuid','text'], 'server-side reaction recorder exists');
+SELECT has_function('public', 'submit_gig_audience_poll_vote', ARRAY['uuid','text'], 'server-side poll vote function exists');
+SELECT has_function('public', 'submit_gig_audience_rating', ARRAY['uuid','integer','integer','integer','integer','integer','uuid','uuid'], 'server-side rating function exists');
+SELECT has_function('public', 'process_gig_audience_rewards', ARRAY['uuid'], 'idempotent reward processor exists');
+SELECT policies_are('public', 'gig_audience_attendance', ARRAY['audience_attendance_select_own_or_band', 'audience_attendance_insert_own_denied', 'audience_attendance_update_own_denied', 'audience_attendance_delete_denied']);
+SELECT policies_are('public', 'gig_audience_reactions', ARRAY['audience_reactions_select_eligible', 'audience_reactions_insert_denied', 'audience_reactions_update_denied', 'audience_reactions_delete_denied']);
+SELECT policies_are('public', 'gig_audience_polls', ARRAY['audience_polls_select_eligible', 'audience_polls_write_denied']);
+SELECT policies_are('public', 'gig_audience_poll_votes', ARRAY['audience_poll_votes_select_own_or_band', 'audience_poll_votes_write_denied']);
+SELECT policies_are('public', 'gig_audience_ratings', ARRAY['audience_ratings_select_own_or_band', 'audience_ratings_write_denied']);
+SELECT * FROM finish();
+ROLLBACK;
