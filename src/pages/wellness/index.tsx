@@ -159,7 +159,7 @@ const WellnessPage = () => {
         </Alert>
       )}
 
-      <WellnessVitalsPanel vitals={vitals} />
+      <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
 
       {blocks.length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5">

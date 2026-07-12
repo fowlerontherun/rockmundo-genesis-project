@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { createDefaultWellnessCore, getPerformanceModifier as getCorePerformanceModifier, WELLNESS_ACTIVITIES, type WellnessCoreValues, type WellnessTierKey } from "@/lib/wellnessSystem";
 
 export type WellnessCategory = "recovery" | "fitness" | "medical" | "indulgence";
 
@@ -16,6 +17,10 @@ export interface WellnessCatalogEntry {
   ailment_risk: Record<string, number>;
   treats_ailment_slug: string | null;
   unlock_min_fame: number;
+  unlock_tier?: WellnessTierKey;
+  can_overlap?: boolean;
+  location_tags?: string[];
+  gameplay_impact?: string;
   sort_order: number;
 }
 
@@ -49,6 +54,15 @@ export interface WellnessVitals {
   energy: number;
   mood: number;
   stress: number;
+  physical_health?: number;
+  happiness?: number;
+  fatigue?: number;
+  sleep_quality?: number;
+  nutrition?: number;
+  fitness?: number;
+  motivation?: number;
+  burnout_risk?: number;
+  overall_wellness?: number;
 }
 
 export async function listWellnessCatalog(): Promise<WellnessCatalogEntry[]> {
@@ -58,7 +72,11 @@ export async function listWellnessCatalog(): Promise<WellnessCatalogEntry[]> {
     .eq("is_active", true)
     .order("sort_order");
   if (error) throw error;
-  return (data ?? []) as any;
+  const rows = (data ?? []) as WellnessCatalogEntry[];
+  return rows.map((row) => {
+    const balance = WELLNESS_ACTIVITIES.find((activity) => activity.slug === row.slug);
+    return balance ? { ...row, ...balance, unlock_min_fame: row.unlock_min_fame } : row;
+  }) as any;
 }
 
 export async function listCooldowns(profileId: string): Promise<WellnessCooldown[]> {
@@ -117,8 +135,20 @@ export async function evaluateGate(profileId: string, activityType: string) {
   };
 }
 
+export function wellnessVitalsToCore(v: WellnessVitals): WellnessCoreValues {
+  return {
+    ...createDefaultWellnessCore({ health: v.health, energy: v.energy, mood: v.mood, stress: v.stress }),
+    physical_health: v.physical_health ?? v.health,
+    happiness: v.happiness ?? v.mood,
+    fatigue: v.fatigue ?? createDefaultWellnessCore({ energy: v.energy }).fatigue,
+    sleep_quality: v.sleep_quality ?? 72,
+    nutrition: v.nutrition ?? 68,
+    fitness: v.fitness ?? 55,
+    motivation: v.motivation ?? v.mood,
+    burnout_risk: v.burnout_risk ?? Math.min(100, Math.round((v.stress ?? 30) * 0.45)),
+  };
+}
+
 export function getWellnessMultiplier(v: WellnessVitals): number {
-  const score = (v.health + v.energy + v.mood) / 300; // 0..1
-  // map 0 -> 0.5, 0.5 -> 0.85, 1 -> 1.15
-  return Math.max(0.5, Math.min(1.15, 0.5 + score * 0.65));
+  return getCorePerformanceModifier(wellnessVitalsToCore(v));
 }
