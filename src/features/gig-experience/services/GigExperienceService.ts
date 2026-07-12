@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 import { EMPTY_GEAR_EFFECTS, type GearModifierEffects } from "@/utils/gearModifiers";
 import type { Database } from "@/lib/supabase-types";
-import type { GigExperienceDTO, GigExperienceValidationError } from "../types";
+import type { GigExperienceDTO, GigExperienceValidationError, GigPostConsequencesDTO } from "../types";
 import { resolveSongAudioDescriptor } from "../viewer/audio/audioSourceResolver";
 import { metricAvailable, metricLegacyMissing, metricNotApplicable, nullableNumberMetric, metricValue } from "../reportMetric";
 
@@ -30,7 +30,7 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
   if (outcomeError) throw outcomeError;
 
   const outcomeId = outcome?.id ?? null;
-  const [songPerfsRes, setlistSongsRes, performersRes, replayDescriptorRes] = await Promise.all([
+  const [songPerfsRes, setlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
     outcomeId
       ? supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type").eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
@@ -39,11 +39,15 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
       : Promise.resolve({ data: [] as SetlistSongRow[], error: null }),
     (supabase as any).from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
     (supabase as any).from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
+    (supabase as any).from("gig_post_processing").select("status,processing_version,completed_at").eq("gig_id", gigId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    (supabase as any).from("gig_consequence_snapshots").select("category,target_type,target_id,consequence_key,previous_value,delta_value,new_value,status,explanation,source_factors,metadata,created_at").eq("gig_id", gigId).order("created_at", { ascending: true }),
   ]);
   if (songPerfsRes.error) throw songPerfsRes.error;
   if (setlistSongsRes.error) throw setlistSongsRes.error;
   if (performersRes.error) throw performersRes.error;
   if (replayDescriptorRes.error && replayDescriptorRes.error.code !== "42P01") throw replayDescriptorRes.error;
+  if (processingRes.error && processingRes.error.code !== "42P01") throw processingRes.error;
+  if (consequenceRes.error && consequenceRes.error.code !== "42P01") throw consequenceRes.error;
 
   return mapGigExperience({
     gig: gig as unknown as GigRow,
@@ -52,10 +56,12 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
     setlistSongs: (setlistSongsRes.data ?? []) as unknown as SetlistSongRow[],
     performers: (performersRes.data ?? []) as PerformerRow[],
     replayDescriptor: replayDescriptorRes.data ?? null,
+    postProcessing: processingRes.data ?? null,
+    consequences: consequenceRes.data ?? [],
   });
 }
 
-export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null }): GigExperienceDTO {
+export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: any[] }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
   const capacity = venue?.capacity ?? outcome?.venue_capacity ?? 0;
@@ -93,6 +99,7 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     finances: { ticketRevenue: outcome ? nullableNumberMetric(outcome.ticket_revenue, "Ticket revenue missing") : metricLegacyMissing("Outcome is not ready"), merchRevenue: outcome ? nullableNumberMetric(outcome.merch_revenue, "Merch revenue missing") : metricLegacyMissing("Outcome is not ready"), totalRevenue: outcome ? nullableNumberMetric(outcome.total_revenue, "Total revenue missing") : metricLegacyMissing("Outcome is not ready"), crewCosts: outcome ? nullableNumberMetric(outcome.crew_cost, "Crew cost missing") : metricLegacyMissing("Outcome is not ready"), equipmentWearCost: outcome ? nullableNumberMetric(outcome.equipment_cost, "Equipment wear cost missing") : metricLegacyMissing("Outcome is not ready"), venueCost: outcome ? nullableNumberMetric(outcome.venue_cost, "Venue cost missing") : metricLegacyMissing("Outcome is not ready"), totalCosts: outcome ? nullableNumberMetric(outcome.total_costs, "Total costs missing") : metricLegacyMissing("Outcome is not ready"), netProfit: outcome ? nullableNumberMetric(outcome.net_profit, "Net profit missing") : metricLegacyMissing("Outcome is not ready"), merchItemsSold: outcome ? nullableNumberMetric(outcome.merch_items_sold, "Merch item count missing") : metricLegacyMissing("Outcome is not ready") },
     progression: { fameGained: outcome ? nullableNumberMetric(outcome.fame_gained, "Fame gain missing") : metricLegacyMissing("Outcome is not ready"), chemistryChange: outcome ? nullableNumberMetric(outcome.chemistry_change, "Chemistry change missing") : metricLegacyMissing("Outcome is not ready"), totalXpAwarded: outcome ? nullableNumberMetric(outcome.total_xp_awarded, "XP summary missing") : metricLegacyMissing("Outcome is not ready"), fansGained: fans, fanConversions: outcome ? nullableNumberMetric(outcome.fan_conversions, "Fan conversion count missing") : metricLegacyMissing("Outcome is not ready") },
     analysis: { equipmentQuality: outcome ? nullableNumberMetric(outcome.equipment_quality_avg, "Equipment breakdown missing") : metricLegacyMissing("Outcome is not ready"), crewSkill: outcome ? nullableNumberMetric(outcome.crew_skill_avg, "Crew breakdown missing") : metricLegacyMissing("Outcome is not ready"), bandChemistry: outcome ? nullableNumberMetric(outcome.band_chemistry_level, "Band chemistry breakdown missing") : metricLegacyMissing("Outcome is not ready"), memberSkills: outcome ? nullableNumberMetric(outcome.member_skill_avg, "Member skills breakdown missing") : metricLegacyMissing("Outcome is not ready"), crowdEnergyPeak: outcome ? nullableNumberMetric(outcome.crowd_energy_peak, "Crowd energy peak missing") : metricLegacyMissing("Outcome is not ready"), stageBehaviorUsed: outcome?.stage_behavior_used ? metricAvailable(outcome.stage_behavior_used) : metricNotApplicable("No stage behaviour was recorded"), gearEffects: outcome ? mapGearEffects(outcome) : null, warnings: buildWarnings(outcome, songs.length, input.performers?.length ?? 0) },
+    postConsequences: mapPostConsequences(input.postProcessing ?? null, input.consequences ?? []),
     lessons: buildLessons(metricValue(rating, 0), metricValue(outcome ? nullableNumberMetric(outcome.actual_attendance, "") : metricAvailable(0), 0), capacity, metricValue(outcome ? nullableNumberMetric(outcome.net_profit, "") : metricAvailable(0), 0)),
     viewer: { ready: !!outcome, outcomeId: outcome?.id ?? null, resultReadyAt: outcome?.completed_at ?? gig.completed_at ?? null, replayAvailable: input.replayDescriptor?.generation_status === "ready", replay: input.replayDescriptor ? { viewerVersion: input.replayDescriptor.viewer_version, durationMs: input.replayDescriptor.duration_ms, generationStatus: input.replayDescriptor.generation_status } : { viewerVersion: null, durationMs: null, generationStatus: outcome ? "legacy_unavailable" : null } },
   };
@@ -127,3 +134,31 @@ function mapGearEffects(outcome: OutcomeRow): GearModifierEffects {
 function buildVerdict(rating: number) { if (rating >= 22) return "A landmark performance that the crowd will remember."; if (rating >= 17) return "A strong show with clear momentum."; if (rating >= 10) return "A mixed gig with useful lessons for next time."; return "A rough night that exposed areas to improve."; }
 function buildWarnings(outcome: OutcomeRow | null, songCount: number, performerCount: number) { const warnings: string[] = []; if (!outcome) warnings.push("Outcome is still processing or unavailable."); if (outcome && songCount === 0) warnings.push("No song performance rows were found for this outcome."); if (outcome && performerCount === 0) warnings.push("No performer lineup rows were found; legacy performer details are unavailable."); if (outcome && outcome.merch_items_sold === null) warnings.push("Merch item details are missing on this legacy outcome."); return warnings; }
 function buildLessons(rating: number, attendance: number, capacity: number, profit: number) { return { worked: [rating >= 17 ? "Overall performance quality was strong." : "The outcome was recorded and can be reviewed."], heldBack: [attendance < capacity * 0.5 ? "Attendance was below half capacity." : profit < 0 ? "Costs outweighed revenue." : "No major blocker was identified in the canonical summary."], recommendations: [attendance < capacity * 0.5 ? "Book a smaller venue or build local demand before returning." : profit < 0 ? "Review ticket price, crew costs, and venue fit before the next gig." : "Use the song breakdown to refine the next setlist."] }; }
+
+function mapPostConsequences(processing: { status: string; processing_version: string | null; completed_at: string | null } | null, rows: any[]): GigPostConsequencesDTO {
+  const consequences = rows.map((row) => ({ key: row.consequence_key, category: row.category, targetType: row.target_type, targetId: row.target_id, previousValue: row.previous_value, deltaValue: row.delta_value, newValue: row.new_value, status: row.status, explanation: row.explanation, sourceFactors: row.source_factors ?? [] }));
+  const findDelta = (key: string) => consequences.find((c) => c.key === key)?.deltaValue;
+  const media = consequences.find((c) => c.category === "media");
+  const timeline = ["Performance completed", "Financial settlement", "Fan response", "Media response", "Reputation changes", "Venue and promoter response", "Performer and crew progression", "Equipment inspection", "Health and recovery", "Future offers"];
+  return {
+    processingStatus: (processing?.status as any) ?? "legacy_missing",
+    processingVersion: processing?.processing_version ?? null,
+    processedAt: processing?.completed_at ?? null,
+    liveReputationDelta: findDelta("live_reputation.overall") !== undefined ? metricAvailable(findDelta("live_reputation.overall")!) : metricLegacyMissing("Post-gig consequences have not been processed for this legacy result"),
+    fanDelta: findDelta("fans.local_delta") !== undefined ? metricAvailable(findDelta("fans.local_delta")!) : metricLegacyMissing("Fan consequence snapshot missing"),
+    followerDelta: findDelta("followers.delta") !== undefined ? metricAvailable(findDelta("followers.delta")!) : metricLegacyMissing("Follower consequence snapshot missing"),
+    bookingDemandDelta: findDelta("booking_demand.recent") !== undefined ? metricAvailable(findDelta("booking_demand.recent")!) : metricLegacyMissing("Booking-demand consequence snapshot missing"),
+    mediaCoverage: media ? metricAvailable(String(media.newValue ?? media.deltaValue ?? media.key)) : metricNotApplicable("No media coverage met the significance threshold"),
+    timeline,
+    nextActions: buildPostGigNextActions(consequences),
+    consequences,
+  };
+}
+function buildPostGigNextActions(consequences: GigPostConsequencesDTO["consequences"]): GigPostConsequencesDTO["nextActions"] {
+  const actions: GigPostConsequencesDTO["nextActions"] = [];
+  if (consequences.some((c) => c.category === "equipment" && c.status === "negative")) actions.push({ key: "repair_equipment", label: "Inspect and repair damaged equipment", href: "/equipment", priority: "high" });
+  if (consequences.some((c) => c.key === "health.fatigue" && (c.deltaValue ?? 0) >= 18)) actions.push({ key: "schedule_recovery", label: "Schedule recovery", href: "/calendar", priority: "medium" });
+  if (consequences.some((c) => c.category === "media")) actions.push({ key: "review_press", label: "Review press coverage", href: "/news", priority: "medium" });
+  actions.push({ key: "review_feedback", label: "Review audience feedback", href: "/gigs", priority: "low" });
+  return actions;
+}
