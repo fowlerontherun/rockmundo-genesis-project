@@ -5,6 +5,19 @@ import { fetchProfileState, type ProfileState } from "./index.ts";
 // Skill level cap (must match src/data/skillConstants.ts MAX_SKILL_LEVEL)
 const MAX_SKILL_LEVEL = 20;
 
+
+const PROGRESSION_BALANCE_VERSION = "progression_v2.0.0";
+const STANDARD_ROLE_XP = [120,148,176,204,232,260,289,318,348,377,406,436,465,494,524,553,582,612,641,670];
+function calculateRequiredXp(level: number): number {
+  if (!Number.isFinite(level) || level < 0) return STANDARD_ROLE_XP[0];
+  return STANDARD_ROLE_XP[Math.min(Math.floor(level), STANDARD_ROLE_XP.length - 1)] ?? STANDARD_ROLE_XP[STANDARD_ROLE_XP.length - 1];
+}
+function cumulativeXpForLevel(level: number): number {
+  let total = 0;
+  for (let next = 0; next < Math.min(level, MAX_SKILL_LEVEL); next += 1) total += calculateRequiredXp(next);
+  return total;
+}
+
 // Streak milestone constants (AP kept low — total daily AP hard-capped at 30)
 // SXP boosted; total daily SXP hard-capped at DAILY_STIPEND_SXP_CAP below
 const STREAK_MILESTONES = [
@@ -325,8 +338,6 @@ export async function handleSpendSkillXp(
     .eq("skill_slug", skillSlug)
     .maybeSingle();
 
-  const calculateRequiredXp = (level: number) => Math.floor(100 * Math.pow(1.5, level));
-
   const currentXp = skill?.current_xp ?? 0;
   const currentLevel = Math.min(skill?.current_level ?? 0, MAX_SKILL_LEVEL);
   const newXp = currentXp + xpAmount;
@@ -348,7 +359,7 @@ export async function handleSpendSkillXp(
   }
 
   // Update skill progress
-  const newRequiredXp = Math.floor(100 * Math.pow(1.5, newLevel));
+  const newRequiredXp = calculateRequiredXp(newLevel);
 
   const { error: skillError } = await client
     .from("skill_progress")
@@ -359,7 +370,7 @@ export async function handleSpendSkillXp(
       current_level: newLevel,
       required_xp: newRequiredXp,
       last_practiced_at: new Date().toISOString(),
-      metadata: (metadata || {}) as Record<string, string | number | boolean | null>,
+      metadata: { ...(metadata || {}), balance_version: PROGRESSION_BALANCE_VERSION } as Record<string, string | number | boolean | null>,
     }, { onConflict: "profile_id,skill_slug" });
 
   if (skillError) {
@@ -411,8 +422,6 @@ export async function handleUnlearnSkill(
   metadata: Record<string, unknown> = {},
 ): Promise<{ state: ProfileState; refundedXp: number; skillProgress: SkillProgressRow | null }> {
   const profileId = profileState.profile.id;
-  const calculateRequiredXp = (level: number) => Math.floor(100 * Math.pow(1.5, level));
-
   const { data: skill, error: skillFetchError } = await client
     .from("skill_progress")
     .select("*")
@@ -451,7 +460,7 @@ export async function handleUnlearnSkill(
       current_level: 0,
       required_xp: calculateRequiredXp(0),
       last_practiced_at: new Date().toISOString(),
-      metadata: { ...(metadata || {}), unlearned_at: new Date().toISOString(), refunded_xp: refundedXp } as Record<string, string | number | boolean | null>,
+      metadata: { ...(metadata || {}), unlearned_at: new Date().toISOString(), refunded_xp: refundedXp, balance_version: PROGRESSION_BALANCE_VERSION } as Record<string, string | number | boolean | null>,
     })
     .eq("profile_id", profileId)
     .eq("skill_slug", skillSlug);
