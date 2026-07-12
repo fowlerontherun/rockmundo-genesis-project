@@ -38,7 +38,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MUSIC_GENRES, getGenreSkillSlug } from "@/data/genres";
 import {
-  calculateSongQuality,
   canStartSongwriting,
   canWriteGenre,
 } from "@/utils/songQuality";
@@ -149,13 +148,19 @@ interface ProjectFormState {
 }
 
 type SessionEffortOption = {
-  id: "burst-2" | "standard-4";
+  id: "focus-1" | "burst-2" | "standard-4";
   label: string;
   hours: number;
   description: string;
 };
 
 const SESSION_EFFORT_OPTIONS: SessionEffortOption[] = [
+  {
+    id: "focus-1",
+    label: "1-hour focus",
+    hours: 1,
+    description: "Safest option: full efficiency with the smallest schedule block.",
+  },
   {
     id: "burst-2",
     label: "2-hour sprint",
@@ -530,7 +535,6 @@ const Songwriting = () => {
   const {
     profile,
     activityStatus,
-    startActivity,
     clearActivityStatus,
     refreshActivityStatus,
     skills,
@@ -1411,28 +1415,10 @@ const Songwriting = () => {
     const effortOption =
       SESSION_EFFORT_OPTIONS.find((option) => option.id === effortId) ??
       DEFAULT_EFFORT_OPTION;
-    const participants = sessionParticipants[project.id] ?? {
-      coWriters:
-        project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
-      producers: project.creative_brief?.producers ?? [],
-      musicians: project.creative_brief?.session_musicians ?? [],
-    };
-
     try {
       await startSession.mutateAsync({
         projectId: project.id,
         effortHours: effortOption.hours,
-      });
-      await startActivity({
-        status: "songwriting_session",
-        durationMinutes: effortOption.hours * 60,
-        metadata: {
-          projectId: project.id,
-          effortHours: effortOption.hours,
-          coWriters: participants.coWriters,
-          producers: participants.producers,
-          sessionMusicians: participants.musicians,
-        },
       });
       await refreshActivityStatus();
     } catch (error) {
@@ -1524,13 +1510,6 @@ const Songwriting = () => {
       await completeSession.mutateAsync({
         sessionId: activeSession.id,
         notes: completionNotes,
-        effortHours: activeSession.effort_hours ?? 2,
-        skillLevels: skills || {},
-        attributes: attributes || {
-          creative_insight: 10,
-          musical_ability: 10,
-          technical_mastery: 10,
-        },
       });
 
       setCompletionProject(null);
@@ -1553,26 +1532,8 @@ const Songwriting = () => {
     bandId?: string,
   ) => {
     try {
-      // Calculate final quality using actual player data
-      // Include experience bonus from total songs written and session depth
-      const quality = calculateSongQuality({
-        genre: project.genres?.[0] || "Rock",
-        skillLevels: skills || {},
-        attributes: attributes || {
-          creative_insight: 10,
-          musical_ability: 10,
-          technical_mastery: 10,
-        },
-        sessionHours: (project.total_sessions || 0) * 6,
-        coWriters: project.creative_brief?.co_writers?.length || 0,
-        aiLyrics: project.lyrics?.includes("[AI]") || false,
-        songsWritten: songs.length,
-        sessionsCompleted: project.sessions_completed || 0,
-      });
-
       await convertToSong.mutateAsync({
         projectId: project.id,
-        quality,
         catalogStatus,
         bandId,
       });

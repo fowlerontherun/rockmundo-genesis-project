@@ -53,6 +53,8 @@ export const SimplifiedProjectCard = ({
   const estimatedSessionsLeft = Math.ceil(totalRemaining / avgProgressPerSession);
   
   const totalSessions = (project.sessions_completed || 0) + estimatedSessionsLeft;
+  const breakdown = project.songwriting_breakdown || {};
+  const progressBreakdown = project.songwriting_sessions?.find((session) => session.progress_breakdown)?.progress_breakdown || breakdown;
   
   // Get status text
   const getStatusText = () => {
@@ -147,6 +149,26 @@ export const SimplifiedProjectCard = ({
             </div>
           </div>
           
+
+          {/* Server-authoritative estimate / result explanation */}
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Songwriting factors</span>
+              <span className="text-muted-foreground">{project.calculation_version || progressBreakdown.balanceVersion || "pending"}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+              <span>Craft: {progressBreakdown.craft ?? "estimated after session"}</span>
+              <span>Attributes: {progressBreakdown.attributes ?? "estimated after session"}</span>
+              <span>Genre: {progressBreakdown.genreKnowledge ?? progressBreakdown.genre ?? "pending"}</span>
+              <span>Polish: {project.polish_progress ?? 0}/500</span>
+              <span>Consistency: {project.consistency_score ?? 0}/500</span>
+              <span>Duration: {progressBreakdown.durationModifier ? `${progressBreakdown.durationModifier}×` : "choose 1/2/4h"}</span>
+            </div>
+            {project.song_rating != null && (
+              <p className="text-foreground">Final songwriting score: {project.song_rating}/1000</p>
+            )}
+          </div>
+
           {/* Sessions Info */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Sessions</span>

@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { generateSongDuration } from "@/utils/setlistDuration";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 
 export interface SongTheme {
@@ -33,6 +32,12 @@ export interface SongwritingProject {
   estimated_sessions: number;
   quality_score: number;
   song_rating: number | null;
+  arrangement_progress?: number | null;
+  polish_progress?: number | null;
+  consistency_score?: number | null;
+  songwriting_breakdown?: any;
+  calculation_version?: string | null;
+  completed_at?: string | null;
   status: string;
   is_locked: boolean;
   locked_until: string | null;
@@ -63,6 +68,8 @@ export interface SongwritingSession {
   lyrics_progress_gained: number;
   xp_earned: number;
   notes: string | null;
+  progress_breakdown?: any;
+  session_type?: string | null;
   effort_hours?: number;
 }
 
@@ -149,7 +156,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       const { data, error } = await supabase
         .from('songwriting_projects')
         .select(`
-          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at, effort_hours,
+          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, arrangement_progress, polish_progress, consistency_score, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, songwriting_breakdown, calculation_version, completed_at, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at, effort_hours,
           song_themes (id, name, description, mood),
           chord_progressions (id, name, progression, difficulty),
           songwriting_sessions (
@@ -162,7 +169,9 @@ export const useSongwritingData = (profileId?: string | null) => {
             music_progress_gained,
             lyrics_progress_gained,
             xp_earned,
-            notes
+            notes,
+            progress_breakdown,
+            session_type
           )
         `)
         .eq('profile_id', profileId)
@@ -299,221 +308,59 @@ export const useSongwritingData = (profileId?: string | null) => {
     }
   });
 
-  // Start session - 1 hour duration, allows 2 concurrent songwriting projects
+  // Start session through server-authoritative RPC with validated duration and activity blocking
   const startSession = useMutation({
-    mutationFn: async ({ projectId }: StartSessionInput) => {
+    mutationFn: async ({ projectId, effortHours = 1 }: StartSessionInput) => {
       if (!profileId) throw new Error("Profile ID required");
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
-      // Get user's profile for scheduled activities
-      const profile = { id: profileId };
-      
-      // Check how many songwriting sessions are currently active (max 2 allowed)
-      const { data: activeProjects } = await supabase
-        .from('songwriting_projects')
-        .select('id')
-        .eq('profile_id', profileId)
-        .eq('is_locked', true)
-        .gt('locked_until', new Date().toISOString());
-      
-      if ((activeProjects?.length || 0) >= 2) {
-        throw new Error('You can only work on 2 songs at once. Wait for a session to complete.');
-      }
-      
-      // Fixed 1-hour duration
-      const lockDuration = 1 * 60 * 60 * 1000;
-      const sessionStart = new Date();
-      const sessionEndTime = new Date(sessionStart.getTime() + lockDuration);
-      const lockedUntil = sessionEndTime.toISOString();
-      
-      // Get project title for the activity
-      const { data: projectData } = await supabase
-        .from('songwriting_projects')
-        .select('title')
-        .eq('id', projectId)
-        .single();
-      
-      // Lock the project
-      const { error: lockError } = await supabase
-        .from('songwriting_projects')
-        .update({ is_locked: true, locked_until: lockedUntil, status: 'writing' })
-        .eq('id', projectId);
-        
-      if (lockError) throw lockError;
-      
-      // Create session with locked_until timestamp
-      const { data, error } = await supabase
-        .from('songwriting_sessions')
-        .insert({
-          project_id: projectId,
-          user_id: user!.id,
-          session_start: sessionStart.toISOString(),
-          locked_until: sessionEndTime.toISOString(),
-          music_progress_gained: 0,
-          lyrics_progress_gained: 0,
-          xp_earned: 0,
-        })
-        .select()
-        .single();
-      
+      const { data, error } = await (supabase as any).rpc('start_songwriting_session', {
+        p_profile_id: profileId,
+        p_project_id: projectId,
+        p_effort_hours: effortHours,
+      });
       if (error) throw error;
-      
-      // Create scheduled activity to block the time slot
-      const { error: activityError } = await (supabase as any)
-        .from('player_scheduled_activities')
-        .insert({
-          user_id: user!.id,
-          profile_id: profileId,
-          activity_type: 'songwriting',
-          scheduled_start: sessionStart.toISOString(),
-          scheduled_end: sessionEndTime.toISOString(),
-          status: 'in_progress',
-          title: `Songwriting: ${projectData?.title || 'Untitled'}`,
-          description: 'Working on song composition',
-          metadata: {
-            project_id: projectId,
-            session_id: data.id,
-          },
-        });
-      
-      if (activityError) {
-        console.error('Failed to create scheduled activity for songwriting:', activityError);
-        // Don't throw - songwriting can still continue, just won't show in schedule
-      }
-      
-      // Log activity
+
       logGameActivity({
-        userId: user!.id,
+        userId: user.id,
         activityType: 'songwriting_session_started',
         activityCategory: 'songwriting',
-        description: `Started 1-hour songwriting session for project`,
-        metadata: { projectId, sessionId: data.id, lockedUntil }
+        description: `Started ${effortHours}-hour songwriting session`,
+        metadata: { projectId, sessionId: data?.session_id, lockedUntil: data?.locked_until, balanceVersion: data?.balance_version }
       });
-      
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
-      toast({ title: "Session Started", description: "1-hour session in progress" });
+      toast({ title: "Session Started", description: "Songwriting session in progress" });
     }
   });
 
-  // Complete session with skill-based quality
+  // Complete session using server-authoritative skill, attribute, genre, collaboration and wellness calculation
   const completeSession = useMutation({
-    mutationFn: async ({ 
-      sessionId, 
-      notes, 
-      effortHours = 2,
-      skillLevels,
-      attributes 
-    }: { 
-      sessionId: string; 
-      notes?: string; 
-      effortHours?: number;
-      skillLevels?: Record<string, number>;
-      attributes?: { creative_insight: number; musical_ability: number; technical_mastery: number };
-    }) => {
-      // Get session and project data
-      const { data: session, error: sessionError } = await supabase
-        .from('songwriting_sessions')
-        .select('project_id, session_end')
-        .eq('id', sessionId)
-        .single();
-      
-      if (sessionError) throw sessionError;
-      if (session.session_end) {
-        throw new Error('Session already completed');
-      }
-      
-      // Calculate skill-based progress if skills provided
-      let musicGain = 0;
-      let lyricsGain = 0;
-      
-      if (skillLevels && attributes) {
-        const basicComposing = skillLevels['songwriting_basic_composing'] || 0;
-        const basicLyrics = skillLevels['songwriting_basic_lyrics'] || 0;
-        
-        // Base progress scales with skills
-        const baseProgress = 400 + Math.floor(Math.random() * 200);
-        musicGain = Math.floor(baseProgress * (1 + basicComposing / 200));
-        lyricsGain = Math.floor(baseProgress * (1 + basicLyrics / 200));
-      } else {
-        // Fallback to simple calculation
-        musicGain = Math.floor(Math.random() * 500) + 500;
-        lyricsGain = Math.floor(Math.random() * 500) + 500;
-      }
-      
-      const xpEarned = Math.floor((musicGain + lyricsGain) / 10);
-      
-      // Update session - explicitly set both timestamp fields
-      const sessionUpdatePayload = {
-        session_end: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-        music_progress_gained: musicGain,
-        lyrics_progress_gained: lyricsGain,
-        xp_earned: xpEarned,
-        notes: notes || null,
-      };
-      
-      console.log('[completeSession] Updating session with payload:', sessionUpdatePayload);
-      
-      const { data: updatedSession, error: sessionUpdateError } = await supabase
-        .from('songwriting_sessions')
-        .update(sessionUpdatePayload)
-        .eq('id', sessionId)
-        .select()
-        .single();
-      
-      if (sessionUpdateError) {
-        console.error('[completeSession] Failed to update songwriting session:', sessionUpdateError);
-        throw sessionUpdateError;
-      }
-      
-      console.log('[completeSession] Session updated successfully:', updatedSession);
-      
-      // Update project progress
-      const { data: project } = await supabase
-        .from('songwriting_projects')
-        .select('music_progress, lyrics_progress, total_sessions, sessions_completed')
-        .eq('id', session.project_id)
-        .single();
-      
-      if (project) {
-        const newMusicProgress = Math.min(2000, (project.music_progress || 0) + musicGain);
-        const newLyricsProgress = Math.min(2000, (project.lyrics_progress || 0) + lyricsGain);
-        const completed = newMusicProgress >= 2000 && newLyricsProgress >= 2000;
-        
-        const { error: updateError } = await supabase
-          .from('songwriting_projects')
-          .update({
-            music_progress: newMusicProgress,
-            lyrics_progress: newLyricsProgress,
-            total_sessions: (project.total_sessions || 0) + 1,
-            sessions_completed: (project.sessions_completed || 0) + 1,
-            status: completed ? 'completed' : 'writing',
-            is_locked: false,
-            locked_until: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', session.project_id);
-        
-        if (updateError) throw updateError;
-      }
-      
-      // Log activity
+    mutationFn: async ({ sessionId, notes }: { sessionId: string; notes?: string; effortHours?: number; skillLevels?: Record<string, number>; attributes?: { creative_insight: number; musical_ability: number; technical_mastery: number }; }) => {
+      if (!profileId) throw new Error("Profile ID required");
+      const { data, error } = await (supabase as any).rpc('complete_songwriting_session', {
+        p_profile_id: profileId,
+        p_session_id: sessionId,
+        p_notes: notes || null,
+      });
+      if (error) throw error;
+
       logGameActivity({
-        userId: profileId!,
+        userId: profileId,
         activityType: 'songwriting_session_completed',
         activityCategory: 'songwriting',
-        description: `Completed songwriting session with +${musicGain} music, +${lyricsGain} lyrics progress`,
-        metadata: { sessionId, musicGain, lyricsGain, xpEarned },
-        amount: xpEarned
+        description: `Completed songwriting session with +${data?.music_progress_gained ?? 0} music, +${data?.lyrics_progress_gained ?? 0} lyrics progress`,
+        metadata: { sessionId, breakdown: data?.breakdown, xpAwards: data?.xp_awards },
+        amount: data?.xp_earned ?? 0
       });
-      
-      return { sessionId, musicGain, lyricsGain, xpEarned };
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
@@ -525,107 +372,34 @@ export const useSongwritingData = (profileId?: string | null) => {
     }
   });
 
-  // Convert to song with quality calculation
+  // Convert to song using the server-authoritative final quality calculator.
   const convertToSong = useMutation({
-    mutationFn: async ({ 
-      projectId, 
-      quality,
-      catalogStatus = 'private',
-      bandId 
-    }: { 
-      projectId: string; 
-      quality: any;
-      catalogStatus?: string;
-      bandId?: string;
-    }) => {
+    mutationFn: async ({ projectId, catalogStatus = 'private', bandId }: { projectId: string; quality?: any; catalogStatus?: string; bandId?: string; }) => {
       if (!profileId) throw new Error("Profile ID required");
-      
-      const { data: project } = await supabase
-        .from('songwriting_projects')
-        .select('id, title, lyrics, initial_lyrics, genres, quality_score, song_rating, creative_brief')
-        .eq('id', projectId)
-        .single();
-      
-      if (!project) throw new Error("Project not found");
-      
-      // Generate random duration between 2:20 and 7:00
-      const { durationSeconds, durationDisplay } = generateSongDuration();
-      
-      // Create song record
-      const { data: song, error: songError } = await supabase
-        .from('songs')
-        .insert({
-          user_id: profileId,
-          original_writer_id: profileId,
-          title: project.title,
-          genre: project.genres?.[0] || null,
-          lyrics: project.lyrics,
-          quality_score: quality.totalQuality,
-          lyrics_strength: quality.lyricsStrength,
-          melody_strength: quality.melodyStrength,
-          rhythm_strength: quality.rhythmStrength,
-          arrangement_strength: quality.arrangementStrength,
-          production_potential: quality.productionPotential,
-          ownership_type: bandId ? 'band' : 'personal',
-          catalog_status: catalogStatus,
-          band_id: bandId || null,
-          ai_generated_lyrics: project.lyrics?.includes('[AI Generated]') || false,
-          duration_seconds: durationSeconds,
-          duration_display: durationDisplay,
-        })
-        .select()
-        .single();
-      
-      if (songError) throw songError;
-      
-      // If adding to a band, create ownership record
-      if (bandId) {
-        await supabase
-          .from('band_song_ownership')
-          .insert({
-            song_id: song.id,
-            band_id: bandId,
-            user_id: profileId,
-            ownership_percentage: 100,
-            original_percentage: 100,
-            role: 'writer',
-            is_active_member: true,
-          });
-        
-        // Update song with repertoire tracking
-        await supabase
-          .from('songs')
-          .update({
-            added_to_repertoire_at: new Date().toISOString(),
-            added_to_repertoire_by: profileId,
-          })
-          .eq('id', song.id);
-      }
-      
-      // Link song to project
-      await supabase
-        .from('songwriting_projects')
-        .update({ song_id: song.id, status: 'converted' })
-        .eq('id', projectId);
-      
-      // Log activity
+      const { data, error } = await (supabase as any).rpc('complete_songwriting_project', {
+        p_profile_id: profileId,
+        p_project_id: projectId,
+        p_catalog_status: catalogStatus,
+        p_band_id: bandId || null,
+      });
+      if (error) throw error;
+
       logGameActivity({
-        userId: profileId!,
+        userId: profileId,
         bandId,
         activityType: 'song_created',
         activityCategory: 'songwriting',
-        description: `Created new song "${project.title}" (Quality: ${quality.totalQuality})`,
+        description: `Created new song from songwriting project`,
         metadata: {
-          songId: song.id,
+          songId: data?.song_id,
           projectId,
-          title: project.title,
-          qualityScore: quality.totalQuality,
-          duration: durationDisplay,
-          catalogStatus
+          qualityScore: data?.final_score,
+          catalogStatus,
+          breakdown: data?.breakdown,
         }
       });
-      
-      return song;
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
