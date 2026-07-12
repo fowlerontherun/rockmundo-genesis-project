@@ -6,6 +6,7 @@ import {
   safeJson,
   startJobRun,
 } from '../_shared/job-logger.ts'
+import { calculateRecordingOutcome } from '../_shared/recordingOutcomeCalculator.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -142,87 +143,106 @@ Deno.serve(async (req) => {
         const endTime = new Date(session.scheduled_end)
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
 
-        // Get current song quality
         const currentQuality = session.songs?.quality_score || 50
 
-        // Calculate quality improvement based on duration and studio
-        let studioQualityBonus = 0
-        if (session.studio_id) {
-          const { data: studioData } = await supabase
-            .from('city_studios')
-            .select('quality_rating')
-            .eq('id', session.studio_id)
-            .single()
-          studioQualityBonus = (studioData?.quality_rating || 5) * 2
-        }
+        const { data: studioData } = session.studio_id
+          ? await supabase
+              .from('city_studios')
+              .select('quality_rating, equipment_quality, engineer_rating')
+              .eq('id', session.studio_id)
+              .maybeSingle()
+          : { data: null } as any
 
-        // Recording session luck roll - adds more variance to outcomes
-        const sessionRoll = Math.random()
-        let sessionLuckMultiplier = 1.0
-        let sessionLuckLabel = 'normal'
-        if (sessionRoll < 0.08) {
-          // 8% - Technical issues (bad takes, equipment problems)
-          sessionLuckMultiplier = 0.4 + Math.random() * 0.3 // 0.4-0.7x
-          sessionLuckLabel = 'technical_issues'
-        } else if (sessionRoll < 0.18) {
-          // 10% - Rough session
-          sessionLuckMultiplier = 0.7 + Math.random() * 0.2 // 0.7-0.9x
-          sessionLuckLabel = 'rough_session'
-        } else if (sessionRoll > 0.92) {
-          // 8% - Magic take (everything clicks perfectly)
-          sessionLuckMultiplier = 1.6 + Math.random() * 0.4 // 1.6-2.0x
-          sessionLuckLabel = 'magic_take'
-        } else if (sessionRoll > 0.82) {
-          // 10% - Great flow
-          sessionLuckMultiplier = 1.2 + Math.random() * 0.3 // 1.2-1.5x
-          sessionLuckLabel = 'great_flow'
-        }
+        const { data: bandData } = session.band_id
+          ? await supabase
+              .from('bands')
+              .select('morale, reputation_score, fan_sentiment_score, chemistry, band_chemistry, cohesion')
+              .eq('id', session.band_id)
+              .maybeSingle()
+          : { data: null } as any
 
-        // === MORALE RECORDING MODIFIER (v1.0.958) ===
-        // Band morale affects creativity in the studio: 0.8x at 0 morale, 1.0x at 50, 1.15x at 100
-        let moraleMod = 1.0
-        // === REPUTATION → RECORDING QUALITY (v1.0.987) ===
-        // Respected/iconic bands attract better session vibes, collaborators, and focus
-        let repRecordMod = 1.0
-        // === SENTIMENT → RECORDING QUALITY (v1.0.987) ===
-        // Fan buzz and excitement inspires the band to produce better work in the studio
-        let sentRecordMod = 1.0
-        if (session.band_id) {
-          const { data: bandData } = await supabase
-            .from('bands')
-            .select('morale, reputation_score, fan_sentiment_score')
-            .eq('id', session.band_id)
-            .single()
-          const moraleScore = (bandData as any)?.morale ?? 50
-          moraleMod = parseFloat((0.8 + (Math.max(0, Math.min(100, moraleScore)) / 100) * 0.35).toFixed(2))
-          
-          const repScore = (bandData as any)?.reputation_score ?? 0
-          const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200
-          repRecordMod = parseFloat((0.9 + repT * 0.2).toFixed(2)) // 0.9x–1.1x (subtle)
-          
-          const sentScore = (bandData as any)?.fan_sentiment_score ?? 0
-          const sentT = (Math.max(-100, Math.min(100, sentScore)) + 100) / 200
-          sentRecordMod = parseFloat((0.9 + sentT * 0.2).toFixed(2)) // 0.9x–1.1x (subtle)
-          
-          console.log(`Band morale: ${moraleScore} → recording creativity modifier ${moraleMod}x`)
-          console.log(`Band reputation: ${repScore} → recording modifier ${repRecordMod}x, sentiment: ${sentScore} → ${sentRecordMod}x`)
-        }
+        const { data: memberRows } = session.band_id
+          ? await supabase
+              .from('band_members')
+              .select('profile_id, user_id, instrument, role, member_status')
+              .eq('band_id', session.band_id)
+              .in('member_status', ['active'])
+          : { data: [] } as any
 
-        // Base improvement scales with duration (1-12 per hour for wider range)
-        const baseImprovement = Math.floor(durationHours * (1 + Math.random() * 11))
-        
-        // Apply luck multiplier, studio bonus, morale, reputation, and sentiment modifiers
-        const qualityImprovement = Math.min(40, Math.floor(baseImprovement * sessionLuckMultiplier * moraleMod * repRecordMod * sentRecordMod) + studioQualityBonus)
-        
-        // Calculate new quality (capped at 100)
-        const newQuality = Math.min(100, currentQuality + qualityImprovement)
-        
-        console.log(`Recording luck: ${sessionLuckLabel} (${sessionLuckMultiplier.toFixed(2)}x)`)
+        const soloProfiles = !session.band_id && session.profile_id
+          ? [{ profile_id: session.profile_id, user_id: session.user_id, instrument: 'lead_vocals', role: 'lead_vocals' }]
+          : []
+        const participants = [...(memberRows || []), ...soloProfiles]
 
-        // Calculate XP earned
-        const baseXpPerHour = 15
-        const xpEarned = Math.floor(baseXpPerHour * durationHours * (1 + qualityImprovement / 50))
+        const performerInputs = await Promise.all(participants.map(async (member: any) => {
+          const profileId = member.profile_id || session.profile_id
+          const { data: profile } = profileId
+            ? await supabase
+                .from('profiles')
+                .select('health, energy, motivation, attributes')
+                .eq('id', profileId)
+                .maybeSingle()
+            : { data: null } as any
+          const { data: skillRows } = profileId
+            ? await supabase
+                .from('player_skills')
+                .select('skill_id, skill_slug, level')
+                .eq('profile_id', profileId)
+            : { data: [] } as any
+          const skills = Object.fromEntries((skillRows || []).map((row: any) => [row.skill_slug || row.skill_id, row.level || 0]))
+          const attrs = (profile as any)?.attributes || {}
+          return {
+            profileId: profileId || member.user_id || session.user_id,
+            role: member.instrument || member.role || 'lead_vocals',
+            accepted: true,
+            attended: true,
+            skills,
+            attributes: attrs,
+            songFamiliarity: 40,
+            rehearsalReadiness: 40,
+            health: (profile as any)?.health ?? 85,
+            energy: (profile as any)?.energy ?? 85,
+            focus: (profile as any)?.motivation ?? attrs.mental_focus ?? 75,
+            equipmentQuality: 55,
+            equipmentSuitability: 60,
+          }
+        }))
 
+        const requiredRoles = Array.from(new Set([
+          'lead_vocals',
+          ...performerInputs.map((p: any) => p.role).filter(Boolean),
+          ...(performerInputs.length > 1 ? ['bass', 'drums'] : []),
+        ]))
+
+        const outcome = calculateRecordingOutcome({
+          sessionId: session.id,
+          songId: session.song_id,
+          sourceSongQuality: currentQuality,
+          genre: session.songs?.genre,
+          requiredRoles,
+          performers: performerInputs,
+          studio: {
+            id: session.studio_id,
+            quality: (studioData as any)?.quality_rating ?? 55,
+            equipment: (studioData as any)?.equipment_quality ?? (studioData as any)?.quality_rating ?? 55,
+          },
+          engineer: { kind: 'studio_default', rating: (studioData as any)?.engineer_rating ?? 50 },
+          producer: session.player_producer_id
+            ? { id: session.player_producer_id, kind: 'player', rating: 55 }
+            : session.producer_id
+              ? { id: session.producer_id, kind: 'npc', rating: 60 }
+              : null,
+          sessionMode: session.recording_type || session.session_data?.sessionMode || 'professional',
+          effortHours: durationHours,
+          bandCohesion: (bandData as any)?.cohesion ?? (bandData as any)?.band_chemistry ?? (bandData as any)?.chemistry ?? 50,
+          chemistry: (bandData as any)?.chemistry ?? (bandData as any)?.band_chemistry ?? 50,
+          seed: `${session.id}:${session.updated_at || session.scheduled_end}`,
+        })
+
+        const qualityImprovement = outcome.qualityImprovement
+        const newQuality = outcome.finalMasterQuality
+        const xpEarned = outcome.xpAwards.reduce((sum, award) => sum + award.amount, 0)
+        console.log(`Recording outcome ${outcome.balanceVersion}: final=${newQuality}, variance=${outcome.appliedVariance}`)
         console.log(`Quality improvement: ${qualityImprovement}, New quality: ${newQuality}, XP: ${xpEarned}`)
 
         // Update the recording session
@@ -232,6 +252,13 @@ Deno.serve(async (req) => {
             status: 'completed',
             completed_at: new Date().toISOString(),
             quality_improvement: qualityImprovement,
+            calculation_version: outcome.balanceVersion,
+            source_song_quality: outcome.sourceSongQuality,
+            final_master_quality: outcome.finalMasterQuality,
+            applied_variance: outcome.appliedVariance,
+            outcome_breakdown: outcome.breakdown,
+            xp_awards: outcome.xpAwards,
+            recording_credits: (outcome.breakdown as any).performerBreakdowns || [],
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.id)
@@ -442,6 +469,7 @@ Deno.serve(async (req) => {
                       session_id: session.id,
                       song_id: session.song_id,
                       quality_improvement: qualityImprovement,
+                      xp_awards: outcome.xpAwards,
                       duration_hours: durationHours,
                       auto_completed: true,
                     },
@@ -487,7 +515,7 @@ Deno.serve(async (req) => {
               // === HEALTH EVENT LOG (v1.0.996) ===
               try {
                 await supabase.from('band_health_events').insert({
-                  band_id: session.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'recording_session', description: `Recording session: quality +${qualityImprovement} (${sessionLuckLabel})`,
+                  band_id: session.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'recording_session', description: `Recording session: quality +${qualityImprovement} (${outcome.balanceVersion})`,
                 });
               } catch (_logErr) { /* non-critical */ }
             }
