@@ -24,6 +24,7 @@ import NutritionHydrationPanel from "@/components/wellness/NutritionHydrationPan
 import { ProfessionalSupportPanel } from "@/components/wellness/ProfessionalSupportPanel";
 import { LifestyleRoutinePanel } from "@/components/wellness/LifestyleRoutinePanel";
 import { TimeAwayLongevityPanel } from "@/components/wellness/TimeAwayLongevityPanel";
+import { CareerStageLongevityPanel } from "@/components/wellness/CareerStageLongevityPanel";
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
@@ -180,6 +181,8 @@ const WellnessPage = () => {
       <ProfessionalSupportPanel vitals={vitals} fame={profile?.fame ?? 0} />
 
       <TimeAwayLongevityPanel vitals={vitals} fame={profile?.fame ?? 0} />
+
+      <CareerStageLongevityPanel vitals={vitals} fame={profile?.fame ?? 0} profileAge={(profile as { age?: number } | null)?.age ?? 24} />
 
       {blocks.length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5">
