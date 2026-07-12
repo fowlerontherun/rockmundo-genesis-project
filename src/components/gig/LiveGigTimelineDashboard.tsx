@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSongResult, TacticalDecision } from '@/utils/gigLive';
+import { LiveGigPresentation } from './LiveGigPresentation';
 
 export interface LiveGigTimelineDashboardProps {
   session: LiveGigSessionState;
@@ -20,6 +21,15 @@ export function LiveGigTimelineDashboard({ session, segments, songResults, incid
 
   return (
     <div className="space-y-4" aria-live="polite">
+      <LiveGigPresentation
+        session={session}
+        segments={segments}
+        songResults={songResults}
+        incidents={incidents}
+        activeDecision={activeDecision}
+        canDecide={canDecide}
+        onSelectDecision={onSelectDecision}
+      />
       <Card>
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
