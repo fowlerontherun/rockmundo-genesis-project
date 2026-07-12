@@ -132,6 +132,27 @@ export function createDefaultWellnessCore(existing?: Partial<{ health: number; e
   return { energy, physical_health, happiness, stress, fatigue: clampWellness(35 + Math.max(0, 50 - energy) / 2), sleep_quality: 72, nutrition: 68, fitness: 55, motivation: happiness, burnout_risk: clampWellness(stress * 0.45 + Math.max(0, 60 - happiness) * 0.35) };
 }
 
+export interface WellnessScheduleWindow {
+  startsAt: Date;
+  endsAt: Date;
+  canOverlap?: boolean;
+  existing?: Array<{ startsAt: Date; endsAt: Date; status?: string }>;
+  now?: Date;
+}
+
+export function validateWellnessScheduleWindow({ startsAt, endsAt, canOverlap = false, existing = [], now = new Date() }: WellnessScheduleWindow): { ok: true } | { ok: false; reason: "past" | "invalid_duration" | "overlap" } {
+  if (startsAt < now) return { ok: false, reason: "past" };
+  if (endsAt <= startsAt) return { ok: false, reason: "invalid_duration" };
+  if (!canOverlap) {
+    const overlaps = existing.some((activity) => {
+      if (activity.status && !["scheduled", "in_progress"].includes(activity.status)) return false;
+      return activity.startsAt < endsAt && activity.endsAt > startsAt;
+    });
+    if (overlaps) return { ok: false, reason: "overlap" };
+  }
+  return { ok: true };
+}
+
 export function applyDailyWellnessDrift(values: WellnessCoreValues, sleptMinutes = 0): WellnessCoreValues {
   const sleptWell = sleptMinutes >= 420;
   return {

@@ -107,6 +107,30 @@ Deno.serve(async (req) => {
       return json({ error: gateRow.reason, suggestion_slug: gateRow.suggestion_slug }, 423);
     }
 
+    const scheduledStart = new Date();
+    const scheduledEnd = new Date(scheduledStart.getTime() + entry.duration_minutes * 60_000);
+    if (scheduledEnd <= scheduledStart) {
+      console.warn("[wellness_invalid_booking] invalid_duration", { profile_id, catalog_slug, duration_minutes: entry.duration_minutes });
+      return json({ error: "Invalid activity duration" }, 400);
+    }
+
+    if (entry.duration_minutes >= 60 && entry.can_overlap !== true) {
+      const { data: hasConflict, error: conflictError } = await supabase.rpc("check_scheduling_conflict", {
+        p_user_id: user.id,
+        p_start: scheduledStart.toISOString(),
+        p_end: scheduledEnd.toISOString(),
+        p_exclude_id: null,
+      });
+      if (conflictError) {
+        console.warn("[wellness_invalid_booking] conflict_check_failed", { profile_id, catalog_slug, error: conflictError.message });
+        return json({ error: "Could not validate schedule availability" }, 409);
+      }
+      if (hasConflict) {
+        console.warn("[wellness_invalid_booking] schedule_conflict", { profile_id, catalog_slug });
+        return json({ error: "This overlaps another scheduled activity" }, 409);
+      }
+    }
+
     // Apply stat effects
     const eff = entry.stat_effects ?? {};
     const newHealth = clamp((profile.health ?? 100) + (eff.health ?? eff.physical_health ?? 0));
@@ -188,12 +212,11 @@ Deno.serve(async (req) => {
 
     // Long activities create a schedule block
     if (entry.duration_minutes >= 60) {
-      const end = new Date(Date.now() + entry.duration_minutes * 60_000).toISOString();
       await supabase.from("player_scheduled_activities").insert({
         user_id: user.id, profile_id,
         activity_type: `wellness_${entry.category}`,
-        scheduled_start: new Date().toISOString(),
-        scheduled_end: end,
+        scheduled_start: scheduledStart.toISOString(),
+        scheduled_end: scheduledEnd.toISOString(),
         duration_minutes: entry.duration_minutes,
         status: "in_progress",
         title: entry.name,
