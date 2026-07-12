@@ -79,6 +79,33 @@ export interface GigExperienceProgressionDTO {
   fanConversions: ReportMetric<number>;
 }
 
+export interface GigConsequenceDTO {
+  key: string;
+  category: string;
+  targetType: string;
+  targetId?: string | null;
+  previousValue?: number | null;
+  deltaValue?: number | null;
+  newValue?: number | null;
+  status: "positive" | "neutral" | "negative";
+  explanation: string;
+  sourceFactors: string[];
+}
+
+export interface GigPostConsequencesDTO {
+  processingStatus: "pending" | "processing" | "completed" | "partially_failed" | "retry_required" | "skipped" | "legacy_missing";
+  processingVersion: string | null;
+  processedAt: string | null;
+  liveReputationDelta: ReportMetric<number>;
+  fanDelta: ReportMetric<number>;
+  followerDelta: ReportMetric<number>;
+  bookingDemandDelta: ReportMetric<number>;
+  mediaCoverage: ReportMetric<string>;
+  timeline: string[];
+  nextActions: Array<{ key: string; label: string; href: string; priority: "low" | "medium" | "high" }>;
+  consequences: GigConsequenceDTO[];
+}
+
 export interface GigExperienceAnalysisDTO {
   equipmentQuality: ReportMetric<number>;
   crewSkill: ReportMetric<number>;
@@ -99,6 +126,7 @@ export interface GigExperienceDTO {
   finances: GigExperienceFinancesDTO;
   progression: GigExperienceProgressionDTO;
   analysis: GigExperienceAnalysisDTO;
+  postConsequences: GigPostConsequencesDTO;
   lessons: { worked: string[]; heldBack: string[]; recommendations: string[] };
   viewer: { ready: boolean; outcomeId: string | null; resultReadyAt: string | null; replayAvailable: boolean; replay?: { viewerVersion: number | null; durationMs: number | null; generationStatus: string | null } };
 }
