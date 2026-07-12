@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  Bed,
+  Bus,
   Dumbbell,
   Heart,
   Sparkles,
@@ -22,6 +24,7 @@ import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
 import type { WellnessCategory } from "@/lib/api/wellnessActivities";
+import { calculateTravelFatigueEffect, forecastWellnessAfterRecovery, resolveAccommodationRecoveryProfile } from "@/lib/wellnessRecovery";
 
 const CATEGORIES: {
   key: WellnessCategory;
@@ -75,6 +78,10 @@ const WellnessPage = () => {
     () => new Map(cooldowns.map((c) => [c.catalog_slug, c])),
     [cooldowns],
   );
+  const accommodationPreview = useMemo(() => resolveAccommodationRecoveryProfile({ kind: "home", tier: "standard", isHomeCity: true, occupied: true, quality: 65, upgrades: ["better_bed"] }), []);
+  const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, vitals), [vitals]);
+  const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(vitals, accommodationPreview, travelPreview, 0), [vitals, accommodationPreview, travelPreview]);
+
   const grouped = useMemo(() => {
     const g: Record<WellnessCategory, typeof catalog> = {
       recovery: [],
@@ -193,6 +200,37 @@ const WellnessPage = () => {
         catalog={catalog}
         onTreat={handlePerform}
       />
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bed className="h-4 w-4 text-primary" /> Accommodation & Travel Recovery
+            <Badge variant="outline">Estimated</Badge>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Recovery forecasts are server-owned calculations in production; this panel previews the same shared resolver for home, hotel and tour transport effects.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">Current accommodation</p>
+            <p className="font-semibold">{accommodationPreview.name}</p>
+            <p className="text-sm">Sleep quality {accommodationPreview.sleep_quality_modifier >= 0 ? "+" : ""}{accommodationPreview.sleep_quality_modifier} · Recovery {accommodationPreview.comfort_rating}/100</p>
+            <p className="text-xs text-muted-foreground">Facilities: {accommodationPreview.facilities.join(", ")}</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><Bus className="h-3 w-3" /> Current travel status</p>
+            <p className="font-semibold">Arrival readiness {travelPreview.arrivalReadiness}%</p>
+            <p className="text-sm">Fatigue +{travelPreview.fatigueDelta} · partial sleep {travelPreview.partialSleepHours}h</p>
+            <p className="text-xs text-muted-foreground">{travelPreview.summary}</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">Tonight's recovery forecast</p>
+            <p className="font-semibold">Readiness {recoveryForecast.readiness}%</p>
+            <p className="text-sm">Energy {recoveryForecast.values.energy} · Fatigue {recoveryForecast.values.fatigue} · Stress {recoveryForecast.values.stress}</p>
+            <p className="text-xs text-muted-foreground">Recommendations: book accommodation, add rest days or improve sleeping facilities when readiness drops.</p>
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader className="pb-2">

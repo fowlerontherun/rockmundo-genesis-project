@@ -60,6 +60,8 @@ describe("tour operations", () => {
     expect(hq.merchandise.sold).toBeGreaterThan(0);
     expect(hq.sponsorObligations.total).toBe(2);
     expect(hq.stats.distanceTravelledKm).toBe(850);
+    expect(hq.wellnessForecast.tourLoadState).toMatch(/comfortable|active|demanding|exhausting|unsustainable/);
+    expect(hq.wellnessForecast.estimatedGigReadiness).toBeGreaterThan(0);
   });
 
   it("generates contextual logistics events from cumulative risk", () => {
