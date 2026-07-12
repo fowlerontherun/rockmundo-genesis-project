@@ -71,7 +71,17 @@ export const AttributeCard = ({
           <span className="text-xs text-muted-foreground">{currentValue}</span>
         </div>
 
-        <Progress value={progress} className="h-1.5" />
+        <Progress value={progress} className="h-1.5" aria-label={`${label} attribute value ${currentValue} of ${ATTRIBUTE_MAX_VALUE}`} />
+
+        <div className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Current effects</p>
+          <p>{affectedSystems.length ? affectedSystems.join(", ") : "General progression"}</p>
+          <p className="mt-1">Upgrade preview: {currentValue} → {Math.min(ATTRIBUTE_MAX_VALUE, currentValue + cost)} for {cost} AP. Estimated contribution only; outcomes are not guaranteed.</p>
+        </div>
+
+        {!canAfford && !isMaxed && (
+          <p className="text-xs text-muted-foreground" role="status">You need more Attribute Points for this upgrade.</p>
+        )}
 
         <Button 
           aria-label={`Train ${label} for ${cost} AP`}
