@@ -21,6 +21,7 @@ import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
 import ActivityCard from "@/components/wellness/ActivityCard";
 import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 import NutritionHydrationPanel from "@/components/wellness/NutritionHydrationPanel";
+import { ProfessionalSupportPanel } from "@/components/wellness/ProfessionalSupportPanel";
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
@@ -170,6 +171,8 @@ const WellnessPage = () => {
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
 
       <NutritionHydrationPanel vitals={vitals} />
+
+      <ProfessionalSupportPanel vitals={vitals} fame={profile?.fame ?? 0} />
 
       {blocks.length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5">
