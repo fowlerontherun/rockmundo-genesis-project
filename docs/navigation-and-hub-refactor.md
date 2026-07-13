@@ -245,3 +245,94 @@ For each future hub migration:
 5. Update page-title metadata if new canonical child paths are introduced.
 6. Keep existing deep links until analytics and release notes confirm they can be removed.
 7. Add tests for base landing, child selected state, breadcrumbs, redirects and query preservation.
+
+## PR 3 update — Music hub consolidation
+
+PR 3 makes `/music` the stable Music landing route and uses the shared `HubLayout` pattern from PR 2 for the Music Overview. The top-level Music module now opens the overview instead of restoring `/hub/music`, Songwriting, Recording or another last visited child page.
+
+### Final Music hub hierarchy
+
+The Music hub surfaces existing systems only:
+
+- Overview — `/music`
+- Songs — `/music/songs` aliasing the existing song manager
+- Songwriting — `/music/songwriting` aliasing the existing songwriting page
+- Practice — `/music/practice` aliasing stage practice
+- Rehearsals — `/music/rehearsals` aliasing existing rehearsals
+- Jam Sessions — `/music/jam-sessions` aliasing existing jam-session routes
+- Recording — `/music/recording` aliasing the existing recording studio flow
+- Releases — `/music/releases` aliasing the existing release manager
+- Setlists — `/music/setlists` aliasing existing setlist management
+
+Genres remain available inside the existing song and release flows rather than as a separate hub child because there is no standalone genre page to migrate in this PR. Albums are managed through the release manager, so the hub uses the single player-facing label “Releases” rather than duplicating an Albums tab.
+
+### Route migration table and aliases
+
+| Logical page | Canonical Music route | Existing implementation / preserved legacy route |
+| --- | --- | --- |
+| Music Overview | `/music` | `/hub/music` and `/music-hub` redirect to `/music` with query strings preserved |
+| Songs | `/music/songs` | Redirects to `/song-manager`; public `/song/:songId` remains valid and selects Songs logically |
+| Songwriting | `/music/songwriting` | Redirects to `/songwriting`; `/booking/songwriting` remains a Schedule booking route but is matched as a songwriting-related alias |
+| Practice | `/music/practice` | Redirects to `/stage-practice` |
+| Rehearsals | `/music/rehearsals` | Redirects to `/rehearsals` |
+| Jam Sessions | `/music/jam-sessions` | Redirects to `/jam-sessions`; `/jams` remains valid |
+| Recording | `/music/recording` | Redirects to `/recording-studio` |
+| Releases | `/music/releases` | Redirects to `/release-manager`; `/release/:id` remains valid and selects Releases logically |
+| Setlists | `/music/setlists` | Redirects to `/setlists` |
+
+Aliases use explicit redirects rather than duplicate page implementations, preserving browser history expectations and avoiding multiple mounted copies of data-heavy gameplay screens. Query parameters are preserved by the same redirect helper used by PR 2 aliases.
+
+### Page ownership decisions
+
+Music owns the creation and development journey: songs, songwriting, practice, recording, releases and general music development. Rehearsals, jam sessions and setlists remain shared with Band & Live for now because the existing pages are band-context systems, but Music links to them as contextual workflow steps. This avoids a premature Band hub refactor while making the player journey easier to follow.
+
+Recording-studio discovery and business management remain in the existing world/business surfaces. The Music Recording child routes players to the existing booking and recording flow rather than moving studio ownership.
+
+### Music Overview content
+
+The overview composes existing Supabase data without new backend endpoints:
+
+- recent user songs from the existing `user-songs` query key,
+- recent recording sessions,
+- recent releases,
+- summary counts for songs being written, completed songs, songs needing practice and recording-ready songs.
+
+The overview keeps hub breadcrumbs, hub child navigation, loading state, retryable error state and empty list states visible around the content.
+
+### Quick actions
+
+The Music Overview exposes existing working navigation actions only:
+
+- Write a song → `/music/songwriting`
+- Practice → `/music/practice`
+- Book recording → `/music/recording`
+- Create release → `/music/releases`
+
+Action-level gameplay gating is still enforced by the destination pages. This PR does not invent new permission rules or bypass existing booking/confirmation flows.
+
+### Contextual workflow links
+
+The overview adds safe navigational workflow links for the existing creation path:
+
+Songwriting → Practice → Rehearsals → Jam Sessions → Recording → Releases.
+
+The links only move the player to existing pages; they do not perform mutations or skip required booking dialogs.
+
+### Selected navigation and page titles
+
+Music has been added to the shared hub title configuration so `/music` resolves as `Music | Rockmundo` and Music child or legacy paths resolve with the Music context where route metadata can identify the logical child. Hub child selection ignores query strings and maps legacy aliases such as `/songwriting`, `/recording-studio`, `/release-manager`, `/release/:id` and `/song/:songId` to their logical Music child.
+
+### Gating behaviour
+
+Existing restrictions remain owned by the migrated pages: band membership for rehearsals/setlists/jam sessions, recording eligibility and studio booking requirements in Recording, release permissions in Release Manager, and songwriting/practice skill or activity restrictions in their existing flows. The hub does not hide whole systems solely because one action may be unavailable; destination pages continue to show their established no-band, unavailable, loading, empty and error states.
+
+### Known limitations and deferred defects
+
+- The canonical Music child routes currently redirect to the existing flat implementations instead of rendering every child inside `HubLayout`. This keeps PR 3 low-risk and preserves the existing page-level loading/error states.
+- Albums are not split from Releases because album creation is implemented through the release manager.
+- Genres are not a separate tab because there is no standalone genre management page.
+- Broader songwriting backend defects, if any, are deferred unless they are caused by the route consolidation. The new aliases do not rely on navigation state, so direct `/music/songwriting` refreshes redirect to the existing direct-load-safe `/songwriting` page.
+
+### Follow-up
+
+The next planned navigation PR is Band hub consolidation. That work should decide whether rehearsals, setlists, gigs, band recording participation and performance preparation receive band-owned canonical routes while continuing to share implementations with Music where appropriate.

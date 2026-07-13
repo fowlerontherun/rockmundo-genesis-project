@@ -15,7 +15,7 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
-import { characterHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
+import { characterHubNavigation, musicHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
@@ -268,7 +268,6 @@ const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"))
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
-const MusicHub = lazyWithRetry(() => import("./pages/MusicHub"));
 const ReleaseDetail = lazyWithRetry(() => import("./pages/ReleaseDetail"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 // const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
@@ -311,7 +310,7 @@ const CasinoBlackjack = lazyWithRetry(() => import("./pages/casino/Blackjack"));
 const CasinoRoulette = lazyWithRetry(() => import("./pages/casino/Roulette"));
 const CasinoSlots = lazyWithRetry(() => import("./pages/casino/Slots"));
 const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
-const MusicHubPage = lazyWithRetry(() => import("./pages/hubs/MusicHubPage"));
+const MusicOverview = lazyWithRetry(() => import("./pages/hubs/MusicOverview"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
 const SocialHubLanding = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
@@ -366,6 +365,7 @@ for (const module of FM_MODULES) {
 
 const HUB_TITLE_CONFIGS = [
   { title: "Character", overviewPath: "/character", items: characterHubNavigation },
+  { title: "Music", overviewPath: "/music", items: musicHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
 ];
 
@@ -482,6 +482,15 @@ function App() {
                     <Route path="busking" element={<Busking />} />
                     
                     <Route path="song-manager" element={<SongManager />} />
+                    <Route path="music/overview" element={<PreserveQueryRedirect to="/music" />} />
+                    <Route path="music/songs" element={<PreserveQueryRedirect to="/song-manager" />} />
+                    <Route path="music/songwriting" element={<PreserveQueryRedirect to="/songwriting" />} />
+                    <Route path="music/practice" element={<PreserveQueryRedirect to="/stage-practice" />} />
+                    <Route path="music/rehearsals" element={<PreserveQueryRedirect to="/rehearsals" />} />
+                    <Route path="music/jam-sessions" element={<PreserveQueryRedirect to="/jam-sessions" />} />
+                    <Route path="music/recording" element={<PreserveQueryRedirect to="/recording-studio" />} />
+                    <Route path="music/releases" element={<PreserveQueryRedirect to="/release-manager" />} />
+                    <Route path="music/setlists" element={<PreserveQueryRedirect to="/setlists" />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
                     <Route path="streaming/:platformId" element={<StreamingPlatformDetail />} />
                     <Route path="advisor" element={<AdvisorPage />} />
@@ -567,8 +576,8 @@ function App() {
                     <Route path="song-rankings" element={<SongRankings />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    <Route path="music-hub" element={<MusicHub />} />
-                    <Route path="music" element={<MusicHub />} />
+                    <Route path="music-hub" element={<PreserveQueryRedirect to="/music" />} />
+                    <Route path="music" element={<MusicOverview />} />
                     <Route path="music-studio" element={<MusicStudio />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="prison" element={<Prison />} />
@@ -617,7 +626,7 @@ function App() {
                     
                     {/* Category hub pages */}
                     <Route path="hub/character" element={<CharacterHub />} />
-                    <Route path="hub/music" element={<MusicHubPage />} />
+                    <Route path="hub/music" element={<PreserveQueryRedirect to="/music" />} />
                     <Route path="hub/band-live" element={<BandLiveHub />} />
                     <Route path="hub/career-business" element={<CareerBusinessHub />} />
                     <Route path="social" element={<SocialHubUnified />} />
