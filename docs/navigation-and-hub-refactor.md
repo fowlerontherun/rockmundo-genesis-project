@@ -809,3 +809,59 @@ The repository still uses a large explicit route table rather than generated rou
 ### Completed PR sequence
 
 The navigation programme is complete: PRs 1–8 established the hub structure and PR 9 finalises polish, accessibility, selected-state reliability, legacy route documentation and regression protection.
+
+## PR 10 post-programme enhancement — navigation search, favourites and recent destinations
+
+PR 10 adds optional navigation-productivity tools on top of the stable hub structure. It does not replace primary module tabs, hub child navigation, breadcrumbs, or route-level authorisation.
+
+### Navigation search scope
+
+The global search entry point in the FM shell opens a command-style navigation dialog with `Ctrl+K` on Windows/Linux or `Cmd+K` on macOS. The search scope is intentionally limited to trusted navigation destinations: top-level hubs, hub child pages, sidebar destinations, quick actions with stable routes, and previously stored favourites or recent destinations that still match allowed navigation metadata. It is not a gameplay-wide search over every player, band, song, company, message, city, transaction, or forum post.
+
+### Searchable destination metadata
+
+Search metadata is derived from `FM_MODULES` in `src/config/fmNavigation.ts`, which is the canonical global navigation configuration used by the primary shell. Each destination carries a label, canonical route, hub label, icon, destination kind, eligibility for favourites/recents, and optional keywords. Developers should extend existing navigation metadata first, then add only small aliases in `src/lib/navigationProductivity.ts` when player terminology differs from visible labels.
+
+Static route example: the Music module contributes `Songwriting` at `/music/songwriting`, so searching `songwriting`, `songs`, or `write song` navigates to the canonical Music-owned route.
+
+Supported dynamic-route example: a recently visited entity page may be stored only as minimal metadata such as label plus canonical internal route, for example `Abbey Road Studios` at `/recording-studio-business/studio-123`, after that route has already been reached through normal authorised navigation. The store must not contain the full studio record.
+
+### Search aliases
+
+Aliases are deliberately small and documented close to the search metadata. Current examples include Health → Wellness, Mail → Messages, Calendar → Schedule, Gig Prep → Band Gigs, Company Money → Business Finances, Songs → Songwriting, and Location → Current City. Aliases must reduce genuine ambiguity and must not be broad enough to return unrelated gameplay data.
+
+### Permission and feature-flag filtering
+
+Search uses the same client navigation visibility rule as the module tabs for admin routes: admin destinations are omitted unless the user role is admin. Feature-flag metadata can be attached to destinations and disabled flags remove those destinations from the searchable set. Search filtering is only a discoverability safeguard; page-level and server-side authorisation remain authoritative.
+
+### Contextual destinations
+
+Context-free hub and page routes are always safe to list when visible in navigation. Contextual destinations are listed only when the client has a stable canonical route. Unknown entity IDs are never invented. Dynamic favourites and recents are accepted only as sanitized internal paths with readable labels, and unavailable entries are hidden when they no longer match currently allowed metadata.
+
+### Favourite eligibility
+
+Players can pin eligible navigation destinations from search results or from the current page control. Favourites are deduplicated by canonical path, newest pins appear first, and the local list is capped. Admin, sensitive, or invalid destinations should opt out or be filtered by the same metadata that hides them from navigation.
+
+### Recent-page eligibility and exclusions
+
+Recent destinations track a short list of useful pages, not browser history. Consecutive duplicates are ignored, revisits move to the top, and the list is capped. Recent tracking excludes login, logout, callbacks, 404/not-found, permission denied, confirmation/payment pages, destructive or transient routes, redirect-only aliases where known, and routes containing sensitive token or password parameters.
+
+### Persistence model
+
+PR 10 uses namespaced, versioned local storage as a limited fallback because no cross-device user-preference backend is established for this feature. Keys include the authenticated user id when available, so favourites and recents are browser-local and account-isolated on shared browsers. They are not account-synchronised across devices.
+
+### Privacy and security rules
+
+Stored entries contain only minimal route metadata: id, label, canonical internal path, hub label, kind, and non-sensitive keywords. External URLs, protocol URLs, double-slash URLs, and unsafe query parameters are rejected or stripped before storage. Search queries are not persisted. Raw message bodies, auth tokens, password-reset links, payment details, return URLs, full entity records, and private profile fields must never be stored.
+
+### Keyboard, mobile and accessibility behaviour
+
+The global header exposes a visible Search control with an accessible name and a shortcut hint. The dialog focuses the search input when opened, uses the existing accessible command/dialog primitives, supports Escape to close, arrow-key result movement and Enter selection through `cmdk`, and returns focus according to the existing Radix dialog behaviour. The shortcut listener is registered once by the shell and does not fire while the player is typing in inputs, textareas, selects, or editable fields. On mobile-sized layouts, the same header control and command dialog are used so the primary navigation structure is not redesigned or duplicated.
+
+### Analytics behaviour
+
+No route analytics facility was present for navigation-productivity events during this PR, so no new analytics calls were added. Future analytics should avoid raw search terms and should count open/select/favourite events without sensitive route data.
+
+### Known limitations and follow-up
+
+Favourites and recents are browser-local, not cross-device. Dynamic entity favourites are limited to canonical internal routes already known to the client; this PR does not introduce a backend search service or gameplay-wide entity index. Future navigation enhancements should be driven by player analytics and usability feedback rather than further structural expansion.

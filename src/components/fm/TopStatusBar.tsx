@@ -11,7 +11,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge } from "lucide-react";
+import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -223,6 +223,18 @@ export const TopStatusBar = () => {
 
       <div className="h-6 w-px bg-fm-border mx-1" />
 
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5"
+        onClick={() => window.dispatchEvent(new Event("fm:open-command"))}
+        aria-label="Open navigation search"
+        title="Search navigation (Ctrl+K or Cmd+K)"
+      >
+        <Search className="h-4 w-4" aria-hidden="true" />
+        <span className="hidden lg:inline text-xs">Search</span>
+        <kbd className="hidden xl:inline rounded border border-fm-border px-1 text-[10px] text-fm-fg-muted">⌘K</kbd>
+      </Button>
       <CharacterSwitcher />
       <PrisonStatusIndicator />
       <ActivityStatusIndicator />
