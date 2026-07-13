@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { usePlayerConnection } from "@/hooks/usePlayerConnections";
+import { respondToFriendship } from "@/integrations/supabase/playerConnections";
 import {
   User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit
 } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
@@ -55,6 +56,8 @@ export default function PlayerProfile() {
     enabled: !!playerId && !!profile,
   });
 
+  const connection = usePlayerConnection(playerId);
+
   const { data: friendship } = useQuery({
     queryKey: ["friendship-status", currentUser?.id, playerId],
     queryFn: async () => {
@@ -73,11 +76,12 @@ export default function PlayerProfile() {
   const sendRequest = useMutation({
     mutationFn: async () => {
       if (!currentUser?.id || !playerId) throw new Error("Missing IDs");
-      await sendFriendRequest({ requestorProfileId: currentUser.id, addresseeProfileId: playerId });
+      await connection.send.mutateAsync();
     },
     onSuccess: () => {
       toast({ title: "Friend request sent!" });
       queryClient.invalidateQueries({ queryKey: ["friendship-status"] });
+      queryClient.invalidateQueries({ queryKey: ["player-connection"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -86,12 +90,12 @@ export default function PlayerProfile() {
   const removeFriend = useMutation({
     mutationFn: async () => {
       if (!friendship?.id) throw new Error("No friendship");
-      const { error } = await supabase.from("friendships").delete().eq("id", friendship.id);
-      if (error) throw error;
+      await respondToFriendship(friendship.id, "removed");
     },
     onSuccess: () => {
       toast({ title: "Friend removed" });
       queryClient.invalidateQueries({ queryKey: ["friendship-status"] });
+      queryClient.invalidateQueries({ queryKey: ["player-connection"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -100,14 +104,12 @@ export default function PlayerProfile() {
   const acceptRequest = useMutation({
     mutationFn: async () => {
       if (!friendship?.id) throw new Error("No friendship");
-      const { error } = await supabase.from("friendships")
-        .update({ status: "accepted", responded_at: new Date().toISOString() })
-        .eq("id", friendship.id);
-      if (error) throw error;
+      await respondToFriendship(friendship.id, "accepted");
     },
     onSuccess: () => {
       toast({ title: "Friend request accepted!" });
       queryClient.invalidateQueries({ queryKey: ["friendship-status"] });
+      queryClient.invalidateQueries({ queryKey: ["player-connection"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -197,10 +199,11 @@ export default function PlayerProfile() {
           <Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button>
         ) : (
           <>
-            {!friendship && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
-            {isPendingSent && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
-            {isPendingReceived && <Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button>}
-            {isFriend && <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            {(connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {(connection.data === "outgoing_pending" || isPendingSent) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
+            {(connection.data === "incoming_pending" || isPendingReceived) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => friendship?.id && respondToFriendship(friendship.id, "declined").then(() => queryClient.invalidateQueries({ queryKey: ["friendship-status"] }))}>Decline</Button></>}
+            {(connection.data === "friends" || isFriend) && <Button size="sm" variant="destructive" onClick={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            {connection.data === "restricted" && <Button size="sm" variant="secondary" disabled>This player is not accepting requests</Button>}
             <FutureProfileActions />
           </>
         )}
