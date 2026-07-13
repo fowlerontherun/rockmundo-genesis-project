@@ -169,16 +169,17 @@ serve(async (req) => {
         break;
 
       case "spend_skill_xp": {
-        const { state, skillProgress } = await handleSpendSkillXp(
+        const { state, skillProgress, spendResult } = await handleSpendSkillXp(
           client,
           user.id,
           profileState,
           params.skill_slug,
           params.xp ?? 25,
           params.metadata,
+          params.event_id,
         );
         result = state;
-        actionResult = { skill_progress: skillProgress };
+        actionResult = { ...spendResult, skill_progress: skillProgress };
         break;
       }
 
