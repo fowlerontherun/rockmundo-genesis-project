@@ -14,7 +14,9 @@ import { TutorialProvider } from "./contexts/TutorialContext";
 import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
-import { FM_MODULES } from "./config/fmNavigation";
+import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
+import { characterHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
+import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
 
@@ -24,6 +26,11 @@ const RedirectTo = ({ to }: { to: string }) => {
     window.location.replace(to);
   }, [to]);
   return null;
+};
+
+const PreserveQueryRedirect = ({ to }: { to: string }) => {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
 };
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
@@ -357,12 +364,27 @@ for (const module of FM_MODULES) {
   }
 }
 
+const HUB_TITLE_CONFIGS = [
+  { title: "Character", overviewPath: "/character", items: characterHubNavigation },
+  { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
+];
+
 const getRouteTitle = (pathname: string) => {
+  for (const hub of HUB_TITLE_CONFIGS) {
+    const activeItem = hub.items.find((item) => isHubNavigationItemActive(pathname, item));
+    if (activeItem) {
+      return activeItem.path === hub.overviewPath ? hub.title : `${activeItem.label} | ${hub.title}`;
+    }
+  }
+
   const exactTitle = ROUTE_TITLES.get(pathname);
   if (exactTitle) return exactTitle;
 
   for (const [route, title] of ROUTE_TITLES) {
-    if (matchPath({ path: route, end: true }, pathname)) return title;
+    if (matchPath({ path: route, end: true }, pathname)) {
+      const mod = findModuleForPath(pathname);
+      return mod.id !== "overview" && title !== mod.label ? `${title} | ${mod.label}` : title;
+    }
   }
 
   return "Rockmundo";
@@ -420,7 +442,11 @@ function App() {
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="character" element={<CharacterOverview />} />
-                    <Route path="character/overview" element={<Navigate to="/character" replace />} />
+                    <Route path="character/overview" element={<PreserveQueryRedirect to="/character" />} />
+                    <Route path="character/wellness" element={<PreserveQueryRedirect to="/wellness" />} />
+                    <Route path="character/skills" element={<PreserveQueryRedirect to="/skills" />} />
+                    <Route path="character/inventory" element={<PreserveQueryRedirect to="/inventory" />} />
+                    <Route path="character/wardrobe" element={<PreserveQueryRedirect to="/clothing-shop" />} />
                     <Route path="wellness" element={<WellnessPage />} />
                     <Route path="underworld" element={<UnderworldNew />} />
                     <Route path="dikcok" element={<DikCok />} />
@@ -462,6 +488,7 @@ function App() {
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="country-charts" element={<CountryCharts />} />
                     <Route path="schedule" element={<Schedule />} />
+                    <Route path="schedule/overview" element={<PreserveQueryRedirect to="/schedule" />} />
                     <Route path="booking/education" element={<EducationBooking />} />
                     <Route path="booking/performance" element={<PerformanceBooking />} />
                     <Route path="booking/work" element={<WorkBooking />} />

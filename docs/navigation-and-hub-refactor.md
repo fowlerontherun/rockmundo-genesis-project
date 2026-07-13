@@ -133,3 +133,115 @@ PR 1 uses existing semantic page states, visible `h1`, labelled navigation links
 - No broad Music/Band/World/Social/Business/Career migration.
 - No removal of existing deep links.
 - No redesign of the global navigation visual system.
+
+## PR 2 update — shared hub layout and conventions
+
+PR 2 establishes a reusable hub-page pattern without starting the Music consolidation or moving every legacy page. The implementation deliberately keeps the existing React Router v6 `BrowserRouter`/`Routes` table in `src/App.tsx` and the existing FM shell navigation in `src/config/fmNavigation.ts` so future migrations can remain incremental.
+
+### Shared hub pattern
+
+The shared pattern is `HubLayout` in `src/components/hub/HubLayout.tsx`, with concise developer notes in `src/components/hub/README.md`. A hub supplies static typed navigation items from `src/config/hubNavigation.ts` and the layout renders:
+
+- a logical hub breadcrumb trail,
+- the existing `PageHeader` visual treatment,
+- optional contextual actions,
+- optional summary/status content,
+- horizontal child navigation for desktop and mobile,
+- a content region that preserves child loading, empty and error states.
+
+The layout intentionally does not generate routes. Route declarations remain explicit in `App.tsx` to match the current architecture and avoid circular imports between route definitions, global navigation and page components.
+
+### Route conventions selected
+
+RockMundo will use **Option A** for hub overviews: the stable base route renders the overview directly.
+
+Examples:
+
+- `/character` renders the Character overview.
+- `/schedule` renders the Schedule overview.
+- Future hubs should prefer `/music`, `/band`, `/world`, `/business`, `/social` and `/career` as render routes once each section is migrated.
+
+`/section/overview` routes may exist only as compatibility aliases that redirect to the base overview. They should not become the canonical route.
+
+### Child-route convention
+
+Future child pages should use predictable hub-owned paths such as `/character/wellness` or `/music/songwriting` when a section is migrated. PR 2 does not move the existing flat pages into all final paths. Instead, it keeps current deep links working and adds a small number of explicit Character aliases:
+
+- `/character/overview` redirects to `/character`.
+- `/character/wellness` redirects to `/wellness`.
+- `/character/skills` redirects to `/skills`.
+- `/character/inventory` redirects to `/inventory`.
+- `/character/wardrobe` redirects to `/clothing-shop`.
+- `/schedule/overview` redirects to `/schedule`.
+
+These redirects preserve query strings where practical and use `replace` so the browser back button does not bounce between alias and canonical route.
+
+### Selected-route matching rules
+
+Hub navigation items match:
+
+1. their exact canonical path,
+2. nested routes below that path,
+3. explicit legacy or alias `matchPaths`,
+4. paths regardless of query string,
+5. paths with trailing slashes normalised.
+
+Only the first matching hub item is treated as current. This prevents unrelated tabs from being highlighted while still allowing aliases such as `/character/wellness` to select Wellness.
+
+### Breadcrumb convention
+
+Hub breadcrumbs are metadata-driven, not raw URL-segment driven. The shared layout renders `Home > Hub label > Child label` using the active hub navigation item. Existing global breadcrumbs remain mounted in `Layout` for non-migrated pages and can be replaced gradually as hubs adopt `HubLayout`.
+
+### Page-title convention
+
+The browser title now uses hub context for migrated hubs:
+
+- overview: `Character | Rockmundo`, `Schedule | Rockmundo`,
+- child context: `Wellness | Character | Rockmundo`, `Education | Schedule | Rockmundo`.
+
+Non-migrated pages continue to use route titles derived from FM navigation metadata, with module context added where it is safe to infer.
+
+### Mobile navigation pattern
+
+The shared hub child navigation uses the existing compact button styling and `fm-scrollbar-thin` horizontal overflow pattern already used by FM sub-tabs. This keeps active pages visible, avoids a new drawer/select interaction model, and works with touch, mouse and keyboard focus states.
+
+### Accessibility expectations
+
+Migrated hubs must keep:
+
+- a labelled hub section and logical heading hierarchy,
+- `aria-current="page"` on the active child link,
+- labelled breadcrumb navigation,
+- accessible labels for contextual actions,
+- visible focus states from the existing button/link styles,
+- non-colour selected-state indicators through button variant and text/icon state,
+- no new animation unless it respects reduced-motion preferences.
+
+### Sections migrated in PR 2
+
+1. **Character** — selected because PR 1 made `/character` the canonical overview and the section already had clear existing child pages. Character now uses `HubLayout` and static hub metadata while preserving existing `/wellness`, `/skills`, `/inventory`, `/clothing-shop`, `/legacy` and related links.
+2. **Schedule** — selected as the second low-risk vertical slice because `/schedule` already existed as a stable landing page, it has a small set of existing booking child routes, and it does not overlap with the upcoming Music consolidation. The Schedule page now uses `HubLayout` with child links to existing booking flows only.
+
+### Sections still pending
+
+Music, Band, World, Social, Business, Career, Media and the broader Home/dashboard surfaces remain on their existing hub or flat-page patterns. Music consolidation is explicitly deferred to PR 3.
+
+### Deviations from the original plan
+
+The original plan anticipated route metadata replacing segment-derived breadcrumbs more broadly. PR 2 limits metadata-driven breadcrumbs to pages rendered by `HubLayout` so the shared pattern can be reviewed independently without rewriting the global breadcrumb component or sidebar.
+
+### Known legacy routes that remain
+
+The flat Character routes (`/wellness`, `/skills`, `/inventory`, `/clothing-shop`, `/housing`, `/gear`, `/legacy`, `/hall-of-immortals`) remain canonical for now. The existing `/hub/character` tile hub remains available as a legacy route. Schedule booking routes remain under `/booking/*` until a later Schedule/Home slice decides whether to move them under `/schedule/*`.
+
+### Migration guidance for future PRs
+
+For each future hub migration:
+
+1. Add static hub navigation items to `src/config/hubNavigation.ts` using only real existing pages.
+2. Render the section overview at the stable base route.
+3. Wrap the overview or shared section shell in `HubLayout`.
+4. Add explicit aliases only for renamed routes, preserving query strings and avoiding redirect loops.
+5. Update page-title metadata if new canonical child paths are introduced.
+6. Keep existing deep links until analytics and release notes confirm they can be removed.
+7. Add tests for base landing, child selected state, breadcrumbs, redirects and query preservation.

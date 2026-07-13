@@ -7,7 +7,8 @@ import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
-import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { HubLayout } from "@/components/hub/HubLayout";
+import { scheduleHubNavigation } from "@/config/hubNavigation";
 
 const Schedule = () => {
   const { t } = useTranslation();
@@ -19,12 +20,13 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <FMPageScaffold
+    <HubLayout
       title="Schedule"
-      subtitle="Read-only view of your booked activities"
-      backTo="/dashboard"
-      backLabel="Back to Dashboard"
+      description="Review your booked activities and jump to existing booking flows."
       icon={Calendar}
+      overviewPath="/schedule"
+      navigation={scheduleHubNavigation}
+      actions={[{ label: "Book activity", path: "/booking/education", variant: "outline" }]}
     >
 
       <GigLocationWarning />
@@ -97,7 +99,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </FMPageScaffold>
+    </HubLayout>
   );
 };
 
