@@ -400,3 +400,78 @@ PR 4 intentionally does not add a new active-band persistence layer, does not re
 ### Follow-up
 
 The next planned navigation PR is World and Travel hub consolidation. World consolidation is not started in PR 4.
+
+## PR 5 update — World and Travel hub consolidation
+
+PR 5 makes `/world` the stable World landing route and moves player-facing discovery of places, travel and world activity into the shared `HubLayout` pattern. The top-level World module now opens the World Overview instead of restoring the legacy tile hub, Travel, Cities, World Pulse or another previously visited child route.
+
+### Final World hub hierarchy
+
+The World hub surfaces existing systems only:
+
+- Overview — `/world`
+- Current City — `/world/current-city` redirects to the active city detail when the authoritative profile city exists, otherwise to Cities.
+- Travel — `/world/travel` aliases the existing travel booking flow.
+- Cities — `/world/cities` aliases Global Cities, with `/world/cities/:cityId` rendering city details directly.
+- Venues — `/world/venues` aliases the existing venue surface.
+- Studios — `/world/studios` aliases the existing recording-studio discovery/booking entry point; Music still owns recording workflow.
+- Companies — `/world/companies` aliases the World Companies public directory; Business still owns management.
+- Events — `/world/events` aliases existing major events.
+- Festivals — `/world/festivals` aliases the festival browser, with `/world/festivals/:festivalId` rendering festival details directly.
+- World Pulse — `/world/pulse` aliases the existing World Pulse dashboard.
+- Leaderboards — `/world/leaderboards` links to existing public rankings rather than moving chart systems.
+- Treasuries — `/world/treasuries` aliases the existing City Treasuries page and is hidden from compact child navigation.
+
+### Canonical route model and aliases
+
+| Canonical World route | Existing route preserved | Behaviour |
+| --- | --- | --- |
+| `/world` | `/hub/world`, `/hub/world-social` | Legacy hub links redirect to the World Overview with query strings preserved. |
+| `/world/current-city` | `/cities/:cityId` | Resolves from the current profile city; falls back to `/cities` when no valid city is available. |
+| `/world/travel` | `/travel` | Redirect alias preserving destination query parameters. |
+| `/world/cities` | `/cities` | Redirect alias preserving filters. |
+| `/world/cities/:cityId` | `/cities/:cityId` | Direct render alias for city detail deep links. |
+| `/world/venues` | `/venues` | Redirect alias to existing venue management/discovery page. |
+| `/world/studios` | `/recording-studio` | Redirect alias to existing studio surface. |
+| `/world/companies` | `/world-companies`, `/companies/directory` | Redirect alias to the public company directory. |
+| `/world/events` | `/major-events` | Redirect alias to existing global events. |
+| `/world/festivals` | `/festivals` | Redirect alias to existing festival browser. |
+| `/world/festivals/:festivalId` | `/festivals/:festivalId` | Direct render alias for festival detail deep links. |
+| `/world/pulse` | `/world-pulse` | Redirect alias to the full lazy-loaded World Pulse dashboard. |
+| `/world/leaderboards` | `/band-rankings` | Redirect alias to existing comparative ranking surface. |
+| `/world/treasuries` | `/cities/treasury` | Redirect alias to existing city treasury data. |
+
+### Current-location behaviour
+
+The World Overview reads current city from existing authoritative game/profile data via `useGameData()` and cross-checks travel state with `useTravelStatus()`. It does not assign a fallback city on the client. When no valid location is available, the overview shows a recoverable empty/error message and links to existing Cities and Travel flows.
+
+### Travel-in-progress behaviour
+
+When the existing travel status hook reports active travel, the overview presents the destination, arrival time and transport type when available. It avoids adding a new timer system and keeps the existing 30-second travel-status polling behaviour in `useTravelStatus()`.
+
+### World Overview content
+
+The overview uses real existing data only: current city, travel status, nearby venues, nearby city studios, local companies, upcoming local gigs, upcoming festivals, featured cities and quick links into existing child routes. Local sections are omitted or shown empty when the current city or underlying data is unavailable.
+
+### Ownership boundaries
+
+- World owns discovery of cities, venues, studios as places, public company profiles, festivals, events, travel entry points and World Pulse discovery.
+- Music owns recording preparation, eligible songs, recording sessions, releases and song development.
+- Band owns gig preparation, rehearsals, tours, performance readiness, crew and band equipment workflows.
+- Business owns company ownership, staff, finances, contracts and management pages; World only links to public company discovery.
+- Social consolidation is deferred to PR 6 and was not started here.
+
+### Contextual workflow links
+
+The World Overview links to Current City, Travel, Cities, Venues, Studios, Companies, Events, Festivals, World Pulse and existing leaderboards without bypassing existing booking, application or management flows. City and festival entity IDs are preserved on direct World aliases.
+
+### Mobile and accessibility considerations
+
+The World Overview uses the shared hub child navigation, semantic breadcrumbs, visible text location status, `aria-current` selected child links and responsive card grids. It does not add maps, animations, duplicate live subscriptions or a World-specific navigation pattern.
+
+### Known limitations and deferred defects
+
+- Existing child pages still mostly render their legacy page scaffold after redirect; a later polish PR can wrap each migrated child page directly in `HubLayout` once risk is acceptable.
+- Venue details and studio details remain limited to the currently implemented pages; no placeholder detail pages were added.
+- World Pulse remains lazy-loaded on its own dashboard route, so the overview does not subscribe to or render the full live dashboard.
+- Follow-up PR 6 is Social hub consolidation.

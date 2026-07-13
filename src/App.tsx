@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
-import { GameDataProvider } from "./hooks/useGameData";
+import { GameDataProvider, useGameData } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
 import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -15,7 +15,7 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
-import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
+import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation, worldHubNavigation } from "./config/hubNavigation";
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
@@ -31,6 +31,11 @@ const RedirectTo = ({ to }: { to: string }) => {
 const PreserveQueryRedirect = ({ to }: { to: string }) => {
   const { search } = useLocation();
   return <Navigate to={`${to}${search}`} replace />;
+};
+
+const CurrentCityRedirect = () => {
+  const { currentCity } = useGameData();
+  return <Navigate to={currentCity?.id ? `/cities/${currentCity.id}` : "/cities"} replace />;
 };
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
@@ -313,6 +318,7 @@ const CharacterHub = lazyWithRetry(() => import("./pages/hubs/CharacterHub"));
 const MusicOverview = lazyWithRetry(() => import("./pages/hubs/MusicOverview"));
 const BandLiveHub = lazyWithRetry(() => import("./pages/hubs/BandLiveHub"));
 const WorldHub = lazyWithRetry(() => import("./pages/hubs/WorldHub"));
+const WorldOverview = lazyWithRetry(() => import("./pages/hubs/WorldOverview"));
 const SocialHubLanding = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
 const MediaHub = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
 const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
@@ -368,6 +374,7 @@ const HUB_TITLE_CONFIGS = [
   { title: "Music", overviewPath: "/music", items: musicHubNavigation },
   { title: "Band", overviewPath: "/band", items: bandHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
+  { title: "World", overviewPath: "/world", items: worldHubNavigation },
 ];
 
 const getRouteTitle = (pathname: string) => {
@@ -546,6 +553,21 @@ function App() {
                     <Route path="media/self-promotion" element={<SelfPromotionBrowser />} />
                     <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
                     
+                    <Route path="world" element={<WorldOverview />} />
+                    <Route path="world/overview" element={<PreserveQueryRedirect to="/world" />} />
+                    <Route path="world/current-city" element={<CurrentCityRedirect />} />
+                    <Route path="world/travel" element={<PreserveQueryRedirect to="/travel" />} />
+                    <Route path="world/cities" element={<PreserveQueryRedirect to="/cities" />} />
+                    <Route path="world/cities/:cityId" element={<City />} />
+                    <Route path="world/treasuries" element={<PreserveQueryRedirect to="/cities/treasury" />} />
+                    <Route path="world/venues" element={<PreserveQueryRedirect to="/venues" />} />
+                    <Route path="world/studios" element={<PreserveQueryRedirect to="/recording-studio" />} />
+                    <Route path="world/companies" element={<PreserveQueryRedirect to="/world-companies" />} />
+                    <Route path="world/events" element={<PreserveQueryRedirect to="/major-events" />} />
+                    <Route path="world/festivals" element={<PreserveQueryRedirect to="/festivals" />} />
+                    <Route path="world/festivals/:festivalId" element={<FestivalDetail />} />
+                    <Route path="world/pulse" element={<PreserveQueryRedirect to="/world-pulse" />} />
+                    <Route path="world/leaderboards" element={<PreserveQueryRedirect to="/band-rankings" />} />
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/treasury" element={<CitiesTreasury />} />
                     <Route path="cities/:cityId" element={<City />} />
@@ -647,14 +669,14 @@ function App() {
                     {/* Bare /hub goes to dashboard (no hub index page exists) */}
                     <Route path="hub" element={<Navigate to="/dashboard" replace />} />
                     {/* New split hubs */}
-                    <Route path="hub/world" element={<WorldHub />} />
+                    <Route path="hub/world" element={<PreserveQueryRedirect to="/world" />} />
                     <Route path="hub/social" element={<SocialHubLanding />} />
                     <Route path="hub/media" element={<MediaHub />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
-                    <Route path="hub/world-social" element={<Navigate to="/hub/world" replace />} />
+                    <Route path="hub/world-social" element={<PreserveQueryRedirect to="/world" />} />
                     <Route path="hub/career" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="hub/commerce" element={<Navigate to="/hub/career-business" replace />} />
                     <Route path="modeling" element={<Modeling />} />
@@ -755,7 +777,6 @@ function App() {
                     <Route path="admin/pov-clips" element={<POVClipAdmin />} />
                     <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
-                    <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="nightclubs" element={<NightclubHub />} />
                     <Route path="nightclub/:clubId" element={<NightClubDetail />} />
