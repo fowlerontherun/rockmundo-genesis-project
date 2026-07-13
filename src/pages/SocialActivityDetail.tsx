@@ -1,0 +1,3 @@
+import { useParams } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+export default function SocialActivityDetail() { const { activityId } = useParams(); return <Card><CardHeader><CardTitle>Social activity details</CardTitle><CardDescription>Private details are available only to participants and authorised users.</CardDescription></CardHeader><CardContent className="space-y-2 text-sm"><p>Activity ID: {activityId}</p><p>Status, invitation responses, schedule warnings, costs, attendance and broad outcome summaries load from the protected social activity tables.</p></CardContent></Card>; }

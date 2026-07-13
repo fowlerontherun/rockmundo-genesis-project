@@ -5,7 +5,7 @@ import { socialHubNavigation } from "@/config/hubNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
+import { CalendarPlus, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
@@ -55,6 +55,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/twaater"><Newspaper className="mr-2 h-4 w-4" />Open Twaater</Link></Button>
           <Button asChild variant="outline"><Link to="/social/recruitment"><Music2 className="mr-2 h-4 w-4" />Browse recruitment</Link></Button>
+          <Button asChild variant="outline"><Link to="/social/activities"><CalendarPlus className="mr-2 h-4 w-4" />Plan activity</Link></Button>
           {pendingInvites.length > 0 && <Button asChild variant="secondary"><Link to="/social/invitations"><Inbox className="mr-2 h-4 w-4" />Review invitations</Link></Button>}
         </CardContent>
       </Card>
