@@ -337,6 +337,9 @@ const WorldOverview = lazyWithRetry(() => import("./pages/hubs/WorldOverview"));
 const SocialHubLanding = lazyWithRetry(() => import("./pages/hubs/SocialHub"));
 const MediaHub = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
 const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
+const SocialActivities = lazyWithRetry(() => import("./pages/SocialActivities"));
+const NewSocialActivity = lazyWithRetry(() => import("./pages/NewSocialActivity"));
+const SocialActivityDetail = lazyWithRetry(() => import("./pages/SocialActivityDetail"));
 const CityLandmarks = lazyWithRetry(() => import("./pages/CityLandmarks"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
 const BusinessOverview = lazyWithRetry(() => import("./pages/BusinessOverview"));
@@ -685,6 +688,9 @@ function App() {
                     <Route path="social/players" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
+                    <Route path="social/activities" element={<SocialActivities />} />
+                    <Route path="social/activities/new" element={<NewSocialActivity />} />
+                    <Route path="social/activities/:activityId" element={<SocialActivityDetail />} />
                     <Route path="social/recruitment" element={<BandRecruitmentDiscovery />} />
                     <Route path="social/twaater" element={<PreserveQueryRedirect to="/twaater" />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />

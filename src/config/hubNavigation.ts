@@ -55,6 +55,7 @@ export const socialHubNavigation: HubNavigationItem[] = [
   { id: "twaater", label: "Twaater", path: "/social/twaater", icon: Newspaper, matchPaths: ["/twaater", "/twaater/:handle", "/twaater/tag/:hashtag", "/twaater/twaat/:twaatId", "/twaater/notifications", "/twaater/analytics"] },
   { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/finder", "/bands/browse", "/bands/search", "/band/:bandId"] },
   { id: "invitations", label: "Invitations", path: "/social/invitations", icon: Inbox, matchPaths: ["/social?tab=invites"] },
+  { id: "activities", label: "Activities", path: "/social/activities", icon: CalendarDays, matchPaths: ["/social/activities/new", "/social/activities/:activityId"] },
 ];
 
 export const businessHubNavigation: HubNavigationItem[] = [
