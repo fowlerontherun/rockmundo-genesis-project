@@ -34,7 +34,7 @@ export default function BandChemistry() {
     });
   }, [bandId]);
 
-  const { band, events, members, chemistryBreakdown, isLoading } = useBandChemistry(userBandId || undefined);
+  const { band, events, members, chemistryBreakdown, latestSnapshot, isLoading } = useBandChemistry(userBandId || undefined);
 
   if (isLoading) {
     return (
@@ -59,8 +59,13 @@ export default function BandChemistry() {
     );
   }
 
-  const chemistryLevel = band.chemistry_level || 0;
-  const cohesionScore = band.cohesion_score || 0;
+  const chemistryLevel = latestSnapshot?.cohesion ?? band.chemistry_level ?? 0;
+  const cohesionScore = latestSnapshot?.cohesion ?? band.cohesion_score ?? 0;
+  const creativeSync = latestSnapshot?.creative_sync ?? 0;
+  const liveSync = latestSnapshot?.live_sync ?? 0;
+  const trust = latestSnapshot?.trust ?? 50;
+  const reliability = latestSnapshot?.reliability ?? 50;
+  const conflict = latestSnapshot?.conflict ?? 0;
   const daysTogether = band.days_together || 0;
 
   return (
@@ -78,7 +83,7 @@ export default function BandChemistry() {
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{chemistryLevel}/100</div>
+            <div className="text-2xl font-bold">{chemistryLevel.toFixed(0)}/100</div>
             <Progress value={chemistryLevel} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
               {chemistryLevel >= 80 ? "Excellent harmony" : chemistryLevel >= 60 ? "Good synergy" : chemistryLevel >= 40 ? "Moderate chemistry" : "Needs work"}
@@ -112,11 +117,32 @@ export default function BandChemistry() {
         </Card>
       </div>
 
+
+      <div className="grid gap-4 md:grid-cols-5">
+        {[
+          ["Performance chemistry", liveSync, "Live timing and stage consistency"],
+          ["Creative chemistry", creativeSync, "Writing and improvisation fit"],
+          ["Trust", trust, "Confidence in commitments"],
+          ["Reliability", reliability, "Attendance and role follow-through"],
+          ["Conflict", conflict, conflict >= 50 ? "Tension may affect rehearsals" : "Calm working conditions"],
+        ].map(([label, value, helper]) => (
+          <Card key={label as string}>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{label}</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-xl font-semibold">{Number(value).toFixed(0)}/100</div>
+              <Progress value={Number(value)} className="mt-2" aria-label={`${label} descriptive score`} />
+              <p className="mt-2 text-xs text-muted-foreground">{helper}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Tabs defaultValue="events" className="space-y-4">
         <TabsList>
           <TabsTrigger value="events">Recent Events</TabsTrigger>
           <TabsTrigger value="members">Member Contributions</TabsTrigger>
           <TabsTrigger value="breakdown">Chemistry Breakdown</TabsTrigger>
+          <TabsTrigger value="actions">Suggested Actions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events" className="space-y-4">
@@ -221,6 +247,19 @@ export default function BandChemistry() {
                   <Badge variant="destructive">{chemistryBreakdown.terrible}</Badge>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="actions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Suggested actions</CardTitle>
+              <CardDescription>Improve chemistry through varied, server-authoritative collaboration instead of repeated trivial activity.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              {["Schedule a focused rehearsal", "Start a jam session", "Co-write a song", "Review attendance concerns", "Hold a band meeting", "Resolve an agreement dispute"].map((action) => (
+                <button key={action} className="rounded-lg border p-3 text-left text-sm hover:bg-muted" aria-label={action}>{action}</button>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>

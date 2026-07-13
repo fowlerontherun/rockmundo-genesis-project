@@ -520,6 +520,7 @@ function App() {
                     <Route path="band/tours" element={<PreserveQueryRedirect to="/tour-manager" />} />
                     <Route path="band/equipment" element={<PreserveQueryRedirect to="/band-crew" />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
+                    <Route path="bands/:bandId/chemistry" element={<BandChemistry />} />
                     <Route path="bands/:bandId/manage/roles" element={<BandManagementPage />} />
                     <Route path="bands/:bandId/recruitment" element={<BandRecruitmentManagement />} />
                     <Route path="bands/:bandId/recruitment/new" element={<BandRecruitmentManagement />} />
