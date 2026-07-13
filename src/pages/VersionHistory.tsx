@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.450",
+    date: "2026-07-13",
+    changes: [
+      { type: 'fix', description: "**Fixed Wellness page crash (`Cannot read properties of null (reading 'fatigue')`).** `useWellnessState` returns `vitals: null` until the profile row loads, but the Wellness page passed it straight into `ProfessionalSupportPanel`, `NutritionHydrationPanel`, and recovery/readiness memos that dereference `vitals.fatigue`. Added a null-vitals fallback screen so the page waits gracefully for vitals to hydrate instead of throwing." },
+    ],
+  },
+  {
     version: "1.1.449",
     date: "2026-07-13",
     changes: [
