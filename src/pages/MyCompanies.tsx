@@ -301,7 +301,7 @@ const MyCompanies = () => {
       title="My Companies"
       subtitle="Manage your business empire — revenue, expenses, taxes, and growth"
       icon={Building2}
-      backTo="/hub/career-business"
+      backTo="/business"
     >
       <VipGate
         feature="Company ownership"

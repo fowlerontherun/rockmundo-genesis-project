@@ -33,7 +33,7 @@ const Finances = () => {
 
   if (isLoading) {
     return (
-      <FMPageScaffold title="Financial Command Center" icon={DollarSign} backTo="/hub/career-business">
+      <FMPageScaffold title="Financial Command Center" icon={DollarSign} backTo="/career">
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -46,7 +46,7 @@ const Finances = () => {
       title="Financial Command Center"
       subtitle="Monitor personal and band finances, track investments, and explore funding pathways."
       icon={DollarSign}
-      backTo="/hub/career-business"
+      backTo="/career"
     >
 
 

@@ -1,4 +1,4 @@
-import { Backpack, BookOpen, Briefcase, Globe2, Building2, Calendar, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
+import { Award, Backpack, BarChart3, BookOpen, Briefcase, Globe2, Building2, Calendar, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, Megaphone, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, ReceiptText, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -55,6 +55,29 @@ export const socialHubNavigation: HubNavigationItem[] = [
   { id: "twaater", label: "Twaater", path: "/social/twaater", icon: Newspaper, matchPaths: ["/twaater", "/twaater/:handle", "/twaater/tag/:hashtag", "/twaater/twaat/:twaatId", "/twaater/notifications", "/twaater/analytics"] },
   { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/finder", "/bands/browse", "/bands/search", "/band/:bandId"] },
   { id: "invitations", label: "Invitations", path: "/social/invitations", icon: Inbox, matchPaths: ["/social?tab=invites"] },
+];
+
+export const businessHubNavigation: HubNavigationItem[] = [
+  { id: "overview", label: "Overview", path: "/business", icon: Building2, matchPaths: ["/business/overview", "/hub/commerce"] },
+  { id: "companies", label: "Companies", path: "/business/companies", icon: Building2, matchPaths: ["/my-companies"] },
+  { id: "staff", label: "Staff", path: "/business/staff", icon: Users, matchPaths: ["/company/:companyId", "/security-firm/:companyId", "/merch-factory/:companyId", "/venue-business/:venueId", "/rehearsal-studio-business/:studioId", "/recording-studio-business/:studioId"] },
+  { id: "recruitment", label: "Recruitment", path: "/business/recruitment", icon: Briefcase, matchPaths: ["/business/job-adverts"] },
+  { id: "finances", label: "Finances", path: "/business/finances", icon: DollarSign },
+  { id: "advertising", label: "Advertising", path: "/business/advertising", icon: Megaphone, matchPaths: ["/pr", "/public-relations"] },
+  { id: "labels", label: "Labels", path: "/business/labels", icon: Disc3, matchPaths: ["/labels", "/record-label", "/labels/:labelId/manage"] },
+  { id: "reports", label: "Reports", path: "/business/reports", icon: BarChart3 },
+];
+
+export const careerHubNavigation: HubNavigationItem[] = [
+  { id: "overview", label: "Overview", path: "/career", icon: Trophy, matchPaths: ["/career/overview", "/hub/career", "/hub/career-business"] },
+  { id: "employment", label: "Employment", path: "/career/employment", icon: Briefcase, matchPaths: ["/employment", "/jobs"] },
+  { id: "finances", label: "Personal Finances", path: "/career/finances", icon: DollarSign, matchPaths: ["/finances", "/sponsorships", "/offers-dashboard"] },
+  { id: "fame", label: "Fame & Fans", path: "/career/fame", icon: Star, matchPaths: ["/fan-management"] },
+  { id: "charts", label: "Charts", path: "/career/charts", icon: BarChart3, matchPaths: ["/competitive-charts", "/country-charts", "/music/charts"] },
+  { id: "awards", label: "Awards", path: "/career/awards", icon: Award, matchPaths: ["/awards"] },
+  { id: "achievements", label: "Achievements", path: "/career/achievements", icon: Trophy, matchPaths: ["/hall-of-immortals"] },
+  { id: "discography", label: "Discography", path: "/career/discography", icon: Disc3, matchPaths: ["/release-manager", "/release/:id"] },
+  { id: "history", label: "History", path: "/career/history", icon: ReceiptText, matchPaths: ["/legacy", "/statistics", "/journal"] },
 ];
 
 export const bandHubNavigation: HubNavigationItem[] = [
