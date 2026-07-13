@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.449",
+    date: "2026-07-13",
+    changes: [
+      { type: 'fix', description: "**Fixed white-screen on home page.** Resolved a circular import between `src/utils/attributeProgression.ts` and `src/utils/progressionBalance.ts` that threw `Cannot access 'ATTRIBUTE_MAX_VALUE' before initialization` at module load, blanking the Landing page. Inlined the constant in `progressionBalance.ts` to break the cycle." },
+    ],
+  },
+  {
     version: "1.1.448",
     date: "2026-07-11",
     changes: [
