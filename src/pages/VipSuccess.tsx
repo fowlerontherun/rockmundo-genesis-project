@@ -28,7 +28,7 @@ export default function VipSuccess() {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          navigate("/dashboard");
+          navigate("/home");
           return 0;
         }
         return prev - 1;
@@ -97,7 +97,7 @@ export default function VipSuccess() {
 
           <div className="space-y-2">
             <Button 
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/home")}
               className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
             >
               <Crown className="h-4 w-4 mr-2" />

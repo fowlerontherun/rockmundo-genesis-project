@@ -29,10 +29,10 @@ export const FM_MODULES: FMModule[] = [
     id: "overview",
     label: "Overview",
     icon: LayoutDashboard,
-    rootPath: "/dashboard",
-    matchPaths: ["/dashboard", "/home", "/inbox", "/schedule", "/journal", "/todays-news", "/statistics", "/advisor"],
+    rootPath: "/home",
+    matchPaths: ["/home", "/dashboard", "/inbox", "/journal", "/todays-news", "/statistics", "/advisor"],
     subTabs: [
-      { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+      { label: "Home", path: "/home", icon: LayoutDashboard },
       { label: "Inbox", path: "/inbox", icon: InboxIcon },
       { label: "Schedule", path: "/schedule", icon: Calendar },
       { label: "News", path: "/todays-news", icon: Newspaper },
@@ -42,7 +42,7 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Today",
         items: [
-          { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+          { label: "Home", path: "/home", icon: LayoutDashboard },
           { label: "Inbox", path: "/inbox", icon: InboxIcon },
           { label: "Schedule", path: "/schedule", icon: Calendar },
           { label: "Today's News", path: "/todays-news", icon: Newspaper },

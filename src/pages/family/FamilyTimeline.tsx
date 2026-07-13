@@ -294,7 +294,7 @@ export default function FamilyTimeline() {
     <div className="container mx-auto max-w-3xl p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Button asChild size="sm" variant="ghost">
-          <Link to="/dashboard">
+          <Link to="/home">
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Link>
         </Button>

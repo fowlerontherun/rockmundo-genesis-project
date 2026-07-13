@@ -19,7 +19,7 @@ const Onboarding = () => {
   useEffect(() => {
     // If onboarding already completed, redirect to dashboard
     if (!isLoading && hasCompletedOnboarding) {
-      navigate("/dashboard");
+      navigate("/home");
     }
   }, [hasCompletedOnboarding, isLoading, navigate]);
 

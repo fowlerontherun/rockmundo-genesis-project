@@ -40,7 +40,7 @@ const Navigation = () => {
   const { data: unreadInboxCount } = useUnreadInboxCount();
 
   const hubLinks: HubLink[] = [
-    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: Home, labelKey: "nav.home", path: "/home" },
     { icon: User, labelKey: "nav.character", path: "/hub/character" },
     { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
     { icon: ShoppingBag, labelKey: "nav.market", path: "/song-market" },
@@ -53,7 +53,7 @@ const Navigation = () => {
 
   // Persistent bottom tabs — Home, Artist, Career, Market, Menu
   const bottomTabs: { icon: LucideIcon; label: string; path: string }[] = [
-    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: Home, label: "Home", path: "/home" },
     { icon: User, label: "Artist", path: "/hub/character" },
     { icon: Briefcase, label: "Career", path: "/hub/career-business" },
     { icon: ShoppingBag, label: "Market", path: "/song-market" },

@@ -113,7 +113,7 @@ export const Breadcrumbs = () => {
       className="mb-3 -mt-1 flex items-center gap-1 text-xs text-muted-foreground overflow-x-auto whitespace-nowrap scrollbar-none"
     >
       <Link
-        to="/dashboard"
+        to="/home"
         className="flex items-center gap-1 hover:text-foreground transition-colors"
         aria-label="Home"
       >

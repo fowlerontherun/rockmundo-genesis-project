@@ -663,3 +663,69 @@ Both new hubs use `HubLayout`, so child navigation keeps the shared horizontally
 ### Follow-up
 
 The next planned navigation PR remains Schedule and Home improvements. PR 7 intentionally does not start Schedule or Home work.
+
+## PR 8 update — Home dashboard and Schedule navigation
+
+PR 8 makes `/home` the canonical post-login Home dashboard route and keeps `/dashboard` as a compatibility alias that redirects to `/home` with query parameters preserved. The authenticated index flow now sends players who have completed onboarding to `/home`; unauthenticated root behaviour stays on the public landing page. Existing protected deep links still enter through the existing auth and layout guards rather than being replaced by a last-visited Home child.
+
+### Final Home route and ownership
+
+- Canonical Home route: `/home`.
+- Legacy alias: `/dashboard` redirects to `/home`.
+- Home top-level navigation now opens `/home` directly instead of restoring a previous Overview child.
+- Home owns the cross-system dashboard surface: current/today schedule summaries, notifications, goals and progress, manager recommendations, world news, character status and high-value links into Schedule, Social, Career, Music and World pages.
+- Optional Home summary failures remain scoped to their card, so notifications, goals or news failures do not blank the whole dashboard.
+
+### Post-login route behaviour
+
+Successful landing-page login, onboarding completion, resurrection return and the authenticated index route now target `/home`. `/hub` also redirects to `/home` because there is no hub index. `/dashboard` remains available for bookmarks and old links.
+
+### Final Schedule hierarchy
+
+Schedule continues to use the shared `HubLayout` pattern and now exposes these explicit routes:
+
+| Route | Behaviour |
+| --- | --- |
+| `/schedule` | Canonical Schedule default; renders Today. |
+| `/schedule/today` | Alias/render route for Today. |
+| `/schedule/week` | Week view using existing day schedule data per tab. |
+| `/schedule/calendar` | Compatibility alias/render route for Week-style calendar. |
+| `/schedule/current` | Current Activity status surface. |
+| `/schedule/book` | Booking launcher that links to owning workflows. |
+| `/schedule/upcoming` | Uses the Schedule shell and current agenda implementation pending a richer upcoming split. |
+| `/schedule/history` | Historical activity surface using the existing schedule data source for the selected date. |
+| `/schedule/overview` | Redirects to `/schedule`. |
+| `/booking/education`, `/booking/performance`, `/booking/work`, `/booking/songwriting` | Legacy booking routes preserved and selected under Schedule Book Activity. |
+
+The selected default is Today because it best answers the daily workflow questions and avoids opening a booking form, history page or blank calendar state.
+
+### Booking ownership model
+
+Schedule does not duplicate specialised activity forms. `/schedule/book` is a launcher to the existing education, performance, work and songwriting booking flows plus the canonical Music practice route. Practice, rehearsals, recording, travel, gigs, employment and wellness remain owned by their feature hubs and legacy pages.
+
+### Duration display, past-time booking and conflicts
+
+Schedule and Home schedule summaries use `getDisplayDurationMinutes` and authoritative start/end times where available, preserving multi-hour and cross-midnight display without changing backend duration rules. Past-time booking remains protected by the existing `validateBookingWindow`/`validateFutureBooking` client checks and server-side scheduled-activity creation validation. Existing conflict enforcement still flows through the `check_scheduling_conflict` RPC in `useCreateScheduledActivity`; this PR surfaces schedule status without introducing a new conflict engine.
+
+### Travel-aware scheduling and band attendance
+
+Travel and location context remains sourced from existing schedule rows, tour travel legs, gig venue city data and `GigLocationWarning`. Band attendance and rehearsal/gig membership rules remain owned by Band pages and their server workflows; Schedule links to the owning detail surfaces rather than silently changing multi-member booking behaviour.
+
+### Notifications and message summary ownership
+
+Global notifications and inbox messages remain owned by the notification and Social systems. Home displays counts and concise widgets only, linking onward to Inbox/Social without marking messages read or adding duplicate live subscriptions.
+
+### Performance and live-update considerations
+
+Home reuses existing card-level queries, query keys and schedule components instead of adding a global dashboard store. Schedule reuses `useScheduledActivities` for day-level loads and avoids fetching a full month for the Home summary. Current Activity calculates display state from the loaded daily schedule and clamps remaining time at zero.
+
+### Mobile and accessibility considerations
+
+Schedule keeps shared hub navigation, `aria-current` from `HubLayout`, compact button controls, stacked cards and text labels for status. Current, empty, loading and error states use the shared page-state components, while Week remains a tabbed day-by-day view for small screens instead of introducing a new calendar library.
+
+### Known limitations and deferred defects
+
+- `/schedule/upcoming` and `/schedule/history` intentionally reuse the existing schedule implementation until a dedicated historical/upcoming endpoint is available.
+- Conflict details are limited to existing booking errors and warning components; no new conflict graph was introduced.
+- Travel feasibility still depends on existing travel/gig warnings and does not calculate new routes.
+- Final navigation polish, responsive parity and legacy-route cleanup remain deferred to PR 9.

@@ -58,7 +58,7 @@ const Index = () => {
       if (!hasCompletedOnboarding) {
         navigate("/onboarding");
       } else {
-        navigate("/dashboard");
+        navigate("/home");
       }
     }
     // If no living character, the death screen or fresh start will render below
@@ -74,7 +74,7 @@ const Index = () => {
           resurrectCharacter.mutate(profileId, {
             onSuccess: () => {
               // Full reload to clear cached game data
-              window.location.href = "/dashboard";
+              window.location.href = "/home";
             },
           });
         }}

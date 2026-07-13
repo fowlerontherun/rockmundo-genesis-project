@@ -21,7 +21,7 @@ const MusicHub = () => {
       title="Music Hub"
       subtitle="Your central hub for all music-related activities"
       icon={Music}
-      backTo="/dashboard"
+      backTo="/home"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {musicSections.map((section) => {

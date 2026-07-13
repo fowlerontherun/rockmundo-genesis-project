@@ -40,7 +40,7 @@ const HorizontalNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const hubLinks: HubLink[] = [
-    { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+    { icon: Home, labelKey: "nav.home", path: "/home" },
     { icon: Newspaper, labelKey: "nav.news", path: "/todays-news" },
     { icon: Music, labelKey: "nav.music", path: "/hub/music" },
     { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
@@ -77,7 +77,7 @@ const HorizontalNavigation = () => {
         {/* Top bar with logo and utilities */}
         <div className="flex items-center justify-between px-4 h-12 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="RockMundo" className="h-10 w-auto object-contain cursor-pointer" onClick={() => handleNavigation("/dashboard")} />
+            <img src={logo} alt="RockMundo" className="h-10 w-auto object-contain cursor-pointer" onClick={() => handleNavigation("/home")} />
             <VersionHeader />
           </div>
           <div className="flex items-center gap-1">
@@ -101,7 +101,7 @@ const HorizontalNavigation = () => {
             <button
               key={link.path}
               className={`px-3 py-1.5 text-xs font-medium tracking-tight rounded-md transition-colors whitespace-nowrap ${
-                link.path === "/dashboard"
+                link.path === "/home"
                   ? `text-yellow-400 ${isActive(link.path) ? "bg-primary/10" : "hover:bg-accent"}`
                   : isActive(link.path)
                     ? "text-primary bg-primary/10"
@@ -176,7 +176,7 @@ const HorizontalNavigation = () => {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border shadow-lg safe-area-bottom">
         <div className="flex justify-around items-center py-1.5 px-1">
           {[
-            { icon: Home, labelKey: "nav.home", path: "/dashboard" },
+            { icon: Home, labelKey: "nav.home", path: "/home" },
             { icon: Music, labelKey: "nav.music", path: "/hub/music" },
             { icon: Users, labelKey: "nav.band", path: "/hub/band-live" },
             { icon: Globe, labelKey: "nav.world", path: "/hub/world-social" },

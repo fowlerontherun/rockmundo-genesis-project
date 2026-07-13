@@ -13,11 +13,11 @@ export const characterHubNavigation: HubNavigationItem[] = [
 ];
 
 export const scheduleHubNavigation: HubNavigationItem[] = [
-  { id: "overview", label: "Overview", path: "/schedule", icon: Calendar },
-  { id: "education", label: "Education", path: "/booking/education", icon: GraduationCap },
-  { id: "performance", label: "Performance", path: "/booking/performance", icon: Zap },
-  { id: "work", label: "Work", path: "/booking/work", icon: Package },
-  { id: "songwriting", label: "Songwriting", path: "/booking/songwriting", icon: Sparkles },
+  { id: "today", label: "Today", path: "/schedule", icon: Calendar, matchPaths: ["/schedule/today", "/schedule/overview"] },
+  { id: "week", label: "Week", path: "/schedule/week", icon: CalendarDays, matchPaths: ["/schedule/calendar"] },
+  { id: "current", label: "Current Activity", path: "/schedule/current", icon: Zap },
+  { id: "book", label: "Book Activity", path: "/schedule/book", icon: Sparkles, matchPaths: ["/booking/education", "/booking/performance", "/booking/work", "/booking/songwriting"] },
+  { id: "history", label: "History", path: "/schedule/history", icon: History },
 ];
 
 export const musicHubNavigation: HubNavigationItem[] = [
