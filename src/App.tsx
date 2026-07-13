@@ -76,6 +76,7 @@ const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRel
 const MediaOutletsAdmin = lazyWithRetry(() => import("./pages/admin/MediaOutletsAdmin"));
 const UnderworldAdmin = lazyWithRetry(() => import("./pages/admin/UnderworldAdmin"));
 const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
+const CharacterOverview = lazyWithRetry(() => import("./pages/CharacterOverview"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
 const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
@@ -418,6 +419,8 @@ function App() {
 
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />
+                    <Route path="character" element={<CharacterOverview />} />
+                    <Route path="character/overview" element={<Navigate to="/character" replace />} />
                     <Route path="wellness" element={<WellnessPage />} />
                     <Route path="underworld" element={<UnderworldNew />} />
                     <Route path="dikcok" element={<DikCok />} />

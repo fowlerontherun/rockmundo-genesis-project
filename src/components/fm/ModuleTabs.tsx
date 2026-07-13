@@ -19,7 +19,7 @@ export const ModuleTabs = () => {
       navigate(rootPath);
       return;
     }
-    const last = getLastModulePath(modId);
+    const last = modId === "character" ? null : getLastModulePath(modId);
     navigate(last || rootPath);
   };
 
