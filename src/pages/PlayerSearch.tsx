@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, User, Music, Star, MapPin, Clock, Users, UserPlus, MessageSquare, Check } from "lucide-react";
+import { Search, User, Music, Star, MapPin, Clock, Users, UserPlus, MessageSquare, Check, Ban, Flag } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
@@ -15,6 +15,8 @@ import { DirectMessagePanel } from "@/features/relationships/components/DirectMe
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { searchPublicProfiles, type PublicProfileSearchResult } from "@/services/publicProfileSearch";
+import { BlockPlayerDialog } from "@/components/social-safety/BlockPlayerDialog";
+import { ReportPlayerDialog } from "@/components/social-safety/ReportPlayerDialog";
 
 type PlayerProfile = PublicProfileSearchResult;
 type FriendState = "none" | "friends" | "pending_sent" | "pending_received";
@@ -270,6 +272,8 @@ export default function PlayerSearch() {
                           <MessageSquare className="mr-1 h-4 w-4" />
                           Message
                         </Button>
+                        <BlockPlayerDialog targetProfileId={player.id} playerName={player.display_name || player.username} trigger={<Button variant="destructive" size="sm"><Ban className="mr-1 h-4 w-4" />Block</Button>} />
+                        <ReportPlayerDialog targetProfileId={player.id} playerName={player.display_name || player.username} trigger={<Button variant="outline" size="sm"><Flag className="mr-1 h-4 w-4" />Report</Button>} />
                       </>
                     )}
                   </div>

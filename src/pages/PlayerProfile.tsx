@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
-  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit
+  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit, Ban, Flag
 } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -16,6 +16,10 @@ import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
+import { useSocialPermission } from "@/hooks/social-safety/useSocialPermission";
+import { BlockPlayerDialog } from "@/components/social-safety/BlockPlayerDialog";
+import { ReportPlayerDialog } from "@/components/social-safety/ReportPlayerDialog";
+import { unblockPlayer } from "@/services/social-safety/PlayerBlockService";
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
@@ -67,6 +71,14 @@ export default function PlayerProfile() {
       return data;
     },
     enabled: !!currentUser?.id && !!playerId && currentUser?.id !== playerId,
+  });
+
+  const { data: socialPermissions } = useSocialPermission(!isCurrentUserLoading && currentUser?.id !== playerId ? playerId : null);
+
+  const unblockMutation = useMutation({
+    mutationFn: async () => { if (!playerId) throw new Error("Missing player"); await unblockPlayer(playerId); },
+    onSuccess: () => { toast({ title: "Player unblocked" }); queryClient.invalidateQueries({ queryKey: ["social-permission", playerId] }); queryClient.invalidateQueries({ queryKey: ["friendship-status"] }); },
+    onError: (e: any) => toast({ title: "Unblock failed", description: e.message, variant: "destructive" }),
   });
 
   // Send friend request
@@ -168,6 +180,8 @@ export default function PlayerProfile() {
   }
 
   const isOwnProfile = currentUser?.id === playerId;
+  const isInteractionRestricted = !!socialPermissions?.is_interaction_restricted;
+  const viewerBlockedTarget = !!socialPermissions?.is_blocked_by_viewer;
   const isFriend = friendship?.status === "accepted";
   const isPendingSent = friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
   const isPendingReceived = friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
@@ -197,11 +211,14 @@ export default function PlayerProfile() {
           <Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button>
         ) : (
           <>
-            {!friendship && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
-            {isPendingSent && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
-            {isPendingReceived && <Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button>}
-            {isFriend && <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
-            <FutureProfileActions />
+            {isInteractionRestricted && <Badge variant="secondary">This player is unavailable.</Badge>}
+            {!isInteractionRestricted && !friendship && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {!isInteractionRestricted && isPendingSent && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
+            {!isInteractionRestricted && isPendingReceived && <Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button>}
+            {!isInteractionRestricted && isFriend && <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            {viewerBlockedTarget ? <Button size="sm" variant="outline" onClick={() => unblockMutation.mutate()} disabled={unblockMutation.isPending}>Unblock player</Button> : <BlockPlayerDialog targetProfileId={playerId!} playerName={profile.display_name || profile.username || "this player"} trigger={<Button size="sm" variant="destructive"><Ban className="mr-1 h-4 w-4" />Block</Button>} />}
+            <ReportPlayerDialog targetProfileId={playerId!} playerName={profile.display_name || profile.username || "this player"} trigger={<Button size="sm" variant="outline"><Flag className="mr-1 h-4 w-4" />Report</Button>} />
+            {!isInteractionRestricted && <FutureProfileActions />}
           </>
         )}
       />

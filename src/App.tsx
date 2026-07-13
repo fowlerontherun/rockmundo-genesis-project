@@ -209,6 +209,8 @@ const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
 const PlayerProfileEdit = lazyWithRetry(() => import("./pages/PlayerProfileEdit"));
+const BlockedPlayersPage = lazyWithRetry(() => import("./pages/settings/privacy/BlockedPlayersPage"));
+const MyReportsPage = lazyWithRetry(() => import("./pages/settings/safety/MyReportsPage"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
 const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
 const BandSearch = lazyWithRetry(() => import("./pages/BandSearch"));
@@ -460,6 +462,8 @@ function App() {
                     <Route path="character" element={<CharacterOverview />} />
                     <Route path="character/overview" element={<PreserveQueryRedirect to="/character" />} />
                     <Route path="character/profile/edit" element={<PlayerProfileEdit />} />
+                    <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
+                    <Route path="settings/safety/reports" element={<MyReportsPage />} />
                     <Route path="character/wellness" element={<PreserveQueryRedirect to="/wellness" />} />
                     <Route path="character/skills" element={<PreserveQueryRedirect to="/skills" />} />
                     <Route path="character/inventory" element={<PreserveQueryRedirect to="/inventory" />} />
