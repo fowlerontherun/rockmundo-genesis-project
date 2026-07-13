@@ -23,6 +23,18 @@ export default function AchievementsAdmin() {
   const [requirements, setRequirements] = useState<Record<string, any>>({});
   const [rewards, setRewards] = useState<Record<string, any>>({});
 
+  const { data: diagnostics = [] } = useQuery({
+    queryKey: ["admin-achievement-diagnostics"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("admin_achievement_diagnostics")
+        .select("*")
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: achievements = [], isLoading } = useQuery({
     queryKey: ["admin-achievements"],
     queryFn: async () => {
@@ -216,6 +228,47 @@ export default function AchievementsAdmin() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Canonical diagnostics</CardTitle>
+          <CardDescription>Read-only catalogue, criteria, rewards, mappings and completion diagnostics.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Slug</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Criteria</TableHead>
+                <TableHead>Rewards</TableHead>
+                <TableHead>Mappings</TableHead>
+                <TableHead>Completions</TableHead>
+                <TableHead>Flags</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {diagnostics.map((row: any) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-mono text-xs">{row.slug}</TableCell>
+                  <TableCell><Badge variant="outline">{row.tier}</Badge></TableCell>
+                  <TableCell>{row.achievement_type}</TableCell>
+                  <TableCell>{row.criteria_count}</TableCell>
+                  <TableCell>{row.reward_count}</TableCell>
+                  <TableCell>{row.event_mapping_count}</TableCell>
+                  <TableCell>{row.completion_rows}</TableCell>
+                  <TableCell className="space-x-1">
+                    {row.is_hidden && <Badge variant="secondary">Hidden</Badge>}
+                    {row.is_repeatable && <Badge variant="outline">Repeat {row.repeat_limit}</Badge>}
+                    {!row.is_active && <Badge variant="destructive">Inactive</Badge>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -28,7 +28,8 @@
     "test:gig-experience:audio": "vitest run src/features/gig-experience/viewer/audio/audioSourceResolver.test.ts",
     "test:gig-experience:e2e": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium",
     "test:gig-experience:e2e:headed": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium --headed",
-    "test:gig-experience:a11y:unit": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx"
+    "test:gig-experience:a11y:unit": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
+    "test:achievements": "vitest run src/features/achievements/__tests__/validator.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
