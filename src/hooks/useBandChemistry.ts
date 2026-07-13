@@ -10,6 +10,20 @@ export interface ChemistryEvent {
   created_at: string;
 }
 
+export interface BandChemistrySnapshot {
+  id: string;
+  band_id: string;
+  cohesion: number;
+  creative_sync: number;
+  live_sync: number;
+  trust: number;
+  reliability: number;
+  conflict: number;
+  trend: string;
+  calculated_at: string;
+  metadata: Record<string, unknown>;
+}
+
 export interface BandMemberChemistry {
   id: string;
   user_id: string | null;
@@ -37,6 +51,26 @@ export const useBandChemistry = (bandId?: string) => {
 
       if (error) throw error;
       return data;
+    },
+    enabled: !!bandId,
+  });
+
+  // Fetch latest derived band cohesion snapshot
+  const { data: latestSnapshot, isLoading: snapshotLoading } = useQuery({
+    queryKey: ["band-chemistry-snapshot", bandId],
+    queryFn: async () => {
+      if (!bandId) return null;
+
+      const { data, error } = await (supabase as any)
+        .from("band_chemistry_snapshots")
+        .select("*")
+        .eq("band_id", bandId)
+        .order("calculated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as BandChemistrySnapshot | null;
     },
     enabled: !!bandId,
   });
@@ -92,6 +126,7 @@ export const useBandChemistry = (bandId?: string) => {
     events,
     members,
     chemistryBreakdown,
-    isLoading: bandLoading || eventsLoading || membersLoading,
+    latestSnapshot,
+    isLoading: bandLoading || snapshotLoading || eventsLoading || membersLoading,
   };
 };
