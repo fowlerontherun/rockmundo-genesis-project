@@ -1,4 +1,4 @@
-import { Award, Backpack, BarChart3, BookOpen, Briefcase, Globe2, Building2, Calendar, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, Megaphone, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, ReceiptText, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
+import { Award, Backpack, BarChart3, BookOpen, Briefcase, Globe2, Building2, Calendar, CalendarDays, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, Megaphone, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, ReceiptText, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -34,7 +34,7 @@ export const musicHubNavigation: HubNavigationItem[] = [
 
 export const worldHubNavigation: HubNavigationItem[] = [
   { id: "overview", label: "Overview", path: "/world", icon: Globe2, matchPaths: ["/world/overview", "/hub/world", "/hub/world-social"] },
-  { id: "current-city", label: "Current City", path: "/world/current-city", icon: MapPin },
+  { id: "current-city", label: "Location", path: "/world/current-city", icon: MapPin },
   { id: "travel", label: "Travel", path: "/world/travel", icon: Plane, matchPaths: ["/travel"] },
   { id: "cities", label: "Cities", path: "/world/cities", icon: MapPin, matchPaths: ["/cities", "/cities/:cityId", "/cities/treasury"] },
   { id: "venues", label: "Venues", path: "/world/venues", icon: Building2, matchPaths: ["/venues", "/venue-business/:venueId"] },
@@ -71,7 +71,7 @@ export const businessHubNavigation: HubNavigationItem[] = [
 export const careerHubNavigation: HubNavigationItem[] = [
   { id: "overview", label: "Overview", path: "/career", icon: Trophy, matchPaths: ["/career/overview", "/hub/career", "/hub/career-business"] },
   { id: "employment", label: "Employment", path: "/career/employment", icon: Briefcase, matchPaths: ["/employment", "/jobs"] },
-  { id: "finances", label: "Personal Finances", path: "/career/finances", icon: DollarSign, matchPaths: ["/finances", "/sponsorships", "/offers-dashboard"] },
+  { id: "finances", label: "Finances", path: "/career/finances", icon: DollarSign, matchPaths: ["/finances", "/sponsorships", "/offers-dashboard"] },
   { id: "fame", label: "Fame & Fans", path: "/career/fame", icon: Star, matchPaths: ["/fan-management"] },
   { id: "charts", label: "Charts", path: "/career/charts", icon: BarChart3, matchPaths: ["/competitive-charts", "/country-charts", "/music/charts"] },
   { id: "awards", label: "Awards", path: "/career/awards", icon: Award, matchPaths: ["/awards"] },

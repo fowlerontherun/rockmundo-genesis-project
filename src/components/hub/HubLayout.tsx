@@ -53,18 +53,33 @@ export type HubLayoutProps = {
   navigationLabel?: string;
 };
 
-const normalisePath = (path: string) => {
-  const [withoutQuery] = path.split("?");
-  return withoutQuery.length > 1 ? withoutQuery.replace(/\/+$/, "") : withoutQuery;
+const splitPathAndSearch = (path: string) => {
+  const [pathname, search = ""] = path.split("?");
+  const normalisedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return { pathname: normalisedPathname, search };
 };
 
-export const isHubNavigationItemActive = (pathname: string, item: HubNavigationItem) => {
-  const current = normalisePath(pathname);
-  const paths = [item.path, ...(item.matchPaths ?? [])].map(normalisePath);
+const searchContains = (currentSearch: string, expectedSearch: string) => {
+  if (!expectedSearch) return true;
+
+  const current = new URLSearchParams(currentSearch);
+  const expected = new URLSearchParams(expectedSearch);
+
+  for (const [key, value] of expected.entries()) {
+    if (current.get(key) !== value) return false;
+  }
+
+  return true;
+};
+
+export const isHubNavigationItemActive = (locationPath: string, item: HubNavigationItem) => {
+  const current = splitPathAndSearch(locationPath);
+  const paths = [item.path, ...(item.matchPaths ?? [])].map(splitPathAndSearch);
 
   return paths.some((path) => {
-    if (current === path) return true;
-    if (matchPath({ path: `${path}/*`, end: false }, current)) return true;
+    if (!searchContains(current.search, path.search)) return false;
+    if (current.pathname === path.pathname) return true;
+    if (matchPath({ path: `${path.pathname}/*`, end: false }, current.pathname)) return true;
     return false;
   });
 };
@@ -114,8 +129,9 @@ export function HubLayout({
   contentClassName,
   navigationLabel,
 }: HubLayoutProps) {
-  const { pathname } = useLocation();
-  const activeItem = navigation.find((item) => isHubNavigationItemActive(pathname, item)) ?? navigation.find((item) => item.path === overviewPath);
+  const { pathname, search } = useLocation();
+  const currentPath = `${pathname}${search}`;
+  const activeItem = navigation.find((item) => isHubNavigationItemActive(currentPath, item)) ?? navigation.find((item) => item.path === overviewPath);
   const logicalBreadcrumbs = breadcrumbs ?? [
     { label: title, path: overviewPath },
     ...(activeItem && activeItem.path !== overviewPath ? [{ label: activeItem.label }] : []),
@@ -154,7 +170,7 @@ export function HubLayout({
         <div className="flex gap-1 overflow-x-auto fm-scrollbar-thin" role="list">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const active = isHubNavigationItemActive(pathname, item);
+            const active = isHubNavigationItemActive(currentPath, item);
             return (
               <Button key={item.id} asChild variant={active ? "secondary" : "ghost"} size="sm" className={cn("h-10 shrink-0 justify-start gap-2", item.mobileVisible === false && "hidden md:inline-flex")} aria-current={active ? "page" : undefined}>
                 <Link to={item.path} aria-label={item.description ? `${item.label}: ${item.description}` : item.label}>

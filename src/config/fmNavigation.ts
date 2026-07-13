@@ -1,3 +1,4 @@
+import { matchPath } from "react-router-dom";
 import {
   LayoutDashboard, Music, Users, Mic2, Briefcase, Globe, MessageSquare,
   Building2, Shield, BookOpen, DollarSign, Calendar, Trophy, Radio,
@@ -21,18 +22,20 @@ export type FMModule = {
   /** Common "create / start something new" shortcuts surfaced in the FM-style
    *  quick actions bar on every page in this module. */
   quickActions?: FMQuickAction[];
+  /** Hide compatibility-only route groups from the primary top-level nav. */
+  primary?: boolean;
 };
 
 export const FM_MODULES: FMModule[] = [
   // 1. OVERVIEW — the "look back & plan" surface
   {
     id: "overview",
-    label: "Overview",
-    icon: LayoutDashboard,
+    label: "Home",
+    icon: Home,
     rootPath: "/home",
     matchPaths: ["/home", "/dashboard", "/inbox", "/journal", "/todays-news", "/statistics", "/advisor"],
     subTabs: [
-      { label: "Home", path: "/home", icon: LayoutDashboard },
+      { label: "Home", path: "/home", icon: Home },
       { label: "Inbox", path: "/inbox", icon: InboxIcon },
       { label: "Schedule", path: "/schedule", icon: Calendar },
       { label: "News", path: "/todays-news", icon: Newspaper },
@@ -183,7 +186,7 @@ export const FM_MODULES: FMModule[] = [
   // 4. BAND & LIVE — merged
   {
     id: "band-live",
-    label: "Band & Live",
+    label: "Band",
     icon: Mic2,
     rootPath: "/band",
     matchPaths: [
@@ -346,7 +349,7 @@ export const FM_MODULES: FMModule[] = [
         { label: "Advertising", path: "/business/advertising", icon: Megaphone },
       ] },
       { label: "Finance & reports", items: [
-        { label: "Company Finances", path: "/business/finances", icon: DollarSign },
+        { label: "Finances", path: "/business/finances", icon: DollarSign },
         { label: "Reports", path: "/business/reports", icon: BarChart3 },
       ] },
       { label: "Business types", items: [
@@ -366,6 +369,7 @@ export const FM_MODULES: FMModule[] = [
   {
     id: "media",
     label: "Media",
+    primary: false,
     icon: Newspaper,
     rootPath: "/hub/media",
     matchPaths: [
@@ -449,7 +453,7 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Explore",
         items: [
-          { label: "Current City", path: "/world/current-city", icon: MapPin },
+          { label: "Location", path: "/world/current-city", icon: MapPin },
           { label: "Cities", path: "/world/cities", icon: MapPin },
           { label: "Travel", path: "/world/travel", icon: Plane },
           { label: "Venues", path: "/world/venues", icon: Building2 },
@@ -574,7 +578,7 @@ export function findModuleForPath(pathname: string): FMModule {
   let best: { mod: FMModule; len: number } | null = null;
   for (const mod of FM_MODULES) {
     for (const p of mod.matchPaths) {
-      if (pathname === p || pathname.startsWith(p + "/")) {
+      if (matchPath({ path: p, end: false }, pathname) || pathname === p || pathname.startsWith(p + "/")) {
         if (!best || p.length > best.len) best = { mod, len: p.length };
       }
     }
