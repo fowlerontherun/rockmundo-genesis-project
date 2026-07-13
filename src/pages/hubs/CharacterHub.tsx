@@ -1,12 +1,33 @@
 import { CategoryHub } from "@/components/CategoryHub";
+import { HubLayout, type HubNavItem } from "@/components/hub/HubLayout";
 import {
   User, Users, ShoppingCart, Guitar, HeartPulse, History, BookOpen, GraduationCap, Sparkles,
-  Palette, Skull, Crown, Scissors, Package, Home, Car, Heart,
+  Palette, Skull, Crown, Scissors, Package, Home, Car, Heart, Shirt, Trophy,
 } from "lucide-react";
+
+const characterHubNavItems: HubNavItem[] = [
+  { id: "overview", label: "Overview", path: "/character", matchPaths: ["/hub/character"], icon: User, end: true },
+  { id: "skills", label: "Skills", path: "/character/skills", matchPaths: ["/skills"], icon: Sparkles },
+  { id: "wellness", label: "Wellness", path: "/character/wellness", matchPaths: ["/wellness"], icon: HeartPulse },
+  { id: "inventory", label: "Inventory", path: "/character/inventory", matchPaths: ["/inventory"], icon: Package },
+  { id: "wardrobe", label: "Wardrobe", path: "/character/wardrobe", matchPaths: ["/clothing-shop", "/skin-store", "/avatar-designer"], icon: Shirt },
+  { id: "lifestyle", label: "Lifestyle", path: "/character/lifestyle", matchPaths: ["/housing", "/personal-vehicles"], icon: Home },
+  { id: "achievements", label: "Achievements", path: "/character/achievements", matchPaths: ["/hall-of-immortals", "/statistics"], icon: Trophy },
+  { id: "history", label: "History", path: "/character/history", matchPaths: ["/legacy", "/journal"], icon: History },
+];
 
 export default function CharacterHub() {
   return (
+    <HubLayout
+      title="Character"
+      description="Identity, progression, property, relationships, and legacy."
+      icon={User}
+      navItems={characterHubNavItems}
+      breadcrumbs={[{ label: "Character" }]}
+      actions={<a className="text-sm font-medium text-primary underline-offset-4 hover:underline" href="/my-character/edit">Edit appearance</a>}
+    >
     <CategoryHub
+      bare
       titleKey="nav.character"
       description="Identity, property, relationships, and legacy."
       groups={[
@@ -49,5 +70,6 @@ export default function CharacterHub() {
         },
       ]}
     />
+    </HubLayout>
   );
 }

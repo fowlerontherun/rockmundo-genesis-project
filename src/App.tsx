@@ -356,6 +356,16 @@ for (const module of FM_MODULES) {
   }
 }
 
+ROUTE_TITLES.set("/character", "Character");
+ROUTE_TITLES.set("/character/skills", "Skills | Character");
+ROUTE_TITLES.set("/character/wellness", "Wellness | Character");
+ROUTE_TITLES.set("/character/inventory", "Inventory | Character");
+ROUTE_TITLES.set("/character/wardrobe", "Wardrobe | Character");
+ROUTE_TITLES.set("/character/lifestyle", "Lifestyle | Character");
+ROUTE_TITLES.set("/character/achievements", "Achievements | Character");
+ROUTE_TITLES.set("/character/history", "History | Character");
+ROUTE_TITLES.set("/schedule", "Schedule");
+
 const getRouteTitle = (pathname: string) => {
   const exactTitle = ROUTE_TITLES.get(pathname);
   if (exactTitle) return exactTitle;
@@ -376,6 +386,11 @@ const PageTitle = () => {
   }, [pathname]);
 
   return null;
+};
+
+const PreserveQueryRedirect = ({ to }: { to: string }) => {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
 };
 
 function App() {
@@ -459,6 +474,7 @@ function App() {
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="country-charts" element={<CountryCharts />} />
                     <Route path="schedule" element={<Schedule />} />
+                    <Route path="schedule/calendar" element={<PreserveQueryRedirect to="/schedule" />} />
                     <Route path="booking/education" element={<EducationBooking />} />
                     <Route path="booking/performance" element={<PerformanceBooking />} />
                     <Route path="booking/work" element={<WorkBooking />} />
@@ -586,6 +602,14 @@ function App() {
                     <Route path="casino/slots" element={<CasinoSlots />} />
                     
                     {/* Category hub pages */}
+                    <Route path="character" element={<CharacterHub />} />
+                    <Route path="character/skills/*" element={<PreserveQueryRedirect to="/skills" />} />
+                    <Route path="character/wellness/*" element={<PreserveQueryRedirect to="/wellness" />} />
+                    <Route path="character/inventory/*" element={<PreserveQueryRedirect to="/inventory" />} />
+                    <Route path="character/wardrobe/*" element={<PreserveQueryRedirect to="/clothing-shop" />} />
+                    <Route path="character/lifestyle/*" element={<PreserveQueryRedirect to="/housing" />} />
+                    <Route path="character/achievements/*" element={<PreserveQueryRedirect to="/statistics" />} />
+                    <Route path="character/history/*" element={<PreserveQueryRedirect to="/legacy" />} />
                     <Route path="hub/character" element={<CharacterHub />} />
                     <Route path="hub/music" element={<MusicHubPage />} />
                     <Route path="hub/band-live" element={<BandLiveHub />} />

@@ -5,12 +5,17 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTranslation } from "@/hooks/useTranslation";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
-import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { HubLayout, type HubNavItem } from "@/components/hub/HubLayout";
+
+const scheduleHubNavItems: HubNavItem[] = [
+  { id: "overview", label: "Overview", path: "/schedule", icon: Calendar, end: true },
+  { id: "education", label: "Education", path: "/booking/education", icon: CalendarDays },
+  { id: "performance", label: "Performance", path: "/booking/performance", icon: CalendarDays },
+  { id: "work", label: "Work", path: "/booking/work", icon: CalendarDays },
+];
 
 const Schedule = () => {
-  const { t } = useTranslation();
   const { userId } = useActiveProfile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
@@ -19,12 +24,12 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <FMPageScaffold
+    <HubLayout
       title="Schedule"
-      subtitle="Read-only view of your booked activities"
-      backTo="/dashboard"
-      backLabel="Back to Dashboard"
+      description="Read-only view of your booked activities and booking entry points."
       icon={Calendar}
+      navItems={scheduleHubNavItems}
+      breadcrumbs={[{ label: "Schedule" }]}
     >
 
       <GigLocationWarning />
@@ -97,7 +102,7 @@ const Schedule = () => {
           ))}
         </Tabs>
       )}
-    </FMPageScaffold>
+    </HubLayout>
   );
 };
 

@@ -25,6 +25,7 @@ interface CategoryHubProps {
   featuredEyebrow?: string;
   featuredHeadline?: string;
   featuredCopy?: string;
+  bare?: boolean;
 }
 
 export const CategoryHub = ({
@@ -36,6 +37,7 @@ export const CategoryHub = ({
   featuredEyebrow,
   featuredHeadline,
   featuredCopy,
+  bare = false,
 }: CategoryHubProps) => {
   const { t } = useTranslation();
   const title = t(titleKey);
@@ -53,8 +55,8 @@ export const CategoryHub = ({
 
   const hasRealStats = stats && stats.length > 0;
 
-  return (
-    <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
+  const content = (
+    <>
       {allGroups.length === 0 && (
         <PageEmptyState
           title="Nothing is on the setlist yet"
@@ -85,6 +87,14 @@ export const CategoryHub = ({
           <TileGrid tiles={group.tiles} />
         </SectionBand>
       ))}
+    </>
+  );
+
+  if (bare) return content;
+
+  return (
+    <FMPageScaffold title={title} subtitle={description} eyebrow={featuredEyebrow}>
+      {content}
     </FMPageScaffold>
   );
 };
