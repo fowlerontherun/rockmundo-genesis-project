@@ -6,6 +6,7 @@ import {
   type FullAttributeKey,
 } from "./attributeProgression";
 import { PROGRESSION_BALANCE, getDiminishingAttributeEffect } from "./progressionBalance";
+import { getMaintenanceMetadata } from "./skillMaintenance";
 
 export const SKILL_TYPES = [
   "foundation",
@@ -94,6 +95,12 @@ export interface CanonicalSkill {
   mastery_curve_key?: string | null;
   mastery_unlock_requirements?: unknown[];
   mastery_display_order?: number | null;
+  supports_maintenance?: boolean;
+  maintenance_policy_key?: string;
+  maintenance_threshold_level?: number;
+  maintenance_grace_days?: number;
+  maintenance_floor?: number;
+  recovery_rate_key?: string;
 }
 export interface SkillAttributeLink {
   skill_slug: string;
@@ -324,6 +331,10 @@ export const CANONICAL_SKILLS: CanonicalSkill[] = [
     icon_key: "sliders",
   },
 ];
+
+for (const skill of CANONICAL_SKILLS) {
+  Object.assign(skill, getMaintenanceMetadata(skill));
+}
 
 export const CANONICAL_ATTRIBUTE_LINKS: SkillAttributeLink[] = [
   ["guitar", "musical_ability", 0.7],
