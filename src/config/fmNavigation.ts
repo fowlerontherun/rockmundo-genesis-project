@@ -126,7 +126,7 @@ export const FM_MODULES: FMModule[] = [
     id: "music",
     label: "Music",
     icon: Music,
-    rootPath: "/hub/music",
+    rootPath: "/music",
     matchPaths: [
       "/hub/music", "/music", "/music-hub",
       "/songwriting", "/stage-practice", "/recording-studio",
@@ -136,10 +136,10 @@ export const FM_MODULES: FMModule[] = [
       "/competitive-charts", "/song-rankings", "/song-market", "/song-manager",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/music", icon: Music },
-      { label: "Songwriting", path: "/songwriting", icon: ListMusic },
-      { label: "Studio", path: "/recording-studio", icon: Disc3 },
-      { label: "Releases", path: "/release-manager", icon: Disc3 },
+      { label: "Overview", path: "/music", icon: Music },
+      { label: "Songwriting", path: "/music/songwriting", icon: ListMusic },
+      { label: "Recording", path: "/music/recording", icon: Disc3 },
+      { label: "Releases", path: "/music/releases", icon: Disc3 },
       { label: "Videos", path: "/music-videos", icon: Video },
       { label: "Charts", path: "/music/charts", icon: BarChart3 },
     ],
@@ -147,7 +147,7 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Create",
         items: [
-          { label: "Songwriting", path: "/songwriting", icon: ListMusic },
+          { label: "Songwriting", path: "/music/songwriting", icon: ListMusic },
           { label: "Stage Practice", path: "/stage-practice", icon: Guitar },
           { label: "Recording Studio", path: "/recording-studio", icon: Disc3 },
           { label: "Song Manager", path: "/song-manager", icon: ListMusic },
@@ -174,9 +174,9 @@ export const FM_MODULES: FMModule[] = [
       },
     ],
     quickActions: [
-      { label: "Write Song", path: "/songwriting", icon: ListMusic, description: "Start a new project" },
-      { label: "Record Track", path: "/recording-studio", icon: Disc3 },
-      { label: "Plan Release", path: "/release-manager", icon: Disc3 },
+      { label: "Write Song", path: "/music/songwriting", icon: ListMusic, description: "Start a new project" },
+      { label: "Record Track", path: "/music/recording", icon: Disc3 },
+      { label: "Plan Release", path: "/music/releases", icon: Disc3 },
       { label: "Create Music Video", path: "/music-videos", icon: Video },
     ],
   },
