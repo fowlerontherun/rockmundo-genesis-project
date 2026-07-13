@@ -68,15 +68,15 @@ export const FM_MODULES: FMModule[] = [
     id: "character",
     label: "Character",
     icon: Users,
-    rootPath: "/hub/character",
+    rootPath: "/character",
     matchPaths: [
-      "/hub/character", "/characters", "/my-character", "/avatar-designer",
+      "/character", "/hub/character", "/characters", "/my-character", "/avatar-designer",
       "/wellness", "/skin-store", "/tattoo-parlour", "/gear", "/gear-shop",
       "/inventory", "/clothing-shop", "/housing", "/personal-vehicles",
       "/family", "/legacy", "/hall-of-immortals",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/character", icon: Users },
+      { label: "Overview", path: "/character", icon: Users },
       { label: "Wellness", path: "/wellness", icon: Heart },
       { label: "Gear", path: "/gear", icon: Guitar },
       { label: "Housing", path: "/housing", icon: Home },
@@ -86,6 +86,7 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Identity",
         items: [
+          { label: "Overview", path: "/character", icon: Users },
           { label: "Characters", path: "/characters", icon: Users },
           { label: "Edit Character", path: "/my-character", icon: Users },
           { label: "Avatar Designer", path: "/avatar-designer", icon: Sparkles },
