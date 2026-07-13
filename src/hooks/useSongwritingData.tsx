@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import logger from "@/lib/logger";
+import { loadSongwritingProjectsResilient } from "@/lib/songwritingResilientLoader";
 
 export interface SongTheme {
   id: string;
@@ -186,70 +187,23 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
         profileId,
         userId,
       });
-      
-      let query = supabase
-        .from('songwriting_projects')
-        .select(`
-          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, arrangement_progress, polish_progress, consistency_score, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, songwriting_breakdown, calculation_version, completed_at, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at,
-          song_themes (id, name, description, mood),
-          chord_progressions (id, name, progression, difficulty),
-          songwriting_sessions (
-            id,
-            project_id,
-            user_id,
-            session_start,
-            session_end,
-            completed_at,
-            music_progress_gained,
-            lyrics_progress_gained,
-            xp_earned,
-            notes,
-            progress_breakdown,
-            session_type,
-            effort_hours
-          )
-        `)
-        .order('updated_at', { ascending: false })
-        .limit(100);
 
-      if (profileId && userId) {
-        query = query.or(`profile_id.eq.${profileId},user_id.eq.${userId}`);
-      } else if (profileId) {
-        query = query.eq('profile_id', profileId);
-      } else if (userId) {
-        query = query.eq('user_id', userId);
-      }
+      const { projects: loadedProjects, failures } = await loadSongwritingProjectsResilient(supabase, profileId, userId);
 
-      const { data, error } = await query;
-      
-      if (error) {
-        logger.error("Songwriting projects query failed", {
-          endpoint: "songwriting_projects",
-          profileId,
-          userId,
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        });
-        throw error;
-      }
-
-      logger.info("Songwriting projects query succeeded", {
+      logger.info("Songwriting core projects query succeeded", {
         endpoint: "songwriting_projects",
         profileId,
         userId,
         responseCode: 200,
-        count: data?.length ?? 0,
+        count: loadedProjects.length,
+        nonCriticalFailureCount: failures.length,
       });
-      
+
       // Auto-unlock expired projects - do this in background, don't block the query
-      const now = new Date().toISOString();
-      const needsUnlock = (data || []).filter(p => 
-        p.is_locked && p.locked_until && p.locked_until < now
+      const needsUnlock = loadedProjects.filter(p =>
+        p.is_locked && p.locked_until && p.locked_until < new Date().toISOString()
       );
-      
-      // Fire and forget - don't await, just update in background
+
       if (needsUnlock.length > 0) {
         Promise.all(
           needsUnlock.map(p =>
@@ -258,23 +212,17 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
               .update({ is_locked: false, locked_until: null })
               .eq('id', p.id)
           )
-        ).catch(() => undefined);
+        ).catch((error) => {
+          logger.warn("Expired songwriting project unlock failed", {
+            endpoint: "songwriting_projects",
+            profileId,
+            userId,
+            error,
+          });
+        });
       }
-      
-      // Order sessions by created_at DESC - mark expired locks as unlocked in UI immediately
-      const projectsWithSessions = (data || []).map(project => {
-        const isExpired = project.is_locked && project.locked_until && project.locked_until < now;
-        return {
-          ...project,
-          songwriting_sessions: (project.songwriting_sessions || []).sort(
-            (a: any, b: any) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime()
-          ),
-          is_locked: isExpired ? false : project.is_locked,
-          locked_until: isExpired ? null : project.locked_until,
-        };
-      });
-      
-      return projectsWithSessions as SongwritingProject[];
+
+      return loadedProjects as SongwritingProject[];
     }
   });
 
