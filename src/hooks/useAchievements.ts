@@ -6,8 +6,15 @@ export interface Achievement {
   name: string;
   description: string | null;
   icon: string | null;
+  icon_key?: string | null;
   category: string | null;
   rarity: string | null;
+  tier?: string | null;
+  slug?: string | null;
+  achievement_type?: string | null;
+  is_hidden?: boolean | null;
+  hidden_hint?: string | null;
+  points?: number | null;
   requirements: Record<string, any> | null;
   rewards: Record<string, any> | null;
   created_at: string | null;
@@ -57,7 +64,7 @@ export const useAchievements = (profileId?: string) => {
   });
 
   const unlockedIds = new Set(playerAchievements.map(pa => pa.achievement_id));
-  const locked = allAchievements.filter(a => !unlockedIds.has(a.id));
+  const locked = allAchievements.filter(a => !unlockedIds.has(a.id) && !a.is_hidden);
   const unlocked = playerAchievements.map(pa => pa.achievement).filter(Boolean) as Achievement[];
 
   const progressByCategory = allAchievements.reduce((acc, achievement) => {
