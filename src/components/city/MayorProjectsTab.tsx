@@ -29,6 +29,7 @@ import {
 } from "@/types/city-projects";
 import type { MayorPoliticsState } from "@/hooks/useMayorPolitics";
 import { useQueryClient } from "@tanstack/react-query";
+import { getSkillBySlug } from "@/utils/skillCatalogue";
 
 interface Props {
   cityId: string;
@@ -168,7 +169,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                           </div>
                           {!unlocked && t.required_skill_slug && (
                             <div className="text-xs text-warning">
-                              Requires {t.required_skill_slug.replace(/_/g, "")}{" "}
+                              Requires {getSkillBySlug(t.required_skill_slug)?.name ?? "Unknown catalogue skill"}{" "}
                               ≥ {t.required_skill_level}
                             </div>
                           )}

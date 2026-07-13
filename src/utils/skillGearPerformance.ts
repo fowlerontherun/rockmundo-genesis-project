@@ -6,6 +6,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getTieredBonusPercent } from "./tieredSkillBonus";
 
+const normalizeInstrumentSkillKey = (slug: string) => slug.replace(/^instruments_(basic|professional|mastery)_/, "");
+
 export interface SkillProgressEntry {
   skill_slug: string;
   current_level: number | null;
@@ -190,9 +192,9 @@ function calculateGearBonus(
 
   for (const bonus of gearBonuses) {
     // Check if the gear bonus matches any of the relevant skills
-    const skillBase = bonus.skill_slug.replace(/^instruments_(basic|professional|mastery)_/, '');
+    const skillBase = normalizeInstrumentSkillKey(bonus.skill_slug);
     for (const skill of relevantSkills) {
-      const targetBase = skill.replace(/^instruments_(basic|professional|mastery)_/, '');
+      const targetBase = normalizeInstrumentSkillKey(skill);
       if (skillBase === targetBase || skill.includes(skillBase) || skillBase.includes(targetBase.substring(0, 6))) {
         totalBonus += bonus.bonus_multiplier;
         matchCount++;

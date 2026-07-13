@@ -305,7 +305,6 @@ export const UniversityTab = () => {
         const formattedSkill = formatSkillSlug(c.skill_slug);
         const searchText = [
           c.name,
-          c.skill_slug.replace(/_/g, " "),
           formattedSkill,
           c.universities?.name,
           c.universities?.city,
