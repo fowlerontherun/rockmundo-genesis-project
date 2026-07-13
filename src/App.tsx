@@ -15,7 +15,7 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
-import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation, worldHubNavigation } from "./config/hubNavigation";
+import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation, socialHubNavigation, worldHubNavigation } from "./config/hubNavigation";
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
@@ -375,6 +375,7 @@ const HUB_TITLE_CONFIGS = [
   { title: "Band", overviewPath: "/band", items: bandHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
   { title: "World", overviewPath: "/world", items: worldHubNavigation },
+  { title: "Social", overviewPath: "/social", items: socialHubNavigation },
 ];
 
 const getRouteTitle = (pathname: string) => {
@@ -580,7 +581,7 @@ function App() {
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="band-vehicles" element={<BandVehicles />} />
-                    <Route path="relationships" element={<Navigate to="/social?tab=friends" replace />} />
+                    <Route path="relationships" element={<PreserveQueryRedirect to="/social/friends" />} />
                     <Route path="public-relations" element={<PublicRelations />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
@@ -619,6 +620,13 @@ function App() {
                     <Route path="jobs" element={<Jobs />} />
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
+                    <Route path="social/overview" element={<PreserveQueryRedirect to="/social" />} />
+                    <Route path="social/friends" element={<SocialHubUnified />} />
+                    <Route path="social/players" element={<SocialHubUnified />} />
+                    <Route path="social/messages" element={<SocialHubUnified />} />
+                    <Route path="social/invitations" element={<SocialHubUnified />} />
+                    <Route path="social/recruitment" element={<SocialHubUnified />} />
+                    <Route path="social/twaater" element={<PreserveQueryRedirect to="/twaater" />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
                     <Route path="twaater/analytics" element={<TwaaterAnalytics />} />
                     <Route path="twaater/tag/:hashtag" element={<TwaaterHashtagView />} />
@@ -629,7 +637,7 @@ function App() {
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
-                    <Route path="players/search" element={<Navigate to="/social?tab=discover" replace />} />
+                    <Route path="players/search" element={<PreserveQueryRedirect to="/social/players" />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="bands/search" element={<BandSearch />} />
@@ -670,7 +678,7 @@ function App() {
                     <Route path="hub" element={<Navigate to="/dashboard" replace />} />
                     {/* New split hubs */}
                     <Route path="hub/world" element={<PreserveQueryRedirect to="/world" />} />
-                    <Route path="hub/social" element={<SocialHubLanding />} />
+                    <Route path="hub/social" element={<PreserveQueryRedirect to="/social" />} />
                     <Route path="hub/media" element={<MediaHub />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />

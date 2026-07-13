@@ -1,4 +1,4 @@
-import { Backpack, BookOpen, Briefcase, Globe2, Building2, Calendar, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Landmark, ListMusic, MapPin, Mic2, Music, Package, Palette, Plane, Radio, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
+import { Backpack, BookOpen, Briefcase, Globe2, Building2, Calendar, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -45,6 +45,16 @@ export const worldHubNavigation: HubNavigationItem[] = [
   { id: "pulse", label: "World Pulse", path: "/world/pulse", icon: Radio, matchPaths: ["/world-pulse"] },
   { id: "leaderboards", label: "Leaderboards", path: "/world/leaderboards", icon: Trophy, matchPaths: ["/band-rankings", "/band-fame-map", "/song-rankings"] },
   { id: "treasuries", label: "Treasuries", path: "/world/treasuries", icon: Landmark, matchPaths: ["/cities/treasury"], mobileVisible: false },
+];
+
+export const socialHubNavigation: HubNavigationItem[] = [
+  { id: "overview", label: "Overview", path: "/social", icon: Users, matchPaths: ["/social/overview", "/hub/social"] },
+  { id: "friends", label: "Friends", path: "/social/friends", icon: Heart, matchPaths: ["/relationships", "/social?tab=friends"] },
+  { id: "players", label: "Players", path: "/social/players", icon: Search, matchPaths: ["/players/search", "/player/:playerId", "/social?tab=discover"] },
+  { id: "messages", label: "Messages", path: "/social/messages", icon: MessageSquare, matchPaths: ["/twaater/messages", "/social?tab=messages"] },
+  { id: "twaater", label: "Twaater", path: "/social/twaater", icon: Newspaper, matchPaths: ["/twaater", "/twaater/:handle", "/twaater/tag/:hashtag", "/twaater/twaat/:twaatId", "/twaater/notifications", "/twaater/analytics"] },
+  { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/finder", "/bands/browse", "/bands/search", "/band/:bandId"] },
+  { id: "invitations", label: "Invitations", path: "/social/invitations", icon: Inbox, matchPaths: ["/social?tab=invites"] },
 ];
 
 export const bandHubNavigation: HubNavigationItem[] = [

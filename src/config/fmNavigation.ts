@@ -448,7 +448,7 @@ export const FM_MODULES: FMModule[] = [
     id: "social",
     label: "Social",
     icon: MessageSquare,
-    rootPath: "/hub/social",
+    rootPath: "/social",
     matchPaths: [
       "/hub/social", "/social",
       "/twaater", "/dikcok", "/gettit",
@@ -457,7 +457,7 @@ export const FM_MODULES: FMModule[] = [
       "/premium-store", "/blind-boxes", "/vip-subscribe",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/social", icon: MessageSquare },
+      { label: "Overview", path: "/social", icon: MessageSquare },
       { label: "Twaater", path: "/twaater", icon: Newspaper },
       { label: "DikCok", path: "/dikcok", icon: Tv },
       { label: "Nightlife", path: "/nightclubs", icon: Sparkles },
@@ -468,7 +468,11 @@ export const FM_MODULES: FMModule[] = [
         label: "People",
         items: [
           { label: "Social Hub", path: "/social", icon: MessageSquare },
-          { label: "Friends", path: "/social?tab=friends", icon: Heart },
+          { label: "Friends", path: "/social/friends", icon: Heart },
+          { label: "Players", path: "/social/players", icon: Users },
+          { label: "Messages", path: "/social/messages", icon: MessageSquare },
+          { label: "Recruitment", path: "/social/recruitment", icon: Users },
+          { label: "Invitations", path: "/social/invitations", icon: InboxIcon },
         ],
       },
       {
@@ -501,7 +505,7 @@ export const FM_MODULES: FMModule[] = [
     quickActions: [
       { label: "Post on Twaater", path: "/twaater", icon: Newspaper, description: "Share with fans" },
       { label: "Hit a Nightclub", path: "/nightclubs", icon: Sparkles },
-      { label: "Open Messages", path: "/twaater/messages", icon: MessageSquare },
+      { label: "Open Messages", path: "/social/messages", icon: MessageSquare },
       { label: "Browse Premium Store", path: "/premium-store", icon: Crown },
     ],
   },
