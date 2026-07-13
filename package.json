@@ -29,7 +29,9 @@
     "test:gig-experience:e2e": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium",
     "test:gig-experience:e2e:headed": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium --headed",
     "test:gig-experience:a11y:unit": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx",
-    "test:achievements": "vitest run src/features/achievements/__tests__/validator.test.ts"
+    "test:achievements": "vitest run src/features/achievements/__tests__/validator.test.ts",
+    "validate:balance": "vitest run src/balance/__tests__/balance.test.ts",
+    "simulate:balance": "node scripts/progression-simulations/run-balance-simulations.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

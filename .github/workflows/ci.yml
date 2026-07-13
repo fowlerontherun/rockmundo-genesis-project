@@ -24,6 +24,8 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm run test:unit -- --reporter=default
+      - name: Balance validation gate
+        run: npm run validate:balance
       - name: Beta smoke tests
         run: npm run test:smoke -- --reporter=default
       - name: Build

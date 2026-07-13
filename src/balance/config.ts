@@ -1,0 +1,34 @@
+export const BALANCE_SCHEMA_VERSION = 1;
+export type Severity = "info" | "warning" | "critical";
+export interface BalanceIssue { severity: Severity; code: string; path: string; message: string }
+export interface WeightedConfig { [key: string]: number }
+export interface BalanceConfig {
+  progression: { xpCurve: { baseXpPerLevel: number; scalingFactor: number; maxLevel: number }; skillCurves: Record<string, string>; learningBonusCap: number };
+  attributes: { keys: string[]; maxValue: number; trainingIncrement: number; costCurve: { base: number; scalingFactor: number; bandSize: number }; apIncome: { dailyBase: number; veteranMin: number; veteranDecayStartXp: number; veteranDecayEndXp: number } };
+  practice: { dailySessionCap: number; baseRewardXp: number; diminishingReturnRate: number; cooldownMinutes: number };
+  songwriting: { scoreCap: number; weights: WeightedConfig; genreMismatchPenalty: number; collaborationBonusCap: number };
+  recording: { scoreCap: number; weights: WeightedConfig; missingRolePenalty: number; studioQualityCap: number };
+  gigs: { scoreCap: number; weights: WeightedConfig; fatiguePenaltyCap: number; rehearsalBonusCap: number };
+  mastery: { ranks: Array<{ rank: number; requiredXp: number; bonusCap: number }> };
+  maintenance: { graceDays: number; decayPerDay: number; floorSharpness: number; refreshCooldownHours: number };
+  teaching: { baseRewardXp: number; teacherMultiplier: number; repeatPenaltyRate: number; dailyPairCap: number; reciprocalCooldownDays: number };
+  bandProgression: { synergyCap: number; milestoneRewards: Array<{ key: string; xp: number; ap: number }> };
+  achievements: { repeatableRewardCap: number; rewards: Array<{ key: string; xp: number; ap: number; repeatable: boolean }> };
+}
+export const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
+  progression: { xpCurve: { baseXpPerLevel: 250, scalingFactor: 1.15, maxLevel: 100 }, skillCurves: { guitar: "standard", vocals: "standard", songwriting: "standard", recording: "standard", performance: "standard" }, learningBonusCap: 0.25 },
+  attributes: { keys: ["charisma","looks","mental_focus","musicality","physical_endurance","stage_presence","crowd_engagement","social_reach","musical_ability","vocal_talent","rhythm_sense","creative_insight","technical_mastery"], maxValue: 1000, trainingIncrement: 10, costCurve: { base: 100, scalingFactor: 1.5, bandSize: 10 }, apIncome: { dailyBase: 10, veteranMin: 2, veteranDecayStartXp: 1000, veteranDecayEndXp: 10000 } },
+  practice: { dailySessionCap: 4, baseRewardXp: 120, diminishingReturnRate: 0.72, cooldownMinutes: 240 },
+  songwriting: { scoreCap: 1000, weights: { skill: 0.45, attributes: 0.25, genreFit: 0.15, collaboration: 0.10, randomness: 0.05 }, genreMismatchPenalty: 0.2, collaborationBonusCap: 0.15 },
+  recording: { scoreCap: 1000, weights: { song: 0.3, performers: 0.25, production: 0.2, studio: 0.15, preparation: 0.1 }, missingRolePenalty: 0.25, studioQualityCap: 1 },
+  gigs: { scoreCap: 1000, weights: { technical: 0.3, stagePresence: 0.25, rehearsal: 0.2, fame: 0.1, setlistFit: 0.1, variance: 0.05 }, fatiguePenaltyCap: 0.35, rehearsalBonusCap: 0.2 },
+  mastery: { ranks: [{ rank: 1, requiredXp: 5000, bonusCap: 0.03 },{ rank: 2, requiredXp: 15000, bonusCap: 0.06 },{ rank: 3, requiredXp: 40000, bonusCap: 0.1 }] },
+  maintenance: { graceDays: 14, decayPerDay: 0.015, floorSharpness: 0.55, refreshCooldownHours: 20 },
+  teaching: { baseRewardXp: 80, teacherMultiplier: 1.2, repeatPenaltyRate: 0.5, dailyPairCap: 2, reciprocalCooldownDays: 7 },
+  bandProgression: { synergyCap: 0.2, milestoneRewards: [{ key: "first_rehearsal", xp: 150, ap: 1 },{ key: "first_gig", xp: 300, ap: 2 }] },
+  achievements: { repeatableRewardCap: 3, rewards: [{ key: "first_song", xp: 200, ap: 1, repeatable: false },{ key: "weekly_practice", xp: 100, ap: 0, repeatable: true }] },
+};
+export const REQUIRED_BALANCE_SECTIONS = Object.keys(DEFAULT_BALANCE_CONFIG) as Array<keyof BalanceConfig>;
+export function xpForLevel(config: BalanceConfig, level: number): number { if (level <= 1) return 0; const {baseXpPerLevel, scalingFactor}=config.progression.xpCurve; return Math.floor(baseXpPerLevel * (Math.pow(scalingFactor, level - 1) - 1) / (scalingFactor - 1)); }
+export function levelForXp(config: BalanceConfig, xp: number): number { const {baseXpPerLevel, scalingFactor, maxLevel}=config.progression.xpCurve; if (xp<=0) return 1; return Math.min(maxLevel, Math.max(1, Math.floor(Math.log(xp * (scalingFactor - 1) / baseXpPerLevel + 1) / Math.log(scalingFactor) + 1))); }
+export function validateBalanceConfig(config: unknown): { ok: boolean; issues: BalanceIssue[] } { const issues: BalanceIssue[]=[]; const c=config as Partial<BalanceConfig>; for (const section of REQUIRED_BALANCE_SECTIONS) if (!(section in (c ?? {}))) issues.push({severity:"critical",code:"missing_section",path:String(section),message:`Missing ${section} section`}); if (issues.length) return {ok:false,issues}; const add=(severity:Severity,code:string,path:string,message:string)=>issues.push({severity,code,path,message}); const finite=(v:number,path:string,min=0,max=Number.MAX_SAFE_INTEGER)=>{ if(!Number.isFinite(v)||v<min||v>max)add("critical","invalid_range",path,`${path} must be between ${min} and ${max}`)}; finite(c.progression!.xpCurve.baseXpPerLevel,"progression.xpCurve.baseXpPerLevel",1,100000); finite(c.progression!.xpCurve.scalingFactor,"progression.xpCurve.scalingFactor",1.01,5); finite(c.progression!.xpCurve.maxLevel,"progression.xpCurve.maxLevel",2,1000); finite(c.progression!.learningBonusCap,"progression.learningBonusCap",0,1); finite(c.attributes!.maxValue,"attributes.maxValue",1,10000); finite(c.practice!.dailySessionCap,"practice.dailySessionCap",1,24); finite(c.practice!.baseRewardXp,"practice.baseRewardXp",1,100000); finite(c.practice!.diminishingReturnRate,"practice.diminishingReturnRate",0,1); for (const group of [["songwriting",c.songwriting!.weights],["recording",c.recording!.weights],["gigs",c.gigs!.weights]] as const) { const sum=Object.values(group[1]).reduce((a,b)=>a+b,0); if(Object.values(group[1]).some(v=>v<0)) add("critical","negative_weight",`${group[0]}.weights`,"Weights must be non-negative"); if(Math.abs(sum-1)>0.0001) add("critical","invalid_weight_total",`${group[0]}.weights`,`Weights must total 1; got ${sum.toFixed(4)}`); } let prev=-1; c.mastery!.ranks.forEach((r,i)=>{ if(r.requiredXp<=prev)add("critical","non_monotonic_mastery",`mastery.ranks.${i}.requiredXp`,"Mastery requirements must increase"); prev=r.requiredXp; finite(r.bonusCap,`mastery.ranks.${i}.bonusCap`,0,1); }); if(c.maintenance!.floorSharpness>=1)add("critical","invalid_floor","maintenance.floorSharpness","Maintenance floor must be below full sharpness"); if(c.teaching!.dailyPairCap<1)add("critical","invalid_cap","teaching.dailyPairCap","Teaching pair cap must be positive"); return {ok:!issues.some(i=>i.severity==="critical"),issues}; }
