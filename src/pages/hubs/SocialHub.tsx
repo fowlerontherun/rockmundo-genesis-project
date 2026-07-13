@@ -1,4 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
+import { PresenceDirectoryPanel } from "@/components/presence/PresenceDirectoryPanel";
 import {
   Users, Twitter, Video, HandHeart, MessageSquare, Sparkles, Dices,
   Ticket, Skull, Crown, Package, Star,
@@ -6,6 +7,8 @@ import {
 
 export default function SocialHub() {
   return (
+    <div className="space-y-4">
+      <PresenceDirectoryPanel title="Friends online now" />
     <CategoryHub
       titleKey="nav.social"
       description="People, peer platforms, nightlife, and premium goods."
@@ -44,5 +47,6 @@ export default function SocialHub() {
         },
       ]}
     />
+    </div>
   );
 }

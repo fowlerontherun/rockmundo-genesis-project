@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { sendBandInvitation } from "@/services/bandInvitations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,8 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { sendBandInvitation, friendlyBandInvitationError } from "@/services/bandInvitations";
+import { PresenceIndicator } from "@/components/presence/PresenceIndicator";
+import { mergePresenceProfiles } from "@/services/presenceService";
 
 const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
@@ -58,6 +59,16 @@ export default function PlayerProfile() {
   });
 
   // Friendship status
+  const { data: profilePresence } = useQuery({
+    queryKey: ["player-profile-presence", playerId],
+    queryFn: async () => {
+      if (!playerId || !profile) return null;
+      const { data } = await supabase.from("profile_activity_statuses").select("profile_id,activity_type,status,started_at,updated_at,ends_at,metadata").eq("profile_id", playerId).is("completed_at", null).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      return mergePresenceProfiles([{ id: profile.id, user_id: profile.user_id, username: profile.username, display_name: profile.display_name, avatar_url: profile.avatar_url, city_name: profile.city_name, updated_at: profile.created_at } as any], data ? [data as any] : [], new Set())[0];
+    },
+    enabled: !!playerId && !!profile,
+  });
+
   const { data: friendship } = useQuery({
     queryKey: ["friendship-status", currentUser?.id, playerId],
     queryFn: async () => {
@@ -239,6 +250,7 @@ export default function PlayerProfile() {
                     <h1 className="text-2xl font-bold">
                       {profile.display_name || profile.username}
                     </h1>
+                    {profilePresence && <PresenceIndicator state={profilePresence.presence} />}
                   </div>
                   {profile.display_name && (
                     <p className="text-muted-foreground text-sm">@{profile.username}</p>
@@ -359,6 +371,7 @@ export default function PlayerProfile() {
                 </span>
               </div>
 
+              {profilePresence?.activity && <p className="text-sm font-medium text-primary">{profilePresence.activity}</p>}
               {profile.bio && <p className="text-sm">{profile.bio}</p>}
             </div>
           </div>

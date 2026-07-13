@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageErrorState, PageLoadingState } from "@/components/ui/page-state";
+import { PresenceDirectoryPanel } from "@/components/presence/PresenceDirectoryPanel";
 import { worldHubNavigation } from "@/config/hubNavigation";
 import { useGameData } from "@/hooks/useGameData";
 import { useTravelStatus } from "@/hooks/useTravelStatus";
@@ -61,6 +62,7 @@ export default function WorldOverview() {
       {error ? <PageErrorState title="World data could not be loaded" description="The hub is still available; retry to reload local discovery cards." onRetry={() => { void localQuery.refetch(); void citiesQuery.refetch(); }} /> : null}
       {!isLoading && !error ? (
         <div className="space-y-4">
+          <PresenceDirectoryPanel cityId={currentCityId} title={cityName ? `${cityName} live population` : "Live population"} />
           <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Current location</CardTitle><CardDescription>Authoritative profile location and current travel state.</CardDescription></CardHeader>
