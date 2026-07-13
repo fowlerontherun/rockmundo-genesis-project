@@ -138,6 +138,8 @@ const TwaaterNotifications = lazyWithRetry(() => import("./pages/TwaaterNotifica
 const TwaaterTwaatView = lazyWithRetry(() => import("./pages/TwaaterTwaatView"));
 const TwaaterAnalytics = lazyWithRetry(() => import("./pages/TwaaterAnalytics"));
 const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
+const BandRecruitmentDiscovery = lazyWithRetry(() => import("./pages/community/BandRecruitment"));
+const BandRecruitmentManagement = lazyWithRetry(() => import("./pages/bands/[bandId]/recruitment"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -509,6 +511,8 @@ function App() {
                     <Route path="band/tours" element={<PreserveQueryRedirect to="/tour-manager" />} />
                     <Route path="band/equipment" element={<PreserveQueryRedirect to="/band-crew" />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
+                    <Route path="bands/:bandId/recruitment" element={<BandRecruitmentManagement />} />
+                    <Route path="bands/:bandId/recruitment/new" element={<BandRecruitmentManagement />} />
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
@@ -664,7 +668,7 @@ function App() {
                     <Route path="social/players" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
-                    <Route path="social/recruitment" element={<SocialHubUnified />} />
+                    <Route path="social/recruitment" element={<BandRecruitmentDiscovery />} />
                     <Route path="social/twaater" element={<PreserveQueryRedirect to="/twaater" />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
                     <Route path="twaater/analytics" element={<TwaaterAnalytics />} />
@@ -681,6 +685,8 @@ function App() {
                     <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
                     <Route path="settings/safety/reports" element={<MyReportsPage />} />
                     <Route path="community/players" element={<PlayerDiscovery />} />
+                    <Route path="community/bands/recruitment" element={<BandRecruitmentDiscovery />} />
+                    <Route path="community/invitations" element={<SocialHubUnified />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="players/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
