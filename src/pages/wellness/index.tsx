@@ -145,6 +145,19 @@ const WellnessPage = () => {
     );
   }
 
+  if (!vitals) {
+    return (
+      <div className="space-y-4 p-6">
+        <Alert>
+          <AlertTitle>Wellness data unavailable</AlertTitle>
+          <AlertDescription>
+            We couldn't load your character's vitals yet. Try refreshing the page in a moment.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-4 lg:p-6">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
