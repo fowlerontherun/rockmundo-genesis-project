@@ -141,6 +141,10 @@ const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const BandRecruitmentDiscovery = lazyWithRetry(() => import("./pages/community/BandRecruitment"));
 const BandRecruitmentManagement = lazyWithRetry(() => import("./pages/bands/[bandId]/recruitment"));
 const BandGovernanceDashboard = lazyWithRetry(() => import("./pages/bands/[bandId]/governance"));
+const BandAgreementsDashboard = lazyWithRetry(() => import("./pages/bands/[bandId]/agreements"));
+const NewBandAgreementPage = lazyWithRetry(() => import("./pages/bands/[bandId]/agreements/new"));
+const BandLeavePage = lazyWithRetry(() => import("./pages/bands/[bandId]/leave"));
+const CharacterAgreementsPage = lazyWithRetry(() => import("./pages/character/agreements"));
 const NewBandProposalPage = lazyWithRetry(() => import("./pages/bands/[bandId]/governance/new"));
 const BandProposalDetailPage = lazyWithRetry(() => import("./pages/bands/[bandId]/governance/detail"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
@@ -470,6 +474,7 @@ function App() {
                     <Route path="character" element={<CharacterOverview />} />
                     <Route path="character/overview" element={<PreserveQueryRedirect to="/character" />} />
                     <Route path="character/profile/edit" element={<PlayerProfileEdit />} />
+                    <Route path="character/agreements" element={<CharacterAgreementsPage />} />
                     <Route path="character/wellness" element={<PreserveQueryRedirect to="/wellness" />} />
                     <Route path="character/skills" element={<PreserveQueryRedirect to="/skills" />} />
                     <Route path="character/inventory" element={<PreserveQueryRedirect to="/inventory" />} />
@@ -519,6 +524,9 @@ function App() {
                     <Route path="bands/:bandId/recruitment" element={<BandRecruitmentManagement />} />
                     <Route path="bands/:bandId/recruitment/new" element={<BandRecruitmentManagement />} />
                     <Route path="bands/:bandId/governance" element={<BandGovernanceDashboard />} />
+                    <Route path="bands/:bandId/agreements" element={<BandAgreementsDashboard />} />
+                    <Route path="bands/:bandId/agreements/new" element={<NewBandAgreementPage />} />
+                    <Route path="bands/:bandId/leave" element={<BandLeavePage />} />
                     <Route path="bands/:bandId/governance/proposals/new" element={<NewBandProposalPage />} />
                     <Route path="bands/:bandId/governance/proposals/:proposalId" element={<BandProposalDetailPage />} />
                     <Route path="gigs" element={<GigBooking />} />

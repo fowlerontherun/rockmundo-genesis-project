@@ -1,0 +1,19 @@
+export type AgreementType =
+  | 'standard_membership' | 'trial_membership' | 'full_membership' | 'touring_member'
+  | 'session_musician' | 'temporary_stand_in' | 'songwriting_collaboration'
+  | 'recording_participation' | 'revenue_share_amendment' | 'departure_settlement'
+  | 'founder_ownership';
+
+export type AgreementStatus = 'draft' | 'proposed' | 'awaiting_signatures' | 'partially_signed' | 'active' | 'rejected' | 'withdrawn' | 'expired' | 'superseded' | 'terminated' | 'completed' | 'disputed' | 'cancelled';
+export type SignatureStatus = 'pending' | 'signed' | 'rejected' | 'withdrawn' | 'invalidated';
+export type RevenueCategory = 'gig_income' | 'tour_income' | 'streaming_revenue' | 'digital_sales' | 'physical_sales' | 'songwriting_royalties' | 'recording_royalties' | 'merchandise_profit' | 'sponsorship_income' | 'festival_income' | 'licensing_income' | 'other_band_income';
+export type ShareRuleType = 'equal_split' | 'percentage_split' | 'fixed_share' | 'role_based_share' | 'contribution_based_share' | 'no_share' | 'fixed_fee_plus_share' | 'project_specific_share' | 'release_specific_share' | 'song_specific_share';
+
+export interface RevenueRecipientShare { recipientId: string; recipientType: 'player' | 'band_reserve' | 'external'; percentage?: number; fixedAmount?: number; role?: string; }
+export interface RevenueCategoryRule { category: RevenueCategory; ruleType: ShareRuleType; recipients: RevenueRecipientShare[]; unallocatedPercentage?: number; appliesFrom: string; projectRef?: { type: 'song' | 'release' | 'tour' | 'gig'; id: string }; }
+export interface FixedFeeTerm { recipientId: string; amount: number; currency: string; paymentTiming: 'on_activation' | 'on_completion' | 'scheduled'; completionCondition?: string; idempotencyKey: string; }
+export interface BandAgreementTerms { membershipType?: string; musicalPosition?: string; managementResponsibilities: string[]; trialPeriodDays?: number; expectations: { rehearsals?: string; gigs?: string; touring?: string; availability?: string }; revenueShares: RevenueCategoryRule[]; expenseRules: string[]; fixedFees: FixedFeeTerm[]; equipmentOwnership?: string; creativeOwnership: { songwritingDefault?: string; recordingDefault?: string; releaseIncomeDefault?: string; survivesDeparture: string[] }; noticePeriodDays: number; departureRules: string[]; removalRules: string[]; postDepartureIncome?: string; disputeProcess: string; effectiveDates: { from: string; until?: string }; amendmentRules: string[]; notes?: string; }
+export interface AgreementParty { playerId: string; partyRole: 'member' | 'band_signatory' | 'affected_member' | 'contributor' | 'owner'; mandatory: boolean; signatureStatus: SignatureStatus; signatureVersion?: number; signedAt?: string; acknowledgementSnapshot?: Record<string, unknown>; }
+export interface BandAgreement { id: string; bandId: string; agreementType: AgreementType; title: string; version: number; status: AgreementStatus; effectiveFrom: string; effectiveUntil?: string; createdBy: string; supersedesAgreementId?: string; governanceProposalId?: string; templateId?: string; termsSnapshot: BandAgreementTerms; parties: AgreementParty[]; createdAt: string; updatedAt: string; activatedAt?: string; terminatedAt?: string; }
+export interface RevenueAllocationInput { bandId: string; category: RevenueCategory; grossAmount: number; costs: number; occurredAt: string; source: { type: 'gig' | 'tour' | 'release' | 'merch' | 'sponsorship' | 'other'; id: string }; }
+export interface RevenueAllocationSnapshot { agreementId?: string; agreementVersion?: number; revenueSource: RevenueAllocationInput['source']; grossAmount: number; costs: number; netDistributable: number; shareRulesUsed: RevenueCategoryRule[]; allocations: Array<{ recipientId: string; recipientType: RevenueRecipientShare['recipientType']; amount: number; percentage?: number }>; allocatedAt: string; }
