@@ -1,43 +1,71 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTranslation } from '@/hooks/useTranslation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
-import { useActiveProfile } from '@/hooks/useActiveProfile';
-import { BandCreationForm } from '@/components/band/BandCreationForm';
-import { BandOverview } from '@/components/band/BandOverview';
-import { BandMemberCard } from '@/components/band/BandMemberCard';
-import { AddTouringMember } from '@/components/band/AddTouringMember';
-import { ChemistryDisplay } from '@/components/band/ChemistryDisplay';
-import { BandChat } from '@/components/band/BandChat';
-import { BandEarnings } from '@/components/band/BandEarnings';
-import { BandFinancesTab } from '@/components/bands/BandFinancesTab';
-import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
-import { BandSettingsTab } from '@/components/band/BandSettingsTab';
-import { BandStatusBanner } from '@/components/band/BandStatusBanner';
-import { BandApplicationsList } from '@/components/band/BandApplicationsList';
-import { BandInvitations } from '@/components/band/BandInvitations';
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "@/hooks/useTranslation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { BandCreationForm } from "@/components/band/BandCreationForm";
+import { BandOverview } from "@/components/band/BandOverview";
+import { BandMemberCard } from "@/components/band/BandMemberCard";
+import { AddTouringMember } from "@/components/band/AddTouringMember";
+import { ChemistryDisplay } from "@/components/band/ChemistryDisplay";
+import { BandChat } from "@/components/band/BandChat";
+import { BandEarnings } from "@/components/band/BandEarnings";
+import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
+import { InviteFriendToBand } from "@/components/band/InviteFriendToBand";
+import { BandSettingsTab } from "@/components/band/BandSettingsTab";
+import { BandStatusBanner } from "@/components/band/BandStatusBanner";
+import { BandApplicationsList } from "@/components/band/BandApplicationsList";
+import { BandInvitations } from "@/components/band/BandInvitations";
 
-import { GigHistoryTab } from '@/components/band/GigHistoryTab';
-import { BandRepertoireTab } from '@/components/band/BandRepertoireTab';
-import { FameFansOverview } from '@/components/fame/FameFansOverview';
-import { Users, Music, Star, Library } from 'lucide-react';
-import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { useToast } from '@/hooks/use-toast';
-import { getUserBands } from '@/utils/bandStatus';
-import { reactivateBand } from '@/utils/bandHiatus';
-import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
-import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
+import { GigHistoryTab } from "@/components/band/GigHistoryTab";
+import { BandRepertoireTab } from "@/components/band/BandRepertoireTab";
+import { FameFansOverview } from "@/components/fame/FameFansOverview";
+import {
+  Calendar,
+  DollarSign,
+  History,
+  Mic2,
+  Package,
+  Plus,
+  Settings,
+  Users,
+  Music,
+  Star,
+  Library,
+  Zap,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getUserBands } from "@/utils/bandStatus";
+import { reactivateBand } from "@/utils/bandHiatus";
+import { getBandStatusLabel, getBandStatusColor } from "@/utils/bandStatus";
+import { useAutoGigExecution } from "@/hooks/useAutoGigExecution";
+import HubLayout from "@/components/hub/HubLayout";
+import { bandHubNavigation } from "@/config/hubNavigation";
+import { PageLoadingState } from "@/components/ui/page-state";
 
 export default function BandManager() {
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [userBands, setUserBands] = useState<any[]>([]);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
@@ -64,20 +92,24 @@ export default function BandManager() {
 
     try {
       const bands = await getUserBands(profileId);
-      
+
       // Filter out disbanded bands
-      const activeBands = bands.filter((b: any) => b.bands.status !== 'disbanded');
+      const activeBands = bands.filter(
+        (b: any) => b.bands.status !== "disbanded",
+      );
       setUserBands(activeBands);
 
       // Auto-select first active band, or first hiatus band
-      const activeFirst = activeBands.find((b: any) => b.bands.status === 'active');
+      const activeFirst = activeBands.find(
+        (b: any) => b.bands.status === "active",
+      );
       const defaultBand = activeFirst || activeBands[0];
-      
+
       if (defaultBand) {
         setSelectedBandId(defaultBand.band_id);
       }
     } catch (error) {
-      console.error('Error loading bands:', error);
+      console.error("Error loading bands:", error);
     } finally {
       setLoading(false);
     }
@@ -87,9 +119,9 @@ export default function BandManager() {
     try {
       // Load band data
       const { data: band } = await supabase
-        .from('bands')
-        .select('*')
-        .eq('id', bandId)
+        .from("bands")
+        .select("*")
+        .eq("id", bandId)
         .single();
 
       if (band) {
@@ -97,17 +129,17 @@ export default function BandManager() {
         await loadBandMembers(bandId);
       }
     } catch (error) {
-      console.error('Error loading band details:', error);
+      console.error("Error loading band details:", error);
     }
   };
 
   const loadBandMembers = async (bandId: string) => {
     // First get all band members (including touring members with null user_id)
     const { data: bandMembersData } = await supabase
-      .from('band_members')
-      .select('*')
-      .eq('band_id', bandId)
-      .order('joined_at', { ascending: true });
+      .from("band_members")
+      .select("*")
+      .eq("band_id", bandId)
+      .order("joined_at", { ascending: true });
 
     if (!bandMembersData) {
       setMembers([]);
@@ -116,23 +148,23 @@ export default function BandManager() {
 
     // Get profile_ids that are not null (use profile_id to get the correct character)
     const profileIds = bandMembersData
-      .map(m => m.profile_id)
+      .map((m) => m.profile_id)
       .filter((id): id is string => id !== null);
 
     // Fetch profiles for human members only
     let profilesData: any[] = [];
     if (profileIds.length > 0) {
       const { data } = await supabase
-        .from('profiles')
-        .select('id, user_id, display_name, username')
-        .in('id', profileIds);
+        .from("profiles")
+        .select("id, user_id, display_name, username")
+        .in("id", profileIds);
       profilesData = data || [];
     }
 
     // Attach profile data to members using profile_id
-    const membersWithProfiles = bandMembersData.map(member => {
+    const membersWithProfiles = bandMembersData.map((member) => {
       if (member.profile_id) {
-        const profile = profilesData.find(p => p.id === member.profile_id);
+        const profile = profilesData.find((p) => p.id === member.profile_id);
         return { ...member, profiles: profile || null };
       }
       return { ...member, profiles: null };
@@ -144,15 +176,15 @@ export default function BandManager() {
   const handleRemoveMember = async (memberId: string) => {
     try {
       const { error } = await supabase
-        .from('band_members')
+        .from("band_members")
         .delete()
-        .eq('id', memberId);
+        .eq("id", memberId);
 
       if (error) throw error;
 
       toast({
-        title: 'Member Removed',
-        description: 'The band member has been removed',
+        title: "Member Removed",
+        description: "The band member has been removed",
       });
 
       if (selectedBandId) {
@@ -160,9 +192,9 @@ export default function BandManager() {
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to remove member',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to remove member",
+        variant: "destructive",
       });
     }
   };
@@ -172,50 +204,110 @@ export default function BandManager() {
 
     try {
       const result = await reactivateBand(selectedBandId, profileId);
-      
+
       if (result.success) {
         toast({
-          title: 'Band Reactivated',
-          description: 'Your band is now active again',
+          title: "Band Reactivated",
+          description: "Your band is now active again",
         });
         await loadUserBands();
       } else if (result.conflicts && result.conflicts.length > 0) {
         toast({
-          title: 'Conflicts Detected',
+          title: "Conflicts Detected",
           description: `${result.conflicts.length} member(s) need to resolve conflicts with other bands`,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to reactivate band',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to reactivate band",
+        variant: "destructive",
       });
     }
   };
 
+  const activeSection = (() => {
+    const path = location.pathname;
+    if (path.endsWith("/members")) return "members";
+    if (path.endsWith("/fame")) return "fame";
+    if (path.endsWith("/repertoire")) return "repertoire";
+    if (path.endsWith("/history")) return "history";
+    if (path.endsWith("/finances")) return "finances";
+    if (path.endsWith("/chemistry")) return "chemistry";
+    if (path.endsWith("/settings")) return "settings";
+    return "overview";
+  })();
+
+  const selectSection = (section: string) => {
+    const target = section === "overview" ? "/band" : `/band/${section}`;
+    if (location.pathname !== target) navigate(target);
+  };
+
   if (loading) {
     return (
-      <FMPageScaffold title="Band Manager" icon={Users} backTo="/hub/band-live">
-        <div className="text-center">Loading...</div>
-      </FMPageScaffold>
+      <HubLayout
+        title="Band"
+        description="Manage your band, preparation and live performance workflow."
+        icon={Users}
+        overviewPath="/band"
+        navigation={bandHubNavigation}
+      >
+        <PageLoadingState
+          title="Loading Band"
+          description="Finding your active band and membership details."
+        />
+      </HubLayout>
     );
   }
 
   if (!selectedBand || userBands.length === 0) {
     return (
-      <FMPageScaffold
-        title="Band Manager"
-        subtitle="Create a band or become a solo artist to begin"
+      <HubLayout
+        title="Band"
+        description="Create a band, review invitations or find musicians before managing rehearsals and gigs."
         icon={Users}
-        backTo="/hub/band-live"
+        overviewPath="/band"
+        navigation={bandHubNavigation}
+        actions={[
+          {
+            label: "Browse bands",
+            path: "/bands/browse",
+            icon: Users,
+            variant: "outline",
+          },
+          {
+            label: "Find musicians",
+            path: "/bands/finder",
+            icon: Plus,
+            variant: "outline",
+          },
+        ]}
       >
-        <div className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>No active band yet</CardTitle>
+              <CardDescription>
+                Create a band, browse existing bands or respond to invitations
+                to unlock band management.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link to="/bands/browse">Browse bands</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/bands/finder">Find musicians</Link>
+              </Button>
+            </CardContent>
+          </Card>
           <BandInvitations />
-          <BandCreationForm onBandCreated={loadUserBands} />
+          <div className="lg:col-span-2">
+            <BandCreationForm onBandCreated={loadUserBands} />
+          </div>
         </div>
-      </FMPageScaffold>
+      </HubLayout>
     );
   }
 
@@ -225,65 +317,81 @@ export default function BandManager() {
 
   const isLeader = Boolean(
     (profileId && selectedBand.leader_id === profileId) ||
-      (userId && selectedBand.leader_id === userId) ||
-      currentMembership?.role === 'leader' ||
-      (profileId && currentMembership?.bands?.leader_id === profileId) ||
-      (userId && currentMembership?.bands?.leader_id === userId)
+    (userId && selectedBand.leader_id === userId) ||
+    currentMembership?.role === "leader" ||
+    (profileId && currentMembership?.bands?.leader_id === profileId) ||
+    (userId && currentMembership?.bands?.leader_id === userId),
   );
 
+  const bandTitle = selectedBand.is_solo_artist
+    ? selectedBand.artist_name || selectedBand.name
+    : selectedBand.name;
+  const hubActions = [
+    {
+      label: "Invite member",
+      path: "/band/members",
+      icon: Plus,
+      variant: "outline" as const,
+    },
+    {
+      label: "Schedule rehearsal",
+      path: "/band/rehearsals",
+      icon: Mic2,
+      variant: "outline" as const,
+    },
+    {
+      label: "Prepare gig",
+      path: "/band/gigs",
+      icon: Zap,
+      variant: "secondary" as const,
+    },
+  ];
+
   return (
-    <FMPageScaffold
-      title={selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
-      subtitle={`${selectedBand.genre || ''} • ${selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}`}
+    <HubLayout
+      title={bandTitle}
+      description={`${selectedBand.genre || "Genre unset"} • ${selectedBand.is_solo_artist ? "Solo Artist" : "Band"}`}
       icon={Music}
-      backTo="/hub/band-live"
-      backLabel="Back to Band & Live"
+      overviewPath="/band"
+      navigation={bandHubNavigation}
+      actions={hubActions}
+      breadcrumbs={[{ label: "Band", path: "/band" }, { label: bandTitle }]}
+      status={
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/70 p-3">
+          <Avatar className="h-12 w-12 border-2 border-primary/20">
+            <AvatarImage src={selectedBand.logo_url} alt={selectedBand.name} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {selectedBand.name?.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium">{bandTitle}</p>
+            <p className="text-sm text-muted-foreground">
+              {members.length} of {selectedBand.max_members} members •{" "}
+              {selectedBand.status}
+            </p>
+          </div>
+          {userBands.length > 1 && (
+            <Select
+              value={selectedBandId || ""}
+              onValueChange={setSelectedBandId}
+            >
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {userBands.map((band) => (
+                  <SelectItem key={band.band_id} value={band.band_id}>
+                    {band.bands.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      }
     >
       <div className="mb-6 space-y-4">
-        <div className="flex items-center justify-between">
-          {/* Band Info with Logo */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14 border-2 border-primary/20">
-              <AvatarImage src={selectedBand.logo_url} alt={selectedBand.name} />
-              <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                {selectedBand.name?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Music className="h-7 w-7" />
-                {selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
-              </h1>
-              <p className="text-muted-foreground">
-                {selectedBand.genre} • {selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Band Selector (if user has multiple bands) */}
-            {userBands.length > 1 && (
-              <Select value={selectedBandId || ''} onValueChange={setSelectedBandId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {userBands.map((band) => (
-                    <SelectItem key={band.band_id} value={band.band_id}>
-                      <div className="flex items-center gap-2">
-                        <span>{band.bands.name}</span>
-                        <Badge className={getBandStatusColor(band.bands.status)}>
-                          {getBandStatusLabel(band.bands.status)}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </div>
-
         {/* Status Banner for Hiatus */}
         <BandStatusBanner
           status={selectedBand.status}
@@ -295,34 +403,58 @@ export default function BandManager() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="h-auto flex flex-wrap gap-1 bg-muted/50 p-1">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="fame" className="flex items-center gap-1 text-xs sm:text-sm">
-              <Star className="h-3 w-3" />
-              <span className="hidden sm:inline">Fame & Fans</span>
-              <span className="sm:hidden">Fame</span>
-            </TabsTrigger>
-            <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>
-            <TabsTrigger value="repertoire" className="flex items-center gap-1 text-xs sm:text-sm">
-              <Library className="h-3 w-3" />
-              <span className="hidden sm:inline">Repertoire</span>
-              <span className="sm:hidden">Rep</span>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
-              <span className="hidden sm:inline">Gig History</span>
-              <span className="sm:hidden">History</span>
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="text-xs sm:text-sm">Chat</TabsTrigger>
-            <TabsTrigger value="earnings" className="text-xs sm:text-sm">Earnings</TabsTrigger>
-            <TabsTrigger value="finances" className="text-xs sm:text-sm">Finances</TabsTrigger>
-            <TabsTrigger value="chemistry" className="text-xs sm:text-sm">Chemistry</TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={activeSection}
+        onValueChange={selectSection}
+        className="space-y-6"
+      >
+        <TabsList className="h-auto flex flex-wrap gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="fame"
+            className="flex items-center gap-1 text-xs sm:text-sm"
+          >
+            <Star className="h-3 w-3" />
+            <span className="hidden sm:inline">Fame & Fans</span>
+            <span className="sm:hidden">Fame</span>
+          </TabsTrigger>
+          <TabsTrigger value="members" className="text-xs sm:text-sm">
+            Members
+          </TabsTrigger>
+          <TabsTrigger
+            value="repertoire"
+            className="flex items-center gap-1 text-xs sm:text-sm"
+          >
+            <Library className="h-3 w-3" />
+            <span className="hidden sm:inline">Repertoire</span>
+            <span className="sm:hidden">Rep</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm">
+            <span className="hidden sm:inline">Gig History</span>
+            <span className="sm:hidden">History</span>
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="text-xs sm:text-sm">
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="earnings" className="text-xs sm:text-sm">
+            Earnings
+          </TabsTrigger>
+          <TabsTrigger value="finances" className="text-xs sm:text-sm">
+            Finances
+          </TabsTrigger>
+          <TabsTrigger value="chemistry" className="text-xs sm:text-sm">
+            Chemistry
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs sm:text-sm">
+            Settings
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <BandOverview 
-            bandId={selectedBand.id} 
+          <BandOverview
+            bandId={selectedBand.id}
             isLeader={isLeader}
             logoUrl={selectedBand.logo_url}
             soundDescription={selectedBand.sound_description}
@@ -339,10 +471,10 @@ export default function BandManager() {
           <BandInvitations />
 
           {/* Pending Applications (Leader only) */}
-          {isLeader && selectedBand.status === 'active' && (
-            <BandApplicationsList 
-              bandId={selectedBand.id} 
-              onMemberAdded={() => loadBandMembers(selectedBand.id)} 
+          {isLeader && selectedBand.status === "active" && (
+            <BandApplicationsList
+              bandId={selectedBand.id}
+              onMemberAdded={() => loadBandMembers(selectedBand.id)}
             />
           )}
 
@@ -355,16 +487,16 @@ export default function BandManager() {
                     {members.length} of {selectedBand.max_members} members
                   </CardDescription>
                 </div>
-                {isLeader && selectedBand.status === 'active' && (
+                {isLeader && selectedBand.status === "active" && (
                   <div className="flex gap-2">
                     <InviteFriendToBand
                       bandId={selectedBand.id}
                       bandName={selectedBand.name}
                       currentUserId={profileId!}
                     />
-                    <AddTouringMember 
-                      bandId={selectedBand.id} 
-                      onAdded={() => loadBandMembers(selectedBand.id)} 
+                    <AddTouringMember
+                      bandId={selectedBand.id}
+                      onAdded={() => loadBandMembers(selectedBand.id)}
                     />
                   </div>
                 )}
@@ -375,10 +507,12 @@ export default function BandManager() {
                 <BandMemberCard
                   key={member.id}
                   member={member}
-                  isLeader={member.role === 'leader'}
-                  canManage={isLeader && selectedBand.status === 'active'}
+                  isLeader={member.role === "leader"}
+                  canManage={isLeader && selectedBand.status === "active"}
                   onRemove={
-                    isLeader && member.role !== 'leader' && selectedBand.status === 'active'
+                    isLeader &&
+                    member.role !== "leader" &&
+                    selectedBand.status === "active"
                       ? () => handleRemoveMember(member.id)
                       : undefined
                   }
@@ -389,7 +523,10 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="repertoire" className="space-y-4">
-          <BandRepertoireTab bandId={selectedBand.id} bandName={selectedBand.name} />
+          <BandRepertoireTab
+            bandId={selectedBand.id}
+            bandName={selectedBand.name}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
@@ -427,6 +564,6 @@ export default function BandManager() {
           />
         </TabsContent>
       </Tabs>
-    </FMPageScaffold>
+    </HubLayout>
   );
 }

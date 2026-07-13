@@ -336,3 +336,67 @@ Existing restrictions remain owned by the migrated pages: band membership for re
 ### Follow-up
 
 The next planned navigation PR is Band hub consolidation. That work should decide whether rehearsals, setlists, gigs, band recording participation and performance preparation receive band-owned canonical routes while continuing to share implementations with Music where appropriate.
+
+## PR 4 update — Band hub consolidation
+
+PR 4 makes `/band` the stable Band landing route. The top-level Band & Live navigation now opens the Band overview instead of the legacy category hub or a narrow management tab. The implementation reuses `HubLayout` and keeps existing gameplay components for membership, roles, repertoire, finances, chemistry, history and settings.
+
+### Final Band hub hierarchy
+
+The Band hub surfaces existing systems only:
+
+| Hub item | Canonical route | Implementation / ownership |
+| --- | --- | --- |
+| Overview | `/band` | Existing band overview, status, current member count, invitations and quick actions. |
+| Members & Roles | `/band/members` | Existing member cards, invitations, applications, touring members and role management controls. |
+| Fame & Fans | `/band/fame` | Existing fame/fans overview from the band manager. |
+| Repertoire | `/band/repertoire` | Existing band repertoire tab; setlist aliases continue to the shared setlist manager. |
+| Rehearsals | `/band/rehearsals` | Alias to the existing rehearsal page so booking and attendance rules remain unchanged. |
+| Gigs | `/band/gigs` | Alias to the existing gigs page and gig-preparation flow. |
+| Tours | `/band/tours` | Alias to the existing tour manager; vehicle and rider legacy links remain compatible. |
+| Equipment & Crew | `/band/equipment` | Alias to existing band crew/stage equipment entry points. |
+| Finances | `/band/finances` | Existing band finance tab. |
+| Chemistry | `/band/chemistry` | Existing chemistry display. |
+| History | `/band/history` | Existing gig history tab. |
+| Settings | `/band/settings` | Existing permission-gated settings tab. |
+
+### Canonical Band route model
+
+`/band` is the canonical active-band overview. Child routes under `/band/*` either render the existing band-management tab in the shared hub shell or redirect with query parameters preserved to the existing shared implementation. Direct profile/entity routes such as `/band/:bandId` and `/bands/:bandId/management` remain in place for public profiles and deep management links.
+
+### Active-band context behaviour
+
+The Band hub preserves the existing `getUserBands(profileId)` selection model. It selects the first active band, then the first non-disbanded band if no active band exists. When a player belongs to multiple bands, the existing selector remains visible in the hub header and switches the selected band without inventing a new global active-band store. No-band players stay on `/band` and see invitations, create-band, browse-band and find-musician actions instead of being redirected to an error page.
+
+### Route migration table and legacy aliases
+
+| Legacy / alternate route | PR 4 behaviour |
+| --- | --- |
+| `/hub/band-live`, `/hub/band`, `/hub/live` | Treated as Band overview aliases for selection/title purposes; existing hub route compatibility remains. |
+| `/band/overview` | Redirects to `/band`. |
+| `/chemistry` | Remains valid and selects the Band Chemistry item. |
+| `/setlists` | Remains the shared setlist manager and selects Band Repertoire/Setlists when viewed in Band context. |
+| `/rehearsals`, `/jam-sessions`, `/jams` | Remain shared activity pages and select Band Rehearsals/Jam Sessions aliases. |
+| `/gigs`, `/gig-booking`, `/gigs/perform/:gigId` | Remain existing gig and performance routes and select Band Gigs. |
+| `/tour-manager`, `/band-vehicles`, `/band-riders` | Remain existing tour/support routes and select Band Tours. |
+| `/stage-setup`, `/stage-equipment`, `/band-crew` | Remain existing preparation/support routes and select Equipment & Crew. |
+
+### Music and Band ownership decisions
+
+Music continues to own songwriting, practice, recording, releases, albums and the general song catalogue. Band owns member management, roles, chemistry, band-specific preparation, repertoire, rehearsals in a band context, gig preparation, tours, equipment, crew, finances, settings and history. Shared rehearsals, jam sessions, setlists, recordings and releases are not duplicated; Band links to existing shared routes and preserves the underlying booking, attendance, setlist, recording and release permission rules.
+
+### Band Overview content, alerts and quick actions
+
+The overview uses the existing band overview component and real selected-band data: identity, genre, logo, status, member count, leader state, invitations, status banners, repertoire and performance summaries exposed by the existing components. Quick actions link to existing member invitation, rehearsal and gig-preparation entry points. Hiatus/reactivation alerts and permission handling remain owned by the existing band status and settings components.
+
+### Permission behaviour
+
+Leader-only actions such as accepting applications, inviting members, adding touring members, removing members and editing restricted settings still use the existing `isLeader` checks. The hub shell remains visible for non-leaders so read-only areas such as overview, members, chemistry, history and finances can continue to use their established access treatment.
+
+### Known limitations and deferred work
+
+PR 4 intentionally does not add a new active-band persistence layer, does not redesign rehearsal or gig-preparation services and does not merge public band profiles into the private Band hub. Some shared pages still render their legacy page shell after the Band alias redirects; this keeps the PR low-risk while preserving deep links and existing loading/error states.
+
+### Follow-up
+
+The next planned navigation PR is World and Travel hub consolidation. World consolidation is not started in PR 4.
