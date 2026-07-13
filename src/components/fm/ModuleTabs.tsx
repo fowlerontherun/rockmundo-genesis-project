@@ -9,7 +9,7 @@ export const ModuleTabs = () => {
   const { pathname } = useLocation();
   const { isAdmin } = useUserRole();
   const active = findModuleForPath(pathname);
-  const modules = FM_MODULES.filter((m) => m.id !== "admin" || isAdmin());
+  const modules = FM_MODULES.filter((m) => (m.primary ?? true) && (m.id !== "admin" || isAdmin()));
 
   const openModule = (modId: string, rootPath: string) => {
     // Restore the player's last context inside this module if we have one,
@@ -41,7 +41,7 @@ export const ModuleTabs = () => {
             )}
             style={isActive ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className="h-3.5 w-3.5" aria-hidden />
             <span>{mod.label}</span>
           </button>
         );

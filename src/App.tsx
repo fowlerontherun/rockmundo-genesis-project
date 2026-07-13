@@ -382,9 +382,10 @@ const HUB_TITLE_CONFIGS = [
   { title: "Social", overviewPath: "/social", items: socialHubNavigation },
 ];
 
-const getRouteTitle = (pathname: string) => {
+const getRouteTitle = (locationPath: string) => {
+  const [pathname] = locationPath.split("?");
   for (const hub of HUB_TITLE_CONFIGS) {
-    const activeItem = hub.items.find((item) => isHubNavigationItemActive(pathname, item));
+    const activeItem = hub.items.find((item) => isHubNavigationItemActive(locationPath, item));
     if (activeItem) {
       return activeItem.path === hub.overviewPath ? hub.title : `${activeItem.label} | ${hub.title}`;
     }
@@ -404,12 +405,12 @@ const getRouteTitle = (pathname: string) => {
 };
 
 const PageTitle = () => {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
-    const title = getRouteTitle(pathname);
+    const title = getRouteTitle(`${pathname}${search}`);
     document.title = title === "Rockmundo" ? title : `${title} | Rockmundo`;
-  }, [pathname]);
+  }, [pathname, search]);
 
   return null;
 };

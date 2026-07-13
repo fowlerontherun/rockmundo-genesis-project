@@ -729,3 +729,83 @@ Schedule keeps shared hub navigation, `aria-current` from `HubLayout`, compact b
 - Conflict details are limited to existing booking errors and warning components; no new conflict graph was introduced.
 - Travel feasibility still depends on existing travel/gig warnings and does not calculate new routes.
 - Final navigation polish, responsive parity and legacy-route cleanup remain deferred to PR 9.
+
+## PR 9 final consolidation — programme complete
+
+PR 9 completes the planned navigation and hub restructuring programme. The final audit confirmed that route declarations remain explicit in `src/App.tsx`, hub child navigation is centralised in `src/config/hubNavigation.ts`, and primary shell navigation is centralised in `src/config/fmNavigation.ts`.
+
+### Final top-level navigation
+
+The production primary navigation is now concise and hub-focused:
+
+1. Home (`/home`)
+2. Character (`/character`)
+3. Music (`/music`)
+4. Band (`/band`)
+5. Career (`/career`)
+6. Business (`/business`)
+7. World (`/world`)
+8. Social (`/social`)
+9. Schedule (`/schedule`)
+10. Admin (`/admin`, visible only to authorised admin users)
+
+Compatibility-only Media routes remain reachable through existing links and route definitions, but Media is no longer presented as a primary top-level hub because the completed programme did not establish it as a final hub.
+
+### Canonical landing conventions
+
+Top-level hubs render stable overview/default pages rather than arbitrary nested child pages. Home remains the stable post-login destination, Character opens Character Overview, Schedule opens Today, and the other hubs open their overview or useful empty/no-membership state. Primary module clicks should not restore stale nested state for Character, and compatibility aliases should redirect in one step where aliases exist.
+
+### Label and icon decisions
+
+Terminology was standardised around established player-facing names:
+
+- `Home`, not `Overview`, for the global dashboard.
+- `Band`, not `Band & Live`, for the top-level band hub.
+- `Messages`, not `Mail`, for social messaging surfaces.
+- `Jam Sessions`, not `Jam`, where the activity name appears in hub navigation.
+- `Rehearsals`, not `Rehearsal`, for navigation collections.
+- `Finances`, not `Company Finances`, in Business navigation.
+- `Location`, not `Current City`, in World hub navigation.
+- `Achievements`, not `Achievement`, for achievement collections.
+
+Icons continue to come from the existing Lucide icon set. Primary and hub navigation retain visible text labels; decorative icons are hidden from assistive technologies where touched by this PR.
+
+### Selected-state rules
+
+Selected-state matching is metadata-driven. Hub items match exact canonical paths, nested paths, dynamic route patterns, trailing-slash variants, query-string aliases and documented legacy aliases. Query-specific aliases such as `/social?tab=friends` no longer cause the bare `/social` overview route to select a child item. Similar prefixes such as `/band` and `/band-rankings` are matched through route patterns rather than brittle raw prefix checks.
+
+### Breadcrumb and page-title conventions
+
+Migrated hubs use logical metadata breadcrumbs from `HubLayout`: `Home > Hub > Child`, with the current crumb marked using `aria-current`. Browser titles use hub navigation metadata and include the hub context. Query-string aliases resolve to the same logical title as their canonical child destination.
+
+### Legacy route retention and cleanup
+
+Retained aliases include old hub paths such as `/hub/character`, `/hub/music`, `/hub/band-live`, `/hub/world`, `/hub/social`, `/hub/career-business`, `/hub/commerce`, social aliases such as `/relationships` and `/players/search`, and activity aliases such as `/jams`, `/record-label`, `/radio` and `/radio-stations`. These are retained because they may appear in bookmarks, notifications, historic activity or external links.
+
+No important deployed compatibility path was removed in PR 9. Temporary compatibility groups that are not final primary hubs are hidden from top-level navigation rather than deleted, so deep-link compatibility is preserved without duplicating the primary IA.
+
+### Mobile and accessibility requirements
+
+The primary module bar remains horizontally scrollable and labelled as primary navigation. Hub child navigation uses the shared horizontal overflow pattern with `aria-current`, visible labels and keyboard-focusable links. Icon-only shell controls keep accessible names, expanded state is exposed where applicable, and touched decorative icons are hidden with `aria-hidden`.
+
+### Authentication and permission-aware navigation
+
+Admin remains visible in primary navigation only for authorised admin users. Protected route policy, login return behaviour and logout policy are not changed by PR 9. Legacy authenticated aliases continue to resolve after login through the existing route table and redirect handling.
+
+### Ownership boundaries and contextual links
+
+Home owns dashboard, inbox, news, statistics and journal surfaces. Character owns identity, wellness, inventory, wardrobe, lifestyle and legacy character surfaces. Music owns songs, songwriting, practice, recording and releases. Band owns members, repertoire, rehearsals, gigs, tours, equipment and band finances. World owns cities, travel, venues, public companies, events and leaderboards. Business owns company management, staff, recruitment, advertising, labels and reports. Social owns friends, players, messages, Twaater and recruitment discovery. Schedule owns today, week, current activity, booking and history. Career owns employment, personal finances, fame, charts, awards, achievements, discography and history.
+
+Cross-hub links should point at canonical hub routes whenever practical and preserve required entity context through route parameters or query strings. Public discovery routes should not bypass management permissions.
+
+### Testing strategy
+
+PR 9 adds final regression coverage for primary navigation labels, hub landing routes, query-string legacy aliases, similar-prefix selected-state handling and representative route ownership. Existing lint, type-check, unit, integration, accessibility and build commands remain the validation gate for future changes.
+
+### Known limitations and future ideas
+
+The repository still uses a large explicit route table rather than generated routes. That remains intentional for compatibility and incremental migration safety. A future lightweight development-only route inventory could check duplicate paths, missing metadata and navigation links to absent routes, but PR 9 deliberately avoids adding a new route-management framework.
+
+### Completed PR sequence
+
+The navigation programme is complete: PRs 1–8 established the hub structure and PR 9 finalises polish, accessibility, selected-state reliability, legacy route documentation and regression protection.
