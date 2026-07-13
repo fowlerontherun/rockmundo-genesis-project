@@ -1,4 +1,4 @@
-import { Backpack, BookOpen, Calendar, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, ListMusic, Mic2, Music, Package, Palette, Radio, Settings, Sparkles, Trophy, Users, Zap } from "lucide-react";
+import { Backpack, BookOpen, Briefcase, Globe2, Building2, Calendar, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Landmark, ListMusic, MapPin, Mic2, Music, Package, Palette, Plane, Radio, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -32,6 +32,20 @@ export const musicHubNavigation: HubNavigationItem[] = [
   { id: "setlists", label: "Setlists", path: "/music/setlists", icon: ListMusic, matchPaths: ["/setlists"] },
 ];
 
+export const worldHubNavigation: HubNavigationItem[] = [
+  { id: "overview", label: "Overview", path: "/world", icon: Globe2, matchPaths: ["/world/overview", "/hub/world", "/hub/world-social"] },
+  { id: "current-city", label: "Current City", path: "/world/current-city", icon: MapPin },
+  { id: "travel", label: "Travel", path: "/world/travel", icon: Plane, matchPaths: ["/travel"] },
+  { id: "cities", label: "Cities", path: "/world/cities", icon: MapPin, matchPaths: ["/cities", "/cities/:cityId", "/cities/treasury"] },
+  { id: "venues", label: "Venues", path: "/world/venues", icon: Building2, matchPaths: ["/venues", "/venue-business/:venueId"] },
+  { id: "studios", label: "Studios", path: "/world/studios", icon: Disc3, matchPaths: ["/recording-studio", "/recording-studio-business/:studioId", "/rehearsal-studio-business/:studioId"] },
+  { id: "companies", label: "Companies", path: "/world/companies", icon: Briefcase, matchPaths: ["/world-companies", "/companies/directory", "/company/:companyId"] },
+  { id: "events", label: "Events", path: "/world/events", icon: Calendar, matchPaths: ["/major-events", "/events/eurovision"] },
+  { id: "festivals", label: "Festivals", path: "/world/festivals", icon: Star, matchPaths: ["/festivals", "/festivals/:festivalId"] },
+  { id: "pulse", label: "World Pulse", path: "/world/pulse", icon: Radio, matchPaths: ["/world-pulse"] },
+  { id: "leaderboards", label: "Leaderboards", path: "/world/leaderboards", icon: Trophy, matchPaths: ["/band-rankings", "/band-fame-map", "/song-rankings"] },
+  { id: "treasuries", label: "Treasuries", path: "/world/treasuries", icon: Landmark, matchPaths: ["/cities/treasury"], mobileVisible: false },
+];
 
 export const bandHubNavigation: HubNavigationItem[] = [
   { id: "overview", label: "Overview", path: "/band", icon: Music, matchPaths: ["/band/overview", "/hub/band", "/hub/live", "/hub/band-live"] },
