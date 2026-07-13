@@ -119,7 +119,7 @@ const Landing = () => {
     }
     toast({ title: "Welcome back", description: "Loading your career…" });
     setOpen(false);
-    navigate("/dashboard");
+    navigate("/home");
   };
 
   return (
@@ -157,7 +157,7 @@ const Landing = () => {
               variant="ghost"
               size="sm"
               className="h-9 px-2 text-xs font-oswald tracking-wide"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/home")}
               title="Dev-only: enters the app as a guest with mock data"
             >
               <PlayCircle className="h-4 w-4 sm:mr-1.5" />
@@ -270,7 +270,7 @@ const Landing = () => {
                 size="lg"
                 variant="outline"
                 className="font-oswald tracking-wide w-full sm:w-auto"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/home")}
               >
                 <PlayCircle className="h-4 w-4 mr-2" />
                 Demo (Dev)
@@ -524,7 +524,7 @@ const Landing = () => {
                   className="font-oswald tracking-wide text-xs"
                   onClick={() => {
                     setOpen(false);
-                    navigate("/dashboard");
+                    navigate("/home");
                   }}
                 >
                   <PlayCircle className="h-4 w-4 mr-1.5" />

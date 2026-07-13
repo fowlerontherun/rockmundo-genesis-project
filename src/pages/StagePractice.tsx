@@ -38,7 +38,7 @@ const StagePractice = () => {
   }, []);
 
   const handleExit = useCallback(() => {
-    navigate('/dashboard');
+    navigate('/home');
   }, [navigate]);
 
   return (

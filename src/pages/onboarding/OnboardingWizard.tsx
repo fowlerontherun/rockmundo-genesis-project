@@ -222,7 +222,7 @@ const OnboardingWizard = () => {
         title: "Onboarding saved",
         description: "Your profile is ready. Welcome to Rockmundo!",
       });
-      navigate("/dashboard");
+      navigate("/home");
     },
     onError: (error: unknown) => {
       console.error("onboarding.save.error", error);

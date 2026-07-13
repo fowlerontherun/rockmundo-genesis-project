@@ -74,7 +74,7 @@ const HubBreadcrumbs = ({ items }: { items: HubBreadcrumbItem[] }) => {
 
   return (
     <nav aria-label="Hub breadcrumb" className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs text-muted-foreground">
-      <Link to="/dashboard" aria-label="Home" className="inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link to="/home" aria-label="Home" className="inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Home className="h-3.5 w-3.5" aria-hidden />
       </Link>
       {items.map((item, index) => {

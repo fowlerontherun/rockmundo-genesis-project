@@ -26,7 +26,7 @@ export default function Prison() {
   }
 
   if (!isImprisoned && !communityService) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   const handlePayBail = () => {
@@ -59,7 +59,7 @@ export default function Prison() {
         title={t('prison.communityService')}
         subtitle={t('prison.activeAssignment')}
         icon={Scale}
-        backTo="/dashboard"
+        backTo="/home"
       >
         <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>{t('prison.activeAssignment')}</AlertTitle><AlertDescription>{t('prison.completeSessionsBy').replace('{required}', communityService.required_busking_sessions.toString()).replace('{deadline}', deadline.toLocaleDateString())}</AlertDescription></Alert>
         <Card>
@@ -85,7 +85,7 @@ export default function Prison() {
       title={t('prison.title')}
       subtitle={prison?.name}
       icon={Lock}
-      backTo="/dashboard"
+      backTo="/home"
       headerActions={<Badge variant="destructive" className="text-[10px]">{t('prison.imprisoned')}</Badge>}
     >
 

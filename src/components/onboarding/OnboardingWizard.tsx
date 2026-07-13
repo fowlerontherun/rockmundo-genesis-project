@@ -215,7 +215,7 @@ export const OnboardingWizard = () => {
       await createReputation.mutateAsync(modifiers);
       await completeOnboarding.mutateAsync();
       
-      navigate("/dashboard");
+      navigate("/home");
     } finally {
       setIsTransitioning(false);
     }

@@ -58,7 +58,7 @@ export default function SlotPurchaseSuccess() {
                 <p className="text-muted-foreground">Your new character slot is ready. You can now create another character.</p>
                 <div className="flex gap-2 justify-center pt-2">
                   <Button onClick={() => navigate("/characters/new")}>Create Character</Button>
-                  <Button variant="outline" onClick={() => navigate("/dashboard")}>Dashboard</Button>
+                  <Button variant="outline" onClick={() => navigate("/home")}>Dashboard</Button>
                 </div>
               </>
             )}

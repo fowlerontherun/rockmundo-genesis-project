@@ -449,7 +449,7 @@ function App() {
                   <Route path="/about" element={<About />} />
                   <Route path="/song/:songId" element={<PublicSong />} />
                   <Route element={<Layout />}>
-                    <Route path="home" element={<Index />} />
+                    <Route path="home" element={<Dashboard />} />
                     <Route path="inbox" element={<Inbox />} />
 
 
@@ -470,7 +470,7 @@ function App() {
                     <Route path="christmas-charts" element={<ChristmasCharts />} />
                     <Route path="seasonal-events" element={<SeasonalEventsCalendar />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
-                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="dashboard" element={<PreserveQueryRedirect to="/home" />} />
                     
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
@@ -523,6 +523,13 @@ function App() {
                     <Route path="country-charts" element={<CountryCharts />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="schedule/overview" element={<PreserveQueryRedirect to="/schedule" />} />
+                    <Route path="schedule/today" element={<Schedule />} />
+                    <Route path="schedule/week" element={<Schedule />} />
+                    <Route path="schedule/calendar" element={<Schedule />} />
+                    <Route path="schedule/current" element={<Schedule />} />
+                    <Route path="schedule/book" element={<Schedule />} />
+                    <Route path="schedule/upcoming" element={<Schedule />} />
+                    <Route path="schedule/history" element={<Schedule />} />
                     <Route path="booking/education" element={<EducationBooking />} />
                     <Route path="booking/performance" element={<PerformanceBooking />} />
                     <Route path="booking/work" element={<WorkBooking />} />
@@ -699,7 +706,7 @@ function App() {
                     <Route path="social" element={<SocialHubUnified />} />
                     <Route path="landmarks" element={<CityLandmarks />} />
                     {/* Bare /hub goes to dashboard (no hub index page exists) */}
-                    <Route path="hub" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="hub" element={<Navigate to="/home" replace />} />
                     {/* New split hubs */}
                     <Route path="hub/world" element={<PreserveQueryRedirect to="/world" />} />
                     <Route path="hub/social" element={<PreserveQueryRedirect to="/social" />} />

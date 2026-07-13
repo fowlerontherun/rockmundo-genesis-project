@@ -82,7 +82,7 @@ export default function InboxPage() {
           ? `${unreadCount} unread message${unreadCount !== 1 ? "s" : ""}`
           : undefined
       }
-      backTo="/dashboard"
+      backTo="/home"
       backLabel="Back to Dashboard"
       icon={InboxIcon}
       headerActions={

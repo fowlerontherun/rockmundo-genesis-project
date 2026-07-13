@@ -161,7 +161,7 @@ export default function DonationSuccess() {
           </Badge>
 
           <Button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/home")}
             className="w-full bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white"
           >
             <Home className="h-4 w-4 mr-2" />
