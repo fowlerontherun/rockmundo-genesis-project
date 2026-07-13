@@ -349,6 +349,7 @@ const ROUTE_TITLES = new Map<string, string>([
   ["/about", "About"],
   ["/song/:songId", "Song"],
   ["/bands/:bandId/management", "Band Management"],
+  ["/bands/:bandId/manage/roles", "Band Roles"],
   ["/gigs/perform/:gigId", "Perform Gig"],
   ["/streaming/:platformId", "Streaming Platform"],
   ["/cities/:cityId", "City"],
@@ -511,6 +512,7 @@ function App() {
                     <Route path="band/tours" element={<PreserveQueryRedirect to="/tour-manager" />} />
                     <Route path="band/equipment" element={<PreserveQueryRedirect to="/band-crew" />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
+                    <Route path="bands/:bandId/manage/roles" element={<BandManagementPage />} />
                     <Route path="bands/:bandId/recruitment" element={<BandRecruitmentManagement />} />
                     <Route path="bands/:bandId/recruitment/new" element={<BandRecruitmentManagement />} />
                     <Route path="gigs" element={<GigBooking />} />

@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BandRosterTab } from "@/components/bands/BandRosterTab";
 import { BandRehearsalsTab } from "@/components/bands/BandRehearsalsTab";
 import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
 import { BandContributionsTab } from "@/components/bands/BandContributionsTab";
+import { BandRolesTab } from "@/components/bands/BandRolesTab";
 import { Card, CardContent } from "@/components/ui/card";
 
 const tabConfig = [
@@ -12,12 +13,14 @@ const tabConfig = [
   { value: "rehearsals", label: "Rehearsals", description: "Oversee rehearsal cadence, costs, and preparation." },
   { value: "finances", label: "Finances", description: "Track band earnings, balance, and transactions." },
   { value: "contributions", label: "Contributions", description: "Review recent participation history without rewards or rankings." },
+  { value: "roles", label: "Roles & permissions", description: "Inspect leadership, responsibilities, risk levels, and approval foundations." },
 ] as const;
 
 export default function BandManagementPage() {
   const { bandId } = useParams<{ bandId: string }>();
+  const location = useLocation();
 
-  const defaultTab = useMemo(() => tabConfig[0]?.value ?? "roster", []);
+  const defaultTab = useMemo(() => location.pathname.endsWith("/manage/roles") ? "roles" : tabConfig[0]?.value ?? "roster", [location.pathname]);
 
   if (!bandId) {
     return <Navigate to="/band" replace />;
@@ -67,6 +70,10 @@ export default function BandManagementPage() {
 
         <TabsContent value="contributions" className="space-y-6">
           <BandContributionsTab bandId={bandId} />
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-6">
+          <BandRolesTab bandId={bandId} />
         </TabsContent>
       </Tabs>
     </div>
