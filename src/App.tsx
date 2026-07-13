@@ -140,6 +140,9 @@ const TwaaterAnalytics = lazyWithRetry(() => import("./pages/TwaaterAnalytics"))
 const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const BandRecruitmentDiscovery = lazyWithRetry(() => import("./pages/community/BandRecruitment"));
 const BandRecruitmentManagement = lazyWithRetry(() => import("./pages/bands/[bandId]/recruitment"));
+const BandGovernanceDashboard = lazyWithRetry(() => import("./pages/bands/[bandId]/governance"));
+const NewBandProposalPage = lazyWithRetry(() => import("./pages/bands/[bandId]/governance/new"));
+const BandProposalDetailPage = lazyWithRetry(() => import("./pages/bands/[bandId]/governance/detail"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -515,6 +518,9 @@ function App() {
                     <Route path="bands/:bandId/manage/roles" element={<BandManagementPage />} />
                     <Route path="bands/:bandId/recruitment" element={<BandRecruitmentManagement />} />
                     <Route path="bands/:bandId/recruitment/new" element={<BandRecruitmentManagement />} />
+                    <Route path="bands/:bandId/governance" element={<BandGovernanceDashboard />} />
+                    <Route path="bands/:bandId/governance/proposals/new" element={<NewBandProposalPage />} />
+                    <Route path="bands/:bandId/governance/proposals/:proposalId" element={<BandProposalDetailPage />} />
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
