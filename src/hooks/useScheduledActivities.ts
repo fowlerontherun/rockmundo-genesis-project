@@ -394,6 +394,28 @@ export function useStartActivity() {
 
   return useMutation({
     mutationFn: async (activityId: string) => {
+      const { data: activity, error: loadError } = await (supabase as any)
+        .from('player_scheduled_activities')
+        .select('*')
+        .eq('id', activityId)
+        .single();
+      if (loadError) throw loadError;
+
+      if (activity?.activity_type === 'songwriting') {
+        const projectId = activity.metadata?.project_id || activity.metadata?.projectId;
+        const effortHours = Number(activity.metadata?.duration_hours || activity.duration_minutes / 60 || 1);
+        const { data: rpcData, error: rpcError } = await (supabase as any).rpc('start_songwriting_session', {
+          p_profile_id: activity.profile_id,
+          p_project_id: projectId,
+          p_effort_hours: effortHours,
+          p_session_type: activity.metadata?.session_type || 'balanced',
+          p_idempotency_key: `start-scheduled-${activityId}`,
+          p_activity_id: activityId,
+        });
+        if (rpcError) throw new Error(rpcError.message || 'Failed to start scheduled songwriting session');
+        return { ...activity, status: 'in_progress', metadata: { ...activity.metadata, ...rpcData } } as ScheduledActivity;
+      }
+
       const { data, error } = await (supabase as any)
         .from('player_scheduled_activities')
         .update({

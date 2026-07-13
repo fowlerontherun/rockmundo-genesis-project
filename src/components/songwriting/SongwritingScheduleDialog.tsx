@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import logger from "@/lib/logger";
 import { addDurationHours, buildScheduledDateTime, validateBookingWindow } from "@/utils/activityBookingTime";
 
 interface SongwritingScheduleDialogProps {
@@ -13,19 +15,38 @@ interface SongwritingScheduleDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId?: string;
   projectTitle?: string;
+  projectStatus?: string;
+  profileId?: string | null;
 }
 
 export function SongwritingScheduleDialog({
   open,
   onOpenChange,
   projectId,
-  projectTitle
+  projectTitle,
+  projectStatus,
+  profileId
 }: SongwritingScheduleDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [hour, setHour] = useState("9");
-  const [duration, setDuration] = useState("3");
+  const [duration, setDuration] = useState("1");
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleSchedule = async () => {
+    if (isSaving) return;
+    if (!profileId) {
+      toast.error("Select an active character before scheduling songwriting.");
+      return;
+    }
+    if (!projectId) {
+      toast.error("Select a songwriting project before scheduling.");
+      return;
+    }
+    if (projectStatus === "completed" || projectStatus === "converted") {
+      toast.error("The selected project is no longer available.");
+      return;
+    }
     if (!date) {
       toast.error("Please select a date");
       return;
@@ -33,26 +54,57 @@ export function SongwritingScheduleDialog({
 
     const scheduledStart = buildScheduledDateTime(date, parseInt(hour));
     const scheduledEnd = addDurationHours(scheduledStart, Number(duration));
+    if (scheduledStart <= new Date()) {
+      toast.error("That time is in the past.");
+      return;
+    }
     const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
     if (bookingError) {
       toast.error(bookingError);
       return;
     }
 
+    setIsSaving(true);
     try {
-      await createScheduledActivity({
-        activityType: 'songwriting',
-        scheduledStart,
-        scheduledEnd,
-        title: projectTitle ? `Songwriting: ${projectTitle}` : 'Songwriting Session',
-        description: projectId ? `Working on ${projectTitle}` : 'General songwriting session',
-        metadata: projectId ? { projectId } : undefined,
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await (supabase as any).rpc("schedule_songwriting_session", {
+        p_profile_id: profileId,
+        p_project_id: projectId,
+        p_scheduled_start: scheduledStart.toISOString(),
+        p_effort_hours: Number(duration),
+        p_session_type: "balanced",
+        p_idempotency_key: `schedule-${profileId}-${projectId}-${scheduledStart.toISOString()}-${duration}`,
       });
+      if (error) {
+        logger.error("Songwriting schedule RPC failed", {
+          action: "schedule_songwriting_session",
+          rpc: "schedule_songwriting_session",
+          profileId,
+          projectId,
+          userId: user?.id,
+          duration: Number(duration),
+          scheduledStart: scheduledStart.toISOString(),
+          postgrestCode: (error as any).code,
+          httpStatus: (error as any).status,
+          domainError: error.message,
+          details: (error as any).details,
+        });
+        throw new Error(error.message || "Failed to schedule session");
+      }
 
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["weekly-schedule"] }),
+        queryClient.invalidateQueries({ queryKey: ["activity-status"] }),
+      ]);
       toast.success("Songwriting session scheduled!");
       onOpenChange(false);
+      return data;
     } catch (error: any) {
       toast.error(error.message || "Failed to schedule session");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -100,18 +152,16 @@ export function SongwritingScheduleDialog({
               <SelectContent>
                 <SelectItem value="1">1 hour</SelectItem>
                 <SelectItem value="2">2 hours</SelectItem>
-                <SelectItem value="3">3 hours (Standard)</SelectItem>
                 <SelectItem value="4">4 hours</SelectItem>
-                <SelectItem value="6">6 hours</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSchedule} className="flex-1">
-              Schedule Session
+            <Button onClick={handleSchedule} className="flex-1" disabled={isSaving || !projectId || projectStatus === "completed" || projectStatus === "converted"}>
+              {isSaving ? "Scheduling..." : "Schedule Session"}
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
               Cancel
             </Button>
           </div>

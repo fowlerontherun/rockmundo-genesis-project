@@ -331,8 +331,23 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
         p_profile_id: profileId,
         p_project_id: projectId,
         p_effort_hours: effortHours,
+        p_idempotency_key: `start-${profileId}-${projectId}-${Date.now()}`,
       });
-      if (error) throw error;
+      if (error) {
+        logger.error('Songwriting start RPC failed', {
+          action: 'start_songwriting_session',
+          rpc: 'start_songwriting_session',
+          profileId,
+          projectId,
+          userId: user.id,
+          duration: effortHours,
+          postgrestCode: (error as any).code,
+          httpStatus: (error as any).status,
+          domainError: error.message,
+          details: (error as any).details,
+        });
+        throw new Error(error.message || 'Failed to start session');
+      }
 
       logGameActivity({
         userId: user.id,
@@ -347,7 +362,11 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-status'] });
       toast({ title: "Session Started", description: "Songwriting session in progress" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not start session", description: error.message, variant: "destructive" });
     }
   });
 
