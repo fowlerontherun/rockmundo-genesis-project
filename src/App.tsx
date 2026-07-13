@@ -207,6 +207,7 @@ const POVClipAdmin = lazyWithRetry(() => import("./pages/admin/POVClipAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
+const PlayerProfileEdit = lazyWithRetry(() => import("./pages/PlayerProfileEdit"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
 const BandProfile = lazyWithRetry(() => import("./pages/BandProfile"));
 const BandSearch = lazyWithRetry(() => import("./pages/BandSearch"));
@@ -457,6 +458,7 @@ function App() {
                     <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="character" element={<CharacterOverview />} />
                     <Route path="character/overview" element={<PreserveQueryRedirect to="/character" />} />
+                    <Route path="character/profile/edit" element={<PlayerProfileEdit />} />
                     <Route path="character/wellness" element={<PreserveQueryRedirect to="/wellness" />} />
                     <Route path="character/skills" element={<PreserveQueryRedirect to="/skills" />} />
                     <Route path="character/inventory" element={<PreserveQueryRedirect to="/inventory" />} />
@@ -671,6 +673,7 @@ function App() {
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="players/search" element={<PreserveQueryRedirect to="/social/players" />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
+                    <Route path="players/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
                     <Route path="bands/search" element={<BandSearch />} />
                     <Route path="band-rankings" element={<BandRankings />} />
