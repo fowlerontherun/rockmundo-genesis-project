@@ -34,6 +34,7 @@ import { CityTransportSection } from "@/components/city/CityTransportSection";
 import { CityMusicSceneCard } from "@/components/city/CityMusicSceneCard";
 import { CityCostBreakdown } from "@/components/city/CityCostBreakdown";
 import { CityGovernanceSection } from "@/components/city/CityGovernanceSection";
+import { PresenceDirectoryPanel } from "@/components/presence/PresenceDirectoryPanel";
 
 type CityRouteParams = {
   cityId?: string;
@@ -327,6 +328,8 @@ export const CityContent = ({
           </div>
         </div>
       </header>
+
+      <PresenceDirectoryPanel cityId={city.id} title={`${city.name} live population`} />
 
       {/* Music Scene & Cost Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
