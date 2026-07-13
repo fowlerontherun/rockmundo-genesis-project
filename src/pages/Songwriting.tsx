@@ -2871,6 +2871,8 @@ const Songwriting = () => {
         onOpenChange={setScheduleDialogOpen}
         projectId={scheduleProject?.id}
         projectTitle={scheduleProject?.title}
+        projectStatus={scheduleProject?.status}
+        profileId={profileId}
       />
     </FMPageScaffold>
   );
