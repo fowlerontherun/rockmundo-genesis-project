@@ -1,4 +1,4 @@
-import { Backpack, BookOpen, Calendar, Disc3, GraduationCap, Guitar, Heart, ListMusic, Mic2, Music, Package, Palette, Radio, Sparkles, Trophy, Users, Zap } from "lucide-react";
+import { Backpack, BookOpen, Calendar, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, ListMusic, Mic2, Music, Package, Palette, Radio, Settings, Sparkles, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -30,4 +30,20 @@ export const musicHubNavigation: HubNavigationItem[] = [
   { id: "recording", label: "Recording", path: "/music/recording", icon: Disc3, matchPaths: ["/recording-studio"] },
   { id: "releases", label: "Releases", path: "/music/releases", icon: Radio, matchPaths: ["/release-manager", "/release/:id"] },
   { id: "setlists", label: "Setlists", path: "/music/setlists", icon: ListMusic, matchPaths: ["/setlists"] },
+];
+
+
+export const bandHubNavigation: HubNavigationItem[] = [
+  { id: "overview", label: "Overview", path: "/band", icon: Music, matchPaths: ["/band/overview", "/hub/band", "/hub/live", "/hub/band-live"] },
+  { id: "members", label: "Members & Roles", path: "/band/members", icon: Users },
+  { id: "fame", label: "Fame & Fans", path: "/band/fame", icon: Trophy, matchPaths: ["/band-rankings", "/band-fame-map"] },
+  { id: "repertoire", label: "Repertoire", path: "/band/repertoire", icon: ListMusic, matchPaths: ["/setlists"] },
+  { id: "rehearsals", label: "Rehearsals", path: "/band/rehearsals", icon: Mic2, matchPaths: ["/rehearsals", "/jam-sessions", "/jams"] },
+  { id: "gigs", label: "Gigs", path: "/band/gigs", icon: Zap, matchPaths: ["/gigs", "/gig-booking", "/gigs/perform/:gigId", "/performance/gig/:gigId"] },
+  { id: "tours", label: "Tours", path: "/band/tours", icon: Calendar, matchPaths: ["/tour-manager", "/band-vehicles", "/band-riders"] },
+  { id: "equipment", label: "Equipment & Crew", path: "/band/equipment", icon: Package, matchPaths: ["/stage-setup", "/stage-equipment", "/band-crew"] },
+  { id: "finances", label: "Finances", path: "/band/finances", icon: DollarSign, matchPaths: ["/finances"] },
+  { id: "chemistry", label: "Chemistry", path: "/band/chemistry", icon: Sparkles, matchPaths: ["/chemistry"] },
+  { id: "history", label: "History", path: "/band/history", icon: History },
+  { id: "settings", label: "Settings", path: "/band/settings", icon: Settings },
 ];

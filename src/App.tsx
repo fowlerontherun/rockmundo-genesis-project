@@ -15,7 +15,7 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
-import { characterHubNavigation, musicHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
+import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation } from "./config/hubNavigation";
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
@@ -366,6 +366,7 @@ for (const module of FM_MODULES) {
 const HUB_TITLE_CONFIGS = [
   { title: "Character", overviewPath: "/character", items: characterHubNavigation },
   { title: "Music", overviewPath: "/music", items: musicHubNavigation },
+  { title: "Band", overviewPath: "/band", items: bandHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
 ];
 
@@ -474,7 +475,19 @@ function App() {
                     <Route path="slot-purchase-success" element={<SlotPurchaseSuccess />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
-                    <Route path="band/repertoire" element={<BandRepertoire />} />
+                    <Route path="band/overview" element={<PreserveQueryRedirect to="/band" />} />
+                    <Route path="band/members" element={<BandManager />} />
+                    <Route path="band/fame" element={<BandManager />} />
+                    <Route path="band/repertoire" element={<BandManager />} />
+                    <Route path="band/history" element={<BandManager />} />
+                    <Route path="band/finances" element={<BandManager />} />
+                    <Route path="band/chemistry" element={<BandManager />} />
+                    <Route path="band/settings" element={<BandManager />} />
+                    <Route path="band/rehearsals" element={<PreserveQueryRedirect to="/rehearsals" />} />
+                    <Route path="band/setlists" element={<PreserveQueryRedirect to="/setlists" />} />
+                    <Route path="band/gigs" element={<PreserveQueryRedirect to="/gigs" />} />
+                    <Route path="band/tours" element={<PreserveQueryRedirect to="/tour-manager" />} />
+                    <Route path="band/equipment" element={<PreserveQueryRedirect to="/band-crew" />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />

@@ -185,7 +185,7 @@ export const FM_MODULES: FMModule[] = [
     id: "band-live",
     label: "Band & Live",
     icon: Mic2,
-    rootPath: "/hub/band-live",
+    rootPath: "/band",
     matchPaths: [
       "/hub/band-live", "/hub/band", "/hub/live", "/hub/events",
       "/band", "/chemistry", "/bands", "/setlists", "/rehearsals",
@@ -196,8 +196,7 @@ export const FM_MODULES: FMModule[] = [
       "/awards", "/stage-setup", "/stage-equipment",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/band-live", icon: Mic2 },
-      { label: "Band", path: "/band", icon: Users },
+      { label: "Overview", path: "/band", icon: Users },
       { label: "Book Gigs", path: "/gig-booking", icon: Calendar },
       { label: "Tours", path: "/tour-manager", icon: Plane },
       { label: "Festivals", path: "/festivals", icon: Trophy },
@@ -207,12 +206,12 @@ export const FM_MODULES: FMModule[] = [
       {
         label: "Your Band",
         items: [
-          { label: "Band Manager", path: "/band", icon: Users },
+          { label: "Overview", path: "/band", icon: Users },
           { label: "Repertoire", path: "/band/repertoire", icon: ListMusic },
-          { label: "Chemistry", path: "/chemistry", icon: Sparkles },
-          { label: "Setlists", path: "/setlists", icon: ListMusic },
-          { label: "Rehearsals", path: "/rehearsals", icon: Guitar },
-          { label: "Crew", path: "/band-crew", icon: Users },
+          { label: "Chemistry", path: "/band/chemistry", icon: Sparkles },
+          { label: "Setlists", path: "/band/setlists", icon: ListMusic },
+          { label: "Rehearsals", path: "/band/rehearsals", icon: Guitar },
+          { label: "Equipment & Crew", path: "/band/equipment", icon: Users },
           { label: "Riders", path: "/band-riders", icon: ListMusic },
           { label: "Vehicles", path: "/band-vehicles", icon: Plane },
         ],
@@ -230,7 +229,7 @@ export const FM_MODULES: FMModule[] = [
         label: "Perform",
         items: [
           { label: "Book Gigs", path: "/gig-booking", icon: Calendar },
-          { label: "My Gigs", path: "/gigs", icon: Mic2 },
+          { label: "My Gigs", path: "/band/gigs", icon: Mic2 },
           { label: "Open Mic", path: "/open-mic", icon: Mic },
           { label: "Jam Sessions", path: "/jam-sessions", icon: Music },
           { label: "Busking", path: "/busking", icon: Music },
@@ -254,7 +253,7 @@ export const FM_MODULES: FMModule[] = [
       { label: "Start a Tour", path: "/tour-manager", icon: Plane },
       { label: "Hit Open Mic", path: "/open-mic", icon: Mic },
       { label: "Find Bandmates", path: "/bands/finder", icon: Users },
-      { label: "Rehearse", path: "/rehearsals", icon: Guitar },
+      { label: "Rehearse", path: "/band/rehearsals", icon: Guitar },
     ],
   },
   // 5. CAREER — money, work, companies, creative side-careers
