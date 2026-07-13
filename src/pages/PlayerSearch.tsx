@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, User, Music, Star, MapPin, Clock, Users, UserPlus, MessageSquare, Check } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { resolveRelationshipPairKey } from "@/features/relationships/api";
@@ -20,8 +20,10 @@ type PlayerProfile = PublicProfileSearchResult;
 type FriendState = "none" | "friends" | "pending_sent" | "pending_received";
 
 export default function PlayerSearch() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [dmTarget, setDmTarget] = useState<{ profileId: string; displayName: string } | null>(null);
   const { profile } = useGameData();
   const { friendships, sendRequest, acceptRequest } = useFriendships(profile?.id);
@@ -56,7 +58,9 @@ export default function PlayerSearch() {
   }, [friendships, profile?.id]);
 
   const handleSearch = () => {
-    setDebouncedQuery(searchQuery);
+    const trimmed = searchQuery.trim();
+    setDebouncedQuery(trimmed);
+    setSearchParams(trimmed ? { q: trimmed } : {}, { replace: true });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -92,7 +96,8 @@ export default function PlayerSearch() {
       title="Search Players"
       subtitle="Find other musicians and view their profiles"
       icon={Search}
-      backTo="/hub/world-social"
+      backTo="/social"
+      backLabel="Back to Social"
     >
 
 

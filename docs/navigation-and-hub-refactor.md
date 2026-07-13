@@ -475,3 +475,80 @@ The World Overview uses the shared hub child navigation, semantic breadcrumbs, v
 - Venue details and studio details remain limited to the currently implemented pages; no placeholder detail pages were added.
 - World Pulse remains lazy-loaded on its own dashboard route, so the overview does not subscribe to or render the full live dashboard.
 - Follow-up PR 6 is Social hub consolidation.
+
+## PR 6 update — Social hub consolidation
+
+PR 6 makes `/social` the predictable Social landing route and renders a real Social Overview with the shared `HubLayout` pattern. The Social top-level navigation now opens the overview rather than restoring a nested friends, messages or Twaater page.
+
+### Final Social hub hierarchy
+
+Only implemented Social surfaces are exposed:
+
+- `/social` — Social Overview.
+- `/social/friends` — existing relationships/friends surface.
+- `/social/players` — existing player search and discovery surface.
+- `/social/messages` — existing friend direct-message surface.
+- `/social/twaater` — alias to the existing Twaater application at `/twaater`.
+- `/social/recruitment` — existing band-finder/recruitment discovery surface.
+- `/social/invitations` — existing social invites inbox.
+
+Forums are not added because no complete forum route exists in the current route table. Gettit remains an existing community platform link, but it is not duplicated as a generic Social feed because Twaater already owns the primary social activity/feed experience.
+
+### Canonical route model, aliases and migrations
+
+| Legacy or existing route | PR 6 route treatment | Notes |
+| --- | --- | --- |
+| `/social` | Canonical overview render route | Stable Social landing page. |
+| `/hub/social` | Redirects to `/social` preserving query strings | Legacy tile-hub entry remains bookmark-safe. |
+| `/social/overview` | Redirects to `/social` preserving query strings | Compatibility alias only. |
+| `/relationships` | Redirects to `/social/friends` preserving query strings | Existing friends implementation is retained. |
+| `/players/search` | Redirects to `/social/players` preserving query strings | Player search query state now uses `q` where supplied. |
+| `/player/:playerId` | Remains canonical profile route | Social navigation metadata treats direct profile links as Players context. |
+| `/twaater` and nested Twaater routes | Remain canonical Twaater routes | `/social/twaater` redirects to `/twaater`; post, hashtag, handle, analytics and notification routes remain intact. |
+| `/twaater/messages` | Remains a Twaater-specific message route | Social Messages uses the existing friend direct-message surface; Twaater messages remain available for Twaater account DMs. |
+| `/bands/finder`, `/bands/browse`, `/bands/search`, `/band/:bandId` | Remain canonical band discovery/profile routes | Social Recruitment links to the finder without moving Band management workflows. |
+| `/social/invitations` | Canonical social-invite review route | Uses the existing social invites inbox and realtime invalidation. |
+
+### Ownership boundaries
+
+- **Social owns** finding other players, friends, player discovery entry points, friend direct messages, Twaater entry, social invitations and recruitment discovery.
+- **Character owns** the authenticated player’s self-management, skills, wellness, inventory, wardrobe, family timeline and personal settings.
+- **Band owns** active-band management, member roles, applicant review, rehearsals, gigs, equipment, finances and settings.
+- **Music owns** songs, songwriting, practice, recording and releases.
+- **Business/Career** consolidation is explicitly deferred to PR 7.
+- **Global Notifications** remain global; Social only summarises social invite/request state and keeps Twaater notifications in Twaater.
+
+### Social Overview content
+
+The overview uses existing query hooks and data only:
+
+- accepted-friend count and pending friend-request count from the relationships cache,
+- pending social-invite count from `social_invites`,
+- Twaater trending-topic count and topic chips from the existing Twaater trending query,
+- quick links to player search, messages, friends, Twaater, recruitment and invitations when relevant.
+
+No fake online status, recommendations, forum posts, activity metrics or placeholder community data are introduced.
+
+### Messaging terminology and live updates
+
+The hub uses **Messages** for the existing friend direct-message experience because that is the player-facing label already used in the Social tab. Twaater account DMs remain labelled and routed as Twaater Messages. PR 6 does not add another message service or SSE subscription; it reuses existing relationship-message components and keeps the invite realtime hook scoped to the Social hub.
+
+### Recruitment and invitations
+
+Social owns discovery of bands and musicians through the existing finder/search routes. Band continues to own applicant management, invitations from band officers, member roles and settings. The Social Invitations page surfaces existing social invites without forcing band, job, transfer or collaboration workflows into one incompatible request screen.
+
+### Player profiles, privacy, blocking and moderation
+
+Direct player profiles remain stable at `/player/:playerId`; Social owns discovery and interaction entry points rather than moving self-character pages. Existing profile privacy, blocked-user visibility, friendship permissions, message permissions, Twaater moderation states and server-side RLS remain authoritative because PR 6 reuses the existing services and components instead of changing backend rules.
+
+### Mobile and accessibility considerations
+
+The Social hub uses shared `HubLayout` child navigation, including horizontal mobile scrolling, `aria-current` selected states, metadata-driven breadcrumbs and existing button/link focus styles. Overview cards use text labels rather than colour-only state, and child failures remain scoped to their own existing components where practical.
+
+### Known limitations and deferred defects
+
+- No forums tab is exposed because there is no complete forum implementation in the current route table.
+- Global Notifications are not moved into Social.
+- Twaater account DMs and friend direct messages remain separate systems to avoid a risky messaging rewrite.
+- Recruitment application-management screens remain in Band.
+- Business and Career consolidation is the planned next navigation PR.
