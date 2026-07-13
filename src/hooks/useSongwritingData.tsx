@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
+import logger from "@/lib/logger";
 
 export interface SongTheme {
   id: string;
@@ -103,6 +104,25 @@ type StartSessionInput = {
   effortHours?: number;
 };
 
+type PostgrestErrorLike = {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+};
+
+const getPostgrestErrorContext = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const candidate = error as PostgrestErrorLike;
+  return {
+    code: typeof candidate.code === "string" ? candidate.code : null,
+    message: typeof candidate.message === "string" ? candidate.message : null,
+  };
+};
+
 export const getSongQualityDescriptor = (score: number) => {
   const normalized = Math.max(0, Math.min(1000, Math.round(score)));
   if (normalized < 300) return { min: 0, max: 299, label: "Amateur", hint: "Keep working", score: normalized };
@@ -114,7 +134,7 @@ export const getSongQualityDescriptor = (score: number) => {
 
 export const SONG_RATING_RANGE = { min: 0, max: 1000 } as const;
 
-export const useSongwritingData = (profileId?: string | null) => {
+export const useSongwritingData = (profileId?: string | null, userId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -148,15 +168,29 @@ export const useSongwritingData = (profileId?: string | null) => {
 
   // Fetch projects with sessions and auto-unlock expired locks
   const { data: projects = [], isLoading: isLoadingProjects, error: projectsError, refetch: refetchProjects } = useQuery({
-    queryKey: ['songwriting-projects', profileId],
-    enabled: !!profileId,
+    queryKey: ['songwriting-projects', profileId, userId],
+    enabled: !!profileId || !!userId,
+    retry: (failureCount, error) => {
+      const context = getPostgrestErrorContext(error);
+      const nonRetryableCodes = new Set(["PGRST200", "PGRST204", "42703", "42P01"]);
+      if (context?.code && nonRetryableCodes.has(context.code)) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!profileId && !userId) return [];
+
+      logger.info("Loading songwriting projects", {
+        endpoint: "songwriting_projects",
+        profileId,
+        userId,
+      });
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('songwriting_projects')
         .select(`
-          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, arrangement_progress, polish_progress, consistency_score, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, songwriting_breakdown, calculation_version, completed_at, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at, effort_hours,
+          id, user_id, title, theme_id, chord_progression_id, initial_lyrics, lyrics, music_progress, lyrics_progress, arrangement_progress, polish_progress, consistency_score, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, songwriting_breakdown, calculation_version, completed_at, status, is_locked, locked_until, song_id, creative_brief, genres, purpose, mode, created_at, updated_at,
           song_themes (id, name, description, mood),
           chord_progressions (id, name, progression, difficulty),
           songwriting_sessions (
@@ -171,14 +205,43 @@ export const useSongwritingData = (profileId?: string | null) => {
             xp_earned,
             notes,
             progress_breakdown,
-            session_type
+            session_type,
+            effort_hours
           )
         `)
-        .eq('profile_id', profileId)
         .order('updated_at', { ascending: false })
         .limit(100);
+
+      if (profileId && userId) {
+        query = query.or(`profile_id.eq.${profileId},user_id.eq.${userId}`);
+      } else if (profileId) {
+        query = query.eq('profile_id', profileId);
+      } else if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        logger.error("Songwriting projects query failed", {
+          endpoint: "songwriting_projects",
+          profileId,
+          userId,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        throw error;
+      }
+
+      logger.info("Songwriting projects query succeeded", {
+        endpoint: "songwriting_projects",
+        profileId,
+        userId,
+        responseCode: 200,
+        count: data?.length ?? 0,
+      });
       
       // Auto-unlock expired projects - do this in background, don't block the query
       const now = new Date().toISOString();
@@ -259,7 +322,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Project Created", description: "New songwriting project started!" });
     },
     onError: (error) => {
@@ -280,7 +343,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Project Updated" });
     },
     onError: (error) => {
@@ -300,7 +363,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Project Deleted" });
     },
     onError: (error) => {
@@ -334,7 +397,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       toast({ title: "Session Started", description: "Songwriting session in progress" });
     }
@@ -363,7 +426,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Session Completed", description: "Progress saved!" });
     },
     onError: (error) => {
@@ -402,7 +465,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Song Created!", description: "Added to your catalog" });
     },
     onError: (error) => {
@@ -428,7 +491,7 @@ export const useSongwritingData = (profileId?: string | null) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["songwriting-projects", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects", profileId, userId] });
       toast({ title: "Session paused successfully" });
     },
     onError: (error) => {
