@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { usePlayerConnection } from "@/hooks/usePlayerConnections";
+import { useSocialPermission } from "@/hooks/useSocialSafety";
+import { SafetyActions } from "@/components/social-safety/SafetyActions";
 import { respondToFriendship } from "@/integrations/supabase/playerConnections";
 import {
   User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit
@@ -57,6 +59,7 @@ export default function PlayerProfile() {
   });
 
   const connection = usePlayerConnection(playerId);
+  const socialPermission = useSocialPermission(playerId);
 
   const { data: friendship } = useQuery({
     queryKey: ["friendship-status", currentUser?.id, playerId],
@@ -170,6 +173,8 @@ export default function PlayerProfile() {
   }
 
   const isOwnProfile = currentUser?.id === playerId;
+  const restrictedBySafety = Boolean(socialPermission.data?.is_interaction_restricted);
+  const blockedByViewer = Boolean(socialPermission.data?.is_blocked_by_viewer);
   const isFriend = friendship?.status === "accepted";
   const isPendingSent = friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
   const isPendingReceived = friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
@@ -199,12 +204,14 @@ export default function PlayerProfile() {
           <Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button>
         ) : (
           <>
-            {(connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {restrictedBySafety && <Button size="sm" variant="secondary" disabled>{blockedByViewer ? "You blocked this player" : "This player is unavailable."}</Button>}
+            {!restrictedBySafety && (connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
             {(connection.data === "outgoing_pending" || isPendingSent) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
             {(connection.data === "incoming_pending" || isPendingReceived) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => friendship?.id && respondToFriendship(friendship.id, "declined").then(() => queryClient.invalidateQueries({ queryKey: ["friendship-status"] }))}>Decline</Button></>}
             {(connection.data === "friends" || isFriend) && <Button size="sm" variant="destructive" onClick={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
             {connection.data === "restricted" && <Button size="sm" variant="secondary" disabled>This player is not accepting requests</Button>}
-            <FutureProfileActions />
+            <SafetyActions targetProfileId={playerId!} targetName={profile.display_name || profile.username || "this player"} isBlockedByViewer={blockedByViewer} />
+            {!restrictedBySafety && <FutureProfileActions />}
           </>
         )}
       />

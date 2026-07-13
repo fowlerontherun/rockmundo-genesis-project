@@ -42,7 +42,9 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
 
 export async function listFriendSuggestions(profileId: string): Promise<FriendSummary[]> {
   const existing = await listFriendships(profileId, "friends");
-  const exclude = new Set([profileId, ...existing.map((f) => f.id)]);
+  const { data: blockRows } = await (supabase as any).from("player_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${profileId},blocked_id.eq.${profileId}`).is("removed_at", null);
+  const blockedIds = ((blockRows ?? []) as any[]).map((row) => row.blocker_id === profileId ? row.blocked_id : row.blocker_id);
+  const exclude = new Set([profileId, ...existing.map((f) => f.id), ...blockedIds]);
   const { data, error } = await (supabase as any).from("profiles").select("id, username, display_name, avatar_url, city_name").limit(12);
   if (error) throw error;
   return ((data ?? []) as any[]).filter((p) => !exclude.has(p.id)).slice(0, 6).map((p) => ({ id: p.id, friendshipId: "", characterName: p.display_name || p.username || "Player", username: p.username, avatarUrl: p.avatar_url, cityName: p.city_name, status: "pending", requestedAt: new Date().toISOString(), mutualFriendCount: 0, primaryRole: "Suggested because they are active in the community" }));
