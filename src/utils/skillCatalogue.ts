@@ -101,6 +101,13 @@ export interface CanonicalSkill {
   maintenance_grace_days?: number;
   maintenance_floor?: number;
   recovery_rate_key?: string;
+  is_teachable?: boolean;
+  minimum_teacher_level?: number;
+  minimum_teacher_advantage?: number;
+  teaching_policy_key?: string;
+  supports_group_workshop?: boolean;
+  supports_band_coaching?: boolean;
+  supports_mentoring?: boolean;
 }
 export interface SkillAttributeLink {
   skill_slug: string;
