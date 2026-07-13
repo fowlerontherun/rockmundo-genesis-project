@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { Activity, Backpack, Heart, Palette, Sparkles, Trophy, User, Wallet, Zap } from "lucide-react";
+import { HubLayout } from "@/components/hub/HubLayout";
+import { characterHubNavigation } from "@/config/hubNavigation";
+import { Activity, Backpack, Heart, Palette, Sparkles, Trophy, User, Users, Wallet, Zap } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 
@@ -35,31 +36,66 @@ export default function CharacterOverview() {
   const { user, loading: authLoading } = useAuth();
   const { profile, skillProgress, activityStatus, activities, xpWallet, loading, error, refetch } = useGameData();
 
+  const hubProps = {
+    title: "Character",
+    description: "Manage your artist identity, progression, wellness and possessions.",
+    icon: Users,
+    overviewPath: "/character",
+    navigation: characterHubNavigation,
+    actions: [{ label: "Edit character", path: "/my-character", variant: "outline" as const }],
+  };
+
   if (authLoading || loading) {
-    return <PageLoadingState title="Loading Character Overview" description="Fetching your active character snapshot..." />;
+    return (
+      <HubLayout
+        {...hubProps}
+        state={{ type: "loading", title: "Loading Character Overview", description: "Fetching your active character snapshot..." }}
+      >
+        <span />
+      </HubLayout>
+    );
   }
 
   if (!user) {
     return (
-      <PageEmptyState
-        title="Sign in to view your character"
-        description="Character overview is available after you log in and choose an active character."
-        action={<Button asChild><Link to="/auth">Sign in</Link></Button>}
-      />
+      <HubLayout
+        {...hubProps}
+        state={{
+          type: "empty",
+          title: "Sign in to view your character",
+          description: "Character overview is available after you log in and choose an active character.",
+          action: <Button asChild><Link to="/auth">Sign in</Link></Button>,
+        }}
+      >
+        <span />
+      </HubLayout>
     );
   }
 
   if (error) {
-    return <PageErrorState title="Character overview could not be loaded" description={error} onRetry={() => void refetch()} />;
+    return (
+      <HubLayout
+        {...hubProps}
+        state={{ type: "error", title: "Character overview could not be loaded", description: error, onRetry: () => void refetch() }}
+      >
+        <span />
+      </HubLayout>
+    );
   }
 
   if (!profile) {
     return (
-      <PageEmptyState
-        title="No active character found"
-        description="Create or switch to a character before using Character tools."
-        action={<Button asChild><Link to="/characters">Manage characters</Link></Button>}
-      />
+      <HubLayout
+        {...hubProps}
+        state={{
+          type: "empty",
+          title: "No active character found",
+          description: "Create or switch to a character before using Character tools.",
+          action: <Button asChild><Link to="/characters">Manage characters</Link></Button>,
+        }}
+      >
+        <span />
+      </HubLayout>
     );
   }
 
@@ -70,6 +106,7 @@ export default function CharacterOverview() {
   const recentEvents = (activities ?? []).slice(0, 3);
 
   return (
+    <HubLayout {...hubProps}>
     <div className="space-y-6">
       <section className="rounded-xl border bg-card/80 p-5 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -80,7 +117,7 @@ export default function CharacterOverview() {
             </Avatar>
             <div>
               <Badge variant="outline" className="mb-2">Character</Badge>
-              <h1 className="text-3xl font-bold tracking-tight">{displayName}</h1>
+              <h2 className="text-3xl font-bold tracking-tight">{displayName}</h2>
               <p className="text-sm text-muted-foreground">Overview of your artist status, progression and next actions.</p>
             </div>
           </div>
@@ -158,5 +195,6 @@ export default function CharacterOverview() {
         </Card>
       </div>
     </div>
+    </HubLayout>
   );
 }
