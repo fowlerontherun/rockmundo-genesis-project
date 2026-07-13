@@ -4,18 +4,21 @@ import type { DirectMessageRow } from "@/hooks/useDirectMessages";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_DM_LENGTH = 2000;
 
-export function validateDirectMessageInput(recipientProfileId: string | null | undefined, body: string) {
-  if (!recipientProfileId || !UUID_RE.test(recipientProfileId)) {
-    throw new Error("Choose a valid player to message.");
-  }
-
+export function validateMessageBody(body: string) {
   const trimmed = body.trim();
   if (!trimmed) throw new Error("Write a message before sending.");
   if (trimmed.length > MAX_DM_LENGTH) {
     throw new Error(`Direct messages must be ${MAX_DM_LENGTH.toLocaleString()} characters or fewer.`);
   }
+  return trimmed;
+}
 
-  return { recipientProfileId, body: trimmed };
+export function validateDirectMessageInput(recipientProfileId: string | null | undefined, body: string) {
+  if (!recipientProfileId || !UUID_RE.test(recipientProfileId)) {
+    throw new Error("Choose a valid player to message.");
+  }
+
+  return { recipientProfileId, body: validateMessageBody(body) };
 }
 
 function friendlyDirectMessageError(message?: string) {
