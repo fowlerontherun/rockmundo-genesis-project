@@ -1,4 +1,7 @@
-import { ATTRIBUTE_MAX_VALUE } from "./attributeProgression";
+// Kept local to break a circular import with ./attributeProgression which
+// re-exports getAttributeUpgradeCost from this file. Must match the value in
+// attributeProgression.ts.
+const ATTRIBUTE_MAX_VALUE = 1000;
 
 export const PROGRESSION_BALANCE_VERSION = "progression_v2.0.0";
 
