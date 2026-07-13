@@ -530,7 +530,7 @@ const getProgressPercent = (value?: number | null) => {
 const Songwriting = () => {
   const { t } = useTranslation();
   // useAuth removed — profileId from useActiveProfile below
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const {
     profile,
@@ -560,7 +560,7 @@ const Songwriting = () => {
     chordProgressionsError,
     refetchThemes,
     refetchChordProgressions,
-  } = useSongwritingData(profile?.id);
+  } = useSongwritingData(profileId, userId);
 
   // Map attributes to required format
   const attributes = useMemo(() => {
@@ -643,19 +643,32 @@ const Songwriting = () => {
   }, [skills]);
 
   const fetchSongs = useCallback(async () => {
-    if (!profileId) {
+    if (!profileId && !userId) {
       setSongs([]);
       return;
     }
 
-    logger.info("Fetching songs for songwriting", { profileId });
+    logger.info("Fetching songs for songwriting", {
+      endpoint: "songs",
+      profileId,
+      userId,
+    });
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("songs")
         .select(SONG_SELECT_COLUMNS)
-        .eq("profile_id", profileId)
         .order("updated_at", { ascending: false });
+
+      if (profileId && userId) {
+        query = query.or(`profile_id.eq.${profileId},user_id.eq.${userId}`);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
+      } else if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
@@ -664,16 +677,25 @@ const Songwriting = () => {
       const resolvedSongs = Array.isArray(data)
         ? (data as unknown as Song[])
         : [];
+      logger.info("Songs query succeeded for songwriting", {
+        endpoint: "songs",
+        profileId,
+        userId,
+        responseCode: 200,
+        count: resolvedSongs.length,
+      });
       setSongs(resolvedSongs);
     } catch (error) {
       logger.error("Error fetching songs for songwriting", {
+        endpoint: "songs",
         profileId,
+        userId,
         error,
       });
       toast.error("Failed to load songs");
       setSongs([]);
     }
-  }, [profileId]);
+  }, [profileId, userId]);
 
   useEffect(() => {
     void fetchSongs();
@@ -2484,7 +2506,7 @@ const Songwriting = () => {
 
       {filteredProjects.length === 0 ? (
         <PageEmptyState
-          title={projectsList.length === 0 ? "No songwriting projects yet" : "No projects match these filters"}
+          title={projectsList.length === 0 ? "You haven't written any songs yet." : "No projects match these filters"}
           description={
             projectsList.length === 0
               ? "Capture a new concept, set creative targets, and let focus sprints carry you to a finished song."
