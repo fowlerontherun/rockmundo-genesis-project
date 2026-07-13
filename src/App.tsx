@@ -78,6 +78,7 @@ const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const PRSubmissionsHistory = lazyWithRetry(() => import("./pages/media/PRSubmissionsHistory"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
+const AdminPlayerReports = lazyWithRetry(() => import("./pages/admin/PlayerReports"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
@@ -208,6 +209,8 @@ const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDef
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
 const FriendsPage = lazyWithRetry(() => import("./pages/Friends"));
+const BlockedPlayersPage = lazyWithRetry(() => import("./pages/settings/BlockedPlayers"));
+const MyReportsPage = lazyWithRetry(() => import("./pages/settings/MyReports"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
 const PlayerProfileEdit = lazyWithRetry(() => import("./pages/PlayerProfileEdit"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
@@ -675,6 +678,8 @@ function App() {
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="players/search" element={<PreserveQueryRedirect to="/community/players" />} />
                     <Route path="community/friends" element={<FriendsPage />} />
+                    <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
+                    <Route path="settings/safety/reports" element={<MyReportsPage />} />
                     <Route path="community/players" element={<PlayerDiscovery />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="players/:playerId" element={<PlayerProfile />} />
@@ -736,6 +741,7 @@ function App() {
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
                     <Route path="admin/players" element={<AdminPlayerManagement />} />
+                    <Route path="admin/player-reports" element={<AdminPlayerReports />} />
                     <Route path="admin/achievements" element={<AdminAchievements />} />
                     <Route path="admin/analytics" element={<AdminAnalytics />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
