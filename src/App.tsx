@@ -207,6 +207,7 @@ const POVClipAdmin = lazyWithRetry(() => import("./pages/admin/POVClipAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
+const FriendsPage = lazyWithRetry(() => import("./pages/Friends"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
 const PlayerProfileEdit = lazyWithRetry(() => import("./pages/PlayerProfileEdit"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
@@ -656,7 +657,7 @@ function App() {
                     <Route path="release/:id" element={<ReleaseDetail />} />
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="social/overview" element={<PreserveQueryRedirect to="/social" />} />
-                    <Route path="social/friends" element={<SocialHubUnified />} />
+                    <Route path="social/friends" element={<FriendsPage />} />
                     <Route path="social/players" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
@@ -673,6 +674,7 @@ function App() {
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="players/search" element={<PreserveQueryRedirect to="/community/players" />} />
+                    <Route path="community/friends" element={<FriendsPage />} />
                     <Route path="community/players" element={<PlayerDiscovery />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="players/:playerId" element={<PlayerProfile />} />
