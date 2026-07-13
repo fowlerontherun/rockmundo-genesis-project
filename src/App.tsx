@@ -15,7 +15,7 @@ import { RadioProvider } from "./components/radio/RMRadioPlayer";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import { FM_MODULES, findModuleForPath } from "./config/fmNavigation";
-import { bandHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation, socialHubNavigation, worldHubNavigation } from "./config/hubNavigation";
+import { bandHubNavigation, businessHubNavigation, careerHubNavigation, characterHubNavigation, musicHubNavigation, scheduleHubNavigation, socialHubNavigation, worldHubNavigation } from "./config/hubNavigation";
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
@@ -324,6 +324,8 @@ const MediaHub = lazyWithRetry(() => import("./pages/hubs/MediaHub"));
 const SocialHubUnified = lazyWithRetry(() => import("./pages/SocialHub"));
 const CityLandmarks = lazyWithRetry(() => import("./pages/CityLandmarks"));
 const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusinessHub"));
+const BusinessOverview = lazyWithRetry(() => import("./pages/BusinessOverview"));
+const CareerOverviewPage = lazyWithRetry(() => import("./pages/CareerOverview"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
 const BlindBoxAnalytics = lazyWithRetry(() => import("./pages/BlindBoxAnalytics"));
@@ -375,6 +377,8 @@ const HUB_TITLE_CONFIGS = [
   { title: "Band", overviewPath: "/band", items: bandHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
   { title: "World", overviewPath: "/world", items: worldHubNavigation },
+  { title: "Business", overviewPath: "/business", items: businessHubNavigation },
+  { title: "Career", overviewPath: "/career", items: careerHubNavigation },
   { title: "Social", overviewPath: "/social", items: socialHubNavigation },
 ];
 
@@ -588,6 +592,26 @@ function App() {
                     <Route path="journal" element={<Journal />} />
                     <Route path="version-history" element={<VersionHistory />} />
                     <Route path="donation-success" element={<DonationSuccess />} />
+                    <Route path="business" element={<BusinessOverview />} />
+                    <Route path="business/overview" element={<PreserveQueryRedirect to="/business" />} />
+                    <Route path="business/companies" element={<MyCompanies />} />
+                    <Route path="business/staff" element={<PreserveQueryRedirect to="/business/companies" />} />
+                    <Route path="business/recruitment" element={<Navigate to="/employment?tab=applications" replace />} />
+                    <Route path="business/job-adverts" element={<Navigate to="/employment?tab=applications" replace />} />
+                    <Route path="business/finances" element={<Navigate to="/my-companies?tab=finances" replace />} />
+                    <Route path="business/advertising" element={<PreserveQueryRedirect to="/pr" />} />
+                    <Route path="business/labels" element={<PreserveQueryRedirect to="/labels" />} />
+                    <Route path="business/reports" element={<Navigate to="/my-companies?tab=reports" replace />} />
+                    <Route path="career" element={<CareerOverviewPage />} />
+                    <Route path="career/overview" element={<PreserveQueryRedirect to="/career" />} />
+                    <Route path="career/employment" element={<Employment />} />
+                    <Route path="career/finances" element={<PreserveQueryRedirect to="/finances" />} />
+                    <Route path="career/fame" element={<PreserveQueryRedirect to="/statistics" />} />
+                    <Route path="career/charts" element={<PreserveQueryRedirect to="/competitive-charts" />} />
+                    <Route path="career/awards" element={<Awards />} />
+                    <Route path="career/achievements" element={<PreserveQueryRedirect to="/hall-of-immortals" />} />
+                    <Route path="career/discography" element={<PreserveQueryRedirect to="/release-manager" />} />
+                    <Route path="career/history" element={<PreserveQueryRedirect to="/legacy" />} />
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
@@ -671,7 +695,7 @@ function App() {
                     <Route path="hub/character" element={<CharacterHub />} />
                     <Route path="hub/music" element={<PreserveQueryRedirect to="/music" />} />
                     <Route path="hub/band-live" element={<BandLiveHub />} />
-                    <Route path="hub/career-business" element={<CareerBusinessHub />} />
+                    <Route path="hub/career-business" element={<PreserveQueryRedirect to="/career" />} />
                     <Route path="social" element={<SocialHubUnified />} />
                     <Route path="landmarks" element={<CityLandmarks />} />
                     {/* Bare /hub goes to dashboard (no hub index page exists) */}
@@ -685,8 +709,8 @@ function App() {
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/world-social" element={<PreserveQueryRedirect to="/world" />} />
-                    <Route path="hub/career" element={<Navigate to="/hub/career-business" replace />} />
-                    <Route path="hub/commerce" element={<Navigate to="/hub/career-business" replace />} />
+                    <Route path="hub/career" element={<PreserveQueryRedirect to="/career" />} />
+                    <Route path="hub/commerce" element={<PreserveQueryRedirect to="/business" />} />
                     <Route path="modeling" element={<Modeling />} />
                     <Route path="producer-career" element={<ProducerCareer />} />
                     <Route path="clothing-designer" element={<ClothingDesigner />} />

@@ -552,3 +552,114 @@ The Social hub uses shared `HubLayout` child navigation, including horizontal mo
 - Twaater account DMs and friend direct messages remain separate systems to avoid a risky messaging rewrite.
 - Recruitment application-management screens remain in Band.
 - Business and Career consolidation is the planned next navigation PR.
+
+## PR 7 update — Business and Career hub consolidation
+
+PR 7 splits the former combined Career & Business area into two predictable hub entry points that use the shared `HubLayout` pattern from PR 2:
+
+- `/business` renders the Business Overview.
+- `/career` renders the Career Overview.
+- `/business/overview` and `/career/overview` are compatibility aliases that preserve query strings and redirect to the base overview routes.
+- `/hub/career-business` and `/hub/career` now resolve to `/career`; `/hub/commerce` resolves to `/business`.
+
+### Final Business hierarchy
+
+Business owns company operations and only surfaces existing routes:
+
+| Business child | Canonical route | Existing implementation or alias |
+| --- | --- | --- |
+| Overview | `/business` | New overview using existing company and company-finance summary hooks. |
+| Companies | `/business/companies` | Existing `MyCompanies` page; `/my-companies` remains valid. |
+| Staff | `/business/staff` | Alias to company management because staff is still handled inside existing company/entity management pages. |
+| Recruitment / Job adverts | `/business/recruitment`, `/business/job-adverts` | Alias to the existing employment/application surface; advert creation and application review remain in the current workflow. |
+| Finances | `/business/finances` | Alias to the existing company dashboard finance summary rather than the personal/band finance ledger. |
+| Advertising | `/business/advertising` | Alias to the existing PR/advertising workflow. |
+| Labels | `/business/labels` | Existing record label pages; `/labels` and `/labels/:labelId/manage` remain valid. |
+| Reports | `/business/reports` | Alias to the existing company dashboard/reporting context. |
+
+No placeholder tabs were added for contracts, company inventory or standalone settings because the current repository does not expose stable standalone pages for those systems across all company types.
+
+### Final Career hierarchy
+
+Career owns personal professional progression and only surfaces existing routes:
+
+| Career child | Canonical route | Existing implementation or alias |
+| --- | --- | --- |
+| Overview | `/career` | New hub shell around the existing career overview data from `src/pages/dashboard/career.tsx`. |
+| Employment | `/career/employment` | Existing `Employment` page; `/employment` and `/jobs` remain valid entry points. |
+| Personal Finances | `/career/finances` | Alias to `/finances` for the existing personal finance ledger and non-company money surfaces. |
+| Fame & Fans | `/career/fame` | Alias to the existing statistics/progression surface. |
+| Charts | `/career/charts` | Alias to competitive charts; full chart browsing remains outside Career. |
+| Awards | `/career/awards` | Existing awards page; `/awards` remains valid. |
+| Achievements | `/career/achievements` | Alias to the existing Hall of Immortals/achievement surface. |
+| Discography | `/career/discography` | Alias to release management as a contextual career entry; Music remains the owner of creation and editing workflows. |
+| History | `/career/history` | Alias to the existing legacy/career-history surface. |
+
+### Canonical Business route model
+
+Business management uses hub-owned routes for navigation (`/business/*`) while preserving entity-specific legacy management URLs such as `/company/:companyId`, `/security-firm/:companyId`, `/merch-factory/:companyId`, `/venue-business/:venueId`, `/rehearsal-studio-business/:studioId` and `/recording-studio-business/:studioId`. Public discovery stays under World at `/world/companies`, `/world-companies`, `/companies/directory` and public company profile routes where they are used as discovery surfaces.
+
+Active-company context remains the current repository model: the company list and individual management pages own their entity IDs, refresh behaviour and permission handling. PR 7 does not introduce a new global company selector or transient navigation-state dependency.
+
+### Canonical Career route model
+
+Career progression uses `/career` for the overview and `/career/*` for predictable child entry points. Existing flat URLs remain aliases or direct routes to avoid breaking bookmarks, activity feed links, messages, notifications and older hub links.
+
+### Route migration table and legacy aliases
+
+| Legacy route | New logical owner | Behaviour |
+| --- | --- | --- |
+| `/hub/career-business` | Career | Redirects to `/career`. |
+| `/hub/career` | Career | Redirects to `/career`. |
+| `/hub/commerce` | Business | Redirects to `/business`. |
+| `/my-companies` | Business | Still renders the existing company dashboard; selected under Business. |
+| `/company/:companyId` and company-type management routes | Business | Remain direct entity management links; selected under Business. |
+| `/world-companies`, `/companies/directory`, `/world/companies` | World | Remain public discovery links; not selected as Business management. |
+| `/employment`, `/jobs` | Career | Remain valid and selected as Employment. |
+| `/awards`, `/competitive-charts`, `/release-manager`, `/legacy`, `/statistics` | Career | Remain valid career progression aliases. |
+| `/finances` | Career | Remains the personal/band finance ledger; Business uses company-dashboard finance context instead. |
+
+### Ownership boundaries
+
+- World owns public company discovery, public profiles, local vacancies and commercial browsing.
+- Business owns company operations: owned-company overview, staff-management entry points, recruitment/adverts, company financial summaries, advertising/PR entry points, labels and reports.
+- Career owns the player's current employment, progression, fame/fans context, awards, achievements, charts participation, discography summary links and history.
+- Character remains identity, skills, wellness, inventory, wardrobe and lifestyle.
+- Social remains community interaction, friends, messages, player discovery and social recruitment contact points.
+- Band remains band roles, band finances, crew/equipment and band-specific performance preparation.
+- Music remains songs, recording, release creation and release editing; Career links to discography only as a progression context.
+
+### Business Overview content
+
+The Business Overview uses existing company hooks and shows only supported data: managed-company count, aggregate company cash, 30-day company revenue and 30-day company profit/loss from the existing company financial summary. The no-company state links to real actions: create/manage companies, browse public companies and find a job.
+
+### Career Overview content
+
+The Career Overview reuses the existing career dashboard data and displays supported progression summaries: gigs completed, average gig rating, lifetime performance revenue, band fame, skill highlights, venue/promoter highlights and recent performance history. Employment, awards, charts, achievements, discography and history are exposed through the Career child navigation without duplicating their underlying systems.
+
+### Recruitment and employment ownership
+
+Business manages company-side recruitment entry points and advert/application review links. World and Social remain discovery/contact surfaces. Career owns the player's employment status, applications and employment history through the existing Employment page. PR 7 does not duplicate the application workflow or change location, salary, contract or suitability rules.
+
+### Finance boundaries
+
+Business routes label company money as company cash, company revenue and company profit/loss. `/finances` remains the existing personal/band ledger and is surfaced through Career as personal finances. Band-specific finances remain in the Band hub. PR 7 does not merge balances, create new finance formulas or alter weekly cost/profit calculations.
+
+### Permission behaviour
+
+Existing pages continue to enforce company owner, manager, staff-role and VIP checks. Business child routes that alias to current pages preserve their existing read-only, locked or denied states. Settings and dangerous company actions are not made default hub routes.
+
+### Mobile and accessibility considerations
+
+Both new hubs use `HubLayout`, so child navigation keeps the shared horizontally scrollable mobile pattern and `aria-current` active-link semantics. Overview cards use text labels for profit/loss and avoid colour-only meaning. Existing tables, forms and confirmation dialogs remain owned by their source pages.
+
+### Known limitations and deferred defects
+
+- Staff, recruitment, job adverts and reports still share existing company/employment pages where the repository has not implemented standalone hub-owned pages.
+- Contracts and company inventory are omitted from navigation because no stable cross-company standalone pages were identified.
+- `/finances` still includes personal and band finance tabs; Business deliberately routes to company-dashboard finance context instead of moving that ledger in this PR.
+- Some entity-specific management pages keep their original breadcrumbs until the broader route metadata cleanup in a later navigation-polish PR.
+
+### Follow-up
+
+The next planned navigation PR remains Schedule and Home improvements. PR 7 intentionally does not start Schedule or Home work.

@@ -261,24 +261,20 @@ export const FM_MODULES: FMModule[] = [
     id: "career",
     label: "Career",
     icon: Briefcase,
-    rootPath: "/hub/career-business",
+    rootPath: "/career",
     matchPaths: [
-      "/hub/career-business", "/hub/career", "/hub/commerce",
+      "/career", "/career/overview", "/career/employment", "/career/finances", "/career/fame", "/career/charts", "/career/awards", "/career/achievements", "/career/discography", "/career/history", "/hub/career-business", "/hub/career",
       "/finances", "/sponsorships", "/employment", "/teaching",
       "/education", "/booking", "/offers-dashboard",
       "/public-relations", "/pr",
       "/producer-career", "/modeling", "/acting", "/clothing-designer",
-      "/labels", "/record-label", "/my-companies", "/company",
-      "/venues", "/venue-business", "/recording-studio-business",
-      "/rehearsal-studio-business", "/merch-factory", "/logistics-company",
-      "/security-firm", "/merchandise",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/career-business", icon: Briefcase },
+      { label: "Overview", path: "/career", icon: Trophy },
       { label: "Finances", path: "/finances", icon: DollarSign },
-      { label: "Employment", path: "/employment", icon: Briefcase },
-      { label: "Companies", path: "/my-companies", icon: Building2 },
-      { label: "PR", path: "/pr", icon: Megaphone },
+      { label: "Employment", path: "/career/employment", icon: Briefcase },
+      { label: "Awards", path: "/career/awards", icon: Award },
+      { label: "Charts", path: "/career/charts", icon: BarChart3 },
       { label: "Offers", path: "/offers-dashboard", icon: Handshake },
     ],
     sidebar: [
@@ -310,25 +306,63 @@ export const FM_MODULES: FMModule[] = [
           { label: "Clothing Designer", path: "/clothing-designer", icon: Scissors },
         ],
       },
-      {
-        label: "Companies",
-        items: [
-          { label: "My Companies", path: "/my-companies", icon: Building2 },
-          { label: "Record Labels", path: "/labels", icon: Disc3 },
-          { label: "Venues", path: "/venues", icon: Building2 },
-          { label: "Merchandise", path: "/merchandise", icon: ShoppingBag },
-        ],
-      },
     ],
     quickActions: [
       { label: "View Finances", path: "/finances", icon: DollarSign, description: "Cash flow & ledger" },
       { label: "Find a Job", path: "/employment", icon: Briefcase },
       { label: "Review Offers", path: "/offers-dashboard", icon: Handshake },
-      { label: "Manage Companies", path: "/my-companies", icon: Building2 },
       { label: "Sign Sponsors", path: "/sponsorships", icon: Handshake },
     ],
   },
-  // 6. MEDIA — consumer media browsing
+
+  // 6. BUSINESS — company ownership and operations
+  {
+    id: "business",
+    label: "Business",
+    icon: Building2,
+    rootPath: "/business",
+    matchPaths: [
+      "/business", "/business/overview", "/business/companies", "/business/staff",
+      "/business/recruitment", "/business/job-adverts", "/business/finances",
+      "/business/advertising", "/business/labels", "/business/reports", "/hub/commerce",
+      "/labels", "/record-label", "/my-companies", "/company",
+      "/venues", "/venue-business", "/recording-studio-business",
+      "/rehearsal-studio-business", "/merch-factory", "/logistics-company",
+      "/security-firm", "/merchandise",
+    ],
+    subTabs: [
+      { label: "Overview", path: "/business", icon: Building2 },
+      { label: "Companies", path: "/business/companies", icon: Building2 },
+      { label: "Recruitment", path: "/business/recruitment", icon: Briefcase },
+      { label: "Finances", path: "/business/finances", icon: DollarSign },
+      { label: "Advertising", path: "/business/advertising", icon: Megaphone },
+      { label: "Labels", path: "/business/labels", icon: Disc3 },
+    ],
+    sidebar: [
+      { label: "Operations", items: [
+        { label: "Companies", path: "/business/companies", icon: Building2 },
+        { label: "Staff", path: "/business/staff", icon: Users },
+        { label: "Recruitment", path: "/business/recruitment", icon: Briefcase },
+        { label: "Advertising", path: "/business/advertising", icon: Megaphone },
+      ] },
+      { label: "Finance & reports", items: [
+        { label: "Company Finances", path: "/business/finances", icon: DollarSign },
+        { label: "Reports", path: "/business/reports", icon: BarChart3 },
+      ] },
+      { label: "Business types", items: [
+        { label: "Record Labels", path: "/business/labels", icon: Disc3 },
+        { label: "Venues", path: "/venues", icon: Building2 },
+        { label: "Merchandise", path: "/merchandise", icon: ShoppingBag },
+      ] },
+    ],
+    quickActions: [
+      { label: "Manage Companies", path: "/business/companies", icon: Building2 },
+      { label: "Review Finances", path: "/business/finances", icon: DollarSign },
+      { label: "Create Job Advert", path: "/business/recruitment", icon: Briefcase },
+      { label: "Browse Public Companies", path: "/world/companies", icon: Globe },
+    ],
+  },
+  // 7. MEDIA — consumer media browsing
   {
     id: "media",
     label: "Media",

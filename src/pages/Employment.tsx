@@ -527,8 +527,8 @@ export default function Employment() {
     <FMPageScaffold
       title="Employment"
       subtitle={currentCityName ? `Find jobs to earn money while pursuing your music career • Currently in: ${currentCityName}` : "Find jobs to earn money while pursuing your music career"}
-      backTo="/hub/career-business"
-      backLabel="Back to Career & Business"
+      backTo="/career"
+      backLabel="Back to Career"
       icon={Briefcase}
     >
 
