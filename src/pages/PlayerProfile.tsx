@@ -1,38 +1,24 @@
-import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, Send, AlertCircle
+  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit
 } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
-import { sendBandInvitation, friendlyBandInvitationError } from "@/services/bandInvitations";
-import { PresenceIndicator } from "@/components/presence/PresenceIndicator";
+import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
+import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
-
-const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
-const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [selectedBand, setSelectedBand] = useState("");
-  const [instrumentRole, setInstrumentRole] = useState("Guitar");
-  const [vocalRole, setVocalRole] = useState("None");
-  const [inviteMessage, setInviteMessage] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,21 +69,6 @@ export default function PlayerProfile() {
     enabled: !!currentUser?.id && !!playerId && currentUser?.id !== playerId,
   });
 
-  // Current user's bands (where they are leader/Founder) for invite
-  const { data: myBands } = useQuery({
-    queryKey: ["my-leader-bands", currentUser?.user_id],
-    queryFn: async () => {
-      if (!currentUser?.user_id) return [];
-      const { data } = await supabase
-        .from("band_members")
-        .select("band_id, bands!band_members_band_id_fkey(id, name)")
-        .eq("user_id", currentUser.user_id)
-        .in("role", ["leader", "Founder"]);
-      return data?.map((m: any) => m.bands).filter(Boolean) || [];
-    },
-    enabled: !!currentUser?.user_id,
-  });
-
   // Send friend request
   const sendRequest = useMutation({
     mutationFn: async () => {
@@ -139,29 +110,6 @@ export default function PlayerProfile() {
       queryClient.invalidateQueries({ queryKey: ["friendship-status"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
-  // Invite to band
-  const inviteToBand = useMutation({
-    mutationFn: async () => {
-      if (!currentUser?.user_id || !profile?.user_id || !selectedBand) throw new Error("Missing data");
-      await sendBandInvitation({
-        bandId: selectedBand,
-        targetProfileId: profile.id,
-        instrumentRole,
-        vocalRole: vocalRole === "None" ? null : vocalRole,
-        message: inviteMessage,
-      });
-    },
-    onSuccess: () => {
-      toast({ title: "Band invitation sent!" });
-      setInviteOpen(false);
-      setSelectedBand("");
-      setInstrumentRole("Guitar");
-      setVocalRole("None");
-      setInviteMessage("");
-    },
-    onError: (e: any) => toast({ title: "Error", description: friendlyBandInvitationError(e), variant: "destructive" }),
   });
 
   if (isCurrentUserLoading || isLoading) {
@@ -234,149 +182,31 @@ export default function PlayerProfile() {
   return (
     <FMPageScaffold title={profile.display_name || profile.username || "Player"} icon={User} backTo="/players/search">
 
-      {/* Hero Card */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-6">
-            <Avatar className="h-24 w-24 border-2 border-primary/30 flex-shrink-0">
-              <AvatarImage src={profile.avatar_url || undefined} />
-              <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
-            </Avatar>
+      <PlayerProfileHeader
+        name={profile.display_name || profile.username}
+        username={profile.username}
+        avatarUrl={profile.avatar_url}
+        cityName={profile.city_name}
+        currentBand={profile.bands[0] ? { id: profile.bands[0].id, name: profile.bands[0].name } : null}
+        mainRole={profile.social_profile?.preferred_roles?.[0] || profile.bands[0]?.instrument_role}
+        fame={profile.fame}
+        careerLevel={profile.level}
+        presence={profilePresence?.presence}
+        isOwnProfile={isOwnProfile}
+        actions={isOwnProfile ? (
+          <Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button>
+        ) : (
+          <>
+            {!friendship && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {isPendingSent && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
+            {isPendingReceived && <Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button>}
+            {isFriend && <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            <FutureProfileActions />
+          </>
+        )}
+      />
 
-            <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-2xl font-bold">
-                      {profile.display_name || profile.username}
-                    </h1>
-                    {profilePresence && <PresenceIndicator state={profilePresence.presence} />}
-                  </div>
-                  {profile.display_name && (
-                    <p className="text-muted-foreground text-sm">@{profile.username}</p>
-                  )}
-                </div>
-
-                {/* Action buttons */}
-                {!isOwnProfile && currentUser && (
-                  <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                    {!friendship && (
-                      <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending}>
-                        <UserPlus className="h-4 w-4 mr-1" /> Add Friend
-                      </Button>
-                    )}
-                    {isPendingSent && (
-                      <Button size="sm" variant="secondary" disabled>
-                        <Clock className="h-4 w-4 mr-1" /> Request Sent
-                      </Button>
-                    )}
-                    {isPendingReceived && (
-                      <Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}>
-                        <UserPlus className="h-4 w-4 mr-1" /> Accept Request
-                      </Button>
-                    )}
-                    {isFriend && (
-                      <Button size="sm" variant="destructive" onClick={() => removeFriend.mutate()} disabled={removeFriend.isPending}>
-                        <UserMinus className="h-4 w-4 mr-1" /> Remove Friend
-                      </Button>
-                    )}
-
-                    {/* Invite to band */}
-                    {myBands && myBands.length > 0 && (
-                      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Send className="h-4 w-4 mr-1" /> Invite to Band
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Invite {profile.display_name || profile.username} to Band</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="profile-band-invite-band">Band</Label>
-                              <Select value={selectedBand} onValueChange={setSelectedBand}>
-                                <SelectTrigger id="profile-band-invite-band"><SelectValue placeholder="Select a band" /></SelectTrigger>
-                                <SelectContent>
-                                  {myBands.map((band: any) => (
-                                    <SelectItem key={band.id} value={band.id}>{band.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="profile-band-invite-instrument">Instrument Role</Label>
-                              <Select value={instrumentRole} onValueChange={setInstrumentRole}>
-                                <SelectTrigger id="profile-band-invite-instrument"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {INSTRUMENTS.map(i => (
-                                    <SelectItem key={i} value={i}>{i}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="profile-band-invite-vocal">Vocal Role</Label>
-                              <Select value={vocalRole} onValueChange={setVocalRole}>
-                                <SelectTrigger id="profile-band-invite-vocal"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {VOCAL_ROLES.map(v => (
-                                    <SelectItem key={v} value={v}>{v}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="profile-band-invite-message">Message (optional)</Label>
-                              <Textarea
-                                id="profile-band-invite-message"
-                                maxLength={500}
-                                aria-describedby="profile-band-invite-message-help"
-                                value={inviteMessage}
-                                onChange={e => setInviteMessage(e.target.value)}
-                                placeholder="Hey, want to join our band?"
-                                rows={2}
-                              />
-                              <p id="profile-band-invite-message-help" className="text-xs text-muted-foreground">
-                                {inviteMessage.trim().length}/500 characters
-                              </p>
-                            </div>
-                            <Button
-                              className="w-full"
-                              onClick={() => inviteToBand.mutate()}
-                              disabled={!selectedBand || inviteToBand.isPending}
-                            >
-                              {inviteToBand.isPending ? "Sending..." : "Send Invitation"}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Meta row */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                {profile.city_name && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {profile.city_name}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Joined {format(new Date(profile.created_at!), "MMMM yyyy")}
-                </span>
-              </div>
-
-              {profilePresence?.activity && <p className="text-sm font-medium text-primary">{profilePresence.activity}</p>}
-              {profile.bio && <p className="text-sm">{profile.bio}</p>}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {profile.social_profile?.status_message && <Card><CardContent className="p-4 text-sm font-medium">{profile.social_profile.status_message}</CardContent></Card>}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -446,6 +276,48 @@ export default function PlayerProfile() {
               )}
             </CardContent>
           </Card>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ProfileInfoCard title="Biography" icon={User}>
+              {profile.social_profile?.biography || profile.bio ? <p className="whitespace-pre-wrap text-sm">{profile.social_profile?.biography || profile.bio}</p> : <p className="text-sm text-muted-foreground">No biography has been shared.</p>}
+            </ProfileInfoCard>
+            <ProfileInfoCard title="Musical Identity" icon={Music}>
+              {profile.social_profile?.show_skills === false || profile.social_profile?.skill_visibility === 'hidden' ? <p className="text-sm text-muted-foreground">Skill information is hidden.</p> : <div className="space-y-2 text-sm">
+                <p><span className="font-medium">Primary instrument:</span> {profile.social_profile?.primary_instrument || 'Not shared'}</p>
+                <p><span className="font-medium">Secondary:</span> {profile.social_profile?.secondary_instruments?.join(', ') || 'Not shared'}</p>
+                <p><span className="font-medium">Genres:</span> {profile.social_profile?.preferred_genres?.join(', ') || 'Not shared'}</p>
+                <p><span className="font-medium">Vocals:</span> {profile.social_profile?.vocal_capability || 'Not shared'}</p>
+                <p className="text-muted-foreground">Proficiency is shown as broad public badges; hidden exact skill values are not exposed.</p>
+              </div>}
+            </ProfileInfoCard>
+            <ProfileInfoCard title="Availability" icon={Users}><OpenStatusBadges profile={profile.social_profile} /></ProfileInfoCard>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ProfileInfoCard title="Current band" icon={Music}>
+              {profile.bands[0] ? <BandProfileCard band={profile.bands[0]} /> : <p className="text-sm text-muted-foreground">No current band listed.</p>}
+            </ProfileInfoCard>
+            <ProfileInfoCard title="Employment"><EmploymentProfileCard employer={profile.career_summary?.current_employer} jobTitle={profile.career_summary?.current_job} /></ProfileInfoCard>
+          </div>
+
+          <ProfileInfoCard title="Career Summary" icon={TrendingUp}>
+            <div className="grid gap-2 text-sm md:grid-cols-3">
+              <p>Bands joined: {profile.career_summary?.bands_joined ?? profile.bands.length}</p>
+              <p>Gigs performed: {profile.career_summary?.gigs_performed ?? 'Not available'}</p>
+              <p>Songs written: {profile.career_summary?.songs_written ?? 'Not available'}</p>
+              <p>Recordings released: {profile.career_summary?.recordings_released ?? 'Not available'}</p>
+              <p>Albums released: {profile.career_summary?.albums_released ?? 'Not available'}</p>
+              <p>Awards: {profile.career_summary?.awards ?? 'Not available'}</p>
+            </div>
+          </ProfileInfoCard>
+
+          <ProfileInfoCard title="Achievements and badges" icon={Star}>
+            {profile.badges?.length ? <div className="flex flex-wrap gap-2">{profile.badges.map((badge: any) => <Badge key={badge.badge_key || badge.name}>{badge.label || badge.name}</Badge>)}</div> : <p className="text-sm text-muted-foreground">No public badges yet.</p>}
+          </ProfileInfoCard>
+
+          <ProfileInfoCard title="Recent public activity" icon={Clock}>
+            {profile.public_activity?.length ? <div className="space-y-2">{profile.public_activity.slice(0, 5).map((item: any) => <p key={item.id || item.created_at} className="text-sm">{item.summary}</p>)}</div> : <p className="text-sm text-muted-foreground">No public activity to show.</p>}
+          </ProfileInfoCard>
 
           {profile.city_name && (
             <Card>

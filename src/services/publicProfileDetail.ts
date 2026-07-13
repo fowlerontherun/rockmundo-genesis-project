@@ -27,6 +27,10 @@ export interface PublicProfileDetail {
   city_name: string | null;
   created_at: string | null;
   bands: PublicProfileDetailBand[];
+  social_profile: any | null;
+  badges: any[];
+  public_activity: any[];
+  career_summary: any | null;
 }
 
 interface PublicProfileDetailRpcRow {
@@ -42,6 +46,10 @@ interface PublicProfileDetailRpcRow {
   city_name: string | null;
   created_at: string | null;
   bands: PublicProfileDetailBand[] | null;
+  social_profile?: any | null;
+  badges?: any[] | null;
+  public_activity?: any[] | null;
+  career_summary?: any | null;
 }
 
 export function validatePublicProfileDetailInput(targetProfileId?: string | null, viewerProfileId?: string | null) {
@@ -83,6 +91,10 @@ function mapDetailRow(row: PublicProfileDetailRpcRow): PublicProfileDetail {
     city_name: row.city_name,
     created_at: row.created_at,
     bands: Array.isArray(row.bands) ? row.bands : [],
+    social_profile: row.social_profile ?? null,
+    badges: Array.isArray(row.badges) ? row.badges : [],
+    public_activity: Array.isArray(row.public_activity) ? row.public_activity : [],
+    career_summary: row.career_summary ?? null,
   };
 }
 
