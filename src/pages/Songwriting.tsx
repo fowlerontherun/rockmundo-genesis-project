@@ -103,6 +103,7 @@ import {
   Zap,
 } from "lucide-react";
 import logger from "@/lib/logger";
+import { loadSongsByOwnership } from "@/lib/songwritingResilientLoader";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -655,28 +656,23 @@ const Songwriting = () => {
     });
 
     try {
-      let query = supabase
-        .from("songs")
-        .select(SONG_SELECT_COLUMNS)
-        .order("updated_at", { ascending: false });
+      const { songs: resolvedRows, failures } = await loadSongsByOwnership(
+        supabase,
+        SONG_SELECT_COLUMNS,
+        profileId,
+        userId,
+      );
 
-      if (profileId && userId) {
-        query = query.or(`profile_id.eq.${profileId},user_id.eq.${userId}`);
-      } else if (profileId) {
-        query = query.eq("profile_id", profileId);
-      } else if (userId) {
-        query = query.eq("user_id", userId);
+      if (failures.length > 0) {
+        logger.warn("Songwriting songs ownership fallback had non-critical failures", {
+          endpoint: "songs",
+          profileId,
+          userId,
+          failures,
+        });
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        throw error;
-      }
-
-      const resolvedSongs = Array.isArray(data)
-        ? (data as unknown as Song[])
-        : [];
+      const resolvedSongs = resolvedRows as unknown as Song[];
       logger.info("Songs query succeeded for songwriting", {
         endpoint: "songs",
         profileId,
@@ -1624,16 +1620,29 @@ const Songwriting = () => {
     );
   }
 
-  if (projectsError || themesError || chordProgressionsError) {
+  if (projectsError && projectsList.length === 0 && songs.length === 0) {
     return (
       <div className="container mx-auto p-6">
         <PageErrorState
           title="Songwriting could not be loaded"
-          description="We could not load your writing desk. Your songs are safe — retry when the connection settles."
+          description={
+            import.meta.env.DEV && (projectsError as any)?.songwritingFailure ? (
+              <span>
+                We could not load your writing desk. Your songs are safe — retry when the connection settles.
+                <br />
+                Diagnostic: failed query {(projectsError as any).songwritingFailure.queryName}
+                {" | status "}{String((projectsError as any).songwritingFailure.httpStatus ?? "unknown")}
+                {" | code "}{String((projectsError as any).songwritingFailure.code ?? "unknown")}
+                {" | message "}{String((projectsError as any).songwritingFailure.message ?? "unknown")}
+                {" | profile "}{String((projectsError as any).songwritingFailure.profileId ?? "none")}
+                {" | legacy fallback "}{String(Boolean((projectsError as any).songwritingFailure.legacyUserFallbackAttempted))}
+              </span>
+            ) : (
+              "We could not load your writing desk. Your songs are safe — retry when the connection settles."
+            )
+          }
           onRetry={() => {
             void refetchProjects();
-            void refetchThemes();
-            void refetchChordProgressions();
             void fetchSongs();
           }}
         />
@@ -1662,6 +1671,12 @@ const Songwriting = () => {
         </Button>
       }
     >
+      {(themesError || chordProgressionsError) && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {themesError && <p>Song themes are temporarily unavailable.</p>}
+          {chordProgressionsError && <p>Chord progressions are temporarily unavailable.</p>}
+        </div>
+      )}
       {/* Session Info Banner */}
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-3 px-4">
@@ -2504,16 +2519,43 @@ const Songwriting = () => {
         </div>
       )}
 
+      {projectsError && songs.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Current songwriting projects could not be refreshed, but your completed songs are still available below.
+        </div>
+      )}
+
+      {songs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Completed songs</CardTitle>
+            <CardDescription>Previously written songs loaded independently from the project desk.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {songs.map((song) => (
+                <div key={song.id} className="rounded-md border p-3">
+                  <p className="font-medium">{song.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {[song.genre, song.status].filter(Boolean).join(" • ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {filteredProjects.length === 0 ? (
         <PageEmptyState
-          title={projectsList.length === 0 ? "You haven't written any songs yet." : "No projects match these filters"}
+          title={projectsList.length === 0 && songs.length === 0 ? "You haven't written any songs yet." : "No projects match these filters"}
           description={
-            projectsList.length === 0
+            projectsList.length === 0 && songs.length === 0
               ? "Capture a new concept, set creative targets, and let focus sprints carry you to a finished song."
               : "Clear a filter or switch status views to bring more writing projects back into the setlist."
           }
           action={
-            projectsList.length === 0 ? (
+            projectsList.length === 0 && songs.length === 0 ? (
               <Button onClick={handleOpenCreate}>
                 <Plus className="h-4 w-4 mr-2" />
                 Start your first project
