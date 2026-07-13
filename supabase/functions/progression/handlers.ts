@@ -298,121 +298,46 @@ export async function handleSpendAttributeXp(
 
 export async function handleSpendSkillXp(
   client: SupabaseClient<Database>,
-  userId: string,
+  _userId: string,
   profileState: ProfileState,
   skillSlug: string,
   xpAmount: number,
   metadata: Record<string, unknown> = {},
-): Promise<{ state: ProfileState; skillProgress: SkillProgressRow }> {
+  eventId?: string,
+): Promise<{ state: ProfileState; skillProgress: SkillProgressRow; spendResult: Record<string, unknown> }> {
   const profileId = profileState.profile.id;
+  const idempotencyKey = eventId || (typeof metadata?.idempotency_key === "string" ? metadata.idempotency_key : undefined);
 
-  // Use skill_xp_balance for spending on skills
-  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
-
-  console.log(`[SpendSkillXp] Profile: ${profileId}, Skill: ${skillSlug}, Amount: ${xpAmount} SXP, Balance: ${currentSxpBalance} SXP`);
-
-  if (xpAmount <= 0) {
-    throw new Error("XP amount must be positive");
+  if (!Number.isInteger(xpAmount) || xpAmount <= 0) {
+    throw new Error("skill_xp_invalid_amount");
   }
 
-  if (currentSxpBalance < xpAmount) {
-    throw new Error(`Insufficient Skill XP. You have ${currentSxpBalance} SXP but need ${xpAmount} SXP.`);
+  if (!idempotencyKey) {
+    throw new Error("skill_xp_missing_idempotency_key");
   }
 
-  // Tier gating: refuse XP if the prerequisite tier hasn't been maxed.
-  const { data: unlocked, error: gateError } = await client.rpc("skill_tier_unlocked", {
+  const { data, error } = await client.rpc("progression_spend_skill_xp" as any, {
     p_profile_id: profileId,
-    p_slug: skillSlug,
-  });
-  if (gateError) {
-    console.error("[SpendSkillXp] tier gate check failed", gateError);
-  } else if (unlocked === false) {
-    throw new Error(`This tier is locked — max the lower tier of "${skillSlug}" to level ${MAX_SKILL_LEVEL} first.`);
+    p_skill_slug: skillSlug,
+    p_xp: xpAmount,
+    p_metadata: { ...(metadata || {}), idempotency_key: idempotencyKey },
+    p_idempotency_key: idempotencyKey,
+  } as any);
+
+  if (error) {
+    throw new Error(error.message || "skill_xp_spend_failed");
   }
 
-  // Get or create skill progress
-  const { data: skill } = await client
-    .from("skill_progress")
-    .select("*")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-
-  const currentXp = skill?.current_xp ?? 0;
-  const currentLevel = Math.min(skill?.current_level ?? 0, MAX_SKILL_LEVEL);
-  const newXp = currentXp + xpAmount;
-  let requiredXp = skill?.required_xp ?? calculateRequiredXp(currentLevel);
-
-  let newLevel = currentLevel;
-  let remainingXp = newXp;
-
-  // Calculate level ups
-  while (newLevel < MAX_SKILL_LEVEL && remainingXp >= requiredXp) {
-    remainingXp -= requiredXp;
-    newLevel += 1;
-    requiredXp = calculateRequiredXp(newLevel);
-  }
-
-  if (newLevel >= MAX_SKILL_LEVEL) {
-    newLevel = MAX_SKILL_LEVEL;
-    remainingXp = Math.min(remainingXp, currentXp);
-  }
-
-  // Update skill progress
-  const newRequiredXp = calculateRequiredXp(newLevel);
-
-  const { error: skillError } = await client
-    .from("skill_progress")
-    .upsert({
-      profile_id: profileId,
-      skill_slug: skillSlug,
-      current_xp: remainingXp,
-      current_level: newLevel,
-      required_xp: newRequiredXp,
-      last_practiced_at: new Date().toISOString(),
-      metadata: { ...(metadata || {}), balance_version: PROGRESSION_BALANCE_VERSION } as Record<string, string | number | boolean | null>,
-    }, { onConflict: "profile_id,skill_slug" });
-
-  if (skillError) {
-    throw new Error(skillError.message || "Failed to update skill");
-  }
-
-  const { data: updatedSkillProgress, error: fetchSkillError } = await client
-    .from("skill_progress")
-    .select("*")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-
-  if (fetchSkillError) {
-    throw new Error(fetchSkillError.message || "Failed to fetch updated skill progress");
-  }
-
-  if (!updatedSkillProgress) {
-    throw new Error("Updated skill progress not found");
-  }
-
-  // Deduct from SXP balance
-  const { error: walletError } = await client
-    .from("player_xp_wallet")
-    .update({
-      skill_xp_balance: currentSxpBalance - xpAmount,
-      skill_xp_spent: (profileState.wallet?.skill_xp_spent ?? 0) + xpAmount,
-      // Keep legacy columns in sync
-      xp_balance: currentSxpBalance - xpAmount,
-      xp_spent: (profileState.wallet?.xp_spent ?? 0) + xpAmount,
-      last_recalculated: new Date().toISOString(),
-    })
-    .eq("profile_id", profileId);
-
-  if (walletError) {
-    throw new Error(walletError.message || "Failed to deduct SXP");
+  const result = (data ?? {}) as Record<string, unknown>;
+  const skillProgress = result.skill_progress as SkillProgressRow | undefined;
+  if (!skillProgress) {
+    throw new Error("skill_xp_updated_progress_missing");
   }
 
   const state = await fetchProfileState(client, profileId);
-
-  return { state, skillProgress: updatedSkillProgress };
+  return { state, skillProgress, spendResult: result };
 }
+
 
 export async function handleUnlearnSkill(
   client: SupabaseClient<Database>,

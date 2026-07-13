@@ -34,6 +34,29 @@ class MockSupabaseClient {
     }> = {},
   ) {}
 
+  rpc(name: string, params: Record<string, unknown>) {
+    if (name !== "progression_spend_skill_xp") return Promise.resolve({ data: null, error: { message: "unknown rpc" } });
+    const profileId = params.p_profile_id;
+    const skillSlug = params.p_skill_slug;
+    const xp = Number(params.p_xp);
+    const wallet = ((this.tables.player_xp_wallet ?? []) as any[]).find((row) => row.profile_id === profileId);
+    const skill = ((this.tables.skill_progress ?? []) as any[]).find((row) => row.profile_id === profileId && row.skill_slug === skillSlug);
+    if (!wallet || !skill) return Promise.resolve({ data: null, error: { message: "missing state" } });
+    let level = skill.current_level;
+    let currentXp = skill.current_xp + xp;
+    const required = [120,148,176,204,232,260,289,318,348,377,406,436,465,494,524,553,582,612,641,670];
+    while (level < 20 && currentXp >= required[Math.min(level, required.length - 1)]) {
+      currentXp -= required[Math.min(level, required.length - 1)];
+      level += 1;
+    }
+    const updatedSkill = { ...skill, current_level: level, current_xp: currentXp, required_xp: required[Math.min(level, required.length - 1)] };
+    const updatedWallet = { ...wallet, skill_xp_balance: wallet.skill_xp_balance - xp, xp_balance: wallet.xp_balance - xp };
+    this.tables.skill_progress = (this.tables.skill_progress as any[]).map((row) => row === skill ? updatedSkill : row) as never;
+    this.tables.player_xp_wallet = (this.tables.player_xp_wallet as any[]).map((row) => row === wallet ? updatedWallet : row) as never;
+    this.lastUpserts["skill_progress"] = updatedSkill;
+    return Promise.resolve({ data: { skill_progress: updatedSkill, xp_spent: xp }, error: null });
+  }
+
   from(table: keyof Database["public"]["Tables"]) {
     const matchKeys: Partial<
       Record<keyof Database["public"]["Tables"], string[]>
@@ -204,13 +227,15 @@ describe("handleSpendSkillXp", () => {
       profileState,
       "guitar",
       400,
+      {},
+      "test-key",
     );
 
     const skillUpsert = mockClient.lastUpserts["skill_progress"] as Record<string, unknown>;
 
     expect(skillUpsert.current_level).toBe(2);
-    expect(skillUpsert.current_xp).toBe(150);
-    expect(skillUpsert.required_xp).toBe(Math.floor(100 * Math.pow(1.5, 2)));
+    expect(skillUpsert.current_xp).toBe(132);
+    expect(skillUpsert.required_xp).toBe(176);
 
     expect(result.state.wallet?.xp_balance).toBe(600);
   });
