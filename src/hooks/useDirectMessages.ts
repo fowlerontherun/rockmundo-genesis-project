@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
+import { sendConversationMessage, startDirectConversation } from "@/features/direct-messages/services/conversations";
 
 export interface DirectMessageRow {
   id: string;
@@ -22,17 +23,29 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   const channelId =
     myProfileId && otherProfileId ? buildChannelId(myProfileId, otherProfileId) : null;
 
+  const conversationQuery = useQuery({
+    queryKey: ["direct-conversation", myProfileId, otherProfileId],
+    enabled: !!myProfileId && !!otherProfileId,
+    queryFn: async () => {
+      if (!otherProfileId) return null;
+      return startDirectConversation(otherProfileId);
+    },
+  });
+
+  const conversationId = conversationQuery.data?.conversation_id ?? null;
+
   const messagesQuery = useQuery({
-    queryKey: ["direct-messages", channelId],
+    queryKey: ["direct-messages", conversationId ?? channelId],
     enabled: !!channelId,
     queryFn: async (): Promise<DirectMessageRow[]> => {
       if (!channelId) return [];
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("direct_messages")
         .select("*")
-        .eq("channel_id", channelId)
         .order("created_at", { ascending: true })
-        .limit(500);
+        .limit(100);
+      query = conversationId ? query.eq("conversation_id", conversationId) : query.eq("channel_id", channelId);
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as DirectMessageRow[];
     },
@@ -51,7 +64,8 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
           filter: `channel_id=eq.${channelId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["direct-messages", channelId] });
+          queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+          queryClient.invalidateQueries({ queryKey: ["direct-conversation", myProfileId, otherProfileId] });
           queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
         },
       )
@@ -59,26 +73,34 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [channelId, queryClient, myProfileId]);
+  }, [channelId, conversationId, queryClient, myProfileId, otherProfileId]);
 
   const sendMessage = useMutation({
     mutationFn: async (body: string) => {
       if (!channelId || !myProfileId || !otherProfileId) {
         throw new Error("Missing channel");
       }
-      await sendDirectMessageService(otherProfileId, body);
+      if (conversationId) {
+        await sendConversationMessage(conversationId, body, crypto.randomUUID());
+      } else {
+        await sendDirectMessageService(otherProfileId, body);
+      }
     },
   });
 
   const markRead = useMutation({
     mutationFn: async () => {
       if (!channelId || !myProfileId) return;
-      await (supabase as any)
-        .from("direct_messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("channel_id", channelId)
-        .eq("recipient_profile_id", myProfileId)
-        .is("read_at", null);
+      if (conversationId) {
+        await (supabase as any).rpc("mark_conversation_read", { conversation_id: conversationId, read_message_id: null });
+      } else {
+        await (supabase as any)
+          .from("direct_messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("channel_id", channelId)
+          .eq("recipient_profile_id", myProfileId)
+          .is("read_at", null);
+      }
       queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
     },
   });
@@ -86,7 +108,8 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   return {
     channelId,
     messages: messagesQuery.data ?? [],
-    isLoading: messagesQuery.isLoading,
+    conversationId,
+    isLoading: messagesQuery.isLoading || conversationQuery.isLoading,
     sendMessage,
     markRead,
   };
