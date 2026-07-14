@@ -23,7 +23,7 @@ const Placeholder = ({ label, to }: { label: string; to: string }) => {
 export default function MobileCareer() {
   const tabs = [
     { key: "band", label: "Band", icon: <Users className="h-4 w-4" />, content: <Placeholder label="Band Manager" to="/band" /> },
-    { key: "songs", label: "Songs", icon: <Music className="h-4 w-4" />, content: <Placeholder label="Songs" to="/songs" /> },
+    { key: "songs", label: "Songs", icon: <Music className="h-4 w-4" />, content: <Placeholder label="Songs" to="/song-manager" /> },
     { key: "practice", label: "Practice", icon: <Zap className="h-4 w-4" />, content: <Placeholder label="Skills" to="/skills" /> },
     { key: "recording", label: "Studio", icon: <Mic2 className="h-4 w-4" />, content: <Placeholder label="Recording" to="/recording-studio" /> },
     { key: "gigs", label: "Gigs", icon: <CalendarDays className="h-4 w-4" />, content: <Placeholder label="Gigs" to="/gigs" /> },
