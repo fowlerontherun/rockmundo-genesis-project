@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.464",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Self-promotion booking works for multi-character accounts.** Was failing with `Profile not found` because the panel looked up profiles by `user_id` with `.single()`, which errors when a user has more than one character slot. It now uses the active character's `profileId` directly." },
+    ],
+  },
+  {
     version: "1.1.463",
     date: "2026-07-14",
     changes: [
