@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.478",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Jam session booking no longer fails with an activity_type check constraint violation. The hook was inserting 'jam_session' but the DB constraint only accepts 'jam' — now aligned." },
+    ],
+  },
+  {
     version: "1.1.477",
     date: "2026-07-14",
     changes: [
