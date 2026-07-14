@@ -186,7 +186,7 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
       activity_type: params.activityType,
       scheduled_start: params.scheduledStart.toISOString(),
       scheduled_end: params.scheduledEnd.toISOString(),
-      duration_minutes: getDurationMinutes(params.scheduledStart, params.scheduledEnd),
+      
       title: params.title,
       description: params.description,
       location: params.location,
