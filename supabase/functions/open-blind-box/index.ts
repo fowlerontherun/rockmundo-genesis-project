@@ -9,11 +9,12 @@ const corsHeaders = {
 
 type Tier = "common" | "rare" | "epic" | "legendary";
 
+// Buffed rewards (v1.1.465) — matches higher box prices and monthly-exclusive nature.
 const TIER_REWARDS: Record<Tier, { xp: [number, number]; ap: number; quality: [number, number] }> = {
-  common: { xp: [200, 300], ap: 1, quality: [30, 55] },
-  rare: { xp: [400, 600], ap: 2, quality: [50, 70] },
-  epic: { xp: [1000, 1400], ap: 4, quality: [70, 88] },
-  legendary: { xp: [2500, 3500], ap: 8, quality: [85, 100] },
+  common: { xp: [500, 800], ap: 2, quality: [55, 70] },
+  rare: { xp: [1000, 1500], ap: 4, quality: [70, 82] },
+  epic: { xp: [2500, 3500], ap: 8, quality: [82, 92] },
+  legendary: { xp: [6000, 8000], ap: 16, quality: [92, 100] },
 };
 
 const rand = (min: number, max: number) =>
@@ -213,6 +214,7 @@ serve(async (req) => {
         stat_boosts: statBoosts,
         skill_boost_slug: skillSlug ?? null,
         stock: 0,
+        is_blind_box_exclusive: true,
       }).select("id").single();
       if (eqIns.error) {
         console.error("[open-blind-box] equipment_items insert failed:", eqIns.error);

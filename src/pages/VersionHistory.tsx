@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.465",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "**Blind Box overhaul — monthly exclusives, higher stakes.** Each of the six themed boxes now runs for **one calendar month only** (Jul→Dec 2026, cycling yearly), so there is a fresh box every month. Prices raised roughly 2–3× ($4.5k–$7.5k cash; 150–175 gems premium) to match a big rewards buff: XP ranges are now 500–800 (common) up to 6,000–8,000 (legendary), AP awards doubled, and roll quality floors are much higher." },
+      { type: 'improvement', description: "**Rewards actually persist to the character.** Instruments now save to `player_personal_gear`, a unique `equipment_items` catalog entry, and `player_equipment` — visible in the Blind Box Inventory *and* the main Gear loadout. Songs drop into your songwriting catalog as fully-written unrecorded tracks. Duplicate instruments convert to crafting shards + rebate XP/AP." },
+      { type: 'feature', description: "**Blind-box gear is exclusive.** New `is_blind_box_exclusive` flag on the equipment catalog — unboxed instruments are minted with this flag set and cannot appear in normal shops, keeping them a genuinely rare loot source." },
+    ],
+  },
+  {
     version: "1.1.464",
     date: "2026-07-14",
     changes: [
