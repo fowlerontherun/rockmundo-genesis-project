@@ -252,7 +252,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
               nominee_id: nomination.nominee_id,
               nominee_name: nomination.nominee_name,
               band_id: nomination.band_id || null,
-              user_id: userId,
+              user_id: authUid,
               submission_data: {
                 ...scoreData,
                 auto_nominated: true,
