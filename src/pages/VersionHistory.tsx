@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.507",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "City Festival Editor: 'Re-seed missing' is now a preview modal that lists every city, festival name, dates, scale, capacity, ticket range, and genre that will be inserted before you confirm — no existing festivals are touched." },
+    ],
+  },
+  {
     version: "1.1.506",
     date: "2026-07-14",
     changes: [

@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Save, RefreshCw, Search, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Save, RefreshCw, Search, MapPin, Eye } from "lucide-react";
 
 type FestivalRow = {
   id: string;
@@ -204,38 +206,47 @@ export default function CityFestivalsAdmin() {
     onError: (e: Error) => toast({ title: "Batch save failed", description: e.message, variant: "destructive" }),
   });
 
+  const reseedPreview = useMemo(() => {
+    const today = new Date();
+    const startBase = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const d = SCALE_DEFAULTS.small;
+    const iso = (dt: Date) => dt.toISOString().slice(0, 10);
+    return citiesMissingFestival.map((c, idx) => {
+      const start = new Date(startBase);
+      start.setDate(start.getDate() + idx);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 2);
+      return {
+        name: `${c.name} Local Festival`,
+        city_id: c.id,
+        city_name: c.name,
+        country: c.country,
+        scale: "small",
+        status: "upcoming",
+        start_date: iso(start),
+        end_date: iso(end),
+        expected_attendance: d.attendance,
+        ticket_price_low: d.low,
+        ticket_price_high: d.high,
+        genre: "indie",
+        description: `A small-scale community festival in ${c.name}.`,
+      };
+    });
+  }, [citiesMissingFestival]);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   const reseedMissingMutation = useMutation({
     mutationFn: async () => {
-      if (!citiesMissingFestival.length) return 0;
-      const today = new Date();
-      const startBase = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-      const rowsToInsert = citiesMissingFestival.map((c, idx) => {
-        const start = new Date(startBase);
-        start.setDate(start.getDate() + idx); // stagger by 1 day
-        const end = new Date(start);
-        end.setDate(end.getDate() + 2); // 3-day small festival
-        const d = SCALE_DEFAULTS.small;
-        const iso = (dt: Date) => dt.toISOString().slice(0, 10);
-        return {
-          name: `${c.name} Local Festival`,
-          city_id: c.id,
-          scale: "small",
-          status: "upcoming",
-          start_date: iso(start),
-          end_date: iso(end),
-          expected_attendance: d.attendance,
-          ticket_price_low: d.low,
-          ticket_price_high: d.high,
-          genre: "indie",
-          description: `A small-scale community festival in ${c.name}.`,
-        };
-      });
+      if (!reseedPreview.length) return 0;
+      const rowsToInsert = reseedPreview.map(({ city_name, country, ...rest }) => rest);
       const { error } = await (supabase as any).from("festivals").insert(rowsToInsert);
       if (error) throw error;
       return rowsToInsert.length;
     },
     onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["admin-cf-festivals"] });
+      setPreviewOpen(false);
       toast({ title: `Seeded ${n} missing festival${n === 1 ? "" : "s"}` });
     },
     onError: (e: Error) => toast({ title: "Re-seed failed", description: e.message, variant: "destructive" }),
@@ -263,29 +274,67 @@ export default function CityFestivalsAdmin() {
           </p>
         </div>
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogTrigger asChild>
               <Button variant="outline" disabled={!citiesMissingFestival.length}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Re-seed missing ({citiesMissingFestival.length})
+                <Eye className="h-4 w-4 mr-2" />
+                Preview re-seed ({citiesMissingFestival.length})
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Re-seed missing city festivals?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will insert one small-scale festival for each of the {citiesMissingFestival.length} cities
-                  that currently have no festival record. Existing festivals will not be touched.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => reseedMissingMutation.mutate()}>
-                  Re-seed safely
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Preview re-seed — {reseedPreview.length} new festival{reseedPreview.length === 1 ? "" : "s"}</DialogTitle>
+                <DialogDescription>
+                  These rows will be <span className="font-medium text-foreground">inserted</span> for cities that currently have no festival. No existing festivals will be updated or overwritten.
+                </DialogDescription>
+              </DialogHeader>
+              {reseedPreview.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">Every city already has a festival — nothing to insert.</p>
+              ) : (
+                <ScrollArea className="h-[420px] rounded-md border border-border/40">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="text-left">
+                        <th className="px-2 py-1.5 font-medium">City</th>
+                        <th className="px-2 py-1.5 font-medium">Festival name</th>
+                        <th className="px-2 py-1.5 font-medium">Dates</th>
+                        <th className="px-2 py-1.5 font-medium">Scale</th>
+                        <th className="px-2 py-1.5 font-medium text-right">Capacity</th>
+                        <th className="px-2 py-1.5 font-medium text-right">Ticket range</th>
+                        <th className="px-2 py-1.5 font-medium">Genre</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reseedPreview.map((r) => (
+                        <tr key={r.city_id} className="border-t border-border/30">
+                          <td className="px-2 py-1.5">
+                            <div className="font-medium">{r.city_name}</div>
+                            {r.country && <div className="text-muted-foreground text-[10px]">{r.country}</div>}
+                          </td>
+                          <td className="px-2 py-1.5">{r.name}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{r.start_date} → {r.end_date}</td>
+                          <td className="px-2 py-1.5"><Badge variant="outline" className="capitalize">{r.scale}</Badge></td>
+                          <td className="px-2 py-1.5 text-right">{r.expected_attendance.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">${r.ticket_price_low} – ${r.ticket_price_high}</td>
+                          <td className="px-2 py-1.5 capitalize">{r.genre}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              )}
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={() => reseedMissingMutation.mutate()}
+                  disabled={!reseedPreview.length || reseedMissingMutation.isPending}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {reseedMissingMutation.isPending ? "Seeding…" : `Insert ${reseedPreview.length} festival${reseedPreview.length === 1 ? "" : "s"}`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => saveAllMutation.mutate()} disabled={!dirtyCount || saveAllMutation.isPending}>
             <Save className="h-4 w-4 mr-2" />
             Save all ({dirtyCount})
