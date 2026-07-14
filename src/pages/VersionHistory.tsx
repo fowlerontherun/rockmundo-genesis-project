@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.480",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Award nominations no longer fail with an RLS violation on award_nominations. The insert was using the character profile id for user_id, but the RLS policy checks auth.uid(); now uses the authenticated user id." },
+    ],
+  },
+  {
     version: "1.1.479",
     date: "2026-07-14",
     changes: [
