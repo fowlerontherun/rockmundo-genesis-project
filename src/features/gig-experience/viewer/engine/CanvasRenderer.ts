@@ -64,7 +64,14 @@ export class CanvasRenderer {
     ctx.fillStyle = "#111827";
     preset.entrances.forEach((p) => { ctx.fillRect(p.x - 12, p.y - 8, 24, 16); });
     // Stage, decor, lights
+    // FOH tower + security + tape marks in audience area
+    drawFOHAndSecurity(ctx, preset);
+    // Stage, decor, lights
     drawStage(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
+    // Extra stage decor (subwoofers, cables, mic stands, guitar rack, LED lip, banner)
+    drawStageExtras(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
+    // Follow spots from FOH to stage
+    drawFollowSpots(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
     // Crash barrier at stage edge
     drawBarrier(ctx, preset);
     // Backstage marker
