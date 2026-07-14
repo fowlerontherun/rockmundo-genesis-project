@@ -17,10 +17,10 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.508",
+    version: "1.1.509",
     date: "2026-07-14",
     changes: [
-      { type: 'feature', description: "Festival Detail Lineup tab now shows a stage-by-stage schedule: each day is grouped by stage with performer name, slot type (headliner/support/opener/DJ), start time, end time, and set duration in minutes. Falls back to the legacy headliner/main/support grouping when no scheduled slots exist yet." },
+      { type: 'feature', description: "New Festival Booking Calendar (/festivals/:id/calendar) with edition selector and four views: Run Order (stage-by-stage per day with set times & durations), Timeline (Gantt-style hour ruler with color-coded slot blocks per stage), Booked Stages (capacity, genre focus, slot & performer counts), and Shifts (staff shifts per day from staff metadata, with roster fallback). Accessible via a new Calendar button on the Festival Detail header." },
     ],
   },
   {
