@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useUserRole } from "@/hooks/useUserRole";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
@@ -88,7 +88,6 @@ const Navigation = () => {
       <div className="p-4 border-b border-sidebar-border/50 flex items-center justify-between">
         <img src={logo} alt="RockMundo" className="h-10 w-auto object-contain" />
         <div className="flex items-center gap-1">
-          <ThemeSwitcher />
           <LanguageSwitcher />
         </div>
       </div>
@@ -200,7 +199,7 @@ const Navigation = () => {
             <ActivityStatusIndicator />
             <NotificationBell />
             <RMRadioButton />
-            <ThemeSwitcher />
+            
             <LanguageSwitcher />
             <HowToPlayDialog />
           </div>
