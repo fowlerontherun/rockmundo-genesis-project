@@ -1,91 +1,109 @@
-## Festivals System Expansion Plan
 
-Turn festivals into a marquee event with full ownership economics, deep booking/finance/operations tooling, and a unified admin console. Players can either apply to play at NPC/admin-run festivals or purchase and personally operate their own.
+# RockMundo Mobile Experience — Phased Build Plan
 
-### 1. Ownership & Marketplace (new)
+This is a large multi-phase build. Because the desktop app has hundreds of pages and dozens of subsystems (bands, gigs, songwriting, recording, festivals, companies, PR, wellness, marketplace, world, employment, awards, tours, achievements, mail, Twaater, friends, characters, wardrobe, inventory, etc.), we won't rewrite every screen in one pass. Instead, we deliver a working mobile shell with the most-used loops first, then layer in additional systems.
 
-- Extend `public.festivals` with:
-  - `owner_type` ('system' | 'player' | 'company'), `owner_profile_id`, `owner_company_id`
-  - `sale_status` ('not_for_sale' | 'listed' | 'sold'), `list_price`, `annual_operating_cost`, `prestige_tier` (1–5)
-  - `founded_year`, `next_edition_start`, `edition_number`, `cancellation_reason`
-- New tables:
-  - `festival_sale_listings` — active for-sale festivals (price, listed_by, notes)
-  - `festival_purchase_offers` — player bids on system/player festivals
-  - `festival_ownership_history` — audit of transfers
-  - `festival_staff` — festival-owned staff: promoters, bookers, safety officers, medics, sound engineers (wage, morale, skill)
-  - `festival_insurance_policies` — coverage type, premium, payout ceiling, weather rider
-  - `festival_permits` — city permit status, permit fee, safety inspection date
-- RPC: `purchase_festival(festival_id, buyer_profile_id)` — transfers ownership, moves treasury, logs history.
+Desktop remains untouched at every step.
 
-### 2. Owner Operations Console (new player page)
+---
 
-New route `/festivals/manage/:festivalId` (owner-only) with tabs:
+## Architecture
 
-- **Overview** — key KPIs, current edition status, checklist (permits, insurance, minimum booked bands, staffing).
-- **Booking** — send/receive slot offers, review applications, drag-and-drop stage schedule builder over `festival_stage_slots`, set headliner, negotiate fees via existing `festival_offer_negotiations`.
-- **Stages & Production** — add/remove stages, choose capacity, rent stage equipment (ties into `stage_equipment_catalog`).
-- **Tickets & Pricing** — set tiered ticket prices (GA, VIP, weekend, day), presale windows, capacity per stage.
-- **Sponsors** — solicit sponsor deals from `sponsorship_brands`, accept/counter offers, tier placement.
-- **Staff & Security** — hire/fire festival staff and security firm via `security_contracts`.
-- **Finances** — live P&L per edition, cash flow calendar, expense ledger.
-- **Marketing** — buy media/radio/DikCok campaigns to drive attendance forecast.
-- **Post-event** — reviews, ratings, payout summary, next-edition planner.
+**Detection & routing**
+- Add `useIsMobileDevice()` (width < 768px OR `?mobile=1` feature flag, persisted to `localStorage`).
+- In `src/components/Layout.tsx`, branch: if mobile → render `<MobileShell>`; else keep existing `<DesktopOnlyGate><FMShell>` untouched.
+- Also update `DesktopOnlyGate` to skip its width block on mobile-route users.
+- Mobile uses the same React Router routes as desktop so links, deep links, and existing pages continue to work. Mobile-specific screens live under a new `src/mobile/` tree and are chosen via a `<MobileRoute>` wrapper that renders the mobile version when available, and falls back to the desktop page inside a mobile-safe container otherwise.
 
-### 3. Deep Finances
+**Directory layout**
+```text
+src/mobile/
+  shell/            MobileShell, TopAppBar, BottomNav, FabMenu
+  components/       Cards, sheets, rings, skeletons, empty states
+  hooks/            useMobileNav, useBottomSheet, useSwipeTabs
+  pages/            Home, Career (+ tabs), Social, World, Me
+  fab/              Action registry, context-aware suggestions
+  theme/            Mobile tokens (radii, shadows, type scale)
+```
 
-- Expand `festival_finances` with columns for: staff_wages, security_costs, permit_fees, insurance_premium, stage_rental, equipment_rental, marketing_spend, artist_guarantees, artist_bonuses, sponsor_income, ticket_income_ga, ticket_income_vip, merch_cut_income, food_beverage_income, cleanup_cost, refund_liability, tax_paid.
-- New `festival_expense_ledger` (line-item entries with category, amount_cents, party, edition).
-- Weekly cron `settle_festival_finances`:
-  - Pay staff wages, insurance premium, permit renewals.
-  - Post artist guarantees on performance completion.
-  - Distribute sponsor payouts on milestones.
-  - Deduct festival cut of merch (`festival_merch_sales.festival_cut`) into treasury.
-  - Handle refund liability if festival cancels.
-- Bankruptcy path: if treasury negative for N weeks → festival auto-listed at fire-sale price, staff unpaid, reputation hit.
+**Reuse rules**
+- All data comes from existing hooks (`useGameData`, `useActiveProfile`, `useNotificationsFeed`, wellness/mail/band hooks, etc.).
+- No new business logic, no new tables. Quick actions dispatch existing mutations or navigate to existing routes.
 
-### 4. Booking Pipeline Upgrades
+---
 
-- Two-way marketplace: owners post open slots; bands apply. Owners can also directly invite bands via `festival_slot_offers` with guarantee + bonus terms (already partly present — surface fully in UI).
-- Requirements per slot: min fame, genre fit, minimum popularity in host country.
-- Auto-negotiation NPC logic for system-owned festivals (bands accept/reject based on fame/fee heuristic).
-- Rider fulfillment tie-in with existing `gig_rider_fulfillment` + `band_riders` (owner sees costs).
-- Conflict detection: prevent double-booking bands across overlapping festivals.
+## Phase 1 — Foundation (this delivery)
 
-### 5. Gig Gameplay Integration
+Ship the shell + Today dashboard + 5-tab nav + FAB so the mobile experience is usable end-to-end, with unimplemented sections gracefully linking to existing routes.
 
-- Festival performances feed the existing Gig Viewer with a `festival_ground` layout preset and multi-stage backstage view.
-- Backstage RP events (`festival_backstage_events`) exposed in the pre-show tab.
-- Cross-band rivalry surface (`festival_rivalries`) — bands on same day compete for crowd share; winner earns fame + owner bonus.
-- Weather integration (`seasonal_weather_patterns`) impacts attendance and can trigger insurance claims.
-- Festival-exclusive merch drops (already in `FestivalExclusiveShop`) tied to owner-set royalty share.
+1. **Detection & shell wiring**
+   - `useIsMobileDevice` hook + `MOBILE_FLAG` localStorage toggle.
+   - `MobileShell.tsx`: TopAppBar (avatar, title, notifications, mail) → scroll area → BottomNav (Home / Career / Social / World / Me) → FAB.
+   - Bypass `DesktopOnlyGate` when mobile.
+   - Integrate into `Layout.tsx` behind the flag.
 
-### 6. Unified Admin Console
+2. **Design tokens**
+   - `src/mobile/theme/tokens.css`: mobile-only CSS variables (`--m-radius`, `--m-shadow`, `--m-tap`, type ramp).
+   - Dark-first, semantic tokens only. No hardcoded colors.
 
-Consolidate `FestivalAdmin.tsx` + `FestivalsAdmin.tsx` into a single `/admin/festivals` route with tabs:
+3. **Core reusable components**
+   - `MCard`, `StatCard`, `ProgressRing`, `CountdownCard`, `QuickActionCard`, `NotificationCard`, `EmptyState`, `SkeletonCard`, `BottomSheet` (wraps existing `Sheet` with mobile ergonomics), `SwipeTabs`.
 
-- **World Roster** — list all festivals (owner type, city, status, next edition, treasury, prestige).
-- **Create / Edit** — full form incl. new fields, seed batches by region/genre.
-- **Ownership** — force-transfer, put up for auction, seize from inactive owners, set reserve price.
-- **Bookings** — global view of all offers/applications, force-approve, mediate disputes.
-- **Finances** — cross-festival P&L, subsidy grants, tax rate config.
-- **Simulation** — run edition preview (attendance/revenue forecast) and one-click "advance to next edition".
-- Delete the redundant legacy pages after migration.
+4. **Today (Home) dashboard**
+   - Header: greeting, current city, weather chip.
+   - Vitals row: Energy, Mood, Health rings (from wellness hooks).
+   - Current activity + countdown (active gig / rehearsal / recording / travel from existing data).
+   - Upcoming: next gig, next rehearsal, unread mail count, unread notifications.
+   - Quick Actions grid: Practice, Write Song, Travel, Jam, Message Band, Post on Twaater, Sleep, Eat, Work, Shop (each routes to existing pages).
+   - Notification feed (uses `useNotificationsFeed`).
 
-### 7. UI Surfacing
+5. **Bottom nav + section landing pages**
+   - Home = Today.
+   - Career: swipeable tabs (Band, Songs, Practice, Recording, Gigs, Skills) — each tab renders a compact card list pulling from existing hooks, with "Open full view" linking to the desktop page inside the mobile scroll shell.
+   - Social: Friends / Band / Chat / Mail / Twaater — recent-activity cards.
+   - World: Current City / Travel / Companies / Marketplace / Charts / Events — card grid.
+   - Me: Character / Inventory / Wardrobe / Achievements / Settings — profile card + list.
 
-- Add a "Festivals" hub tile linking to `/festivals` browser; browser shows Owned / Attending / Watchlist / Marketplace tabs.
-- Landing widget on WorldPulse listing upcoming top-prestige festivals.
-- Notifications for: purchase-offer received, slot application received, insurance claim, staff quitting, weather warning.
+6. **FAB + Quick Action sheet**
+   - Global "+" button opens a bottom sheet with contextual actions based on current route.
+   - Registry maps action → route/mutation. Default set: Practice, Travel, Write Song, Jam, Message Friend, Book Studio, Book Rehearsal, Post on Twaater, Sleep, Eat, Buy Items.
 
-### Technical Notes
+7. **Gestures & polish**
+   - Horizontal swipe between Career tabs.
+   - Pull-to-refresh on Home (invalidates key queries).
+   - Loading skeletons + empty states on every card list.
 
-- All new tables use `profile_id` where player-scoped, follow existing RLS/GRANT pattern (`authenticated` + `service_role`).
-- Prices stored in cents (`_cents` suffix) with `Math.round(dollars * 100)`.
-- Use SECURITY DEFINER for `purchase_festival`, `advance_festival_edition`, `settle_festival_finances`.
-- Reuse existing `sponsorship_brands`, `security_contracts`, `stage_equipment_catalog`, `festival_merch_sales`, `festival_backstage_events`, `festival_rivalries` — no duplicate schemas.
-- Cron entry added to `cron_job_config` for weekly settlement + daily edition rollover.
-- Bump version to **v1.1.499**; add VersionHistory entry.
+8. **Version bump**
+   - Bump `VersionHeader` and add v1.1.520 entry to `VersionHistory`.
 
-### Rollout
+---
 
-Delivered in one build session (schema migration → RPCs → owner console → admin unification → hub surfacing → version bump), verified with `npm run typecheck` and Supabase linter.
+## Phase 2 — Deep integration (follow-up deliveries)
+
+Not shipped this turn. Called out so the user knows scope:
+- Mobile-native detail screens for Gig, Band, Song, Recording session, Travel picker, Studio booking, Friend profile, Mail thread, Twaater composer.
+- Context actions on every mobile page (rehearse, invite, book, publish, etc.).
+- Long-press quick actions on cards.
+- Notification permission + push (Capacitor/PWA path — separate decision).
+
+---
+
+## Technical details
+
+- **No schema changes.** No new tables, no migrations.
+- **No desktop file changes** other than the small branch in `Layout.tsx` and a mobile-aware check in `DesktopOnlyGate`.
+- **Routing:** existing routes untouched. Mobile pages register at the same paths using a `<MobileRoute>` HOC so `/` renders `MobileHome` on phones and `Landing`/desktop dashboard on desktop — but only inside the authenticated `Layout`; unauthenticated `/` and `/auth` stay as-is.
+- **Performance:** lazy-load Career sub-tab content; use React Query's existing caches; no extra fetching loops.
+- **Accessibility:** 44px min tap targets, focus rings on all controls, aria-labels on icon-only buttons.
+
+---
+
+## Deliverables this turn
+
+1. Mobile detection + shell + bottom nav + FAB.
+2. Today dashboard with real data.
+3. Career, Social, World, Me landing pages (card-based, wired to real hooks, with links to existing detail routes).
+4. Mobile component library (~12 components).
+5. Version bump to v1.1.520 with history entry.
+
+Ready to proceed with Phase 1?
