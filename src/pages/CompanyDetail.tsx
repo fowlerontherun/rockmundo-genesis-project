@@ -60,15 +60,19 @@ const CompanyDetailContent = () => {
   const linkLabelMutation = useMutation({
     mutationFn: async (labelId: string) => {
       if (!companyId) throw new Error("Missing company");
-      const { error } = await supabase.from("labels").update({ company_id: companyId }).eq("id", labelId);
+      const { error } = await (supabase as any).rpc("link_label_to_company", {
+        p_label_id: labelId,
+        p_company_id: companyId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Label linked to company");
       queryClient.invalidateQueries({ queryKey: ["company-labels", companyId] });
       queryClient.invalidateQueries({ queryKey: ["unlinked-owned-labels", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["company", companyId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message || "Failed to link label"),
   });
 
   const formatCurrency = (amount: number) => {
