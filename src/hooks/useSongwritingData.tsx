@@ -334,19 +334,26 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
         p_idempotency_key: `start-${profileId}-${projectId}-${Date.now()}`,
       });
       if (error) {
+        const err = error as any;
+        const detail = {
+          rpc: 'start_songwriting_session',
+          code: err.code ?? null,
+          httpStatus: err.status ?? null,
+          message: err.message ?? null,
+          details: err.details ?? null,
+          hint: err.hint ?? null,
+          params: { p_profile_id: profileId, p_project_id: projectId, p_effort_hours: effortHours },
+        };
         logger.error('Songwriting start RPC failed', {
           action: 'start_songwriting_session',
-          rpc: 'start_songwriting_session',
-          profileId,
-          projectId,
+          ...detail,
           userId: user.id,
-          duration: effortHours,
-          postgrestCode: (error as any).code,
-          httpStatus: (error as any).status,
-          domainError: error.message,
-          details: (error as any).details,
+          postgrestCode: err.code,
+          domainError: err.message,
         });
-        throw new Error(error.message || 'Failed to start session');
+        const enriched = new Error(err.message || 'Failed to start session');
+        (enriched as any).detail = detail;
+        throw enriched;
       }
 
       logGameActivity({
@@ -366,9 +373,24 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
       toast({ title: "Session Started", description: "Songwriting session in progress" });
     },
     onError: (error: Error) => {
-      toast({ title: "Could not start session", description: error.message, variant: "destructive" });
+      const detail = (error as any).detail as
+        | { rpc: string; code: string | null; httpStatus: number | null; message: string | null; details: string | null; hint: string | null }
+        | undefined;
+      const lines = detail
+        ? [
+            error.message,
+            `RPC: public.${detail.rpc}`,
+            detail.httpStatus != null ? `HTTP ${detail.httpStatus}` : null,
+            detail.code ? `Code: ${detail.code}` : null,
+            detail.details ? `Details: ${detail.details}` : null,
+            detail.hint ? `Hint: ${detail.hint}` : null,
+          ].filter(Boolean).join('\n')
+        : error.message;
+      console.error('[start_songwriting_session] failed', { error, detail });
+      toast({ title: "Could not start session", description: lines, variant: "destructive" });
     }
   });
+
 
   // Complete session using server-authoritative skill, attribute, genre, collaboration and wellness calculation
   const completeSession = useMutation({
