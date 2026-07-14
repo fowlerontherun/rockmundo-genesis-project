@@ -44,6 +44,12 @@ import InventoryManager from "./pages/InventoryManager";
 import Sponsorships from "./pages/Sponsorships";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
+const MobileLayout = lazyWithRetry(() => import("./mobile/shell/MobileLayout"));
+const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
+const MobileCareer = lazyWithRetry(() => import("./mobile/pages/MobileCareer"));
+const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
+const MobileWorld = lazyWithRetry(() => import("./mobile/pages/MobileWorld"));
+const MobileMe = lazyWithRetry(() => import("./mobile/pages/MobileMe"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
