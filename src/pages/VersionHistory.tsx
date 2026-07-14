@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.471",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded one recording studio and one rehearsal room in every one of the 180 world cities. Hourly rates and quality ratings scale to each city's music scene strength, so smaller towns offer affordable practice while major hubs command premium prices." },
+    ],
+  },
+  {
     version: "1.1.470",
     date: "2026-07-14",
     changes: [
