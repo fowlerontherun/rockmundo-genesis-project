@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.453",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Fixed 'record v_project has no field completed_at' (42703) when starting a songwriting session.** The `start_songwriting_session` RPC referenced a `completed_at` column that doesn't exist on `songwriting_projects`. Removed that reference — completion is now determined solely by `status IN ('completed','converted')` or a linked `song_id`." },
+    ],
+  },
+  {
     version: "1.1.452",
     date: "2026-07-14",
     changes: [
