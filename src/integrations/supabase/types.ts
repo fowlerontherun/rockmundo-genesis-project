@@ -37297,6 +37297,15 @@ export type Database = {
       }
       sync_job_employee_counts: { Args: never; Returns: undefined }
       sync_twaater_fame_scores: { Args: never; Returns: undefined }
+      trade_crypto_token: {
+        Args: {
+          p_profile_id: string
+          p_quantity: number
+          p_token_id: string
+          p_transaction_type: string
+        }
+        Returns: Json
+      }
       update_song_fame: {
         Args: { p_fame_amount: number; p_song_id: string; p_source: string }
         Returns: undefined

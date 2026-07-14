@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.462",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Underworld crypto trading works again.** Restored the missing `trade_crypto_token` database function — buys and sells were failing with a schema-cache miss. The RPC validates ownership, checks cash/holdings, deducts or credits the wallet, updates the weighted average buy price, and records the transaction atomically." },
+    ],
+  },
+  {
     version: "1.1.461",
     date: "2026-07-14",
     changes: [
