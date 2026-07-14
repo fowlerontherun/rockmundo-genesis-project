@@ -78,9 +78,18 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  // All mentors are now unlocked for all players
+  // Booking-side: all mentors remain unlocked for booking (design decision preserved)
   const isMentorDiscovered = (_mentorId: string) => {
     return true;
+  };
+
+  // Journal-side: real discovery claim state from player_master_discoveries
+  const hasClaimedDiscovery = (mentorId: string) => {
+    return !!discoveries?.some((d) => d.mentor_id === mentorId);
+  };
+
+  const getDiscovery = (mentorId: string) => {
+    return discoveries?.find((d) => d.mentor_id === mentorId) ?? null;
   };
 
   // Helper to get day name
@@ -356,6 +365,8 @@ export function useMentorSessions() {
     isBooking: bookSessionMutation.isPending,
     canBookSession,
     isMentorDiscovered,
+    hasClaimedDiscovery,
+    getDiscovery,
     isAvailableToday,
     isInMentorCity,
     getDayName,

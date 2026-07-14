@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building, BookOpen } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
+import { MentorDiscoveryJournal } from "./MentorDiscoveryJournal";
 
 export const MentorsTab = () => {
   const { 
@@ -47,6 +48,23 @@ export const MentorsTab = () => {
   });
 
   return (
+    <Tabs defaultValue="masters" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="masters" className="gap-1">
+          <Sparkles className="h-3.5 w-3.5" />
+          Masters
+        </TabsTrigger>
+        <TabsTrigger value="journal" className="gap-1">
+          <BookOpen className="h-3.5 w-3.5" />
+          Discovery Journal
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="journal" className="mt-4 focus-visible:outline-none">
+        <MentorDiscoveryJournal />
+      </TabsContent>
+
+      <TabsContent value="masters" className="mt-4 focus-visible:outline-none">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -300,5 +318,8 @@ export const MentorsTab = () => {
         </TabsContent>
       </Tabs>
     </div>
+      </TabsContent>
+    </Tabs>
   );
 };
+

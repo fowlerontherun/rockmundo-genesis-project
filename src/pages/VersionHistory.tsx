@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.522",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Mentor Discovery Journal: new sub-tab in Education → Masters lists every legendary master as a locked or unlocked entry. Locked cards hide the mentor's name, city, and focus skill, and expose a 'Reveal hint' toggle that shows the discovery hint (persisted per-device). A 'Mark as found' action calls the discover_master RPC (method: exploration) when the player is in the master's city — otherwise the button prompts them to travel there. Unlocked cards show the real identity, discovery method, and claim date. Journal has search, Locked/Unlocked/All filters, and a progress bar tracking claimed vs total masters. Booking flow is unchanged — all masters remain bookable; the journal tracks discovery as a separate, opt-in progression layer." },
+    ],
+  },
+  {
     version: "1.1.521",
     date: "2026-07-14",
     changes: [
