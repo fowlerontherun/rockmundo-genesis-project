@@ -35,6 +35,7 @@ interface SelfPromotionPanelProps {
   bandFame: number;
   bandBalance: number;
   userId: string;
+  profileId: string;
 }
 
 interface PromotionActivity {
@@ -86,7 +87,7 @@ const promoFocusOptions = [
   { value: 'streaming', label: 'Streaming Platforms' },
 ];
 
-export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId }: SelfPromotionPanelProps) {
+export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId, profileId }: SelfPromotionPanelProps) {
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [promoFocus, setPromoFocus] = useState<string>("general");
@@ -169,14 +170,7 @@ export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId }: Se
       const startTime = new Date();
       const endTime = addMinutes(startTime, activity.duration_minutes);
 
-      // Get user's profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
+      if (!profileId) throw new Error("No active character profile");
 
       // Deduct cost from band
       const { error: deductError } = await supabase
@@ -211,7 +205,7 @@ export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId }: Se
         .from("player_scheduled_activities")
         .insert({
           user_id: userId,
-          profile_id: profile.id,
+          profile_id: profileId,
           activity_type: "self_promotion",
           title: `Self Promo: ${activity.name}`,
           scheduled_start: startTime.toISOString(),
