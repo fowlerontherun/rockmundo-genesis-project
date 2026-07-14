@@ -1,0 +1,56 @@
+/* Mobile-only design tokens. Loaded by MobileShell.
+   All colors reference existing semantic tokens (--background, --card, --primary, etc.).
+   Only sizing/radius/shadow tokens defined here. */
+
+.rm-mobile {
+  --m-radius-sm: 10px;
+  --m-radius: 16px;
+  --m-radius-lg: 22px;
+  --m-tap: 44px;
+  --m-shadow: 0 4px 14px -6px hsl(0 0% 0% / 0.55);
+  --m-shadow-lg: 0 12px 28px -10px hsl(0 0% 0% / 0.65);
+  --m-nav-h: 64px;
+  --m-appbar-h: 56px;
+  --m-safe-b: env(safe-area-inset-bottom, 0px);
+  --m-safe-t: env(safe-area-inset-top, 0px);
+}
+
+.rm-mobile,
+.rm-mobile * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rm-mobile {
+  font-family: 'Oswald', 'Inter', system-ui, sans-serif;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  min-height: 100dvh;
+}
+
+.rm-mobile-scroll {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.rm-mobile-scroll::-webkit-scrollbar { display: none; }
+
+.rm-mcard {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--m-radius);
+  box-shadow: var(--m-shadow);
+}
+
+.rm-mobile .rm-tap {
+  min-height: var(--m-tap);
+  min-width: var(--m-tap);
+}
+
+@keyframes rm-skeleton {
+  0% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+  100% { opacity: 0.55; }
+}
+.rm-skeleton { animation: rm-skeleton 1.4s ease-in-out infinite; }
