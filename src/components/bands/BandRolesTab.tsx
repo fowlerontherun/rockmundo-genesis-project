@@ -86,7 +86,7 @@ export function BandRolesTab({ bandId }: BandRolesTabProps) {
                     <TableCell>
                       <div className="flex max-w-lg flex-wrap gap-1">
                         {role.permissions.slice(0, 8).map((key) => {
-                          const permission = permissionByKey.get(key as BandPermissionKey);
+                          const permission = permissionByKey.get(key);
                           return (
                           <Badge key={key} className={riskClassName[permission?.risk ?? "standard"]}>
                             {permission?.label ?? key}
