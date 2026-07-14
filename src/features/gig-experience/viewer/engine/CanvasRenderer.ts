@@ -7,6 +7,7 @@ import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan } fro
 import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEngine";
 import type { Size } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
+import { drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere } from "./StageDecor";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
