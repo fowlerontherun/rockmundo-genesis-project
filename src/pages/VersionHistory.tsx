@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.479",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Band Manager: removed the duplicate secondary tab row. Sections already present in the top hub navigation (Overview, Members, Fame & Fans, Repertoire, Gig History, Finances, Chemistry, Settings) are no longer shown twice. Chat and Earnings remain as inline sub-tabs since they aren't in the hub nav." },
+    ],
+  },
+  {
     version: "1.1.478",
     date: "2026-07-14",
     changes: [
