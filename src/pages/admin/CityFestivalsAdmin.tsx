@@ -308,6 +308,20 @@ export default function CityFestivalsAdmin() {
                 />
               </div>
             </div>
+            <div className="w-56">
+              <Label className="text-xs">City</Label>
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">All cities</SelectItem>
+                  {(cities || []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}{c.country ? `, ${c.country}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="w-40">
               <Label className="text-xs">Scale</Label>
               <Select value={scaleFilter} onValueChange={setScaleFilter}>
@@ -321,6 +335,35 @@ export default function CityFestivalsAdmin() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-52">
+              <Label className="text-xs">Sort by</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name (A–Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z–A)</SelectItem>
+                  <SelectItem value="city-asc">City (A–Z)</SelectItem>
+                  <SelectItem value="city-desc">City (Z–A)</SelectItem>
+                  <SelectItem value="start-asc">Start date (earliest)</SelectItem>
+                  <SelectItem value="start-desc">Start date (latest)</SelectItem>
+                  <SelectItem value="price-low-asc">Ticket low (cheapest)</SelectItem>
+                  <SelectItem value="price-low-desc">Ticket low (priciest)</SelectItem>
+                  <SelectItem value="price-high-asc">Ticket high (cheapest)</SelectItem>
+                  <SelectItem value="price-high-desc">Ticket high (priciest)</SelectItem>
+                  <SelectItem value="capacity-asc">Capacity (smallest)</SelectItem>
+                  <SelectItem value="capacity-desc">Capacity (largest)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(search || cityFilter !== "all" || scaleFilter !== "all" || sortBy !== "name-asc") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(""); setCityFilter("all"); setScaleFilter("all"); setSortBy("name-asc"); }}
+              >
+                Reset
+              </Button>
+            )}
             <div className="text-xs text-muted-foreground ml-auto">
               {rows.length} of {festivals?.length ?? 0} festivals
             </div>
