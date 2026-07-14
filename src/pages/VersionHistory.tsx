@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.463",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "**Link unlinked labels to your holding company.** The **Link to company** button on the holding page is now fully wired via a new `link_label_to_company` RPC that verifies you own both the label and the target company before attaching it — no more silent RLS failures on legacy labels missing `created_by`." },
+    ],
+  },
+  {
     version: "1.1.462",
     date: "2026-07-14",
     changes: [
