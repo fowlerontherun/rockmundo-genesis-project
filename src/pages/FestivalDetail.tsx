@@ -37,6 +37,14 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
    const [selectedTicketType, setSelectedTicketType] = useState<"day" | "weekend">("weekend");
    const [selectedDay, setSelectedDay] = useState(1);
    const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+   const [selectedTier, setSelectedTier] = useState<"general" | "vip" | "premium">("general");
+   const [activeTab, setActiveTab] = useState<string>("lineup");
+
+   const TIERS = [
+     { id: "general" as const, label: "General Admission", multiplier: 1, perks: "Standard festival access" },
+     { id: "vip" as const, label: "VIP", multiplier: 1.75, perks: "VIP lounge, dedicated bars & viewing decks" },
+     { id: "premium" as const, label: "Premium", multiplier: 3, perks: "All VIP perks + backstage & artist meet-and-greets" },
+   ];
  
    // Fetch festival details
    const { data: festival, isLoading } = useQuery({
