@@ -69,7 +69,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
         if (!festival?.venue_id) return null;
         const { data: venue, error } = await (supabase as any)
           .from("venues")
-          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, parking_spaces, city_id")
+          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, has_recording_capability, alcohol_license, backstage_quality, parking_spaces, amenities, city_id")
           .eq("id", festival.venue_id)
           .maybeSingle();
         if (error) throw error;
