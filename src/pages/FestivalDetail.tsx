@@ -147,6 +147,11 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
       backTo="/festivals"
       headerActions={
         <div className="flex items-center gap-2">
+          {festival?.owner_profile_id && profileId === festival.owner_profile_id && (
+            <Button size="sm" variant="default" onClick={() => navigate(`/festivals/${festivalId}/run`)}>
+              Run Festival
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => navigate(`/festivals/${festivalId}/calendar`)}>
             <Calendar className="h-4 w-4 mr-1" /> Calendar
           </Button>
