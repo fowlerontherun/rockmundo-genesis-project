@@ -437,9 +437,11 @@ const CompanyDetailContent = () => {
           <CompanyRecruitmentLifecycle
             companyId={company.id}
             companyName={company.name}
+            companyType={company.company_type}
             headquartersCityId={company.headquarters_city_id}
           />
         </TabsContent>
+
 
         <TabsContent value="shares" className="space-y-4">
           <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === userId} />

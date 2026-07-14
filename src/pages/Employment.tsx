@@ -9,7 +9,7 @@ import { SectionCard, StandardStatusBadge } from "@/components/ui/standard-compo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, CalendarCheck, Filter, MapPin, Search, Building2, History, Send, CheckCircle2, XCircle } from "lucide-react";
+import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, CalendarCheck, Filter, MapPin, Search, Building2, History, Send, CheckCircle2, XCircle, Megaphone } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -206,9 +206,19 @@ export default function Employment() {
         .eq("status", "open")
         .order("weekly_wage", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      const now = Date.now();
+      // Prioritize actively advertised vacancies; sort them by daily spend desc, then wage desc.
+      return (data ?? []).slice().sort((a: any, b: any) => {
+        const aAd = a.advertised_until && new Date(a.advertised_until).getTime() > now;
+        const bAd = b.advertised_until && new Date(b.advertised_until).getTime() > now;
+        if (aAd && !bAd) return -1;
+        if (!aAd && bAd) return 1;
+        if (aAd && bAd) return (b.advertising_daily_spend ?? 0) - (a.advertising_daily_spend ?? 0);
+        return (b.weekly_wage ?? 0) - (a.weekly_wage ?? 0);
+      });
     },
   });
+
 
   const { data: myCompanyApplications = [] } = useQuery({
     queryKey: ["my-company-applications", profile?.id],
@@ -636,12 +646,16 @@ export default function Employment() {
                     const mine = (vacancy.company_job_applications ?? []).find((app: any) => app.applicant_profile_id === profile?.id);
                     const score = mine?.suitability_score ?? 60;
                     const rating = score >= 85 ? "Excellent match" : score >= 70 ? "Good match" : score >= 45 ? "Partial match" : "Poor match";
+                    const isAdvertised = vacancy.advertised_until && new Date(vacancy.advertised_until).getTime() > Date.now();
                     return (
-                      <Card key={vacancy.id} className="flex flex-col">
+                      <Card key={vacancy.id} className={`flex flex-col ${isAdvertised ? "border-primary/60 shadow-md shadow-primary/10" : ""}`}>
                         <CardHeader className="pb-2">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <CardTitle className="text-lg">{vacancy.job_title}</CardTitle>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <CardTitle className="text-lg">{vacancy.job_title}</CardTitle>
+                                {isAdvertised && <Badge className="text-[10px] gap-1"><Megaphone className="h-3 w-3" />Featured</Badge>}
+                              </div>
                               <CardDescription>{vacancy.companies?.name} • {vacancy.companies?.company_type}</CardDescription>
                             </div>
                             <StandardStatusBadge tone={mine ? "info" : "muted"}>{mine ? mine.status : rating}</StandardStatusBadge>
@@ -659,6 +673,7 @@ export default function Employment() {
                       </Card>
                     );
                   })}
+
                 </div>
               )}
             </SectionCard>
