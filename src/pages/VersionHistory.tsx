@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.455",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Fixed 'column idempotency_key does not exist' (42703) when starting a songwriting session.** Added the missing `idempotency_key`, `effort_hours`, `session_type`, `status`, and `progress_breakdown` columns to `songwriting_sessions` so the `start_songwriting_session` RPC can write session rows again." },
+    ],
+  },
+  {
     version: "1.1.454",
     date: "2026-07-14",
     changes: [
