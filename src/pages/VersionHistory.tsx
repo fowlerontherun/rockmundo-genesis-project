@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.526",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Skill Tree tab: the Train XP button was always greyed out because the Skills page rendered the tree without passing the player's skill XP balance. The page now forwards the current SXP wallet and refresh callback, so Train and 'All' buttons enable correctly whenever the player has enough SXP." },
+    ],
+  },
+  {
     version: "1.1.525",
     date: "2026-07-14",
     changes: [
