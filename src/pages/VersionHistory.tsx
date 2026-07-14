@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.504",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded 80+ new achievements across performance, chart, creative, band, financial, social, lifestyle, regional, career, underworld, and legacy categories — spanning common through mythic rarities with cash and fame rewards." },
+    ],
+  },
+  {
     version: "1.1.503",
     date: "2026-07-14",
     changes: [
