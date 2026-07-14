@@ -2,7 +2,7 @@ import { forwardRef, HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
-interface MCardProps extends HTMLAttributes<HTMLDivElement> {
+interface MCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   title?: ReactNode;
   subtitle?: ReactNode;
   icon?: ReactNode;
