@@ -650,7 +650,7 @@ export default function Employment() {
                         </CardHeader>
                         <CardContent className="flex-1 space-y-3">
                           <p className="text-sm text-muted-foreground line-clamp-2">{vacancy.description || "No description supplied."}</p>
-                          <div className="grid grid-cols-2 gap-2 text-sm"><span className="font-semibold">${vacancy.weekly_wage}/week</span><span>{vacancy.positions_available - vacancy.positions_filled} open</span><span>{vacancy.staff_category?.replaceAll("_", " ")}</span><span>{vacancy.employment_type?.replaceAll("_", " ")}</span></div>
+                          <div className="grid grid-cols-2 gap-2 text-sm"><span className="font-semibold">${vacancy.weekly_wage}/week</span><span>{vacancy.positions_available - vacancy.positions_filled} open</span><span>{vacancy.staff_category?.split("_").join(" ")}</span><span>{vacancy.employment_type?.split("_").join(" ")}</span></div>
                           <div className="text-xs text-muted-foreground">Suitability: {rating}. Reasons consider location, listed skill requirements, reputation, and employment conflicts.</div>
                           <Button className="w-full" size="sm" onClick={() => applyToCompanyVacancyMutation.mutate(vacancy.id)} disabled={!profile || !!mine || applyToCompanyVacancyMutation.isPending}>
                             <Send className="h-4 w-4 mr-2" />{mine ? "Already applied" : "Apply to company"}

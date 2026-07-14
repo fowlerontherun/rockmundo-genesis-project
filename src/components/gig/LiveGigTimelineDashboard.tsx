@@ -34,7 +34,7 @@ export function LiveGigTimelineDashboard({ session, segments, songResults, incid
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>Live gig control room</CardTitle>
-            <Badge variant={session.status === 'paused_for_decision' ? 'destructive' : 'default'}>{session.status.replaceAll('_', ' ')}</Badge>
+            <Badge variant={session.status === 'paused_for_decision' ? 'destructive' : 'default'}>{session.status.split('_').join(' ')}</Badge>
           </div>
           <Progress value={progress} aria-label="Live gig progress" />
         </CardHeader>
@@ -54,7 +54,7 @@ export function LiveGigTimelineDashboard({ session, segments, songResults, incid
             {segments.map((segment) => (
               <div key={segment.segmentIndex} className="flex items-center justify-between rounded-md border p-3 text-sm">
                 <div>
-                  <div className="font-medium">{segment.segmentType.replaceAll('_', ' ')}</div>
+                  <div className="font-medium">{segment.segmentType.split('_').join(' ')}</div>
                   <div className="text-muted-foreground">{Math.round(segment.plannedDurationSeconds / 60)} min planned</div>
                 </div>
                 <Badge variant={segment.segmentIndex === current?.segmentIndex ? 'default' : segment.status === 'resolved' ? 'secondary' : 'outline'}>{segment.status}</Badge>
@@ -68,7 +68,7 @@ export function LiveGigTimelineDashboard({ session, segments, songResults, incid
             <Card className="border-amber-400">
               <CardHeader><CardTitle className="text-base">Tactical decision required</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">Fallback: {activeDecision.recommendedFallback.replaceAll('_', ' ')}. Window: {Math.round(activeDecision.deadlineSeconds / 60)} min game time.</p>
+                <p className="text-sm text-muted-foreground">Fallback: {activeDecision.recommendedFallback.split('_').join(' ')}. Window: {Math.round(activeDecision.deadlineSeconds / 60)} min game time.</p>
                 {activeDecision.options.map((option) => (
                   <button key={option.key} type="button" disabled={!canDecide} onClick={() => onSelectDecision?.(option.key)} className="w-full rounded-md border p-2 text-left text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
                     {option.label}{option.safeFallback ? ' · safe fallback' : ''}

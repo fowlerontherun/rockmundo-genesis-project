@@ -241,7 +241,7 @@ export const WELLNESS_CANONICAL_BALANCE = {
 } as const;
 
 const readinessAction = (role: WellnessReadinessRole, score: number) => {
-  if (score >= 78) return `Maintain current recovery before ${role.replaceAll("_", " ")}.`;
+  if (score >= 78) return `Maintain current recovery before ${role.split("_").join(" ")}.`;
   if (score >= 48) return "Add rest, food, hydration or lighter preparation before committing.";
   return "Delay demanding activity or use recovery support before proceeding.";
 };
@@ -294,7 +294,7 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const score = clampWellness(rawScore);
   const state = WELLNESS_CANONICAL_BALANCE.readinessThresholds.find((threshold) => score >= threshold.min)?.state ?? "unavailable";
   const performanceModifier = Number(Math.max(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
-  const summary = `${input.role.replaceAll("_", " ")} readiness is ${score}: ${normalized.slice(0, 3).map((m) => m.explanation).join(", ") || "current wellness is the main input"}.`;
+  const summary = `${input.role.split("_").join(" ")} readiness is ${score}: ${normalized.slice(0, 3).map((m) => m.explanation).join(", ") || "current wellness is the main input"}.`;
   return {
     role: input.role,
     score,

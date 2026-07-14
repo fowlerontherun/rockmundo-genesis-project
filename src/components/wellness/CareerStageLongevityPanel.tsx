@@ -38,7 +38,7 @@ export function CareerStageLongevityPanel({ vitals, fame = 0, profileAge = 24 }:
           </section>
           <section className="rounded-lg border p-3" aria-label="Long-term workload">
             <p className="flex items-center gap-1 text-xs text-muted-foreground"><Shield className="h-3 w-3" /> Workload & resilience</p>
-            <p className="font-semibold capitalize">{resilience.state.replaceAll("_", " ")}</p>
+            <p className="font-semibold capitalize">{resilience.state.split("_").join(" ")}</p>
             <p className="text-sm">Wear impact {wear.activeImpact}/100 · trend {wear.longTermWorkloadBalance}/100</p>
             <p className="text-xs text-muted-foreground">Historical totals remain for records, while recovery periods reduce active impact.</p>
           </section>
@@ -50,8 +50,8 @@ export function CareerStageLongevityPanel({ vitals, fame = 0, profileAge = 24 }:
           </section>
           <section className="rounded-lg border p-3" aria-label="Retirement and comeback">
             <p className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw className="h-3 w-3" /> Retirement & comeback</p>
-            <p className="font-semibold capitalize">{retirementState.replaceAll("_", " ")} · {careerMode.replaceAll("_", " ")}</p>
-            <p className="text-sm capitalize">Comeback: {comeback.state.replaceAll("_", " ")}</p>
+            <p className="font-semibold capitalize">{retirementState.split("_").join(" ")} · {careerMode.split("_").join(" ")}</p>
+            <p className="text-sm capitalize">Comeback: {comeback.state.split("_").join(" ")}</p>
             <p className="text-xs text-muted-foreground">Retirement is voluntary, preserves history and requires server-calculated conflict previews.</p>
           </section>
         </div>

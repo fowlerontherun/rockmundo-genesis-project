@@ -31,7 +31,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="text-xl">Live stage presentation</CardTitle>
-            <p className="text-sm text-muted-foreground">Server-authoritative concert view · {presentation.stageLayout.replaceAll('_', ' ')} · {presentation.venueTier.replaceAll('_', ' ')}</p>
+            <p className="text-sm text-muted-foreground">Server-authoritative concert view · {presentation.stageLayout.split('_').join(' ')} · {presentation.venueTier.split('_').join(' ')}</p>
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Presentation quality settings">
             {(['full', 'reduced', 'minimal', 'data'] as const).map((mode) => <Button key={mode} type="button" size="sm" variant={quality === mode ? 'default' : 'outline'} onClick={() => setQuality(mode)}>{mode === 'data' ? 'Data-only' : mode}</Button>)}
@@ -54,7 +54,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
               {presentation.performerStates.map((performer) => (
                 <div key={performer.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: `${performer.x}%`, top: `${performer.y}%` }}>
                   <div className={`mx-auto flex h-14 w-10 items-center justify-center rounded-t-full border text-xl shadow-lg ${performer.visualState === 'incident_affected' ? 'border-red-300 bg-red-600/70' : performer.visualState === 'standout_performance' ? 'border-yellow-200 bg-yellow-500/60' : 'border-white/30 bg-slate-700/80'}`} aria-hidden="true">{performer.instrumentLabel.includes('Drum') ? '🥁' : performer.instrumentLabel.includes('Bass') ? '🎸' : performer.instrumentLabel.includes('guitar') ? '🎸' : performer.instrumentLabel.includes('Keyboard') ? '🎹' : performer.instrumentLabel.includes('Microphone') ? '🎤' : '🎵'}</div>
-                  <div className="mt-1 max-w-24 rounded bg-black/60 px-1 text-[10px]">{performer.name}<br />{performer.visualState.replaceAll('_', ' ')}</div>
+                  <div className="mt-1 max-w-24 rounded bg-black/60 px-1 text-[10px]">{performer.name}<br />{performer.visualState.split('_').join(' ')}</div>
                 </div>
               ))}
             </div>
@@ -62,7 +62,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
               <div className="absolute inset-x-3 bottom-3 grid grid-cols-8 gap-1" aria-hidden="true">
                 {Array.from({ length: Math.max(2, Math.min(24, Math.round(presentation.crowdDensity / 4))) }).map((_, index) => <div key={index} className={`rounded-t-full bg-white/30 ${quality === 'full' && presentation.intensity > 65 ? 'animate-pulse' : ''}`} style={{ height: index % 3 === 0 ? '3rem' : '2.25rem' }} />)}
               </div>
-              <div className="absolute bottom-2 left-4 rounded bg-black/60 px-2 py-1 text-xs">Crowd: {presentation.crowdState.replaceAll('_', ' ')} · density {presentation.crowdDensity}%</div>
+              <div className="absolute bottom-2 left-4 rounded bg-black/60 px-2 py-1 text-xs">Crowd: {presentation.crowdState.split('_').join(' ')} · density {presentation.crowdDensity}%</div>
             </div>
             <div className="absolute bottom-4 right-4 max-w-xs rounded-lg bg-black/70 p-3 text-sm">
               <div className="font-semibold">{presentation.headline}</div>
@@ -72,7 +72,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
         ) : null}
 
         <div className="grid gap-3 md:grid-cols-4">
-          <Metric label="Crowd energy" value={session.crowdEnergy} note={presentation.crowdState.replaceAll('_', ' ')} />
+          <Metric label="Crowd energy" value={session.crowdEnergy} note={presentation.crowdState.split('_').join(' ')} />
           <Metric label="Fan satisfaction" value={session.fanSatisfaction} note={session.fanSatisfaction >= 70 ? 'strong response' : 'building'} />
           <Metric label="Band stamina" value={session.bandStamina} note={session.bandStamina < 30 ? 'fatigue risk' : 'available'} />
           <Metric label="Momentum" value={session.momentum} note={session.momentum >= 0 ? 'positive flow' : 'recovery needed'} signed />
@@ -80,7 +80,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
 
         {activeDecision ? (
           <div className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm dark:bg-amber-950/20" role="region" aria-label="Tactical decision presentation">
-            <div className="font-semibold">Decision open · fallback {activeDecision.recommendedFallback.replaceAll('_', ' ')}</div>
+            <div className="font-semibold">Decision open · fallback {activeDecision.recommendedFallback.split('_').join(' ')}</div>
             <p className="text-muted-foreground">Deadline window: {Math.round(activeDecision.deadlineSeconds / 60)} min game time. Visual distraction is reduced while options are available.</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               {activeDecision.options.map((option) => <Button key={option.key} type="button" variant={option.safeFallback ? 'default' : 'outline'} disabled={!canDecide} onClick={() => onSelectDecision?.(option.key)} aria-label={`${option.label}. ${option.safeFallback ? 'Automatic fallback option.' : 'Tactical option.'}`}>{option.label}</Button>)}
@@ -92,7 +92,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
           <div className="rounded-lg border p-3">
             <h4 className="font-semibold">Visual setlist timeline</h4>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-2" role="list" aria-label="Live setlist timeline">
-              {segments.map((segment) => <div key={segment.segmentIndex} className="min-w-32 rounded-md border p-2 text-xs" role="listitem"><div className="font-medium">{segment.segmentType.replaceAll('_', ' ')}</div><Badge variant={segment.segmentIndex === current?.segmentIndex ? 'default' : segment.status === 'resolved' ? 'secondary' : 'outline'}>{segment.status}</Badge></div>)}
+              {segments.map((segment) => <div key={segment.segmentIndex} className="min-w-32 rounded-md border p-2 text-xs" role="listitem"><div className="font-medium">{segment.segmentType.split('_').join(' ')}</div><Badge variant={segment.segmentIndex === current?.segmentIndex ? 'default' : segment.status === 'resolved' ? 'secondary' : 'outline'}>{segment.status}</Badge></div>)}
             </div>
           </div>
           <div className="rounded-lg border p-3">

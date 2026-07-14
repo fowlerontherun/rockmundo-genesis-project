@@ -67,7 +67,7 @@ export default function NutritionHydrationPanel({ vitals }: { vitals: WellnessVi
                       <span className="font-medium">{meal.food.name}</span>
                       <Badge variant="outline">{labels.nutrition}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">Source: {meal.food.source_type.replaceAll("_", " ")} · Cost ${(meal.paidCents ?? meal.food.cost_cents) / 100} · {labels.energy} · {labels.hydration} · {labels.fullness}</p>
+                    <p className="text-xs text-muted-foreground">Source: {meal.food.source_type.split("_").join(" ")} · Cost ${(meal.paidCents ?? meal.food.cost_cents) / 100} · {labels.energy} · {labels.hydration} · {labels.fullness}</p>
                     <p className="text-xs text-muted-foreground">Use: {labels.recommendedUse}. Remaining short-term effect is capped by recent meal stacking.</p>
                   </div>
                 );

@@ -39,13 +39,13 @@ export function TimeAwayLongevityPanel({ vitals, fame = 0 }: { vitals: WellnessV
           </div>
           <div className="rounded-lg border p-3">
             <p className="flex items-center gap-1 text-xs text-muted-foreground"><Gauge className="h-3 w-3" /> Career sustainability</p>
-            <p className="font-semibold capitalize">{sustainability.state.replaceAll("_", " ")}</p>
+            <p className="font-semibold capitalize">{sustainability.state.split("_").join(" ")}</p>
             <p className="text-sm">Score {sustainability.score}/100 · risk: {sustainability.mainRiskFactor}</p>
             <p className="text-xs text-muted-foreground">Protective factor: {sustainability.mainProtectiveFactor}; missing history is legacy-safe.</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw className="h-3 w-3" /> Return plan</p>
-            <p className="font-semibold capitalize">{staycation.returnReadiness.state.replaceAll("_", " ")}</p>
+            <p className="font-semibold capitalize">{staycation.returnReadiness.state.split("_").join(" ")}</p>
             <p className="text-sm">Momentum {momentum.state} · fame protected</p>
             <p className="text-xs text-muted-foreground">{staycation.returnReadiness.recommendation}</p>
           </div>
