@@ -46,14 +46,30 @@ const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
-  const { userId } = useActiveProfile();
-  
+  const { userId, profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
     company?.company_type === 'holding' ? companyId : undefined
   );
   const { data: labels = [] } = useCompanyLabels(companyId);
+  const { data: unlinkedLabels = [] } = useUnlinkedOwnedLabels(profileId);
   const { data: transactions = [] } = useCompanyTransactions(companyId);
+
+  const linkLabelMutation = useMutation({
+    mutationFn: async (labelId: string) => {
+      if (!companyId) throw new Error("Missing company");
+      const { error } = await supabase.from("labels").update({ company_id: companyId }).eq("id", labelId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Label linked to company");
+      queryClient.invalidateQueries({ queryKey: ["company-labels", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-owned-labels", profileId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
