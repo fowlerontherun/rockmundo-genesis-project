@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.477",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Wellness page no longer shows 'Wellness data unavailable'. The vitals query was requesting profile columns that don't exist (physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk) which caused the whole select to fail silently. Now only queries real columns (health/energy/mood/stress) and derives the remaining wellness metrics from them." },
+    ],
+  },
+  {
     version: "1.1.476",
     date: "2026-07-14",
     changes: [
