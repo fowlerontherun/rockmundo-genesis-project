@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.502",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "City Festival Editor now has a City dropdown filter (all 180 cities) and a Sort by control covering name, city, start date, ticket low, ticket high, and capacity — with a Reset button to clear all filters." },
+      { type: 'improvement', description: "Search box continues to match festival, city, and country text; combined with the new filters for quick lookup." },
+    ],
+  },
+  {
     version: "1.1.501",
     date: "2026-07-14",
     changes: [
