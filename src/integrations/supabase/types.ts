@@ -11817,6 +11817,71 @@ export type Database = {
         }
         Relationships: []
       }
+      gear_gig_history: {
+        Row: {
+          band_id: string | null
+          band_name: string | null
+          created_at: string
+          entry_source: string
+          gear_id: string
+          gear_kind: string
+          gear_name: string
+          gig_id: string | null
+          id: string
+          logged_by: string | null
+          notes: string | null
+          owner_band_id: string | null
+          owner_user_id: string | null
+          performed_at: string
+          venue_id: string | null
+          venue_name: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          band_name?: string | null
+          created_at?: string
+          entry_source?: string
+          gear_id: string
+          gear_kind: string
+          gear_name: string
+          gig_id?: string | null
+          id?: string
+          logged_by?: string | null
+          notes?: string | null
+          owner_band_id?: string | null
+          owner_user_id?: string | null
+          performed_at?: string
+          venue_id?: string | null
+          venue_name?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          band_name?: string | null
+          created_at?: string
+          entry_source?: string
+          gear_id?: string
+          gear_kind?: string
+          gear_name?: string
+          gig_id?: string | null
+          id?: string
+          logged_by?: string | null
+          notes?: string | null
+          owner_band_id?: string | null
+          owner_user_id?: string | null
+          performed_at?: string
+          venue_id?: string | null
+          venue_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_gig_history_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gear_marketplace_listings: {
         Row: {
           allow_negotiation: boolean | null
@@ -37168,6 +37233,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      log_gear_gig_manual: {
+        Args: {
+          p_gear_id: string
+          p_gear_kind: string
+          p_gig_id: string
+          p_notes?: string
+          p_performed_at?: string
+        }
+        Returns: string
       }
       manage_company_vacancy: {
         Args: {

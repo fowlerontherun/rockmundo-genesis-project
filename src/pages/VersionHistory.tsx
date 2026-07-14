@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.470",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "**Gear now remembers every gig it played.** Band stage equipment and personal gear automatically log the gig, venue, band, date and owner-at-the-time whenever a gig completes. Current owners can also manually add historic entries via a new **Log gig** dialog on any gear card. The full history is permanent — it stays with the piece of gear even after it's sold, traded, or the owner is deleted — and is publicly viewable at `/gear-history/:kind/:id` so anyone can inspect a vintage rig's provenance." },
+    ],
+  },
+  {
     version: "1.1.469",
     date: "2026-07-14",
     changes: [

@@ -276,6 +276,7 @@ const SelfPromotionBrowser = lazyWithRetry(() => import("./pages/media/SelfPromo
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const ProgressionPanel = lazyWithRetry(() => import("./pages/ProgressionPanel"));
+const GearHistoryPublic = lazyWithRetry(() => import("./pages/GearHistoryPublic"));
 const OverviewPage = lazyWithRetry(() => import("./pages/Overview"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./components/jam-sessions/JamSessionsEnhanced"));
@@ -871,6 +872,7 @@ function App() {
                     <Route path="hall-of-immortals" element={<HallOfImmortals />} />
                     <Route path="my-character" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
+                    <Route path="gear-history/:kind/:id" element={<GearHistoryPublic />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
