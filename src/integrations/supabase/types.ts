@@ -37128,6 +37128,10 @@ export type Database = {
       is_storefront_open: { Args: { _company_id: string }; Returns: boolean }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      link_label_to_company: {
+        Args: { p_company_id: string; p_label_id: string }
+        Returns: undefined
+      }
       log_child_school_event: {
         Args: {
           p_academic_rating?: number
