@@ -318,5 +318,8 @@ export const MentorsTab = () => {
         </TabsContent>
       </Tabs>
     </div>
+      </TabsContent>
+    </Tabs>
   );
 };
+
