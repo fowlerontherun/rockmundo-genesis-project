@@ -98,15 +98,24 @@ const Layout = () => {
     return null;
   }
 
+  // Mobile users get redirected to the dedicated /mobile shell only from the
+  // primary landing routes. Deep-links to feature pages (from mobile quick
+  // actions, FAB, etc.) must render inline so buttons actually work — otherwise
+  // every tap bounces back to /mobile.
   if (isMobile) {
-    return <Navigate to="/mobile" replace />;
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    if (path === "/" || path === "/home" || path === "/index") {
+      return <Navigate to="/mobile" replace />;
+    }
   }
 
 
 
+
   return (
-    <DesktopOnlyGate>
+    <ConditionalDesktopGate bypass={isMobile}>
     <FMShell>
+
       {profileError && (
         <Alert variant="destructive" className="mb-4 max-w-2xl">
           <AlertCircle className="h-4 w-4" />
@@ -134,8 +143,12 @@ const Layout = () => {
         />
       )}
     </FMShell>
-    </DesktopOnlyGate>
+    </ConditionalDesktopGate>
   );
 };
 
+const ConditionalDesktopGate = ({ bypass, children }: { bypass: boolean; children: React.ReactNode }) =>
+  bypass ? <>{children}</> : <DesktopOnlyGate>{children}</DesktopOnlyGate>;
+
 export default Layout;
+
