@@ -9,7 +9,8 @@ import { spendSkillXp, unlearnSkill } from "@/utils/progression";
 import { toast } from "sonner";
 import { EducationSourceBadge, type EducationSource } from "./EducationSourceBadge";
 import { SchedulePracticeDialog } from "./SchedulePracticeDialog";
-import { usePracticeRestrictions } from "@/hooks/useSkillPractice";
+import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
+import { useAuth } from "@/hooks/use-auth-context";
 import {
   AlertDialog,
   AlertDialogAction,
