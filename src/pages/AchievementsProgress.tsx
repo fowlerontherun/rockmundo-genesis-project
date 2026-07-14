@@ -188,13 +188,7 @@ export default function AchievementsProgress() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <Helmet>
-        <title>Achievement Progress | RockMundo</title>
-        <meta
-          name="description"
-          content="Track your completed and remaining RockMundo achievements with live progress bars."
-        />
-      </Helmet>
+
 
       <div className="flex items-center gap-3">
         <Award className="h-7 w-7 text-amber-400" />
