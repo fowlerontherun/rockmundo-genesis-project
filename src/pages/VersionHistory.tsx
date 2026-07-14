@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.517",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Achievement unlocks now push in-game notifications. Added a `SECURITY DEFINER` trigger `trg_notify_achievement_unlock` on `player_achievements` that inserts a row into `notifications` with category `achievement`, the achievement name + rarity in the title, a formatted reward summary (or description fallback), and `action_path=/achievements` so the bell links to the new progress page. Legendary/epic/mythic unlocks use the `success` notification type." },
+    ],
+  },
+  {
     version: "1.1.516",
     date: "2026-07-14",
     changes: [
