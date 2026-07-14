@@ -33,7 +33,7 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
   const loadAudienceState = useCallback(async () => {
     const attendanceQuery = (supabase.from("gig_audience_attendance" as never) as any).select("id, attendance_type, status, participation_score, watch_duration_seconds, reward_status, last_presence_at").eq("gig_id", gigId).maybeSingle();
     const { data: attendanceData } = await attendanceQuery;
-    setAttendance(attendanceData ?? null);
+    setAttendance((attendanceData as AttendanceRow | null) ?? null);
 
     if (liveSessionId) {
       const { data: aggregateData } = await (supabase.from("gig_audience_segment_aggregates" as never) as any)
@@ -42,7 +42,16 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      setAggregate(aggregateData ?? null);
+      const row = aggregateData as Partial<AggregateRow> | null;
+      setAggregate(row ? {
+        participation_level: row.participation_level ?? "low",
+        participation_score: Number(row.participation_score ?? 0),
+        reaction_counts: (row.reaction_counts ?? {}) as Record<string, number>,
+        unique_participants: Number(row.unique_participants ?? 0),
+        encore_demand: Number(row.encore_demand ?? 0),
+        singalong_strength: Number(row.singalong_strength ?? 0),
+        audience_modifier: Number(row.audience_modifier ?? 0),
+      } : null);
 
       const { count } = await (supabase.from("gig_audience_attendance" as never) as any)
         .select("id", { count: "exact", head: true })
