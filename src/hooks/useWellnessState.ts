@@ -39,13 +39,29 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
 
   const loadVitals = useCallback(async () => {
     if (!profileId) return;
-    const { data } = await (supabase as any)
+    const { data, error: vitalsError } = await (supabase as any)
       .from("profiles")
-      .select("health, energy, mood, stress, physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk")
+      .select("health, energy, mood, stress")
       .eq("id", profileId)
       .maybeSingle();
+    if (vitalsError) {
+      console.error("[useWellnessState] Failed to load vitals", vitalsError);
+    }
     if (data) {
-      const nextVitals = data as WellnessVitals;
+      const nextVitals: WellnessVitals = {
+        health: data.health ?? 80,
+        energy: data.energy ?? 80,
+        mood: data.mood ?? 70,
+        stress: data.stress ?? 30,
+        physical_health: data.health ?? 80,
+        happiness: data.mood ?? 70,
+        fatigue: Math.max(0, 100 - (data.energy ?? 80)),
+        sleep_quality: 72,
+        nutrition: 68,
+        fitness: 60,
+        motivation: 70,
+        burnout_risk: Math.min(100, (data.stress ?? 30) + Math.max(0, 100 - (data.energy ?? 80)) / 2),
+      } as WellnessVitals;
       setVitals(nextVitals);
       const { data: lifestyleRow } = await (supabase as any)
         .from("wellness_lifestyle_profiles")
