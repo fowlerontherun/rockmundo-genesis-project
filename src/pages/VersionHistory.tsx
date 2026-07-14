@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.506",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festival Venue tab now shows amenities and access details: parking tier & space count, public transit level (derived from city size), rideshare drop-off, bike parking, wheelchair access, step-free routes, hearing loop, accessible restrooms, food & drink, alcohol licence, Wi-Fi, cashless payments, security cover, family area, green room, and recording capability — plus any listed amenity tags from the venue record." },
+    ],
+  },
+  {
     version: "1.1.505",
     date: "2026-07-14",
     changes: [
