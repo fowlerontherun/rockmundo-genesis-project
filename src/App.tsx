@@ -83,6 +83,7 @@ const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const CityFestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/CityFestivalsAdmin"));
 const EurovisionAdminPage = lazyWithRetry(() => import("./pages/admin/EurovisionAdmin"));
 const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
 const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
@@ -800,6 +801,7 @@ function App() {
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/music-videos" element={<MusicVideosAdmin />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
+                    <Route path="admin/city-festivals" element={<CityFestivalsAdminPage />} />
                     <Route path="admin/eurovision" element={<EurovisionAdminPage />} />
                     <Route path="admin/awards" element={<AwardsAdmin />} />
                     <Route path="admin/advisor" element={<AdvisorAdmin />} />
