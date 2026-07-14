@@ -81,32 +81,40 @@ export interface BandRoleTemplate {
   description: string;
   protected: boolean;
   primaryLeadership: boolean;
-  permissions: string[];
+  permissions: BandPermissionKey[];
 }
 
-const allOperational = BAND_PERMISSION_CATALOGUE.filter((p) => p.risk !== "critical").map((p) => p.key);
-const memberBase = ["membership.view_roster", "scheduling.view_private", "creative.propose_song"];
+const allOperational: BandPermissionKey[] = BAND_PERMISSION_CATALOGUE
+  .filter((p) => p.risk !== "critical")
+  .map((p) => p.key);
+const memberBase: BandPermissionKey[] = [
+  "membership.view_roster",
+  "scheduling.view_private",
+  "creative.propose_song",
+];
+
+const perms = (...keys: BandPermissionKey[]): BandPermissionKey[] => keys;
 
 export const DEFAULT_BAND_ROLE_TEMPLATES: BandRoleTemplate[] = [
   { roleType: "founder", name: "Founder", description: "Historical creator marker; not permanently authoritative by itself.", protected: true, primaryLeadership: false, permissions: memberBase },
   { roleType: "band_leader", name: "Band leader", description: "Broad active operational control without ownership-transfer powers.", protected: true, primaryLeadership: true, permissions: allOperational },
   { roleType: "co_leader", name: "Co-leader", description: "Shared leadership for sensitive operations and day-to-day control.", protected: false, primaryLeadership: true, permissions: allOperational.filter((k) => !k.startsWith("finance.view_transactions")) },
-  { roleType: "manager", name: "Manager", description: "Recruitment, scheduling, gigs, tours and publicity without ownership or unrestricted finance.", protected: false, primaryLeadership: false, permissions: allOperational.filter((k) => !k.startsWith("finance.") || ["finance.view_summary", "finance.manage_budget"].includes(k)) },
-  { roleType: "musical_director", name: "Musical director", description: "Repertoire, setlists, song approvals, rehearsal planning and recording preparation.", protected: false, primaryLeadership: false, permissions: ["creative.approve_song", "creative.manage_songwriting", "creative.assign_contributors", "creative.select_studio", "creative.manage_repertoire", "gigs.edit_setlist", "scheduling.create_rehearsal", "scheduling.edit_rehearsal"] },
-  { roleType: "recruitment_manager", name: "Recruitment manager", description: "Vacancies, applications, invitations and trial-member management.", protected: false, primaryLeadership: false, permissions: ["membership.invite_player", "membership.review_applications", "membership.send_offer", "membership.manage_trials", "publicity.update_recruitment"] },
-  { roleType: "booking_manager", name: "Booking manager", description: "Gig applications, offer responses, venue communication and tour scheduling.", protected: false, primaryLeadership: false, permissions: ["gigs.apply", "gigs.accept", "gigs.decline", "gigs.prepare", "tours.schedule", "tours.edit"] },
-  { roleType: "tour_manager", name: "Tour manager", description: "Tour planning, logistics, transport, accommodation and attendance coordination.", protected: false, primaryLeadership: false, permissions: ["tours.schedule", "tours.edit", "tours.book_transport", "tours.book_accommodation", "scheduling.manage_attendance"] },
-  { roleType: "finance_manager", name: "Finance manager", description: "Reports, budgets, expense approval and limited payments; no ownership control.", protected: false, primaryLeadership: false, permissions: ["finance.view_summary", "finance.view_transactions", "finance.approve_expense", "finance.manage_budget", "finance.purchase_equipment"] },
-  { roleType: "recording_manager", name: "Recording manager", description: "Recording approvals, studios, sessions and release preparation.", protected: false, primaryLeadership: false, permissions: ["creative.approve_recording", "creative.select_studio", "creative.approve_release", "creative.manage_credits"] },
-  { roleType: "songwriting_coordinator", name: "Songwriting coordinator", description: "Song pipeline, collaboration sessions and contributor assignments.", protected: false, primaryLeadership: false, permissions: ["creative.propose_song", "creative.manage_songwriting", "creative.assign_contributors"] },
-  { roleType: "publicity_manager", name: "Publicity manager", description: "Public profile, social posts, campaigns, gigs, releases and fan announcements.", protected: false, primaryLeadership: false, permissions: ["publicity.edit_profile", "publicity.post_updates", "publicity.manage_twaater", "publicity.manage_campaigns", "publicity.update_recruitment", "publicity.manage_fans"] },
-  { roleType: "merch_manager", name: "Merch manager", description: "Products, sale prices, stock orders, inventory and merch performance.", protected: false, primaryLeadership: false, permissions: ["merch.create", "merch.set_prices", "merch.order_stock", "merch.manage_inventory", "merch.view_finances"] },
+  { roleType: "manager", name: "Manager", description: "Recruitment, scheduling, gigs, tours and publicity without ownership or unrestricted finance.", protected: false, primaryLeadership: false, permissions: allOperational.filter((k) => !k.startsWith("finance.") || (["finance.view_summary", "finance.manage_budget"] as BandPermissionKey[]).includes(k)) },
+  { roleType: "musical_director", name: "Musical director", description: "Repertoire, setlists, song approvals, rehearsal planning and recording preparation.", protected: false, primaryLeadership: false, permissions: perms("creative.approve_song", "creative.manage_songwriting", "creative.assign_contributors", "creative.select_studio", "creative.manage_repertoire", "gigs.edit_setlist", "scheduling.create_rehearsal", "scheduling.edit_rehearsal") },
+  { roleType: "recruitment_manager", name: "Recruitment manager", description: "Vacancies, applications, invitations and trial-member management.", protected: false, primaryLeadership: false, permissions: perms("membership.invite_player", "membership.review_applications", "membership.send_offer", "membership.manage_trials", "publicity.update_recruitment") },
+  { roleType: "booking_manager", name: "Booking manager", description: "Gig applications, offer responses, venue communication and tour scheduling.", protected: false, primaryLeadership: false, permissions: perms("gigs.apply", "gigs.accept", "gigs.decline", "gigs.prepare", "tours.schedule", "tours.edit") },
+  { roleType: "tour_manager", name: "Tour manager", description: "Tour planning, logistics, transport, accommodation and attendance coordination.", protected: false, primaryLeadership: false, permissions: perms("tours.schedule", "tours.edit", "tours.book_transport", "tours.book_accommodation", "scheduling.manage_attendance") },
+  { roleType: "finance_manager", name: "Finance manager", description: "Reports, budgets, expense approval and limited payments; no ownership control.", protected: false, primaryLeadership: false, permissions: perms("finance.view_summary", "finance.view_transactions", "finance.approve_expense", "finance.manage_budget", "finance.purchase_equipment") },
+  { roleType: "recording_manager", name: "Recording manager", description: "Recording approvals, studios, sessions and release preparation.", protected: false, primaryLeadership: false, permissions: perms("creative.approve_recording", "creative.select_studio", "creative.approve_release", "creative.manage_credits") },
+  { roleType: "songwriting_coordinator", name: "Songwriting coordinator", description: "Song pipeline, collaboration sessions and contributor assignments.", protected: false, primaryLeadership: false, permissions: perms("creative.propose_song", "creative.manage_songwriting", "creative.assign_contributors") },
+  { roleType: "publicity_manager", name: "Publicity manager", description: "Public profile, social posts, campaigns, gigs, releases and fan announcements.", protected: false, primaryLeadership: false, permissions: perms("publicity.edit_profile", "publicity.post_updates", "publicity.manage_twaater", "publicity.manage_campaigns", "publicity.update_recruitment", "publicity.manage_fans") },
+  { roleType: "merch_manager", name: "Merch manager", description: "Products, sale prices, stock orders, inventory and merch performance.", protected: false, primaryLeadership: false, permissions: perms("merch.create", "merch.set_prices", "merch.order_stock", "merch.manage_inventory", "merch.view_finances") },
   { roleType: "member", name: "Member", description: "Ordinary member access to roster, private schedule and creative proposals.", protected: false, primaryLeadership: false, permissions: memberBase },
-  { roleType: "trial_member", name: "Trial member", description: "Limited rehearsal and internal access while under review.", protected: false, primaryLeadership: false, permissions: ["scheduling.view_private", "creative.propose_song"] },
+  { roleType: "trial_member", name: "Trial member", description: "Limited rehearsal and internal access while under review.", protected: false, primaryLeadership: false, permissions: perms("scheduling.view_private", "creative.propose_song") },
 ];
 
 const riskWeight: Record<BandPermissionRisk, number> = { low: 1, standard: 2, sensitive: 3, critical: 4 };
-export const permissionByKey: Map<string, (typeof BAND_PERMISSION_CATALOGUE)[number]> = new Map(BAND_PERMISSION_CATALOGUE.map((permission) => [permission.key, permission]));
+export const permissionByKey: Map<BandPermissionKey, (typeof BAND_PERMISSION_CATALOGUE)[number]> = new Map(BAND_PERMISSION_CATALOGUE.map((permission) => [permission.key, permission]));
 
 export interface EffectivePermissionInput {
   isOwner?: boolean;
