@@ -274,29 +274,67 @@ export default function CityFestivalsAdmin() {
           </p>
         </div>
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogTrigger asChild>
               <Button variant="outline" disabled={!citiesMissingFestival.length}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Re-seed missing ({citiesMissingFestival.length})
+                <Eye className="h-4 w-4 mr-2" />
+                Preview re-seed ({citiesMissingFestival.length})
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Re-seed missing city festivals?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will insert one small-scale festival for each of the {citiesMissingFestival.length} cities
-                  that currently have no festival record. Existing festivals will not be touched.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => reseedMissingMutation.mutate()}>
-                  Re-seed safely
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Preview re-seed — {reseedPreview.length} new festival{reseedPreview.length === 1 ? "" : "s"}</DialogTitle>
+                <DialogDescription>
+                  These rows will be <span className="font-medium text-foreground">inserted</span> for cities that currently have no festival. No existing festivals will be updated or overwritten.
+                </DialogDescription>
+              </DialogHeader>
+              {reseedPreview.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">Every city already has a festival — nothing to insert.</p>
+              ) : (
+                <ScrollArea className="h-[420px] rounded-md border border-border/40">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="text-left">
+                        <th className="px-2 py-1.5 font-medium">City</th>
+                        <th className="px-2 py-1.5 font-medium">Festival name</th>
+                        <th className="px-2 py-1.5 font-medium">Dates</th>
+                        <th className="px-2 py-1.5 font-medium">Scale</th>
+                        <th className="px-2 py-1.5 font-medium text-right">Capacity</th>
+                        <th className="px-2 py-1.5 font-medium text-right">Ticket range</th>
+                        <th className="px-2 py-1.5 font-medium">Genre</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reseedPreview.map((r) => (
+                        <tr key={r.city_id} className="border-t border-border/30">
+                          <td className="px-2 py-1.5">
+                            <div className="font-medium">{r.city_name}</div>
+                            {r.country && <div className="text-muted-foreground text-[10px]">{r.country}</div>}
+                          </td>
+                          <td className="px-2 py-1.5">{r.name}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{r.start_date} → {r.end_date}</td>
+                          <td className="px-2 py-1.5"><Badge variant="outline" className="capitalize">{r.scale}</Badge></td>
+                          <td className="px-2 py-1.5 text-right">{r.expected_attendance.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">${r.ticket_price_low} – ${r.ticket_price_high}</td>
+                          <td className="px-2 py-1.5 capitalize">{r.genre}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              )}
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={() => reseedMissingMutation.mutate()}
+                  disabled={!reseedPreview.length || reseedMissingMutation.isPending}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {reseedMissingMutation.isPending ? "Seeding…" : `Insert ${reseedPreview.length} festival${reseedPreview.length === 1 ? "" : "s"}`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => saveAllMutation.mutate()} disabled={!dirtyCount || saveAllMutation.isPending}>
             <Save className="h-4 w-4 mr-2" />
             Save all ({dirtyCount})
