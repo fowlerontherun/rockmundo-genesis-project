@@ -73,14 +73,20 @@ export default function FestivalRunWizard() {
   const [draftAttendance, setDraftAttendance] = useState<string>("");
   const [draftLow, setDraftLow] = useState<string>("");
   const [draftHigh, setDraftHigh] = useState<string>("");
+  const [originalDraft, setOriginalDraft] = useState<{ name: string; attendance: string; low: string; high: string } | null>(null);
 
   // Initialize once
   useMemo(() => {
     if (festival && draftName === "") {
-      setDraftName(festival.name || "");
-      setDraftAttendance(String(festival.expected_attendance ?? ""));
-      setDraftLow(String(festival.ticket_price_low ?? ""));
-      setDraftHigh(String(festival.ticket_price_high ?? ""));
+      const name = festival.name || "";
+      const attendance = String(festival.expected_attendance ?? "");
+      const low = String(festival.ticket_price_low ?? "");
+      const high = String(festival.ticket_price_high ?? "");
+      setDraftName(name);
+      setDraftAttendance(attendance);
+      setDraftLow(low);
+      setDraftHigh(high);
+      if (!originalDraft) setOriginalDraft({ name, attendance, low, high });
     }
   }, [festival]);
 
