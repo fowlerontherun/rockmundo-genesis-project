@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.452",
+    date: "2026-07-14",
+    changes: [
+      { type: 'improvement', description: "**Surface detailed errors when starting a songwriting session fails.** The Songwriting page now shows the RPC name (`public.start_songwriting_session`), HTTP status, PostgREST code, and any `details`/`hint` returned by Supabase in the failure toast, and logs the same structured payload to the console — making 404s (missing function), 42703 (missing column), and RLS/domain errors immediately diagnosable." },
+    ],
+  },
+  {
     version: "1.1.451",
     date: "2026-07-14",
     changes: [
