@@ -85,6 +85,7 @@ const AdminDashboard = () => {
 
   const quickActions = [
     // Core Admin
+    { label: "System Status & Banner", path: "/admin/system-status", icon: ServerCrashIconAlias },
     { label: "Game Balance", path: "/admin/game-balance", icon: Settings },
     { label: "Player Management", path: "/admin/players", icon: Users },
     { label: "Release Admin", path: "/admin/releases", icon: Music },
