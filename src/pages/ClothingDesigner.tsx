@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Scissors, Store, TrendingUp, DollarSign, Package } from "lucide-react";
+import { Scissors, Store, TrendingUp, DollarSign, Package, Lock } from "lucide-react";
 import { useClothingBrand } from "@/hooks/useClothingBrand";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { calculateClothingScores, GENRE_STYLES } from "@/utils/clothingQuality";
@@ -37,8 +37,45 @@ const ClothingDesignerInner = () => {
     );
   }
 
+  // Fashion skill gate — must have learned Basic Fashion Knowledge
+  const FASHION_GATE_SLUG = "fashion_basic_fundamentals";
+  const FASHION_GATE_LEVEL = 100;
+  const fashionLevel = progress.find((s) => s.skill_slug === FASHION_GATE_SLUG)?.current_level ?? 0;
+  const fashionUnlocked = fashionLevel >= FASHION_GATE_LEVEL;
+
   // Brand creation flow
   if (!brand) {
+    if (!fashionUnlocked) {
+      return (
+        <FMPageScaffold title="Clothing Brand" subtitle="Launch your fashion empire." icon={Scissors} backTo="/hub/career-business">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Clothing Brand Locked
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                To launch your own clothing brand, you must first study the craft. Reach level {FASHION_GATE_LEVEL} in
+                <span className="font-semibold text-foreground"> Basic Fashion Knowledge</span> to unlock brand creation.
+              </p>
+              <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Basic Fashion Knowledge</span>
+                  <Badge variant={fashionLevel > 0 ? "secondary" : "outline"}>
+                    Lv {fashionLevel} / {FASHION_GATE_LEVEL}
+                  </Badge>
+                </div>
+              </div>
+              <Button asChild className="w-full">
+                <a href="/skills">Go to Skills</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </FMPageScaffold>
+      );
+    }
     return (
       <FMPageScaffold title="Clothing Brand" subtitle="Launch your fashion empire." icon={Scissors} backTo="/hub/career-business">
         <Card>
