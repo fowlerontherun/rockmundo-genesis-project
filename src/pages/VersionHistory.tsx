@@ -17,6 +17,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.492",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Cleared the TypeScript compile blockers surfaced while fixing secondary character profile saves, including gig viewer DTO compatibility, wellness vitals typing, typed Supabase query mismatches, translation fallback typing, and test matcher declarations." },
+    ],
+  },
+  {
+    version: "1.1.491",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Secondary character profile saves no longer fail with the generic profile update error when the requested username is already used by another character. The form now auto-resolves a unique username, normalizes legacy gender values, and shows clearer save feedback." },
+    ],
+  },
+  {
     version: "1.1.490",
     date: "2026-07-14",
     changes: [

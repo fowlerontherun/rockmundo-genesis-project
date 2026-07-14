@@ -19,7 +19,8 @@ export function SafetyActions({ targetProfileId, targetName = "this player", isB
   const [blockAfterReport, setBlockAfterReport] = useState(false);
   const actions = usePlayerBlockActions(targetProfileId);
   const report = useReportPlayer();
-  const emergency = REPORT_CATEGORIES.find((item) => item.value === category)?.emergency;
+  const selectedCategory = REPORT_CATEGORIES.find((item) => item.value === category);
+  const emergency = selectedCategory && "emergency" in selectedCategory ? selectedCategory.emergency : false;
   const submitReportDisabled = !category || description.trim().length < 10 || description.length > 2000 || report.isPending;
 
   return <>

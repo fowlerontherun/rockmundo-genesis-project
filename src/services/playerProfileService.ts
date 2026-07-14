@@ -92,14 +92,14 @@ export function validatePlayerProfileUpdate(input: PlayerProfileUpdateInput): Pl
 export async function getOwnPlayerSocialProfile(profileId: string): Promise<PlayerSocialProfile | null> {
   const { data, error } = await supabase.from("player_profiles" as any).select("*").eq("profile_id", profileId).maybeSingle();
   if (error) throw error;
-  return data as PlayerSocialProfile | null;
+  return data as unknown as PlayerSocialProfile | null;
 }
 
 export async function updatePlayerSocialProfile(input: PlayerProfileUpdateInput) {
   const cleaned = validatePlayerProfileUpdate(input);
   const { data, error } = await supabase.from("player_profiles" as any).upsert(cleaned, { onConflict: "profile_id" }).select("*").single();
   if (error) throw error;
-  return data as PlayerSocialProfile;
+  return data as unknown as PlayerSocialProfile;
 }
 
 export function calculateProfileCompleteness(profile: Partial<PlayerSocialProfile> | null | undefined) {

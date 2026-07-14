@@ -30,7 +30,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
 import type { WellnessCategory } from "@/lib/api/wellnessActivities";
 import { calculateTravelFatigueEffect, forecastWellnessAfterRecovery, resolveAccommodationRecoveryProfile } from "@/lib/wellnessRecovery";
-import { buildCoreWellnessModifiers, calculateCanonicalReadiness } from "@/lib/wellnessSystem";
+import { buildCoreWellnessModifiers, calculateCanonicalReadiness, createDefaultWellnessCore, type WellnessCoreValues } from "@/lib/wellnessSystem";
 
 const CATEGORIES: {
   key: WellnessCategory;
@@ -85,10 +85,11 @@ const WellnessPage = () => {
     () => new Map(cooldowns.map((c) => [c.catalog_slug, c])),
     [cooldowns],
   );
+  const coreVitals = useMemo<WellnessCoreValues>(() => ({ ...createDefaultWellnessCore(), ...vitals }), [vitals]);
   const accommodationPreview = useMemo(() => resolveAccommodationRecoveryProfile({ kind: "home", tier: "standard", isHomeCity: true, occupied: true, quality: 65, upgrades: ["better_bed"] }), []);
-  const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, vitals), [vitals]);
-  const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(vitals, accommodationPreview, travelPreview, 0), [vitals, accommodationPreview, travelPreview]);
-  const readinessPreview = useMemo(() => calculateCanonicalReadiness({ role: "gig", core: vitals, modifiers: buildCoreWellnessModifiers(vitals, "gig"), confidence: "actual" }), [vitals]);
+  const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, coreVitals), [coreVitals]);
+  const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(coreVitals, accommodationPreview, travelPreview, 0), [coreVitals, accommodationPreview, travelPreview]);
+  const readinessPreview = useMemo(() => calculateCanonicalReadiness({ role: "gig", core: coreVitals, modifiers: buildCoreWellnessModifiers(coreVitals, "gig"), confidence: "actual" }), [coreVitals]);
 
   const grouped = useMemo(() => {
     const g: Record<WellnessCategory, typeof catalog> = {
@@ -222,7 +223,7 @@ const WellnessPage = () => {
 
       <NutritionHydrationPanel vitals={vitals} />
 
-      <ProfessionalSupportPanel vitals={vitals} fame={profile?.fame ?? 0} />
+      <ProfessionalSupportPanel vitals={coreVitals} fame={profile?.fame ?? 0} />
 
       <TimeAwayLongevityPanel vitals={vitals} fame={profile?.fame ?? 0} />
 

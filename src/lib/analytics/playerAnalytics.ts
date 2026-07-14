@@ -114,7 +114,7 @@ export function summarizeTrend(observations: AnalyticsObservation[], metricLabel
   const confidence: TrendConfidence = sampleSize === 2 ? "low" : sampleSize <= 5 ? "early" : "normal";
   const label = sampleSize === 2 ? "Low confidence" : sampleSize <= 5 ? "Early indication" : direction === "stable" ? "Stable trend" : "Strong trend";
   const caution = versionWarning ? " Scoring changed or is unknown during this period, so interpret the trend cautiously." : "";
-  return { sampleSize, direction, confidence, label, delta, versionWarning, explanation: `${sampleSize} ${metricLabel} observations show ${direction === "unknown" ? "no clear" : `a ${direction}`} pattern (${delta >= 0 ? "+" : ""}${delta}).${caution}` };
+  return { sampleSize, direction, confidence, label, delta, versionWarning, explanation: `${sampleSize} ${metricLabel} observations show a ${direction} pattern (${delta >= 0 ? "+" : ""}${delta}).${caution}` };
 }
 
 export function buildSafeComparison<T extends { calculationVersion?: string | null; systemKey?: string | null }>(before: T, after: T): SafeComparison<T> {

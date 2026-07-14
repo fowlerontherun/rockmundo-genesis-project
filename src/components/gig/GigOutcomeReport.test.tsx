@@ -20,6 +20,7 @@ function makeExperience(overrides: Partial<GigExperienceDTO> = {}): GigExperienc
     finances: { ticketRevenue: metric(4200), merchRevenue: metric(500), totalRevenue: metric(4700), crewCosts: metric(800), equipmentWearCost: metric(200), venueCost: metric(2500), totalCosts: metric(3500), netProfit: metric(1200), merchItemsSold: metric(25) },
     progression: { fameGained: metric(16), chemistryChange: metric(2), totalXpAwarded: metric(100), fansGained: metric(42), fanConversions: metric(42) },
     analysis: { equipmentQuality: metric(10), crewSkill: metric(9), bandChemistry: metric(11), memberSkills: metric(13), crowdEnergyPeak: metric(84), stageBehaviorUsed: { status: "not_applicable", reason: "none" }, gearEffects: null, warnings: [] },
+    postConsequences: { processingStatus: "completed", processingVersion: "test", processedAt: "2026-07-11", liveReputationDelta: metric(2), fanDelta: metric(42), followerDelta: metric(8), bookingDemandDelta: metric(4), mediaCoverage: metric("Local buzz"), timeline: [], nextActions: [], consequences: [] },
     lessons: { worked: [], heldBack: [], recommendations: [] },
     viewer: { ready: true, outcomeId: "outcome-1", resultReadyAt: "2026-07-11", replayAvailable: false },
   };

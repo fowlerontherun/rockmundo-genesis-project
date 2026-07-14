@@ -23,7 +23,7 @@ const MusicOverview = () => {
     enabled: !!userId,
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("songs")
         .select("id,title,status,genre,quality_score,practice_level,archived,created_at")
         .eq("user_id", userId)
@@ -39,7 +39,7 @@ const MusicOverview = () => {
     enabled: !!userId,
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("recording_sessions")
         .select("id,status,scheduled_start,scheduled_end,song_id,songs(title)")
         .eq("user_id", userId)
@@ -55,7 +55,7 @@ const MusicOverview = () => {
     enabled: !!profileId,
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("releases")
         .select("id,title,release_type,release_status,release_date,created_at")
         .eq("user_id", profileId)

@@ -72,7 +72,7 @@ export async function listWellnessCatalog(): Promise<WellnessCatalogEntry[]> {
     .eq("is_active", true)
     .order("sort_order");
   if (error) throw error;
-  const rows = (data ?? []) as WellnessCatalogEntry[];
+  const rows = (data ?? []) as unknown as WellnessCatalogEntry[];
   return rows.map((row) => {
     const balance = WELLNESS_ACTIVITIES.find((activity) => activity.slug === row.slug);
     return balance ? { ...row, ...balance, unlock_min_fame: row.unlock_min_fame } : row;

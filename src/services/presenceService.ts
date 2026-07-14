@@ -98,11 +98,11 @@ export async function fetchPresenceDirectory(viewerProfileId?: string | null, ci
   }
 
   const profileIds = Array.from(friendIds);
-  let profilesQuery = supabase.from("profiles").select("id,user_id,username,display_name,avatar_url,city_name,current_city_id,updated_at,looking_for_band").limit(36);
+  let profilesQuery = (supabase as any).from("profiles").select("id,user_id,username,display_name,avatar_url,city_name,current_city_id,updated_at,looking_for_band").limit(36);
   if (cityId) profilesQuery = profilesQuery.eq("current_city_id", cityId);
   const [cityProfiles, friendProfiles, statusesResult] = await Promise.all([
     profilesQuery,
-    profileIds.length ? supabase.from("profiles").select("id,user_id,username,display_name,avatar_url,city_name,current_city_id,updated_at,looking_for_band").in("id", profileIds) : Promise.resolve({ data: [], error: null }),
+    profileIds.length ? (supabase as any).from("profiles").select("id,user_id,username,display_name,avatar_url,city_name,current_city_id,updated_at,looking_for_band").in("id", profileIds) : Promise.resolve({ data: [], error: null }),
     supabase.from("profile_activity_statuses").select("profile_id,activity_type,status,started_at,updated_at,ends_at,metadata").is("completed_at", null).order("updated_at", { ascending: false }).limit(120),
   ]);
   if (cityProfiles.error) throw cityProfiles.error;
@@ -110,7 +110,7 @@ export async function fetchPresenceDirectory(viewerProfileId?: string | null, ci
   if (statusesResult.error) throw statusesResult.error;
   const statuses = (statusesResult.data ?? []) as StatusRow[];
   const map = new Map<string, ProfileRow>();
-  [...((cityProfiles.data ?? []) as ProfileRow[]), ...(((friendProfiles as any).data ?? []) as ProfileRow[])].forEach((p) => map.set(p.id, p));
+  [...((cityProfiles.data ?? []) as unknown as ProfileRow[]), ...(((friendProfiles as any).data ?? []) as unknown as ProfileRow[])].forEach((p) => map.set(p.id, p));
   const players = mergePresenceProfiles(Array.from(map.values()), statuses, onlineUserIds).filter((p) => p.id !== viewerProfileId);
   const activeRank = (p: PresencePlayer) => p.presence === "offline" ? 2 : p.presence === "recently_online" ? 1 : 0;
   const sorted = [...players].sort((a, b) => activeRank(a) - activeRank(b));

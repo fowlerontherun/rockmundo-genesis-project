@@ -1,6 +1,4 @@
-import type { TranslationKeys } from './en';
-
-export const fr: TranslationKeys = {
+export const fr = {
   common: {
     loading: "Chargement...",
     error: "Erreur",

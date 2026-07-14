@@ -61,6 +61,94 @@ const createEmptyAllocation = () =>
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 
+const PROFILE_GENDER_VALUES = new Set(["male", "female", "non-binary", "other", "unspecified"]);
+
+const normalizeProfileGender = (value: unknown): string => {
+  if (typeof value !== "string") {
+    return "unspecified";
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/_/g, "-");
+  if (normalized === "prefer-not-to-say" || normalized === "prefer not to say") {
+    return "unspecified";
+  }
+
+  return PROFILE_GENDER_VALUES.has(normalized) ? normalized : "unspecified";
+};
+
+const createUsernameCandidate = (requestedUsername: string, profile: { id: string; slot_number?: number | null }) => {
+  const slug = requestedUsername
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const safeBase = slug.length > 0 ? slug : `player-${profile.id.slice(0, 8)}`;
+  const suffix = String(profile.slot_number ?? profile.id.slice(0, 4));
+  const trimmedBase = safeBase.slice(0, Math.max(1, 49 - suffix.length));
+  return `${trimmedBase}-${suffix}`;
+};
+
+const resolveAvailableUsername = async (
+  requestedUsername: string,
+  profile: { id: string; username?: string | null; slot_number?: number | null },
+) => {
+  const candidates = Array.from(
+    new Set([
+      requestedUsername.slice(0, 50),
+      createUsernameCandidate(requestedUsername, profile),
+      `${createUsernameCandidate(requestedUsername, profile).slice(0, 45)}-${profile.id.slice(0, 4)}`,
+    ]),
+  );
+
+  for (const candidate of candidates) {
+    if (candidate === profile.username) {
+      return { username: candidate, adjusted: candidate !== requestedUsername };
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", candidate)
+      .neq("id", profile.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.id) {
+      return { username: candidate, adjusted: candidate !== requestedUsername };
+    }
+  }
+
+  throw new Error("That username is already taken. Try a more distinctive username.");
+};
+
+const getProfileUpdateMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const candidate = error as { code?: string; message?: string; details?: string };
+    const details = `${candidate.message ?? ""} ${candidate.details ?? ""}`.toLowerCase();
+
+    if (candidate.code === "23505" && details.includes("username")) {
+      return "That username is already taken. Try a more distinctive username.";
+    }
+
+    if (candidate.code === "23514" && details.includes("gender")) {
+      return "Choose one of the listed gender options before saving.";
+    }
+
+    if (candidate.message) {
+      return candidate.message;
+    }
+  }
+
+  return "We couldn't update your profile right now.";
+};
+
 const MyCharacterEdit = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -80,7 +168,7 @@ const MyCharacterEdit = () => {
   const [usernameInput, setUsernameInput] = useState(profile?.username ?? "");
   const [displayNameInput, setDisplayNameInput] = useState(profile?.display_name ?? "");
   const [bioInput, setBioInput] = useState(profile?.bio ?? "");
-  const [genderInput, setGenderInput] = useState<string>((profile as any)?.gender ?? "unspecified");
+  const [genderInput, setGenderInput] = useState<string>(normalizeProfileGender((profile as any)?.gender));
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -139,7 +227,7 @@ const MyCharacterEdit = () => {
     setUsernameInput(profile?.username ?? "");
     setDisplayNameInput(profile?.display_name ?? "");
     setBioInput(profile?.bio ?? "");
-    setGenderInput((profile as any)?.gender ?? "unspecified");
+    setGenderInput(normalizeProfileGender((profile as any)?.gender));
     setProfileError(null);
   }, [profile]);
 
@@ -257,27 +345,33 @@ const MyCharacterEdit = () => {
     setProfileError(null);
 
     try {
+      const { username: resolvedUsername, adjusted: usernameAdjusted } = await resolveAvailableUsername(
+        nextUsername,
+        profile as any,
+      );
+      const resolvedGender = normalizeProfileGender(genderInput);
+
       await updateProfile({
-        username: nextUsername,
+        username: resolvedUsername,
         display_name: nextDisplayName,
         bio: nextBio.length > 0 ? nextBio : null,
-        gender: genderInput,
+        gender: resolvedGender,
       } as any);
       await refetch();
 
-      setUsernameInput(nextUsername);
+      setUsernameInput(resolvedUsername);
       setDisplayNameInput(nextDisplayName);
       setBioInput(nextBio);
+      setGenderInput(resolvedGender);
 
       toast({
         title: "Profile updated",
-        description: "Your character details have been saved.",
+        description: usernameAdjusted
+          ? `Your character details were saved. Username was set to ${resolvedUsername} because ${nextUsername} is already in use.`
+          : "Your character details have been saved.",
       });
     } catch (profileUpdateError) {
-      const message =
-        profileUpdateError instanceof Error
-          ? profileUpdateError.message
-          : "We couldn't update your profile right now.";
+      const message = getProfileUpdateMessage(profileUpdateError);
 
       setProfileError(message);
       toast({

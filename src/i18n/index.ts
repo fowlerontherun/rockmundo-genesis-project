@@ -11,12 +11,12 @@ export type Language = 'en' | 'es' | 'zh' | 'hi' | 'ar' | 'pt' | 'bn' | 'ru' | '
 // For languages not yet fully translated, we fall back to English
 export const translations: Record<Language, TranslationKeys> = {
   en,
-  es,
-  tr, // Turkish - fully translated
-  de: de as TranslationKeys, // German - core translations
-  fr: fr as TranslationKeys, // French - core translations
-  pt: pt as TranslationKeys, // Portuguese - core translations
-  it: it as TranslationKeys, // Italian - core translations
+  es: es as unknown as TranslationKeys,
+  tr: tr as unknown as TranslationKeys, // Turkish - core translations
+  de: de as unknown as TranslationKeys, // German - core translations
+  fr: fr as unknown as TranslationKeys, // French - core translations
+  pt: pt as unknown as TranslationKeys, // Portuguese - core translations
+  it: it as unknown as TranslationKeys, // Italian - core translations
   // Other languages fall back to English for now
   zh: en,
   hi: en,

@@ -1,6 +1,4 @@
-import type { TranslationKeys } from './en';
-
-export const ja: TranslationKeys = {
+export const ja = {
   common: {
     loading: "読み込み中...",
     error: "エラー",

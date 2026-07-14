@@ -68,14 +68,14 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const setlistTitles = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, row.songs?.title ?? "Unknown Song"]));
   const setlistAudio = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, resolveSongAudioDescriptor(row.songs, "allowed")]));
   const songPerformances = [...(input.songPerformances ?? [])].sort((a, b) => a.position - b.position);
-  const songs = songPerformances.map((row) => ({
+  const songs: GigExperienceDTO["songs"] = songPerformances.map((row) => ({
     id: row.id,
     songId: row.song_id ?? null,
     position: row.position,
     title: row.song_title ?? (row.song_id ? setlistTitles.get(row.song_id) : undefined) ?? row.performance_item_name ?? "Unknown Song",
     audio: row.song_id ? setlistAudio.get(row.song_id) : resolveSongAudioDescriptor(null, "allowed"),
     performanceScore: nullableNumberMetric(row.performance_score, "Song score missing from legacy performance row"),
-    crowdResponse: row.crowd_response ? metricAvailable(row.crowd_response) : metricLegacyMissing("Crowd response missing from legacy performance row"),
+    crowdResponse: row.crowd_response ? metricAvailable<string>(String(row.crowd_response)) : metricLegacyMissing<string>("Crowd response missing from legacy performance row"),
     contributions: {
       songQuality: nullableNumberMetric(row.song_quality_contrib, "Song quality contribution missing from legacy row"),
       rehearsal: nullableNumberMetric(row.rehearsal_contrib, "Rehearsal contribution missing from legacy row"),

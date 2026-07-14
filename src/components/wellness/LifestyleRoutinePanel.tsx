@@ -3,11 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Bed, CalendarClock, Flame, Moon, PartyPopper, ShieldCheck } from "lucide-react";
+import { Bed, CalendarClock, Flame, Moon, PartyPopper, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { LifestyleProfile } from "@/lib/wellnessLifestyle";
 
 interface Props { lifestyle: LifestyleProfile | null; fame: number; }
 const bandTone = (state?: string) => state === "Unsustainable" || state === "Exhausting" ? "destructive" : state === "Busy" || state === "Unstable" ? "secondary" : "default";
+const routineMetrics: Array<[string, keyof LifestyleProfile, LucideIcon]> = [
+  ["Sleep consistency", "sleep_consistency", Bed],
+  ["Workload balance", "activity_balance", CalendarClock],
+  ["Recovery discipline", "recovery_discipline", Moon],
+  ["Social activity", "social_activity", PartyPopper],
+  ["Burnout pressure", "burnout_pressure", Flame],
+  ["Routine stability", "routine_stability", ShieldCheck],
+];
 
 export function LifestyleRoutinePanel({ lifestyle, fame }: Props) {
   if (!lifestyle) return null;
@@ -31,19 +39,15 @@ export function LifestyleRoutinePanel({ lifestyle, fame }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            {[
-              ["Sleep consistency", lifestyle.sleep_consistency, Bed],
-              ["Workload balance", lifestyle.activity_balance, CalendarClock],
-              ["Recovery discipline", lifestyle.recovery_discipline, Moon],
-              ["Social activity", lifestyle.social_activity, PartyPopper],
-              ["Burnout pressure", lifestyle.burnout_pressure, Flame],
-              ["Routine stability", lifestyle.routine_stability, ShieldCheck],
-            ].map(([label, value, Icon]) => (
-              <div key={label as string} className="rounded-lg border p-3">
-                <div className="mb-2 flex items-center justify-between gap-2 text-sm"><span className="inline-flex items-center gap-1"><Icon className="h-3.5 w-3.5" />{label as string}</span><span>{value as number}/100</span></div>
-                <Progress value={value as number} aria-label={`${label} ${value}/100`} />
+            {routineMetrics.map(([label, key, Icon]) => {
+              const value = Number(lifestyle[key] ?? 0);
+              return (
+              <div key={label} className="rounded-lg border p-3">
+                <div className="mb-2 flex items-center justify-between gap-2 text-sm"><span className="inline-flex items-center gap-1"><Icon className="h-3.5 w-3.5" />{label}</span><span>{value}/100</span></div>
+                <Progress value={value} aria-label={`${label} ${value}/100`} />
               </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 

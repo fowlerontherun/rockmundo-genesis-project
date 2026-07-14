@@ -6,13 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Users, Radio, ShieldCheck, Sparkles } from "lucide-react";
-import { AUDIENCE_REACTION_TYPES, aggregateAudienceResponse, checkAudienceReactionRateLimit, type AudienceReactionType } from "@/utils/gigAudience";
+import { AUDIENCE_REACTION_TYPES, aggregateAudienceResponse, checkAudienceReactionRateLimit, type AudienceAggregate, type AudienceReactionType, type ParticipationLevel } from "@/utils/gigAudience";
 
 interface LiveGigAudiencePanelProps { gigId: string; liveSessionId?: string | null; currentSegmentId?: string | null; isAudienceView?: boolean; }
 interface AttendanceRow { id: string; attendance_type: string; status: string; participation_score: number; watch_duration_seconds: number; reward_status: string; last_presence_at: string | null; }
 interface AggregateRow { participation_level: string; participation_score: number; reaction_counts: Record<string, number>; unique_participants: number; encore_demand: number; singalong_strength: number; audience_modifier: number; }
+interface AggregateView { participationLevel: ParticipationLevel | string; participationScore: number; uniqueParticipants: number; encoreDemand: number; audienceModifier: number; }
 
 const reactionLabels: Record<AudienceReactionType, string> = { cheer: "Cheer", clap: "Clap", sing_along: "Sing along", hands_up: "Hands up", dance: "Dance", phone_wave: "Phone wave", chant: "Chant", encore_request: "Encore!", support_performer: "Support", highlight: "Highlight" };
+
+const toAggregateView = (value: AggregateRow | AudienceAggregate): AggregateView => {
+  if ("participation_level" in value) {
+    return { participationLevel: value.participation_level, participationScore: value.participation_score, uniqueParticipants: value.unique_participants, encoreDemand: value.encore_demand, audienceModifier: value.audience_modifier };
+  }
+  return { participationLevel: value.participationLevel, participationScore: value.participationScore, uniqueParticipants: value.uniqueParticipants, encoreDemand: value.encoreDemand, audienceModifier: value.audienceModifier };
+};
 
 export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, isAudienceView = false }: LiveGigAudiencePanelProps) {
   const [attendance, setAttendance] = useState<AttendanceRow | null>(null);
@@ -56,7 +64,7 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
     return () => { supabase.removeChannel(channel); };
   }, [liveSessionId, loadAudienceState]);
 
-  const derivedAggregate = useMemo(() => aggregate ?? aggregateAudienceResponse([], friendCount), [aggregate, friendCount]);
+  const derivedAggregate = useMemo(() => toAggregateView(aggregate ?? aggregateAudienceResponse([], friendCount)), [aggregate, friendCount]);
   const cooldownSeconds = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil.getTime() - Date.now()) / 1000)) : 0;
 
   const checkIn = async (attendanceType: "ticket_holder" | "remote_viewer") => {
@@ -83,12 +91,12 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div><p className="text-2xl font-bold capitalize">{derivedAggregate.participation_level}</p><p className="text-xs text-muted-foreground">Participation</p></div>
-          <div><p className="text-2xl font-bold">{derivedAggregate.unique_participants}</p><p className="text-xs text-muted-foreground">Active fans</p></div>
-          <div><p className="text-2xl font-bold">{derivedAggregate.encore_demand}%</p><p className="text-xs text-muted-foreground">Encore demand</p></div>
-          <div><p className="text-2xl font-bold">+{Number(derivedAggregate.audience_modifier || 0).toFixed(1)}</p><p className="text-xs text-muted-foreground">Capped atmosphere</p></div>
+          <div><p className="text-2xl font-bold capitalize">{derivedAggregate.participationLevel}</p><p className="text-xs text-muted-foreground">Participation</p></div>
+          <div><p className="text-2xl font-bold">{derivedAggregate.uniqueParticipants}</p><p className="text-xs text-muted-foreground">Active fans</p></div>
+          <div><p className="text-2xl font-bold">{derivedAggregate.encoreDemand}%</p><p className="text-xs text-muted-foreground">Encore demand</p></div>
+          <div><p className="text-2xl font-bold">+{Number(derivedAggregate.audienceModifier || 0).toFixed(1)}</p><p className="text-xs text-muted-foreground">Capped atmosphere</p></div>
         </div>
-        <Progress value={derivedAggregate.participation_score} className="h-2" />
+        <Progress value={derivedAggregate.participationScore} className="h-2" />
 
         {attendance ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
