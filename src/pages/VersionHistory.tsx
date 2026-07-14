@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.525",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Skill Tree tab now supports practising and spending XP directly on each skill. Every skill row shows a new 'Practise' button that opens the schedule dialog to book a practice session, alongside the existing Train (spend SXP) and 'All' (spend entire wallet) buttons — so players can grow any skill from the tree without leaving the tab." },
+    ],
+  },
+  {
     version: "1.1.524",
     date: "2026-07-14",
     changes: [
