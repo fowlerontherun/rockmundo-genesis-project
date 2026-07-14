@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.518",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festival Run Wizard 'Go Live' step now ends with a final confirmation screen. Shows a diff of edits made in the wizard (name, expected attendance, ticket low/high vs. original values) plus a side-by-side view of the full Run Order (chronological across all stages with day, start–end time, stage, and slot type) next to Booked Stages (grouped per stage with act count and per-slot day/time)." },
+    ],
+  },
+  {
     version: "1.1.517",
     date: "2026-07-14",
     changes: [
