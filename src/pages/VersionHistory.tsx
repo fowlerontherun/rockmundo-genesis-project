@@ -20,7 +20,7 @@ const versionHistory: VersionEntry[] = [
     version: "1.1.495",
     date: "2026-07-14",
     changes: [
-      { type: 'change', description: "Removed the legacy color scheme switcher (Nightfall / Sunrise / Forest / Midnight) and its palette icon from the top bar and sidebars — the app now uses the single unified dark theme." },
+      { type: 'improvement', description: "Removed the legacy color scheme switcher (Nightfall / Sunrise / Forest / Midnight) and its palette icon from the top bar and sidebars — the app now uses the single unified dark theme." },
     ],
   },
   {
