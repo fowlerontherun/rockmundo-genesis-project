@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.459",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Gig Viewer Demo now progresses through events and responds to controls.** Two bugs: (1) `useGigReplayPlayback` stored the `useState` setter in a `useMemo` dependency instead of the tick value, so playback state never re-derived on frame ticks — the clock advanced internally but the UI froze. (2) `ReplayClock.position()` capped elapsed wall time to 60,000 ms, which stalled any replay longer than 60 s (fixtures are 180 s). Both fixed — Play, Pause, Restart, Seek, and Next/Previous now work end-to-end." },
+    ],
+  },
+  {
     version: "1.1.458",
     date: "2026-07-14",
     changes: [
