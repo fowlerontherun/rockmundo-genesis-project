@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.472",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded 32 new recurring major events spanning all 12 months — festivals (Desert Sound, Isle of Rock, Alpine Metal, Roskilde-style), awards (Global Music Awards, Latin Music Awards, Hip Hop Honors, MTV-style Globals), holiday spectaculars, sports halftime slots and prestige galas. Rewards, audience size and fame gates scale with prestige tier." },
+    ],
+  },
+  {
     version: "1.1.471",
     date: "2026-07-14",
     changes: [
