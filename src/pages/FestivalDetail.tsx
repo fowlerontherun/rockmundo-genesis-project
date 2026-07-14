@@ -673,8 +673,9 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
           <TabsContent value="tickets" className="mt-6">
             {isUpcoming ? (() => {
               const basePrice = festival.ticket_price || 100;
-              const dayPrice = Math.round(basePrice * 0.45);
-              const weekendPrice = basePrice;
+              const tierMult = TIERS.find(t => t.id === selectedTier)?.multiplier || 1;
+              const dayPrice = Math.round(basePrice * 0.45 * tierMult);
+              const weekendPrice = Math.round(basePrice * tierMult);
               
               const ADD_ONS = [
                 { id: "early_access", label: "Early Access", description: "Enter 2 hours before general admission", price: Math.round(basePrice * 0.15) },
