@@ -19,7 +19,7 @@
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
  import { FestivalRivalryCard } from "@/components/festivals/rivalry/FestivalRivalryCard";
  import { useFestivalTickets } from "@/hooks/useFestivalTickets";
- import { useFestivalStages } from "@/hooks/useFestivalStages";
+ import { useFestivalStages, useFestivalStageSlots, type FestivalStageSlot } from "@/hooks/useFestivalStages";
  import { useFestivalQuality } from "@/hooks/useFestivalFinances";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
