@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.473",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded 30 recording producers across budget, mid, premium and legendary tiers spanning every major genre (rock, pop, hip hop, electronic, metal, R&B, country, folk, blues, jazz, indie, world). Each producer has genre specialties, mixing/mastering/arrangement skills, hourly rates, past works, and Grammy/platinum counts so players have real options to book at every career stage." },
+    ],
+  },
+  {
     version: "1.1.472",
     date: "2026-07-14",
     changes: [
