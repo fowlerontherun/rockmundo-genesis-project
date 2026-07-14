@@ -73,14 +73,20 @@ export default function FestivalRunWizard() {
   const [draftAttendance, setDraftAttendance] = useState<string>("");
   const [draftLow, setDraftLow] = useState<string>("");
   const [draftHigh, setDraftHigh] = useState<string>("");
+  const [originalDraft, setOriginalDraft] = useState<{ name: string; attendance: string; low: string; high: string } | null>(null);
 
   // Initialize once
   useMemo(() => {
     if (festival && draftName === "") {
-      setDraftName(festival.name || "");
-      setDraftAttendance(String(festival.expected_attendance ?? ""));
-      setDraftLow(String(festival.ticket_price_low ?? ""));
-      setDraftHigh(String(festival.ticket_price_high ?? ""));
+      const name = festival.name || "";
+      const attendance = String(festival.expected_attendance ?? "");
+      const low = String(festival.ticket_price_low ?? "");
+      const high = String(festival.ticket_price_high ?? "");
+      setDraftName(name);
+      setDraftAttendance(attendance);
+      setDraftLow(low);
+      setDraftHigh(high);
+      if (!originalDraft) setOriginalDraft({ name, attendance, low, high });
     }
   }, [festival]);
 
@@ -386,7 +392,34 @@ export default function FestivalRunWizard() {
             </div>
           )}
 
-          {step.key === "launch" && (
+          {step.key === "launch" && (() => {
+            // Build run order across all stages, sorted by day + start_time
+            const runOrder = [...confirmedSlots].sort((a: any, b: any) => {
+              if (a.day_number !== b.day_number) return a.day_number - b.day_number;
+              const at = a.start_time || "";
+              const bt = b.start_time || "";
+              return at.localeCompare(bt);
+            });
+            const bookedByStage = stages
+              .map(st => ({
+                stage: st,
+                slots: confirmedSlots
+                  .filter((s: any) => s.stage_id === st.id)
+                  .sort((a: any, b: any) => (a.day_number - b.day_number) || String(a.start_time || "").localeCompare(String(b.start_time || ""))),
+              }))
+              .filter(g => g.slots.length > 0);
+
+            const slotLabel = (s: any) => s.band?.name || s.npc_dj_name || (s.is_npc_dj ? "NPC DJ" : "Unassigned");
+            const fmtTime = (t: string | null) => t ? String(t).slice(0, 5) : "TBA";
+
+            const edits: { label: string; before: string; after: string }[] = originalDraft ? [
+              { label: "Name", before: originalDraft.name || "—", after: draftName || "—" },
+              { label: "Expected attendance", before: originalDraft.attendance || "—", after: draftAttendance || "—" },
+              { label: "Ticket low", before: `$${originalDraft.low || "0"}`, after: `$${draftLow || "0"}` },
+              { label: "Ticket high", before: `$${originalDraft.high || "0"}`, after: `$${draftHigh || "0"}` },
+            ].filter(e => e.before !== e.after) : [];
+
+            return (
             <div className="space-y-4">
               <div className="rounded-md border p-4 space-y-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -406,6 +439,105 @@ export default function FestivalRunWizard() {
                   <span>{approvedPermits.length} approved permits • {insurance.length} active policies</span>
                 </div>
               </div>
+
+              {/* Wizard edits diff */}
+              {edits.length > 0 && (
+                <Card className="border-primary/40 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> Edits made in this wizard
+                    </CardTitle>
+                    <CardDescription>Review changes before going live.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1.5 text-sm">
+                      {edits.map((e, i) => (
+                        <li key={i} className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-muted-foreground">{e.label}</span>
+                          <span className="font-mono text-xs">
+                            <span className="line-through text-muted-foreground">{e.before}</span>
+                            <ArrowRight className="inline h-3 w-3 mx-1" />
+                            <span className="text-primary">{e.after}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Side-by-side: Run Order vs Booked Stages */}
+              <div className="grid gap-3 md:grid-cols-2">
+                <Card className="border-border/60">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" /> Run Order
+                    </CardTitle>
+                    <CardDescription>Chronological across all stages ({runOrder.length} acts)</CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    {runOrder.length === 0 ? (
+                      <p className="text-muted-foreground">No confirmed acts yet.</p>
+                    ) : (
+                      <ol className="space-y-1.5 max-h-80 overflow-auto pr-1">
+                        {runOrder.map((s: any, idx: number) => {
+                          const stageName = stages.find(st => st.id === s.stage_id)?.stage_name || "Stage";
+                          return (
+                            <li key={s.id} className="flex items-center justify-between gap-2 border-b border-border/40 pb-1 last:border-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-mono text-muted-foreground w-6">#{idx + 1}</span>
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate">{slotLabel(s)}</div>
+                                  <div className="text-[11px] text-muted-foreground truncate">
+                                    Day {s.day_number} • {fmtTime(s.start_time)}–{fmtTime(s.end_time)} • {stageName}
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="capitalize text-[10px]">{String(s.slot_type).replace("_", " ")}</Badge>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/60">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Music className="h-4 w-4" /> Booked Stages
+                    </CardTitle>
+                    <CardDescription>Grouped by stage ({bookedByStage.length}/{stages.length})</CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    {bookedByStage.length === 0 ? (
+                      <p className="text-muted-foreground">No stages have bookings yet.</p>
+                    ) : (
+                      <div className="space-y-3 max-h-80 overflow-auto pr-1">
+                        {bookedByStage.map(({ stage, slots: stageSlots }) => (
+                          <div key={stage.id}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="font-medium">{stage.stage_name}</div>
+                              <Badge variant="secondary" className="text-[10px]">{stageSlots.length} act{stageSlots.length !== 1 ? "s" : ""}</Badge>
+                            </div>
+                            <ul className="space-y-1 pl-2 border-l border-border/60">
+                              {stageSlots.map((s: any) => (
+                                <li key={s.id} className="flex items-center justify-between text-[12px]">
+                                  <span className="truncate">{slotLabel(s)}</span>
+                                  <span className="text-muted-foreground font-mono text-[10px] ml-2">
+                                    D{s.day_number} {fmtTime(s.start_time)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
               {!canLaunch && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
@@ -422,7 +554,8 @@ export default function FestivalRunWizard() {
                 {festival.status === "announced" || festival.status === "live" ? "Festival is Live" : "Go Live & Announce"}
               </Button>
             </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
