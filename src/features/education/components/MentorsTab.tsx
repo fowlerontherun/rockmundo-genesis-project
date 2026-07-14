@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building, BookOpen } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
+import { MentorDiscoveryJournal } from "./MentorDiscoveryJournal";
 
 export const MentorsTab = () => {
   const { 
