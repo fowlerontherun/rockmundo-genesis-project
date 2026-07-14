@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.454",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Removed `String.prototype.replaceAll` TypeScript errors.** Bumped the app tsconfig `lib` target from `ES2020` to `ES2022`, so `replaceAll` and other ES2021+ built-ins are recognised across gig presentation, timeline, recruitment, and outcome components." },
+    ],
+  },
+  {
     version: "1.1.453",
     date: "2026-07-14",
     changes: [
