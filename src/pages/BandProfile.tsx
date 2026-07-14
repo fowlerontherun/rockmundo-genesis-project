@@ -110,6 +110,21 @@ export default function BandProfile() {
     enabled: !!bandId && !!profileId,
   });
 
+  const withdrawMutation = useMutation({
+    mutationFn: async (applicationId: string) => withdrawBandApplication(applicationId),
+    onSuccess: (application) => {
+      setSubmittedApplication(application);
+      toast({ title: "Application withdrawn", description: `Your application has been withdrawn.` });
+      queryClient.invalidateQueries({ queryKey: ["band-application", bandId, profileId] });
+      queryClient.invalidateQueries({ queryKey: ["band-profile", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band-applications", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["band-application-history", profileId] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Unable to withdraw application", description: error?.message || "Try again or refresh before withdrawing.", variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
       <FMPageScaffold title="Band Profile" icon={Users} backTo="/hub/band">
@@ -137,20 +152,7 @@ export default function BandProfile() {
   const activeApplication = submittedApplication || existingApplication;
   const activeApplicationStatus = getRecruitmentStatusMeta(activeApplication?.status);
   const canApply = band.is_recruiting && !isMember && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected") && profileId;
-  const withdrawMutation = useMutation({
-    mutationFn: async (applicationId: string) => withdrawBandApplication(applicationId),
-    onSuccess: (application) => {
-      setSubmittedApplication(application);
-      toast({ title: "Application withdrawn", description: `Your application to ${band.name} has been withdrawn.` });
-      queryClient.invalidateQueries({ queryKey: ["band-application", bandId, profileId] });
-      queryClient.invalidateQueries({ queryKey: ["band-profile", bandId] });
-      queryClient.invalidateQueries({ queryKey: ["band-applications", bandId] });
-      queryClient.invalidateQueries({ queryKey: ["band-application-history", profileId] });
-    },
-    onError: (error: any) => {
-      toast({ title: "Unable to withdraw application", description: error?.message || "Try again or refresh before withdrawing.", variant: "destructive" });
-    },
-  });
+
 
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
