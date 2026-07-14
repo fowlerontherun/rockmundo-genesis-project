@@ -19,7 +19,7 @@
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
  import { FestivalRivalryCard } from "@/components/festivals/rivalry/FestivalRivalryCard";
  import { useFestivalTickets } from "@/hooks/useFestivalTickets";
- import { useFestivalStages } from "@/hooks/useFestivalStages";
+ import { useFestivalStages, useFestivalStageSlots, type FestivalStageSlot } from "@/hooks/useFestivalStages";
  import { useFestivalQuality } from "@/hooks/useFestivalFinances";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -31,7 +31,8 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
    const { data: primaryBandRecord } = usePrimaryBand();
    const band = primaryBandRecord?.bands;
    const { tickets, hasTicket, hasWeekendPass, purchaseTicket } = useFestivalTickets(festivalId);
-   const { data: stages = [] } = useFestivalStages(festivalId);
+  const { data: stages = [] } = useFestivalStages(festivalId);
+  const { data: stageSlots = [] } = useFestivalStageSlots(festivalId);
    const { data: quality } = useFestivalQuality(festivalId);
    const [selectedTicketType, setSelectedTicketType] = useState<"day" | "weekend">("weekend");
    const [selectedDay, setSelectedDay] = useState(1);
@@ -219,74 +220,179 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
  
          {/* Lineup Tab */}
          <TabsContent value="lineup" className="mt-6 space-y-6">
-           {/* Headliners */}
-           {headliners.length > 0 && (
-             <div>
-               <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
-                 <Trophy className="h-5 w-5 text-yellow-500" />
-                 Headliners
-               </h3>
-               <div className="grid gap-3 md:grid-cols-2">
-                 {headliners.map((p: any) => (
-                   <Card key={p.id} className="border-yellow-500/30">
-                     <CardContent className="p-4 flex items-center justify-between">
-                       <div>
-                         <p className="font-bold text-lg">{p.band?.name || "TBA"}</p>
-                         <p className="text-sm text-muted-foreground">{p.band?.genre}</p>
+           {/* Stage-by-stage schedule */}
+           {stages.length > 0 && stageSlots.length > 0 ? (
+             (() => {
+               const days = Array.from(new Set(stageSlots.map(s => s.day_number))).sort((a, b) => a - b);
+               const festivalStart = new Date(festival.start_date);
+               const fmtTime = (iso: string | null) => {
+                 if (!iso) return "TBA";
+                 try { return format(new Date(iso), "HH:mm"); } catch { return "TBA"; }
+               };
+               const durationMin = (start: string | null, end: string | null) => {
+                 if (!start || !end) return null;
+                 const ms = new Date(end).getTime() - new Date(start).getTime();
+                 if (!Number.isFinite(ms) || ms <= 0) return null;
+                 return Math.round(ms / 60000);
+               };
+               const slotBadge = (t: string) => {
+                 if (t === "headliner") return <Badge className="bg-yellow-500">Headliner</Badge>;
+                 if (t === "support") return <Badge variant="secondary">Support</Badge>;
+                 if (t === "dj_session") return <Badge variant="outline">DJ Set</Badge>;
+                 return <Badge variant="outline">Opener</Badge>;
+               };
+               const performerName = (s: FestivalStageSlot) => {
+                 if (s.band?.name) return s.band.name;
+                 if (s.is_npc_dj) return s.npc_dj_name || "NPC DJ";
+                 return "TBA";
+               };
+
+               return (
+                 <div className="space-y-6">
+                   {days.map(day => {
+                     const dayDate = new Date(festivalStart);
+                     dayDate.setDate(dayDate.getDate() + (day - 1));
+                     return (
+                       <div key={day} className="space-y-3">
+                         <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+                           <Calendar className="h-4 w-4 text-primary" />
+                           <h3 className="text-lg font-semibold">
+                             Day {day} <span className="text-muted-foreground font-normal">— {format(dayDate, "EEE, MMM d")}</span>
+                           </h3>
+                         </div>
+                         <div className="grid gap-4 lg:grid-cols-2">
+                           {stages.map(stage => {
+                             const slots = stageSlots
+                               .filter(s => s.stage_id === stage.id && s.day_number === day)
+                               .sort((a, b) => {
+                                 if (a.start_time && b.start_time) {
+                                   return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+                                 }
+                                 return a.slot_number - b.slot_number;
+                               });
+                             if (slots.length === 0) return null;
+                             return (
+                               <Card key={stage.id}>
+                                 <CardHeader className="pb-3">
+                                   <CardTitle className="flex items-center justify-between text-base">
+                                     <span className="flex items-center gap-2">
+                                       <Music className="h-4 w-4 text-primary" />
+                                       {stage.stage_name}
+                                     </span>
+                                     <span className="text-xs font-normal text-muted-foreground">
+                                       Cap {stage.capacity.toLocaleString()}
+                                       {stage.genre_focus ? ` • ${stage.genre_focus}` : ""}
+                                     </span>
+                                   </CardTitle>
+                                 </CardHeader>
+                                 <CardContent className="p-0">
+                                   <ul className="divide-y divide-border/40">
+                                     {slots.map(slot => {
+                                       const dur = durationMin(slot.start_time, slot.end_time);
+                                       return (
+                                         <li key={slot.id} className="flex items-center gap-3 px-4 py-2.5">
+                                           <div className="w-20 shrink-0 font-mono text-sm">
+                                             <div>{fmtTime(slot.start_time)}</div>
+                                             {dur != null && (
+                                               <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                 <Clock className="h-2.5 w-2.5" /> {dur}m
+                                               </div>
+                                             )}
+                                           </div>
+                                           <div className="flex-1 min-w-0">
+                                             <p className="font-medium truncate">{performerName(slot)}</p>
+                                             {slot.is_npc_dj && slot.npc_dj_genre && (
+                                               <p className="text-xs text-muted-foreground truncate">
+                                                 {slot.npc_dj_genre} • Q{slot.npc_dj_quality}
+                                               </p>
+                                             )}
+                                             {slot.end_time && (
+                                               <p className="text-[10px] text-muted-foreground">
+                                                 {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+                                               </p>
+                                             )}
+                                           </div>
+                                           {slotBadge(slot.slot_type)}
+                                         </li>
+                                       );
+                                     })}
+                                   </ul>
+                                 </CardContent>
+                               </Card>
+                             );
+                           })}
+                         </div>
                        </div>
-                       <Badge className="bg-yellow-500">Headline</Badge>
-                     </CardContent>
-                   </Card>
-                 ))}
-               </div>
-             </div>
-           )}
- 
-           {/* Main Stage */}
-           {mainActs.length > 0 && (
-             <div>
-               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                 <Star className="h-5 w-5 text-primary" />
-                 Main Stage
-               </h3>
-               <div className="grid gap-2 md:grid-cols-3">
-                 {mainActs.map((p: any) => (
-                   <Card key={p.id}>
-                     <CardContent className="p-3 flex items-center justify-between">
-                       <div>
-                         <p className="font-medium">{p.band?.name || "TBA"}</p>
-                         <p className="text-xs text-muted-foreground">{p.band?.genre}</p>
-                       </div>
-                       <Badge variant="secondary">Main</Badge>
-                     </CardContent>
-                   </Card>
-                 ))}
-               </div>
-             </div>
-           )}
- 
-           {/* Support Acts */}
-           {supportActs.length > 0 && (
-             <div>
-               <h3 className="text-lg font-semibold mb-3">Support & Opening Acts</h3>
-               <div className="grid gap-2 md:grid-cols-4">
-                 {supportActs.map((p: any) => (
-                   <Card key={p.id}>
-                     <CardContent className="p-2 text-sm">
-                       <p className="font-medium">{p.band?.name || "TBA"}</p>
-                       <p className="text-xs text-muted-foreground">{p.slot_type}</p>
-                     </CardContent>
-                   </Card>
-                 ))}
-               </div>
-             </div>
-           )}
- 
-           {confirmedActs.length === 0 && (
-             <div className="text-center py-12 text-muted-foreground">
-               <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-               <p>Lineup to be announced</p>
-             </div>
+                     );
+                   })}
+                 </div>
+               );
+             })()
+           ) : (
+             <>
+               {/* Fallback: legacy participant grouping */}
+               {headliners.length > 0 && (
+                 <div>
+                   <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                     <Trophy className="h-5 w-5 text-yellow-500" /> Headliners
+                   </h3>
+                   <div className="grid gap-3 md:grid-cols-2">
+                     {headliners.map((p: any) => (
+                       <Card key={p.id} className="border-yellow-500/30">
+                         <CardContent className="p-4 flex items-center justify-between">
+                           <div>
+                             <p className="font-bold text-lg">{p.band?.name || "TBA"}</p>
+                             <p className="text-sm text-muted-foreground">{p.band?.genre}</p>
+                           </div>
+                           <Badge className="bg-yellow-500">Headline</Badge>
+                         </CardContent>
+                       </Card>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               {mainActs.length > 0 && (
+                 <div>
+                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                     <Star className="h-5 w-5 text-primary" /> Main Stage
+                   </h3>
+                   <div className="grid gap-2 md:grid-cols-3">
+                     {mainActs.map((p: any) => (
+                       <Card key={p.id}>
+                         <CardContent className="p-3 flex items-center justify-between">
+                           <div>
+                             <p className="font-medium">{p.band?.name || "TBA"}</p>
+                             <p className="text-xs text-muted-foreground">{p.band?.genre}</p>
+                           </div>
+                           <Badge variant="secondary">Main</Badge>
+                         </CardContent>
+                       </Card>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               {supportActs.length > 0 && (
+                 <div>
+                   <h3 className="text-lg font-semibold mb-3">Support & Opening Acts</h3>
+                   <div className="grid gap-2 md:grid-cols-4">
+                     {supportActs.map((p: any) => (
+                       <Card key={p.id}>
+                         <CardContent className="p-2 text-sm">
+                           <p className="font-medium">{p.band?.name || "TBA"}</p>
+                           <p className="text-xs text-muted-foreground">{p.slot_type}</p>
+                         </CardContent>
+                       </Card>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               {confirmedActs.length === 0 && (
+                 <div className="text-center py-12 text-muted-foreground">
+                   <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                   <p>Lineup to be announced</p>
+                 </div>
+               )}
+             </>
            )}
           </TabsContent>
 
