@@ -40,6 +40,8 @@ export default function CityFestivalsAdmin() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [scaleFilter, setScaleFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
   const [edits, setEdits] = useState<Record<string, Partial<FestivalRow>>>({});
 
   const { data: cities } = useQuery({
