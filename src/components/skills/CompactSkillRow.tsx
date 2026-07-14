@@ -155,6 +155,20 @@ export const CompactSkillRow = ({
         </div>
       )}
 
+      {/* Practise button (schedules a practice session) */}
+      {!isLocked && !isMaxed && (
+        <Button
+          onClick={() => setPracticeOpen(true)}
+          size="sm"
+          variant="secondary"
+          className="h-7 text-xs px-2 flex-shrink-0"
+          title="Schedule a practice session"
+        >
+          <CalendarClock className="w-3 h-3 mr-1" />
+          Practise
+        </Button>
+      )}
+
       {/* Train button */}
       {!isLocked && (
         <Button
@@ -163,6 +177,7 @@ export const CompactSkillRow = ({
           size="sm"
           variant="outline"
           className="h-7 text-xs px-2 flex-shrink-0"
+          title={isMaxed ? "Skill is maxed" : `Spend ${cost} SXP`}
         >
           {isMaxed ? "Max" : (
             <>
