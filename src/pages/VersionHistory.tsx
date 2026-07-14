@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.511",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festival Detail page now has a prominent Get Your Pass CTA banner above the tabs with a ticket tier selector (General, VIP, Premium) and a Buy Tickets button that jumps to the Tickets tab. The Tickets tab includes a tier picker with multipliers (×1 / ×1.75 / ×3) that scales day and weekend prices; add-ons and the purchase flow now apply on top of the selected tier." },
+    ],
+  },
+  {
     version: "1.1.510",
     date: "2026-07-14",
     changes: [
