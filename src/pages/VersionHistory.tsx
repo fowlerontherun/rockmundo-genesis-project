@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.451",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Fixed 'Could not start session — Could not find the function public.start_songwriting_session in the schema cache.'** The authoritative `start_songwriting_session` and `schedule_songwriting_session` RPCs were missing from the live database, so the songwriting UI could not begin or schedule sessions. Re-applied both SECURITY DEFINER functions with the expected `(p_profile_id, p_project_id, p_effort_hours, p_session_type, p_idempotency_key, p_activity_id)` signature, granted execute to `authenticated`, and reloaded the PostgREST schema cache." },
+    ],
+  },
+  {
     version: "1.1.450",
     date: "2026-07-13",
     changes: [

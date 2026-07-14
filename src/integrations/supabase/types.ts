@@ -31680,13 +31680,7 @@ export type Database = {
       }
       songwriting_projects: {
         Row: {
-          arrangement_progress: number
-          calculation_version: string | null
           chord_progression_id: string | null
-          completed_at: string | null
-          consistency_score: number
-          songwriting_breakdown: Json
-          polish_progress: number
           created_at: string
           creative_brief: Json | null
           estimated_sessions: number | null
@@ -31714,13 +31708,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          arrangement_progress?: number
-          calculation_version?: string | null
           chord_progression_id?: string | null
-          completed_at?: string | null
-          consistency_score?: number
-          songwriting_breakdown?: Json
-          polish_progress?: number
           created_at?: string
           creative_brief?: Json | null
           estimated_sessions?: number | null
@@ -31748,13 +31736,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          arrangement_progress?: number
-          calculation_version?: string | null
           chord_progression_id?: string | null
-          completed_at?: string | null
-          consistency_score?: number
-          songwriting_breakdown?: Json
-          polish_progress?: number
           created_at?: string
           creative_brief?: Json | null
           estimated_sessions?: number | null
@@ -31842,9 +31824,6 @@ export type Database = {
       }
       songwriting_sessions: {
         Row: {
-          effort_hours: number
-          progress_breakdown: Json
-          session_type: string
           auto_completed: boolean | null
           completed_at: string | null
           created_at: string
@@ -31862,9 +31841,6 @@ export type Database = {
           xp_earned: number | null
         }
         Insert: {
-          effort_hours?: number
-          progress_breakdown?: Json
-          session_type?: string
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -31882,9 +31858,6 @@ export type Database = {
           xp_earned?: number | null
         }
         Update: {
-          effort_hours?: number
-          progress_breakdown?: Json
-          session_type?: string
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -37228,6 +37201,17 @@ export type Database = {
         Returns: undefined
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
+      schedule_songwriting_session: {
+        Args: {
+          p_effort_hours: number
+          p_idempotency_key?: string
+          p_profile_id: string
+          p_project_id: string
+          p_scheduled_start: string
+          p_session_type?: string
+        }
+        Returns: Json
+      }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       skill_tier_unlocked: {
@@ -37243,6 +37227,17 @@ export type Database = {
           p_party_id?: string
         }
         Returns: string
+      }
+      start_songwriting_session: {
+        Args: {
+          p_activity_id?: string
+          p_effort_hours?: number
+          p_idempotency_key?: string
+          p_profile_id: string
+          p_project_id: string
+          p_session_type?: string
+        }
+        Returns: Json
       }
       storefront_sold_out_behavior: {
         Args: { _company_id: string }
