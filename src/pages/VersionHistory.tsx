@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.512",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Replaced all `String.prototype.replaceAll` usages with `.split(sep).join(replacement)` across gig presentation, wellness, tours, employment, company recruitment, band agreements, and festival components. This removes the ES2021 lib dependency so the app builds cleanly regardless of the TypeScript `lib` target." },
+    ],
+  },
+  {
     version: "1.1.511",
     date: "2026-07-14",
     changes: [
