@@ -365,6 +365,8 @@ export function useMentorSessions() {
     isBooking: bookSessionMutation.isPending,
     canBookSession,
     isMentorDiscovered,
+    hasClaimedDiscovery,
+    getDiscovery,
     isAvailableToday,
     isInMentorCity,
     getDayName,
