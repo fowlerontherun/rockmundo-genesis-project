@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.487",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Clothing Brand company is now unlocked by learning fashion skills. Players must reach level 100 in Basic Fashion Knowledge before they can launch a brand from the Clothing Designer." },
+    ],
+  },
+  {
     version: "1.1.486",
     date: "2026-07-14",
     changes: [
