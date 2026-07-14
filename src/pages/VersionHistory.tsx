@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.501",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New admin City Festival Editor at /admin/city-festivals: table view of every city's festival with inline editing for capacity, ticket price low/high range, run dates, and scale. Per-row Save and Save All actions with validation (end ≥ start, high ≥ low, capacity > 0)." },
+      { type: 'feature', description: "Scale presets automatically apply safe defaults for capacity and ticket price range when the scale is changed (small/medium/large/major)." },
+      { type: 'feature', description: "Safe re-seed action inserts a small-scale festival only for cities currently missing one — existing festivals are never overwritten." },
+    ],
+  },
+  {
     version: "1.1.500",
     date: "2026-07-14",
     changes: [
