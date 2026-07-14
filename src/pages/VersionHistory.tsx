@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.516",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New player-facing Achievement Progress page at `/achievements` (also mapped from `/career/achievements`). Shows overall unlock % against all 219 achievements, search + category filter, and Remaining / Completed / All tabs with per-achievement progress bars derived from the `requirements`/`progress` JSON, rarity + category badges, and unlock dates." },
+    ],
+  },
+  {
     version: "1.1.515",
     date: "2026-07-14",
     changes: [
