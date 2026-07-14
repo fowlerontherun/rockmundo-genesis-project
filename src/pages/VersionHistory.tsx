@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.503",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New Festival Directory page (/festivals/directory) lists every city's festival with name, dates, capacity, and ticket price, plus scale filter, search, and sort controls." },
+    ],
+  },
+  {
     version: "1.1.502",
     date: "2026-07-14",
     changes: [
