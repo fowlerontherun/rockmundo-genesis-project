@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.476",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Admin Dashboard: restored the Beta Health Overview by adding the missing admin_get_beta_health_overview RPC. Returns active players 24h, new profiles, stuck/active activity statuses, failed cron jobs, recent activity errors, admin actions, total cash and latest error/cron samples — admin-only." },
+    ],
+  },
+  {
     version: "1.1.475",
     date: "2026-07-14",
     changes: [
