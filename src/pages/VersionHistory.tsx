@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.482",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Gig Viewer: added more scene graphics — subwoofer cabinets on the floor, cable runs from amps, mic stands with heads, guitar rack with three guitars, LED lip strip pulsing to energy, stage banner across the backdrop, follow spots from FOH to stage, an FOH mixing tower with faders and screens, hi-viz security personnel along the barrier, and dashed floor tape guides in the audience aisle." },
+    ],
+  },
+  {
     version: "1.1.481",
     date: "2026-07-14",
     changes: [

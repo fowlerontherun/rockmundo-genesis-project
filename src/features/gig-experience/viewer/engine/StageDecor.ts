@@ -221,9 +221,190 @@ export function drawBarrier(ctx: CanvasRenderingContext2D, preset: VenuePreset) 
   });
 }
 
+export function drawStageExtras(ctx: CanvasRenderingContext2D, preset: VenuePreset, positionMs: number, reducedMotion: boolean, stageEnergy: number) {
+  const d = preset.decorations;
+  const p = d.palette;
+  const s = preset.stage;
+  const energy = Math.max(0, Math.min(100, stageEnergy)) / 100;
+
+  // Subwoofer cabinets on floor
+  d.subwoofers.forEach((r) => {
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(r.x, r.y, r.width, r.height);
+    ctx.strokeStyle = withAlpha("#ffffff", 0.08);
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1);
+    const cx = r.x + r.width / 2;
+    const cy = r.y + r.height / 2;
+    const rad = Math.min(r.width, r.height) * 0.32;
+    ctx.fillStyle = "#111111";
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = withAlpha("#ffffff", 0.06);
+    ctx.beginPath(); ctx.arc(cx - 1, cy - 1, rad * 0.4, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Cable runs
+  ctx.strokeStyle = withAlpha("#000000", 0.6);
+  ctx.lineWidth = 1.5;
+  d.cableRuns.forEach((r) => {
+    ctx.beginPath();
+    const steps = Math.max(6, Math.floor(r.width / 6));
+    for (let i = 0; i <= steps; i++) {
+      const x = r.x + (r.width * i) / steps;
+      const y = r.y + Math.sin(i * 0.7) * (r.height * 0.6);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+  ctx.lineWidth = 1;
+
+  // Guitar rack (leaning necks)
+  if (d.guitarRack) {
+    const g = d.guitarRack;
+    ctx.fillStyle = "#1c1917";
+    ctx.fillRect(g.x, g.y + g.height * 0.7, g.width, g.height * 0.1);
+    for (let i = 0; i < 3; i++) {
+      const gx = g.x + g.width * (0.2 + i * 0.3);
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(gx, g.y + g.height * 0.75);
+      ctx.lineTo(gx + 4, g.y);
+      ctx.stroke();
+      ctx.fillStyle = i === 0 ? "#dc2626" : i === 1 ? "#f59e0b" : "#0ea5e9";
+      ctx.beginPath();
+      ctx.ellipse(gx + 1, g.y + g.height * 0.55, 3, 5, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.lineWidth = 1;
+  }
+
+  // Mic stands
+  d.micStands.forEach((pt) => {
+    ctx.strokeStyle = "#9ca3af";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(pt.x, pt.y);
+    ctx.lineTo(pt.x, pt.y - 22);
+    ctx.stroke();
+    // base
+    ctx.fillStyle = "#4b5563";
+    ctx.beginPath(); ctx.ellipse(pt.x, pt.y, 5, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+    // mic head
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.arc(pt.x + 1, pt.y - 23, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = withAlpha("#ffffff", 0.15);
+    ctx.beginPath(); ctx.arc(pt.x + 1, pt.y - 23, 2.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 1;
+  });
+
+  // LED lip strip (pulses with energy)
+  if (d.ledLipStrip) {
+    const l = d.ledLipStrip;
+    const pulse = reducedMotion ? 0.6 : 0.4 + Math.sin(positionMs / 220) * 0.3 + energy * 0.3;
+    const segs = Math.max(20, Math.floor(l.width / 8));
+    for (let i = 0; i < segs; i++) {
+      const x = l.x + (l.width * i) / segs;
+      const w = l.width / segs - 1;
+      const hue = (i * 12 + positionMs / 20) % 360;
+      ctx.fillStyle = reducedMotion
+        ? withAlpha(p.accent, 0.6)
+        : `hsla(${hue}, 90%, 60%, ${Math.max(0.2, Math.min(0.9, pulse))})`;
+      ctx.fillRect(x, l.y, w, l.height);
+    }
+  }
+
+  // Banner across backdrop
+  if (d.bannerRect) {
+    const b = d.bannerRect;
+    ctx.fillStyle = withAlpha("#000000", 0.55);
+    ctx.fillRect(b.x, b.y, b.width, b.height);
+    ctx.strokeStyle = withAlpha(p.accent, 0.6);
+    ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.width - 1, b.height - 1);
+    ctx.fillStyle = withAlpha(p.accent, 0.9);
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(b.x + b.width * 0.08, b.y + b.height * (0.25 + i * 0.22), b.width * 0.84, 1);
+    }
+  }
+}
+
+export function drawFOHAndSecurity(ctx: CanvasRenderingContext2D, preset: VenuePreset) {
+  const d = preset.decorations;
+  // FOH tower
+  if (d.fohTower) {
+    const t = d.fohTower;
+    ctx.fillStyle = "#1f2937";
+    ctx.fillRect(t.x, t.y, t.width, t.height);
+    ctx.strokeStyle = withAlpha("#000000", 0.6);
+    ctx.strokeRect(t.x + 0.5, t.y + 0.5, t.width - 1, t.height - 1);
+    // Screens on desk
+    ctx.fillStyle = withAlpha(d.palette.accent, 0.7);
+    ctx.fillRect(t.x + 3, t.y + 3, t.width * 0.4 - 4, t.height * 0.35);
+    ctx.fillRect(t.x + t.width * 0.5, t.y + 3, t.width * 0.5 - 4, t.height * 0.35);
+    // Faders
+    ctx.fillStyle = "#374151";
+    for (let i = 0; i < 10; i++) {
+      const fx = t.x + 4 + i * ((t.width - 8) / 10);
+      ctx.fillRect(fx, t.y + t.height * 0.5, 2, t.height * 0.35);
+    }
+    // Label
+    ctx.fillStyle = withAlpha("#ffffff", 0.5);
+    ctx.font = "bold 7px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("FOH", t.x + t.width / 2, t.y + t.height - 2);
+  }
+  // Security personnel
+  d.securityPosts.forEach((pt) => {
+    // yellow vest
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.fill();
+    // head
+    ctx.fillStyle = "#1c1917";
+    ctx.beginPath(); ctx.arc(pt.x, pt.y - 3, 2, 0, Math.PI * 2); ctx.fill();
+    // outline
+    ctx.strokeStyle = withAlpha("#000000", 0.5);
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.stroke();
+  });
+  // Floor tape marks (aisle guides)
+  ctx.strokeStyle = withAlpha("#facc15", 0.35);
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  d.floorTapeMarks.forEach((pt) => {
+    ctx.beginPath();
+    ctx.moveTo(pt.x, pt.y - 6);
+    ctx.lineTo(pt.x, pt.y + 6);
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+
+export function drawFollowSpots(ctx: CanvasRenderingContext2D, preset: VenuePreset, positionMs: number, reducedMotion: boolean, stageEnergy: number) {
+  const d = preset.decorations;
+  if (!d.followSpots.length) return;
+  const p = d.palette;
+  const energy = Math.max(0, Math.min(100, stageEnergy)) / 100;
+  const targetX = preset.stage.x + preset.stage.width / 2;
+  const targetY = preset.stage.y + preset.stage.height * 0.55;
+  d.followSpots.forEach((src, i) => {
+    const sway = reducedMotion ? 0 : Math.sin(positionMs / 500 + i) * 30;
+    const grad = ctx.createLinearGradient(src.x, src.y, targetX + sway, targetY);
+    grad.addColorStop(0, withAlpha("#ffffff", 0.28 * (0.5 + energy * 0.5)));
+    grad.addColorStop(1, withAlpha(p.accent, 0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(src.x - 6, src.y);
+    ctx.lineTo(src.x + 6, src.y);
+    ctx.lineTo(targetX + sway + 34, targetY);
+    ctx.lineTo(targetX + sway - 34, targetY);
+    ctx.closePath();
+    ctx.fill();
+    // Operator marker
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(src.x - 4, src.y - 3, 8, 5);
+  });
+}
+
 export function drawAtmosphere(ctx: CanvasRenderingContext2D, preset: VenuePreset, size: Size, stageEnergy: number, positionMs: number, reducedMotion: boolean) {
   const p = preset.decorations.palette;
-  // Haze/fog above audience for arena/stadium/festival
   if (preset.stageType === "arena" || preset.stageType === "stadium" || preset.stageType === "festival") {
     const gr = ctx.createRadialGradient(size.width / 2, preset.stage.y + preset.stage.height, 40, size.width / 2, preset.stage.y + preset.stage.height, size.width * 0.6);
     gr.addColorStop(0, withAlpha(p.accent, 0.12));
@@ -231,7 +412,6 @@ export function drawAtmosphere(ctx: CanvasRenderingContext2D, preset: VenuePrese
     ctx.fillStyle = gr;
     ctx.fillRect(0, 0, size.width, size.height);
   }
-  // Strobe flash on high energy
   if (!reducedMotion && stageEnergy >= 82) {
     const strobe = (Math.sin(positionMs / 90) + 1) / 2;
     ctx.fillStyle = withAlpha("#ffffff", strobe * 0.06);

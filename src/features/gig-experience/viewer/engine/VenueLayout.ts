@@ -11,12 +11,22 @@ export interface StageDecorations {
   ampsRight: Rect[];
   monitors: Rect[];
   speakerStacks: Rect[];
+  subwoofers: Rect[];
   drumRiser: Rect | null;
   lightingTruss: Rect | null;
   lightFixtures: Point[];
+  followSpots: Point[];
   backdrop: Rect | null;
+  bannerRect: Rect | null;
   bigScreens: Rect[];
   barrierPosts: Point[];
+  micStands: Point[];
+  cableRuns: Rect[];
+  guitarRack: Rect | null;
+  fohTower: Rect | null;
+  securityPosts: Point[];
+  ledLipStrip: Rect | null;
+  floorTapeMarks: Point[];
   floorPattern: FloorPattern;
   palette: { skyTop: string; skyBottom: string; audienceFloor: string; stageDeck: string; stageEdge: string; barrier: string; ampBody: string; speakerBody: string; accent: string };
 }
@@ -52,7 +62,7 @@ function baseBounds(name: VenuePresetName) {
   return { stage: { x: .12, y: .09, width: .76, height: .24 }, audience: { x: .06, y: .39, width: .88, height: .5 }, entrances: [{ x: .35, y: .96 }, { x: .65, y: .96 }], backstage: { x: .92, y: .2 }, crowdZones: [{ x: .07, y: .41, width: .86, height: .32 }, { x: .14, y: .74, width: .72, height: .13 }], barriers: [{ x: .1, y: .36, width: .8, height: .02 }] };
 }
 
-function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Rect, barriers: Rect[]): StageDecorations {
+function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Rect, barriers: Rect[], audience: Rect): StageDecorations {
   const sx = stage.x, sy = stage.y, sw = stage.width, sh = stage.height;
   const rightEdge = sx + sw;
   const stackWidth = stageType === "stadium" || stageType === "festival" ? 0.045 : stageType === "arena" ? 0.04 : 0.03;
@@ -71,12 +81,28 @@ function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Re
         { x: sx - stackWidth * 0.7, y: sy - sh * 0.15, width: stackWidth, height: stackHeight },
         { x: rightEdge - stackWidth * 0.3, y: sy - sh * 0.15, width: stackWidth, height: stackHeight },
       ];
+  // Subwoofer cabinets on the floor at stage edge
+  const subCount = stageType === "club" ? 2 : stageType === "theater" ? 3 : 4;
+  const subW = 0.05, subH = 0.022;
+  const subwoofers: Rect[] = Array.from({ length: subCount * 2 }).map((_, i) => {
+    const side = i < subCount ? "l" : "r";
+    const k = i % subCount;
+    const totalW = subCount * subW + (subCount - 1) * 0.004;
+    const startX = side === "l" ? sx + 0.01 : rightEdge - 0.01 - totalW;
+    return { x: startX + k * (subW + 0.004), y: sy + sh + 0.004, width: subW, height: subH };
+  });
   const drumRiser: Rect | null = { x: sx + sw * 0.4, y: sy + sh * 0.05, width: sw * 0.2, height: sh * 0.35 };
   const trussY = sy - 0.015;
   const lightingTruss: Rect | null = stageType === "festival" ? null : { x: sx + 0.005, y: trussY, width: sw - 0.01, height: 0.014 };
   const lightCount = stageType === "club" ? 6 : stageType === "theater" ? 8 : stageType === "stadium" ? 14 : stageType === "festival" ? 12 : 10;
   const lightFixtures: Point[] = Array.from({ length: lightCount }).map((_, i) => ({ x: sx + 0.02 + (sw - 0.04) * (i / Math.max(1, lightCount - 1)), y: (lightingTruss ? lightingTruss.y + lightingTruss.height * 0.5 : sy - 0.006) }));
+  // Follow spots from FOH position
+  const followSpots: Point[] = stageType === "club" ? [] : [
+    { x: audience.x + audience.width * 0.15, y: audience.y + audience.height * 0.55 },
+    { x: audience.x + audience.width * 0.85, y: audience.y + audience.height * 0.55 },
+  ];
   const backdrop: Rect | null = { x: sx, y: sy, width: sw, height: sh * 0.55 };
+  const bannerRect: Rect | null = { x: sx + sw * 0.28, y: sy + sh * 0.06, width: sw * 0.44, height: sh * 0.14 };
   const bigScreens: Rect[] = stageType === "arena" || stageType === "stadium" || stageType === "festival"
     ? [
         { x: sx - 0.01, y: sy + sh * 0.05, width: sw * 0.14, height: sh * 0.45 },
@@ -86,7 +112,38 @@ function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Re
   const barrier = barriers[0];
   const postCount = stageType === "club" ? 8 : stageType === "theater" ? 12 : stageType === "arena" ? 18 : 24;
   const barrierPosts: Point[] = barrier ? Array.from({ length: postCount }).map((_, i) => ({ x: barrier.x + barrier.width * (i / Math.max(1, postCount - 1)), y: barrier.y + barrier.height * 0.5 })) : [];
-  return { ampsLeft: buildAmps("l"), ampsRight: buildAmps("r"), monitors, speakerStacks, drumRiser, lightingTruss, lightFixtures, backdrop, bigScreens, barrierPosts, floorPattern: FLOOR_BY_TYPE[stageType], palette: PALETTES[stageType] };
+  // Mic stands at front of stage (vocals + backing)
+  const micStands: Point[] = [
+    { x: sx + sw * 0.5, y: sy + sh * 0.78 },
+    { x: sx + sw * 0.25, y: sy + sh * 0.72 },
+    { x: sx + sw * 0.75, y: sy + sh * 0.72 },
+  ];
+  // Cable runs from amps toward drum riser
+  const cableRuns: Rect[] = [
+    { x: sx + sw * 0.1, y: sy + sh - 0.008, width: sw * 0.3, height: 0.004 },
+    { x: sx + sw * 0.6, y: sy + sh - 0.008, width: sw * 0.3, height: 0.004 },
+  ];
+  const guitarRack: Rect | null = { x: sx + sw * 0.05, y: sy + sh * 0.5, width: sw * 0.08, height: sh * 0.2 };
+  // FOH sound tower in audience
+  const fohTower: Rect | null = { x: audience.x + audience.width * 0.5 - 0.03, y: audience.y + audience.height * 0.65, width: 0.06, height: 0.05 };
+  // Security posts along stage front barrier (behind barrier, on stage side)
+  const secCount = stageType === "club" ? 2 : stageType === "theater" ? 3 : 5;
+  const securityPosts: Point[] = barrier ? Array.from({ length: secCount }).map((_, i) => ({
+    x: barrier.x + barrier.width * ((i + 0.5) / secCount),
+    y: barrier.y - 0.012,
+  })) : [];
+  const ledLipStrip: Rect | null = { x: sx, y: sy + sh - 0.004, width: sw, height: 0.004 };
+  // Floor tape marks in audience zone (path markings)
+  const floorTapeMarks: Point[] = Array.from({ length: 8 }).map((_, i) => ({
+    x: audience.x + audience.width * ((i + 0.5) / 8),
+    y: audience.y + audience.height * 0.9,
+  }));
+  return {
+    ampsLeft: buildAmps("l"), ampsRight: buildAmps("r"), monitors, speakerStacks, subwoofers,
+    drumRiser, lightingTruss, lightFixtures, followSpots, backdrop, bannerRect, bigScreens, barrierPosts,
+    micStands, cableRuns, guitarRack, fohTower, securityPosts, ledLipStrip, floorTapeMarks,
+    floorPattern: FLOOR_BY_TYPE[stageType], palette: PALETTES[stageType],
+  };
 }
 
 function buildPreset(name: VenuePresetName, stageType: StageType): VenuePreset {
@@ -105,7 +162,7 @@ function buildPreset(name: VenuePresetName, stageType: StageType): VenuePreset {
     performerSlots,
     crowdZones: b.crowdZones as Rect[], barriers: b.barriers as Rect[],
     labelSafe: { x: .03, y: .03, width: .94, height: .08 },
-    decorations: buildDecorations(name, stageType, stage, b.barriers as Rect[]),
+    decorations: buildDecorations(name, stageType, stage, b.barriers as Rect[], b.audience as Rect),
   };
 }
 
@@ -151,12 +208,22 @@ export function scaleVenuePreset(preset: VenuePreset, size: Size): VenuePreset {
     ampsRight: d.ampsRight.map((r) => scaleRect(r, size)),
     monitors: d.monitors.map((r) => scaleRect(r, size)),
     speakerStacks: d.speakerStacks.map((r) => scaleRect(r, size)),
+    subwoofers: d.subwoofers.map((r) => scaleRect(r, size)),
     drumRiser: d.drumRiser ? scaleRect(d.drumRiser, size) : null,
     lightingTruss: d.lightingTruss ? scaleRect(d.lightingTruss, size) : null,
     lightFixtures: d.lightFixtures.map((p) => scalePoint(p, size)),
+    followSpots: d.followSpots.map((p) => scalePoint(p, size)),
     backdrop: d.backdrop ? scaleRect(d.backdrop, size) : null,
+    bannerRect: d.bannerRect ? scaleRect(d.bannerRect, size) : null,
     bigScreens: d.bigScreens.map((r) => scaleRect(r, size)),
     barrierPosts: d.barrierPosts.map((p) => scalePoint(p, size)),
+    micStands: d.micStands.map((p) => scalePoint(p, size)),
+    cableRuns: d.cableRuns.map((r) => scaleRect(r, size)),
+    guitarRack: d.guitarRack ? scaleRect(d.guitarRack, size) : null,
+    fohTower: d.fohTower ? scaleRect(d.fohTower, size) : null,
+    securityPosts: d.securityPosts.map((p) => scalePoint(p, size)),
+    ledLipStrip: d.ledLipStrip ? scaleRect(d.ledLipStrip, size) : null,
+    floorTapeMarks: d.floorTapeMarks.map((p) => scalePoint(p, size)),
     floorPattern: d.floorPattern,
     palette: d.palette,
   };
