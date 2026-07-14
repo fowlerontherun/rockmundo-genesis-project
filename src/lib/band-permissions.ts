@@ -114,7 +114,7 @@ export const DEFAULT_BAND_ROLE_TEMPLATES: BandRoleTemplate[] = [
 ];
 
 const riskWeight: Record<BandPermissionRisk, number> = { low: 1, standard: 2, sensitive: 3, critical: 4 };
-export const permissionByKey: Map<BandPermissionKey, (typeof BAND_PERMISSION_CATALOGUE)[number]> = new Map(BAND_PERMISSION_CATALOGUE.map((permission) => [permission.key, permission]));
+export const permissionByKey: Map<string, (typeof BAND_PERMISSION_CATALOGUE)[number]> = new Map(BAND_PERMISSION_CATALOGUE.map((permission) => [permission.key as string, permission]));
 
 export interface EffectivePermissionInput {
   isOwner?: boolean;
