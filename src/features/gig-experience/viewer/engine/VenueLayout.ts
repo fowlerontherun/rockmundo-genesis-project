@@ -162,7 +162,7 @@ function buildPreset(name: VenuePresetName, stageType: StageType): VenuePreset {
     performerSlots,
     crowdZones: b.crowdZones as Rect[], barriers: b.barriers as Rect[],
     labelSafe: { x: .03, y: .03, width: .94, height: .08 },
-    decorations: buildDecorations(name, stageType, stage, b.barriers as Rect[]),
+    decorations: buildDecorations(name, stageType, stage, b.barriers as Rect[], b.audience as Rect),
   };
 }
 
