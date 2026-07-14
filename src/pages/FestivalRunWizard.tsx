@@ -556,17 +556,6 @@ export default function FestivalRunWizard() {
             </div>
             );
           })()}
-              <Button
-                size="lg"
-                className="w-full"
-                disabled={!canLaunch || launchMutation.isPending || festival.status === "announced" || festival.status === "live"}
-                onClick={() => launchMutation.mutate()}
-              >
-                {launchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Rocket className="h-4 w-4 mr-2" />}
-                {festival.status === "announced" || festival.status === "live" ? "Festival is Live" : "Go Live & Announce"}
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
