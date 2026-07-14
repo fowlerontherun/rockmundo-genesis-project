@@ -11287,6 +11287,78 @@ export type Database = {
           },
         ]
       }
+      festivals: {
+        Row: {
+          city_id: string
+          created_at: string
+          description: string | null
+          end_date: string
+          expected_attendance: number | null
+          genre: string | null
+          id: string
+          metadata: Json
+          name: string
+          scale: string
+          start_date: string
+          status: string
+          ticket_price_high: number | null
+          ticket_price_low: number | null
+          updated_at: string
+          venue_id: string | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          description?: string | null
+          end_date: string
+          expected_attendance?: number | null
+          genre?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          scale?: string
+          start_date: string
+          status?: string
+          ticket_price_high?: number | null
+          ticket_price_low?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          expected_attendance?: number | null
+          genre?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          scale?: string
+          start_date?: string
+          status?: string
+          ticket_price_high?: number | null
+          ticket_price_low?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festivals_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festivals_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       film_performance_weekly: {
         Row: {
           box_office_week_cents: number
