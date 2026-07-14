@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.494",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded the stage crew catalog with 33 hireable crew members across tour managers, FOH and monitor engineers, guitar/drum/backline techs, lighting designers and techs, video/LED, pyro/SFX, rigging, stage and production managers, security, merch, tour accounting, bus drivers, wardrobe, physio, and catering." },
+    ],
+  },
+  {
     version: "1.1.493",
     date: "2026-07-14",
     changes: [
