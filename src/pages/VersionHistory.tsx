@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.468",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Today's Briefing loads again.** The dashboard briefing query was selecting a non-existent `previous_rank` column from `chart_entries`, which threw a PostgREST error and surfaced the 'Today's Briefing could not be loaded' state. Query now uses the existing `trend_change` column to compute chart movement." },
+    ],
+  },
+  {
     version: "1.1.467",
     date: "2026-07-14",
     changes: [
