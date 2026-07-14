@@ -221,7 +221,43 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
          </Card>
        </div>
  
-        <Tabs defaultValue="lineup" className="w-full">
+        {isUpcoming && !hasWeekendPass && (() => {
+          const basePrice = festival.ticket_price || 100;
+          const tierMult = TIERS.find(t => t.id === selectedTier)?.multiplier || 1;
+          const previewPrice = Math.round((selectedTicketType === "weekend" ? basePrice : basePrice * 0.45) * tierMult);
+          return (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Get Your Pass</span>
+                  {TIERS.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTier(t.id)}
+                      className={`px-2.5 py-1 rounded-md text-xs border transition ${
+                        selectedTier === t.id ? "border-primary bg-primary text-primary-foreground" : "border-border/50 hover:bg-muted/50"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">From</p>
+                    <p className="text-lg font-bold">${previewPrice.toLocaleString()}</p>
+                  </div>
+                  <Button size="sm" onClick={() => setActiveTab("tickets")}>
+                    <Ticket className="h-4 w-4 mr-1" /> Buy Tickets
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="lineup">Lineup</TabsTrigger>
             <TabsTrigger value="venue" className="flex items-center gap-1">
