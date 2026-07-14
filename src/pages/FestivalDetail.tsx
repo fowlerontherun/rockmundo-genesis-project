@@ -146,9 +146,12 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
       icon={Music}
       backTo="/festivals"
       headerActions={
-        <Button size="sm" onClick={() => navigate(`/festivals`)}>
-          Apply
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate(`/festivals/${festivalId}/calendar`)}>
+            <Calendar className="h-4 w-4 mr-1" /> Calendar
+          </Button>
+          <Button size="sm" onClick={() => navigate(`/festivals`)}>Apply</Button>
+        </div>
       }
     >
 

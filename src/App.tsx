@@ -111,6 +111,7 @@ const FestivalDetail = lazyWithRetry(() => import("./pages/FestivalDetail"));
 const FestivalOwnerConsole = lazyWithRetry(() => import("./pages/FestivalOwnerConsole"));
 const FestivalMarketplace = lazyWithRetry(() => import("./pages/FestivalMarketplace"));
 const FestivalDirectory = lazyWithRetry(() => import("./pages/FestivalDirectory"));
+const FestivalBookingCalendar = lazyWithRetry(() => import("./pages/FestivalBookingCalendar"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
@@ -666,6 +667,7 @@ function App() {
                     <Route path="festivals/simulation" element={<FestivalsNew />} />
                     <Route path="festivals/perform/:participationId" element={<FestivalPerformance />} />
                     <Route path="festivals/:festivalId/manage" element={<FestivalOwnerConsole />} />
+                    <Route path="festivals/:festivalId/calendar" element={<FestivalBookingCalendar />} />
                     <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="bands/finder" element={<BandFinder />} />

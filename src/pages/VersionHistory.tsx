@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.509",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New Festival Booking Calendar (/festivals/:id/calendar) with edition selector and four views: Run Order (stage-by-stage per day with set times & durations), Timeline (Gantt-style hour ruler with color-coded slot blocks per stage), Booked Stages (capacity, genre focus, slot & performer counts), and Shifts (staff shifts per day from staff metadata, with roster fallback). Accessible via a new Calendar button on the Festival Detail header." },
+    ],
+  },
+  {
     version: "1.1.508",
     date: "2026-07-14",
     changes: [
