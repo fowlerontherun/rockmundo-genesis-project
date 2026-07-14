@@ -483,6 +483,13 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/song/:songId" element={<PublicSong />} />
+                  <Route path="/mobile" element={<MobileLayout />}>
+                    <Route index element={<MobileHome />} />
+                    <Route path="career" element={<MobileCareer />} />
+                    <Route path="social" element={<MobileSocial />} />
+                    <Route path="world" element={<MobileWorld />} />
+                    <Route path="me" element={<MobileMe />} />
+                  </Route>
                   <Route element={<Layout />}>
                     <Route path="home" element={<Dashboard />} />
                     <Route path="inbox" element={<Inbox />} />
