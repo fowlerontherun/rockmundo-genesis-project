@@ -97,7 +97,7 @@ export const useJamSessionBooking = () => {
     const { error } = await (supabase as any).from("player_scheduled_activities").insert({
       user_id: userId,
       profile_id: profileId,
-      activity_type: "jam_session",
+      activity_type: "jam",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
       
