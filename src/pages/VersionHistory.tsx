@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.484",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Joining a band no longer fails with 'Could not find the function public.submit_band_application in the schema cache'. Restored the missing submit_band_application, withdraw_band_application, and respond_band_application RPCs so applicants can apply, withdraw, and leaders can approve/reject." },
+    ],
+  },
+  {
     version: "1.1.483",
     date: "2026-07-14",
     changes: [
