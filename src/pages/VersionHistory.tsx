@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.520",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New mobile-first experience at `/mobile`. Completely separate shell (Top App Bar + Bottom Nav + FAB) — desktop UI untouched. Auto-switches on viewports under 768px, or force with `?mobile=1` / `?mobile=0`. Five-tab bottom nav (Home, Career, Social, World, Me). Home 'Today' dashboard shows vitals rings (energy/mood/health), quick-action grid (Practice, Write, Travel, Jam, Sleep, Eat, Work, Shop, Message, Twaater), and notification feed with mark-as-read. Career uses swipeable tabs (Band/Songs/Practice/Studio/Gigs/Career). Social lists Friends/Band/Chat/Mail/Twaater with recent activity. World is a 2-col card grid. Me exposes Character/Inventory/Wardrobe/Achievements/Settings + a 'Switch to desktop' escape hatch. New reusable mobile components: MCard, ProgressRing, StatCard, CountdownCard, QuickActionCard, NotificationCard, EmptyState, SkeletonCard, SwipeTabs. Reuses existing hooks (useGameData, useNotificationsFeed) — no business logic duplicated." },
+    ],
+  },
+  {
     version: "1.1.519",
     date: "2026-07-14",
     changes: [
