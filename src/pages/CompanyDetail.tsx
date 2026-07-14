@@ -407,6 +407,7 @@ const CompanyDetailContent = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
           </Card>
         </TabsContent>
 
