@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.498",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded a small-scale festival in every one of the 180 cities — each festival has a themed name tied to the local city, a 500–2,000 attendee capacity, affordable $15–$45 ticket pricing, a rotating genre focus (indie rock, folk, jazz, electronic, hip-hop, punk, country, blues, reggae, metal, pop, world music), a 2-day run, and a start date scheduled 30–120 days out." },
+      { type: 'improvement', description: "Created the festivals table with proper city/venue foreign keys, scale/status/genre columns, RLS policies (public read, service-role write), and an updated_at trigger so future admin tools can extend festival lineups and scheduling." },
+    ],
+  },
+  {
     version: "1.1.497",
     date: "2026-07-14",
     changes: [
