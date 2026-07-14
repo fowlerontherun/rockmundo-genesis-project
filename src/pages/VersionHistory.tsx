@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.497",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Hardened LiveGigAudiencePanel aggregate query — participation_level, participation_score, unique_participants, encore_demand, and audience_modifier are now explicitly typed and normalized on the returned row so the panel renders safely even when partial data comes back from realtime updates." },
+    ],
+  },
+  {
     version: "1.1.496",
     date: "2026-07-14",
     changes: [
