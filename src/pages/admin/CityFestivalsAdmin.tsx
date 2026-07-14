@@ -77,6 +77,7 @@ export default function CityFestivalsAdmin() {
   const rows = useMemo(() => {
     let list = festivals || [];
     if (scaleFilter !== "all") list = list.filter((f) => f.scale === scaleFilter);
+    if (cityFilter !== "all") list = list.filter((f) => f.city_id === cityFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((f) => {
@@ -88,8 +89,27 @@ export default function CityFestivalsAdmin() {
         );
       });
     }
-    return list;
-  }, [festivals, scaleFilter, search, cityMap]);
+    const sorted = [...list];
+    const num = (v: any) => (v == null ? 0 : Number(v));
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "name-desc": return b.name.localeCompare(a.name);
+        case "city-asc": return (cityMap.get(a.city_id)?.name || "").localeCompare(cityMap.get(b.city_id)?.name || "");
+        case "city-desc": return (cityMap.get(b.city_id)?.name || "").localeCompare(cityMap.get(a.city_id)?.name || "");
+        case "start-asc": return a.start_date.localeCompare(b.start_date);
+        case "start-desc": return b.start_date.localeCompare(a.start_date);
+        case "price-low-asc": return num(a.ticket_price_low) - num(b.ticket_price_low);
+        case "price-low-desc": return num(b.ticket_price_low) - num(a.ticket_price_low);
+        case "price-high-asc": return num(a.ticket_price_high) - num(b.ticket_price_high);
+        case "price-high-desc": return num(b.ticket_price_high) - num(a.ticket_price_high);
+        case "capacity-asc": return num(a.expected_attendance) - num(b.expected_attendance);
+        case "capacity-desc": return num(b.expected_attendance) - num(a.expected_attendance);
+        case "name-asc":
+        default: return a.name.localeCompare(b.name);
+      }
+    });
+    return sorted;
+  }, [festivals, scaleFilter, cityFilter, search, cityMap, sortBy]);
 
   const citiesMissingFestival = useMemo(() => {
     const withFest = new Set((festivals || []).map((f) => f.city_id));
