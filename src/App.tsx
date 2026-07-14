@@ -110,6 +110,7 @@ const FestivalPerformance = lazyWithRetry(() => import("./pages/FestivalPerforma
 const FestivalDetail = lazyWithRetry(() => import("./pages/FestivalDetail"));
 const FestivalOwnerConsole = lazyWithRetry(() => import("./pages/FestivalOwnerConsole"));
 const FestivalMarketplace = lazyWithRetry(() => import("./pages/FestivalMarketplace"));
+const FestivalDirectory = lazyWithRetry(() => import("./pages/FestivalDirectory"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
