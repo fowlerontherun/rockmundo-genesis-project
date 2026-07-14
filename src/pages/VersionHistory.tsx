@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.486",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Career overview no longer errors with 'Unable to load career data'. The gig_outcomes query was filtering on a nested foreign-table column (gig.band_id) which PostgREST rejected; it now filters on gig_outcomes.band_id directly." },
+    ],
+  },
+  {
     version: "1.1.485",
     date: "2026-07-14",
     changes: [

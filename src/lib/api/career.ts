@@ -158,7 +158,7 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
           promoter:promoters(id, name, reputation)
         )`
       )
-      .in("gig.band_id", allBandIds)
+      .in("band_id", allBandIds)
       .order("completed_at", { ascending: false })
       .limit(200);
 
