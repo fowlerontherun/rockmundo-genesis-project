@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.456",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Fixed 'cannot insert a non-DEFAULT value into column duration_minutes' (428C9) when starting/scheduling a songwriting session.** The `start_songwriting_session` and `schedule_songwriting_session` RPCs were writing to `player_scheduled_activities.duration_minutes`, which is a generated column. Removed those writes — Postgres now computes the duration from `scheduled_end - scheduled_start` automatically." },
+    ],
+  },
+  {
     version: "1.1.455",
     date: "2026-07-14",
     changes: [
