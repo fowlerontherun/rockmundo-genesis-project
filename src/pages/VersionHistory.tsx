@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.492",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Cleared the TypeScript compile blockers surfaced while fixing secondary character profile saves, including gig viewer DTO compatibility, wellness vitals typing, typed Supabase query mismatches, translation fallback typing, and test matcher declarations." },
+    ],
+  },
+  {
     version: "1.1.491",
     date: "2026-07-14",
     changes: [
