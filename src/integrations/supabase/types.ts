@@ -31827,16 +31827,21 @@ export type Database = {
           auto_completed: boolean | null
           completed_at: string | null
           created_at: string
+          effort_hours: number
           id: string
+          idempotency_key: string | null
           locked_until: string | null
           lyrics_progress_gained: number | null
           music_progress_gained: number | null
           notes: string | null
           profile_id: string | null
+          progress_breakdown: Json
           project_id: string
           session_end: string | null
           session_start: string
+          session_type: string
           started_at: string
+          status: string
           user_id: string
           xp_earned: number | null
         }
@@ -31844,16 +31849,21 @@ export type Database = {
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
+          effort_hours?: number
           id?: string
+          idempotency_key?: string | null
           locked_until?: string | null
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
           profile_id?: string | null
+          progress_breakdown?: Json
           project_id: string
           session_end?: string | null
           session_start?: string
+          session_type?: string
           started_at?: string
+          status?: string
           user_id: string
           xp_earned?: number | null
         }
@@ -31861,16 +31871,21 @@ export type Database = {
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
+          effort_hours?: number
           id?: string
+          idempotency_key?: string | null
           locked_until?: string | null
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
           profile_id?: string | null
+          progress_breakdown?: Json
           project_id?: string
           session_end?: string | null
           session_start?: string
+          session_type?: string
           started_at?: string
+          status?: string
           user_id?: string
           xp_earned?: number | null
         }
