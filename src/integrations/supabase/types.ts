@@ -36676,6 +36676,7 @@ export type Database = {
         Args: { p_release_id: string }
         Returns: undefined
       }
+      admin_get_beta_health_overview: { Args: never; Returns: Json }
       admin_get_cron_job_runs: {
         Args: { _limit?: number }
         Returns: {
