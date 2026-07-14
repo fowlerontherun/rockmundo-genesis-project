@@ -8,10 +8,12 @@
  import { Separator } from "@/components/ui/separator";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Progress } from "@/components/ui/progress";
-  import { 
-    ArrowLeft, Calendar, MapPin, Users, Music, Star, Building2, Globe,
-    DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
-  } from "lucide-react";
+   import { 
+     ArrowLeft, Calendar, MapPin, Users, Music, Star, Building2, Globe,
+     DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2,
+     Car, Bus, Accessibility, Wifi, Utensils, ShieldCheck, PawPrint, CreditCard,
+     Wine, DoorOpen, Mic2, CheckCircle2, XCircle
+   } from "lucide-react";
  import { format, formatDistanceToNow, isFuture } from "date-fns";
  import { usePrimaryBand } from "@/hooks/usePrimaryBand";
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
@@ -67,7 +69,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
         if (!festival?.venue_id) return null;
         const { data: venue, error } = await (supabase as any)
           .from("venues")
-          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, parking_spaces, city_id")
+          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, has_recording_capability, alcohol_license, backstage_quality, parking_spaces, amenities, city_id")
           .eq("id", festival.venue_id)
           .maybeSingle();
         if (error) throw error;
@@ -388,6 +390,113 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Amenities & Access */}
+                {(() => {
+                  const v = venueInfo.venue;
+                  const rawAmen = v.amenities;
+                  const amenList: string[] = Array.isArray(rawAmen)
+                    ? rawAmen.map((x: any) => String(x).toLowerCase())
+                    : rawAmen && typeof rawAmen === 'object'
+                      ? Object.keys(rawAmen).filter(k => (rawAmen as any)[k]).map(k => k.toLowerCase())
+                      : typeof rawAmen === 'string'
+                        ? rawAmen.split(/[,;]/).map(s => s.trim().toLowerCase()).filter(Boolean)
+                        : [];
+                  const hasAmen = (needles: string[]) => needles.some(n => amenList.some(a => a.includes(n)));
+                  const pop = Number(venueInfo.city?.population ?? 0);
+                  const transitTier = pop >= 3_000_000 ? 'Metro, bus & rail hub' : pop >= 800_000 ? 'City bus & light rail' : pop >= 200_000 ? 'Regional bus network' : 'Limited local bus service';
+                  const parking = Number(v.parking_spaces ?? 0);
+                  const parkingLabel = parking >= 2000 ? 'On-site mega lot' : parking >= 500 ? 'Large on-site lot' : parking >= 100 ? 'On-site parking' : parking > 0 ? 'Limited parking' : 'Street parking only';
+                  const wheelchair = hasAmen(['wheelchair','ada','accessible','disabled']) || (v.prestige_level ?? 0) >= 3;
+                  const stepFree = hasAmen(['step-free','ramp','elevator','lift']) || wheelchair;
+                  const hearingLoop = hasAmen(['hearing','loop','assistive']);
+                  const accessibleRestrooms = hasAmen(['accessible restroom','ada restroom']) || wheelchair;
+                  const bikeParking = hasAmen(['bike','cycle','bicycle']);
+                  const rideshare = pop >= 200_000;
+                  const wifi = hasAmen(['wifi','wi-fi','internet']) || (v.prestige_level ?? 0) >= 2;
+                  const food = hasAmen(['food','concession','catering','bar','restaurant']);
+                  const security = (v.prestige_level ?? 0) >= 2 || hasAmen(['security']);
+                  const familyArea = hasAmen(['family','kids','child']);
+                  const cashless = hasAmen(['cashless','contactless','card']) || (v.prestige_level ?? 0) >= 3;
+
+                  const Item = ({ icon: Icon, label, value, ok }: { icon: any; label: string; value: string; ok?: boolean }) => (
+                    <div className="flex items-start gap-2 rounded-md border border-border/40 bg-card/40 p-2">
+                      <Icon className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          {label}
+                          {ok === true && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                          {ok === false && <XCircle className="h-3 w-3 text-muted-foreground/60" />}
+                        </div>
+                        <div className="text-sm font-medium truncate">{value}</div>
+                      </div>
+                    </div>
+                  );
+
+                  return (
+                    <Card className="lg:col-span-2">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Accessibility className="h-5 w-5 text-primary" /> Amenities & Access
+                        </CardTitle>
+                        <CardDescription>Parking, transit, accessibility, and on-site services</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Getting there</p>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <Item icon={Car} label="Parking" value={`${parkingLabel}${parking ? ` • ${parking.toLocaleString()} spaces` : ''}`} ok={parking > 0} />
+                            <Item icon={Bus} label="Public transit" value={transitTier} ok={pop >= 200_000} />
+                            <Item icon={CreditCard} label="Rideshare drop-off" value={rideshare ? 'Dedicated zone' : 'Curbside only'} ok={rideshare} />
+                            <Item icon={PawPrint} label="Bike parking" value={bikeParking ? 'Racks on-site' : 'Not provided'} ok={bikeParking} />
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Accessibility</p>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <Item icon={Accessibility} label="Wheelchair access" value={wheelchair ? 'Full venue access' : 'Limited access'} ok={wheelchair} />
+                            <Item icon={DoorOpen} label="Step-free routes" value={stepFree ? 'Ramps & lifts' : 'Steps present'} ok={stepFree} />
+                            <Item icon={Mic2} label="Hearing assistance" value={hearingLoop ? 'Loop system available' : 'Not available'} ok={hearingLoop} />
+                            <Item icon={Accessibility} label="Accessible restrooms" value={accessibleRestrooms ? 'Available' : 'Standard only'} ok={accessibleRestrooms} />
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">On-site services</p>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <Item icon={Utensils} label="Food & drink" value={food ? 'Concessions & bars' : 'Bring your own'} ok={food} />
+                            <Item icon={Wine} label="Alcohol licence" value={v.alcohol_license ? 'Licensed venue' : 'Dry venue'} ok={!!v.alcohol_license} />
+                            <Item icon={Wifi} label="Wi-Fi" value={wifi ? 'Public Wi-Fi' : 'Not provided'} ok={wifi} />
+                            <Item icon={CreditCard} label="Payments" value={cashless ? 'Cashless / contactless' : 'Cash & card'} ok={cashless} />
+                            <Item icon={ShieldCheck} label="Security" value={security ? 'Trained team on-site' : 'Basic cover'} ok={security} />
+                            <Item icon={Users} label="Family area" value={familyArea ? 'Kids zone' : 'Adult-focused'} ok={familyArea} />
+                            <Item icon={Building2} label="Green room" value={v.has_green_room ? 'Artist green room' : 'Shared backstage'} ok={!!v.has_green_room} />
+                            <Item icon={Mic2} label="Recording capable" value={v.has_recording_capability ? 'Multitrack rig' : 'Not equipped'} ok={!!v.has_recording_capability} />
+                          </div>
+                        </div>
+
+                        {amenList.length > 0 && (
+                          <>
+                            <Separator />
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Listed amenities</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {amenList.map((a, i) => (
+                                  <Badge key={`${a}-${i}`} variant="outline" className="capitalize">{a}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
