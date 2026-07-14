@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.488",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Viewing an existing band no longer crashes with React error #310. The withdraw-application mutation hook was declared after conditional early returns, causing an inconsistent hook order; it now runs unconditionally before any return." },
+    ],
+  },
+  {
     version: "1.1.487",
     date: "2026-07-14",
     changes: [
