@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.500",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festival detail page now includes a Venue tab showing venue name, type, capacity, prestige, sound/lighting ratings, description, and image alongside a City Map card with an OpenStreetMap marker at the host city's coordinates plus city population, music scene score, and dominant genre." },
+      { type: 'improvement', description: "Expanded the FestivalDetail tab bar to five tabs (Lineup, Venue, Tickets, Sponsors, Rivalries) so lineup, ticket tiers, and venue/city information are all reachable from the same page." },
+    ],
+  },
+  {
     version: "1.1.499",
     date: "2026-07-14",
     changes: [

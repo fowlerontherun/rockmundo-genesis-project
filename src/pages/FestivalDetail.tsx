@@ -8,10 +8,10 @@
  import { Separator } from "@/components/ui/separator";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Progress } from "@/components/ui/progress";
- import { 
-   ArrowLeft, Calendar, MapPin, Users, Music, Star, 
-   DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
- } from "lucide-react";
+  import { 
+    ArrowLeft, Calendar, MapPin, Users, Music, Star, Building2, Globe,
+    DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
+  } from "lucide-react";
  import { format, formatDistanceToNow, isFuture } from "date-fns";
  import { usePrimaryBand } from "@/hooks/usePrimaryBand";
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
@@ -57,8 +57,34 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
      enabled: !!festivalId,
    });
  
-   const { data: sponsorships } = useFestivalSponsorships(festivalId);
-   const { data: rivalries } = useFestivalRivalries(festivalId, band?.id);
+    const { data: sponsorships } = useFestivalSponsorships(festivalId);
+    const { data: rivalries } = useFestivalRivalries(festivalId, band?.id);
+
+    // Venue + city map data
+    const { data: venueInfo } = useQuery({
+      queryKey: ["festival-venue-city", festival?.venue_id],
+      queryFn: async () => {
+        if (!festival?.venue_id) return null;
+        const { data: venue, error } = await (supabase as any)
+          .from("venues")
+          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, parking_spaces, city_id")
+          .eq("id", festival.venue_id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!venue) return null;
+        let city: any = null;
+        if (venue.city_id) {
+          const { data: c } = await (supabase as any)
+            .from("cities")
+            .select("id, name, country, region, latitude, longitude, population, music_scene, dominant_genre")
+            .eq("id", venue.city_id)
+            .maybeSingle();
+          city = c;
+        }
+        return { venue, city };
+      },
+      enabled: !!festival?.venue_id,
+    });
  
    // Calculate genre match
    const calculateGenreMatch = () => {
@@ -177,8 +203,11 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
        </div>
  
         <Tabs defaultValue="lineup" className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="lineup">Lineup</TabsTrigger>
+            <TabsTrigger value="venue" className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> Venue
+            </TabsTrigger>
             <TabsTrigger value="tickets" className="flex items-center gap-1">
               <Ticket className="h-3 w-3" /> Tickets
             </TabsTrigger>
@@ -258,6 +287,120 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
              </div>
            )}
           </TabsContent>
+
+          {/* Venue Tab */}
+          <TabsContent value="venue" className="mt-6 space-y-4">
+            {venueInfo ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      {venueInfo.venue.name}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {venueInfo.city ? `${venueInfo.city.name}, ${venueInfo.city.country}` : venueInfo.venue.location}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    {venueInfo.venue.image_url && (
+                      <img
+                        src={venueInfo.venue.image_url}
+                        alt={venueInfo.venue.name}
+                        className="w-full h-40 object-cover rounded-md border border-border/40"
+                      />
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Type</p>
+                        <p className="font-medium capitalize">{venueInfo.venue.venue_type || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Capacity</p>
+                        <p className="font-medium">{(venueInfo.venue.capacity ?? 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Prestige</p>
+                        <p className="font-medium">Tier {venueInfo.venue.prestige_level ?? 1}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Parking</p>
+                        <p className="font-medium">{venueInfo.venue.parking_spaces ?? 0} spaces</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Sound</p>
+                        <p className="font-medium">{venueInfo.venue.sound_system_rating ?? 0}/100</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Lighting</p>
+                        <p className="font-medium">{venueInfo.venue.lighting_rating ?? 0}/100</p>
+                      </div>
+                    </div>
+                    {venueInfo.venue.description && (
+                      <>
+                        <Separator />
+                        <p className="text-muted-foreground">{venueInfo.venue.description}</p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-primary" />
+                      City Map
+                    </CardTitle>
+                    <CardDescription>
+                      {venueInfo.city
+                        ? `${venueInfo.city.name} • pop. ${(venueInfo.city.population ?? 0).toLocaleString()} • scene ${venueInfo.city.music_scene ?? 0}/100`
+                        : "Location marker"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {venueInfo.city?.latitude != null && venueInfo.city?.longitude != null ? (
+                      <div className="space-y-2">
+                        <div className="aspect-video overflow-hidden rounded-md border border-border/40">
+                          <iframe
+                            title={`${venueInfo.city.name} map`}
+                            width="100%"
+                            height="100%"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(venueInfo.city.longitude) - 0.15}%2C${Number(venueInfo.city.latitude) - 0.1}%2C${Number(venueInfo.city.longitude) + 0.15}%2C${Number(venueInfo.city.latitude) + 0.1}&layer=mapnik&marker=${venueInfo.city.latitude}%2C${venueInfo.city.longitude}`}
+                          />
+                        </div>
+                        <a
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                          href={`https://www.openstreetmap.org/?mlat=${venueInfo.city.latitude}&mlon=${venueInfo.city.longitude}#map=12/${venueInfo.city.latitude}/${venueInfo.city.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <MapPin className="h-3 w-3" /> Open larger map
+                        </a>
+                        {venueInfo.city.dominant_genre && (
+                          <Badge variant="outline" className="capitalize">Scene: {venueInfo.city.dominant_genre}</Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No coordinates on file for this city.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Venue details are not available for this festival.</p>
+                {festival.location && (
+                  <p className="text-sm mt-1">Location on record: {festival.location}</p>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+
 
           {/* Tickets Tab */}
           <TabsContent value="tickets" className="mt-6">
