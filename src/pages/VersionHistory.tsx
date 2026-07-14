@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.510",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "New guided Run Festival wizard at /festivals/:id/run for owners: 4-step flow (Draft Setup, Booking Confirmation, Permits & Insurance, Go Live) with per-step readiness checks, inline draft edits (name, attendance, ticket range), live booking summary (stages, confirmed slots, headliners, missing stages), compliance dashboard (permits by status, active policies, weather rider), and a gated Go Live action that requires all prior steps green before announcing. A Run Festival button appears on the Festival Detail header when the viewer owns the festival." },
+    ],
+  },
+  {
     version: "1.1.509",
     date: "2026-07-14",
     changes: [
