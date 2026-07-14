@@ -5,10 +5,10 @@ import { MCard } from "../components/MCard";
 export default function MobileWorld() {
   const navigate = useNavigate();
   const tiles = [
-    { title: "Current City", subtitle: "Local venues and events", icon: <MapPin className="h-5 w-5" />, to: "/city" },
+    { title: "Current City", subtitle: "Local venues and events", icon: <MapPin className="h-5 w-5" />, to: "/world/current-city" },
     { title: "Travel", subtitle: "Fly, drive, or tour", icon: <Plane className="h-5 w-5" />, to: "/travel" },
-    { title: "Companies", subtitle: "Your business empire", icon: <Building2 className="h-5 w-5" />, to: "/companies" },
-    { title: "Marketplace", subtitle: "Buy and sell", icon: <Store className="h-5 w-5" />, to: "/marketplace" },
+    { title: "Companies", subtitle: "Your business empire", icon: <Building2 className="h-5 w-5" />, to: "/companies/directory" },
+    { title: "Marketplace", subtitle: "Buy and sell", icon: <Store className="h-5 w-5" />, to: "/gear-shop" },
     { title: "Charts", subtitle: "Songs & albums", icon: <LineChart className="h-5 w-5" />, to: "/music/charts" },
     { title: "Events", subtitle: "Festivals and awards", icon: <CalendarClock className="h-5 w-5" />, to: "/festivals/directory" },
   ];
