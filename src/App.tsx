@@ -83,6 +83,7 @@ const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const CityFestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/CityFestivalsAdmin"));
 const EurovisionAdminPage = lazyWithRetry(() => import("./pages/admin/EurovisionAdmin"));
 const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
 const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
