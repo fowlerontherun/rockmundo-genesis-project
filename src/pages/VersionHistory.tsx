@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.493",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded 30 film productions across major, indie, and streaming studios, and 25 scripted TV series across UK, US, and streaming networks — casting boards now show a full slate of roles with varied fame gates, pay tiers, and prestige." },
+    ],
+  },
+  {
     version: "1.1.492",
     date: "2026-07-14",
     changes: [
