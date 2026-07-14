@@ -214,7 +214,7 @@ export default function FestivalOwnerConsole() {
     <FMPageScaffold
       title={festival.name}
       subtitle={`${festival.city?.name ?? ""} · Prestige ${festival.prestige_tier}/5 · Edition #${festival.edition_number}`}
-      actions={
+      headerActions={
         <Button variant="ghost" size="sm" onClick={() => navigate(`/festivals/${festivalId}`)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Public page
         </Button>
