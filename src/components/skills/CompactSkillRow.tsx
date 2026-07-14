@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Lock, RotateCcw } from "lucide-react";
+import { TrendingUp, Lock, RotateCcw, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { spendSkillXp, unlearnSkill } from "@/utils/progression";
 import { toast } from "sonner";
 import { EducationSourceBadge, type EducationSource } from "./EducationSourceBadge";
+import { SchedulePracticeDialog } from "./SchedulePracticeDialog";
+import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
+import { useAuth } from "@/hooks/use-auth-context";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +63,10 @@ export const CompactSkillRow = ({
 }: CompactSkillRowProps) => {
   const queryClient = useQueryClient();
   
+  const { user } = useAuth();
+  const [practiceOpen, setPracticeOpen] = useState(false);
+  const { data: practiceConfig } = useSkillPracticeRestrictions(user?.id);
+
   const level = progress?.current_level || 0;
   const xp = progress?.current_xp || 0;
   const requiredXp = progress?.required_xp || 100;
@@ -147,6 +155,20 @@ export const CompactSkillRow = ({
         </div>
       )}
 
+      {/* Practise button (schedules a practice session) */}
+      {!isLocked && !isMaxed && (
+        <Button
+          onClick={() => setPracticeOpen(true)}
+          size="sm"
+          variant="secondary"
+          className="h-7 text-xs px-2 flex-shrink-0"
+          title="Schedule a practice session"
+        >
+          <CalendarClock className="w-3 h-3 mr-1" />
+          Practise
+        </Button>
+      )}
+
       {/* Train button */}
       {!isLocked && (
         <Button
@@ -155,6 +177,7 @@ export const CompactSkillRow = ({
           size="sm"
           variant="outline"
           className="h-7 text-xs px-2 flex-shrink-0"
+          title={isMaxed ? "Skill is maxed" : `Spend ${cost} SXP`}
         >
           {isMaxed ? "Max" : (
             <>
@@ -211,6 +234,14 @@ export const CompactSkillRow = ({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <SchedulePracticeDialog
+        open={practiceOpen}
+        onOpenChange={setPracticeOpen}
+        skillSlug={skill.slug}
+        skillName={skill.display_name}
+        practiceConfig={practiceConfig}
+      />
     </div>
   );
 };
