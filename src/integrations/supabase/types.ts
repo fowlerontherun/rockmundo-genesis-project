@@ -31680,13 +31680,7 @@ export type Database = {
       }
       songwriting_projects: {
         Row: {
-          arrangement_progress: number
-          calculation_version: string | null
           chord_progression_id: string | null
-          completed_at: string | null
-          consistency_score: number
-          songwriting_breakdown: Json
-          polish_progress: number
           created_at: string
           creative_brief: Json | null
           estimated_sessions: number | null
@@ -31714,13 +31708,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          arrangement_progress?: number
-          calculation_version?: string | null
           chord_progression_id?: string | null
-          completed_at?: string | null
-          consistency_score?: number
-          songwriting_breakdown?: Json
-          polish_progress?: number
           created_at?: string
           creative_brief?: Json | null
           estimated_sessions?: number | null
@@ -31748,13 +31736,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          arrangement_progress?: number
-          calculation_version?: string | null
           chord_progression_id?: string | null
-          completed_at?: string | null
-          consistency_score?: number
-          songwriting_breakdown?: Json
-          polish_progress?: number
           created_at?: string
           creative_brief?: Json | null
           estimated_sessions?: number | null
@@ -31842,9 +31824,6 @@ export type Database = {
       }
       songwriting_sessions: {
         Row: {
-          effort_hours: number
-          progress_breakdown: Json
-          session_type: string
           auto_completed: boolean | null
           completed_at: string | null
           created_at: string
@@ -31862,9 +31841,6 @@ export type Database = {
           xp_earned: number | null
         }
         Insert: {
-          effort_hours?: number
-          progress_breakdown?: Json
-          session_type?: string
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
@@ -31882,9 +31858,6 @@ export type Database = {
           xp_earned?: number | null
         }
         Update: {
-          effort_hours?: number
-          progress_breakdown?: Json
-          session_type?: string
           auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
