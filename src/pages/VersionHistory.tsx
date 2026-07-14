@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.523",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Hiring & advertising for all company types: new canonical role catalog covering every company type (Label, Recording Studio, Rehearsal, Venue, Merch Factory, Logistics, Security, Retail, Bar, Restaurant, Casino, Hotel, Clinic, Gym, Hair Salon, Tattoo Parlour, Music School, PR Agency, Talent Agency, Real Estate, Magazine, Newspaper, Radio, Podcast Network, Modelling Agency, Crypto Exchange, Taxi, and Holding). Company → Jobs tab now shows the full role catalogue with title, category, weekly wage, description, and current filled/open counts — click any role to open a pre-filled vacancy form. Each vacancy has an 'Advertise' button that features it at the top of the jobs marketplace for a configurable duration (1-60 days) and daily spend, billed from the company balance and logged as a marketing transaction. Marketplace listings now sort advertised vacancies first (by daily spend) and show a Featured badge. New RPC `advertise_company_vacancy(vacancy_id, days, daily_spend)` handles the paid promotion." },
+    ],
+  },
+
+  {
     version: "1.1.522",
     date: "2026-07-14",
     changes: [
