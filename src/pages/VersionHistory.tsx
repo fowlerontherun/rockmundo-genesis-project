@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.474",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Admin Streaming Platforms page: wired up Add Platform and Edit buttons with a working dialog covering name, icon URL, payout per stream, quality multiplier, min quality requirement and active toggle. Added a quick Enable/Disable action per card." },
+    ],
+  },
+  {
     version: "1.1.473",
     date: "2026-07-14",
     changes: [
