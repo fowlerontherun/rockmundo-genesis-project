@@ -10339,48 +10339,146 @@ export type Database = {
           },
         ]
       }
+      festival_expense_ledger: {
+        Row: {
+          amount_cents: number
+          category: string
+          counterparty_id: string | null
+          counterparty_type: string | null
+          created_at: string
+          description: string | null
+          direction: string
+          edition_number: number
+          festival_id: string
+          id: string
+          posted_at: string
+        }
+        Insert: {
+          amount_cents: number
+          category: string
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          description?: string | null
+          direction: string
+          edition_number?: number
+          festival_id: string
+          id?: string
+          posted_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          category?: string
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          description?: string | null
+          direction?: string
+          edition_number?: number
+          festival_id?: string
+          id?: string
+          posted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_expense_ledger_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_finances: {
         Row: {
+          artist_bonuses_cents: number
+          artist_guarantees_cents: number
           band_payouts_total: number | null
           budget: number | null
+          cleanup_cost_cents: number
           created_at: string | null
+          edition_number: number
+          equipment_rental_cents: number
           festival_id: string
           festival_tax_amount: number | null
           festival_tax_rate: number | null
+          fnb_income_cents: number
           id: string
+          insurance_premium_cents: number
+          marketing_spend_cents: number
+          merch_cut_income_cents: number
+          permit_fees_cents: number
+          refund_liability_cents: number
           security_cost: number | null
           sponsorship_income: number | null
+          staff_wages_cents: number
           stage_costs: number | null
+          stage_rental_cents: number
+          tax_paid_cents: number
+          ticket_income_ga_cents: number
+          ticket_income_vip_cents: number
           ticket_revenue: number | null
           total_profit: number | null
           updated_at: string | null
         }
         Insert: {
+          artist_bonuses_cents?: number
+          artist_guarantees_cents?: number
           band_payouts_total?: number | null
           budget?: number | null
+          cleanup_cost_cents?: number
           created_at?: string | null
+          edition_number?: number
+          equipment_rental_cents?: number
           festival_id: string
           festival_tax_amount?: number | null
           festival_tax_rate?: number | null
+          fnb_income_cents?: number
           id?: string
+          insurance_premium_cents?: number
+          marketing_spend_cents?: number
+          merch_cut_income_cents?: number
+          permit_fees_cents?: number
+          refund_liability_cents?: number
           security_cost?: number | null
           sponsorship_income?: number | null
+          staff_wages_cents?: number
           stage_costs?: number | null
+          stage_rental_cents?: number
+          tax_paid_cents?: number
+          ticket_income_ga_cents?: number
+          ticket_income_vip_cents?: number
           ticket_revenue?: number | null
           total_profit?: number | null
           updated_at?: string | null
         }
         Update: {
+          artist_bonuses_cents?: number
+          artist_guarantees_cents?: number
           band_payouts_total?: number | null
           budget?: number | null
+          cleanup_cost_cents?: number
           created_at?: string | null
+          edition_number?: number
+          equipment_rental_cents?: number
           festival_id?: string
           festival_tax_amount?: number | null
           festival_tax_rate?: number | null
+          fnb_income_cents?: number
           id?: string
+          insurance_premium_cents?: number
+          marketing_spend_cents?: number
+          merch_cut_income_cents?: number
+          permit_fees_cents?: number
+          refund_liability_cents?: number
           security_cost?: number | null
           sponsorship_income?: number | null
+          staff_wages_cents?: number
           stage_costs?: number | null
+          stage_rental_cents?: number
+          tax_paid_cents?: number
+          ticket_income_ga_cents?: number
+          ticket_income_vip_cents?: number
           ticket_revenue?: number | null
           total_profit?: number | null
           updated_at?: string | null
@@ -10391,6 +10489,56 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: true
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_insurance_policies: {
+        Row: {
+          active: boolean
+          coverage_type: string
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          festival_id: string
+          id: string
+          payout_ceiling_cents: number
+          premium_cents: number
+          updated_at: string
+          weather_rider: boolean
+        }
+        Insert: {
+          active?: boolean
+          coverage_type: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          festival_id: string
+          id?: string
+          payout_ceiling_cents: number
+          premium_cents: number
+          updated_at?: string
+          weather_rider?: boolean
+        }
+        Update: {
+          active?: boolean
+          coverage_type?: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          festival_id?: string
+          id?: string
+          payout_ceiling_cents?: number
+          premium_cents?: number
+          updated_at?: string
+          weather_rider?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_insurance_policies_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
         ]
@@ -10532,6 +10680,50 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ownership_history: {
+        Row: {
+          festival_id: string
+          from_owner_profile_id: string | null
+          from_owner_type: string | null
+          id: string
+          price_paid_cents: number | null
+          to_owner_profile_id: string | null
+          to_owner_type: string
+          transfer_reason: string | null
+          transferred_at: string
+        }
+        Insert: {
+          festival_id: string
+          from_owner_profile_id?: string | null
+          from_owner_type?: string | null
+          id?: string
+          price_paid_cents?: number | null
+          to_owner_profile_id?: string | null
+          to_owner_type: string
+          transfer_reason?: string | null
+          transferred_at?: string
+        }
+        Update: {
+          festival_id?: string
+          from_owner_profile_id?: string | null
+          from_owner_type?: string | null
+          id?: string
+          price_paid_cents?: number | null
+          to_owner_profile_id?: string | null
+          to_owner_type?: string
+          transfer_reason?: string | null
+          transferred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ownership_history_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
         ]
@@ -10724,6 +10916,110 @@ export type Database = {
             columns: ["setlist_id"]
             isOneToOne: false
             referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_permits: {
+        Row: {
+          approved_at: string | null
+          city_id: string | null
+          created_at: string
+          expires_on: string | null
+          festival_id: string
+          id: string
+          permit_fee_cents: number
+          permit_type: string
+          safety_inspection_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          city_id?: string | null
+          created_at?: string
+          expires_on?: string | null
+          festival_id: string
+          id?: string
+          permit_fee_cents?: number
+          permit_type?: string
+          safety_inspection_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          city_id?: string | null
+          created_at?: string
+          expires_on?: string | null
+          festival_id?: string
+          id?: string
+          permit_fee_cents?: number
+          permit_type?: string
+          safety_inspection_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_permits_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_purchase_offers: {
+        Row: {
+          buyer_profile_id: string
+          created_at: string
+          festival_id: string
+          id: string
+          listing_id: string | null
+          message: string | null
+          offer_price_cents: number
+          responded_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_profile_id: string
+          created_at?: string
+          festival_id: string
+          id?: string
+          listing_id?: string | null
+          message?: string | null
+          offer_price_cents: number
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_profile_id?: string
+          created_at?: string
+          festival_id?: string
+          id?: string
+          listing_id?: string | null
+          message?: string | null
+          offer_price_cents?: number
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_purchase_offers_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_purchase_offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "festival_sale_listings"
             referencedColumns: ["id"]
           },
         ]
@@ -10941,6 +11237,59 @@ export type Database = {
           },
         ]
       }
+      festival_sale_listings: {
+        Row: {
+          asking_price_cents: number
+          closed_at: string | null
+          created_at: string
+          festival_id: string
+          id: string
+          listed_at: string
+          listed_by_profile_id: string | null
+          listed_by_type: string
+          notes: string | null
+          reserve_price_cents: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          asking_price_cents: number
+          closed_at?: string | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          listed_at?: string
+          listed_by_profile_id?: string | null
+          listed_by_type?: string
+          notes?: string | null
+          reserve_price_cents?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          asking_price_cents?: number
+          closed_at?: string | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          listed_at?: string
+          listed_by_profile_id?: string | null
+          listed_by_type?: string
+          notes?: string | null
+          reserve_price_cents?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_sale_listings_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_slot_offers: {
         Row: {
           additional_perks: string[] | null
@@ -11070,6 +11419,59 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_staff: {
+        Row: {
+          created_at: string
+          festival_id: string
+          hired_at: string
+          id: string
+          metadata: Json
+          morale: number
+          name: string
+          role: string
+          skill_level: number
+          terminated_at: string | null
+          updated_at: string
+          weekly_wage_cents: number
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          hired_at?: string
+          id?: string
+          metadata?: Json
+          morale?: number
+          name: string
+          role: string
+          skill_level?: number
+          terminated_at?: string | null
+          updated_at?: string
+          weekly_wage_cents?: number
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          hired_at?: string
+          id?: string
+          metadata?: Json
+          morale?: number
+          name?: string
+          role?: string
+          skill_level?: number
+          terminated_at?: string | null
+          updated_at?: string
+          weekly_wage_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
         ]
@@ -11289,56 +11691,92 @@ export type Database = {
       }
       festivals: {
         Row: {
+          annual_operating_cost_cents: number
+          cancellation_reason: string | null
           city_id: string
           created_at: string
           description: string | null
+          edition_number: number
           end_date: string
           expected_attendance: number | null
+          founded_year: number | null
           genre: string | null
           id: string
+          list_price_cents: number | null
           metadata: Json
           name: string
+          next_edition_start: string | null
+          owner_company_id: string | null
+          owner_profile_id: string | null
+          owner_type: string
+          prestige_tier: number
+          sale_status: string
           scale: string
           start_date: string
           status: string
           ticket_price_high: number | null
           ticket_price_low: number | null
+          treasury_cents: number
           updated_at: string
           venue_id: string | null
         }
         Insert: {
+          annual_operating_cost_cents?: number
+          cancellation_reason?: string | null
           city_id: string
           created_at?: string
           description?: string | null
+          edition_number?: number
           end_date: string
           expected_attendance?: number | null
+          founded_year?: number | null
           genre?: string | null
           id?: string
+          list_price_cents?: number | null
           metadata?: Json
           name: string
+          next_edition_start?: string | null
+          owner_company_id?: string | null
+          owner_profile_id?: string | null
+          owner_type?: string
+          prestige_tier?: number
+          sale_status?: string
           scale?: string
           start_date: string
           status?: string
           ticket_price_high?: number | null
           ticket_price_low?: number | null
+          treasury_cents?: number
           updated_at?: string
           venue_id?: string | null
         }
         Update: {
+          annual_operating_cost_cents?: number
+          cancellation_reason?: string | null
           city_id?: string
           created_at?: string
           description?: string | null
+          edition_number?: number
           end_date?: string
           expected_attendance?: number | null
+          founded_year?: number | null
           genre?: string | null
           id?: string
+          list_price_cents?: number | null
           metadata?: Json
           name?: string
+          next_edition_start?: string | null
+          owner_company_id?: string | null
+          owner_profile_id?: string | null
+          owner_type?: string
+          prestige_tier?: number
+          sale_status?: string
           scale?: string
           start_date?: string
           status?: string
           ticket_price_high?: number | null
           ticket_price_low?: number | null
+          treasury_cents?: number
           updated_at?: string
           venue_id?: string | null
         }
@@ -37273,6 +37711,10 @@ export type Database = {
         Args: { p_company_id: string; p_label_id: string }
         Returns: undefined
       }
+      list_festival_for_sale: {
+        Args: { p_festival_id: string; p_notes?: string; p_price_cents: number }
+        Returns: string
+      }
       log_child_school_event: {
         Args: {
           p_academic_rating?: number
@@ -37371,6 +37813,14 @@ export type Database = {
       }
       promote_twaat: {
         Args: { p_hours: number; p_twaat_id: string }
+        Returns: Json
+      }
+      purchase_festival: {
+        Args: {
+          p_buyer_profile_id: string
+          p_festival_id: string
+          p_price_cents: number
+        }
         Returns: Json
       }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
