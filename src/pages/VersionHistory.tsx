@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.483",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Buying/renting band vehicles no longer fails with an RLS violation on band_vehicles. The policy compared bands.leader_id (a profile id) directly to auth.uid(); it now joins through profiles so band leaders and members are matched by their account user id." },
+    ],
+  },
+  {
     version: "1.1.482",
     date: "2026-07-14",
     changes: [
