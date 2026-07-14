@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Navigate } from "react-router-dom";
 import CharacterGate from "@/components/CharacterGate";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
@@ -31,6 +32,9 @@ const Layout = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
   const { profileId } = useActiveProfile();
+  const isMobile = useIsMobileDevice();
+
+
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
@@ -93,6 +97,12 @@ const Layout = () => {
   if (!user && !devGuestBypass) {
     return null;
   }
+
+  if (isMobile) {
+    return <Navigate to="/mobile" replace />;
+  }
+
+
 
   return (
     <DesktopOnlyGate>
