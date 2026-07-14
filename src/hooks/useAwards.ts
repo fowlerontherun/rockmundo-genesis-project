@@ -211,6 +211,10 @@ export const useAwards = (userId?: string, bandId?: string) => {
     }) => {
       if (!userId) throw new Error("User not authenticated");
 
+      const { data: authData } = await supabase.auth.getUser();
+      const authUid = authData.user?.id;
+      if (!authUid) throw new Error("User not authenticated");
+
       validateNominationSubmission(nomination);
 
       if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(currentGameYear)) {
@@ -221,7 +225,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
         .from("award_nominations")
         .insert({
           ...nomination,
-          user_id: userId,
+          user_id: authUid,
         })
         .select()
         .single();
