@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.514",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Added `@testing-library/jest-dom` (and `vitest/globals`) to the `types` array in `tsconfig.app.json` so custom matchers `toBeInTheDocument`, `toBeDisabled`, `toHaveTextContent`, `toHaveAttribute`, and `toBeVisible` are recognized by TypeScript across all tests." },
+    ],
+  },
+  {
     version: "1.1.513",
     date: "2026-07-14",
     changes: [
