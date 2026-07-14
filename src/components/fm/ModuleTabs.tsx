@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { FM_MODULES, findModuleForPath } from "@/config/fmNavigation";
 import { useUserRole } from "@/hooks/useUserRole";
-import { getLastModulePath } from "@/lib/fmHistory";
+
 import { cn } from "@/lib/utils";
 
 export const ModuleTabs = () => {
