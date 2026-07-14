@@ -34,9 +34,6 @@ const Layout = () => {
   const { profileId } = useActiveProfile();
   const isMobile = useIsMobileDevice();
 
-  if (isMobile) {
-    return <Navigate to="/mobile" replace />;
-  }
 
 
   // Global auto-start for gigs - runs regardless of which page user is on
