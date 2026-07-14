@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.457",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Fixed 'Cannot coerce the result to a single JSON object' when equipping gear.** The equip mutation was filtering `player_equipment_inventory` by `profile_id` while the table's `user_id` column stores the auth user id, so the update matched zero rows and `.single()` threw. Switched the filter to the auth user id and swapped in `.maybeSingle()` with a friendly not-found message." },
+    ],
+  },
+  {
     version: "1.1.456",
     date: "2026-07-14",
     changes: [
