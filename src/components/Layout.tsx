@@ -98,6 +98,12 @@ const Layout = () => {
     return null;
   }
 
+  if (isMobile) {
+    return <Navigate to="/mobile" replace />;
+  }
+
+
+
   return (
     <DesktopOnlyGate>
     <FMShell>
