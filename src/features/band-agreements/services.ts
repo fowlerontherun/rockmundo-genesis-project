@@ -47,8 +47,8 @@ export function diffAgreementTerms(previous: BandAgreementTerms, next: BandAgree
   if (previous.noticePeriodDays !== next.noticePeriodDays) changes.push(`Notice period changed from ${previous.noticePeriodDays} to ${next.noticePeriodDays} days`);
   const prevCats = new Map(previous.revenueShares.map(r => [r.category, r]));
   for (const rule of next.revenueShares) {
-    const old = prevCats.get(rule.category); if (!old) { changes.push(`${rule.category.replaceAll('_',' ')} revenue rule added`); continue; }
-    for (const rec of rule.recipients) { const oldRec = old.recipients.find(r => r.recipientId === rec.recipientId && r.recipientType === rec.recipientType); if ((oldRec?.percentage ?? 0) !== (rec.percentage ?? 0)) changes.push(`${rule.category.replaceAll('_',' ')} share for ${rec.recipientId} changed from ${oldRec?.percentage ?? 0}% to ${rec.percentage ?? 0}%`); }
+    const old = prevCats.get(rule.category); if (!old) { changes.push(`${rule.category.split('_').join(' ')} revenue rule added`); continue; }
+    for (const rec of rule.recipients) { const oldRec = old.recipients.find(r => r.recipientId === rec.recipientId && r.recipientType === rec.recipientType); if ((oldRec?.percentage ?? 0) !== (rec.percentage ?? 0)) changes.push(`${rule.category.split('_').join(' ')} share for ${rec.recipientId} changed from ${oldRec?.percentage ?? 0}% to ${rec.percentage ?? 0}%`); }
   }
   if (previous.creativeOwnership.songwritingDefault !== next.creativeOwnership.songwritingDefault) changes.push('Songwriting ownership default changed');
   if (previous.expectations.touring !== next.expectations.touring) changes.push(next.expectations.touring ? 'Touring requirement changed or added' : 'Touring requirement removed');

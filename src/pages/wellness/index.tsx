@@ -194,7 +194,7 @@ const WellnessPage = () => {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Activity className="h-4 w-4 text-primary" /> Canonical readiness
-            <Badge variant="outline">{readinessPreview.state.replaceAll("_", " ")}</Badge>
+            <Badge variant="outline">{readinessPreview.state.split("_").join(" ")}</Badge>
           </CardTitle>
           <p className="text-xs text-muted-foreground">Server-generated explanation preview using the shared modifier pipeline and global caps.</p>
         </CardHeader>

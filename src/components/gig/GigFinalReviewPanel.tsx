@@ -6,7 +6,7 @@ import type { GigForecastSnapshot, ForecastRange } from '@/utils/gigForecast';
 
 const fmtMoney = (n: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 const fmtRange = (r: ForecastRange, money = false) => `${money ? fmtMoney(r.low) : r.low}–${money ? fmtMoney(r.high) : r.high}`;
-const statusLabel = (s: string) => s.replaceAll('_', ' ');
+const statusLabel = (s: string) => s.split('_').join(' ');
 
 export function GigFinalReviewPanel({ forecast, loading, onRefresh, onNavigate }: { forecast?: GigForecastSnapshot | null; loading?: boolean; onRefresh?: () => void; onNavigate?: (section: string) => void }) {
   if (loading) return <Card><CardHeader><CardTitle>Final review</CardTitle><CardDescription>Generating the latest pre-gig forecast…</CardDescription></CardHeader><CardContent className="text-sm text-muted-foreground">Checking setlist, crew, equipment, production, soundcheck and finance.</CardContent></Card>;
