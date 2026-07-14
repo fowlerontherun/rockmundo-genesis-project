@@ -11,12 +11,22 @@ export interface StageDecorations {
   ampsRight: Rect[];
   monitors: Rect[];
   speakerStacks: Rect[];
+  subwoofers: Rect[];
   drumRiser: Rect | null;
   lightingTruss: Rect | null;
   lightFixtures: Point[];
+  followSpots: Point[];
   backdrop: Rect | null;
+  bannerRect: Rect | null;
   bigScreens: Rect[];
   barrierPosts: Point[];
+  micStands: Point[];
+  cableRuns: Rect[];
+  guitarRack: Rect | null;
+  fohTower: Rect | null;
+  securityPosts: Point[];
+  ledLipStrip: Rect | null;
+  floorTapeMarks: Point[];
   floorPattern: FloorPattern;
   palette: { skyTop: string; skyBottom: string; audienceFloor: string; stageDeck: string; stageEdge: string; barrier: string; ampBody: string; speakerBody: string; accent: string };
 }
