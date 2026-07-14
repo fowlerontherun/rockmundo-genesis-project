@@ -300,10 +300,14 @@ export const useUnderworldStore = () => {
           boostValue = effects.creativity_boost as number;
         }
 
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
         const { error: boostError } = await supabase
           .from("player_active_boosts")
           .insert({
-            user_id: profileId,
+            user_id: user.id,
+            profile_id: profileId,
             product_id: product.id,
             boost_type: boostType,
             boost_value: boostValue,
@@ -313,11 +317,15 @@ export const useUnderworldStore = () => {
         if (boostError) throw boostError;
       }
 
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+
       // Record the purchase - mark as used only if effects were applied immediately
       const { error: purchaseError } = await supabase
         .from("underworld_purchases")
         .insert({
-          user_id: profileId,
+          user_id: authUser.id,
+          profile_id: profileId,
           product_id: product.id,
           paid_with: paymentMethod,
           cash_amount: paymentMethod === "cash" ? product.price_cash : null,
