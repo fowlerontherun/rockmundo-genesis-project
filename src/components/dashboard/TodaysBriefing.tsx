@@ -91,7 +91,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         bandIds.length > 0
           ? (supabase as any)
               .from("chart_entries")
-              .select("id, rank, previous_rank, trend, chart_date, country, song_id, songs(title, band_id, user_id)")
+              .select("id, rank, trend, trend_change, chart_date, country, song_id, songs(title, band_id, user_id)")
               .eq("chart_date", today)
               .order("rank", { ascending: true })
               .limit(20)
