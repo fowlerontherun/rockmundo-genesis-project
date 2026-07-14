@@ -19,13 +19,13 @@ interface EquipGearResult {
 }
 
 export const useEquipPlayerEquipment = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { addActivity } = useGameData();
   const queryClient = useQueryClient();
 
   const mutation = useMutation<EquipGearResult, Error, EquipGearVariables>({
     mutationFn: async (variables) => {
-      if (!profileId) {
+      if (!userId) {
         throw new Error("You must be signed in to update equipment");
       }
 
@@ -37,7 +37,7 @@ export const useEquipPlayerEquipment = () => {
           .from("player_equipment_inventory")
           .update({ is_equipped: false })
           .in("id", unequipIds)
-          .eq("user_id", profileId!);
+          .eq("user_id", userId);
 
         if (unequipError) {
           throw unequipError;
@@ -48,12 +48,16 @@ export const useEquipPlayerEquipment = () => {
         .from("player_equipment_inventory")
         .update({ is_equipped: variables.equip })
         .eq("id", targetId)
-        .eq("user_id", profileId!)
+        .eq("user_id", userId)
         .select("id, is_equipped")
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw error;
+      }
+
+      if (!data) {
+        throw new Error("Gear not found in your inventory");
       }
 
       return { id: data.id, isEquipped: data.is_equipped } satisfies EquipGearResult;
