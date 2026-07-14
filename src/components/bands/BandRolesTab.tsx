@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BAND_PERMISSION_CATALOGUE, DEFAULT_BAND_ROLE_TEMPLATES, permissionByKey, type BandPermissionKey } from "@/lib/band-permissions";
+import { BAND_PERMISSION_CATALOGUE, DEFAULT_BAND_ROLE_TEMPLATES, permissionByKey } from "@/lib/band-permissions";
 import { ShieldCheck, Timer, UserCog, Vote } from "lucide-react";
 
 interface BandRolesTabProps { bandId: string; }
@@ -86,7 +86,7 @@ export function BandRolesTab({ bandId }: BandRolesTabProps) {
                     <TableCell>
                       <div className="flex max-w-lg flex-wrap gap-1">
                         {role.permissions.slice(0, 8).map((key) => {
-                          const permission = permissionByKey.get(key as BandPermissionKey);
+                          const permission = permissionByKey.get(key);
                           return (
                           <Badge key={key} className={riskClassName[permission?.risk ?? "standard"]}>
                             {permission?.label ?? key}

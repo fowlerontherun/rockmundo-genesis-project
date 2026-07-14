@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.505",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Typed BandRolesTab permission strings via BandPermissionKey — role templates now carry a strict permission union and the redundant string cast has been removed." },
+    ],
+  },
+  {
     version: "1.1.504",
     date: "2026-07-14",
     changes: [
