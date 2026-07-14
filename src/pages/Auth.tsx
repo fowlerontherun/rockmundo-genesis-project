@@ -22,6 +22,7 @@ import discordLogo from "@/assets/discord-logo.png";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 
@@ -40,6 +41,8 @@ const Auth = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const { data: siteConfig } = useSiteConfig();
+  const announcement = siteConfig?.announcement;
   const [error, setError] = useState("");
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [activeTab, setActiveTab] = useState<AuthTab>("login");
@@ -490,17 +493,31 @@ const Auth = () => {
           </Button>
         </div>
 
-        <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
-          <AlertCircle className="h-4 w-4 text-primary" />
-          <AlertDescription className="space-y-1 text-left">
-            <p className="font-semibold">Open Play Test — Friday 17 July</p>
-            <p className="text-sm text-muted-foreground">
-              A 1-week public play test kicks off Friday 17 July 2026. Sign in
-              or create an account below — no Beta code required. Join the
-              Discord for live updates.
-            </p>
-          </AlertDescription>
-        </Alert>
+        {announcement?.enabled && (announcement.title || announcement.body) && (
+          <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
+            <AlertCircle className="h-4 w-4 text-primary" />
+            <AlertDescription className="space-y-1 text-left">
+              {announcement.title && (
+                <p className="font-semibold">{announcement.title}</p>
+              )}
+              {announcement.body && (
+                <p className="text-sm text-muted-foreground">{announcement.body}</p>
+              )}
+              {announcement.cta_label && announcement.cta_url && (
+                <p className="text-sm">
+                  <a
+                    href={announcement.cta_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    {announcement.cta_label} →
+                  </a>
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">
           <CardHeader className="pb-4">
