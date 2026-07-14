@@ -36934,6 +36934,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      dismiss_company_employee: {
+        Args: { p_employee_id: string; p_reason?: string }
+        Returns: undefined
+      }
       donate_to_party: {
         Args: { p_amount: number; p_note?: string; p_party_id: string }
         Returns: string
@@ -37158,6 +37162,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      manage_company_vacancy: {
+        Args: {
+          p_action: string
+          p_closes_at?: string
+          p_company_id?: string
+          p_description?: string
+          p_employment_type?: string
+          p_expected_activity_level?: string
+          p_is_permanent?: boolean
+          p_job_title?: string
+          p_location_city_id?: string
+          p_minimum_skill_levels?: Json
+          p_positions_available?: number
+          p_preferred_skills?: Json
+          p_required_skills?: Json
+          p_staff_category?: string
+          p_vacancy_id?: string
+          p_weekly_wage?: number
+        }
+        Returns: string
+      }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
       notify_blind_box_live: { Args: never; Returns: number }
       owns_rehearsal_room: { Args: { _room_id: string }; Returns: boolean }
@@ -37209,6 +37234,10 @@ export type Database = {
       }
       resurrect_character: {
         Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      review_company_application: {
+        Args: { p_action: string; p_application_id: string }
         Returns: undefined
       }
       revoke_endorsement: {
