@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.513",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festival Directory now displays a responsive grid of fully clickable festival cards. Each card links to `/festivals/:id`, shows name, genre, scale badge, city/country, dates, expected attendance, and ticket price, with hover/focus styles and keyboard accessibility." },
+    ],
+  },
+  {
     version: "1.1.512",
     date: "2026-07-14",
     changes: [
