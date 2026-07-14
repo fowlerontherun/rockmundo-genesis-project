@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BAND_PERMISSION_CATALOGUE, DEFAULT_BAND_ROLE_TEMPLATES, permissionByKey, type BandPermissionKey } from "@/lib/band-permissions";
+import { BAND_PERMISSION_CATALOGUE, DEFAULT_BAND_ROLE_TEMPLATES, permissionByKey } from "@/lib/band-permissions";
 import { ShieldCheck, Timer, UserCog, Vote } from "lucide-react";
 
 interface BandRolesTabProps { bandId: string; }
