@@ -126,6 +126,15 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, headquarte
     onError: (e: Error) => toast({ title: "Dismissal failed", description: e.message, variant: "destructive" }),
   });
 
+  const deleteVacancy = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("company_vacancies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast({ title: "Vacancy deleted" }); qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }); },
+    onError: (e: Error) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
   const currentVacancy = useMemo(() => vacancies.find((v: any) => v.id === selectedVacancy), [selectedVacancy, vacancies]);
 
   return (
