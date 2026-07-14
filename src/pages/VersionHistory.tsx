@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.524",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Mobile UI actions now work. Quick action buttons, FAB shortcuts and any link from the mobile shell that points at a feature page (Skills, Songwriting, Travel, Twaater, Wellness, etc.) previously bounced straight back to /mobile because the desktop Layout unconditionally redirected mobile devices. Layout now only redirects on the top-level landing routes and bypasses the DesktopOnlyGate for mobile so those feature pages actually render." },
+    ],
+  },
+
+  {
     version: "1.1.523",
     date: "2026-07-14",
     changes: [
