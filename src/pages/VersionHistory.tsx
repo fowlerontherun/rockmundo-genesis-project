@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.519",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Admin can now control the public site's server status and news banner. New `/admin/system-status` page lets admins set server status (Online / Degraded / Down) with a custom message, and edit the announcement banner (title, body, optional CTA) with a live preview and enable/disable toggle. Landing page and Auth page now read these values from `system_settings` via the new `useSiteConfig` hook — the hardcoded 'Server Down' banner and 'Open Play Test — Friday 17 July' copy are gone. RLS restricts updates to users with the admin role." },
+    ],
+  },
+  {
     version: "1.1.518",
     date: "2026-07-14",
     changes: [
