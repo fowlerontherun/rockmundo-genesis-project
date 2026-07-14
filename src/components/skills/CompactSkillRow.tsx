@@ -234,6 +234,14 @@ export const CompactSkillRow = ({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <SchedulePracticeDialog
+        open={practiceOpen}
+        onOpenChange={setPracticeOpen}
+        skillSlug={skill.slug}
+        skillName={skill.display_name}
+        practiceConfig={practiceConfig}
+      />
     </div>
   );
 };
