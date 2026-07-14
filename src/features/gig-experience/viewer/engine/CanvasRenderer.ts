@@ -44,28 +44,30 @@ export class CanvasRenderer {
     const ctx = this.ctx;
     const size = this.size;
     if (!this.layout || !this.crowdPlan || !this.performerPlan) this.resize(size);
-    const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity }), size);
+    const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity, venueName: this.experience?.gig.venue.name, venueType: (this.experience?.gig.venue as any)?.type ?? null }), size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
 
     ctx.clearRect(0, 0, size.width, size.height);
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, size.width, size.height);
-    ctx.fillStyle = "#1f2937";
-    ctx.fillRect(preset.audience.x, preset.audience.y, preset.audience.width, preset.audience.height);
+    // Themed background + audience floor
+    drawBackground(ctx, preset, size);
+    drawFloor(ctx, preset);
+    // Occupied audience zone tint
     if (crowd && preset.crowdZones.length > 1) {
-      ctx.globalAlpha = .18 + crowd.fillProgress * .18;
-      ctx.fillStyle = "#38bdf8";
+      ctx.globalAlpha = .14 + crowd.fillProgress * .14;
+      ctx.fillStyle = preset.decorations.palette.accent;
       preset.crowdZones.forEach((z, i) => { if (crowd.occupiedZones.some((id) => id.startsWith(i === 0 ? "front" : "middle"))) ctx.fillRect(z.x, z.y, z.width, z.height); });
       ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = "#374151";
-    preset.entrances.forEach((p) => { ctx.beginPath(); ctx.rect(p.x - 12, p.y - 8, 24, 16); ctx.fill(); });
-    ctx.fillStyle = "#3f2f20";
-    ctx.fillRect(preset.stage.x, preset.stage.y, preset.stage.width, preset.stage.height);
-    ctx.fillStyle = "#6b7280";
-    preset.barriers.forEach((r) => ctx.fillRect(r.x, r.y, r.width, r.height));
+    // Entrances
+    ctx.fillStyle = "#111827";
+    preset.entrances.forEach((p) => { ctx.fillRect(p.x - 12, p.y - 8, 24, 16); });
+    // Stage, decor, lights
+    drawStage(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
+    // Crash barrier at stage edge
+    drawBarrier(ctx, preset);
+    // Backstage marker
     ctx.fillStyle = "#9ca3af";
     ctx.beginPath(); ctx.arc(preset.backstage.x, preset.backstage.y, 10, 0, Math.PI * 2); ctx.fill();
 
