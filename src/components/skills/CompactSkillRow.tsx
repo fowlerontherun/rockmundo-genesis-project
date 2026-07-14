@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Lock, RotateCcw } from "lucide-react";
+import { TrendingUp, Lock, RotateCcw, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { spendSkillXp, unlearnSkill } from "@/utils/progression";
 import { toast } from "sonner";
 import { EducationSourceBadge, type EducationSource } from "./EducationSourceBadge";
+import { SchedulePracticeDialog } from "./SchedulePracticeDialog";
+import { usePracticeRestrictions } from "@/hooks/useSkillPractice";
 import {
   AlertDialog,
   AlertDialogAction,
