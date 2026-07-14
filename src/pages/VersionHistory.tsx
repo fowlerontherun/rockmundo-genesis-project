@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.499",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Festivals expansion — festivals can now be owned by players. Extended the festivals table with owner, treasury, prestige tier, sale status, edition number, and next-edition date, and added supporting tables for sale listings, purchase offers, ownership history, festival staff, insurance policies, permits, and a per-edition expense ledger." },
+      { type: 'feature', description: "New Festival Owner Console at /festivals/:id/manage with tabs for Overview checklist, Booking, Stages, Tickets, Sponsors, Staff hiring/firing, Insurance & Permits, Finances ledger, Marketing, and Sell-for-cash listing." },
+      { type: 'feature', description: "Added purchase_festival and list_festival_for_sale RPCs so ownership transfers move cash, log audit history, and update the sale marketplace atomically." },
+      { type: 'improvement', description: "Festival finances table now tracks staff wages, permit fees, insurance premiums, stage/equipment rental, marketing spend, artist guarantees & bonuses, tiered ticket income, merch cut, F&B income, cleanup cost, refund liability, and tax paid — all in cents." },
+    ],
+  },
+  {
     version: "1.1.498",
     date: "2026-07-14",
     changes: [

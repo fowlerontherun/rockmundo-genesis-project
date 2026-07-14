@@ -660,6 +660,7 @@ function App() {
                     <Route path="festivals/:festivalId" element={<FestivalDetail />} />
                     <Route path="festivals/simulation" element={<FestivalsNew />} />
                     <Route path="festivals/perform/:participationId" element={<FestivalPerformance />} />
+                    <Route path="festivals/:festivalId/manage" element={<FestivalOwnerConsole />} />
                     <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="bands/finder" element={<BandFinder />} />
