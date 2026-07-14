@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.461",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "**Delete cancelled vacancies.** Company owners can now permanently remove cancelled vacancies from the recruitment lifecycle panel via a confirmation dialog, keeping the board clean of dead listings." },
+    ],
+  },
+  {
     version: "1.1.460",
     date: "2026-07-14",
     changes: [

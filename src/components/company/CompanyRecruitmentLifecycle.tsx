@@ -126,6 +126,15 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, headquarte
     onError: (e: Error) => toast({ title: "Dismissal failed", description: e.message, variant: "destructive" }),
   });
 
+  const deleteVacancy = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("company_vacancies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast({ title: "Vacancy deleted" }); qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }); },
+    onError: (e: Error) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
+  });
+
   const currentVacancy = useMemo(() => vacancies.find((v: any) => v.id === selectedVacancy), [selectedVacancy, vacancies]);
 
   return (
@@ -152,6 +161,15 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, headquarte
                   {v.status === "open" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: v.id, action: "close" })}>Close</Button>}
                   {v.status === "closed" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: v.id, action: "reopen" })}>Reopen</Button>}
                   {!["filled", "cancelled"].includes(v.status) && <Button size="sm" variant="destructive" onClick={() => vacancyAction.mutate({ id: v.id, action: "cancel" })}>Cancel</Button>}
+                  {v.status === "cancelled" && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild><Button size="sm" variant="destructive">Delete</Button></AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader><AlertDialogTitle>Delete cancelled vacancy?</AlertDialogTitle><AlertDialogDescription>This permanently removes the vacancy and its application records. This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteVacancy.mutate(v.id)}>Delete</AlertDialogAction></AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>;
             })}
