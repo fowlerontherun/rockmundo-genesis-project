@@ -31,7 +31,10 @@ import { CompanyStorefrontManager } from "@/components/company/CompanyStorefront
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useCompanyLabels } from "@/hooks/useCompanyLabels";
+import { useCompanyLabels, useUnlinkedOwnedLabels } from "@/hooks/useCompanyLabels";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
