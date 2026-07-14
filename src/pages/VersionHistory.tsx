@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.485",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Returning players without an active character no longer see 'No profile available to update yet' when opening My Character. The edit page now detects the missing profile and directs players to create a new character or manage their slots." },
+    ],
+  },
+  {
     version: "1.1.484",
     date: "2026-07-14",
     changes: [

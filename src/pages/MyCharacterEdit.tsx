@@ -374,6 +374,34 @@ const MyCharacterEdit = () => {
     );
   }
 
+  if (!profile) {
+    return (
+      <FMPageScaffold
+        title="My Character"
+        subtitle="You don't have an active character yet."
+        icon={User}
+        backTo="/hub/character"
+      >
+        <Card className="mx-auto max-w-lg">
+          <CardHeader>
+            <CardTitle>No active character</CardTitle>
+            <CardDescription>
+              You don't have an active character on this account yet. Create one to start playing Rockmundo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row">
+            <Button onClick={() => navigate("/characters/new")} className="flex-1">
+              Create new character
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/characters")} className="flex-1">
+              Manage character slots
+            </Button>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
   const { data: calendarData } = useGameCalendar();
   const displayName = profile?.display_name || profile?.username || "Performer";
   const avatarUrl = (profile as any)?.avatar_url ?? undefined;
