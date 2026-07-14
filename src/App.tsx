@@ -80,6 +80,7 @@ const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
 const AdminPlayerReports = lazyWithRetry(() => import("./pages/admin/PlayerReports"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
+const AchievementsProgress = lazyWithRetry(() => import("./pages/AchievementsProgress"));
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
@@ -655,7 +656,8 @@ function App() {
                     <Route path="career/fame" element={<PreserveQueryRedirect to="/statistics" />} />
                     <Route path="career/charts" element={<PreserveQueryRedirect to="/competitive-charts" />} />
                     <Route path="career/awards" element={<Awards />} />
-                    <Route path="career/achievements" element={<PreserveQueryRedirect to="/hall-of-immortals" />} />
+                    <Route path="career/achievements" element={<AchievementsProgress />} />
+                    <Route path="achievements" element={<AchievementsProgress />} />
                     <Route path="career/discography" element={<PreserveQueryRedirect to="/release-manager" />} />
                     <Route path="career/history" element={<PreserveQueryRedirect to="/legacy" />} />
                     <Route path="my-companies" element={<MyCompanies />} />
