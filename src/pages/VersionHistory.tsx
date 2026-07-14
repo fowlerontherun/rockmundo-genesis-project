@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.469",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Booking activities no longer fails with a duration_minutes error.** `player_scheduled_activities.duration_minutes` is a generated column (computed from `scheduled_end - scheduled_start`), but several booking flows (activity booking, jam sessions, songwriting, gig/rehearsal/busking bookings) were still inserting an explicit value, triggering `cannot insert a non-DEFAULT value into column \"duration_minutes\"`. Removed the explicit writes so Postgres computes the duration automatically." },
+    ],
+  },
+  {
     version: "1.1.468",
     date: "2026-07-14",
     changes: [

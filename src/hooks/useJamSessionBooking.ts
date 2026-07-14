@@ -100,7 +100,7 @@ export const useJamSessionBooking = () => {
       activity_type: "jam_session",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
-      duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
+      
       status: "scheduled",
       title: `Jam Session: ${sessionName}`,
       location: cityName || "Rehearsal Room",

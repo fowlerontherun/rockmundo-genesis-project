@@ -87,7 +87,7 @@ export default function SongwritingBooking() {
       activity_type: "songwriting",
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
-      duration_minutes: 60,
+      
       status: "scheduled",
       title: `Songwriting: ${project?.title || "Untitled"}`,
       description: `Continue working on ${project?.title || "untitled song"}`,

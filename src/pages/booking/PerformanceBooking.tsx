@@ -228,7 +228,6 @@ export default function PerformanceBooking() {
           activity_type: "rehearsal",
           scheduled_start: scheduledStart.toISOString(),
           scheduled_end: scheduledEnd.toISOString(),
-          duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
           status: "scheduled",
           title: "Band Rehearsal",
           metadata: {
@@ -311,7 +310,7 @@ export default function PerformanceBooking() {
       activity_type: activityType,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
-      duration_minutes: getDurationMinutes(scheduledStart, scheduledEnd),
+      
       status: "scheduled",
       title: `${activityType === "gig" ? "Gig" : activityType === "busking" ? "Busking" : "Songwriting"}`,
       metadata,
