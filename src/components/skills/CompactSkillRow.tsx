@@ -63,6 +63,10 @@ export const CompactSkillRow = ({
 }: CompactSkillRowProps) => {
   const queryClient = useQueryClient();
   
+  const { user } = useAuth();
+  const [practiceOpen, setPracticeOpen] = useState(false);
+  const { data: practiceConfig } = useSkillPracticeRestrictions(user?.id);
+
   const level = progress?.current_level || 0;
   const xp = progress?.current_xp || 0;
   const requiredXp = progress?.required_xp || 100;
