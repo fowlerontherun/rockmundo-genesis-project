@@ -7657,6 +7657,8 @@ export type Database = {
       }
       company_vacancies: {
         Row: {
+          advertised_until: string | null
+          advertising_daily_spend: number
           closes_at: string | null
           company_id: string
           created_at: string
@@ -7674,10 +7676,13 @@ export type Database = {
           required_skills: Json
           staff_category: string
           status: string
+          total_advertising_spend: number
           updated_at: string
           weekly_wage: number
         }
         Insert: {
+          advertised_until?: string | null
+          advertising_daily_spend?: number
           closes_at?: string | null
           company_id: string
           created_at?: string
@@ -7695,10 +7700,13 @@ export type Database = {
           required_skills?: Json
           staff_category: string
           status?: string
+          total_advertising_spend?: number
           updated_at?: string
           weekly_wage?: number
         }
         Update: {
+          advertised_until?: string | null
+          advertising_daily_spend?: number
           closes_at?: string | null
           company_id?: string
           created_at?: string
@@ -7716,6 +7724,7 @@ export type Database = {
           required_skills?: Json
           staff_category?: string
           status?: string
+          total_advertising_spend?: number
           updated_at?: string
           weekly_wage?: number
         }
@@ -37253,6 +37262,10 @@ export type Database = {
         }[]
       }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
+      advertise_company_vacancy: {
+        Args: { p_daily_spend?: number; p_days?: number; p_vacancy_id: string }
+        Returns: string
+      }
       advertise_job: {
         Args: { p_days?: number; p_job_id: string }
         Returns: Json
