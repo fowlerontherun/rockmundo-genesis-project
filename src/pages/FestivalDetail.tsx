@@ -37,6 +37,14 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
    const [selectedTicketType, setSelectedTicketType] = useState<"day" | "weekend">("weekend");
    const [selectedDay, setSelectedDay] = useState(1);
    const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+   const [selectedTier, setSelectedTier] = useState<"general" | "vip" | "premium">("general");
+   const [activeTab, setActiveTab] = useState<string>("lineup");
+
+   const TIERS = [
+     { id: "general" as const, label: "General Admission", multiplier: 1, perks: "Standard festival access" },
+     { id: "vip" as const, label: "VIP", multiplier: 1.75, perks: "VIP lounge, dedicated bars & viewing decks" },
+     { id: "premium" as const, label: "Premium", multiplier: 3, perks: "All VIP perks + backstage & artist meet-and-greets" },
+   ];
  
    // Fetch festival details
    const { data: festival, isLoading } = useQuery({
@@ -213,7 +221,43 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
          </Card>
        </div>
  
-        <Tabs defaultValue="lineup" className="w-full">
+        {isUpcoming && !hasWeekendPass && (() => {
+          const basePrice = festival.ticket_price || 100;
+          const tierMult = TIERS.find(t => t.id === selectedTier)?.multiplier || 1;
+          const previewPrice = Math.round((selectedTicketType === "weekend" ? basePrice : basePrice * 0.45) * tierMult);
+          return (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Get Your Pass</span>
+                  {TIERS.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTier(t.id)}
+                      className={`px-2.5 py-1 rounded-md text-xs border transition ${
+                        selectedTier === t.id ? "border-primary bg-primary text-primary-foreground" : "border-border/50 hover:bg-muted/50"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">From</p>
+                    <p className="text-lg font-bold">${previewPrice.toLocaleString()}</p>
+                  </div>
+                  <Button size="sm" onClick={() => setActiveTab("tickets")}>
+                    <Ticket className="h-4 w-4 mr-1" /> Buy Tickets
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="lineup">Lineup</TabsTrigger>
             <TabsTrigger value="venue" className="flex items-center gap-1">
@@ -629,8 +673,9 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
           <TabsContent value="tickets" className="mt-6">
             {isUpcoming ? (() => {
               const basePrice = festival.ticket_price || 100;
-              const dayPrice = Math.round(basePrice * 0.45);
-              const weekendPrice = basePrice;
+              const tierMult = TIERS.find(t => t.id === selectedTier)?.multiplier || 1;
+              const dayPrice = Math.round(basePrice * 0.45 * tierMult);
+              const weekendPrice = Math.round(basePrice * tierMult);
               
               const ADD_ONS = [
                 { id: "early_access", label: "Early Access", description: "Enter 2 hours before general admission", price: Math.round(basePrice * 0.15) },
@@ -669,6 +714,26 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
                       </Badge>
                     ) : (
                       <>
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Tier</h4>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            {TIERS.map(t => (
+                              <Card
+                                key={t.id}
+                                className={`cursor-pointer transition-colors ${selectedTier === t.id ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : 'hover:border-primary/40'}`}
+                                onClick={() => setSelectedTier(t.id)}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-semibold text-sm">{t.label}</p>
+                                    <Badge variant="outline" className="text-[10px]">×{t.multiplier}</Badge>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground mt-1">{t.perks}</p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'day' ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary/40'}`}
                             onClick={() => setSelectedTicketType('day')}>
