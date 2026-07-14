@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.490",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "My Character no longer refuses to save with 'Username and display name are required' when the display name is blank. The form now only requires a username and auto-fills the display name from it if empty. Also moved useGameCalendar above the early returns to prevent a hook-order crash." },
+    ],
+  },
+  {
     version: "1.1.489",
     date: "2026-07-14",
     changes: [

@@ -244,13 +244,14 @@ const MyCharacterEdit = () => {
     }
 
     const nextUsername = usernameInput.trim();
-    const nextDisplayName = displayNameInput.trim();
+    const nextDisplayName = displayNameInput.trim() || nextUsername;
     const nextBio = bioInput.trim();
 
-    if (nextUsername.length === 0 || nextDisplayName.length === 0) {
-      setProfileError("Username and display name are required.");
+    if (nextUsername.length === 0) {
+      setProfileError("Username is required.");
       return;
     }
+
 
     setIsSavingProfile(true);
     setProfileError(null);
@@ -365,6 +366,8 @@ const MyCharacterEdit = () => {
     }
   };
 
+  const { data: calendarData } = useGameCalendar();
+
   if (loading) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center">
@@ -402,13 +405,13 @@ const MyCharacterEdit = () => {
     );
   }
 
-  const { data: calendarData } = useGameCalendar();
   const displayName = profile?.display_name || profile?.username || "Performer";
   const avatarUrl = (profile as any)?.avatar_url ?? undefined;
   const lifetimeXp = Number((xpWallet as XpWalletRow | null)?.lifetime_xp ?? 0);
   const xpSpent = Number((xpWallet as XpWalletRow | null)?.xp_spent ?? 0);
   const initialAge = (profile as any)?.age ?? 18;
   const characterAge = calendarData ? calculateInGameAge(initialAge, calendarData) : initialAge;
+
 
   return (
     <FMPageScaffold
