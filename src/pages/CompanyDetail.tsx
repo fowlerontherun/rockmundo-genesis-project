@@ -31,7 +31,10 @@ import { CompanyStorefrontManager } from "@/components/company/CompanyStorefront
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useCompanyLabels } from "@/hooks/useCompanyLabels";
+import { useCompanyLabels, useUnlinkedOwnedLabels } from "@/hooks/useCompanyLabels";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useCompanyTransactions } from "@/hooks/useCompanyFinance";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
@@ -43,14 +46,30 @@ const CompanyDetailContent = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
-  const { userId } = useActiveProfile();
-  
+  const { userId, profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+
   const { data: company, isLoading } = useCompany(companyId);
   const { data: subsidiaries = [], isLoading: subsLoading } = useCompanySubsidiaries(
     company?.company_type === 'holding' ? companyId : undefined
   );
   const { data: labels = [] } = useCompanyLabels(companyId);
+  const { data: unlinkedLabels = [] } = useUnlinkedOwnedLabels(profileId);
   const { data: transactions = [] } = useCompanyTransactions(companyId);
+
+  const linkLabelMutation = useMutation({
+    mutationFn: async (labelId: string) => {
+      if (!companyId) throw new Error("Missing company");
+      const { error } = await supabase.from("labels").update({ company_id: companyId }).eq("id", labelId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Label linked to company");
+      queryClient.invalidateQueries({ queryKey: ["company-labels", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-owned-labels", profileId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -355,6 +374,35 @@ const CompanyDetailContent = () => {
                           {formatCurrency(label.balance)}
                         </p>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isHolding && unlinkedLabels.length > 0 && (
+                <div className="mt-6 pt-4 border-t space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Your unlinked labels ({unlinkedLabels.length})
+                  </p>
+                  {unlinkedLabels.map((label) => (
+                    <div key={label.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <Disc className="h-4 w-4 text-purple-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{label.name}</p>
+                          <p className="text-xs text-muted-foreground">{label.headquarters_city || "No HQ"}</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={linkLabelMutation.isPending}
+                        onClick={() => linkLabelMutation.mutate(label.id)}
+                      >
+                        Link to company
+                      </Button>
                     </div>
                   ))}
                 </div>

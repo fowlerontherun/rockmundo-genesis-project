@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.460",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Company vacancies can be created again.** Restored the missing `manage_company_vacancy`, `review_company_application`, and `dismiss_company_employee` database functions with owner authorisation checks — the recruitment lifecycle panel was erroring with a schema-cache miss for every action." },
+      { type: 'improvement', description: "**Record labels you own now surface on the holding company page.** The Record Labels tab lists any of your labels that aren't yet linked to a company, with a one-click **Link to company** button — no more empty section when the label just wasn't attached yet." },
+    ],
+  },
+  {
     version: "1.1.459",
     date: "2026-07-14",
     changes: [
