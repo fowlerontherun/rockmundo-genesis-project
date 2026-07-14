@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.467",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Underworld store purchases work again.** Purchases and active boosts were being inserted with `user_id = profile_id`, which failed the RLS `auth.uid() = user_id` check and blocked buying any listed item (both cash and crypto payments). Inserts now use the authenticated `auth.uid()` for `user_id` and the character's `profile_id` for `profile_id`, matching the read queries and RLS policies." },
+    ],
+  },
+  {
     version: "1.1.466",
     date: "2026-07-14",
     changes: [
