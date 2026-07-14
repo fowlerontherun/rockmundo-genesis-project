@@ -714,6 +714,26 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
                       </Badge>
                     ) : (
                       <>
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Tier</h4>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            {TIERS.map(t => (
+                              <Card
+                                key={t.id}
+                                className={`cursor-pointer transition-colors ${selectedTier === t.id ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : 'hover:border-primary/40'}`}
+                                onClick={() => setSelectedTier(t.id)}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-semibold text-sm">{t.label}</p>
+                                    <Badge variant="outline" className="text-[10px]">×{t.multiplier}</Badge>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground mt-1">{t.perks}</p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <Card className={`cursor-pointer transition-colors ${selectedTicketType === 'day' ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary/40'}`}
                             onClick={() => setSelectedTicketType('day')}>
