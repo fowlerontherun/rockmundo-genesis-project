@@ -16,7 +16,7 @@ export default function MobileMe() {
     { title: "Inventory", icon: <Backpack className="h-5 w-5" />, to: "/inventory" },
     { title: "Wardrobe", icon: <Shirt className="h-5 w-5" />, to: "/clothing-shop" },
     { title: "Achievements", icon: <Trophy className="h-5 w-5" />, to: "/achievements" },
-    { title: "Settings", icon: <Settings className="h-5 w-5" />, to: "/settings" },
+    { title: "Settings", icon: <Settings className="h-5 w-5" />, to: "/character/profile/edit" },
   ];
 
   const toDesktop = () => {

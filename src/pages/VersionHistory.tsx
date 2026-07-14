@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.521",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Mobile UI: fixed broken quick action links across the Home dashboard, FAB menu, Career/Social/World/Me pages. Corrected routes now point to real destinations: Jam → /jams, Message → /social/messages, Shop → /gear-shop, Book Studio → /recording-studio, Rehearsal → /rehearsals, Friends → /social/friends, My Band → /band, Current City → /world/current-city, Companies → /companies/directory, Songs → /song-manager, Settings → /character/profile/edit." },
+    ],
+  },
+  {
     version: "1.1.520",
     date: "2026-07-14",
     changes: [

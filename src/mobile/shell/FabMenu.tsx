@@ -34,14 +34,14 @@ export const FabMenu = () => {
     { key: "practice", label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/skills" },
     { key: "travel", label: "Travel", icon: <Plane className="h-5 w-5" />, to: "/travel" },
     { key: "write", label: "Write Song", icon: <PenLine className="h-5 w-5" />, to: "/songwriting" },
-    { key: "jam", label: "Jam", icon: <Music4 className="h-5 w-5" />, to: "/jam" },
-    { key: "message", label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/messages" },
-    { key: "book-studio", label: "Book Studio", icon: <Mic2 className="h-5 w-5" />, to: "/recording" },
-    { key: "book-rehearsal", label: "Rehearsal", icon: <CalendarClock className="h-5 w-5" />, to: "/rehearsal" },
+    { key: "jam", label: "Jam", icon: <Music4 className="h-5 w-5" />, to: "/jams" },
+    { key: "message", label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/social/messages" },
+    { key: "book-studio", label: "Book Studio", icon: <Mic2 className="h-5 w-5" />, to: "/recording-studio" },
+    { key: "book-rehearsal", label: "Rehearsal", icon: <CalendarClock className="h-5 w-5" />, to: "/rehearsals" },
     { key: "twaater", label: "Twaater", icon: <Twitter className="h-5 w-5" />, to: "/twaater" },
     { key: "sleep", label: "Sleep", icon: <Moon className="h-5 w-5" />, to: "/wellness" },
     { key: "eat", label: "Eat", icon: <Utensils className="h-5 w-5" />, to: "/wellness" },
-    { key: "shop", label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/marketplace" },
+    { key: "shop", label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/gear-shop" },
   ];
   const actions = orderFor(location.pathname, base);
 

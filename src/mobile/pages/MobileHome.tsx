@@ -34,13 +34,13 @@ export default function MobileHome() {
     { label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/skills" },
     { label: "Write Song", icon: <PenLine className="h-5 w-5" />, to: "/songwriting" },
     { label: "Travel", icon: <Plane className="h-5 w-5" />, to: "/travel" },
-    { label: "Jam", icon: <Music4 className="h-5 w-5" />, to: "/jam" },
-    { label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/messages" },
+    { label: "Jam", icon: <Music4 className="h-5 w-5" />, to: "/jams" },
+    { label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/social/messages" },
     { label: "Twaater", icon: <Twitter className="h-5 w-5" />, to: "/twaater" },
     { label: "Sleep", icon: <Moon className="h-5 w-5" />, to: "/wellness" },
     { label: "Eat", icon: <Utensils className="h-5 w-5" />, to: "/wellness" },
     { label: "Work", icon: <Briefcase className="h-5 w-5" />, to: "/employment" },
-    { label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/marketplace" },
+    { label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/gear-shop" },
   ];
 
   const refresh = () => {

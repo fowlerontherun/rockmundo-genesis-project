@@ -13,9 +13,9 @@ export default function MobileSocial() {
   );
 
   const rows = [
-    { title: "Friends", subtitle: "See who's online", icon: <Users className="h-5 w-5" />, to: "/friends" },
-    { title: "My Band", subtitle: "Chemistry, chat, and roster", icon: <UsersRound className="h-5 w-5" />, to: "/bands" },
-    { title: "Chat", subtitle: "Direct messages", icon: <MessageSquare className="h-5 w-5" />, to: "/messages" },
+    { title: "Friends", subtitle: "See who's online", icon: <Users className="h-5 w-5" />, to: "/social/friends" },
+    { title: "My Band", subtitle: "Chemistry, chat, and roster", icon: <UsersRound className="h-5 w-5" />, to: "/band" },
+    { title: "Chat", subtitle: "Direct messages", icon: <MessageSquare className="h-5 w-5" />, to: "/social/messages" },
     { title: "Mail", subtitle: "Inbox and offers", icon: <Mail className="h-5 w-5" />, to: "/inbox" },
     { title: "Twaater", subtitle: "Post and trends", icon: <Twitter className="h-5 w-5" />, to: "/twaater" },
   ];
