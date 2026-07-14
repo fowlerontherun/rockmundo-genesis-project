@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.475",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Holding company detail now surfaces labels attached to any subsidiary label-company, not just those linked directly to the holding. Labels list on the holding page will show your owned Record Labels again." },
+    ],
+  },
+  {
     version: "1.1.474",
     date: "2026-07-14",
     changes: [
