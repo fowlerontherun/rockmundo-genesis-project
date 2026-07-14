@@ -33,7 +33,7 @@ export class ReplayClock {
   seek(ms: number) { this.basePosition = Math.max(0, Math.min(this.durationMs, ms)); this.baseNow = this.now(); }
   setSpeed(speed: PlaybackSpeed) { this.basePosition = this.position(); this.baseNow = this.now(); this.speed = speed; }
   restart() { this.basePosition = 0; this.baseNow = this.now(); }
-  position() { if (!this.playing) return this.basePosition; const elapsed = Math.max(0, Math.min(60_000, this.now() - this.baseNow)); return Math.max(0, Math.min(this.durationMs, this.basePosition + elapsed * this.speed)); }
+  position() { if (!this.playing) return this.basePosition; const elapsed = Math.max(0, this.now() - this.baseNow); return Math.max(0, Math.min(this.durationMs, this.basePosition + elapsed * this.speed)); }
   isPlaying() { return this.playing && this.position() < this.durationMs; }
   getSpeed() { return this.speed; }
 }
