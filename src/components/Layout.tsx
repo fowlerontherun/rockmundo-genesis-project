@@ -32,6 +32,12 @@ const Layout = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: dataLoading, error: profileError } = useGameData();
   const { profileId } = useActiveProfile();
+  const isMobile = useIsMobileDevice();
+
+  if (isMobile) {
+    return <Navigate to="/mobile" replace />;
+  }
+
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
