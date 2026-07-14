@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.489",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Applying to join a band no longer fails with 'column reference band_id is ambiguous'. The submit_band_application RPC now aliases the incoming band_id parameter and qualifies all column references." },
+    ],
+  },
+  {
     version: "1.1.488",
     date: "2026-07-14",
     changes: [
