@@ -11,16 +11,11 @@ export const ModuleTabs = () => {
   const active = findModuleForPath(pathname);
   const modules = FM_MODULES.filter((m) => (m.primary ?? true) && (m.id !== "admin" || isAdmin()));
 
-  const openModule = (modId: string, rootPath: string) => {
-    // Restore the player's last context inside this module if we have one,
-    // otherwise fall back to its hub. Don't restore for the already-active
-    // module — that becomes a no-op or jumps the user unexpectedly.
-    if (modId === active.id) {
-      navigate(rootPath);
-      return;
-    }
-    const last = modId === "character" ? null : getLastModulePath(modId);
-    navigate(last || rootPath);
+  const openModule = (_modId: string, rootPath: string) => {
+    // Top-level module tabs always land on the module's overview/hub so the
+    // player gets a consistent entry point. Sub-page context is still
+    // recoverable via the Quick Actions "Resume last page" shortcut.
+    navigate(rootPath);
   };
 
   return (
