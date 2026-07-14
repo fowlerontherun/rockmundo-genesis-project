@@ -63,6 +63,7 @@ export const useEquipPlayerEquipment = () => {
       return { id: data.id, isEquipped: data.is_equipped } satisfies EquipGearResult;
     },
     onSuccess: async (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
 
       if (variables.equip && variables.activityMessage) {

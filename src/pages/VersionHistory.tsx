@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.458",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Gear equip status now refreshes immediately.** The equip mutation was invalidating the React Query cache under `[\"player-equipment\", profileId]`, but the gear page's store keys its query by the auth `userId`, so the UI kept showing stale data until you navigated away. The mutation now invalidates both keys." },
+    ],
+  },
+  {
     version: "1.1.457",
     date: "2026-07-14",
     changes: [
