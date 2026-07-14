@@ -8,7 +8,7 @@ describe("social safety configuration", () => {
   });
 
   it("marks urgent report categories that require real-world safety messaging", () => {
-    const urgent = REPORT_CATEGORIES.filter((category) => category.emergency).map((category) => category.value);
+    const urgent = REPORT_CATEGORIES.filter((category) => "emergency" in category && category.emergency).map((category) => category.value);
     expect(urgent).toContain("threats_intimidation");
     expect(REPORT_CATEGORIES.map((category) => category.value)).toContain("personal_information");
   });

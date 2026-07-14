@@ -1,6 +1,4 @@
-import type { TranslationKeys } from './en';
-
-export const it: TranslationKeys = {
+export const it = {
   // Common UI elements
   common: {
     loading: "Caricamento...",

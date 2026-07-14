@@ -8,7 +8,7 @@ export const useManualGigStart = () => {
 
   return useMutation({
     mutationFn: async (gigId: string) => {
-      const { data, error } = await supabase.rpc("start_gig_authoritative", {
+      const { data, error } = await (supabase as any).rpc("start_gig_authoritative", {
         p_gig_id: gigId,
       });
 

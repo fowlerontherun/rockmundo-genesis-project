@@ -1,6 +1,4 @@
-import type { TranslationKeys } from './en';
-
-export const zh: TranslationKeys = {
+export const zh = {
   common: {
     loading: "加载中...",
     error: "错误",

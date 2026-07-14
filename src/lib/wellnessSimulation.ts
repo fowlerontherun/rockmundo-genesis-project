@@ -64,7 +64,7 @@ function applyActivity(values: WellnessCoreValues, activity: string, seed: numbe
 
 export function simulateWellnessScenario(scenario: WellnessSimulationScenario, seed = 1): WellnessSimulationResult {
   const config = scenarioDefaults[scenario];
-  const startingState = { ...createDefaultWellnessCore(), ...config };
+  const startingState: WellnessCoreValues = { ...createDefaultWellnessCore(), ...config };
   let current = startingState;
   const steps = config.activities.map((activity, index) => {
     const before = current;

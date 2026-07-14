@@ -32,10 +32,10 @@ export function GigViewerShell({ gigId, experience, open, onViewResult, onClose,
   if (result.state === "unsupported_version") return <GigViewerFallback title="Unsupported replay version" body="This stored replay uses a viewer or event-schema version this client does not support. Use the report or text timeline fallback." onResult={onViewResult} onClose={onClose} />;
   if (result.state === "failed") return <GigViewerFallback title={result.reason === "malformed_replay" ? "Malformed replay" : "Replay generation failed"} body="The stored replay cannot be rendered safely. The authoritative result report remains available." onRetry={() => query.refetch()} onResult={onViewResult} onClose={onClose} />;
   if (!result.replay) return <GigViewerFallback title="Malformed replay" body="Replay metadata loaded without a valid payload." onResult={onViewResult} onClose={onClose} />;
-  return <ReadyReplay replay={result.replay} experience={experience ?? null} reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} onViewResult={onViewResult} onClose={onClose} />;
+  return <ReadyReplay replay={result.replay} experience={experience ?? null} open={open} reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} onViewResult={onViewResult} onClose={onClose} />;
 }
 
-function ReadyReplay({ replay, experience, reducedMotion, setReducedMotion, onViewResult, onClose }: any) {
+function ReadyReplay({ replay, experience, open, reducedMotion, setReducedMotion, onViewResult, onClose }: any) {
   const playback = useGigReplayPlayback(replay); const state = playback.state; const story = useMemo(() => buildStoryModel(replay, experience), [replay, experience]); const snapshot = useMemo(() => state ? deriveStorySnapshot(story, state.positionMs, reducedMotion) : null, [story, state?.positionMs, reducedMotion]); const audio = useGigViewerAudio({ experience, snapshot, replaySeed: replay.simulationSeed, isPlaying: !!state?.isPlaying, speed: playback.speed, open });
   const stageType = useMemo(() => selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: (experience?.gig?.venue as any)?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }), [experience?.gig?.venue?.name, experience?.gig?.venue?.capacity]);
   useCrowdAmbience({ enabled: !!audio.enabled, muted: !!audio.muted, volume: typeof audio.volume === "number" ? audio.volume : 0.6, isPlaying: !!state?.isPlaying, snapshot, stageType });

@@ -148,7 +148,7 @@ export default function PerformGig() {
         setBandTotalFans(0);
       }
 
-      if (existingOutcome && gigData.result_ready_at) {
+      if (existingOutcome && (gigData as any).result_ready_at) {
         setOutcome(existingOutcome);
         setShowOutcome(false);
       } else {
