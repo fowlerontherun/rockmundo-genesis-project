@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
 import heroImage from "@/assets/landing-hero.jpg";
 import { version } from "@/components/VersionHeader";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 const FEATURES = [
   {
@@ -91,8 +92,7 @@ const STATS = [
 ];
 
 const isDev = import.meta.env.DEV;
-const DISCORD_URL = "https://discord.gg/lovable-dev";
-const SERVER_STATUS: "up" | "degraded" | "down" = "down";
+const DEFAULT_DISCORD_URL = "https://discord.gg/lovable-dev";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -102,6 +102,10 @@ const Landing = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { data: siteConfig } = useSiteConfig();
+  const serverStatus = siteConfig?.server.status ?? "up";
+  const serverMessage = siteConfig?.server.message ?? "";
+  const announcement = siteConfig?.announcement;
 
 
   const handleLogin = async (e: FormEvent) => {
@@ -176,48 +180,53 @@ const Landing = () => {
       </header>
 
       {/* Server status + Beta V2 announcement banners */}
-      {SERVER_STATUS === "down" && (
-        <div className="bg-destructive/15 border-b border-destructive/40 text-destructive">
+      {/* Server status + announcement banners (admin-controlled) */}
+      {(serverStatus === "down" || serverStatus === "degraded") && (
+        <div className={`${serverStatus === "down" ? "bg-destructive/15 border-destructive/40 text-destructive" : "bg-yellow-500/10 border-yellow-500/40 text-yellow-500"} border-b`}>
           <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-start sm:items-center gap-2.5 text-xs sm:text-sm font-oswald">
             <ServerCrash className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0" />
             <div className="flex-1 leading-snug">
-              <span className="font-semibold mr-1.5">Server status · Down</span>
-              <span className="opacity-90">
-                RockMundo is currently offline for maintenance. Logins and
-                gameplay are unavailable.
+              <span className="font-semibold mr-1.5">
+                Server status · {serverStatus === "down" ? "Down" : "Degraded"}
               </span>
+              <span className="opacity-90">{serverMessage}</span>
             </div>
           </div>
         </div>
       )}
-      <div className="bg-primary/10 border-b border-primary/30">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm font-oswald">
-          <div className="flex items-start sm:items-center gap-2 flex-1 leading-snug">
-            <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
-            <span>
-              <span className="font-semibold text-primary mr-1.5">
-                Open Play Test · Friday 17 July
+      {announcement?.enabled && (announcement.title || announcement.body) && (
+        <div className="bg-primary/10 border-b border-primary/30">
+          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm font-oswald">
+            <div className="flex items-start sm:items-center gap-2 flex-1 leading-snug">
+              <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
+              <span>
+                {announcement.title && (
+                  <span className="font-semibold text-primary mr-1.5">
+                    {announcement.title}
+                  </span>
+                )}
+                {announcement.body && (
+                  <span className="text-foreground/90">{announcement.body}</span>
+                )}
               </span>
-              <span className="text-foreground/90">
-                A 1-week public play test starts Friday 17 July 2026 — no Beta
-                code needed. Check Discord for details.
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2 sm:shrink-0">
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="h-7 px-2.5 font-oswald tracking-wide text-[10px]"
-            >
-              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-3.5 w-3.5 mr-1" /> Discord
-              </a>
-            </Button>
+            </div>
+            {announcement.cta_label && announcement.cta_url && (
+              <div className="flex items-center gap-2 sm:shrink-0">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2.5 font-oswald tracking-wide text-[10px]"
+                >
+                  <a href={announcement.cta_url || DEFAULT_DISCORD_URL} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-3.5 w-3.5 mr-1" /> {announcement.cta_label}
+                  </a>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Hero */}
       <section

@@ -9,7 +9,7 @@ import {
   AlertCircle, CheckCircle2, Clock, TrendingUp, Settings, Wrench, Sparkles,
   Radio, Gift, Zap, MessageSquare, Star, Package, Briefcase, Headphones,
   Building2, Video, Gauge, Megaphone, Disc3, Guitar, ShoppingBag, LayoutDashboard,
-  Landmark, Crown, Newspaper, HeartPulse
+  Landmark, Crown, Newspaper, HeartPulse, ServerCog
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +85,7 @@ const AdminDashboard = () => {
 
   const quickActions = [
     // Core Admin
+    { label: "System Status & Banner", path: "/admin/system-status", icon: ServerCog },
     { label: "Game Balance", path: "/admin/game-balance", icon: Settings },
     { label: "Player Management", path: "/admin/players", icon: Users },
     { label: "Release Admin", path: "/admin/releases", icon: Music },
