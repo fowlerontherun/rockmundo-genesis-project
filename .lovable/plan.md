@@ -1,102 +1,91 @@
+## Festivals System Expansion Plan
 
-# Company System Expansion Plan
+Turn festivals into a marquee event with full ownership economics, deep booking/finance/operations tooling, and a unified admin console. Players can either apply to play at NPC/admin-run festivals or purchase and personally operate their own.
 
-## Current State
+### 1. Ownership & Marketplace (new)
 
-Rockmundo already has 8 company types: `holding`, `label`, `security`, `factory` (merch), `logistics`, `venue`, `rehearsal`, `recording_studio`. They function mostly as private money sinks — owners pay weekly costs, get internal revenue, but **the world barely changes around them**. NPCs and other players seldom interact with player-owned companies, prices are static, no market share matters, and several categories from Popmundo are missing entirely.
+- Extend `public.festivals` with:
+  - `owner_type` ('system' | 'player' | 'company'), `owner_profile_id`, `owner_company_id`
+  - `sale_status` ('not_for_sale' | 'listed' | 'sold'), `list_price`, `annual_operating_cost`, `prestige_tier` (1–5)
+  - `founded_year`, `next_edition_start`, `edition_number`, `cancellation_reason`
+- New tables:
+  - `festival_sale_listings` — active for-sale festivals (price, listed_by, notes)
+  - `festival_purchase_offers` — player bids on system/player festivals
+  - `festival_ownership_history` — audit of transfers
+  - `festival_staff` — festival-owned staff: promoters, bookers, safety officers, medics, sound engineers (wage, morale, skill)
+  - `festival_insurance_policies` — coverage type, premium, payout ceiling, weather rider
+  - `festival_permits` — city permit status, permit fee, safety inspection date
+- RPC: `purchase_festival(festival_id, buyer_profile_id)` — transfers ownership, moves treasury, logs history.
 
-## What Popmundo Does That We Don't
+### 2. Owner Operations Console (new player page)
 
-Popmundo treats companies as the **backbone of the simulated world**. Key mechanics worth copying:
+New route `/festivals/manage/:festivalId` (owner-only) with tabs:
 
-1. Companies are publicly listed and rated; every player can shop/use them.
-2. Reputation, quality and price drive NPC + player demand (visible "market share").
-3. Workers (players) clock in shifts for wages — owner sets shift wage, quality bonus, and tip share.
-4. Many more company types tied to lifestyle: bars, restaurants, clothing stores, hotels, hairdressers, instrument shops, tattoo parlours, gyms, hospitals/clinics, newspapers, radio stations, magazines, churches, gambling halls, taxi firms, real-estate agencies, modelling agencies, schools/universities.
-5. Companies pay city taxes that feed the city treasury (we have treasury but no inflow from player companies).
-6. City laws (mayor) directly affect company tax rate, opening hours, alcohol/age limits.
-7. Boards of directors, share issuance, hostile takeovers and stock exchange.
+- **Overview** — key KPIs, current edition status, checklist (permits, insurance, minimum booked bands, staffing).
+- **Booking** — send/receive slot offers, review applications, drag-and-drop stage schedule builder over `festival_stage_slots`, set headliner, negotiate fees via existing `festival_offer_negotiations`.
+- **Stages & Production** — add/remove stages, choose capacity, rent stage equipment (ties into `stage_equipment_catalog`).
+- **Tickets & Pricing** — set tiered ticket prices (GA, VIP, weekend, day), presale windows, capacity per stage.
+- **Sponsors** — solicit sponsor deals from `sponsorship_brands`, accept/counter offers, tier placement.
+- **Staff & Security** — hire/fire festival staff and security firm via `security_contracts`.
+- **Finances** — live P&L per edition, cash flow calendar, expense ledger.
+- **Marketing** — buy media/radio/DikCok campaigns to drive attendance forecast.
+- **Post-event** — reviews, ratings, payout summary, next-edition planner.
 
-## Plan
+### 3. Deep Finances
 
-### Phase 1 — Make existing companies matter in the world (foundation)
+- Expand `festival_finances` with columns for: staff_wages, security_costs, permit_fees, insurance_premium, stage_rental, equipment_rental, marketing_spend, artist_guarantees, artist_bonuses, sponsor_income, ticket_income_ga, ticket_income_vip, merch_cut_income, food_beverage_income, cleanup_cost, refund_liability, tax_paid.
+- New `festival_expense_ledger` (line-item entries with category, amount_cents, party, edition).
+- Weekly cron `settle_festival_finances`:
+  - Pay staff wages, insurance premium, permit renewals.
+  - Post artist guarantees on performance completion.
+  - Distribute sponsor payouts on milestones.
+  - Deduct festival cut of merch (`festival_merch_sales.festival_cut`) into treasury.
+  - Handle refund liability if festival cancels.
+- Bankruptcy path: if treasury negative for N weeks → festival auto-listed at fire-sale price, staff unpaid, reputation hit.
 
-- Add a **public marketplace registry**: every active company surfaces on a city/world directory with reputation, quality, price tier, capacity and "now hiring" flag. NPCs and other players pick services from this registry instead of hard-coded NPCs.
-- Add **`company_market_demand`** + nightly resolver that allocates customer volume by `reputation * quality / price * city_population_factor` (Popmundo's core loop).
-- Pipe **city tax** from every company's weekly revenue into `city_treasury_ledger` (already exists). Mayor laws drive the rate; `CORPORATE_TAX_RATES` becomes the floor.
-- Add **shift work for players** at any company (extends current `company_employees` + `shift_history`): owner posts shifts with wage + skill requirement, players clock in for cash + skill XP. Connects employment system to the company system (today they are separate).
-- Add **price controls** owner-side (price tier ↔ demand curve) and **quality investments** (upgrades raise quality stat).
+### 4. Booking Pipeline Upgrades
 
-### Phase 2 — Expand each existing type with depth
+- Two-way marketplace: owners post open slots; bands apply. Owners can also directly invite bands via `festival_slot_offers` with guarantee + bonus terms (already partly present — surface fully in UI).
+- Requirements per slot: min fame, genre fit, minimum popularity in host country.
+- Auto-negotiation NPC logic for system-owned festivals (bands accept/reject based on fame/fee heuristic).
+- Rider fulfillment tie-in with existing `gig_rider_fulfillment` + `band_riders` (owner sees costs).
+- Conflict detection: prevent double-booking bands across overlapping festivals.
 
-| Type | New mechanics |
-|---|---|
-| Label | Public artist scouting board, A&R offers visible to all unsigned bands, label chart share KPI, distribution deals with retail stores (Phase 3). |
-| Security | Public bid board for gigs/festivals/clubs; reputation rises with incident-free events; can be hired by mayor for city safety contracts. |
-| Merch Factory | Wholesale catalogue listed publicly; quality tier affects every merch order in the world; raw-material supply chain from new Textile/Print suppliers. |
-| Logistics | Tour transport bidding marketplace; routes block on weather; can sub-contract to other player companies. |
-| Venue | Already public; add booking marketplace open to all bands, dynamic ticket revenue split, residencies. |
-| Rehearsal | Hourly booking board; quality tier modifies band cohesion gains. |
-| Recording Studio | Public session marketplace, producer roster visible, equipment tier modifies song quality. |
-| Holding | Stock issuance, dividends to shareholders, hostile takeover bids on other holdings. |
+### 5. Gig Gameplay Integration
 
-### Phase 3 — New Popmundo-style company types
+- Festival performances feed the existing Gig Viewer with a `festival_ground` layout preset and multi-stage backstage view.
+- Backstage RP events (`festival_backstage_events`) exposed in the pre-show tab.
+- Cross-band rivalry surface (`festival_rivalries`) — bands on same day compete for crowd share; winner earns fame + owner bonus.
+- Weather integration (`seasonal_weather_patterns`) impacts attendance and can trigger insurance claims.
+- Festival-exclusive merch drops (already in `FestivalExclusiveShop`) tied to owner-set royalty share.
 
-Add these as new `company_type` enum values with their own catalogues, upgrades and revenue loops:
+### 6. Unified Admin Console
 
-1. **Bar / Pub** — sells drinks; NPC traffic by district; can host open-mic; alcohol-law constrained.
-2. **Restaurant** — meals restore wellness energy; chef quality drives rating; ties into dating/marriage venues.
-3. **Clothing Store / Boutique** — retails player-designed `player_clothing_items`; owner sets price & territory; supplies fashion gigs.
-4. **Hotel** — books rooms for touring bands; affects tour fatigue + cost; star rating mechanic.
-5. **Hairdresser / Stylist** — modifies avatar look + small charisma buff; appointment slots.
-6. **Tattoo Parlour** — already has artists; convert to player-ownable company wrapping `tattoo_parlours`.
-7. **Gym** — wellness fitness gains; subscription model + day passes.
-8. **Hospital / Clinic** — treats ailments faster; player-owned competes with public hospital; insurance contracts.
-9. **Newspaper** — already exists as content table; add owner type so players publish articles, run ads, sway elections.
-10. **Radio Station / Magazine / Podcast Network** — convert existing tables into ownable media companies with airplay influence over charts.
-11. **Instrument / Gear Shop** — retails `equipment_catalog` items; regional pricing; trade-ins.
-12. **Taxi / Rideshare Co.** — short-haul travel inside city; complements logistics.
-13. **Real Estate Agency** — brokers `lifestyle_properties` & `housing_market_prices`; earns commission.
-14. **Modelling Agency** — already a table; ownable, scouts NPC + player models for `modeling_gigs`.
-15. **School / Music Academy** — paid lessons (skill XP) competing with `education_mentors`.
-16. **Casino / Gambling Hall** — wraps `casino_transactions`; house edge revenue, addiction risk warnings.
-17. **Crypto Exchange / Brokerage** — earns fees on `token_transactions`.
-18. **PR / Marketing Agency** — wraps `pr_consultants`; sells campaigns to bands.
-19. **Talent Agency** — books gigs/film/tv on behalf of artists for a cut.
-20. **Sponsorship Brand Co.** — issues `sponsorship_offers` instead of NPC-only.
+Consolidate `FestivalAdmin.tsx` + `FestivalsAdmin.tsx` into a single `/admin/festivals` route with tabs:
 
-### Phase 4 — World impact systems (cross-cutting)
+- **World Roster** — list all festivals (owner type, city, status, next edition, treasury, prestige).
+- **Create / Edit** — full form incl. new fields, seed batches by region/genre.
+- **Ownership** — force-transfer, put up for auction, seize from inactive owners, set reserve price.
+- **Bookings** — global view of all offers/applications, force-approve, mediate disputes.
+- **Finances** — cross-festival P&L, subsidy grants, tax rate config.
+- **Simulation** — run edition preview (attendance/revenue forecast) and one-click "advance to next edition".
+- Delete the redundant legacy pages after migration.
 
-- **City impact**: each company contributes to city `employment_rate`, `nightlife_score`, `culture_score`, `tax_revenue`. Population growth formula already exists — feed these scores into it.
-- **Market share & rankings**: extend `company_market_rankings` to all new types; weekly leaderboard per city per type.
-- **Rivalries & sabotage**: extend `company_rivalries` to trigger price wars and reputation hits.
-- **Mayor laws → companies**: tax rate, minimum wage, opening hours, alcohol licensing affect P&L for relevant types.
-- **News loop**: company milestones (IPO, bankruptcy, takeover, hiring spree) auto-publish to `newspapers` + `activity_feed`.
-- **Stock exchange (stretch)**: extend `crypto_tokens` table pattern to company shares; daily price based on revenue, reputation, news.
+### 7. UI Surfacing
 
-### Phase 5 — UI / discovery
+- Add a "Festivals" hub tile linking to `/festivals` browser; browser shows Owned / Attending / Watchlist / Marketplace tabs.
+- Landing widget on WorldPulse listing upcoming top-prestige festivals.
+- Notifications for: purchase-offer received, slot application received, insurance claim, staff quitting, weather warning.
 
-- New **World Companies** directory page (filter by city/type/rating) — like the Cities Treasury page.
-- Company detail page gets public-facing "Storefront" tab (services, prices, shifts open, reviews).
-- Player profile gets "Career" tab showing shifts worked and shares held.
-- Hub tile + sidebar entries under Business module.
+### Technical Notes
 
-## Technical Notes
+- All new tables use `profile_id` where player-scoped, follow existing RLS/GRANT pattern (`authenticated` + `service_role`).
+- Prices stored in cents (`_cents` suffix) with `Math.round(dollars * 100)`.
+- Use SECURITY DEFINER for `purchase_festival`, `advance_festival_edition`, `settle_festival_finances`.
+- Reuse existing `sponsorship_brands`, `security_contracts`, `stage_equipment_catalog`, `festival_merch_sales`, `festival_backstage_events`, `festival_rivalries` — no duplicate schemas.
+- Cron entry added to `cron_job_config` for weekly settlement + daily edition rollover.
+- Bump version to **v1.1.499**; add VersionHistory entry.
 
-- New tables: `company_market_demand`, `company_storefront`, `company_shifts`, `company_reviews`, `company_shares`, `company_dividends`, `restaurant_menus`, `bar_inventory`, `hotel_rooms`, `clothing_store_inventory`, `instrument_shop_inventory`, plus a per-type config row in `company_type_definitions`.
-- Migrate the `company_type` text column to driven-by-catalogue (`company_type_definitions`) so adding new types no longer needs code-side enum changes; keep TS union as derived.
-- Extend `COMPANY_CREATION_COSTS`, `CORPORATE_TAX_RATES`, `COMPANY_TYPE_INFO` to cover all new types.
-- New nightly cron `resolve_company_demand` allocates NPC traffic + writes revenue + city tax.
-- Public read RLS on storefront/registry tables; owner-only write.
-- All money in cents-safe rounding per project memory.
-- Update `HowToPlayDialog` Business tab, version bump per release, and `VersionHistory` entry per phase.
+### Rollout
 
-## Rollout Order
-
-1. Phase 1 (foundation: registry, shifts, tax pipe, demand resolver).
-2. Phase 2 (deepen existing 8 types — one PR per type).
-3. Phase 3 in waves: nightlife (bar/restaurant/hotel/casino), retail (clothing/instrument/gear), services (gym/clinic/stylist/tattoo), media (newspaper/radio/magazine), agencies (PR/talent/modelling/real-estate/school), finance (exchange/brokerage).
-4. Phase 4 cross-cutting world impact + mayor law hooks.
-5. Phase 5 directory + storefront UI.
-
-Each phase ships independently with a version bump and changelog entry.
+Delivered in one build session (schema migration → RPCs → owner console → admin unification → hub surfacing → version bump), verified with `npm run typecheck` and Supabase linter.
