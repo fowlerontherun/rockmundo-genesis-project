@@ -203,8 +203,11 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
        </div>
  
         <Tabs defaultValue="lineup" className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="lineup">Lineup</TabsTrigger>
+            <TabsTrigger value="venue" className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> Venue
+            </TabsTrigger>
             <TabsTrigger value="tickets" className="flex items-center gap-1">
               <Ticket className="h-3 w-3" /> Tickets
             </TabsTrigger>
