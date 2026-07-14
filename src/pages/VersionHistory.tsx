@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.466",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "**Top-level module tabs always land on the overview.** Clicking Character, Music, Band & Live, Career, Media, World or Social in the primary nav now goes to that module's hub every time instead of restoring the last-visited sub-page (which made the tab appear to jump to the first item in the list). Sub-page context is still available via the Quick Actions **Resume last page** shortcut." },
+    ],
+  },
+  {
     version: "1.1.465",
     date: "2026-07-14",
     changes: [
