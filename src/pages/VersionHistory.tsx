@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.515",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Verified `GigExperienceDTO` already declares `postConsequences: GigPostConsequencesDTO` and every DTO builder populates it — service mapper (`mapGigExperience`), legacy adapter (`legacyToExperience` with `legacyPostConsequences`), admin fixture (`GigViewerDemo.fixtureExperience`), and the `GigOutcomeReport` test factory. No `GigOutcomeReport` type errors remained. Removed a stale `@testing-library/jest-dom` entry from `tsconfig.app.json` `types` (the package's `/vitest` subpath imported in `vitest.setup.ts` augments matchers globally, so no root types entry is needed)." },
+    ],
+  },
+  {
     version: "1.1.514",
     date: "2026-07-14",
     changes: [
