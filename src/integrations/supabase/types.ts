@@ -37315,6 +37315,26 @@ export type Database = {
         Args: { target_date?: string }
         Returns: number
       }
+      respond_band_application: {
+        Args: { application_id: string; decision: string }
+        Returns: {
+          applicant_profile_id: string
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resurrect_character: {
         Args: { p_profile_id: string }
         Returns: undefined
@@ -37370,6 +37390,26 @@ export type Database = {
         Args: { _company_id: string }
         Returns: string
       }
+      submit_band_application: {
+        Args: { band_id: string; message?: string; requested_role: string }
+        Returns: {
+          applicant_profile_id: string
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       swap_gettit_comment_vote: {
         Args: { comment_id: string; new_field: string; old_field: string }
         Returns: undefined
@@ -37405,6 +37445,26 @@ export type Database = {
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
+      }
+      withdraw_band_application: {
+        Args: { application_id: string }
+        Returns: {
+          applicant_profile_id: string
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
