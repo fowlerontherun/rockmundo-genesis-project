@@ -37201,6 +37201,17 @@ export type Database = {
         Returns: undefined
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
+      schedule_songwriting_session: {
+        Args: {
+          p_effort_hours: number
+          p_idempotency_key?: string
+          p_profile_id: string
+          p_project_id: string
+          p_scheduled_start: string
+          p_session_type?: string
+        }
+        Returns: Json
+      }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       skill_tier_unlocked: {
@@ -37216,6 +37227,17 @@ export type Database = {
           p_party_id?: string
         }
         Returns: string
+      }
+      start_songwriting_session: {
+        Args: {
+          p_activity_id?: string
+          p_effort_hours?: number
+          p_idempotency_key?: string
+          p_profile_id: string
+          p_project_id: string
+          p_session_type?: string
+        }
+        Returns: Json
       }
       storefront_sold_out_behavior: {
         Args: { _company_id: string }
