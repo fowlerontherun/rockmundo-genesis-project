@@ -409,46 +409,11 @@ export default function BandManager() {
         className="space-y-6"
       >
         <TabsList className="h-auto flex flex-wrap gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger
-            value="fame"
-            className="flex items-center gap-1 text-xs sm:text-sm"
-          >
-            <Star className="h-3 w-3" />
-            <span className="hidden sm:inline">Fame & Fans</span>
-            <span className="sm:hidden">Fame</span>
-          </TabsTrigger>
-          <TabsTrigger value="members" className="text-xs sm:text-sm">
-            Members
-          </TabsTrigger>
-          <TabsTrigger
-            value="repertoire"
-            className="flex items-center gap-1 text-xs sm:text-sm"
-          >
-            <Library className="h-3 w-3" />
-            <span className="hidden sm:inline">Repertoire</span>
-            <span className="sm:hidden">Rep</span>
-          </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs sm:text-sm">
-            <span className="hidden sm:inline">Gig History</span>
-            <span className="sm:hidden">History</span>
-          </TabsTrigger>
           <TabsTrigger value="chat" className="text-xs sm:text-sm">
             Chat
           </TabsTrigger>
           <TabsTrigger value="earnings" className="text-xs sm:text-sm">
             Earnings
-          </TabsTrigger>
-          <TabsTrigger value="finances" className="text-xs sm:text-sm">
-            Finances
-          </TabsTrigger>
-          <TabsTrigger value="chemistry" className="text-xs sm:text-sm">
-            Chemistry
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="text-xs sm:text-sm">
-            Settings
           </TabsTrigger>
         </TabsList>
 
