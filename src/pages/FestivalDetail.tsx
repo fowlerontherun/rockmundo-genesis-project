@@ -8,10 +8,10 @@
  import { Separator } from "@/components/ui/separator";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Progress } from "@/components/ui/progress";
- import { 
-   ArrowLeft, Calendar, MapPin, Users, Music, Star, 
-   DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
- } from "lucide-react";
+  import { 
+    ArrowLeft, Calendar, MapPin, Users, Music, Star, Building2, Globe,
+    DollarSign, Trophy, Clock, Zap, TrendingUp, Sun, CloudRain, Ticket, Loader2
+  } from "lucide-react";
  import { format, formatDistanceToNow, isFuture } from "date-fns";
  import { usePrimaryBand } from "@/hooks/usePrimaryBand";
  import { useFestivalHistory, useFestivalSponsorships, useFestivalRivalries } from "@/hooks/useFestivalHistory";
