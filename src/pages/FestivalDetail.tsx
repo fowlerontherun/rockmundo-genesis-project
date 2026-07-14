@@ -57,8 +57,34 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
      enabled: !!festivalId,
    });
  
-   const { data: sponsorships } = useFestivalSponsorships(festivalId);
-   const { data: rivalries } = useFestivalRivalries(festivalId, band?.id);
+    const { data: sponsorships } = useFestivalSponsorships(festivalId);
+    const { data: rivalries } = useFestivalRivalries(festivalId, band?.id);
+
+    // Venue + city map data
+    const { data: venueInfo } = useQuery({
+      queryKey: ["festival-venue-city", festival?.venue_id],
+      queryFn: async () => {
+        if (!festival?.venue_id) return null;
+        const { data: venue, error } = await (supabase as any)
+          .from("venues")
+          .select("id, name, location, capacity, venue_type, prestige_level, description, image_url, sound_system_rating, lighting_rating, has_green_room, parking_spaces, city_id")
+          .eq("id", festival.venue_id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!venue) return null;
+        let city: any = null;
+        if (venue.city_id) {
+          const { data: c } = await (supabase as any)
+            .from("cities")
+            .select("id, name, country, region, latitude, longitude, population, music_scene, dominant_genre")
+            .eq("id", venue.city_id)
+            .maybeSingle();
+          city = c;
+        }
+        return { venue, city };
+      },
+      enabled: !!festival?.venue_id,
+    });
  
    // Calculate genre match
    const calculateGenreMatch = () => {
