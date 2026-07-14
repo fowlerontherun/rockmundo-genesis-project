@@ -661,6 +661,7 @@ function App() {
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
                     <Route path="festivals" element={<FestivalBrowser />} />
                     <Route path="festivals/marketplace" element={<FestivalMarketplace />} />
+                    <Route path="festivals/directory" element={<FestivalDirectory />} />
                     <Route path="festivals/:festivalId" element={<FestivalDetail />} />
                     <Route path="festivals/simulation" element={<FestivalsNew />} />
                     <Route path="festivals/perform/:participationId" element={<FestivalPerformance />} />
