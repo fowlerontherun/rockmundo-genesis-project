@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.527",
+    date: "2026-07-14",
+    changes: [
+      { type: 'fix', description: "Alternate characters now show attributes and can spend AXP. Backfilled the missing player_attributes and player_xp_wallet rows for every existing profile that didn't have them, and added a database trigger so every newly created character automatically gets its attributes row and XP wallet row provisioned." },
+    ],
+  },
+  {
     version: "1.1.526",
     date: "2026-07-14",
     changes: [
