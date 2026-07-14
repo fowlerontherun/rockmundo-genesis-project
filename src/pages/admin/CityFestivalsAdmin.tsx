@@ -40,6 +40,8 @@ export default function CityFestivalsAdmin() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [scaleFilter, setScaleFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
   const [edits, setEdits] = useState<Record<string, Partial<FestivalRow>>>({});
 
   const { data: cities } = useQuery({
@@ -75,6 +77,7 @@ export default function CityFestivalsAdmin() {
   const rows = useMemo(() => {
     let list = festivals || [];
     if (scaleFilter !== "all") list = list.filter((f) => f.scale === scaleFilter);
+    if (cityFilter !== "all") list = list.filter((f) => f.city_id === cityFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((f) => {
@@ -86,8 +89,27 @@ export default function CityFestivalsAdmin() {
         );
       });
     }
-    return list;
-  }, [festivals, scaleFilter, search, cityMap]);
+    const sorted = [...list];
+    const num = (v: any) => (v == null ? 0 : Number(v));
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "name-desc": return b.name.localeCompare(a.name);
+        case "city-asc": return (cityMap.get(a.city_id)?.name || "").localeCompare(cityMap.get(b.city_id)?.name || "");
+        case "city-desc": return (cityMap.get(b.city_id)?.name || "").localeCompare(cityMap.get(a.city_id)?.name || "");
+        case "start-asc": return a.start_date.localeCompare(b.start_date);
+        case "start-desc": return b.start_date.localeCompare(a.start_date);
+        case "price-low-asc": return num(a.ticket_price_low) - num(b.ticket_price_low);
+        case "price-low-desc": return num(b.ticket_price_low) - num(a.ticket_price_low);
+        case "price-high-asc": return num(a.ticket_price_high) - num(b.ticket_price_high);
+        case "price-high-desc": return num(b.ticket_price_high) - num(a.ticket_price_high);
+        case "capacity-asc": return num(a.expected_attendance) - num(b.expected_attendance);
+        case "capacity-desc": return num(b.expected_attendance) - num(a.expected_attendance);
+        case "name-asc":
+        default: return a.name.localeCompare(b.name);
+      }
+    });
+    return sorted;
+  }, [festivals, scaleFilter, cityFilter, search, cityMap, sortBy]);
 
   const citiesMissingFestival = useMemo(() => {
     const withFest = new Set((festivals || []).map((f) => f.city_id));
@@ -286,6 +308,20 @@ export default function CityFestivalsAdmin() {
                 />
               </div>
             </div>
+            <div className="w-56">
+              <Label className="text-xs">City</Label>
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">All cities</SelectItem>
+                  {(cities || []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}{c.country ? `, ${c.country}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="w-40">
               <Label className="text-xs">Scale</Label>
               <Select value={scaleFilter} onValueChange={setScaleFilter}>
@@ -299,6 +335,35 @@ export default function CityFestivalsAdmin() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-52">
+              <Label className="text-xs">Sort by</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name (A–Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z–A)</SelectItem>
+                  <SelectItem value="city-asc">City (A–Z)</SelectItem>
+                  <SelectItem value="city-desc">City (Z–A)</SelectItem>
+                  <SelectItem value="start-asc">Start date (earliest)</SelectItem>
+                  <SelectItem value="start-desc">Start date (latest)</SelectItem>
+                  <SelectItem value="price-low-asc">Ticket low (cheapest)</SelectItem>
+                  <SelectItem value="price-low-desc">Ticket low (priciest)</SelectItem>
+                  <SelectItem value="price-high-asc">Ticket high (cheapest)</SelectItem>
+                  <SelectItem value="price-high-desc">Ticket high (priciest)</SelectItem>
+                  <SelectItem value="capacity-asc">Capacity (smallest)</SelectItem>
+                  <SelectItem value="capacity-desc">Capacity (largest)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(search || cityFilter !== "all" || scaleFilter !== "all" || sortBy !== "name-asc") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(""); setCityFilter("all"); setScaleFilter("all"); setSortBy("name-asc"); }}
+              >
+                Reset
+              </Button>
+            )}
             <div className="text-xs text-muted-foreground ml-auto">
               {rows.length} of {festivals?.length ?? 0} festivals
             </div>
