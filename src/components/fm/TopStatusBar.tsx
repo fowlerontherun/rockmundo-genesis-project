@@ -5,7 +5,7 @@ import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
@@ -240,7 +240,7 @@ export const TopStatusBar = () => {
       <ActivityStatusIndicator />
       <NotificationBell />
       <RMRadioButton />
-      <ThemeSwitcher />
+      
       <LanguageSwitcher />
       <HowToPlayDialog />
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout} title="Sign out" aria-label="Sign out">
