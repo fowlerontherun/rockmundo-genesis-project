@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.481",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Gig Viewer: added themed stage visuals per venue type (Club, Theater, Arena, Stadium, Festival) with dedicated backdrops, floor textures (checker, wood, concrete, grass), amp cabs, monitor wedges, PA speaker stacks with cone details, lighting truss with swinging spotlight beams, crash-barrier posts, drum riser, big screens (arena/stadium/festival), and haze/strobe atmosphere driven by crowd energy." },
+      { type: 'feature', description: "Gig Viewer audio: synthesized crowd ambience using Web Audio (pink-noise murmur bandpass-filtered by crowd energy) plus cheer/applause bursts on cheer pulses, jumps and finale peaks. Ambience level scales with stage type (bigger = louder, more reverberant feel)." },
+    ],
+  },
+  {
     version: "1.1.480",
     date: "2026-07-14",
     changes: [
