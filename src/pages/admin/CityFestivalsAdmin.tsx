@@ -206,38 +206,47 @@ export default function CityFestivalsAdmin() {
     onError: (e: Error) => toast({ title: "Batch save failed", description: e.message, variant: "destructive" }),
   });
 
+  const reseedPreview = useMemo(() => {
+    const today = new Date();
+    const startBase = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const d = SCALE_DEFAULTS.small;
+    const iso = (dt: Date) => dt.toISOString().slice(0, 10);
+    return citiesMissingFestival.map((c, idx) => {
+      const start = new Date(startBase);
+      start.setDate(start.getDate() + idx);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 2);
+      return {
+        name: `${c.name} Local Festival`,
+        city_id: c.id,
+        city_name: c.name,
+        country: c.country,
+        scale: "small",
+        status: "upcoming",
+        start_date: iso(start),
+        end_date: iso(end),
+        expected_attendance: d.attendance,
+        ticket_price_low: d.low,
+        ticket_price_high: d.high,
+        genre: "indie",
+        description: `A small-scale community festival in ${c.name}.`,
+      };
+    });
+  }, [citiesMissingFestival]);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   const reseedMissingMutation = useMutation({
     mutationFn: async () => {
-      if (!citiesMissingFestival.length) return 0;
-      const today = new Date();
-      const startBase = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-      const rowsToInsert = citiesMissingFestival.map((c, idx) => {
-        const start = new Date(startBase);
-        start.setDate(start.getDate() + idx); // stagger by 1 day
-        const end = new Date(start);
-        end.setDate(end.getDate() + 2); // 3-day small festival
-        const d = SCALE_DEFAULTS.small;
-        const iso = (dt: Date) => dt.toISOString().slice(0, 10);
-        return {
-          name: `${c.name} Local Festival`,
-          city_id: c.id,
-          scale: "small",
-          status: "upcoming",
-          start_date: iso(start),
-          end_date: iso(end),
-          expected_attendance: d.attendance,
-          ticket_price_low: d.low,
-          ticket_price_high: d.high,
-          genre: "indie",
-          description: `A small-scale community festival in ${c.name}.`,
-        };
-      });
+      if (!reseedPreview.length) return 0;
+      const rowsToInsert = reseedPreview.map(({ city_name, country, ...rest }) => rest);
       const { error } = await (supabase as any).from("festivals").insert(rowsToInsert);
       if (error) throw error;
       return rowsToInsert.length;
     },
     onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["admin-cf-festivals"] });
+      setPreviewOpen(false);
       toast({ title: `Seeded ${n} missing festival${n === 1 ? "" : "s"}` });
     },
     onError: (e: Error) => toast({ title: "Re-seed failed", description: e.message, variant: "destructive" }),
