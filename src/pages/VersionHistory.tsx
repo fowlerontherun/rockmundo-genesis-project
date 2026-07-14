@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.496",
+    date: "2026-07-14",
+    changes: [
+      { type: 'feature', description: "Seeded 1,800 city-linked jobs across all 180 cities — every city now offers 10 varied roles (barista, retail clerk, postal worker, delivery driver, line cook, bartender, nightclub bouncer, session musician, local radio presenter, warehouse loader) with realistic wages, level gates, and shift schedules." },
+    ],
+  },
+  {
     version: "1.1.495",
     date: "2026-07-14",
     changes: [
