@@ -214,6 +214,7 @@ serve(async (req) => {
         stat_boosts: statBoosts,
         skill_boost_slug: skillSlug ?? null,
         stock: 0,
+        is_blind_box_exclusive: true,
       }).select("id").single();
       if (eqIns.error) {
         console.error("[open-blind-box] equipment_items insert failed:", eqIns.error);
