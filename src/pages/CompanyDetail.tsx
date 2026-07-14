@@ -378,7 +378,35 @@ const CompanyDetailContent = () => {
                   ))}
                 </div>
               )}
-            </CardContent>
+
+              {isHolding && unlinkedLabels.length > 0 && (
+                <div className="mt-6 pt-4 border-t space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Your unlinked labels ({unlinkedLabels.length})
+                  </p>
+                  {unlinkedLabels.map((label) => (
+                    <div key={label.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <Disc className="h-4 w-4 text-purple-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{label.name}</p>
+                          <p className="text-xs text-muted-foreground">{label.headquarters_city || "No HQ"}</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={linkLabelMutation.isPending}
+                        onClick={() => linkLabelMutation.mutate(label.id)}
+                      >
+                        Link to company
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
           </Card>
         </TabsContent>
 
