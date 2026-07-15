@@ -353,31 +353,60 @@ const WellnessPage = () => {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Bed className="h-4 w-4 text-primary" /> Accommodation & Travel Recovery
-            <Badge variant="outline">Estimated</Badge>
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Recovery forecasts are server-owned calculations in production; this panel previews the same shared resolver for home, hotel and tour transport effects.</p>
+          <p className="text-xs text-muted-foreground">
+            Based on your current property, rental, and any active travel.
+          </p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">Current accommodation</p>
             <p className="font-semibold">{accommodationProfile.name}</p>
-            <p className="text-sm">Sleep quality {accommodationProfile.sleep_quality_modifier >= 0 ? "+" : ""}{accommodationProfile.sleep_quality_modifier} · Recovery {accommodationProfile.comfort_rating}/100</p>
-            <p className="text-xs text-muted-foreground">Facilities: {accommodationProfile.facilities.join(", ")}</p>
+            <p className="text-sm">
+              Sleep quality {accommodationProfile.sleep_quality_modifier >= 0 ? "+" : ""}
+              {accommodationProfile.sleep_quality_modifier} · Recovery {accommodationProfile.comfort_rating}/100
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {accommodationProfile.facilities.length
+                ? `Facilities: ${accommodationProfile.facilities.join(", ")}`
+                : "No extra facilities — consider upgrades."}
+            </p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><Bus className="h-3 w-3" /> Current travel status</p>
-            <p className="font-semibold">Arrival readiness {travelPreview.arrivalReadiness}%</p>
-            <p className="text-sm">Fatigue +{travelPreview.fatigueDelta} · partial sleep {travelPreview.partialSleepHours}h</p>
-            <p className="text-xs text-muted-foreground">{travelPreview.summary}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Bus className="h-3 w-3" /> Travel status
+            </p>
+            {travelEffect ? (
+              <>
+                <p className="font-semibold">Arrival readiness {travelEffect.arrivalReadiness}%</p>
+                <p className="text-sm">
+                  Fatigue +{travelEffect.fatigueDelta} · partial sleep {travelEffect.partialSleepHours}h
+                </p>
+                <p className="text-xs text-muted-foreground">{travelEffect.summary}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Not travelling</p>
+                <p className="text-sm text-muted-foreground">No travel fatigue in effect.</p>
+              </>
+            )}
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">Tonight's recovery forecast</p>
             <p className="font-semibold">Readiness {recoveryForecast.readiness}%</p>
-            <p className="text-sm">Energy {recoveryForecast.values.energy} · Fatigue {recoveryForecast.values.fatigue} · Stress {recoveryForecast.values.stress}</p>
-            <p className="text-xs text-muted-foreground">Recommendations: book accommodation, add rest days or improve sleeping facilities when readiness drops.</p>
+            <p className="text-sm">
+              Energy {recoveryForecast.values.energy} · Fatigue {recoveryForecast.values.fatigue} · Stress{" "}
+              {recoveryForecast.values.stress}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {recoveryForecast.readiness < 60
+                ? "Low — add rest days or upgrade your accommodation."
+                : "Your recovery is on track for tomorrow."}
+            </p>
           </div>
         </CardContent>
       </Card>
+
 
 
       <Card>
