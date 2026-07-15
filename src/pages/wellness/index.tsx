@@ -67,11 +67,24 @@ const vehicleFromTransport = (
   if (t.includes("plane") || t.includes("fly") || t.includes("jet") || t.includes("air")) return "plane";
   if (t.includes("train") || t.includes("rail")) return "train";
   if (t.includes("ferry") || t.includes("boat")) return "ferry";
-  if (t.includes("bus") || t.includes("coach")) return "bus";
-  if (t.includes("tour")) return "tour_bus";
+  if (t.includes("tour")) return "full_tour_bus";
+  if (t.includes("bus") || t.includes("coach")) return "small_tour_bus";
+  if (t.includes("sprinter")) return "sprinter";
   if (t.includes("van") || t.includes("mini")) return "minivan";
-  return "car";
+  return "rusty_van";
 };
+
+const CATEGORIES: {
+  key: WellnessCategory;
+  label: string;
+  icon: JSX.Element;
+  blurb: string;
+}[] = [
+  { key: "recovery", label: "Recovery", icon: <Heart className="h-4 w-4" />, blurb: "Restore mood, lower stress" },
+  { key: "fitness", label: "Fitness", icon: <Dumbbell className="h-4 w-4" />, blurb: "Build long-term health" },
+  { key: "medical", label: "Medical", icon: <Sparkles className="h-4 w-4" />, blurb: "Clear ailments, prevent injury" },
+  { key: "indulgence", label: "Indulgence", icon: <Wine className="h-4 w-4" />, blurb: "Mood up — but with consequences" },
+];
 
 const WellnessPage = () => {
   const { profile } = useGameData();
