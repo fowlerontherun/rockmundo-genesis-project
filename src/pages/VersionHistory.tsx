@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.528",
+    date: "2026-07-15",
+    changes: [
+      { type: 'feature', description: "Wellness page now uses real player data instead of scaffolding previews. Accommodation recovery is derived from your actual primary property or active rental (with tier-based sleep/comfort ratings), travel fatigue is calculated from your live travel status (departure/arrival, transport type), and the recovery forecast reflects those real inputs. Removed the 'preview' badges and placeholder copy across the readiness and accommodation cards." },
+    ],
+  },
+  {
     version: "1.1.527",
     date: "2026-07-14",
     changes: [

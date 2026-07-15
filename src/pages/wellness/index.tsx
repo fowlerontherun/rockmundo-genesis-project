@@ -28,9 +28,51 @@ import { CareerStageLongevityPanel } from "@/components/wellness/CareerStageLong
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
+import { usePlayerProperties, usePlayerRental } from "@/hooks/useHousing";
+import { useTravelStatus } from "@/hooks/useTravelStatus";
 import type { WellnessCategory } from "@/lib/api/wellnessActivities";
-import { calculateTravelFatigueEffect, forecastWellnessAfterRecovery, resolveAccommodationRecoveryProfile } from "@/lib/wellnessRecovery";
-import { buildCoreWellnessModifiers, calculateCanonicalReadiness, createDefaultWellnessCore, type WellnessCoreValues } from "@/lib/wellnessSystem";
+import {
+  calculateTravelFatigueEffect,
+  forecastWellnessAfterRecovery,
+  resolveAccommodationRecoveryProfile,
+  type AccommodationSource,
+  type TravelSegmentInput,
+} from "@/lib/wellnessRecovery";
+import {
+  buildCoreWellnessModifiers,
+  calculateCanonicalReadiness,
+  createDefaultWellnessCore,
+  type WellnessCoreValues,
+} from "@/lib/wellnessSystem";
+
+const tierFromLevel = (tier?: number): AccommodationSource["tier"] => {
+  const t = tier ?? 2;
+  if (t <= 1) return "basic";
+  if (t === 2) return "standard";
+  if (t === 3) return "premium";
+  return "specialist";
+};
+
+const rentalTierFromLevel = (tier?: number): AccommodationSource["tier"] => {
+  const t = tier ?? 1;
+  if (t <= 1) return "basic";
+  if (t === 2) return "standard";
+  return "premium";
+};
+
+const vehicleFromTransport = (
+  transport?: string | null,
+): TravelSegmentInput["vehicleTier"] => {
+  const t = (transport ?? "").toLowerCase();
+  if (t.includes("plane") || t.includes("fly") || t.includes("jet") || t.includes("air")) return "plane";
+  if (t.includes("train") || t.includes("rail")) return "train";
+  if (t.includes("ferry") || t.includes("boat")) return "ferry";
+  if (t.includes("tour")) return "full_tour_bus";
+  if (t.includes("bus") || t.includes("coach")) return "small_tour_bus";
+  if (t.includes("sprinter")) return "sprinter";
+  if (t.includes("van") || t.includes("mini")) return "minivan";
+  return "rusty_van";
+};
 
 const CATEGORIES: {
   key: WellnessCategory;
@@ -38,30 +80,10 @@ const CATEGORIES: {
   icon: JSX.Element;
   blurb: string;
 }[] = [
-  {
-    key: "recovery",
-    label: "Recovery",
-    icon: <Heart className="h-4 w-4" />,
-    blurb: "Restore mood, lower stress",
-  },
-  {
-    key: "fitness",
-    label: "Fitness",
-    icon: <Dumbbell className="h-4 w-4" />,
-    blurb: "Build long-term health",
-  },
-  {
-    key: "medical",
-    label: "Medical",
-    icon: <Sparkles className="h-4 w-4" />,
-    blurb: "Clear ailments, prevent injury",
-  },
-  {
-    key: "indulgence",
-    label: "Indulgence",
-    icon: <Wine className="h-4 w-4" />,
-    blurb: "Mood up — but with consequences",
-  },
+  { key: "recovery", label: "Recovery", icon: <Heart className="h-4 w-4" />, blurb: "Restore mood, lower stress" },
+  { key: "fitness", label: "Fitness", icon: <Dumbbell className="h-4 w-4" />, blurb: "Build long-term health" },
+  { key: "medical", label: "Medical", icon: <Sparkles className="h-4 w-4" />, blurb: "Clear ailments, prevent injury" },
+  { key: "indulgence", label: "Indulgence", icon: <Wine className="h-4 w-4" />, blurb: "Mood up — but with consequences" },
 ];
 
 const WellnessPage = () => {
@@ -78,6 +100,9 @@ const WellnessPage = () => {
     error,
     perform,
   } = useWellnessState(profileId);
+  const { data: properties = [] } = usePlayerProperties();
+  const { data: rental } = usePlayerRental();
+  const { travelStatus } = useTravelStatus();
   const [performing, setPerforming] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WellnessCategory>("recovery");
 
@@ -86,10 +111,72 @@ const WellnessPage = () => {
     [cooldowns],
   );
   const coreVitals = useMemo<WellnessCoreValues>(() => ({ ...createDefaultWellnessCore(), ...vitals }), [vitals]);
-  const accommodationPreview = useMemo(() => resolveAccommodationRecoveryProfile({ kind: "home", tier: "standard", isHomeCity: true, occupied: true, quality: 65, upgrades: ["better_bed"] }), []);
-  const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, coreVitals), [coreVitals]);
-  const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(coreVitals, accommodationPreview, travelPreview, 0), [coreVitals, accommodationPreview, travelPreview]);
-  const readinessPreview = useMemo(() => calculateCanonicalReadiness({ role: "gig", core: coreVitals, modifiers: buildCoreWellnessModifiers(coreVitals, "gig"), confidence: "actual" }), [coreVitals]);
+
+  const accommodationSource = useMemo<AccommodationSource>(() => {
+    const homeCityId = profile?.current_city_id ?? null;
+    const primary = properties.find((p) => p.is_primary) ?? properties[0];
+    if (primary) {
+      const ht = primary.housing_types;
+      return {
+        id: primary.id,
+        kind: "home",
+        tier: tierFromLevel(ht?.tier),
+        name: ht?.name ?? "Owned residence",
+        quality: 50 + Math.min(40, (ht?.tier ?? 2) * 10),
+        isHomeCity: !!homeCityId && primary.country === (profile as any)?.current_city_country,
+        occupied: true,
+        upgrades: [],
+      };
+    }
+    if (rental) {
+      const rt = rental.rental_types;
+      return {
+        id: rental.id,
+        kind: "temporary",
+        tier: rentalTierFromLevel(rt?.tier),
+        name: rt?.name ?? "Rented apartment",
+        quality: 45 + Math.min(35, (rt?.tier ?? 1) * 10),
+        occupied: true,
+        upgrades: [],
+      };
+    }
+    return { kind: "none", tier: "none", name: "No accommodation", occupied: false };
+  }, [properties, rental, profile]);
+
+  const accommodationProfile = useMemo(
+    () => resolveAccommodationRecoveryProfile(accommodationSource),
+    [accommodationSource],
+  );
+
+  const travelEffect = useMemo(() => {
+    if (!travelStatus?.is_traveling || !travelStatus.departure_time || !travelStatus.travel_arrives_at) return null;
+    const durationHours = Math.max(
+      0.25,
+      (new Date(travelStatus.travel_arrives_at).getTime() - new Date(travelStatus.departure_time).getTime()) / 3_600_000,
+    );
+    const vehicleTier = vehicleFromTransport(travelStatus.transport_type);
+    const distanceKm = durationHours * (vehicleTier === "plane" ? 700 : vehicleTier === "train" ? 180 : 80);
+    return calculateTravelFatigueEffect(
+      { id: travelStatus.travel_id ?? "current", durationHours, distanceKm, vehicleTier },
+      coreVitals,
+    );
+  }, [travelStatus, coreVitals]);
+
+  const recoveryForecast = useMemo(
+    () => forecastWellnessAfterRecovery(coreVitals, accommodationProfile, travelEffect ?? undefined, 0),
+    [coreVitals, accommodationProfile, travelEffect],
+  );
+
+  const readiness = useMemo(
+    () =>
+      calculateCanonicalReadiness({
+        role: "gig",
+        core: coreVitals,
+        modifiers: buildCoreWellnessModifiers(coreVitals, "gig"),
+        confidence: "actual",
+      }),
+    [coreVitals],
+  );
 
   const grouped = useMemo(() => {
     const g: Record<WellnessCategory, typeof catalog> = {
@@ -194,25 +281,25 @@ const WellnessPage = () => {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Activity className="h-4 w-4 text-primary" /> Canonical readiness
-            <Badge variant="outline">{readinessPreview.state.split("_").join(" ")}</Badge>
+            <Badge variant="outline">{readiness.state.split("_").join(" ")}</Badge>
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Server-generated explanation preview using the shared modifier pipeline and global caps.</p>
+          <p className="text-xs text-muted-foreground">Live readiness score for your next gig based on current vitals.</p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[160px_1fr]">
-          <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readinessPreview.score} out of 100`}>
-            <p className="text-3xl font-bold">{readinessPreview.score}</p>
+          <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readiness.score} out of 100`}>
+            <p className="text-3xl font-bold">{readiness.score}</p>
             <p className="text-xs text-muted-foreground">Gig readiness</p>
           </div>
           <div className="space-y-2 text-sm">
-            <p>{readinessPreview.explanation.summary}</p>
-            <p className="text-muted-foreground">Recommended action: {readinessPreview.explanation.suggestedAction}</p>
+            <p>{readiness.explanation.summary}</p>
+            <p className="text-muted-foreground">Recommended action: {readiness.explanation.suggestedAction}</p>
             <details className="rounded-md border p-3">
               <summary className="cursor-pointer font-medium">Calculation details</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>Base value: {readinessPreview.explanation.baseValue}</li>
-                <li>Positive contributors: {readinessPreview.explanation.positiveContributors.map((c) => c.explanation).join(", ") || "None"}</li>
-                <li>Negative contributors: {readinessPreview.explanation.negativeContributors.map((c) => c.explanation).join(", ") || "None"}</li>
-                <li>Capped contributors: {readinessPreview.explanation.cappedContributors.length}</li>
+                <li>Base value: {readiness.explanation.baseValue}</li>
+                <li>Positive contributors: {readiness.explanation.positiveContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Negative contributors: {readiness.explanation.negativeContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Capped contributors: {readiness.explanation.cappedContributors.length}</li>
               </ul>
             </details>
           </div>
@@ -266,31 +353,60 @@ const WellnessPage = () => {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Bed className="h-4 w-4 text-primary" /> Accommodation & Travel Recovery
-            <Badge variant="outline">Estimated</Badge>
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Recovery forecasts are server-owned calculations in production; this panel previews the same shared resolver for home, hotel and tour transport effects.</p>
+          <p className="text-xs text-muted-foreground">
+            Based on your current property, rental, and any active travel.
+          </p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">Current accommodation</p>
-            <p className="font-semibold">{accommodationPreview.name}</p>
-            <p className="text-sm">Sleep quality {accommodationPreview.sleep_quality_modifier >= 0 ? "+" : ""}{accommodationPreview.sleep_quality_modifier} · Recovery {accommodationPreview.comfort_rating}/100</p>
-            <p className="text-xs text-muted-foreground">Facilities: {accommodationPreview.facilities.join(", ")}</p>
+            <p className="font-semibold">{accommodationProfile.name}</p>
+            <p className="text-sm">
+              Sleep quality {accommodationProfile.sleep_quality_modifier >= 0 ? "+" : ""}
+              {accommodationProfile.sleep_quality_modifier} · Recovery {accommodationProfile.comfort_rating}/100
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {accommodationProfile.facilities.length
+                ? `Facilities: ${accommodationProfile.facilities.join(", ")}`
+                : "No extra facilities — consider upgrades."}
+            </p>
           </div>
           <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><Bus className="h-3 w-3" /> Current travel status</p>
-            <p className="font-semibold">Arrival readiness {travelPreview.arrivalReadiness}%</p>
-            <p className="text-sm">Fatigue +{travelPreview.fatigueDelta} · partial sleep {travelPreview.partialSleepHours}h</p>
-            <p className="text-xs text-muted-foreground">{travelPreview.summary}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Bus className="h-3 w-3" /> Travel status
+            </p>
+            {travelEffect ? (
+              <>
+                <p className="font-semibold">Arrival readiness {travelEffect.arrivalReadiness}%</p>
+                <p className="text-sm">
+                  Fatigue +{travelEffect.fatigueDelta} · partial sleep {travelEffect.partialSleepHours}h
+                </p>
+                <p className="text-xs text-muted-foreground">{travelEffect.summary}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Not travelling</p>
+                <p className="text-sm text-muted-foreground">No travel fatigue in effect.</p>
+              </>
+            )}
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">Tonight's recovery forecast</p>
             <p className="font-semibold">Readiness {recoveryForecast.readiness}%</p>
-            <p className="text-sm">Energy {recoveryForecast.values.energy} · Fatigue {recoveryForecast.values.fatigue} · Stress {recoveryForecast.values.stress}</p>
-            <p className="text-xs text-muted-foreground">Recommendations: book accommodation, add rest days or improve sleeping facilities when readiness drops.</p>
+            <p className="text-sm">
+              Energy {recoveryForecast.values.energy} · Fatigue {recoveryForecast.values.fatigue} · Stress{" "}
+              {recoveryForecast.values.stress}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {recoveryForecast.readiness < 60
+                ? "Low — add rest days or upgrade your accommodation."
+                : "Your recovery is on track for tomorrow."}
+            </p>
           </div>
         </CardContent>
       </Card>
+
 
 
       <Card>
