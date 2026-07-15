@@ -132,7 +132,7 @@ const WellnessPage = () => {
       const rt = rental.rental_types;
       return {
         id: rental.id,
-        kind: "rental",
+        kind: "temporary",
         tier: rentalTierFromLevel(rt?.tier),
         name: rt?.name ?? "Rented apartment",
         quality: 45 + Math.min(35, (rt?.tier ?? 1) * 10),
@@ -281,25 +281,25 @@ const WellnessPage = () => {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Activity className="h-4 w-4 text-primary" /> Canonical readiness
-            <Badge variant="outline">{readinessPreview.state.split("_").join(" ")}</Badge>
+            <Badge variant="outline">{readiness.state.split("_").join(" ")}</Badge>
           </CardTitle>
           <p className="text-xs text-muted-foreground">Server-generated explanation preview using the shared modifier pipeline and global caps.</p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[160px_1fr]">
-          <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readinessPreview.score} out of 100`}>
-            <p className="text-3xl font-bold">{readinessPreview.score}</p>
+          <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readiness.score} out of 100`}>
+            <p className="text-3xl font-bold">{readiness.score}</p>
             <p className="text-xs text-muted-foreground">Gig readiness</p>
           </div>
           <div className="space-y-2 text-sm">
-            <p>{readinessPreview.explanation.summary}</p>
-            <p className="text-muted-foreground">Recommended action: {readinessPreview.explanation.suggestedAction}</p>
+            <p>{readiness.explanation.summary}</p>
+            <p className="text-muted-foreground">Recommended action: {readiness.explanation.suggestedAction}</p>
             <details className="rounded-md border p-3">
               <summary className="cursor-pointer font-medium">Calculation details</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>Base value: {readinessPreview.explanation.baseValue}</li>
-                <li>Positive contributors: {readinessPreview.explanation.positiveContributors.map((c) => c.explanation).join(", ") || "None"}</li>
-                <li>Negative contributors: {readinessPreview.explanation.negativeContributors.map((c) => c.explanation).join(", ") || "None"}</li>
-                <li>Capped contributors: {readinessPreview.explanation.cappedContributors.length}</li>
+                <li>Base value: {readiness.explanation.baseValue}</li>
+                <li>Positive contributors: {readiness.explanation.positiveContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Negative contributors: {readiness.explanation.negativeContributors.map((c) => c.explanation).join(", ") || "None"}</li>
+                <li>Capped contributors: {readiness.explanation.cappedContributors.length}</li>
               </ul>
             </details>
           </div>
@@ -360,9 +360,9 @@ const WellnessPage = () => {
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">Current accommodation</p>
-            <p className="font-semibold">{accommodationPreview.name}</p>
-            <p className="text-sm">Sleep quality {accommodationPreview.sleep_quality_modifier >= 0 ? "+" : ""}{accommodationPreview.sleep_quality_modifier} · Recovery {accommodationPreview.comfort_rating}/100</p>
-            <p className="text-xs text-muted-foreground">Facilities: {accommodationPreview.facilities.join(", ")}</p>
+            <p className="font-semibold">{accommodationProfile.name}</p>
+            <p className="text-sm">Sleep quality {accommodationProfile.sleep_quality_modifier >= 0 ? "+" : ""}{accommodationProfile.sleep_quality_modifier} · Recovery {accommodationProfile.comfort_rating}/100</p>
+            <p className="text-xs text-muted-foreground">Facilities: {accommodationProfile.facilities.join(", ")}</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-xs text-muted-foreground flex items-center gap-1"><Bus className="h-3 w-3" /> Current travel status</p>
