@@ -28,41 +28,50 @@ import { CareerStageLongevityPanel } from "@/components/wellness/CareerStageLong
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
+import { usePlayerProperties, usePlayerRental } from "@/hooks/useHousing";
+import { useTravelStatus } from "@/hooks/useTravelStatus";
 import type { WellnessCategory } from "@/lib/api/wellnessActivities";
-import { calculateTravelFatigueEffect, forecastWellnessAfterRecovery, resolveAccommodationRecoveryProfile } from "@/lib/wellnessRecovery";
-import { buildCoreWellnessModifiers, calculateCanonicalReadiness, createDefaultWellnessCore, type WellnessCoreValues } from "@/lib/wellnessSystem";
+import {
+  calculateTravelFatigueEffect,
+  forecastWellnessAfterRecovery,
+  resolveAccommodationRecoveryProfile,
+  type AccommodationSource,
+  type TravelSegmentInput,
+} from "@/lib/wellnessRecovery";
+import {
+  buildCoreWellnessModifiers,
+  calculateCanonicalReadiness,
+  createDefaultWellnessCore,
+  type WellnessCoreValues,
+} from "@/lib/wellnessSystem";
 
-const CATEGORIES: {
-  key: WellnessCategory;
-  label: string;
-  icon: JSX.Element;
-  blurb: string;
-}[] = [
-  {
-    key: "recovery",
-    label: "Recovery",
-    icon: <Heart className="h-4 w-4" />,
-    blurb: "Restore mood, lower stress",
-  },
-  {
-    key: "fitness",
-    label: "Fitness",
-    icon: <Dumbbell className="h-4 w-4" />,
-    blurb: "Build long-term health",
-  },
-  {
-    key: "medical",
-    label: "Medical",
-    icon: <Sparkles className="h-4 w-4" />,
-    blurb: "Clear ailments, prevent injury",
-  },
-  {
-    key: "indulgence",
-    label: "Indulgence",
-    icon: <Wine className="h-4 w-4" />,
-    blurb: "Mood up — but with consequences",
-  },
-];
+const tierFromLevel = (tier?: number): AccommodationSource["tier"] => {
+  const t = tier ?? 2;
+  if (t <= 1) return "basic";
+  if (t === 2) return "standard";
+  if (t === 3) return "premium";
+  return "specialist";
+};
+
+const rentalTierFromLevel = (tier?: number): AccommodationSource["tier"] => {
+  const t = tier ?? 1;
+  if (t <= 1) return "basic";
+  if (t === 2) return "standard";
+  return "premium";
+};
+
+const vehicleFromTransport = (
+  transport?: string | null,
+): TravelSegmentInput["vehicleTier"] => {
+  const t = (transport ?? "").toLowerCase();
+  if (t.includes("plane") || t.includes("fly") || t.includes("jet") || t.includes("air")) return "plane";
+  if (t.includes("train") || t.includes("rail")) return "train";
+  if (t.includes("ferry") || t.includes("boat")) return "ferry";
+  if (t.includes("bus") || t.includes("coach")) return "bus";
+  if (t.includes("tour")) return "tour_bus";
+  if (t.includes("van") || t.includes("mini")) return "minivan";
+  return "car";
+};
 
 const WellnessPage = () => {
   const { profile } = useGameData();
@@ -78,6 +87,9 @@ const WellnessPage = () => {
     error,
     perform,
   } = useWellnessState(profileId);
+  const { data: properties = [] } = usePlayerProperties();
+  const { data: rental } = usePlayerRental();
+  const { travelStatus } = useTravelStatus();
   const [performing, setPerforming] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WellnessCategory>("recovery");
 
@@ -86,10 +98,72 @@ const WellnessPage = () => {
     [cooldowns],
   );
   const coreVitals = useMemo<WellnessCoreValues>(() => ({ ...createDefaultWellnessCore(), ...vitals }), [vitals]);
-  const accommodationPreview = useMemo(() => resolveAccommodationRecoveryProfile({ kind: "home", tier: "standard", isHomeCity: true, occupied: true, quality: 65, upgrades: ["better_bed"] }), []);
-  const travelPreview = useMemo(() => calculateTravelFatigueEffect({ id: "preview", durationHours: 4, distanceKm: 260, vehicleTier: "minivan" }, coreVitals), [coreVitals]);
-  const recoveryForecast = useMemo(() => forecastWellnessAfterRecovery(coreVitals, accommodationPreview, travelPreview, 0), [coreVitals, accommodationPreview, travelPreview]);
-  const readinessPreview = useMemo(() => calculateCanonicalReadiness({ role: "gig", core: coreVitals, modifiers: buildCoreWellnessModifiers(coreVitals, "gig"), confidence: "actual" }), [coreVitals]);
+
+  const accommodationSource = useMemo<AccommodationSource>(() => {
+    const homeCityId = profile?.current_city_id ?? null;
+    const primary = properties.find((p) => p.is_primary) ?? properties[0];
+    if (primary) {
+      const ht = primary.housing_types;
+      return {
+        id: primary.id,
+        kind: "home",
+        tier: tierFromLevel(ht?.tier),
+        name: ht?.name ?? "Owned residence",
+        quality: 50 + Math.min(40, (ht?.tier ?? 2) * 10),
+        isHomeCity: !!homeCityId && primary.country === (profile as any)?.current_city_country,
+        occupied: true,
+        upgrades: [],
+      };
+    }
+    if (rental) {
+      const rt = rental.rental_types;
+      return {
+        id: rental.id,
+        kind: "rental",
+        tier: rentalTierFromLevel(rt?.tier),
+        name: rt?.name ?? "Rented apartment",
+        quality: 45 + Math.min(35, (rt?.tier ?? 1) * 10),
+        occupied: true,
+        upgrades: [],
+      };
+    }
+    return { kind: "none", tier: "none", name: "No accommodation", occupied: false };
+  }, [properties, rental, profile]);
+
+  const accommodationProfile = useMemo(
+    () => resolveAccommodationRecoveryProfile(accommodationSource),
+    [accommodationSource],
+  );
+
+  const travelEffect = useMemo(() => {
+    if (!travelStatus?.is_traveling || !travelStatus.departure_time || !travelStatus.travel_arrives_at) return null;
+    const durationHours = Math.max(
+      0.25,
+      (new Date(travelStatus.travel_arrives_at).getTime() - new Date(travelStatus.departure_time).getTime()) / 3_600_000,
+    );
+    const vehicleTier = vehicleFromTransport(travelStatus.transport_type);
+    const distanceKm = durationHours * (vehicleTier === "plane" ? 700 : vehicleTier === "train" ? 180 : 80);
+    return calculateTravelFatigueEffect(
+      { id: travelStatus.travel_id ?? "current", durationHours, distanceKm, vehicleTier },
+      coreVitals,
+    );
+  }, [travelStatus, coreVitals]);
+
+  const recoveryForecast = useMemo(
+    () => forecastWellnessAfterRecovery(coreVitals, accommodationProfile, travelEffect ?? undefined, 0),
+    [coreVitals, accommodationProfile, travelEffect],
+  );
+
+  const readiness = useMemo(
+    () =>
+      calculateCanonicalReadiness({
+        role: "gig",
+        core: coreVitals,
+        modifiers: buildCoreWellnessModifiers(coreVitals, "gig"),
+        confidence: "actual",
+      }),
+    [coreVitals],
+  );
 
   const grouped = useMemo(() => {
     const g: Record<WellnessCategory, typeof catalog> = {
