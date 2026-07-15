@@ -283,7 +283,7 @@ const WellnessPage = () => {
             <Activity className="h-4 w-4 text-primary" /> Canonical readiness
             <Badge variant="outline">{readiness.state.split("_").join(" ")}</Badge>
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Server-generated explanation preview using the shared modifier pipeline and global caps.</p>
+          <p className="text-xs text-muted-foreground">Live readiness score for your next gig based on current vitals.</p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[160px_1fr]">
           <div className="rounded-lg border p-3 text-center" role="group" aria-label={`Gig readiness ${readiness.score} out of 100`}>
