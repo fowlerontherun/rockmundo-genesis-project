@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("profile_id", profile_id)
       .gte("performed_at", since.toISOString());
-    if ((dayCount ?? 0) >= 3) {
+    if ((dayCount ?? 0) >= 8) {
       console.warn("[wellness_invalid_booking] daily_cap", { profile_id, catalog_slug });
-      return json({ error: "Daily wellness action cap reached (3/day)" }, 429);
+      return json({ error: "Daily wellness action cap reached (8/day)" }, 429);
     }
 
     if (entry.category === "indulgence") {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         .eq("profile_id", profile_id)
         .eq("category", "indulgence")
         .gte("performed_at", since.toISOString());
-      if ((indCount ?? 0) >= 1) return json({ error: "Only 1 indulgence per day" }, 429);
+      if ((indCount ?? 0) >= 2) return json({ error: "Only 2 indulgences per day" }, 429);
     }
 
     // Stamina check
