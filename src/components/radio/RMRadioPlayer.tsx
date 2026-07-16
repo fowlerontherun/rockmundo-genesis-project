@@ -458,12 +458,13 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Initialize playlist when songs and content load
+  // Initialize playlist when songs AND content have loaded (so jingles/adverts are interleaved)
   useEffect(() => {
+    if (radioContentLoading) return; // wait for jingles/adverts before building playlist
     if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
       radio.initializePlaylist(allSongs, radioContent || []);
     }
-  }, [allSongs, radioContent, radio.isInitialized]);
+  }, [allSongs, radioContent, radioContentLoading, radio.isInitialized]);
 
   // Audio time tracking
   useEffect(() => {
