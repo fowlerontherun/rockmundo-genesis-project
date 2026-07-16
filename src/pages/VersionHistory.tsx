@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.545",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Verified the Recording Studio visibility fixes are in place: session loading now queries profile_id, legacy user_id, and active band bookings separately; current and upcoming tabs include scheduled and in-progress bookings; recorded songs use the active profile fallback; and the completion job no longer reads the removed profile attributes column." },
+    ],
+  },
+  {
     version: "1.1.544",
     date: "2026-07-16",
     changes: [
