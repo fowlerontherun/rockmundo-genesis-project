@@ -135,13 +135,13 @@ export default function FestivalRunWizard() {
         currentEdition?.expected_attendance ?? festival.expected_attendance ?? "",
       );
       const low = String(
-        currentEdition?.minimum_ticket_price_cents != null
-          ? currentEdition.minimum_ticket_price_cents / 100
+        (currentEdition as any)?.minimum_ticket_price_cents != null
+          ? (currentEdition as any).minimum_ticket_price_cents / 100
           : festival.ticket_price_low ?? "",
       );
       const high = String(
-        currentEdition?.maximum_ticket_price_cents != null
-          ? currentEdition.maximum_ticket_price_cents / 100
+        (currentEdition as any)?.maximum_ticket_price_cents != null
+          ? (currentEdition as any).maximum_ticket_price_cents / 100
           : festival.ticket_price_high ?? "",
       );
       setDraftName(name);
@@ -721,12 +721,12 @@ export default function FestivalRunWizard() {
                       <span>
                         Ticket range: $
                         {(
-                          (currentEdition?.minimum_ticket_price_cents ??
+                          ((currentEdition as any)?.minimum_ticket_price_cents ??
                             Math.round(Number(festival.ticket_price_low ?? 0) * 100)) /
                           100
                         ).toLocaleString()} – $
                         {(
-                          (currentEdition?.maximum_ticket_price_cents ??
+                          ((currentEdition as any)?.maximum_ticket_price_cents ??
                             Math.round(Number(festival.ticket_price_high ?? 0) * 100)) /
                           100
                         ).toLocaleString()}
