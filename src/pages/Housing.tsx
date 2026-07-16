@@ -25,7 +25,7 @@ import {
   calculateDailyUpkeep,
   getMarketPrice,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -117,63 +117,9 @@ const Housing = () => {
   const { data: playerCash = 0 } = usePlayerCash();
   const marketPrice = useMarketPriceForCountry(activeCountry);
   const { data: allMarketPrices = [] } = useMarketPrices();
-  const [generatingImage, setGeneratingImage] = useState<string | null>(null);
-  const [batchGenerating, setBatchGenerating] = useState(false);
-  const [batchProgress, setBatchProgress] = useState<{ processed: number; remaining: number } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleGenerateImage = async (housingTypeId: string) => {
-    setGeneratingImage(housingTypeId);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-housing-image", {
-        body: { housing_type_id: housingTypeId, country: activeCountry },
-      });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["housing-types"] });
-    } catch (e) {
-      console.error("Image generation failed:", e);
-    } finally {
-      setGeneratingImage(null);
-    }
-  };
-
-  const handleBatchGenerate = async () => {
-    setBatchGenerating(true);
-    setBatchProgress(null);
-    toast({ title: "Batch Generation Started", description: "Generating images for all housing types. This will take a while..." });
-    
-    let totalProcessed = 0;
-    let remaining = 1;
-    
-    while (remaining > 0) {
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-housing-image", {
-          body: { batch: true, batch_size: 5, delay_ms: 4000 },
-        });
-        if (error) throw error;
-        
-        totalProcessed += data.processed || 0;
-        remaining = data.remaining || 0;
-        setBatchProgress({ processed: totalProcessed, remaining });
-        queryClient.invalidateQueries({ queryKey: ["housing-types"] });
-        
-        if (data.processed === 0 && remaining > 0) {
-          await new Promise(r => setTimeout(r, 30000));
-        }
-        
-        if (remaining === 0) {
-          toast({ title: "All Done!", description: `Generated ${totalProcessed} housing images.` });
-        }
-      } catch (e) {
-        console.error("Batch generation error:", e);
-        toast({ title: "Batch Error", description: "Will retry in 30 seconds...", variant: "destructive" });
-        await new Promise(r => setTimeout(r, 30000));
-      }
-    }
-    
-    setBatchGenerating(false);
-  };
 
   const ownedInCountry = playerProperties?.filter(p => p.country === activeCountry) ?? [];
   const ownedIds = new Set(playerProperties?.map(p => p.housing_type_id) ?? []);
@@ -254,24 +200,8 @@ const Housing = () => {
         </CardContent>
       </Card>
 
-      {isAdmin() && housingTypes && housingTypes.some(h => !h.image_url) && (
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleBatchGenerate}
-            disabled={batchGenerating}
-          >
-            {batchGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Wand2 className="h-4 w-4 mr-1" />}
-            {batchGenerating ? "Generating..." : "Generate All Missing Images"}
-          </Button>
-          {batchProgress && (
-            <span className="text-xs text-muted-foreground">
-              {batchProgress.processed} done, {batchProgress.remaining} remaining
-            </span>
-          )}
-        </div>
-      )}
+
+
 
       <Tabs defaultValue="buy">
         <TabsList className="grid w-full grid-cols-3">
@@ -337,22 +267,6 @@ const Housing = () => {
                     <CardContent className="pb-2">
                       {ht.image_url ? (
                         <img src={ht.image_url} alt={ht.name} className="w-full h-32 object-cover rounded-md" />
-                      ) : isAdmin() ? (
-                        <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleGenerateImage(ht.id)}
-                            disabled={generatingImage === ht.id}
-                          >
-                            {generatingImage === ht.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                            ) : (
-                              <ImageIcon className="h-4 w-4 mr-1" />
-                            )}
-                            Generate Image
-                          </Button>
-                        </div>
                       ) : (
                         <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
                           <ImageIcon className="h-6 w-6 text-muted-foreground/40" />

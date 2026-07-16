@@ -17,6 +17,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.562",
+    date: "2026-07-16",
+    changes: [
+      { type: 'improvement', description: "Housing: removed AI image generation for houses. Every housing type in every country now uses one of the existing pre-generated house images (backfilled by tier so all 1,280 properties display a house image). Removed the admin 'Generate Image' and 'Generate All Missing Images' buttons and deleted the generate-housing-image edge function." },
+    ],
+  },
+  {
+    version: "1.1.561",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'Failed to schedule practice: cannot insert a non-DEFAULT value into column duration_minutes' when scheduling a skill practice session. The scheduled activity insert no longer passes duration_minutes (it's a generated column in the database). Also restored the missing useFestivalContractActions import in festivals booking components to clear a build error." },
+    ],
+  },
+  {
     version: "1.1.560",
     date: "2026-07-16",
     changes: [
