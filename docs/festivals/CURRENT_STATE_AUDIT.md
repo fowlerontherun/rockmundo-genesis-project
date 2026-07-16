@@ -321,3 +321,9 @@ Legacy event/player flows remain active during this migration. Stage, slot, tick
 The corrective edition hardening PR retains the historical `20291204090000_create_festival_editions.sql` migration because this checkout cannot prove it has not been applied in a shared Supabase environment. A follow-up additive migration, `20291205090000_harden_festival_editions.sql`, fixes the public-view dependency ordering, recreates the public-safe view, adds creation/transition idempotency request records, changes planning updates to JSONB patch semantics, and strengthens lifecycle validation.
 
 Public festival discovery must read `public_festival_editions`; owner/admin tools use protected `festival_editions` reads. Owner workflow edits to attendance, ticket range, dates and title now target canonical editions when present, while permanent festival brand edits remain separate. Legacy player flows, stages, slots, applications, contracts, setlists and performances remain unchanged pending later canonical migration PRs.
+
+## Canonical booking/contracts addition
+
+The next canonical layer introduces edition-scoped applications, offers, immutable revisions, signed contracts, setlists and private audit events. New player application flows should use `submit_festival_application`; organiser actions should use review/offer/contract RPCs. Legacy `festival_participants`, `festival_slot_applications`, `festival_slot_offers` and `festival_offer_negotiations` remain compatibility sources for unresolved events but are no longer the canonical source for edition-first booking writes.
+
+Public browsing is corrected with `public_festival_editions_read()`, a security-definer safe projection that avoids granting direct public reads on private `festival_editions` columns.

@@ -97,3 +97,7 @@ The edition foundation is hardened by additive migration rather than by renaming
 The public edition projection is explicitly privacy-scoped and rebuilt after its helper function. Creation and transition RPCs now persist idempotency request records and reject mismatched idempotency reuse. Planning writes use JSONB patch semantics so clients can distinguish omitted values from intentional clears. Owner UI flows derive managed state from a shared edition selector and save occurrence planning to editions rather than permanent festival brands.
 
 Remaining canonicalisation work is intentionally deferred: applications, contracts, setlists, performance settlement, stage re-keying, ticket/attendance re-keying and reward/fame settlement are not included in this correction.
+
+## Booking contract layer update
+
+Canonical festival booking now follows application -> offer revision -> contract -> signature -> active lineup. Applications and offers are not bookings; only fully signed active contracts can reserve a compatible stage slot. Public projections exclude contract economics and signatures. Performance simulation and settlement remain deferred.

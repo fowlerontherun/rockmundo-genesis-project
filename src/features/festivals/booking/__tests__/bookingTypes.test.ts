@@ -1,0 +1,11 @@
+import { describe, expect, it } from 'vitest';
+import { bothSidesSigned, calculateTotalDuration, canCounterOffer, canTransitionApplication, ensureCurrentRevision, festivalBookingKeys, projectPublicLineup, requiredSignatureSides, termsChanged, validateFestivalSetlist } from '../bookingTypes';
+describe('festival booking helpers', () => {
+  it('validates application state transitions', () => { expect(canTransitionApplication('submitted','under_review')).toBe(true); expect(canTransitionApplication('rejected','submitted')).toBe(false); });
+  it('checks current offer revisions', () => { expect(canCounterOffer('sent', 2, 2)).toBe(true); expect(canCounterOffer('sent', 1, 2)).toBe(false); expect(() => ensureCurrentRevision(1, 2)).toThrow('Stale offer revision'); });
+  it('requires both contract signatures', () => { expect(requiredSignatureSides('awaiting_signatures')).toEqual(['band','organiser']); expect(bothSidesSigned([{ signing_side: 'band', contract_version: 1 }, { signing_side: 'organiser', contract_version: 1 }], 1)).toBe(true); });
+  it('compares terms independently of object insertion order', () => { expect(termsChanged({ guarantee_fee_cents: 100, proposed_stage_name: 'Main' }, { proposed_stage_name: 'Main', guarantee_fee_cents: 100 })).toBe(false); });
+  it('calculates and validates setlist duration', () => { const items = [{ song_id: 'song-1', planned_duration_seconds: 180 }, { song_id: 'song-2', planned_duration_seconds: 200 }]; expect(calculateTotalDuration(items)).toBe(380); expect(validateFestivalSetlist(items, 600).valid).toBe(true); expect(validateFestivalSetlist(items, 300).valid).toBe(false); });
+  it('projects public lineup without economics', () => { const projected = projectPublicLineup({ edition_id: 'edition', band_id: 'band', status: 'active', terms_snapshot: { guarantee_fee_cents: 100000, proposed_stage_name: 'Main' } }); expect(projected).toEqual({ edition_id: 'edition', band_id: 'band', stage_display_name: 'Main', slot_type: null, public_status: 'active' }); expect(projected).not.toHaveProperty('guarantee_fee_cents'); });
+  it('builds stable query keys', () => { expect(festivalBookingKeys.contracts('band','contract')).toEqual(['festivals','booking','contracts','band','contract']); });
+});
