@@ -1,17 +1,18 @@
+import { useState } from "react";
 import { AdminFestivalCatalogue } from "@/features/festivals/admin/components/AdminFestivalCatalogue";
+import { FestivalStageManagement } from "@/features/festivals/admin/components/FestivalStageManagement";
+import { FestivalStaffManagement } from "@/features/festivals/admin/components/FestivalStaffManagement";
+import { FestivalPermitManagement } from "@/features/festivals/admin/components/FestivalPermitManagement";
+import { FestivalInsuranceManagement } from "@/features/festivals/admin/components/FestivalInsuranceManagement";
+import { FestivalFinanceManagement } from "@/features/festivals/admin/components/FestivalFinanceManagement";
+import { FestivalOutcomesManagement } from "@/features/festivals/admin/components/FestivalOutcomesManagement";
+import { FestivalSettlementManagement } from "@/features/festivals/admin/components/FestivalSettlementManagement";
+import { FestivalDataHealthManagement } from "@/features/festivals/admin/components/FestivalDataHealthManagement";
+import { FestivalLegacyRecordsManagement } from "@/features/festivals/admin/components/FestivalLegacyRecordsManagement";
+import { FestivalAuditLog } from "@/features/festivals/admin/components/FestivalAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 
-export default function FestivalsAdminPage() {
-  return <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-oswald">Festivals Administration</h1>
-      <p className="text-muted-foreground">Canonical brand and edition management. Legacy game-event festival records are read-only and appear only through compatibility mappings.</p>
-    </div>
-    <Card>
-      <CardHeader><CardTitle className="flex flex-wrap gap-2">Workspace tabs <Badge>Catalogue</Badge><Badge>Brands</Badge><Badge>Editions</Badge><Badge>Lifecycle</Badge><Badge>Stages</Badge><Badge>Staff</Badge><Badge>Permits</Badge><Badge>Insurance</Badge><Badge>Live</Badge><Badge>Outcomes</Badge><Badge>Settlement</Badge><Badge>Legacy Records</Badge><Badge>Data Health</Badge><Badge>Audit</Badge></CardTitle></CardHeader>
-      <CardContent className="text-sm text-muted-foreground">Use audited RPCs for creation, lifecycle overrides, edition operations, migration previews and data-health repair actions. This page no longer creates or mutates festival rows in game_events.</CardContent>
-    </Card>
-    <AdminFestivalCatalogue />
-  </div>;
-}
+function EditionRequired({ editionId, children }: { editionId: string; children: React.ReactNode }) { return editionId ? <>{children}</> : <Card><CardHeader><CardTitle>Select an edition</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">This admin section is edition-specific. Paste or select a canonical edition id before loading data.</CardContent></Card>; }
+export default function FestivalsAdminPage() { const [editionId,setEditionId]=useState(""); return <div className="space-y-6"><div><h1 className="text-3xl font-oswald">Festivals Administration</h1><p className="text-muted-foreground">Canonical brand, edition, operation, migration and audit management.</p></div><Card><CardHeader><CardTitle>Admin edition selection</CardTitle></CardHeader><CardContent><Input aria-label="Admin edition id" placeholder="Festival edition id for operational tabs" value={editionId} onChange={e=>setEditionId(e.target.value)} /></CardContent></Card><Tabs defaultValue="catalogue" className="space-y-4"><TabsList className="flex h-auto flex-wrap">{["catalogue","brands","editions","lifecycle","stages","staff","permits","insurance","live","outcomes","settlement","legacy","data-health","audit"].map(t=><TabsTrigger key={t} value={t}>{t.replace("data-health","Data Health").replace("legacy","Legacy Records")}</TabsTrigger>)}</TabsList><TabsContent value="catalogue"><AdminFestivalCatalogue /></TabsContent><TabsContent value="brands"><AdminFestivalCatalogue /></TabsContent><TabsContent value="editions"><AdminFestivalCatalogue /></TabsContent><TabsContent value="lifecycle"><AdminFestivalCatalogue /></TabsContent><TabsContent value="stages"><EditionRequired editionId={editionId}><FestivalStageManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="staff"><EditionRequired editionId={editionId}><FestivalStaffManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="permits"><EditionRequired editionId={editionId}><FestivalPermitManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="insurance"><EditionRequired editionId={editionId}><FestivalInsuranceManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="live"><EditionRequired editionId={editionId}><FestivalOutcomesManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="outcomes"><EditionRequired editionId={editionId}><FestivalOutcomesManagement editionId={editionId} scope="admin" /></EditionRequired></TabsContent><TabsContent value="settlement"><EditionRequired editionId={editionId}><FestivalSettlementManagement editionId={editionId} /></EditionRequired></TabsContent><TabsContent value="legacy"><FestivalLegacyRecordsManagement /></TabsContent><TabsContent value="data-health"><FestivalDataHealthManagement /></TabsContent><TabsContent value="audit"><FestivalAuditLog /></TabsContent></Tabs></div> }

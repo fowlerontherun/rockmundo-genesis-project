@@ -69,3 +69,31 @@ export async function quoteFestivalEditionInsurance(editionId: string, provider 
 export async function purchaseFestivalEditionInsurance(quoteId: string, idempotencyKey: string) { return rpc("purchase_festival_edition_insurance" as RpcName, { p_quote_id: quoteId, p_idempotency_key: idempotencyKey }, nonNullJson); }
 export async function fetchFestivalEditionFinanceSummary(editionId: string) { return rpc("festival_edition_finance_summary" as RpcName, { p_edition_id: editionId }, jsonRecord); }
 export async function previewCopyFestivalEdition(sourceEditionId: string, targetEditionId?: string | null) { return rpc("preview_copy_festival_edition" as RpcName, { p_source_edition_id: sourceEditionId, p_target_edition_id: targetEditionId ?? null }, jsonRecord); }
+
+const callMaybeRpc = async <T>(fn: string, args?: Record<string, unknown>, fallback?: () => Promise<T>): Promise<T> => {
+  try { return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>); } catch (error) { if (fallback) return fallback(); throw error; }
+};
+
+export async function fetchFestivalEditionOperations(editionId: string) {
+  return callMaybeRpc("festival_edition_operations_summary", { p_edition_id: editionId }, async () => {
+    const client = supabase as any;
+    const [stages, slots, staff, permits, insurance] = await Promise.all([
+      client.from("festival_stages").select("*").eq("edition_id", editionId),
+      client.from("festival_stage_slots").select("*").eq("edition_id", editionId),
+      client.from("festival_staff").select("*").eq("edition_id", editionId),
+      client.from("festival_permits").select("*").eq("edition_id", editionId),
+      client.from("festival_insurance_policies").select("*").eq("edition_id", editionId),
+    ]);
+    const firstError = [stages, slots, staff, permits, insurance].find((r) => r.error)?.error;
+    if (firstError) throw mapFestivalError(firstError);
+    return { stages: stages.data ?? [], slots: slots.data ?? [], staff: staff.data ?? [], candidates: [], permit_requirements: permits.data ?? [], insurance_quotes: [], insurance_policies: insurance.data ?? [], permissions: {}, lifecycle: {} };
+  });
+}
+
+export async function fetchFestivalAdminDataHealth() { return callMaybeRpc("admin_festival_data_health", {}, async () => { const { data, error } = await (supabase as any).from("festival_migration_issues").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { issues: data ?? [] }; }); }
+export async function fetchFestivalLegacyRecords() { return callMaybeRpc("admin_festival_legacy_records", {}, async () => { const { data, error } = await (supabase as any).from("festival_legacy_mappings").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { records: data ?? [] }; }); }
+export async function fetchFestivalAuditEvents(filters: Record<string, string>) { return callMaybeRpc("admin_festival_audit_events", { p_filters: filters }, async () => { const { data, error } = await (supabase as any).from("festival_admin_audit_events").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { events: data ?? [] }; }); }
+export async function repairFestivalDataHealthIssue(input: { issueId: string; action: string; reason?: string }) { return callMaybeRpc("repair_festival_data_health_issue", { p_issue_id: input.issueId, p_action: input.action, p_reason: input.reason ?? null }, async () => ({ unavailable: true, message: "Data-health repair RPC is unavailable in this environment." })); }
+export async function previewLegacyFestivalMigration(mappingId: string) { return callMaybeRpc("preview_festival_legacy_migration", { p_mapping_id: mappingId }, async () => ({ unavailable: true, preview_hash: null, message: "Legacy migration preview RPC is unavailable in this environment." })); }
+export async function applyLegacyFestivalMigration(mappingId: string) { return callMaybeRpc("apply_festival_legacy_migration", { p_mapping_id: mappingId, p_idempotency_key: `legacy:${mappingId}` }, async () => ({ unavailable: true, message: "Legacy migration apply RPC is unavailable in this environment." })); }
+export async function reviewFestivalEditionPermit(input: { permitId: string; action: string; reason?: string }) { return callMaybeRpc("admin_review_festival_edition_permit", { p_permit_id: input.permitId, p_action: input.action, p_reason: input.reason ?? null, p_idempotency_key: `permit-review:${input.permitId}:${input.action}` }, async () => ({ unavailable: true, message: "Permit review RPC is unavailable in this environment." })); }
