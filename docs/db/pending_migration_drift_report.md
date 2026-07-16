@@ -439,3 +439,22 @@ Generated against live schema on 2026-07-16. Total pending migrations: **127**.
 
 ### `20291216080000_repair_festival_owner_bootstrap.sql` (8773B)
 
+
+## Guardrail analysis (CREATE TABLE IF NOT EXISTS)
+
+Of the 65 pending migrations that CREATE tables, **59 use `IF NOT EXISTS`** — safe to replay against the live DB. Only **6 use unguarded `CREATE TABLE`** and MUST be inspected before deployment:
+
+- `20260923110000_normalize_skills.sql` — unguarded creates: skill_definitions, skill_relationships, profile_skill_progress, profile_skill_unlocks
+- `20261101100000_create_friendships_table.sql` — unguarded creates: friendships
+- `20290603100000_create_music_video_release_tables.sql` — unguarded creates: music_video_configs, music_video_metrics
+- `20290702100000_create_story_narrative_tables.sql` — unguarded creates: story_states, story_choices
+- `20290705090000_create_side_hustle_progress_tables.sql` — unguarded creates: side_hustle_progress, side_hustle_minigame_attempts
+- `20291206090000_festival_booking_contracts.sql` — unguarded creates: festival_applications, festival_contract_offers, festival_offer_revisions, festival_contracts, festival_contract_signatures, festival_contract_setlists, festival_contract_setlist_items, festival_application_events, festival_contract_events
+
+## Recommended deployment order
+
+1. **Phase A — Safe new features** (12 clean-new-table migrations + 34 policy/function-only): deploy in filename order.
+2. **Phase B — Festival Edition cluster** (Dec 2029, ~16 files, mostly `IF NOT EXISTS`): deploy in filename order. This unblocks the admin console errors reported earlier.
+3. **Phase C — Column additions** (29 files touching existing tables): for each, run `information_schema.columns` check first; skip columns that already exist. Watch for `user_id`/`profile_id` divergence on `busking_sessions`, `activity_feed`, `player_ailments`, `experience_ledger`.
+4. **Phase D — 6 unguarded CREATE TABLE files**: rewrite each to `CREATE TABLE IF NOT EXISTS` (or gate behind an existence check) before deploying.
+5. **Phase E — RLS/policy-only migrations**: replay last so they attach to whatever schema Phases A-D produced.
