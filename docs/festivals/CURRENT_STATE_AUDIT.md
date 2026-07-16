@@ -328,7 +328,6 @@ The next canonical layer introduces edition-scoped applications, offers, immutab
 
 Public browsing is corrected with `public_festival_editions_read()`, a security-definer safe projection that avoids granting direct public reads on private `festival_editions` columns.
 
-
 ### Booking hardening update
 
 PR #1193 follow-up inspection found broad active-member authority, inconsistent idempotency, mutable setlist rows, and weak slot reservation semantics. `20291207090000_harden_festival_booking_contracts.sql` corrects these before UI wiring.
@@ -340,3 +339,7 @@ Player and organiser UI now consume canonical application, offer, contract and s
 ## Canonical booking UI hardening state
 
 The booking UI scaffold from PR #1195 has been hardened with focused modules, stable idempotency handling, readable terms summaries and typed projections. Repertoire-backed song selection, direct invitation search, server-projected signing authority and realtime invalidation remain the next UI/domain integration risks before performance sessions.
+
+## Canonical booking workspace completion
+
+The booking workspace completion pass addresses the PR #1196 audit gaps: direct invitation projections, server-backed eligibility, server-projected band authority, repertoire-backed setlist validation, typed Supabase-client usage and React-safe mutation idempotency. Full local Supabase reset remains an environment-dependent validation step.
