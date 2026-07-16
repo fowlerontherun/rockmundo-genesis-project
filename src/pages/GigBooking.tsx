@@ -95,13 +95,17 @@ const GigBooking = () => {
     return Math.max(0, Math.min(100, Math.round(combined)));
   }, [performanceSkill, stagePresence, crowdEngagement, fame]);
 
-  // Set player's country as default filter when currentCity loads
+  // Set player's country/city as default filter when currentCity loads
   useEffect(() => {
     if (currentCity?.country && !playerCountry) {
       setPlayerCountry(currentCity.country);
       setSelectedCountry(currentCity.country);
     }
-  }, [currentCity, playerCountry]);
+    if (currentCity?.name && !playerCity) {
+      setPlayerCity(currentCity.name);
+      setSelectedCity(currentCity.name);
+    }
+  }, [currentCity, playerCountry, playerCity]);
 
   const loadVenues = useCallback(async () => {
     const { data, error } = await supabase
