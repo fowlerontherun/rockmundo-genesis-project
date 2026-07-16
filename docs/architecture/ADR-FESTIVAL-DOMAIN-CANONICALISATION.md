@@ -121,3 +121,7 @@ Canonical booking workspaces use additive server projections for represented ban
 ## Follow-up: canonical performance sessions
 
 After booking activation, festival performance execution is canonicalised through `festival_performance_sessions` and its attendance, equipment, crew, incident and event-history child tables. The gig viewer and live UI are presentation consumers of this session state; they must not implement a parallel festival lifecycle or calculate rewards directly.
+
+## Audience and outcome extension
+
+Festival performance outcomes now consume canonical performance-session evidence. Audience generation and scoring are server-authoritative, idempotent, versioned and immutable. Public projections intentionally omit private readiness, health, contract and settlement details.

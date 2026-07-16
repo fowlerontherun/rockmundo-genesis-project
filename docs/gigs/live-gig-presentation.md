@@ -58,3 +58,7 @@ The presentation state separates view-only display from management controls. Tac
 ## Festival performance-session integration
 
 Festival live views now consume canonical `festival_performance_sessions` state, including immutable setlist snapshots, current song position, checked-in performers, equipment readiness and safe incident state. The viewer remains a presentation layer; lifecycle mutations happen through festival session RPCs.
+
+## Festival audience outcome integration
+
+Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.

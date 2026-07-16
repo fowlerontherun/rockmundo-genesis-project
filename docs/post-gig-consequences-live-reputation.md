@@ -82,3 +82,7 @@ The gig experience DTO now exposes a post-consequence section, timeline and next
 ## Known limitations
 
 This PR lays the durable schema, calculation foundation, DTO mapping and report UI. It intentionally avoids a full automated booking marketplace, AI journalism, severe medical simulation, tour-wide simulation and retroactive backfill. Server-side orchestration can now call the pure consequence calculator and persist rows through the new idempotent tables.
+
+## Festival audience outcome integration
+
+Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.

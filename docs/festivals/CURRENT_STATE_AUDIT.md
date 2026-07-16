@@ -347,3 +347,7 @@ The booking workspace completion pass addresses the PR #1196 audit gaps: direct 
 ## Performance sessions PR audit update
 
 The PR #1197 booking-workspace boundary was rechecked before adding performance sessions. Its projection RPCs and TypeScript mappers are present and connected through the booking hooks/UI services. This PR adds the next server-authoritative layer after active contracts: canonical sessions, attendance, equipment, crew, readiness, soundcheck, incidents, stage call, song progression and settlement-pending completion evidence.
+
+## Festival audience outcome integration
+
+Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.
