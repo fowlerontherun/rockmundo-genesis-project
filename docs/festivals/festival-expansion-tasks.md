@@ -23,3 +23,11 @@ The canonical edition operations PR completes the PR #1210 foundation by adding 
 
 - Added canonical settlement lifecycle, effect applications, contract settlement instructions, reconciliation and final edition financial result storage.
 - Next: `feat(festivals): add festival legacy history records awards and multi-year progression`.
+
+## Stabilisation gate before further expansion
+
+- [x] Stop unsafe edition-number-one operational backfills.
+- [x] Remove universal USD ledger default for historical rows.
+- [x] Add stage legacy-domain diagnostics and slot consistency enforcement.
+- [x] Add frontend service validation for admin catalogue and owner workflows.
+- [ ] Run the full Supabase reset and route smoke suite in an environment with the supported Supabase CLI.

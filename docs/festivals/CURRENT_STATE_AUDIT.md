@@ -367,3 +367,7 @@ The canonical edition operations PR completes the PR #1210 foundation by adding 
 ## Festival settlement phase
 
 A canonical settlement migration now adds locked settlement snapshots, effect application records, contract settlement instructions, settlement transactions, financial results and reconciliation functions for the next festival expansion phase.
+
+## Stabilisation update — July 2026
+
+A corrective festival stabilisation pass documents the broken owner/admin workflows, adds runtime RPC validation, removes unsafe historical ledger defaults, records ambiguous legacy operations as migration issues, and enforces stage/slot consistency at the database layer. Settlement is not expanded by this work.

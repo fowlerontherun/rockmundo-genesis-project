@@ -138,3 +138,7 @@ The canonical edition operations PR completes the PR #1210 foundation by adding 
 ## Settlement extension
 
 Festival editions now complete through a server-authoritative settlement lifecycle. Settlement locks a readiness and input snapshot, applies pending outcome effects through immutable application records, derives contract instructions from signed contract versions, reconciles operational ledger rows, stores final edition financial results and only then transitions the edition to completed.
+
+## Stabilisation addendum
+
+Canonical festival operations must not infer an edition from a permanent brand when multiple editions exist. Legacy operational data should remain unresolved and visible to admins until deterministic evidence can assign it to an edition. Ledger currency must be edition-derived, and stage/slot integrity must be enforced in the database as well as the UI.
