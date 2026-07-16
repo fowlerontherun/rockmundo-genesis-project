@@ -73,20 +73,22 @@ const Index = () => {
         onResurrect={(profileId) => {
           resurrectCharacter.mutate(profileId, {
             onSuccess: () => {
-              // Full reload to clear cached game data
               window.location.href = "/home";
             },
           });
         }}
-        onCreateChild={(parentId) => {
-          createChildCharacter.mutate(parentId, {
-            onSuccess: () => {
-              window.location.href = "/onboarding";
-            },
-          });
+        onCreateChild={(parentId, opts) => {
+          createChildCharacter.mutate(
+            { parentProfileId: parentId, displayName: opts.displayName, username: opts.username },
+            {
+              onSuccess: () => {
+                window.location.href = "/onboarding";
+              },
+            }
+          );
         }}
-        onCreateFresh={() => {
-          createFreshCharacter.mutate(undefined, {
+        onCreateFresh={(opts) => {
+          createFreshCharacter.mutate(opts, {
             onSuccess: () => {
               window.location.href = "/onboarding";
             },
@@ -97,13 +99,15 @@ const Index = () => {
     );
   }
 
-  // No living character and no dead ones — shouldn't happen but handle gracefully
+  // No living character and no dead ones — brand-new account fresh start.
   if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
         <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
-          <h2 className="text-xl font-bold">Welcome Back</h2>
-          <p className="text-sm text-muted-foreground">No active character found. Let's create a new one!</p>
+          <h2 className="text-xl font-bold">Welcome to RockMundo</h2>
+          <p className="text-sm text-muted-foreground">
+            Let's create your first character. You can personalize everything in onboarding right after.
+          </p>
           <Button
             onClick={() => {
               createFreshCharacter.mutate(undefined, {
