@@ -1,0 +1,526 @@
+{
+  "routes": [
+    {
+      "path": "/world/festivals",
+      "component": "PreserveQueryRedirect",
+      "classification": "keep alias"
+    },
+    {
+      "path": "/world/festivals/:festivalId",
+      "component": "src/pages/FestivalDetail.tsx",
+      "classification": "merge"
+    },
+    {
+      "path": "/festivals",
+      "component": "src/pages/FestivalBrowser.tsx",
+      "classification": "legacy active"
+    },
+    {
+      "path": "/festivals/marketplace",
+      "component": "src/pages/FestivalMarketplace.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "/festivals/directory",
+      "component": "src/pages/FestivalDirectory.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "/festivals/:festivalId",
+      "component": "src/pages/FestivalDetail.tsx",
+      "classification": "hybrid"
+    },
+    {
+      "path": "/festivals/simulation",
+      "component": "src/pages/FestivalsNew.tsx",
+      "classification": "duplicate legacy"
+    },
+    {
+      "path": "/festivals/perform/:participationId",
+      "component": "src/pages/FestivalPerformance.tsx",
+      "classification": "legacy unsafe"
+    },
+    {
+      "path": "/festivals/:festivalId/manage",
+      "component": "src/pages/FestivalOwnerConsole.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "/festivals/:festivalId/calendar",
+      "component": "src/pages/FestivalBookingCalendar.tsx",
+      "classification": "hybrid"
+    },
+    {
+      "path": "/festivals/:festivalId/run",
+      "component": "src/pages/FestivalRunWizard.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "/admin/festivals",
+      "component": "src/pages/admin/FestivalsAdmin.tsx",
+      "classification": "legacy hybrid admin"
+    },
+    {
+      "path": "/admin/city-festivals",
+      "component": "src/pages/admin/CityFestivalsAdmin.tsx",
+      "classification": "canonical partial admin"
+    }
+  ],
+  "pages": [
+    {
+      "path": "src/pages/FestivalBrowser.tsx",
+      "classification": "legacy active"
+    },
+    {
+      "path": "src/pages/Festivals.tsx",
+      "classification": "unregistered shell"
+    },
+    {
+      "path": "src/pages/FestivalsNew.tsx",
+      "classification": "duplicate legacy"
+    },
+    {
+      "path": "src/pages/FestivalDetail.tsx",
+      "classification": "hybrid active"
+    },
+    {
+      "path": "src/pages/FestivalPerformance.tsx",
+      "classification": "legacy unsafe"
+    },
+    {
+      "path": "src/pages/FestivalOwnerConsole.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "src/pages/FestivalRunWizard.tsx",
+      "classification": "canonical partial"
+    },
+    {
+      "path": "src/pages/FestivalBookingCalendar.tsx",
+      "classification": "hybrid"
+    },
+    {
+      "path": "src/pages/FestivalMarketplace.tsx",
+      "classification": "canonical brand"
+    },
+    {
+      "path": "src/pages/FestivalDirectory.tsx",
+      "classification": "canonical brand"
+    },
+    {
+      "path": "src/pages/admin/FestivalsAdmin.tsx",
+      "classification": "legacy hybrid admin"
+    },
+    {
+      "path": "src/pages/admin/FestivalAdmin.tsx",
+      "classification": "unregistered admin partial"
+    },
+    {
+      "path": "src/pages/admin/CityFestivalsAdmin.tsx",
+      "classification": "canonical brand admin"
+    }
+  ],
+  "components": [
+    {
+      "path": "src/components/festivals/FestivalBrowser.tsx",
+      "classification": "duplicate browser"
+    },
+    {
+      "path": "src/components/festivals/FestivalApplyDialog.tsx",
+      "classification": "application partial"
+    },
+    {
+      "path": "src/components/festivals/FestivalContractNegotiationDialog.tsx",
+      "classification": "client-authoritative negotiation"
+    },
+    {
+      "path": "src/components/festivals/FestivalSetlistEditor.tsx",
+      "classification": "ui-only partial"
+    },
+    {
+      "path": "src/components/festivals/FestivalScheduleConflictWarning.tsx",
+      "classification": "advisory preflight"
+    },
+    {
+      "path": "src/components/festivals/LiveFestivalView.tsx",
+      "classification": "hybrid live"
+    },
+    {
+      "path": "src/components/festivals/performance/FestivalPerformanceLoop.tsx",
+      "classification": "client-authoritative performance"
+    },
+    {
+      "path": "src/components/festivals/FestivalPerformanceOutcome.tsx",
+      "classification": "outcome display"
+    },
+    {
+      "path": "src/components/festivals/FestivalSlotOffers.tsx",
+      "classification": "hybrid offers"
+    },
+    {
+      "path": "src/components/band/FestivalOffersTab.tsx",
+      "classification": "hybrid offers"
+    },
+    {
+      "path": "src/components/festivals/FestivalInviteManager.tsx",
+      "classification": "hybrid admin offers"
+    },
+    {
+      "path": "src/components/festivals/admin/FestivalDetailManager.tsx",
+      "classification": "hybrid admin manager"
+    },
+    {
+      "path": "src/components/festivals/admin/FestivalLifecycleControls.tsx",
+      "classification": "partial lifecycle"
+    },
+    {
+      "path": "src/components/festivals/admin/FestivalBulkReviewPanel.tsx",
+      "classification": "partial application review"
+    },
+    {
+      "path": "src/components/festivals/discovery/FestivalMapView.tsx",
+      "classification": "discovery ui"
+    },
+    {
+      "path": "src/components/festivals/history/FestivalHistoryCard.tsx",
+      "classification": "history ui"
+    },
+    {
+      "path": "src/components/festivals/history/FestivalHistoryStats.tsx",
+      "classification": "history ui"
+    },
+    {
+      "path": "src/components/festivals/merch/FestivalExclusiveShop.tsx",
+      "classification": "merch partial"
+    },
+    {
+      "path": "src/components/festivals/merch/FestivalMerchStand.tsx",
+      "classification": "merch partial"
+    },
+    {
+      "path": "src/components/festivals/merch/FestivalMerchSummary.tsx",
+      "classification": "merch summary"
+    },
+    {
+      "path": "src/components/festivals/FestivalBackstageEvents.tsx",
+      "classification": "incident partial"
+    },
+    {
+      "path": "src/components/festivals/FestivalStageCommentary.tsx",
+      "classification": "ui-only live commentary"
+    },
+    {
+      "path": "src/components/festivals/FestivalVoiceChat.tsx",
+      "classification": "ui-only voice"
+    },
+    {
+      "path": "src/components/festivals/FestivalCrowdProjections.tsx",
+      "classification": "projection ui"
+    },
+    {
+      "path": "src/components/festivals/reviews/FestivalReviewCard.tsx",
+      "classification": "review ui"
+    },
+    {
+      "path": "src/components/festivals/rivalry/FestivalRivalryCard.tsx",
+      "classification": "rivalry ui"
+    }
+  ],
+  "hooks": [
+    {
+      "path": "src/hooks/useFestivals.ts",
+      "classification": "legacy authority"
+    },
+    {
+      "path": "src/hooks/useFestivalStages.ts",
+      "classification": "hybrid stages slots"
+    },
+    {
+      "path": "src/hooks/useFestivalSlotApplications.ts",
+      "classification": "partial applications"
+    },
+    {
+      "path": "src/hooks/useFestivalSlotOffers.ts",
+      "classification": "hybrid offers"
+    },
+    {
+      "path": "src/hooks/useFestivalNegotiation.ts",
+      "classification": "client-authoritative negotiation"
+    },
+    {
+      "path": "src/hooks/useFestivalPerformance.ts",
+      "classification": "client-authoritative performance"
+    },
+    {
+      "path": "src/hooks/useFestivalTickets.ts",
+      "classification": "hybrid tickets"
+    },
+    {
+      "path": "src/hooks/useFestivalAttendance.ts",
+      "classification": "hybrid attendance"
+    },
+    {
+      "path": "src/hooks/useFestivalWatchRewards.ts",
+      "classification": "hybrid rewards"
+    },
+    {
+      "path": "src/hooks/useFestivalFinances.ts",
+      "classification": "mixed finance summary ledger"
+    },
+    {
+      "path": "src/hooks/useFestivalHistory.ts",
+      "classification": "hybrid history"
+    },
+    {
+      "path": "src/hooks/useFestivalBackstageEvents.ts",
+      "classification": "partial incidents"
+    },
+    {
+      "path": "src/hooks/useFestivalScheduleConflict.ts",
+      "classification": "advisory schedule preflight"
+    }
+  ],
+  "utilities": [
+    { "path": "src/data/festivals.ts", "classification": "mock/static data" },
+    {
+      "path": "src/utils/festivalCareerImpact.ts",
+      "classification": "client-side reward impact utility"
+    },
+    {
+      "path": "src/hooks/useActivityBooking.ts",
+      "classification": "scheduled activity integration"
+    }
+  ],
+  "tables": [
+    { "name": "game_events", "classification": "legacy event authority" },
+    {
+      "name": "festival_participants",
+      "classification": "legacy participation"
+    },
+    { "name": "festival_revenue_streams", "classification": "legacy finance" },
+    { "name": "festival_stages", "classification": "hybrid event-backed" },
+    { "name": "festival_stage_slots", "classification": "hybrid event-backed" },
+    { "name": "festival_tickets", "classification": "hybrid event-backed" },
+    { "name": "festival_attendance", "classification": "hybrid event-backed" },
+    {
+      "name": "festival_watch_rewards",
+      "classification": "hybrid event-backed"
+    },
+    { "name": "festival_finances", "classification": "hybrid summary finance" },
+    { "name": "festival_quality_ratings", "classification": "hybrid quality" },
+    {
+      "name": "festival_performance_history",
+      "classification": "hybrid performance history"
+    },
+    { "name": "festival_sponsorships", "classification": "hybrid sponsorship" },
+    { "name": "festival_rivalries", "classification": "hybrid rivalry" },
+    { "name": "festival_reviews", "classification": "hybrid reviews" },
+    { "name": "festival_merch_sales", "classification": "hybrid merch" },
+    { "name": "festival_slot_offers", "classification": "hybrid offers" },
+    {
+      "name": "festival_offer_negotiations",
+      "classification": "hybrid negotiations"
+    },
+    {
+      "name": "festival_backstage_events",
+      "classification": "hybrid incidents"
+    },
+    { "name": "festivals", "classification": "canonical brand candidate" },
+    { "name": "festival_lineups", "classification": "dedicated but uncertain" },
+    {
+      "name": "festival_sale_listings",
+      "classification": "canonical brand marketplace"
+    },
+    {
+      "name": "festival_purchase_offers",
+      "classification": "canonical brand marketplace"
+    },
+    {
+      "name": "festival_ownership_history",
+      "classification": "canonical brand audit"
+    },
+    {
+      "name": "festival_staff",
+      "classification": "canonical operations partial"
+    },
+    {
+      "name": "festival_insurance_policies",
+      "classification": "canonical operations partial"
+    },
+    {
+      "name": "festival_permits",
+      "classification": "canonical operations partial"
+    },
+    {
+      "name": "festival_expense_ledger",
+      "classification": "canonical ledger candidate"
+    }
+  ],
+  "views": [],
+  "rpcs": [
+    {
+      "name": "list_festival_for_sale",
+      "classification": "canonical brand marketplace"
+    },
+    {
+      "name": "purchase_festival",
+      "classification": "canonical brand marketplace"
+    },
+    {
+      "name": "notify_festival_slot_offer",
+      "classification": "hybrid notification trigger function"
+    }
+  ],
+  "edge_functions": [],
+  "statuses": [
+    { "name": "pending", "classification": "overloaded" },
+    { "name": "invited", "classification": "legacy participant" },
+    {
+      "name": "confirmed",
+      "classification": "overloaded participant/festival"
+    },
+    { "name": "performed", "classification": "legacy terminal participant" },
+    { "name": "withdrawn", "classification": "legacy participant" },
+    { "name": "rejected", "classification": "application/offer" },
+    { "name": "accepted", "classification": "application/offer/negotiation" },
+    { "name": "declined", "classification": "legacy participant constraint" },
+    { "name": "cancelled", "classification": "overloaded terminal" },
+    { "name": "postponed", "classification": "festival lifecycle" },
+    { "name": "draft", "classification": "festival lifecycle" },
+    { "name": "published", "classification": "festival lifecycle" },
+    { "name": "announced", "classification": "festival lifecycle" },
+    { "name": "live", "classification": "festival lifecycle" },
+    { "name": "completed", "classification": "activity/edition target" },
+    { "name": "booked", "classification": "stage slot" },
+    { "name": "approved", "classification": "permit" },
+    { "name": "upcoming", "classification": "dedicated festival seed" }
+  ],
+  "mutations": [
+    {
+      "caller": "useFestivals.applyToFestival",
+      "target": "festival_participants",
+      "classification": "legacy client write"
+    },
+    {
+      "caller": "useFestivals.withdrawFromFestival",
+      "target": "festival_participants",
+      "classification": "legacy client write"
+    },
+    {
+      "caller": "useFestivals.updateSetlist",
+      "target": "festival_participants",
+      "classification": "no-op persistence"
+    },
+    {
+      "caller": "useFestivals.performAtFestival",
+      "target": "festival_participants,bands",
+      "classification": "unsafe client settlement"
+    },
+    {
+      "caller": "useFestivalPerformance",
+      "target": "festival_performance_history,festival_reviews,festival_merch_sales,festival_participants",
+      "classification": "client-authoritative outcome"
+    },
+    {
+      "caller": "useFestivalStages",
+      "target": "festival_stages,festival_stage_slots",
+      "classification": "hybrid client schedule write"
+    },
+    {
+      "caller": "useFestivalSlotApplications",
+      "target": "festival_slot_applications",
+      "classification": "partial application write"
+    },
+    {
+      "caller": "useFestivalSlotOffers",
+      "target": "festival_slot_offers",
+      "classification": "hybrid offer response"
+    },
+    {
+      "caller": "useFestivalNegotiation",
+      "target": "festival_offer_negotiations,festival_slot_offers",
+      "classification": "client-random negotiation"
+    },
+    {
+      "caller": "useFestivalTickets",
+      "target": "festival_tickets",
+      "classification": "hybrid ticket write"
+    },
+    {
+      "caller": "useFestivalAttendance",
+      "target": "festival_attendance",
+      "classification": "hybrid attendance write"
+    },
+    {
+      "caller": "useFestivalWatchRewards",
+      "target": "festival_watch_rewards",
+      "classification": "hybrid reward write"
+    },
+    {
+      "caller": "FestivalRunWizard",
+      "target": "festivals.status",
+      "classification": "brand lifecycle write"
+    },
+    {
+      "caller": "FestivalMarketplace",
+      "target": "list_festival_for_sale,purchase_festival",
+      "classification": "server rpc brand marketplace"
+    }
+  ],
+  "duplicate_candidates": [
+    {
+      "path": "src/pages/FestivalBrowser.tsx",
+      "classification": "overlaps FestivlsNew and component browser"
+    },
+    {
+      "path": "src/pages/FestivalsNew.tsx",
+      "classification": "duplicate legacy simulation"
+    },
+    {
+      "path": "src/components/festivals/FestivalBrowser.tsx",
+      "classification": "duplicate component browser"
+    },
+    {
+      "path": "src/pages/admin/FestivalsAdmin.tsx",
+      "classification": "overlaps FestivalAdmin"
+    },
+    {
+      "path": "src/pages/admin/FestivalAdmin.tsx",
+      "classification": "overlaps FestivalsAdmin and is unregistered"
+    },
+    {
+      "name": "festival_finances vs festival_expense_ledger",
+      "classification": "finance authority overlap"
+    },
+    {
+      "name": "festival_participants vs festival_slot_applications vs festival_slot_offers",
+      "classification": "application/booking overlap"
+    }
+  ],
+  "legacy_candidates": [
+    {
+      "name": "game_events festival rows",
+      "classification": "calendar projection target only"
+    },
+    {
+      "name": "festival_participants",
+      "classification": "migrate after canonical tables"
+    },
+    {
+      "name": "festival_revenue_streams",
+      "classification": "replace with ledger"
+    },
+    {
+      "path": "src/hooks/useFestivals.ts",
+      "classification": "replace with canonical adapter"
+    },
+    {
+      "path": "src/pages/FestivalsNew.tsx",
+      "classification": "remove after migration"
+    },
+    {
+      "path": "src/pages/admin/FestivalsAdmin.tsx",
+      "classification": "merge after admin migration"
+    }
+  ]
+}
