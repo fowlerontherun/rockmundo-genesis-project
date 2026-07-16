@@ -373,30 +373,29 @@ Deno.serve(async (req) => {
               }
             }
             
-            // Trigger audio generation for the version song if quality is good enough
-            if (newQuality >= 60 && targetSongId) {
+            // Trigger audio generation for the version song (automatic on recording completion)
+            if (targetSongId) {
               try {
                 const { data: versionSongData } = await supabase
                   .from('songs')
                   .select('user_id, audio_url, audio_generation_status, songwriting_project_id')
                   .eq('id', targetSongId)
                   .single()
-                
-                if (versionSongData?.user_id && 
-                    !versionSongData?.audio_url && 
+
+                if (versionSongData?.user_id &&
+                    !versionSongData?.audio_url &&
                     versionSongData?.audio_generation_status !== 'generating' &&
-                    versionSongData?.audio_generation_status !== 'completed' &&
-                    versionSongData?.songwriting_project_id) {
-                  
+                    versionSongData?.audio_generation_status !== 'completed') {
+
                   console.log(`Invoking generate-song-audio for version song ${targetSongId}`)
-                  
+
                   const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
-                    body: { 
-                      songId: targetSongId, 
-                      userId: versionSongData.user_id 
+                    body: {
+                      songId: targetSongId,
+                      userId: versionSongData.user_id
                     }
                   })
-                  
+
                   if (genError) {
                     console.error(`Failed to trigger audio generation for version song ${targetSongId}:`, genError)
                   } else {
