@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, X, Music4, Plane, PenLine, Zap, MessageSquare, Mic2, CalendarClock, Twitter, Moon, Utensils, ShoppingBag } from "lucide-react";
+import { Plus, X, Music4, Plane, PenLine, Zap, MessageSquare, Mic2, CalendarClock, Twitter, Moon, Utensils, ShoppingBag, Backpack, Shirt, Trophy, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,13 @@ function orderFor(pathname: string, base: Action[]): Action[] {
   if (pathname.startsWith("/mobile/career") || pathname.startsWith("/career")) return bucket(["practice", "write", "book-studio", "book-rehearsal", "jam"]);
   if (pathname.startsWith("/mobile/social") || pathname.startsWith("/social")) return bucket(["message", "twaater", "jam"]);
   if (pathname.startsWith("/mobile/world") || pathname.startsWith("/world")) return bucket(["travel", "shop", "book-studio"]);
-  if (pathname.startsWith("/mobile/me") || pathname.startsWith("/me") || pathname.startsWith("/character")) return bucket(["sleep", "eat", "shop"]);
+  if (pathname.startsWith("/mobile/me/wellness")) return bucket(["eat", "sleep", "rest", "recovery-item"]);
+  if (pathname.startsWith("/mobile/me/inventory")) return bucket(["use-item", "equip-item", "shop"]);
+  if (pathname.startsWith("/mobile/me/wardrobe")) return bucket(["change-outfit", "shop"]);
+  if (pathname.startsWith("/mobile/me/skills")) return bucket(["practice", "start-learning"]);
+  if (pathname.startsWith("/mobile/me/education")) return bucket(["start-learning", "practice"]);
+  if (pathname.startsWith("/mobile/me/achievements")) return bucket(["achievements"]);
+  if (pathname.startsWith("/mobile/me") || pathname.startsWith("/me") || pathname.startsWith("/character")) return bucket(["eat", "sleep", "use-item", "change-outfit", "practice"]);
   return base;
 }
 
@@ -42,6 +48,13 @@ export const FabMenu = () => {
     { key: "sleep", label: "Sleep", icon: <Moon className="h-5 w-5" />, to: "/wellness" },
     { key: "eat", label: "Eat", icon: <Utensils className="h-5 w-5" />, to: "/wellness" },
     { key: "shop", label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/gear-shop" },
+    { key: "rest", label: "Rest", icon: <Moon className="h-5 w-5" />, to: "/mobile/me/wellness" },
+    { key: "recovery-item", label: "Recovery Item", icon: <Backpack className="h-5 w-5" />, to: "/mobile/me/inventory" },
+    { key: "use-item", label: "Use Item", icon: <Backpack className="h-5 w-5" />, to: "/mobile/me/inventory" },
+    { key: "equip-item", label: "Equip Item", icon: <Backpack className="h-5 w-5" />, to: "/mobile/me/inventory" },
+    { key: "change-outfit", label: "Change Outfit", icon: <Shirt className="h-5 w-5" />, to: "/mobile/me/wardrobe" },
+    { key: "start-learning", label: "Start Learning", icon: <GraduationCap className="h-5 w-5" />, to: "/mobile/me/education" },
+    { key: "achievements", label: "Achievements", icon: <Trophy className="h-5 w-5" />, to: "/mobile/me/achievements" },
   ];
   const actions = orderFor(location.pathname, base);
 
