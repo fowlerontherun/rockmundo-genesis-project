@@ -45,19 +45,35 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     })
 
-    // Find in_progress sessions that have passed their scheduled_end time
-    const { data: sessions, error: sessionsError } = await supabase
+    // Find sessions that have passed their scheduled_end time
+    const nowIso = new Date().toISOString()
+    console.log(`Querying for sessions with scheduled_end < ${nowIso}`)
+    const { data: rawSessions, error: sessionsError } = await supabase
       .from('recording_sessions')
-      .select('*, songs(id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id)')
+      .select('*')
       .in('status', ['in_progress', 'scheduled'])
-      .lt('scheduled_end', new Date().toISOString())
+      .lt('scheduled_end', nowIso)
 
     if (sessionsError) {
       console.error('Error fetching sessions:', sessionsError)
       throw sessionsError
     }
 
-    console.log(`Found ${sessions?.length || 0} recording sessions to auto-complete`)
+    console.log(`Found ${rawSessions?.length || 0} raw recording sessions`)
+
+    // Hydrate song info separately (avoid embed edge-cases)
+    const songIds = Array.from(new Set((rawSessions || []).map((s: any) => s.song_id).filter(Boolean)))
+    const songMap = new Map<string, any>()
+    if (songIds.length > 0) {
+      const { data: songRows } = await supabase
+        .from('songs')
+        .select('id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id')
+        .in('id', songIds)
+      for (const row of songRows || []) songMap.set((row as any).id, row)
+    }
+    const sessions = (rawSessions || []).map((s: any) => ({ ...s, songs: s.song_id ? songMap.get(s.song_id) || null : null }))
+
+    console.log(`Found ${sessions.length} recording sessions to auto-complete`)
 
     for (const session of sessions || []) {
       try {
