@@ -32,7 +32,7 @@ export default function FestivalOwnerConsole() {
     return <Navigate to={`/festivals/${festivalId}/manage/editions/${editions[0].id}`} replace />;
   }
 
-  return <FMPageScaffold title="Festival management" description="Canonical brand and edition management for festival owners and delegated managers.">
+  return <FMPageScaffold title="Festival management" subtitle="Canonical brand and edition management for festival owners and delegated managers.">
     <div className="mb-4"><Button asChild variant="ghost" size="sm"><Link to="/festivals"><ArrowLeft className="mr-2 h-4 w-4" />Back to festivals</Link></Button></div>
     <div className="space-y-6">
       <OwnerEditionSelector festivalId={festivalId} selectedEditionId={editionId} />
