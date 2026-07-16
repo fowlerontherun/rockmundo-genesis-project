@@ -54,3 +54,7 @@ The presentation state separates view-only display from management controls. Tac
 - The first stage view is DOM/CSS based rather than WebGL or a game engine.
 - Highlight persistence and venue/band history records are foundations only; automatic public sharing is intentionally out of scope.
 - Older `TopDownGigViewer` remains available until the live route is fully migrated to the server timeline dashboard.
+
+## Festival performance-session integration
+
+Festival live views now consume canonical `festival_performance_sessions` state, including immutable setlist snapshots, current song position, checked-in performers, equipment readiness and safe incident state. The viewer remains a presentation layer; lifecycle mutations happen through festival session RPCs.

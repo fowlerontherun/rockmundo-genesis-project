@@ -343,3 +343,7 @@ The booking UI scaffold from PR #1195 has been hardened with focused modules, st
 ## Canonical booking workspace completion
 
 The booking workspace completion pass addresses the PR #1196 audit gaps: direct invitation projections, server-backed eligibility, server-projected band authority, repertoire-backed setlist validation, typed Supabase-client usage and React-safe mutation idempotency. Full local Supabase reset remains an environment-dependent validation step.
+
+## Performance sessions PR audit update
+
+The PR #1197 booking-workspace boundary was rechecked before adding performance sessions. Its projection RPCs and TypeScript mappers are present and connected through the booking hooks/UI services. This PR adds the next server-authoritative layer after active contracts: canonical sessions, attendance, equipment, crew, readiness, soundcheck, incidents, stage call, song progression and settlement-pending completion evidence.

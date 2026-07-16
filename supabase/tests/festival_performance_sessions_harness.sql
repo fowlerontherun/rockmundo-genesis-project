@@ -1,0 +1,26 @@
+-- Festival performance session behavioural harness. Run inside a rollback transaction.
+begin;
+select plan(21);
+select has_table('public','festival_performance_sessions','canonical session table exists');
+select has_table('public','festival_performance_attendance','attendance table exists');
+select has_table('public','festival_session_equipment','equipment table exists');
+select has_table('public','festival_session_crew','crew table exists');
+select has_table('public','festival_performance_incidents','incident table exists');
+select has_table('public','festival_performance_session_events','event stream exists');
+select has_function('public','ensure_festival_performance_session',ARRAY['uuid','text'],'active contract creates one idempotent session via RPC');
+select has_function('public','check_in_festival_performer',ARRAY['uuid','text'],'performer self check-in RPC exists and rejects unrelated players');
+select has_function('public','festival_session_arrival_status',ARRAY['uuid'],'whole-band arrival projection exists');
+select has_function('public','festival_equipment_preflight',ARRAY['uuid'],'equipment blockers and remedies projection exists');
+select has_function('public','festival_crew_preflight',ARRAY['uuid'],'crew preflight projection exists');
+select has_function('public','festival_session_readiness',ARRAY['uuid'],'server readiness projection exists');
+select has_function('public','lock_festival_session_readiness',ARRAY['uuid','text'],'readiness lock exists');
+select has_function('public','call_festival_band_to_stage',ARRAY['uuid','text'],'stage call requires readiness RPC exists');
+select has_function('public','start_festival_performance',ARRAY['uuid','text'],'authoritative start RPC exists');
+select has_function('public','advance_festival_performance',ARRAY['uuid','integer','text','jsonb','text'],'stale-position guarded progression RPC exists');
+select has_function('public','cancel_festival_performance_session',ARRAY['uuid','text','text','text'],'cancellation/no-show evidence RPC exists');
+select has_function('public','complete_festival_performance',ARRAY['uuid','text'],'settlement-pending completion RPC exists');
+select has_function('public','public_festival_performance_sessions',ARRAY['uuid'],'privacy-safe public projection exists');
+select ok(public.festival_session_can_transition('ready','stage_call') and not public.festival_session_can_transition('scheduled','in_progress'),'transition graph blocks direct start');
+select isnt((public.festival_session_timing('2030-01-01 20:00+00','2030-01-01 21:00+00')->>'arrival_deadline_at'), null, 'timing windows are deterministic');
+select * from finish();
+rollback;

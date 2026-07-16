@@ -705,7 +705,10 @@
     "playerRoute": "/festivals",
     "ownerRoute": "/festivals/:festivalId/manage",
     "modeHelper": "getFestivalBookingMode",
-    "deferred": ["canonical performance sessions", "financial settlement"]
+    "deferred": [
+      "canonical performance sessions",
+      "financial settlement"
+    ]
   },
   "bookingUiHardening": {
     "status": "partial-hardening-landed",
@@ -732,6 +735,40 @@
       "fame updates",
       "payments",
       "financial settlement"
+    ]
+  },
+  "performance_sessions": {
+    "tables": [
+      "festival_performance_sessions",
+      "festival_performance_attendance",
+      "festival_session_equipment",
+      "festival_session_crew",
+      "festival_performance_incidents",
+      "festival_performance_session_events"
+    ],
+    "rpcs": [
+      "ensure_festival_performance_session",
+      "check_in_festival_performer",
+      "festival_session_arrival_status",
+      "festival_equipment_preflight",
+      "festival_crew_preflight",
+      "festival_session_readiness",
+      "lock_festival_session_readiness",
+      "begin_festival_soundcheck",
+      "complete_festival_soundcheck",
+      "call_festival_band_to_stage",
+      "start_festival_performance",
+      "advance_festival_performance",
+      "complete_festival_performance",
+      "public_festival_performance_sessions"
+    ],
+    "deferred": [
+      "performance_quality",
+      "crowd_satisfaction",
+      "fame_rewards",
+      "guarantee_payment",
+      "merch_settlement",
+      "ticket_revenue_allocation"
     ]
   }
 }
