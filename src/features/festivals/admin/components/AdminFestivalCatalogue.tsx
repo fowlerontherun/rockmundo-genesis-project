@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CalendarDays, HeartPulse } from "lucide-react";
+import { AlertTriangle, CalendarDays, ExternalLink, HeartPulse } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAdminFestivalCatalogue } from "../hooks";
 import { formatFestivalMoney } from "../mappers";
 
@@ -33,7 +34,7 @@ export function AdminFestivalCatalogue() {
           <div><p className="text-xs text-muted-foreground">Stages / contracts</p><p>{row.stageCount} / {row.activeContractCount}</p></div>
           <div><p className="text-xs text-muted-foreground">Sessions / outcomes</p><p>{row.performanceSessionCount} / {row.outcomeCount}</p></div>
           <div><p className="text-xs text-muted-foreground">Forecast</p><p>{formatFestivalMoney(row.projectedFinanceCents, row.currencyCode)}</p></div>
-          <div className="flex items-end"><Button variant="outline" size="sm"><HeartPulse className="mr-2 h-4 w-4" />Open workspace</Button></div>
+          <div className="flex flex-wrap items-end gap-2"><Button asChild variant="outline" size="sm"><Link to={`/festivals/${row.festivalId}/manage/editions/${row.currentEditionId ?? row.nextEditionId ?? row.completedEditionId}`}><HeartPulse className="mr-2 h-4 w-4" />Open management</Link></Button><Button asChild variant="ghost" size="sm"><Link to={`/festivals/${row.festivalId}`}><ExternalLink className="mr-2 h-4 w-4" />View public page</Link></Button><Button asChild variant="ghost" size="sm"><Link to="/admin/festivals#health">View data health</Link></Button></div>
           {row.dataHealthWarnings.length > 0 && <div className="md:col-span-6 text-sm text-muted-foreground">{row.dataHealthWarnings.map((issue) => issue.message).join(" · ")}</div>}
         </CardContent>
       </Card>)}
