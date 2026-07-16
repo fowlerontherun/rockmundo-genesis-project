@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.547",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Open Mic sign-up no longer fails with an RLS error. The insert into open_mic_performances (and the linked scheduled activity) now uses the auth user id instead of the character profile id, matching the row-level security policy on the table." },
+    ],
+  },
+  {
     version: "1.1.546",
     date: "2026-07-16",
     changes: [
