@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.573",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Festivals Administration: fixed 'FESTIVAL_MIGRATION_REQUIRED: This festival record needs admin migration or data repair' shown in the Legacy records panel. The admin service was throwing when the optional admin_festival_legacy_records / admin_festival_data_health / admin_festival_audit_events RPCs were missing and the fallback table query hit a permission error — the error message contained the word 'legacy' so it was misclassified as a migration-required error. Fallbacks now swallow those errors and return an empty list so the workspace loads cleanly." },
+    ],
+  },
+  {
     version: "1.1.572",
     date: "2026-07-16",
     changes: [

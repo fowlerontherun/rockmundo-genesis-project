@@ -71,7 +71,7 @@ export async function fetchFestivalEditionFinanceSummary(editionId: string) { re
 export async function previewCopyFestivalEdition(sourceEditionId: string, targetEditionId?: string | null) { return rpc("preview_copy_festival_edition" as RpcName, { p_source_edition_id: sourceEditionId, p_target_edition_id: targetEditionId ?? null }, jsonRecord); }
 
 const callMaybeRpc = async <T>(fn: string, args?: Record<string, unknown>, fallback?: () => Promise<T>): Promise<T> => {
-  try { return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>); } catch (error) { if (fallback) return fallback(); throw error; }
+  try { return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>); } catch (error) { if (fallback) { try { return await fallback(); } catch { /* graceful */ return ({} as T); } } throw error; }
 };
 
 export async function fetchFestivalEditionOperations(editionId: string) {
@@ -90,9 +90,9 @@ export async function fetchFestivalEditionOperations(editionId: string) {
   });
 }
 
-export async function fetchFestivalAdminDataHealth() { return callMaybeRpc("admin_festival_data_health", {}, async () => { const { data, error } = await (supabase as any).from("festival_migration_issues").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { issues: data ?? [] }; }); }
-export async function fetchFestivalLegacyRecords() { return callMaybeRpc("admin_festival_legacy_records", {}, async () => { const { data, error } = await (supabase as any).from("festival_legacy_mappings").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { records: data ?? [] }; }); }
-export async function fetchFestivalAuditEvents(filters: Record<string, string>) { return callMaybeRpc("admin_festival_audit_events", { p_filters: filters }, async () => { const { data, error } = await (supabase as any).from("festival_admin_audit_events").select("*").order("created_at", { ascending: false }).limit(100); if (error) throw mapFestivalError(error); return { events: data ?? [] }; }); }
+export async function fetchFestivalAdminDataHealth() { return callMaybeRpc("admin_festival_data_health", {}, async () => { try { const { data } = await (supabase as any).from("festival_migration_issues").select("*").order("created_at", { ascending: false }).limit(100); return { issues: data ?? [] }; } catch { return { issues: [] }; } }); }
+export async function fetchFestivalLegacyRecords() { return callMaybeRpc("admin_festival_legacy_records", {}, async () => { try { const { data } = await (supabase as any).from("festival_legacy_mappings").select("*").order("created_at", { ascending: false }).limit(100); return { records: data ?? [] }; } catch { return { records: [] }; } }); }
+export async function fetchFestivalAuditEvents(filters: Record<string, string>) { return callMaybeRpc("admin_festival_audit_events", { p_filters: filters }, async () => { try { const { data } = await (supabase as any).from("festival_admin_audit_events").select("*").order("created_at", { ascending: false }).limit(100); return { events: data ?? [] }; } catch { return { events: [] }; } }); }
 export async function repairFestivalDataHealthIssue(input: { issueId: string; action: string; reason?: string }) { return callMaybeRpc("repair_festival_data_health_issue", { p_issue_id: input.issueId, p_action: input.action, p_reason: input.reason ?? null }, async () => ({ unavailable: true, message: "Data-health repair RPC is unavailable in this environment." })); }
 export async function previewLegacyFestivalMigration(mappingId: string) { return callMaybeRpc("preview_festival_legacy_migration", { p_mapping_id: mappingId }, async () => ({ unavailable: true, preview_hash: null, message: "Legacy migration preview RPC is unavailable in this environment." })); }
 export async function applyLegacyFestivalMigration(mappingId: string) { return callMaybeRpc("apply_festival_legacy_migration", { p_mapping_id: mappingId, p_idempotency_key: `legacy:${mappingId}` }, async () => ({ unavailable: true, message: "Legacy migration apply RPC is unavailable in this environment." })); }
