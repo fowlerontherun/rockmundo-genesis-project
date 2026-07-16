@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.549",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Seeded a starter live-music club in every city (179 new venues) with varied, city-flavored names so every location has at least one bookable venue." },
+    ],
+  },
+  {
     version: "1.1.548",
     date: "2026-07-16",
     changes: [
