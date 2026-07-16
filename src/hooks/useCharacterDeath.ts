@@ -193,8 +193,10 @@ export function useCharacterDeath() {
 
   // Create fresh random character (no inheritance)
   const createFreshCharacter = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (input?: { displayName?: string; username?: string }) => {
       if (!user?.id) throw new Error("Not authenticated");
+      const displayName = input?.displayName?.trim() || undefined;
+      const providedUsername = input?.username?.trim() || undefined;
 
       const { count } = await supabase
         .from("profiles")
@@ -205,8 +207,7 @@ export function useCharacterDeath() {
 
       // Retire any prior profiles for this user so their old fame, money and
       // fan following stay with the retired characters and never bleed into the
-      // fresh start. Alive profiles get marked as died_at=now (retired) and
-      // zeroed out; already-dead profiles are just deactivated.
+      // fresh start.
       const nowIso = new Date().toISOString();
       await supabase
         .from("profiles")
@@ -225,12 +226,14 @@ export function useCharacterDeath() {
         .update({ is_active: false })
         .eq("user_id", user.id);
 
+      const fallbackUsername = `player-${user.id.slice(0, 8)}-${slotNumber}`;
+
       const { error } = await supabase
         .from("profiles")
         .insert({
           user_id: user.id,
-          username: `player-${user.id.slice(0, 8)}-${slotNumber}`,
-          display_name: null,
+          username: providedUsername || fallbackUsername,
+          display_name: displayName ?? null,
           avatar_url: null,
           bio: null,
           cash: 10000,
