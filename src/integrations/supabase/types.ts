@@ -21600,14 +21600,14 @@ export type Database = {
           {
             foreignKeyName: "player_attributes_profile_id_fkey"
             columns: ["profile_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "player_attributes_profile_id_fkey"
             columns: ["profile_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },

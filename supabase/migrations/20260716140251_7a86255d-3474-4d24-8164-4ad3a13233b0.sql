@@ -1,0 +1,1 @@
+ALTER TABLE public.player_attributes ADD CONSTRAINT player_attributes_profile_id_key UNIQUE (profile_id);
