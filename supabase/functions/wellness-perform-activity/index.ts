@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("profile_id", profile_id)
       .gte("performed_at", since.toISOString());
-    if ((dayCount ?? 0) >= 3) {
+    if ((dayCount ?? 0) >= 8) {
       console.warn("[wellness_invalid_booking] daily_cap", { profile_id, catalog_slug });
-      return json({ error: "Daily wellness action cap reached (3/day)" }, 429);
+      return json({ error: "Daily wellness action cap reached (8/day)" }, 429);
     }
 
     if (entry.category === "indulgence") {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         .eq("profile_id", profile_id)
         .eq("category", "indulgence")
         .gte("performed_at", since.toISOString());
-      if ((indCount ?? 0) >= 1) return json({ error: "Only 1 indulgence per day" }, 429);
+      if ((indCount ?? 0) >= 2) return json({ error: "Only 2 indulgences per day" }, 429);
     }
 
     // Stamina check
@@ -114,19 +114,15 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid activity duration" }, 400);
     }
 
-    if (entry.duration_minutes >= 60 && entry.can_overlap !== true) {
-      const { data: hasConflict, error: conflictError } = await supabase.rpc("check_scheduling_conflict", {
+    // Only block on schedule conflict for long, non-overlappable activities (2h+)
+    if (entry.duration_minutes >= 120 && entry.can_overlap === false) {
+      const { data: hasConflict } = await supabase.rpc("check_scheduling_conflict", {
         p_user_id: user.id,
         p_start: scheduledStart.toISOString(),
         p_end: scheduledEnd.toISOString(),
         p_exclude_id: null,
       });
-      if (conflictError) {
-        console.warn("[wellness_invalid_booking] conflict_check_failed", { profile_id, catalog_slug, error: conflictError.message });
-        return json({ error: "Could not validate schedule availability" }, 409);
-      }
       if (hasConflict) {
-        console.warn("[wellness_invalid_booking] schedule_conflict", { profile_id, catalog_slug });
         return json({ error: "This overlaps another scheduled activity" }, 409);
       }
     }

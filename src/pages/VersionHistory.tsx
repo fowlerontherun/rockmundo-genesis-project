@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.533",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Wellness Phase 2 — Habits & Routines. New Daily Habits panel lets you start habits from a template catalog (morning stretch, hydration, early bed, daily practice, sober streak, meditation, meal prep, gratitude, reading, social call) and log a daily completion. Streaks track current + best, with streak bonuses at 7/14/21/30 days." },
+      { type: 'feature', description: "Wellness — Massively expanded activity catalog. Added 32 new activities across Recovery (power nap, breathing, warm bath, nature walk, journaling, digital detox, acupuncture, float tank), Fitness (morning run, home yoga, swimming, cycling, boxing, pilates, HIIT, stretching, rock climbing), Medical (eye/blood/sleep clinics, vaccination, chiropractor, nutritionist, CBT) and Indulgence (coffee run, takeout, shopping spree, after-hours bar, groupie night, junk food, gaming marathon, spa weekend)." },
+      { type: 'fix', description: "Wellness activities now actually run. Loosened the schedule-conflict check (only 2h+ non-overlapping activities can be blocked by other bookings), raised the daily action cap to 8/day, and allowed 2 indulgences per day." },
+    ],
+  },
+  {
     version: "1.1.532",
     date: "2026-07-16",
     changes: [

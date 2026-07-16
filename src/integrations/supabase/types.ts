@@ -23426,39 +23426,51 @@ export type Database = {
       }
       player_habits: {
         Row: {
+          best_streak: number
           category: string | null
           created_at: string | null
+          current_streak: number
           description: string | null
           frequency: string | null
           id: string
           is_active: boolean | null
+          last_completed_date: string | null
           name: string
           profile_id: string | null
           target_per_week: number | null
+          template_slug: string | null
           user_id: string
         }
         Insert: {
+          best_streak?: number
           category?: string | null
           created_at?: string | null
+          current_streak?: number
           description?: string | null
           frequency?: string | null
           id?: string
           is_active?: boolean | null
+          last_completed_date?: string | null
           name: string
           profile_id?: string | null
           target_per_week?: number | null
+          template_slug?: string | null
           user_id: string
         }
         Update: {
+          best_streak?: number
           category?: string | null
           created_at?: string | null
+          current_streak?: number
           description?: string | null
           frequency?: string | null
           id?: string
           is_active?: boolean | null
+          last_completed_date?: string | null
           name?: string
           profile_id?: string | null
           target_per_week?: number | null
+          template_slug?: string | null
           user_id?: string
         }
         Relationships: [
@@ -36575,6 +36587,7 @@ export type Database = {
         Row: {
           ailment_risk: Json
           blocks_activity_types: string[]
+          can_overlap: boolean
           category: string
           cooldown_hours: number
           cost_cents: number
@@ -36595,6 +36608,7 @@ export type Database = {
         Insert: {
           ailment_risk?: Json
           blocks_activity_types?: string[]
+          can_overlap?: boolean
           category: string
           cooldown_hours?: number
           cost_cents?: number
@@ -36615,6 +36629,7 @@ export type Database = {
         Update: {
           ailment_risk?: Json
           blocks_activity_types?: string[]
+          can_overlap?: boolean
           category?: string
           cooldown_hours?: number
           cost_cents?: number
@@ -36758,6 +36773,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wellness_habit_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          stat_bonus: Json
+          streak_bonus: Json
+          target_per_week: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          stat_bonus?: Json
+          streak_bonus?: Json
+          target_per_week?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          stat_bonus?: Json
+          streak_bonus?: Json
+          target_per_week?: number
+        }
+        Relationships: []
       }
       wellness_lifestyles: {
         Row: {
@@ -37514,6 +37571,7 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
       convert_child_to_playable:
         | { Args: { p_child_id: string }; Returns: string }
         | {
@@ -38037,6 +38095,11 @@ export type Database = {
         }
         Returns: Json
       }
+      start_wellness_habit: {
+        Args: { _template_slug: string }
+        Returns: string
+      }
+      stop_wellness_habit: { Args: { _habit_id: string }; Returns: undefined }
       storefront_sold_out_behavior: {
         Args: { _company_id: string }
         Returns: string

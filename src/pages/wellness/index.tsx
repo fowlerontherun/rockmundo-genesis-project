@@ -12,6 +12,7 @@ import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
 import ActivityCard from "@/components/wellness/ActivityCard";
 import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 import LifestylePickerPanel from "@/components/wellness/LifestylePickerPanel";
+import HabitsPanel from "@/components/wellness/HabitsPanel";
 import { usePlayerLifestyle, useLifestyleCatalog } from "@/hooks/useWellnessLifestyle";
 
 import { useGameData } from "@/hooks/useGameData";
@@ -126,6 +127,8 @@ const WellnessPage = () => {
 
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
       <LifestylePickerPanel />
+      <HabitsPanel profileId={profileId} />
+
 
 
       {blocks.length > 0 && (
@@ -156,7 +159,7 @@ const WellnessPage = () => {
             <Activity className="h-4 w-4 text-primary" /> Activities
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Pick an activity to perform now. Daily cap: 3 actions · max 1 indulgence per day.
+            Pick an activity to perform now. Daily cap: 8 actions · max 2 indulgences per day.
           </p>
         </CardHeader>
         <CardContent>
