@@ -700,5 +700,14 @@
     "migration": "20291207090000_harden_festival_booking_contracts.sql",
     "notes": "docs/festivals/BOOKING_HARDENING_NOTES.md",
     "status": "corrective-hardening"
+  },
+  "bookingUiMigration": {
+    "playerRoute": "/festivals",
+    "ownerRoute": "/festivals/:festivalId/manage",
+    "modeHelper": "getFestivalBookingMode",
+    "deferred": [
+      "canonical performance sessions",
+      "financial settlement"
+    ]
   }
 }

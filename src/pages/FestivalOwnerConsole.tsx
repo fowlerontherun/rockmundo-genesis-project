@@ -38,6 +38,7 @@ import {
   Store,
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { CanonicalOrganiserBookingWorkspace } from "@/features/festivals/booking/components";
 import {
   createFestivalEdition,
   listFestivalEditionsForOwner,
@@ -497,27 +498,22 @@ export default function FestivalOwnerConsole() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="booking">
-          <Card>
-            <CardHeader>
-              <CardTitle>Slot Bookings</CardTitle>
-              <CardDescription>Manage stage slots and offers</CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {stages.length === 0
-                ? "Configure a stage first, then invite bands or open slots to applications."
-                : stages.map((s: any) => (
-                    <div key={s.id} className="mb-3 p-3 border rounded">
-                      <div className="font-semibold">{s.stage_name}</div>
-                      <div className="text-xs">
-                        {(s.slots || []).length} slots ·{" "}
-                        {(s.slots || []).filter((sl: any) => sl.band_id).length}{" "}
-                        booked
-                      </div>
-                    </div>
-                  ))}
-            </CardContent>
-          </Card>
+        <TabsContent value="booking" className="space-y-4">
+          {currentEdition ? (
+            <CanonicalOrganiserBookingWorkspace editionId={currentEdition.id} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Canonical booking unavailable</CardTitle>
+                <CardDescription>Create a canonical edition before reviewing applications, offers, contracts or setlists.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => createEdition.mutate()} disabled={createEdition.isPending}>
+                  {createEdition.isPending ? "Creating…" : "Create canonical edition"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="stages">

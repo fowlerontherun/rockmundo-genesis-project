@@ -47,3 +47,7 @@ Rollback by reverting the new RPC definitions to the PR #1193 versions and dropp
 ## Deferred work
 
 Full UI migration, canonical performance sessions, fame rewards, guarantee/deposit payment, bonus calculation, merch settlement, ticket migration and audience simulation remain deferred.
+
+## Booking UI migration update
+
+Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.

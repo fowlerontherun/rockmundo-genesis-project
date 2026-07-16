@@ -64,3 +64,9 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 
 
 - [x] Harden canonical booking contracts and setlists with idempotency, authority helpers, reservations, immutable versions, schedule integration and behavioural harness coverage.
+
+## Canonical booking UI migration
+
+- `/festivals` is now the canonical player booking hub for discovery, applications, offers, contracts and preparation.
+- `/festivals/:festivalId/manage` uses the canonical booking workspace for organiser review queues.
+- Performance sessions and settlement remain deferred to a later PR.
