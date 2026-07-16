@@ -25,7 +25,7 @@ import {
   calculateDailyUpkeep,
   getMarketPrice,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Wand2, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
