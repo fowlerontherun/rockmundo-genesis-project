@@ -382,7 +382,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch radio content (jingles and adverts)
-  const { data: radioContent } = useRadioContent();
+  const { data: radioContent, isLoading: radioContentLoading } = useRadioContent();
 
   // Fetch all songs with audio
   const { data: allSongs, isLoading: songsLoading } = useQuery({
