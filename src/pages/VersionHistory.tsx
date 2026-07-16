@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.569",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Festival booking: fixed TypeScript build errors across the festival booking module. The canonical festival tables (festival_applications, festival_contracts, festival_contract_offers) and their RPCs (submit/withdraw/review/sign/amend/cancel/create/counter/accept/decline/save/submit/review/lock) are not yet in the generated Supabase types, so applications.ts, contracts.ts, offers.ts, and setlists.ts now cast the supabase client to any so calls type-check. Also added the missing FestivalApplicationRecord/FestivalOfferRecord type imports in hooks.ts, added the missing 'classes' style map plus a deriveBookingProgress re-export in CanonicalBookingProgress." },
+    ],
+  },
+  {
     version: "1.1.568",
     date: "2026-07-16",
     changes: [
