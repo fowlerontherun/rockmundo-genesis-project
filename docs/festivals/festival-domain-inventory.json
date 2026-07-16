@@ -781,5 +781,12 @@
       "festival_performance_effects"
     ],
     "settlement": "deferred"
+  },
+  "admin_management_consolidation": {
+    "primary_admin_route": "/admin/festivals",
+    "owner_route": "/festivals/:festivalId/manage/editions/:editionId",
+    "audit_table": "festival_admin_audit_events",
+    "settlement_readiness_rpc": "festival_edition_settlement_readiness",
+    "legacy_policy": "read-only with preview migration tooling"
   }
 }

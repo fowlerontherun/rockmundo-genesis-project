@@ -351,3 +351,11 @@ The PR #1197 booking-workspace boundary was rechecked before adding performance 
 ## Festival audience outcome integration
 
 Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.
+
+## PR #1201 admin-management consolidation update
+
+- `/admin/festivals` is now the primary canonical administration workspace for permanent brands, selected editions, lifecycle, operations, live state, outcomes, legacy records and configuration.
+- `/admin/city-festivals` is no longer a direct permanent-brand occurrence editor; it redirects to the canonical admin workspace.
+- `/festivals/:festivalId/manage/editions/:editionId` is the owner/delegated-manager deep link for explicit edition management.
+- New admin mutations are server-authoritative RPCs and are audited through `festival_admin_audit_events`.
+- Settlement remains deferred; `festival_edition_settlement_readiness` exposes blockers for the next PR without applying effects or money movement.

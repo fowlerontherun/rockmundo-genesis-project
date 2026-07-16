@@ -9,3 +9,8 @@ After booking workspace completion, the next PR should be `feat(festivals): add 
 - [x] Add player session route, mobile-focused view, organiser controls shell and realtime invalidation hooks.
 - [x] Add SQL harness and TypeScript unit coverage for transition, timing, readiness, progression, privacy and invalidation.
 - [ ] Next: `feat(festivals): add audience simulation and performance outcomes`.
+
+
+## Admin and edition management consolidation
+
+PR #1201 consolidates admin and owner festival management onto canonical brands and dated editions. Legacy festival game events remain readable through compatibility mappings, while new creation, lifecycle, operations and migration actions use audited RPCs. The next PR should apply career effects and settle performance contracts using settlement readiness.

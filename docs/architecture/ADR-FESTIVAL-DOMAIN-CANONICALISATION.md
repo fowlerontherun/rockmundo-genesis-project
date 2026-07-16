@@ -125,3 +125,8 @@ After booking activation, festival performance execution is canonicalised throug
 ## Audience and outcome extension
 
 Festival performance outcomes now consume canonical performance-session evidence. Audience generation and scoring are server-authoritative, idempotent, versioned and immutable. Public projections intentionally omit private readiness, health, contract and settlement details.
+
+
+## Admin and edition management consolidation
+
+PR #1201 consolidates admin and owner festival management onto canonical brands and dated editions. Legacy festival game events remain readable through compatibility mappings, while new creation, lifecycle, operations and migration actions use audited RPCs. The next PR should apply career effects and settle performance contracts using settlement readiness.
