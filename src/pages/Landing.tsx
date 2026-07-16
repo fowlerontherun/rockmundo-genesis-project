@@ -147,7 +147,7 @@ const Landing = () => {
             variant="outline"
             className="hidden sm:inline-flex bg-warning/10 text-warning border-warning/30 text-[10px] px-1.5 py-0 font-oswald"
           >
-            Beta V1
+            Beta V2
           </Badge>
           <div className="flex-1" />
           <Link

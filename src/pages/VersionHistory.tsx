@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.571",
+    date: "2026-07-16",
+    changes: [
+      { type: 'improvement', description: "Updated system version to Beta V2 in the landing page banner." },
+    ],
+  },
+  {
     version: "1.1.570",
     date: "2026-07-16",
     changes: [
