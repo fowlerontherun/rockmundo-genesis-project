@@ -114,12 +114,93 @@ function friendlyFriendRequestError(message?: string) {
 }
 
 export const sendFriendRequest = async ({
+  requestorProfileId,
   addresseeProfileId,
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
   const targetProfileId = validateFriendRequestInput(addresseeProfileId);
-  const { data, error } = await (supabase as any).rpc("send_friend_request", {
+  if (!requestorProfileId || !UUID_RE.test(requestorProfileId)) {
+    throw new Error(friendlyFriendRequestError("active player profile required"));
+  }
+  if (requestorProfileId === targetProfileId) {
+    throw new Error("You cannot send a friend request to yourself.");
+  }
+
+  // Try the RPC first if it exists; fall back to a direct insert (RLS enforces requestor ownership).
+  const rpcAttempt = await (supabase as any).rpc("send_friend_request", {
     target_profile_id: targetProfileId,
   });
+
+  if (!rpcAttempt.error && rpcAttempt.data) {
+    return rpcAttempt.data as FriendshipRow;
+  }
+
+  const rpcMissing =
+    rpcAttempt.error &&
+    /function .*send_friend_request.* does not exist|could not find the function|PGRST202|42883/i.test(
+      `${rpcAttempt.error.message ?? ""} ${rpcAttempt.error.code ?? ""} ${rpcAttempt.error.details ?? ""}`,
+    );
+
+  if (rpcAttempt.error && !rpcMissing) {
+    throw new Error(friendlyFriendRequestError(rpcAttempt.error.message));
+  }
+
+  // Check for an existing friendship in either direction so we don't hit the unique constraint blindly.
+  const { data: existing, error: existingError } = await supabase
+    .from("friendships")
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
+    .or(
+      `and(requestor_id.eq.${requestorProfileId},addressee_id.eq.${targetProfileId}),` +
+        `and(requestor_id.eq.${targetProfileId},addressee_id.eq.${requestorProfileId})`,
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(friendlyFriendRequestError(existingError.message));
+  }
+
+  if (existing) {
+    if (existing.status === "accepted") {
+      throw new Error("You are already friends with this player.");
+    }
+    if (existing.status === "pending") {
+      // If the other side previously sent us a request, auto-accept.
+      if (existing.requestor_id === targetProfileId && existing.addressee_id === requestorProfileId) {
+        const accepted = await updateFriendshipStatus(existing.id, "accepted");
+        return accepted;
+      }
+      return existing as FriendshipRow;
+    }
+    if (existing.status === "declined") {
+      // Revive the declined request by re-issuing from the current requestor.
+      const { data: revived, error: reviveError } = await supabase
+        .from("friendships")
+        .update({
+          status: "pending",
+          requestor_id: requestorProfileId,
+          addressee_id: targetProfileId,
+          responded_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
+        .single();
+      if (reviveError) {
+        throw new Error(friendlyFriendRequestError(reviveError.message));
+      }
+      return revived as FriendshipRow;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("friendships")
+    .insert({
+      requestor_id: requestorProfileId,
+      addressee_id: targetProfileId,
+      status: "pending",
+    })
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
+    .single();
 
   if (error) {
     throw new Error(friendlyFriendRequestError(error.message));
