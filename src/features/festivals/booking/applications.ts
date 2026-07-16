@@ -1,4 +1,7 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as typedSupabase } from "@/integrations/supabase/client";
+// Booking tables/RPCs are not yet in the generated Supabase types; cast to any so calls type-check.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = typedSupabase as any;
 import { mapBookingError } from "./bookingTypes";
 import type { FestivalApplicationInput, FestivalTerms } from "./bookingTypes";
 
