@@ -198,6 +198,23 @@ export function useCharacterDeath() {
 
       const slotNumber = (count ?? 0) + 1;
 
+      // Retire any prior profiles for this user so their old fame, money and
+      // fan following stay with the retired characters and never bleed into the
+      // fresh start. Alive profiles get marked as died_at=now (retired) and
+      // zeroed out; already-dead profiles are just deactivated.
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("profiles")
+        .update({
+          is_active: false,
+          died_at: nowIso,
+          fame: 0,
+          cash: 0,
+          fans: 0,
+        } as any)
+        .eq("user_id", user.id)
+        .is("died_at", null);
+
       await supabase
         .from("profiles")
         .update({ is_active: false })
