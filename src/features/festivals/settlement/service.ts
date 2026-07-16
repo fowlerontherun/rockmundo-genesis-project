@@ -27,13 +27,15 @@ export const applyFestivalSettlementBatch = async (settlementId: string, idempot
 };
 
 export const getFestivalSettlementReport = async (settlementId: string): Promise<SettlementReport> => {
-  const [settlement, effects, contracts, financialResult, events] = await Promise.all([
-    settlementClient.from('festival_edition_settlements').select('*').eq('id', settlementId).single(),
-    settlementClient.from('festival_effect_applications').select('*').eq('settlement_id', settlementId),
-    settlementClient.from('festival_contract_settlement_instructions').select('*').eq('settlement_id', settlementId),
-    settlementClient.from('festival_edition_financial_results').select('*').eq('settlement_id', settlementId).maybeSingle(),
-    settlementClient.from('festival_settlement_events').select('*').eq('settlement_id', settlementId).order('created_at'),
-  ]);
-  for (const result of [settlement, effects, contracts, financialResult, events]) if (result.error) throw result.error;
-  return { settlement: settlement.data, effects: effects.data ?? [], contracts: contracts.data ?? [], financialResult: financialResult.data, events: events.data ?? [] };
+  const { data, error } = await settlementClient.rpc('festival_settlement_report', { p_settlement_id: settlementId });
+  if (error) throw error;
+  const report = data as Partial<SettlementReport> | null;
+  if (!report?.settlement) throw new Error('Settlement report projection was empty.');
+  return {
+    settlement: report.settlement,
+    effects: report.effects ?? [],
+    contracts: report.contracts ?? [],
+    financialResult: report.financialResult ?? null,
+    events: report.events ?? [],
+  };
 };
