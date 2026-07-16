@@ -101,3 +101,8 @@ Remaining canonicalisation work is intentionally deferred: applications, contrac
 ## Booking contract layer update
 
 Canonical festival booking now follows application -> offer revision -> contract -> signature -> active lineup. Applications and offers are not bookings; only fully signed active contracts can reserve a compatible stage slot. Public projections exclude contract economics and signatures. Performance simulation and settlement remain deferred.
+
+
+## Booking hardening decision
+
+Canonical festival booking mutations are database-authoritative. Band authority follows leader/founder/co-leader/manager roles, idempotency is centralised in `festival_booking_requests`, offers/contracts/setlists are versioned immutably, and public reads use safe projections only.

@@ -695,5 +695,10 @@
       "festival_offer_negotiations",
       "festival_stage_slots"
     ]
+  },
+  "booking_hardening": {
+    "migration": "20291207090000_harden_festival_booking_contracts.sql",
+    "notes": "docs/festivals/BOOKING_HARDENING_NOTES.md",
+    "status": "corrective-hardening"
   }
 }

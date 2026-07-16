@@ -327,3 +327,8 @@ Public festival discovery must read `public_festival_editions`; owner/admin tool
 The next canonical layer introduces edition-scoped applications, offers, immutable revisions, signed contracts, setlists and private audit events. New player application flows should use `submit_festival_application`; organiser actions should use review/offer/contract RPCs. Legacy `festival_participants`, `festival_slot_applications`, `festival_slot_offers` and `festival_offer_negotiations` remain compatibility sources for unresolved events but are no longer the canonical source for edition-first booking writes.
 
 Public browsing is corrected with `public_festival_editions_read()`, a security-definer safe projection that avoids granting direct public reads on private `festival_editions` columns.
+
+
+### Booking hardening update
+
+PR #1193 follow-up inspection found broad active-member authority, inconsistent idempotency, mutable setlist rows, and weak slot reservation semantics. `20291207090000_harden_festival_booking_contracts.sql` corrects these before UI wiring.
