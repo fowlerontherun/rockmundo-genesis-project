@@ -384,7 +384,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   // Fetch radio content (jingles and adverts)
   const { data: radioContent } = useRadioContent();
 
-  // Fetch all songs with audio
+  // Fetch all songs with audio (include anything with an audio_url, even if
+  // the generation status flag was never flipped to `completed`).
   const { data: allSongs, isLoading: songsLoading } = useQuery({
     queryKey: ["rm-radio-songs"],
     queryFn: async () => {
@@ -399,8 +400,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
  bands(name, artist_name)
  `,
         )
-        .eq("audio_generation_status", "completed")
         .not("audio_url", "is", null)
+        .neq("audio_url", "")
         .order("created_at", { ascending: false })
         .limit(500);
 
@@ -418,7 +419,9 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         genre: song.genre,
       })) as Song[];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Fetch the #1 chart song for the host segment
@@ -431,8 +434,12 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         .order("total_streams", { ascending: false })
         .limit(1);
 
-      if (error || !data || data.length === 0) {
-        console.error("[RMRadio] Error fetching #1 chart song:", error);
+      if (error) {
+        console.warn("[RMRadio] Chart lookup failed:", error.message);
+        return null;
+      }
+      if (!data || data.length === 0) {
+        // No chart data yet — silent no-op, not an error
         return null;
       }
 
@@ -442,7 +449,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         .from("songs")
         .select("audio_url")
         .eq("id", chartSong.song_id)
-        .single();
+        .maybeSingle();
 
       if (songData?.audio_url) {
         chartNumberOneSong = {
