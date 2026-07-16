@@ -1,8 +1,8 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Home, Guitar, Users, Globe2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const items = [
+export const mobilePrimaryNavItems = [
   { to: "/mobile", label: "Home", icon: Home, exact: true },
   { to: "/mobile/career", label: "Career", icon: Guitar },
   { to: "/mobile/social", label: "Social", icon: Users },
@@ -11,6 +11,7 @@ const items = [
 ];
 
 export const BottomNav = () => {
+  const location = useLocation();
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border"
@@ -18,17 +19,17 @@ export const BottomNav = () => {
       aria-label="Primary"
     >
       <ul className="flex" style={{ height: "var(--m-nav-h)" }}>
-        {items.map(({ to, label, icon: Icon, exact }) => (
+        {mobilePrimaryNavItems.map(({ to, label, icon: Icon, exact }) => (
           <li key={to} className="flex-1">
             <NavLink
               to={to}
               end={exact}
-              className={({ isActive }) =>
-                cn(
-                  "h-full w-full flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium",
-                  isActive ? "text-primary" : "text-muted-foreground",
-                )
-              }
+              className={({ isActive }) => {
+                const primaryPath = to.replace("/mobile", "") || "/home";
+                const primaryActive = exact ? ["/mobile", "/home", "/"].includes(location.pathname) : location.pathname.startsWith(primaryPath);
+                const active = isActive || primaryActive;
+                return cn("h-full w-full flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium", active ? "text-primary" : "text-muted-foreground");
+              }}
             >
               {({ isActive }) => (
                 <>
