@@ -112,6 +112,71 @@ export default function PlayersBrowser() {
     queryFn: () => fetchPlayers(debounced, page, profile?.id),
   });
 
+  // My accepted friends (profile IDs) — used to compute mutuals.
+  const myFriendIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of friendships) {
+      if (f.friendship.status === "accepted" && f.otherProfile?.id) s.add(f.otherProfile.id);
+    }
+    return s;
+  }, [friendships]);
+
+  const visibleIds = useMemo(() => (data ?? []).map((p) => p.id), [data]);
+
+  // For each visible player, load their accepted friendships, intersect with mine.
+  const { data: mutualsMap } = useQuery({
+    queryKey: ["players-mutuals", profile?.id, visibleIds.join(","), myFriendIds.size],
+    enabled: Boolean(profile?.id) && visibleIds.length > 0 && myFriendIds.size > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const result = new Map<string, { id: string; username: string; display_name: string | null; avatar_url: string | null }[]>();
+      const idList = visibleIds.join(",");
+      const { data: rows } = await supabase
+        .from("friendships")
+        .select("requestor_id, addressee_id, status")
+        .eq("status", "accepted")
+        .or(`requestor_id.in.(${idList}),addressee_id.in.(${idList})`);
+      if (!rows) return result;
+
+      // Map player -> set of their friend profile ids
+      const perPlayer = new Map<string, Set<string>>();
+      for (const r of rows as { requestor_id: string; addressee_id: string }[]) {
+        for (const [self, other] of [[r.requestor_id, r.addressee_id], [r.addressee_id, r.requestor_id]] as const) {
+          if (visibleIds.includes(self)) {
+            if (!perPlayer.has(self)) perPlayer.set(self, new Set());
+            perPlayer.get(self)!.add(other);
+          }
+        }
+      }
+
+      // Intersect with my friends -> mutual profile ids
+      const mutualIdSet = new Set<string>();
+      const perPlayerMutuals = new Map<string, string[]>();
+      for (const [pid, theirFriends] of perPlayer.entries()) {
+        const mutuals: string[] = [];
+        for (const fid of theirFriends) if (myFriendIds.has(fid)) mutuals.push(fid);
+        if (mutuals.length) {
+          perPlayerMutuals.set(pid, mutuals);
+          mutuals.forEach((m) => mutualIdSet.add(m));
+        }
+      }
+
+      // Batch-fetch profile info for mutual IDs
+      const mutualIds = Array.from(mutualIdSet);
+      if (mutualIds.length === 0) return result;
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", mutualIds);
+      const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+
+      for (const [pid, ids] of perPlayerMutuals.entries()) {
+        result.set(pid, ids.map((i) => profMap.get(i)).filter(Boolean) as any);
+      }
+      return result;
+    },
+  });
+
   const stateMap = useMemo(() => {
     const m = new Map<string, { state: FriendState; friendshipId: string }>();
     if (!profile?.id) return m;
@@ -228,6 +293,31 @@ export default function PlayersBrowser() {
 
                   {p.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{p.bio}</p>}
 
+                  {(() => {
+                    const muts = mutualsMap?.get(p.id) ?? [];
+                    if (!muts.length) return null;
+                    return (
+                      <div className="flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1.5">
+                        <div className="flex -space-x-2">
+                          {muts.slice(0, 3).map((m) => (
+                            <Avatar key={m.id} className="h-5 w-5 border-2 border-background">
+                              <AvatarImage src={m.avatar_url ?? undefined} />
+                              <AvatarFallback className="text-[8px]">
+                                {(m.display_name || m.username || "?").slice(0, 1).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          <Users className="mr-1 inline h-3 w-3" />
+                          {muts.length} mutual{muts.length === 1 ? "" : "s"} · {muts.slice(0, 2).map((m) => m.display_name || m.username).join(", ")}
+                          {muts.length > 2 ? ` +${muts.length - 2}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+
                   <div className="flex flex-wrap justify-end gap-2 border-t pt-2" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedId(p.id)}>View</Button>
                     {state === "none" && profile?.id && (
@@ -254,6 +344,7 @@ export default function PlayersBrowser() {
           onAdd={handleAdd}
           onAccept={handleAccept}
           busy={busy}
+          mutuals={selected ? mutualsMap?.get(selected.id) ?? [] : []}
         />
 
         {players.length >= PAGE_SIZE && (

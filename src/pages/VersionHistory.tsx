@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.557",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Added a mutual-friends preview on /social/players. Each player card now shows a small stacked-avatar row with a mutual count and up to two mutual names, so you can gauge shared connections before sending a request. The Player Profile drawer expands this into a full list (up to 8 named chips, with a +N overflow indicator). Mutuals are computed by intersecting the visible players' accepted friendships with your own — a single batched query per page keeps it fast." },
+    ],
+  },
+  {
     version: "1.1.556",
     date: "2026-07-16",
     changes: [
