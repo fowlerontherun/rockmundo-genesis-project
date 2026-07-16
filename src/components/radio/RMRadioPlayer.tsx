@@ -195,21 +195,48 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
   const initializePlaylist = useCallback(
     (songs: Song[], content: RadioContent[]) => {
       if (songs.length === 0) return;
-      if (globalState.playlist.length > 0) return; // Already initialized
+
+      // Count unique songs already in the playlist. If the incoming song list
+      // matches (nothing new was added), keep the current playlist so the
+      // currently-playing track isn't interrupted.
+      const existingSongIds = new Set(
+        globalState.playlist
+          .filter((item) => item.type === "song" && item.song)
+          .map((item) => item.song!.id),
+      );
+      const hasNewSongs = songs.some((s) => !existingSongIds.has(s.id));
+      if (globalState.playlist.length > 0 && !hasNewSongs) return;
 
       const shuffledSongs = shuffleArray(songs);
       const playlist = buildPlaylistWithContent(shuffledSongs, content);
 
+      // Preserve current playback position if possible
+      const currentSongId =
+        globalState.currentItem?.type === "song"
+          ? globalState.currentItem.song?.id
+          : null;
+      const preservedIndex = currentSongId
+        ? playlist.findIndex(
+            (item) => item.type === "song" && item.song?.id === currentSongId,
+          )
+        : -1;
+
+      const nextIndex = preservedIndex >= 0 ? preservedIndex : 0;
       globalState = {
         ...globalState,
         playlist,
-        currentIndex: 0,
-        currentItem: playlist[0] || null,
+        currentIndex: nextIndex,
+        currentItem: playlist[nextIndex] || null,
       };
 
-      const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
-      if (globalAudio && audioUrl) {
-        globalAudio.src = audioUrl;
+      // Only reset audio src if we didn't preserve the currently playing song
+      if (preservedIndex < 0) {
+        const audioUrl = playlist[nextIndex]
+          ? getAudioUrl(playlist[nextIndex])
+          : null;
+        if (globalAudio && audioUrl) {
+          globalAudio.src = audioUrl;
+        }
       }
       notifyListeners();
     },
