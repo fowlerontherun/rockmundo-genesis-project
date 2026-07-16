@@ -29,6 +29,44 @@ export function CharacterDeathScreen({
 
   const livesRemaining = deadCharacter.resurrection_lives ?? 0;
 
+  if (step === "welcome") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
+        <Card className="w-full max-w-lg border-primary/30 bg-card/95">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+              <Music2 className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-oswald">Welcome back to RockMundo</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your last character, <span className="font-semibold text-foreground">{deadCharacter.character_name}</span>,
+              is no longer with us. In the next step you can resurrect them, continue their bloodline, or start fresh.
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-muted-foreground">Lives</div>
+                <div className="font-bold">{livesRemaining} / 3</div>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-muted-foreground">Fame</div>
+                <div className="font-bold">{(deadCharacter.total_fame || 0).toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-muted-foreground">Generation</div>
+                <div className="font-bold">{deadCharacter.generation_number}</div>
+              </div>
+            </div>
+            <Button className="w-full" size="lg" onClick={() => setStep("choose")}>
+              Continue <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
       <div className="w-full max-w-lg space-y-6">
