@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.531",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'column is_active of relation band_members does not exist' error when approving a band application. The respond_band_application RPC now inserts new members with member_status = 'active' instead of the removed is_active column." },
+    ],
+  },
+  {
     version: "1.1.530",
     date: "2026-07-16",
     changes: [
