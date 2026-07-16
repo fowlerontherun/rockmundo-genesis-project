@@ -45,11 +45,21 @@ export function useRehearsalParticipants(rehearsalId: string | null | undefined,
         .order("participation_status", { ascending: true })
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Table not yet provisioned in this environment — treat as no participant rows recorded
+        // so completed rehearsals show the "unavailable for older event" empty state instead of an error card.
+        const code = (error as any)?.code;
+        const message = (error as any)?.message ?? "";
+        if (code === "42P01" || code === "PGRST205" || /does not exist|schema cache/i.test(message)) {
+          return [];
+        }
+        throw error;
+      }
       return (data ?? []) as RehearsalParticipant[];
     },
   });
 }
+
 
 export function useGigPerformers(gigId: string | null | undefined, enabled = true) {
   return useQuery({
