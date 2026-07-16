@@ -230,7 +230,7 @@ export function useSignUpForOpenMic() {
           title: `Open Mic at ${venueName}`,
           description: 'Open mic night performance - 2 songs',
           metadata: {
-            band_id: bandId,
+            band_id: bandId ?? null,
             linked_open_mic_id: data.id,
           },
         });
