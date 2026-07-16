@@ -200,7 +200,9 @@ export const OnboardingWizard = () => {
     try {
       await saveProgress();
       
-      // Save display_name, username, and gender to the profile
+      // Save display_name, username, backstory (bio) and gender to the profile.
+      // Only overwrite the username when the player actually typed one, so the
+      // wizard-provided stage name isn't wiped out by a blank input here.
       if (profileId) {
         const profileUpdates: Record<string, any> = {
           display_name: data.displayName.trim(),
@@ -208,6 +210,9 @@ export const OnboardingWizard = () => {
         };
         if (data.artistName.trim()) {
           profileUpdates.username = data.artistName.trim();
+        }
+        if (data.backstoryText.trim()) {
+          profileUpdates.bio = data.backstoryText.trim();
         }
         await supabase
           .from("profiles")
