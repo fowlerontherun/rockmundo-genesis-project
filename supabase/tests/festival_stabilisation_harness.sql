@@ -8,3 +8,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='festival_expense_ledger_category_check') THEN RAISE EXCEPTION 'ledger category check missing'; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='festival_stage_slot_consistency_trg') THEN RAISE EXCEPTION 'slot consistency trigger missing'; END IF;
 END $$;
+
+DO $$
+BEGIN
+  IF to_regprocedure('public.resolve_festival_stage_edition(uuid)') IS NULL THEN RAISE EXCEPTION 'canonical stage edition resolver missing'; END IF;
+  IF to_regprocedure('public.festival_settlement_report(uuid)') IS NULL THEN RAISE EXCEPTION 'safe settlement report RPC missing'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname='festival_edition_settlement_readiness') THEN RAISE EXCEPTION 'settlement readiness projection missing'; END IF;
+END $$;

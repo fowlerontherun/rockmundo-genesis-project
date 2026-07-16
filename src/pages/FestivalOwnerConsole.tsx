@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, FileText, ShieldCheck, Ticket, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, FileText, ShieldCheck, Ticket, Users, Music, History, Settings, Activity, Banknote, ClipboardList } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CanonicalOrganiserBookingWorkspace } from "@/features/festivals/booking/components";
 import { OwnerEditionSelector } from "@/features/festivals/admin/components/OwnerEditionSelector";
 import { useOwnerFestivalEditions } from "@/features/festivals/admin/hooks";
+import { festivalFeatureRegistry } from "@/features/festivals/festivalFeatureRegistry";
 
 export default function FestivalOwnerConsole() {
   const { festivalId, editionId } = useParams();
@@ -41,20 +43,42 @@ export default function FestivalOwnerConsole() {
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="booking">Booking</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
-          <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
+          <TabsTrigger value="lineup">Lineup</TabsTrigger>
+          <TabsTrigger value="stages">Stages</TabsTrigger>
+          <TabsTrigger value="staff">Staff</TabsTrigger>
+          <TabsTrigger value="permits">Permits</TabsTrigger>
+          <TabsTrigger value="insurance">Insurance</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="live">Live</TabsTrigger>
+          <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
+          <TabsTrigger value="settlement">Settlement</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <Card><CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5" />{selectedEdition.title}<Badge>{selectedEdition.status}</Badge></CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-3 text-sm"><div><p className="text-muted-foreground">City</p><p>{selectedEdition.cityName ?? "Not assigned"}</p></div><div><p className="text-muted-foreground">Dates</p><p>{selectedEdition.startAt ? new Date(selectedEdition.startAt).toLocaleDateString() : "Unscheduled"}</p></div><div><p className="text-muted-foreground">Currency</p><p>{selectedEdition.currencyCode}</p></div></CardContent></Card>
         </TabsContent>
         <TabsContent value="booking"><CanonicalOrganiserBookingWorkspace editionId={selectedEdition.id} /></TabsContent>
-        <TabsContent value="operations"><EditionOperationsSummary /></TabsContent>
-        <TabsContent value="outcomes"><ReadOnlyOutcomeSummary /></TabsContent>
-        <TabsContent value="finance"><SettlementReadinessSummary /></TabsContent>
+        <TabsContent value="lineup"><FeatureWorkflow featureId="contracts" icon={<Music className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="stages"><FeatureWorkflow featureId="stages" icon={<Activity className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="staff"><FeatureWorkflow featureId="staff" icon={<Users className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="permits"><FeatureWorkflow featureId="permits" icon={<FileText className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="insurance"><FeatureWorkflow featureId="insurance" icon={<ShieldCheck className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="finance"><FeatureWorkflow featureId="finance" icon={<Banknote className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="live"><FeatureWorkflow featureId="live-sessions" icon={<Activity className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="outcomes"><FeatureWorkflow featureId="outcomes" icon={<ClipboardList className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="settlement"><FeatureWorkflow featureId="settlement" icon={<Ticket className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="history"><FeatureWorkflow featureId="legacy-records" icon={<History className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="settings"><FeatureWorkflow featureId="owner-editions" icon={<Settings className="h-5 w-5" />} /></TabsContent>
       </Tabs>}
     </div>
   </FMPageScaffold>;
+}
+
+function FeatureWorkflow({ featureId, icon }: { featureId: string; icon: ReactNode }) {
+  const feature = festivalFeatureRegistry.find((entry) => entry.id === featureId);
+  if (!feature) return <Card><CardContent className="p-6 text-destructive">Feature registry entry missing: {featureId}</CardContent></Card>;
+  return <Card><CardHeader><CardTitle className="flex items-center gap-2">{icon}{feature.label}<Badge variant="outline">{feature.implementationStatus}</Badge></CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>{feature.description}</p><div className="grid gap-3 md:grid-cols-3"><div><p className="text-muted-foreground">Permission</p><p>{feature.requiredPermission}</p></div><div><p className="text-muted-foreground">Lifecycle</p><p>{feature.requiredLifecycleStates.length ? feature.requiredLifecycleStates.join(", ") : "Always available"}</p></div><div><p className="text-muted-foreground">Unavailable state</p><p>{feature.emptyState}</p></div></div><p className="text-muted-foreground">If this workflow is unavailable, resolve permission, lifecycle or migration blockers shown here before retrying. Error state: {feature.errorState}</p></CardContent></Card>;
 }
 
 function EditionOperationsSummary() {
