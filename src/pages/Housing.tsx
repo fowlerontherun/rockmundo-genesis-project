@@ -200,24 +200,8 @@ const Housing = () => {
         </CardContent>
       </Card>
 
-      {isAdmin() && housingTypes && housingTypes.some(h => !h.image_url) && (
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleBatchGenerate}
-            disabled={batchGenerating}
-          >
-            {batchGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Wand2 className="h-4 w-4 mr-1" />}
-            {batchGenerating ? "Generating..." : "Generate All Missing Images"}
-          </Button>
-          {batchProgress && (
-            <span className="text-xs text-muted-foreground">
-              {batchProgress.processed} done, {batchProgress.remaining} remaining
-            </span>
-          )}
-        </div>
-      )}
+
+
 
       <Tabs defaultValue="buy">
         <TabsList className="grid w-full grid-cols-3">
