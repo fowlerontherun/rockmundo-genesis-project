@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import WellnessVitalsPanel from "@/components/wellness/WellnessVitalsPanel";
 import ActivityCard from "@/components/wellness/ActivityCard";
 import AilmentsPanel from "@/components/wellness/AilmentsPanel";
+import LifestylePickerPanel from "@/components/wellness/LifestylePickerPanel";
+import { usePlayerLifestyle, useLifestyleCatalog } from "@/hooks/useWellnessLifestyle";
 
 import { useGameData } from "@/hooks/useGameData";
 import { useWellnessState } from "@/hooks/useWellnessState";
@@ -102,14 +104,17 @@ const WellnessPage = () => {
           <p className="font-display text-xs text-muted-foreground">Lifestyle</p>
           <h1 className="font-display text-3xl font-bold tracking-tight">Wellness</h1>
           <p className="text-sm text-muted-foreground">
-            Keep your character healthy. Poor wellness will block gigs, tours and studio work.
+            Pick a lifestyle, manage vitals, and treat ailments. Poor wellness blocks gigs, tours and studio work.
           </p>
         </div>
-        {blocks.length > 0 && (
-          <Badge variant="destructive" className="gap-1">
-            <AlertTriangle className="h-3 w-3" /> {blocks.length} active block{blocks.length > 1 ? "s" : ""}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          <ActiveLifestyleBadge />
+          {blocks.length > 0 && (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" /> {blocks.length} block{blocks.length > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
       </header>
 
       {error && (
@@ -120,6 +125,8 @@ const WellnessPage = () => {
       )}
 
       <WellnessVitalsPanel vitals={vitals} fame={profile?.fame ?? 0} />
+      <LifestylePickerPanel />
+
 
       {blocks.length > 0 && (
         <Card className="border-amber-500/40 bg-amber-500/5">
@@ -193,4 +200,18 @@ const WellnessPage = () => {
   );
 };
 
+const ActiveLifestyleBadge = () => {
+  const { data: current } = usePlayerLifestyle();
+  const { data: catalog } = useLifestyleCatalog();
+  if (!current) return null;
+  const entry = catalog?.find((c) => c.slug === current.lifestyle_slug);
+  if (!entry) return null;
+  return (
+    <Badge variant="outline" className="gap-1 border-primary/40 bg-primary/5 text-primary">
+      <Sparkles className="h-3 w-3" /> {entry.name}
+    </Badge>
+  );
+};
+
 export default WellnessPage;
+

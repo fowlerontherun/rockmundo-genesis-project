@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.532",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Wellness — Lifestyles (Phase 1). Added 8 selectable lifestyles (Balanced, Straight Edge, Party Animal, Fitness Fanatic, Workaholic, Bohemian Creative, Spiritual Zen, Luxury Rockstar), each with its own passive bonuses and penalties (XP multipliers, fame gain, addiction risk, weekly upkeep, activity slots, mood/health/energy regen). New Lifestyle picker panel on the Wellness page, current-lifestyle badge in the header, and a 7-day cooldown between switches. Modifiers exposed via get_wellness_lifestyle_modifiers() for other systems to consume." },
+    ],
+  },
+  {
     version: "1.1.531",
     date: "2026-07-16",
     changes: [

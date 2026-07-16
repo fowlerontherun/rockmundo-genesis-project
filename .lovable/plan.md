@@ -1,109 +1,142 @@
+# Wellness System Expansion Plan
 
-# RockMundo Mobile Experience — Phased Build Plan
+Turn the Wellness page from a single-activity picker into a full lifestyle-management hub, giving players persistent choices that grant real bonuses and penalties across the game.
 
-This is a large multi-phase build. Because the desktop app has hundreds of pages and dozens of subsystems (bands, gigs, songwriting, recording, festivals, companies, PR, wellness, marketplace, world, employment, awards, tours, achievements, mail, Twaater, friends, characters, wardrobe, inventory, etc.), we won't rewrite every screen in one pass. Instead, we deliver a working mobile shell with the most-used loops first, then layer in additional systems.
+## 1. Lifestyle Presets (headline feature)
 
-Desktop remains untouched at every step.
+Add a **Lifestyle** that the player selects and can switch (with a cooldown / adjustment cost). Each lifestyle passively modifies stats each day, changes activity cooldowns, and affects other systems (gigs, fame, addictions, XP).
 
----
+Suggested presets:
 
-## Architecture
+| Lifestyle | Bonuses | Penalties |
+|---|---|---|
+| Balanced | Small +to all vitals, no drift | No standout bonus |
+| Straight Edge | +Health, +Focus, immune to substance ailments, faster skill XP | −Fame gain, −Party rep, some indulgences locked |
+| Party Animal | +Fame gain, +Charisma, +Nightclub rep, cheaper indulgences | −Health drift, higher addiction risk, energy drain |
+| Fitness Fanatic | +Stamina, +Health regen, longer gig endurance | −Creativity XP, higher food cost |
+| Workaholic | +XP from practice/recording, +Money from jobs | −Mood, −Relationship XP, burnout risk |
+| Bohemian / Creative | +Songwriting XP, +Inspiration events | −Money income, −Health regen |
+| Spiritual / Zen | +Mood floor, resistance to stress ailments | −Aggression-based reputation, slower fame |
+| Luxury / Rockstar | +Fame multiplier, +VIP access, +Charisma | Weekly upkeep drain, higher tabloid risk |
 
-**Detection & routing**
-- Add `useIsMobileDevice()` (width < 768px OR `?mobile=1` feature flag, persisted to `localStorage`).
-- In `src/components/Layout.tsx`, branch: if mobile → render `<MobileShell>`; else keep existing `<DesktopOnlyGate><FMShell>` untouched.
-- Also update `DesktopOnlyGate` to skip its width block on mobile-route users.
-- Mobile uses the same React Router routes as desktop so links, deep links, and existing pages continue to work. Mobile-specific screens live under a new `src/mobile/` tree and are chosen via a `<MobileRoute>` wrapper that renders the mobile version when available, and falls back to the desktop page inside a mobile-safe container otherwise.
+Each has a numeric modifier bundle applied by cron / edge fn (mood, health, energy drift, xp_multiplier, fame_multiplier, addiction_risk, money_upkeep).
 
-**Directory layout**
+## 2. Daily Habits (routines)
+
+Player builds a small routine (max 3–5 slots) from a **habit catalog**:
+
+- Morning run, Meditation, Balanced meals, 8h sleep, Vocal warm-up, Journaling, Cold shower, Social hour, etc.
+
+Habits auto-tick daily. Streaks compound (+bonus at 7 / 30 / 90 day marks). Missing habits break streaks and give small penalties. Habits interact with lifestyle (e.g. Straight Edge locks "nightcap", Fitness boosts "morning run" gains).
+
+## 3. Sleep & Diet controls
+
+Two sliders/pickers persistently set on the player:
+
+- **Sleep schedule**: 4h Grind / 6h Standard / 8h Restful / 10h Recovery — affects energy cap, mood, next-day activity slots.
+- **Diet plan**: Junk / Standard / Balanced / Athlete / Vegan / Custom — affects health regen, weight (cosmetic), stamina, and weekly food cost.
+
+Both feed into the daily drift calculation.
+
+## 4. Goals & Programs
+
+Multi-day programs the player commits to for rewards:
+
+- 7-day Detox, 30-day Fitness Challenge, Rehab program, Weight loss plan, Mindfulness course.
+
+Track progress, allow abandon (with penalty), pay out on completion (permanent stat, achievement, insurance discount).
+
+## 5. Medical & Professional care
+
+Expand medical beyond the current one-shot activities:
+
+- **Doctor visits**: full check-up reveals hidden ailments early.
+- **Therapy** (recurring): reduces stress/addiction risk while attending.
+- **Personal trainer** (weekly cost): boosts fitness activity effectiveness.
+- **Nutritionist**: unlocks better diet plans.
+- **Rehab clinic**: cures addictions faster (already partly present — integrate here).
+
+Weekly retainer costs, appointment slots, ties into existing hospitals & mentors tables where possible.
+
+## 6. Health Insurance
+
+Simple tiered policy (None / Basic / Standard / Premium). Monthly premium; reduces medical costs, unlocks premium clinics, prevents big hospitalisation bills.
+
+## 7. Ailments overhaul (light)
+
+Keep current ailments; add:
+
+- Severity progression if untreated (mild → serious → critical → hospitalisation).
+- Chronic conditions from long-term bad lifestyle (back pain, vocal strain, burnout, addiction).
+- Visible risk meter driven by lifestyle + habits + recent activities.
+
+## 8. Wellness effects surfaced game-wide
+
+Wellness must matter outside its page:
+
+- Gig performance modifier (already partial) — expose in gig pre-check.
+- Skill XP multiplier from lifestyle/habits.
+- Fame gain multiplier.
+- Activity slot count per day (currently 3) becomes lifestyle-driven (2–5).
+- Random events biased by lifestyle (Party Animal → more tabloid events; Zen → more inspiration).
+
+## 9. UI redesign of `/wellness`
+
+Reorganise into clear tabs, keeping the working activity core intact:
+
 ```text
-src/mobile/
-  shell/            MobileShell, TopAppBar, BottomNav, FabMenu
-  components/       Cards, sheets, rings, skeletons, empty states
-  hooks/            useMobileNav, useBottomSheet, useSwipeTabs
-  pages/            Home, Career (+ tabs), Social, World, Me
-  fab/              Action registry, context-aware suggestions
-  theme/            Mobile tokens (radii, shadows, type scale)
+Header:  Vitals summary  |  Lifestyle badge  |  Active blocks
+Tabs:
+  1. Overview   — vitals, active modifiers, today's habits, quick actions
+  2. Lifestyle  — pick/change lifestyle, see modifiers, switch cost
+  3. Routine    — habits builder, streaks, sleep + diet pickers
+  4. Activities — existing 4-category catalog (unchanged core)
+  5. Care       — doctor / therapist / trainer / insurance
+  6. Goals      — active programs + available programs
+  7. Ailments   — current + chronic conditions with treat buttons
 ```
 
-**Reuse rules**
-- All data comes from existing hooks (`useGameData`, `useActiveProfile`, `useNotificationsFeed`, wellness/mail/band hooks, etc.).
-- No new business logic, no new tables. Quick actions dispatch existing mutations or navigate to existing routes.
+Mobile: collapse tabs into a segmented control; keep dense card layout consistent with FM style.
 
----
+## Technical Details
 
-## Phase 1 — Foundation (this delivery)
+### New tables (public schema, with GRANTs + RLS scoped to `profile_id`)
 
-Ship the shell + Today dashboard + 5-tab nav + FAB so the mobile experience is usable end-to-end, with unimplemented sections gracefully linking to existing routes.
+- `wellness_lifestyles` — catalog: slug, name, description, modifiers jsonb, unlock_requirements, switch_cost, icon.
+- `player_wellness_lifestyle` — one row per profile: profile_id, lifestyle_slug, started_at, switch_available_at.
+- `wellness_habits_catalog` — slug, name, category, daily_effects jsonb, streak_bonuses jsonb, lifestyle_synergy.
+- `player_wellness_habits` — profile_id, habit_slug, slot, active, current_streak, best_streak, last_ticked_at.
+- `player_wellness_routine` — profile_id, sleep_plan, diet_plan, updated_at.
+- `wellness_programs_catalog` — multi-day programs (slug, duration_days, requirements, rewards jsonb).
+- `player_wellness_programs` — profile_id, program_slug, status, started_at, progress, completed_at.
+- `wellness_care_providers` — doctor / therapist / trainer / nutritionist listings (reuse `hospitals` where sensible).
+- `player_wellness_care_subscriptions` — profile_id, provider_type, tier, next_charge_at, benefits jsonb.
+- `player_health_insurance` — profile_id, tier, monthly_premium, coverage jsonb, active_since.
+- Extend `player_ailments` with `severity`, `is_chronic`, `escalates_at`.
 
-1. **Detection & shell wiring**
-   - `useIsMobileDevice` hook + `MOBILE_FLAG` localStorage toggle.
-   - `MobileShell.tsx`: TopAppBar (avatar, title, notifications, mail) → scroll area → BottomNav (Home / Career / Social / World / Me) → FAB.
-   - Bypass `DesktopOnlyGate` when mobile.
-   - Integrate into `Layout.tsx` behind the flag.
+### Server logic
 
-2. **Design tokens**
-   - `src/mobile/theme/tokens.css`: mobile-only CSS variables (`--m-radius`, `--m-shadow`, `--m-tap`, type ramp).
-   - Dark-first, semantic tokens only. No hardcoded colors.
+- Edge function `wellness-apply-daily-drift` (cron): applies lifestyle + habit + routine + insurance effects to vitals, ticks streaks, escalates ailments, charges upkeep.
+- RPC `switch_wellness_lifestyle(new_slug)` with cost + cooldown validation.
+- RPC `set_wellness_routine(sleep, diet)` and `toggle_wellness_habit(slug, slot)`.
+- RPC `start_wellness_program(slug)` / `complete_wellness_program(id)`.
+- RPC `purchase_health_insurance(tier)` / `cancel_health_insurance()`.
+- Update `wellness-perform-activity` to read lifestyle modifiers for cost/effect scaling and to honour lifestyle activity locks.
+- Hook lifestyle multipliers into: gig outcome calc, skill XP grant, fame delta, addiction risk roll, random-event weighting.
 
-3. **Core reusable components**
-   - `MCard`, `StatCard`, `ProgressRing`, `CountdownCard`, `QuickActionCard`, `NotificationCard`, `EmptyState`, `SkeletonCard`, `BottomSheet` (wraps existing `Sheet` with mobile ergonomics), `SwipeTabs`.
+### Frontend
 
-4. **Today (Home) dashboard**
-   - Header: greeting, current city, weather chip.
-   - Vitals row: Energy, Mood, Health rings (from wellness hooks).
-   - Current activity + countdown (active gig / rehearsal / recording / travel from existing data).
-   - Upcoming: next gig, next rehearsal, unread mail count, unread notifications.
-   - Quick Actions grid: Practice, Write Song, Travel, Jam, Message Band, Post on Twaater, Sleep, Eat, Work, Shop (each routes to existing pages).
-   - Notification feed (uses `useNotificationsFeed`).
+- New components under `src/components/wellness/`: `LifestylePickerPanel`, `HabitsRoutinePanel`, `SleepDietPanel`, `ProgramsPanel`, `CarePanel`, `InsurancePanel`, `WellnessModifiersBadge`.
+- New hooks: `usePlayerLifestyle`, `usePlayerHabits`, `usePlayerRoutine`, `usePlayerPrograms`, `usePlayerCare`, `usePlayerInsurance`.
+- Rework `src/pages/wellness/index.tsx` into the tabbed layout above; keep `ActivityCard`, `AilmentsPanel`, `WellnessVitalsPanel`.
+- Surface active lifestyle badge + modifiers in `FMShell` top bar and pre-gig confirm dialog.
 
-5. **Bottom nav + section landing pages**
-   - Home = Today.
-   - Career: swipeable tabs (Band, Songs, Practice, Recording, Gigs, Skills) — each tab renders a compact card list pulling from existing hooks, with "Open full view" linking to the desktop page inside the mobile scroll shell.
-   - Social: Friends / Band / Chat / Mail / Twaater — recent-activity cards.
-   - World: Current City / Travel / Companies / Marketplace / Charts / Events — card grid.
-   - Me: Character / Inventory / Wardrobe / Achievements / Settings — profile card + list.
+### Rollout order
 
-6. **FAB + Quick Action sheet**
-   - Global "+" button opens a bottom sheet with contextual actions based on current route.
-   - Registry maps action → route/mutation. Default set: Practice, Travel, Write Song, Jam, Message Friend, Book Studio, Book Rehearsal, Post on Twaater, Sleep, Eat, Buy Items.
-
-7. **Gestures & polish**
-   - Horizontal swipe between Career tabs.
-   - Pull-to-refresh on Home (invalidates key queries).
-   - Loading skeletons + empty states on every card list.
-
-8. **Version bump**
-   - Bump `VersionHeader` and add v1.1.520 entry to `VersionHistory`.
-
----
-
-## Phase 2 — Deep integration (follow-up deliveries)
-
-Not shipped this turn. Called out so the user knows scope:
-- Mobile-native detail screens for Gig, Band, Song, Recording session, Travel picker, Studio booking, Friend profile, Mail thread, Twaater composer.
-- Context actions on every mobile page (rehearse, invite, book, publish, etc.).
-- Long-press quick actions on cards.
-- Notification permission + push (Capacitor/PWA path — separate decision).
-
----
-
-## Technical details
-
-- **No schema changes.** No new tables, no migrations.
-- **No desktop file changes** other than the small branch in `Layout.tsx` and a mobile-aware check in `DesktopOnlyGate`.
-- **Routing:** existing routes untouched. Mobile pages register at the same paths using a `<MobileRoute>` HOC so `/` renders `MobileHome` on phones and `Landing`/desktop dashboard on desktop — but only inside the authenticated `Layout`; unauthenticated `/` and `/auth` stay as-is.
-- **Performance:** lazy-load Career sub-tab content; use React Query's existing caches; no extra fetching loops.
-- **Accessibility:** 44px min tap targets, focus rings on all controls, aria-labels on icon-only buttons.
-
----
-
-## Deliverables this turn
-
-1. Mobile detection + shell + bottom nav + FAB.
-2. Today dashboard with real data.
-3. Career, Social, World, Me landing pages (card-based, wired to real hooks, with links to existing detail routes).
-4. Mobile component library (~12 components).
-5. Version bump to v1.1.520 with history entry.
-
-Ready to proceed with Phase 1?
+1. Migration: lifestyles catalog + `player_wellness_lifestyle` + switch RPC + UI picker.
+2. Habits + routine (sleep/diet) tables, RPCs, daily drift edge fn, UI.
+3. Programs + goals.
+4. Care providers + insurance.
+5. Ailment severity & chronic conditions.
+6. Cross-system wiring (gig / XP / fame / random events).
+7. Version bump + version history entry per milestone.
