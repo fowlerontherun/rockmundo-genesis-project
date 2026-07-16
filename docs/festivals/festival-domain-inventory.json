@@ -821,5 +821,16 @@
       "apply_festival_settlement_batch",
       "reconcile_festival_edition_settlement"
     ]
+  },
+  "stabilisation_2026_07_16": {
+    "migration": "20291213080000_stabilise_festival_domain.sql",
+    "focus": [
+      "safe ledger categories",
+      "no USD default for historical ledger rows",
+      "deterministic edition backfills",
+      "stage legacy-domain resolver",
+      "slot consistency trigger"
+    ],
+    "settlement": "deferred"
   }
 }

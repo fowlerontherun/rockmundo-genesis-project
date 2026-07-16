@@ -17,3 +17,7 @@ New canonical writes must pass through edition-scoped RPCs. Direct stage/slot po
 ## Repairs
 
 `repair_festival_data_health_issue` supports safe, audited repairs such as deterministic attachment, missing mapping rebuild notes, stale reservation release notes, stale offer expiry notes, readiness recalculation records, and duplicate/historical-only marking. There is no generic fix-everything mutation.
+
+## Stabilisation update — safe historical mappings
+
+Historical festival operations are no longer attached to edition #1 by default. Staff, permit, and insurance rows are mapped only when the brand has a single deterministic edition; otherwise rows remain unresolved and are recorded in `festival_operation_migration_issues`. Ledger categories are normalised through the documented legacy-to-canonical mapping, while unknown categories are recorded as blockers. Ledger currency is derived from the canonical edition and unresolved rows stay flagged instead of receiving a universal USD default.

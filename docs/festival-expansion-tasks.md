@@ -82,3 +82,7 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 
 - Added canonical audience generations, aggregate cohorts, stage crowd snapshots, immutable performance audience snapshots, song outcomes, performance outcomes, fan conversion proposals, pending effects, media/sponsor outcomes, highlights and public projections.
 - Effects are stored as pending application only; financial and career settlement remains deferred.
+
+## Festival stabilisation gate
+
+Further festival expansion should remain paused until the stabilisation harness, clean migration chain, and owner/admin route smoke tests pass in CI or a developer environment with Supabase CLI support.

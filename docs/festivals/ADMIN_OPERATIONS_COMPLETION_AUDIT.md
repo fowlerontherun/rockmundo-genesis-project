@@ -30,3 +30,7 @@ This audit reviews the PR #1210 foundation in `20291211090000_festival_admin_man
 ## Settlement safety conclusion
 
 PR #1210 was a necessary foundation but was unsafe for settlement because operational data could remain unscoped, staff/permit/insurance costs were not authoritative ledger obligations, system acts were not persisted as canonical assignments, legacy records could still be written after mapping, and readiness did not validate operational blockers. This PR closes those gaps while deliberately deferring fame, fan, popularity, streaming, XP, relationship, payment, revenue, tax, and final settlement effects.
+
+## Stabilisation update — canonical operations
+
+The stabilisation pass moved operations from optimistic frontend assumptions to server-validated workflows. Owner edition routes now wait for authorised edition options, redirect brand-level management to a concrete edition, and show `FESTIVAL_INVALID_EDITION_ROUTE` when a URL edition cannot be managed. Admin catalogue responses are runtime-validated before rendering, including brands without editions and nullable finance/currency fields.

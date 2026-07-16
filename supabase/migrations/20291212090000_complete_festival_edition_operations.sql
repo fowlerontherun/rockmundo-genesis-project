@@ -140,13 +140,27 @@ ALTER TABLE public.festival_insurance_policies ADD COLUMN IF NOT EXISTS quote_id
 ALTER TABLE public.festival_insurance_policies ADD COLUMN IF NOT EXISTS policy_status text NOT NULL DEFAULT 'active';
 ALTER TABLE public.festival_insurance_policies ADD COLUMN IF NOT EXISTS idempotency_key text;
 
-ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS currency_code text NOT NULL DEFAULT 'USD';
+ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS currency_code text;
+ALTER TABLE public.festival_expense_ledger ALTER COLUMN currency_code DROP DEFAULT;
 ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'committed';
 ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS source_type text;
 ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS source_id uuid;
 ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS due_at timestamptz;
 ALTER TABLE public.festival_expense_ledger ADD COLUMN IF NOT EXISTS idempotency_key text;
 ALTER TABLE public.festival_expense_ledger DROP CONSTRAINT IF EXISTS festival_expense_ledger_category_check;
+UPDATE public.festival_expense_ledger SET category = CASE category
+  WHEN 'staff' THEN 'staff_wages' WHEN 'performers' THEN 'artist_guarantee' WHEN 'stage' THEN 'stage_rental'
+  WHEN 'security_cost' THEN 'security' WHEN 'sponsorship' THEN 'sponsor_income' WHEN 'food' THEN 'fnb_income'
+  WHEN 'drinks' THEN 'fnb_income' WHEN 'miscellaneous' THEN 'other' ELSE category END
+WHERE category IN ('staff','performers','stage','security_cost','sponsorship','food','drinks','miscellaneous');
+INSERT INTO public.festival_operation_migration_issues(source_table, source_id, festival_id, proposed_edition_id, issue_type, severity, evidence)
+SELECT 'festival_expense_ledger', id, festival_id, edition_id, 'unmapped_ledger_category', 'blocker', jsonb_build_object('category', category, 'reason', 'category is outside canonical festival ledger taxonomy')
+FROM public.festival_expense_ledger
+WHERE category NOT IN ('staff_wages','security','permits','insurance','stage_rental','equipment_rental','marketing','artist_guarantee','artist_bonus','cleanup','tax','refund','sponsor_income','ticket_income','merch_income','fnb_income','other','utilities','medical','sanitation','transport','deposit','cancellation_liability')
+ON CONFLICT DO NOTHING;
+UPDATE public.festival_expense_ledger
+SET category='other'
+WHERE category NOT IN ('staff_wages','security','permits','insurance','stage_rental','equipment_rental','marketing','artist_guarantee','artist_bonus','cleanup','tax','refund','sponsor_income','ticket_income','merch_income','fnb_income','other','utilities','medical','sanitation','transport','deposit','cancellation_liability');
 ALTER TABLE public.festival_expense_ledger ADD CONSTRAINT festival_expense_ledger_category_check CHECK (category IN ('staff_wages','security','permits','insurance','stage_rental','equipment_rental','marketing','artist_guarantee','artist_bonus','cleanup','tax','refund','sponsor_income','ticket_income','merch_income','fnb_income','other','utilities','medical','sanitation','transport','deposit','cancellation_liability'));
 ALTER TABLE public.festival_expense_ledger DROP CONSTRAINT IF EXISTS festival_expense_ledger_status_check;
 ALTER TABLE public.festival_expense_ledger ADD CONSTRAINT festival_expense_ledger_status_check CHECK (status IN ('expected','committed','accrued','paid','received','void','cancelled'));
@@ -162,10 +176,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS festival_ledger_idempotency_idx ON public.fest
 -- Deterministic backfill where legacy mapping makes the edition unambiguous; unresolved rows become explicit issues.
 UPDATE public.festival_stages st SET edition_id = m.edition_id FROM public.festival_legacy_mappings m WHERE st.edition_id IS NULL AND m.legacy_source='game_event' AND m.legacy_id=st.festival_id;
 UPDATE public.festival_stage_slots sl SET edition_id = st.edition_id FROM public.festival_stages st WHERE sl.stage_id=st.id AND sl.edition_id IS NULL AND st.edition_id IS NOT NULL;
-UPDATE public.festival_staff s SET edition_id=e.id FROM public.festival_editions e WHERE s.edition_id IS NULL AND s.festival_id=e.festival_id AND e.edition_number=1;
-UPDATE public.festival_permits p SET edition_id=e.id FROM public.festival_editions e WHERE p.edition_id IS NULL AND p.festival_id=e.festival_id AND e.edition_number=1;
-UPDATE public.festival_insurance_policies p SET edition_id=e.id FROM public.festival_editions e WHERE p.edition_id IS NULL AND p.festival_id=e.festival_id AND e.edition_number=1;
+WITH single_edition AS (SELECT festival_id, min(id) AS edition_id FROM public.festival_editions GROUP BY festival_id HAVING count(*)=1)
+UPDATE public.festival_staff s SET edition_id=se.edition_id FROM single_edition se WHERE s.edition_id IS NULL AND s.festival_id=se.festival_id;
+WITH single_edition AS (SELECT festival_id, min(id) AS edition_id FROM public.festival_editions GROUP BY festival_id HAVING count(*)=1)
+UPDATE public.festival_permits p SET edition_id=se.edition_id FROM single_edition se WHERE p.edition_id IS NULL AND p.festival_id=se.festival_id;
+WITH single_edition AS (SELECT festival_id, min(id) AS edition_id FROM public.festival_editions GROUP BY festival_id HAVING count(*)=1)
+UPDATE public.festival_insurance_policies p SET edition_id=se.edition_id FROM single_edition se WHERE p.edition_id IS NULL AND p.festival_id=se.festival_id;
 UPDATE public.festival_expense_ledger l SET edition_id=e.id FROM public.festival_editions e WHERE l.edition_id IS NULL AND l.festival_id=e.festival_id AND l.edition_number=e.edition_number;
+UPDATE public.festival_expense_ledger l SET currency_code=e.currency_code FROM public.festival_editions e WHERE l.edition_id=e.id AND l.currency_code IS NULL;
+INSERT INTO public.festival_operation_migration_issues(source_table, source_id, festival_id, proposed_edition_id, issue_type, severity, evidence)
+SELECT 'festival_expense_ledger', id, festival_id, edition_id, 'missing_ledger_currency', 'blocker', jsonb_build_object('reason','currency could not be derived from a canonical edition without guessing USD')
+FROM public.festival_expense_ledger WHERE currency_code IS NULL ON CONFLICT DO NOTHING;
 
 INSERT INTO public.festival_operation_migration_issues(source_table, source_id, festival_id, issue_type, severity, evidence)
 SELECT 'festival_stages', id, NULL, 'missing_edition', 'blocker', to_jsonb(st) FROM public.festival_stages st WHERE edition_id IS NULL
@@ -207,7 +228,7 @@ CREATE OR REPLACE FUNCTION public.post_festival_edition_ledger_entry(p_edition_i
 RETURNS public.festival_expense_ledger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE v_e public.festival_editions%ROWTYPE; v_row public.festival_expense_ledger%ROWTYPE;
 BEGIN
-  IF p_category NOT IN ('staff_wages','permits','insurance','stage_rental','equipment','performer_guarantee','deposit','performance_bonus','cancellation_liability','ticket_revenue','sponsorship','concessions','merch_commission','marketing','utilities','security','medical','sanitation','cleanup','transport','tax','refund','miscellaneous_approved_adjustment') THEN RAISE EXCEPTION 'Unsupported festival ledger category'; END IF;
+  IF p_category NOT IN ('staff_wages','permits','insurance','stage_rental','equipment_rental','equipment','artist_guarantee','performer_guarantee','artist_bonus','performance_bonus','deposit','cancellation_liability','ticket_income','ticket_revenue','sponsor_income','sponsorship','fnb_income','concessions','merch_income','merch_commission','marketing','utilities','security','medical','sanitation','cleanup','transport','tax','refund','other','miscellaneous_approved_adjustment') THEN RAISE EXCEPTION 'Unsupported festival ledger category'; END IF;
   IF p_direction NOT IN ('income','expense') THEN RAISE EXCEPTION 'Unsupported ledger direction'; END IF;
   SELECT * INTO v_e FROM public.festival_editions WHERE id=p_edition_id; IF NOT FOUND THEN RAISE EXCEPTION 'Edition not found'; END IF;
   IF coalesce(p_currency_code,v_e.currency_code) <> v_e.currency_code THEN RAISE EXCEPTION 'Ledger currency must match edition currency'; END IF;
