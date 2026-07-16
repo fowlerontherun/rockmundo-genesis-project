@@ -37974,6 +37974,10 @@ export type Database = {
         Args: { p_company_id: string; p_total: number }
         Returns: Json
       }
+      perform_wellness_activity: {
+        Args: { _catalog_slug: string; _profile_id: string }
+        Returns: Json
+      }
       place_song_bid: {
         Args: {
           p_bid_amount: number
