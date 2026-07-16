@@ -26,6 +26,7 @@ import {
   submitFestivalSetlist,
 } from "./setlists";
 import type { FestivalSetlistItemInput } from "./bookingTypes";
+import type { FestivalApplicationRecord, FestivalOfferRecord } from "./domainTypes";
 import {
   getFestivalApplicationEligibility,
   listFestivalBookingSlots,
