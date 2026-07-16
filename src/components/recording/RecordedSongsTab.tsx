@@ -99,7 +99,15 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         };
       });
     },
-    enabled: !!userId || !!profileId || !!bandId
+    enabled: !!userId || !!profileId || !!bandId,
+    refetchInterval: (query) => {
+      const rows = (query.state.data as any[]) || [];
+      const active = rows.some((r: any) => {
+        const s = (r?.song?.audio_generation_status || '').toLowerCase();
+        return s === 'generating' || s === 'processing' || s === 'in_progress' || s === 'queued' || s === 'pending';
+      });
+      return active ? 15000 : false;
+    },
   });
 
   // Extract unique genres for filter dropdown
