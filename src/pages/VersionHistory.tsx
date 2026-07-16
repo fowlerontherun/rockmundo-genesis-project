@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.538",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording sessions now actually complete. Two problems: (1) `recording_sessions` was missing the columns the completion job writes (`final_master_quality`, `source_song_quality`, `applied_variance`, `calculation_version`, `outcome_breakdown`, `xp_awards`, `recording_credits`, `session_data`) so every update failed silently. Added them via migration. (2) The `complete-recording-sessions` cron only picked up sessions in `in_progress`, but new sessions are created as `scheduled` and nothing was transitioning them — so past-due sessions sat forever and songs never got recorded. The cron now processes both `scheduled` and `in_progress` sessions once `scheduled_end` is in the past, marks them completed, and updates the underlying song's quality and status." },
+    ],
+  },
+  {
     version: "1.1.537",
     date: "2026-07-16",
     changes: [

@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const { data: sessions, error: sessionsError } = await supabase
       .from('recording_sessions')
       .select('*, songs(id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id)')
-      .eq('status', 'in_progress')
+      .in('status', ['in_progress', 'scheduled'])
       .lt('scheduled_end', new Date().toISOString())
 
     if (sessionsError) {
