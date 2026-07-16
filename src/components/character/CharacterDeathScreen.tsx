@@ -21,6 +21,7 @@ export function CharacterDeathScreen({
   onCreateFresh,
   isLoading,
 }: CharacterDeathScreenProps) {
+  const [step, setStep] = useState<"welcome" | "choose">("welcome");
   const [choice, setChoice] = useState<"resurrect" | "child" | "fresh" | null>(null);
 
   const skillCount = Object.keys(deadCharacter.final_skills || {}).length;
