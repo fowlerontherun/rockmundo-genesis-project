@@ -17,24 +17,10 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.567",
+    version: "1.1.568",
     date: "2026-07-16",
     changes: [
-      { type: 'feature', description: "Recording Studio → Recorded Songs: each track now shows an AI audio generation status badge — Queued, Processing (spinner), AI Audio Ready, Generation Failed, or Awaiting AI Audio. The list auto-refreshes every 15s while any song is still queued or processing so the badge flips to Ready without a reload." },
-    ],
-  },
-  {
-    version: "1.1.566",
-    date: "2026-07-16",
-    changes: [
-      { type: 'fix', description: "Recording Studio → Recorded Songs: broadened the query so any recorded song tied to the current user, active profile, or their band is listed. Previously band members only saw band songs (and solo songs required band_id IS NULL), which hid tracks recorded under a band from anyone whose band membership hadn't loaded yet." },
-    ],
-  },
-  {
-    version: "1.1.565",
-    date: "2026-07-16",
-    changes: [
-      { type: 'fix', description: "RM Radio: now picks up newly generated AI songs without a page reload. Removed the strict audio_generation_status='completed' filter (any song with an audio_url is eligible), lowered the songs query stale time to 60s with refetch-on-focus, and the playlist now auto-refreshes when new AI songs land — preserving the currently-playing track. Also silenced the false 'Error fetching #1 chart song' console error when the singles chart is empty." },
+      { type: 'fix', description: "RM Radio: jingles and adverts now play again. The playlist was being built the moment the songs query resolved, which was almost always before the radio_content query finished loading — so the playlist was built with an empty content list and the guard prevented rebuilds. The initializer now waits for radio_content to finish loading before assembling the playlist, so the 7 active jingles and 2 adverts are interleaved between songs (every 3-5 tracks) as intended." },
     ],
   },
   {

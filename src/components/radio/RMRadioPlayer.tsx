@@ -195,48 +195,21 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
   const initializePlaylist = useCallback(
     (songs: Song[], content: RadioContent[]) => {
       if (songs.length === 0) return;
-
-      // Count unique songs already in the playlist. If the incoming song list
-      // matches (nothing new was added), keep the current playlist so the
-      // currently-playing track isn't interrupted.
-      const existingSongIds = new Set(
-        globalState.playlist
-          .filter((item) => item.type === "song" && item.song)
-          .map((item) => item.song!.id),
-      );
-      const hasNewSongs = songs.some((s) => !existingSongIds.has(s.id));
-      if (globalState.playlist.length > 0 && !hasNewSongs) return;
+      if (globalState.playlist.length > 0) return; // Already initialized
 
       const shuffledSongs = shuffleArray(songs);
       const playlist = buildPlaylistWithContent(shuffledSongs, content);
 
-      // Preserve current playback position if possible
-      const currentSongId =
-        globalState.currentItem?.type === "song"
-          ? globalState.currentItem.song?.id
-          : null;
-      const preservedIndex = currentSongId
-        ? playlist.findIndex(
-            (item) => item.type === "song" && item.song?.id === currentSongId,
-          )
-        : -1;
-
-      const nextIndex = preservedIndex >= 0 ? preservedIndex : 0;
       globalState = {
         ...globalState,
         playlist,
-        currentIndex: nextIndex,
-        currentItem: playlist[nextIndex] || null,
+        currentIndex: 0,
+        currentItem: playlist[0] || null,
       };
 
-      // Only reset audio src if we didn't preserve the currently playing song
-      if (preservedIndex < 0) {
-        const audioUrl = playlist[nextIndex]
-          ? getAudioUrl(playlist[nextIndex])
-          : null;
-        if (globalAudio && audioUrl) {
-          globalAudio.src = audioUrl;
-        }
+      const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
+      if (globalAudio && audioUrl) {
+        globalAudio.src = audioUrl;
       }
       notifyListeners();
     },
@@ -409,10 +382,9 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch radio content (jingles and adverts)
-  const { data: radioContent } = useRadioContent();
+  const { data: radioContent, isLoading: radioContentLoading } = useRadioContent();
 
-  // Fetch all songs with audio (include anything with an audio_url, even if
-  // the generation status flag was never flipped to `completed`).
+  // Fetch all songs with audio
   const { data: allSongs, isLoading: songsLoading } = useQuery({
     queryKey: ["rm-radio-songs"],
     queryFn: async () => {
@@ -427,8 +399,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
  bands(name, artist_name)
  `,
         )
+        .eq("audio_generation_status", "completed")
         .not("audio_url", "is", null)
-        .neq("audio_url", "")
         .order("created_at", { ascending: false })
         .limit(500);
 
@@ -446,9 +418,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         genre: song.genre,
       })) as Song[];
     },
-    staleTime: 60 * 1000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch the #1 chart song for the host segment
@@ -461,12 +431,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         .order("total_streams", { ascending: false })
         .limit(1);
 
-      if (error) {
-        console.warn("[RMRadio] Chart lookup failed:", error.message);
-        return null;
-      }
-      if (!data || data.length === 0) {
-        // No chart data yet — silent no-op, not an error
+      if (error || !data || data.length === 0) {
+        console.error("[RMRadio] Error fetching #1 chart song:", error);
         return null;
       }
 
@@ -476,7 +442,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         .from("songs")
         .select("audio_url")
         .eq("id", chartSong.song_id)
-        .maybeSingle();
+        .single();
 
       if (songData?.audio_url) {
         chartNumberOneSong = {
@@ -492,14 +458,13 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Initialize (or refresh) playlist when songs and content load. This also
-  // re-runs whenever the song count changes, so newly generated AI tracks are
-  // picked up without needing a page reload.
+  // Initialize playlist when songs AND content have loaded (so jingles/adverts are interleaved)
   useEffect(() => {
-    if (allSongs && allSongs.length > 0) {
+    if (radioContentLoading) return; // wait for jingles/adverts before building playlist
+    if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
       radio.initializePlaylist(allSongs, radioContent || []);
     }
-  }, [allSongs?.length, radioContent?.length]);
+  }, [allSongs, radioContent, radioContentLoading, radio.isInitialized]);
 
   // Audio time tracking
   useEffect(() => {

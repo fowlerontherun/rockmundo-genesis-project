@@ -1,2 +1,22 @@
-import { OfferRevisionCard } from './OfferRevisionCard';import type { FestivalOfferRecord } from '../domainTypes';
-export function OrganiserOfferQueue({ offers }: {offers:FestivalOfferRecord[]}){return <section className="space-y-3"><h3 className="font-semibold">Offers ({offers.length})</h3>{offers.length?offers.map(o=><OfferRevisionCard key={o.id} offer={o} side="organiser"/>):<p className="text-sm text-muted-foreground">No offers for this edition.</p>}</section>}
+import { OfferRevisionCard } from "./OfferRevisionCard";
+import type { FestivalOfferRecord } from "../domainTypes";
+export function OrganiserOfferQueue({
+  offers,
+}: {
+  offers: FestivalOfferRecord[];
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="font-semibold">Offers ({offers.length})</h3>
+      {offers.length ? (
+        offers.map((o) => (
+          <OfferRevisionCard key={o.id} offer={o} side="organiser" />
+        ))
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No offers for this edition.
+        </p>
+      )}
+    </section>
+  );
+}

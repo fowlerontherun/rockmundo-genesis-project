@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle, Loader2, Hourglass, XCircle } from "lucide-react";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
@@ -31,31 +31,53 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
   const { data: recordedSongs, isLoading, error } = useQuery({
     queryKey: ["recorded-songs-list", userId, profileId, bandId],
     queryFn: async () => {
-      const queries: Promise<any>[] = [];
-      const base = () =>
-        supabase
-          .from("songs")
-          .select(recordedSongSelect)
-          .eq("status", "recorded")
-          .order("updated_at", { ascending: false })
-          .limit(200);
+      const songResponses = bandId
+        ? [await supabase
+            .from("songs")
+            .select(recordedSongSelect)
+            .eq("status", "recorded")
+            .eq("band_id", bandId)
+            .order("updated_at", { ascending: false })
+            .limit(200)]
+        : await Promise.all([
+            profileId
+              ? supabase
+                  .from("songs")
+                  .select(recordedSongSelect)
+                  .eq("status", "recorded")
+                  .eq("profile_id", profileId)
+                  .is("band_id", null)
+                  .order("updated_at", { ascending: false })
+                  .limit(200)
+              : Promise.resolve({ data: [], error: null } as any),
+            userId
+              ? profileId
+                ? supabase
+                    .from("songs")
+                    .select(recordedSongSelect)
+                    .eq("status", "recorded")
+                    .eq("user_id", userId)
+                    .is("profile_id", null)
+                    .is("band_id", null)
+                    .order("updated_at", { ascending: false })
+                    .limit(200)
+                : supabase
+                    .from("songs")
+                    .select(recordedSongSelect)
+                    .eq("status", "recorded")
+                    .eq("user_id", userId)
+                    .is("band_id", null)
+                    .order("updated_at", { ascending: false })
+                    .limit(200)
+              : Promise.resolve({ data: [], error: null } as any),
+          ]);
 
-      if (userId) queries.push(Promise.resolve(base().eq("user_id", userId)));
-      if (profileId) queries.push(Promise.resolve(base().eq("profile_id", profileId)));
-      if (bandId) queries.push(Promise.resolve(base().eq("band_id", bandId)));
-
-      if (queries.length === 0) return [];
-
-      const songResponses = await Promise.all(queries);
       for (const response of songResponses) {
         if (response.error) throw response.error;
       }
 
-      const songs = Array.from(
-        new Map(
-          songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])
-        ).values()
-      ).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      const songs = Array.from(new Map(songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])).values())
+        .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
       // Get recording sessions for these songs
       const songIds = songs.map((s: any) => s.id) || [];
@@ -99,15 +121,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         };
       });
     },
-    enabled: !!userId || !!profileId || !!bandId,
-    refetchInterval: (query) => {
-      const rows = (query.state.data as any[]) || [];
-      const active = rows.some((r: any) => {
-        const s = (r?.song?.audio_generation_status || '').toLowerCase();
-        return s === 'generating' || s === 'processing' || s === 'in_progress' || s === 'queued' || s === 'pending';
-      });
-      return active ? 15000 : false;
-    },
+    enabled: !!userId || !!profileId || !!bandId
   });
 
   // Extract unique genres for filter dropdown
@@ -245,54 +259,9 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
 
       <div className="grid gap-4 max-w-full">
         {filteredSongs.map((item) => {
-          const genStatus = (item.song.audio_generation_status || '').toLowerCase();
-          const hasAudio = !!item.song.audio_url && (genStatus === 'completed' || genStatus === '');
-          const isProcessing = genStatus === 'generating' || genStatus === 'processing' || genStatus === 'in_progress';
-          const isQueued = genStatus === 'queued' || genStatus === 'pending';
-          const isFailed = genStatus === 'failed' || genStatus === 'error';
+          const hasAudio = item.song.audio_url && item.song.audio_generation_status === 'completed';
           const artistName = item.song.bands?.artist_name || item.song.bands?.name || 'Unknown Artist';
-
-          const renderAiStatusBadge = () => {
-            if (hasAudio && item.song.audio_url) {
-              return (
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-                  <Volume2 className="h-3 w-3 mr-1" />
-                  AI Audio Ready
-                </Badge>
-              );
-            }
-            if (isProcessing) {
-              return (
-                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Processing
-                </Badge>
-              );
-            }
-            if (isQueued) {
-              return (
-                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                  <Hourglass className="h-3 w-3 mr-1" />
-                  Queued
-                </Badge>
-              );
-            }
-            if (isFailed) {
-              return (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Generation Failed
-                </Badge>
-              );
-            }
-            return (
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                <Hourglass className="h-3 w-3 mr-1" />
-                Awaiting AI Audio
-              </Badge>
-            );
-          };
-
+          
           return (
             <Card key={item.song.id}>
               <CardContent className="p-4">
@@ -302,7 +271,12 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       <Music className="h-4 w-4 text-primary shrink-0" />
                       <h3 className="font-semibold break-words min-w-0">{item.song.title}</h3>
                       <Badge variant="secondary" className="text-xs">{item.song.genre}</Badge>
-                      {renderAiStatusBadge()}
+                      {hasAudio && (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                          <Volume2 className="h-3 w-3 mr-1" />
+                          AI Audio
+                        </Badge>
+                      )}
                       {(item.song.hype || 0) > 0 && (
                         <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
                           <Flame className="h-3 w-3 mr-1" />

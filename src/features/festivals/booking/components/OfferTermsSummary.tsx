@@ -1,3 +1,50 @@
-import type { FestivalTerms } from '../bookingTypes';
-import { formatBookingDateTime, formatBookingMoney } from '../formatting';
-export function OfferTermsSummary({ terms, revealPrivate = true }: { terms: FestivalTerms; revealPrivate?: boolean }) { const c=terms.currency_code; return <div className="grid gap-3 text-sm"><section><h4 className="font-medium">Performance</h4><p>{terms.proposed_stage_name ?? terms.proposed_slot_type ?? 'Stage TBA'} · {formatBookingDateTime(terms.proposed_start_at)} · {terms.set_duration_minutes ?? 'TBD'} min</p></section>{revealPrivate ? <section><h4 className="font-medium">Payment</h4><p>Guarantee {formatBookingMoney(terms.guarantee_fee_cents,c)} · deposit {formatBookingMoney(terms.deposit_cents,c)} · bonus {formatBookingMoney(terms.performance_bonus_cents,c)}</p></section> : null}<section><h4 className="font-medium">Merch, travel and hospitality</h4><p>Merch share {terms.merch_share_percent ?? 0}% · travel {terms.travel_terms?.notes ?? 'TBD'} · accommodation {terms.accommodation_terms?.notes ?? 'TBD'} · hospitality {terms.hospitality_terms?.notes ?? 'TBD'}</p></section><section><h4 className="font-medium">Technical and cancellation</h4><p>Technical {terms.technical_terms?.notes ?? 'TBD'} · cancellation notice {terms.cancellation_terms?.notice_hours ?? 'TBD'}h · expires {formatBookingDateTime(terms.expires_at)}</p></section></div>; }
+import type { FestivalTerms } from "../bookingTypes";
+import { formatBookingDateTime, formatBookingMoney } from "../formatting";
+export function OfferTermsSummary({
+  terms,
+  revealPrivate = true,
+}: {
+  terms: FestivalTerms;
+  revealPrivate?: boolean;
+}) {
+  const c = terms.currency_code;
+  return (
+    <div className="grid gap-3 text-sm">
+      <section>
+        <h4 className="font-medium">Performance</h4>
+        <p>
+          {terms.proposed_stage_name ?? terms.proposed_slot_type ?? "Stage TBA"}{" "}
+          · {formatBookingDateTime(terms.proposed_start_at)} ·{" "}
+          {terms.set_duration_minutes ?? "TBD"} min
+        </p>
+      </section>
+      {revealPrivate ? (
+        <section>
+          <h4 className="font-medium">Payment</h4>
+          <p>
+            Guarantee {formatBookingMoney(terms.guarantee_fee_cents, c)} ·
+            deposit {formatBookingMoney(terms.deposit_cents, c)} · bonus{" "}
+            {formatBookingMoney(terms.performance_bonus_cents, c)}
+          </p>
+        </section>
+      ) : null}
+      <section>
+        <h4 className="font-medium">Merch, travel and hospitality</h4>
+        <p>
+          Merch share {terms.merch_share_percent ?? 0}% · travel{" "}
+          {terms.travel_terms?.notes ?? "TBD"} · accommodation{" "}
+          {terms.accommodation_terms?.notes ?? "TBD"} · hospitality{" "}
+          {terms.hospitality_terms?.notes ?? "TBD"}
+        </p>
+      </section>
+      <section>
+        <h4 className="font-medium">Technical and cancellation</h4>
+        <p>
+          Technical {terms.technical_terms?.notes ?? "TBD"} · cancellation
+          notice {terms.cancellation_terms?.notice_hours ?? "TBD"}h · expires{" "}
+          {formatBookingDateTime(terms.expires_at)}
+        </p>
+      </section>
+    </div>
+  );
+}
