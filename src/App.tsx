@@ -714,7 +714,8 @@ function App() {
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="social/overview" element={<PreserveQueryRedirect to="/social" />} />
                     <Route path="social/friends" element={<FriendsPage />} />
-                    <Route path="social/players" element={<PlayerDiscovery />} />
+                    <Route path="social/players" element={<PlayersBrowser />} />
+                    <Route path="social/players/discover" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
                     <Route path="social/activities" element={<SocialActivities />} />
