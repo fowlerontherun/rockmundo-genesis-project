@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.535",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Fixed the remaining Wellness activity database error. The activity RPC was updating expanded wellness stats such as physical_health, happiness, fatigue, sleep_quality, nutrition, fitness, motivation, burnout_risk, and overall_wellness before those profile columns existed in the live schema. Added the missing profile fields, restored ailment expected recovery tracking, and rebuilt perform_wellness_activity so activity buttons can update vitals, apply cooldowns, log actions, and return the updated stats safely." },
+    ],
+  },
+  {
     version: "1.1.534",
     date: "2026-07-16",
     changes: [
