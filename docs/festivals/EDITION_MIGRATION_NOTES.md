@@ -1,34 +1,31 @@
 # Festival edition migration notes
 
-## Backfill rules
+## Deployment review
 
-Every existing `festivals` row receives an initial `festival_editions` row when one does not already exist for the same brand and edition number. The migration preserves brand dates, city, venue, expected attendance, description, treasury and metadata. Existing `ticket_price_low` and `ticket_price_high` are decimal currency units, while the new edition ticket fields are cents, so the backfill multiplies those prices by 100 and records the compatibility decision in `legacy_metadata`.
+The historical canonical-edition migration is `supabase/migrations/20291204090000_create_festival_editions.sql`. This repository checkout does not contain deployment logs proving whether that migration has or has not been applied to a shared Supabase project, so this corrective PR treats it as potentially deployed.
 
-## Status mapping
+## Ordering decision
 
-Dedicated festival statuses verified in repository code and migrations are mapped conservatively:
+The `20291204090000` timestamp is retained as a historical migration identity. Renaming it alone would fix only fresh installs and could leave shared environments with divergent migration history. The hardening work therefore lives in the additive migration `20291205090000_harden_festival_editions.sql`.
 
-- `draft`, `upcoming` → `planning`
-- `confirmed` → `booking`
-- `published`, `announced` → `announced`
-- `live` → `live`
-- `completed` → `completed`
-- `postponed` → `postponed`
-- `cancelled` → `cancelled`
-- unknown values → `planning` with the original status retained in `legacy_metadata`
+Future festival migrations that depend on canonical editions must be timestamped after the historical foundation and the hardening migration, or must include idempotent bootstrap guards when they need to tolerate partially-applied environments.
 
-## Legacy event handling
+## Corrected dependency order
 
-The migration creates explicit `dedicated_festival_row` mappings for all backfilled editions. Legacy `game_events` rows are mapped only when the match is deterministic: festival event type, exact/normalised title match, compatible venue when present, and overlapping dates. Unmatched legacy festival events are left unmapped for the later data-migration PR rather than creating placeholder brands.
+PR #1190 created `public.public_festival_editions` before `public.is_public_festival_edition_status(status)`. PostgreSQL does not allow relying on an unresolved function reference in a view definition. The hardening migration creates or replaces the helper first, then drops and recreates the public view, reapplies grants, and performs a smoke query.
 
-## Compatibility rules
+## Public/private read contract
 
-`festivals` remains the permanent brand and marketplace asset. Brand-level staff, permits, insurance and ledger screens continue to operate until later edition re-keying. Current player festival routes backed by `game_events` and `festival_participants` remain active.
+Public discovery reads use `public.public_festival_editions`, a security-invoker/security-barrier projection that omits budgets, treasury allocations, lifecycle metadata, legacy metadata, idempotency keys and internal moderation/ownership fields. Owner and admin reads continue to use the protected `festival_editions` table through RLS-backed service functions.
 
-## Rollback strategy
+## RPC semantics
 
-This change is additive. Rollback can drop the three new tables, the enum, policies, indexes, triggers and RPCs without changing existing festival primary keys or deleting legacy festival data. Because backfill writes only new canonical tables and mappings, existing `festivals`, `game_events`, `festival_participants`, stages, tickets and attendance data remain intact.
+`update_festival_edition_planning` now accepts a JSONB patch object so omitted keys preserve existing values while explicit `null` values clear fields where allowed. `create_festival_edition` accepts an optional idempotency key and stores it on the edition under a per-brand unique index. `transition_festival_edition` locks the edition before idempotency checks, fingerprints transition inputs and rejects reuse of a key with different inputs.
 
-## Next migration PR
+## No-op transitions
 
-Recommended next PR: `feat(festivals): add canonical applications contracts setlists and performances`.
+A new request that targets the edition's current status returns the unchanged edition and does not create lifecycle history. A retry with the same idempotency key returns the original locked edition after validating the fingerprint.
+
+## Remaining limitations
+
+Legacy stages, slots, applications, contracts, setlists, attendance and performance settlement remain keyed as they were before this PR. They are intentionally not migrated until the next canonical booking/application PR.

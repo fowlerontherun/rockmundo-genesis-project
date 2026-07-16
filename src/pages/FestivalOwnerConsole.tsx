@@ -38,8 +38,11 @@ import {
   Store,
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { listFestivalEditions } from "@/features/festivals/service";
-import { getFestivalEditionStatusLabel } from "@/features/festivals/lifecycle";
+import { listFestivalEditionsForOwner } from "@/features/festivals/service";
+import {
+  getFestivalEditionStatusLabel,
+  selectManagedFestivalEdition,
+} from "@/features/festivals/lifecycle";
 
 const money = (cents: number | null | undefined) => {
   const c = Number(cents ?? 0);
@@ -82,10 +85,10 @@ export default function FestivalOwnerConsole() {
 
   const { data: editions = [] } = useQuery({
     queryKey: ["festival-editions", festivalId],
-    queryFn: () => listFestivalEditions(festivalId!),
+    queryFn: () => listFestivalEditionsForOwner(festivalId!),
     enabled: !!festivalId,
   });
-  const currentEdition = editions[0];
+  const currentEdition = selectManagedFestivalEdition(editions);
 
   const { data: staff = [] } = useQuery({
     queryKey: ["festival-staff", festivalId],
@@ -510,15 +513,20 @@ export default function FestivalOwnerConsole() {
             <CardContent className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <Label>Low tier</Label>
-                <div>${festival.ticket_price_low}</div>
+                <div>{money(currentEdition?.minimum_ticket_price_cents)}</div>
               </div>
               <div>
                 <Label>High tier / VIP</Label>
-                <div>${festival.ticket_price_high}</div>
+                <div>{money(currentEdition?.maximum_ticket_price_cents)}</div>
               </div>
               <div>
                 <Label>Expected attendance</Label>
-                <div>{festival.expected_attendance?.toLocaleString()}</div>
+                <div>
+                  {(
+                    currentEdition?.expected_attendance ??
+                    currentEdition?.capacity
+                  )?.toLocaleString()}
+                </div>
               </div>
               <div>
                 <Label>Runs</Label>

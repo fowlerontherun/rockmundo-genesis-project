@@ -10433,10 +10433,40 @@ export type Database = {
           live_at: string | null
           completed_at: string | null
           cancelled_at: string | null
+          creation_idempotency_key: string | null
         }
         Insert: Partial<Database["public"]["Tables"]["festival_editions"]["Row"]> & { festival_id: string; edition_number: number }
         Update: Partial<Database["public"]["Tables"]["festival_editions"]["Row"]>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "festival_editions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_editions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_editions_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_editions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       festival_edition_lifecycle_events: {
         Row: {
@@ -10448,11 +10478,27 @@ export type Database = {
           reason: string | null
           metadata: Json
           idempotency_key: string | null
+          request_fingerprint: string | null
           created_at: string
         }
         Insert: Partial<Database["public"]["Tables"]["festival_edition_lifecycle_events"]["Row"]> & { edition_id: string; to_status: Database["public"]["Enums"]["festival_edition_status"] }
         Update: Partial<Database["public"]["Tables"]["festival_edition_lifecycle_events"]["Row"]>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_lifecycle_events_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_lifecycle_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       festival_legacy_mappings: {
         Row: {
@@ -10466,7 +10512,15 @@ export type Database = {
         }
         Insert: Partial<Database["public"]["Tables"]["festival_legacy_mappings"]["Row"]> & { edition_id: string; legacy_source: "game_event" | "dedicated_festival_row" | "festival_lineup_source"; legacy_id: string }
         Update: Partial<Database["public"]["Tables"]["festival_legacy_mappings"]["Row"]>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "festival_legacy_mappings_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       festival_finances: {
         Row: {
@@ -37420,6 +37474,7 @@ export type Database = {
           p_minimum_ticket_price_cents?: number | null
           p_maximum_ticket_price_cents?: number | null
           p_public_metadata?: Json
+          p_idempotency_key?: string | null
         }
         Returns: Database["public"]["Tables"]["festival_editions"]["Row"]
       }
@@ -37436,17 +37491,7 @@ export type Database = {
       update_festival_edition_planning: {
         Args: {
           p_edition_id: string
-          p_title?: string | null
-          p_description?: string | null
-          p_start_at?: string | null
-          p_end_at?: string | null
-          p_city_id?: string | null
-          p_venue_id?: string | null
-          p_expected_attendance?: number | null
-          p_capacity?: number | null
-          p_minimum_ticket_price_cents?: number | null
-          p_maximum_ticket_price_cents?: number | null
-          p_public_metadata?: Json | null
+          p_patch?: Json
         }
         Returns: Database["public"]["Tables"]["festival_editions"]["Row"]
       }

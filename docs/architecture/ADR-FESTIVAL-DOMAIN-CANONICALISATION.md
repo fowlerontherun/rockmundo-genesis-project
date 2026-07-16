@@ -89,3 +89,11 @@ This PR establishes the first additive canonical schema layer:
 - Compatibility remains explicit: owner tools may display canonical edition lifecycle, but brand-scoped staff, permits, insurance, marketplace and legacy event-backed player flows remain unchanged until later migrations.
 
 Unresolved migration items remain canonical applications, contracts, setlists, performances, stage/slot re-keying, tickets, attendance, settlement, reward ledgers, audience/incident/vendor/staff-shift systems, and final legacy withdrawal.
+
+## 2026 hardening update
+
+The canonical festival edition foundation is supplemented by `20291205090000_harden_festival_editions.sql` rather than renaming the historical `20291204090000` migration, because deployment state for the 2029 migration cannot be proven from the repository alone. The hardening migration recreates the public view after its status helper, narrows the public projection, adds creation idempotency, converts planning updates to JSONB patch semantics, and fingerprints lifecycle transition idempotency keys.
+
+Frontend owner workflows now distinguish public reads from owner/private reads. Public discovery uses `public_festival_editions`; owner screens use protected owner reads and a shared `selectManagedFestivalEdition` helper. The run wizard writes edition planning fields through `updateFestivalEditionPlanning` and requires an explicit edition creation action before occurrence planning or launch changes.
+
+Database regression coverage is expanded in `supabase/tests/festival_editions_harness.sql`, and static migration-order coverage is provided by `scripts/check-festival-edition-migrations.mjs`. Legacy player flows, stages, slots, applications, contracts, setlists and performance settlement remain unchanged.

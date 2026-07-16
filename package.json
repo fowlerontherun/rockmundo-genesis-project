@@ -32,7 +32,9 @@
     "test:achievements": "vitest run src/features/achievements/__tests__/validator.test.ts",
     "validate:balance": "vitest run src/balance/__tests__/balance.test.ts",
     "simulate:balance": "node scripts/progression-simulations/run-balance-simulations.mjs",
-    "validate:progression-programme": "node scripts/progression/validate-programme.mjs"
+    "validate:progression-programme": "node scripts/progression/validate-programme.mjs",
+    "test:festivals:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for festival DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/festival_editions_harness.sql'",
+    "check:festival-migrations": "node scripts/check-festival-edition-migrations.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
