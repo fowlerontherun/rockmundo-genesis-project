@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseTyped } from '@/integrations/supabase/client';
+const supabase = supabaseTyped as any;
 import { mapBookingError } from './bookingTypes';
 import type { BookingSide, FestivalTerms } from './bookingTypes';
 
