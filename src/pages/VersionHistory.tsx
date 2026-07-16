@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.572",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Festivals Administration: fixed 'Could not find the function public.admin_festival_catalogue' by adding a compatibility RPC that projects existing festivals into the admin catalogue shape (brand name, city, lifecycle state, stage count, treasury, projected finance, attendance). Also fixed a build error in FestivalOwnerConsole where FMPageScaffold was passed an unsupported 'description' prop — renamed to 'subtitle'." },
+    ],
+  },
+  {
     version: "1.1.571",
     date: "2026-07-16",
     changes: [
