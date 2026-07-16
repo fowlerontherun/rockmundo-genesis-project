@@ -393,6 +393,14 @@ export const useCreateRecordingSession = () => {
       
       const studioName = studioData?.name || 'Recording Studio';
 
+      // Fetch song title for notifications
+      const { data: songInfo } = await supabase
+        .from('songs')
+        .select('title')
+        .eq('id', input.song_id)
+        .single();
+      const songTitle = (songInfo as any)?.title || 'a song';
+
       if (input.band_id) {
         // Band session - schedule for ALL band members
         await createBandScheduledActivities({
@@ -410,6 +418,43 @@ export const useCreateRecordingSession = () => {
             songId: input.song_id,
           },
         });
+
+        // Notify all band members via inbox
+        try {
+          const { data: bandInfo } = await supabase
+            .from('bands')
+            .select('name')
+            .eq('id', input.band_id)
+            .single();
+          const bandName = (bandInfo as any)?.name || 'Your band';
+
+          const { data: members } = await supabase
+            .from('band_members')
+            .select('user_id')
+            .eq('band_id', input.band_id)
+            .eq('member_status', 'active');
+
+          const startStr = now.toLocaleString();
+          const inboxRows = (members || [])
+            .map((m: any) => m.user_id)
+            .filter((uid: string | null) => !!uid)
+            .map((uid: string) => ({
+              user_id: uid,
+              category: 'system' as any,
+              priority: 'normal' as any,
+              title: `Recording session booked: ${songTitle}`,
+              message: `${bandName} has a recording session for "${songTitle}" at ${studioName} starting ${startStr} (${input.duration_hours}h).`,
+              action_type: 'view_recording_session',
+              action_data: { session_id: sessionData.id } as any,
+              metadata: { source: 'recording_booking', session_id: sessionData.id, band_id: input.band_id } as any,
+            }));
+
+          if (inboxRows.length > 0) {
+            await supabase.from('player_inbox').insert(inboxRows as any);
+          }
+        } catch (notifyErr) {
+          console.error('Failed to notify band members of recording booking:', notifyErr);
+        }
       } else {
         // Solo artist - schedule just for the user
         await createScheduledActivity({
@@ -427,6 +472,23 @@ export const useCreateRecordingSession = () => {
             songId: input.song_id,
           },
         });
+
+        // Notify solo artist
+        try {
+          const startStr = now.toLocaleString();
+          await supabase.from('player_inbox').insert({
+            user_id: input.user_id,
+            category: 'system' as any,
+            priority: 'normal' as any,
+            title: `Recording session booked: ${songTitle}`,
+            message: `Your recording session for "${songTitle}" at ${studioName} starts ${startStr} (${input.duration_hours}h).`,
+            action_type: 'view_recording_session',
+            action_data: { session_id: sessionData.id } as any,
+            metadata: { source: 'recording_booking', session_id: sessionData.id } as any,
+          } as any);
+        } catch (notifyErr) {
+          console.error('Failed to notify artist of recording booking:', notifyErr);
+        }
       }
 
       return sessionData;
