@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         const { data: studioData } = session.studio_id
           ? await supabase
               .from('city_studios')
-              .select('quality_rating, equipment_quality, engineer_rating')
+              .select('quality_rating, equipment_rating')
               .eq('id', session.studio_id)
               .maybeSingle()
           : { data: null } as any
@@ -164,13 +164,25 @@ Deno.serve(async (req) => {
         const { data: memberRows } = session.band_id
           ? await supabase
               .from('band_members')
-              .select('profile_id, user_id, instrument, role, member_status')
+              .select('profile_id, user_id, instrument_role, role, member_status')
               .eq('band_id', session.band_id)
               .in('member_status', ['active'])
           : { data: [] } as any
 
-        const soloProfiles = !session.band_id && session.profile_id
-          ? [{ profile_id: session.profile_id, user_id: session.user_id, instrument: 'lead_vocals', role: 'lead_vocals' }]
+        let soloProfileId = session.profile_id || null
+        if (!session.band_id && !soloProfileId && session.user_id) {
+          const { data: activeSoloProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', session.user_id)
+            .eq('is_active', true)
+            .is('died_at', null)
+            .maybeSingle()
+          soloProfileId = activeSoloProfile?.id || null
+        }
+
+        const soloProfiles = !session.band_id
+          ? [{ profile_id: soloProfileId, user_id: session.user_id, instrument_role: 'lead_vocals', role: 'lead_vocals' }]
           : []
         const participants = [...(memberRows || []), ...soloProfiles]
 
@@ -179,7 +191,7 @@ Deno.serve(async (req) => {
           const { data: profile } = profileId
             ? await supabase
                 .from('profiles')
-                .select('health, energy, motivation, attributes')
+                .select('health, energy, motivation, physical_health')
                 .eq('id', profileId)
                 .maybeSingle()
             : { data: null } as any
@@ -190,10 +202,10 @@ Deno.serve(async (req) => {
                 .eq('profile_id', profileId)
             : { data: [] } as any
           const skills = Object.fromEntries((skillRows || []).map((row: any) => [row.skill_slug || row.skill_id, row.level || 0]))
-          const attrs = (profile as any)?.attributes || {}
+          const attrs = { physical_health: (profile as any)?.physical_health ?? (profile as any)?.health ?? 75 }
           return {
             profileId: profileId || member.user_id || session.user_id,
-            role: member.instrument || member.role || 'lead_vocals',
+            role: member.instrument_role || member.role || 'lead_vocals',
             accepted: true,
             attended: true,
             skills,
@@ -224,9 +236,9 @@ Deno.serve(async (req) => {
           studio: {
             id: session.studio_id,
             quality: (studioData as any)?.quality_rating ?? 55,
-            equipment: (studioData as any)?.equipment_quality ?? (studioData as any)?.quality_rating ?? 55,
+            equipment: (studioData as any)?.equipment_rating ?? (studioData as any)?.quality_rating ?? 55,
           },
-          engineer: { kind: 'studio_default', rating: (studioData as any)?.engineer_rating ?? 50 },
+          engineer: { kind: 'studio_default', rating: (studioData as any)?.equipment_rating ?? (studioData as any)?.quality_rating ?? 50 },
           producer: session.player_producer_id
             ? { id: session.player_producer_id, kind: 'player', rating: 55 }
             : session.producer_id
@@ -454,7 +466,7 @@ Deno.serve(async (req) => {
             .from('band_members')
             .select('user_id')
             .eq('band_id', session.band_id)
-            .in('member_status', ['active', null])
+            .eq('member_status', 'active')
 
           for (const member of bandMembers || []) {
             if (member.user_id) {

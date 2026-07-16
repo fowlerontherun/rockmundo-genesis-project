@@ -26,9 +26,10 @@ export interface RecordingProducer {
 export interface RecordingSession {
   id: string;
   user_id: string;
+  profile_id: string | null;
   band_id: string | null;
   studio_id: string;
-  producer_id: string;
+  producer_id: string | null;
   song_id: string;
   recording_version: string | null;
   duration_hours: number;
@@ -92,39 +93,86 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
   });
 };
 
-export const useRecordingSessions = (profileId: string) => {
+const recordingSessionSelect = `
+  id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, scheduled_start, scheduled_end, completed_at, session_data, created_at, updated_at,
+  city_studios (name, quality_rating),
+  recording_producers (name, tier),
+  songs (title, genre)
+` as string;
+
+const normalizeRecordingSession = (row: any): RecordingSession => ({
+  ...row,
+  stage: row.session_data?.stage ?? "recording",
+  started_at: row.session_data?.started_at ?? null,
+  total_takes: row.session_data?.total_takes ?? null,
+  quality_gain: row.session_data?.quality_gain ?? row.quality_improvement ?? null,
+  notes: row.session_data?.notes ?? null,
+  engineer_id: row.session_data?.engineer_id ?? null,
+  engineer_name: row.session_data?.engineer_name ?? null,
+});
+
+export const useRecordingSessions = (profileId?: string | null, userId?: string | null) => {
   return useQuery({
-    queryKey: ['recording-sessions', profileId],
+    queryKey: ['recording-sessions', profileId, userId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!profileId && !userId) return [];
 
-      const { data: membershipRows, error: membershipError } = await supabase
-        .from('band_members')
-        .select('band_id')
-        .eq('profile_id', profileId)
-        .eq('member_status', 'active');
+      const membershipQueries = [
+        profileId
+          ? supabase
+              .from('band_members')
+              .select('band_id')
+              .eq('profile_id', profileId)
+              .eq('member_status', 'active')
+          : Promise.resolve({ data: [], error: null } as any),
+        userId
+          ? supabase
+              .from('band_members')
+              .select('band_id')
+              .eq('user_id', userId)
+              .eq('member_status', 'active')
+          : Promise.resolve({ data: [], error: null } as any),
+      ];
 
-      if (membershipError) throw membershipError;
+      const [membershipByProfile, membershipByUser] = await Promise.all(membershipQueries);
 
-      const bandIds = (membershipRows || []).map(row => row.band_id).filter(Boolean);
-      const selectCols = `
-        id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, stage, scheduled_start, scheduled_end, started_at, completed_at, session_data, total_takes, quality_gain, notes, engineer_id, engineer_name, created_at, updated_at,
-        city_studios (name, quality_rating),
-        recording_producers (name, tier),
-        songs (title, genre)
-      `;
+      if (membershipByProfile.error) throw membershipByProfile.error;
+      if (membershipByUser.error) throw membershipByUser.error;
 
-      const [byProfile, byBand] = await Promise.all([
-        supabase
-          .from('recording_sessions')
-          .select(selectCols)
-          .eq('profile_id', profileId)
-          .order('created_at', { ascending: false })
-          .limit(100),
+      const bandIds = Array.from(new Set([
+        ...((membershipByProfile.data || []) as any[]).map(row => row.band_id),
+        ...((membershipByUser.data || []) as any[]).map(row => row.band_id),
+      ].filter(Boolean)));
+
+      const [byProfile, byLegacyUser, byBand] = await Promise.all([
+        profileId
+          ? supabase
+              .from('recording_sessions')
+              .select(recordingSessionSelect)
+              .eq('profile_id', profileId)
+              .order('created_at', { ascending: false })
+              .limit(100)
+          : Promise.resolve({ data: [], error: null } as any),
+        userId
+          ? profileId
+            ? supabase
+                .from('recording_sessions')
+                .select(recordingSessionSelect)
+                .eq('user_id', userId)
+                .is('profile_id', null)
+                .order('created_at', { ascending: false })
+                .limit(100)
+            : supabase
+                .from('recording_sessions')
+                .select(recordingSessionSelect)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(100)
+          : Promise.resolve({ data: [], error: null } as any),
         bandIds.length > 0
           ? supabase
               .from('recording_sessions')
-              .select(selectCols)
+              .select(recordingSessionSelect)
               .in('band_id', bandIds)
               .order('created_at', { ascending: false })
               .limit(100)
@@ -132,22 +180,25 @@ export const useRecordingSessions = (profileId: string) => {
       ]);
 
       if (byProfile.error) throw byProfile.error;
+      if (byLegacyUser.error) throw byLegacyUser.error;
       if (byBand.error) throw byBand.error;
 
       const merged = new Map<string, any>();
       for (const row of (byProfile.data || []) as any[]) merged.set(row.id, row);
+      for (const row of (byLegacyUser.data || []) as any[]) merged.set(row.id, row);
       for (const row of (byBand.data || []) as any[]) merged.set(row.id, row);
 
       return Array.from(merged.values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ) as any as RecordingSession[];
+      ).map(normalizeRecordingSession);
     },
-    enabled: !!profileId,
+    enabled: !!profileId || !!userId,
   });
 };
 
 interface CreateRecordingSessionInput {
   user_id: string;
+  profile_id?: string | null;
   band_id?: string;
   studio_id: string;
   producer_id: string;
@@ -236,6 +287,7 @@ export const useCreateRecordingSession = () => {
       // Use scheduled times if provided, otherwise use now
       const now = input.scheduled_start ? new Date(input.scheduled_start) : new Date();
       const sessionEnd = input.scheduled_end ? new Date(input.scheduled_end) : new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
+      let actingProfileId = input.profile_id ?? null;
 
       // If band session, check availability for ALL band members first
       if (input.band_id) {
@@ -336,13 +388,19 @@ export const useCreateRecordingSession = () => {
           });
       } else {
         // Solo artist - deduct from personal cash via profile_id
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, cash')
-          .eq('user_id', input.user_id)
-          .eq('is_active', true)
-          .is('died_at', null)
-          .single();
+        const { data: profile } = actingProfileId
+          ? await supabase
+              .from('profiles')
+              .select('id, cash')
+              .eq('id', actingProfileId)
+              .maybeSingle()
+          : await supabase
+              .from('profiles')
+              .select('id, cash')
+              .eq('user_id', input.user_id)
+              .eq('is_active', true)
+              .is('died_at', null)
+              .maybeSingle();
 
         const currentCash = profile?.cash || 0;
         if (currentCash < totalCost) {
@@ -354,6 +412,8 @@ export const useCreateRecordingSession = () => {
           .from('profiles')
           .update({ cash: currentCash - totalCost })
           .eq('id', profile?.id);
+
+        actingProfileId = profile?.id ?? actingProfileId;
       }
 
       // Create recording session - use null for self-produce since producer_id is a uuid column
@@ -368,6 +428,7 @@ export const useCreateRecordingSession = () => {
         .from('recording_sessions')
         .insert({
           user_id: input.user_id,
+          profile_id: actingProfileId,
           band_id: input.band_id || null,
           studio_id: input.studio_id,
           producer_id: input.producer_id === 'self-produce' ? null : input.producer_id,
@@ -510,6 +571,7 @@ export const useCreateRecordingSession = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['recorded-songs-list'] });
       toast.success('Recording session started!');
     },
     onError: (error: Error) => {

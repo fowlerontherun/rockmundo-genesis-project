@@ -52,6 +52,7 @@ import type { SkillProgressEntry } from "@/utils/skillGearPerformance";
 
 interface SessionConfiguratorProps {
   userId: string;
+  profileId?: string | null;
   bandId?: string | null;
   studio: any;
   song: any;
@@ -63,6 +64,7 @@ interface SessionConfiguratorProps {
 
 export const SessionConfigurator = ({
   userId,
+  profileId,
   bandId,
   studio,
   song,
@@ -154,11 +156,19 @@ export const SessionConfigurator = ({
         setIsLabelSigned(!!contract);
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash, id, fame, level")
-        .eq("user_id", userId)
-        .single();
+      const { data: profile } = profileId
+        ? await supabase
+            .from("profiles")
+            .select("cash, id, fame, level")
+            .eq("id", profileId)
+            .maybeSingle()
+        : await supabase
+            .from("profiles")
+            .select("cash, id, fame, level")
+            .eq("user_id", userId)
+            .eq("is_active", true)
+            .is("died_at", null)
+            .maybeSingle();
 
       setPersonalCash(profile?.cash || 0);
       setPlayerFame(profile?.fame || 0);
@@ -178,7 +188,7 @@ export const SessionConfigurator = ({
       }
     };
     fetchData();
-  }, [bandId, userId, song.id]);
+  }, [bandId, userId, profileId, song.id]);
 
   const orchestraOption = orchestraSize
     ? ORCHESTRA_OPTIONS.find((o) => o.size === orchestraSize)
@@ -286,6 +296,7 @@ export const SessionConfigurator = ({
     try {
       await createSession.mutateAsync({
         user_id: userId,
+        profile_id: profileId || null,
         band_id: bandId || null,
         studio_id: studio.id,
         producer_id: producer.id,

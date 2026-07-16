@@ -7,14 +7,15 @@ import type {
   FestivalLegacySource,
 } from "./types";
 
-const editionsTable = () => supabase.from("festival_editions");
-const mappingsTable = () => supabase.from("festival_legacy_mappings");
+const selectAll = "*" as string;
+const editionsTable = () => (supabase as any).from("festival_editions");
+const mappingsTable = () => (supabase as any).from("festival_legacy_mappings");
 
 export async function listFestivalEditions(
   festivalId: string,
 ): Promise<FestivalEdition[]> {
   const { data, error } = await editionsTable()
-    .select("*")
+    .select(selectAll)
     .eq("festival_id", festivalId)
     .order("edition_number", { ascending: false });
   if (error) throw error;
@@ -25,7 +26,7 @@ export async function getFestivalEdition(
   editionId: string,
 ): Promise<FestivalEdition | null> {
   const { data, error } = await editionsTable()
-    .select("*")
+    .select(selectAll)
     .eq("id", editionId)
     .maybeSingle();
   if (error) throw error;
@@ -45,7 +46,7 @@ export async function createFestivalEdition(input: {
   maximumTicketPriceCents?: number | null;
   publicMetadata?: Json;
 }): Promise<FestivalEdition> {
-  const { data, error } = await supabase.rpc("create_festival_edition", {
+  const { data, error } = await (supabase as any).rpc("create_festival_edition", {
     p_festival_id: input.festivalId,
     p_title: input.title ?? null,
     p_start_at: input.startAt ?? null,
@@ -78,7 +79,7 @@ export async function updateFestivalEditionPlanning(
     publicMetadata: Json;
   }>,
 ): Promise<FestivalEdition> {
-  const { data, error } = await supabase.rpc(
+  const { data, error } = await (supabase as any).rpc(
     "update_festival_edition_planning",
     {
       p_edition_id: editionId,
@@ -106,7 +107,7 @@ export async function transitionFestivalEdition(input: {
   metadata?: Json;
   idempotencyKey?: string | null;
 }): Promise<FestivalEdition> {
-  const { data, error } = await supabase.rpc("transition_festival_edition", {
+  const { data, error } = await (supabase as any).rpc("transition_festival_edition", {
     p_edition_id: input.editionId,
     p_target_status: input.targetStatus,
     p_reason: input.reason ?? null,
@@ -122,7 +123,7 @@ export async function resolveEditionFromLegacyIdentifier(
   legacyId: string,
 ): Promise<FestivalLegacyMapping | null> {
   const { data, error } = await mappingsTable()
-    .select("*")
+    .select(selectAll)
     .eq("legacy_source", legacySource)
     .eq("legacy_id", legacyId)
     .maybeSingle();

@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.544",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording Studio now loads sessions quickly and reliably. Removed non-existent columns from the session query, added profile_id + legacy user_id fallbacks so older bookings still appear, fixed active-character band lookup, and mounted automatic recording completion globally so past scheduled sessions are converted into recorded songs." },
+    ],
+  },
+  {
     version: "1.1.543",
     date: "2026-07-16",
     changes: [
