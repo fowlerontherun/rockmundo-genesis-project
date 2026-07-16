@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.558",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'no unique or exclusion constraint matching the ON CONFLICT specification' error hit by returning players creating a fresh character. Added a UNIQUE constraint on player_attributes.profile_id so the ensure_profile_progression_rows trigger's ON CONFLICT clause resolves cleanly." },
+      { type: 'feature', description: "Added a Returning Player Wizard: when a former player logs in with no living character, they now see a friendly 'Welcome back' intro step summarising resurrection lives, fame, and generation before advancing to the resurrect / continue bloodline / start fresh choices." },
+    ],
+  },
+  {
     version: "1.1.557",
     date: "2026-07-16",
     changes: [
