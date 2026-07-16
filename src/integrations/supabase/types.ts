@@ -26056,6 +26056,61 @@ export type Database = {
         }
         Relationships: []
       }
+      player_wellness_lifestyle: {
+        Row: {
+          created_at: string
+          id: string
+          lifestyle_slug: string
+          profile_id: string
+          started_at: string
+          switch_available_at: string
+          total_switches: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lifestyle_slug: string
+          profile_id: string
+          started_at?: string
+          switch_available_at?: string
+          total_switches?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lifestyle_slug?: string
+          profile_id?: string
+          started_at?: string
+          switch_available_at?: string
+          total_switches?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_wellness_lifestyle_lifestyle_slug_fkey"
+            columns: ["lifestyle_slug"]
+            isOneToOne: false
+            referencedRelation: "wellness_lifestyles"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "player_wellness_lifestyle_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_wellness_lifestyle_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_xp_wallet: {
         Row: {
           attribute_points_balance: number | null
@@ -36704,6 +36759,63 @@ export type Database = {
           },
         ]
       }
+      wellness_lifestyles: {
+        Row: {
+          accent_color: string
+          bonuses: string[]
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_active: boolean
+          modifiers: Json
+          name: string
+          penalties: string[]
+          slug: string
+          sort_order: number
+          switch_cost: number
+          tagline: string
+          unlock_requirements: Json
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          bonuses?: string[]
+          created_at?: string
+          description: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          modifiers?: Json
+          name: string
+          penalties?: string[]
+          slug: string
+          sort_order?: number
+          switch_cost?: number
+          tagline: string
+          unlock_requirements?: Json
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          bonuses?: string[]
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          modifiers?: Json
+          name?: string
+          penalties?: string[]
+          slug?: string
+          sort_order?: number
+          switch_cost?: number
+          tagline?: string
+          unlock_requirements?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       world_parliament_motions: {
         Row: {
           abstain_votes: number
@@ -37677,6 +37789,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_wellness_lifestyle_modifiers: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       gift_underworld_item: {
         Args: { _purchase_id: string; _recipient_profile_id: string }
         Returns: string
@@ -37952,6 +38068,25 @@ export type Database = {
       swap_gettit_vote: {
         Args: { new_field: string; old_field: string; post_id: string }
         Returns: undefined
+      }
+      switch_wellness_lifestyle: {
+        Args: { new_slug: string }
+        Returns: {
+          created_at: string
+          id: string
+          lifestyle_slug: string
+          profile_id: string
+          started_at: string
+          switch_available_at: string
+          total_switches: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_wellness_lifestyle"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sync_job_employee_counts: { Args: never; Returns: undefined }
       sync_twaater_fame_scores: { Args: never; Returns: undefined }
