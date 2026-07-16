@@ -110,17 +110,12 @@ export async function listActiveBlocks(profileId: string): Promise<WellnessBlock
 }
 
 export async function performWellnessActivity(profileId: string, catalogSlug: string) {
-  const { data, error } = await supabase.functions.invoke("wellness-perform-activity", {
-    body: { profile_id: profileId, catalog_slug: catalogSlug },
+  const { data, error } = await supabase.rpc("perform_wellness_activity" as any, {
+    _profile_id: profileId,
+    _catalog_slug: catalogSlug,
   });
-  if (error) {
-    // surface server-provided error body when available
-    const ctx = (error as any).context;
-    let serverMsg: string | undefined;
-    try { serverMsg = ctx && (await ctx.json?.())?.error; } catch { /* ignore */ }
-    throw new Error(serverMsg ?? error.message);
-  }
-  return data as { ok: boolean; cooldown_until: string; new_stats: WellnessVitals; ailments_contracted: string[] };
+  if (error) throw new Error(error.message);
+  return data as unknown as { ok: boolean; cooldown_until: string; new_stats: WellnessVitals; ailments_contracted: string[] };
 }
 
 export async function evaluateGate(profileId: string, activityType: string) {
