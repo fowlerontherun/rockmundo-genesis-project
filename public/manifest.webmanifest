@@ -1,0 +1,15 @@
+{
+  "name": "RockMundo",
+  "short_name": "RockMundo",
+  "description": "Quick mobile access to RockMundo activities, social updates, travel and career progress.",
+  "start_url": "/mobile?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#111827",
+  "background_color": "#09090b",
+  "icons": [
+    { "src": "/placeholder.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/placeholder.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
