@@ -231,6 +231,7 @@ const POVClipAdmin = lazyWithRetry(() => import("./pages/admin/POVClipAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
+const PlayersBrowser = lazyWithRetry(() => import("./pages/PlayersBrowser"));
 const FriendsPage = lazyWithRetry(() => import("./pages/Friends"));
 const BlockedPlayersPage = lazyWithRetry(() => import("./pages/settings/BlockedPlayers"));
 const MyReportsPage = lazyWithRetry(() => import("./pages/settings/MyReports"));
