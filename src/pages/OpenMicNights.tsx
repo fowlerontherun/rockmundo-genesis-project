@@ -209,7 +209,7 @@ export default function OpenMicNights() {
                         <Button
                           className="w-full"
                           size="sm"
-                          disabled={!userBand || !isCurrentCity}
+                          disabled={!profileId || !isCurrentCity}
                           onClick={() => handleSignUp(venue.id)}
                         >
                           <Music className="h-4 w-4 mr-2" />
@@ -217,7 +217,7 @@ export default function OpenMicNights() {
                         </Button>
                       )}
                       
-                      {!isCurrentCity && userBand && (
+                      {!isCurrentCity && (
                         <p className="text-xs text-muted-foreground text-center mt-2">
                           Travel to this city to sign up
                         </p>
