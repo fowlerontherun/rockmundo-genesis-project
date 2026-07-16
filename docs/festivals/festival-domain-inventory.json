@@ -670,5 +670,30 @@
       "canonical_performances",
       "settlement"
     ]
+  },
+  "canonical_booking_contracts": {
+    "migration": "20291206090000_festival_booking_contracts.sql",
+    "tables": [
+      "festival_applications",
+      "festival_contract_offers",
+      "festival_offer_revisions",
+      "festival_contracts",
+      "festival_contract_signatures",
+      "festival_contract_setlists",
+      "festival_contract_setlist_items",
+      "festival_application_events",
+      "festival_contract_events"
+    ],
+    "public_projections": [
+      "public_festival_editions_read",
+      "public_festival_lineup"
+    ],
+    "legacy_compatibility": [
+      "festival_participants",
+      "festival_slot_applications",
+      "festival_slot_offers",
+      "festival_offer_negotiations",
+      "festival_stage_slots"
+    ]
   }
 }

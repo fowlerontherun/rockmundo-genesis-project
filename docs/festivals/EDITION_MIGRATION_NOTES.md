@@ -30,3 +30,9 @@ Owner screens now share deterministic managed-edition selection. The run wizard 
 ## Validation
 
 `supabase/tests/festival_editions_harness.sql` now checks schema contracts, view privacy, idempotency objects, transition graph invariants and legacy mapping uniqueness inside a rollback-only transaction. `scripts/festivals/check-edition-migration-order.mjs` statically verifies helper-before-view ordering and documents the 2029 anomaly.
+
+## Canonical booking dependent migration
+
+`supabase/migrations/20291206090000_festival_booking_contracts.sql` intentionally sorts after both historical edition migrations. It depends on `festival_editions`, `festival_legacy_mappings`, public edition lifecycle statuses and owner/admin helpers introduced and hardened by `20291204090000` and `20291205090000`.
+
+The booking migration also corrects public edition reads before introducing player-facing application RPCs by adding the `public_festival_editions_read()` security-definer function. The function returns only the same safe public projection as `public_festival_editions`, grants execution to `anon` and `authenticated`, and does not add direct public `SELECT` policies on private `festival_editions` columns.

@@ -54,3 +54,10 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 48. **Status: partially implemented — sponsorship tables/hooks exist but are not canonical.** Integrate sponsorships/brand alignments affecting rewards and audience mood.
 49. **Status: partially implemented — duplicate checks exist client-side; server anti-cheat still required.** Add anti-cheat checks to prevent duplicate applications and enforce participant caps.
 50. **Status: blocked by canonical migration — admin screens should be consolidated after authority model is introduced.** Consolidate the two admin festival screens into a single lifecycle management interface.
+
+### Canonical booking/contracts PR
+
+- [x] Add edition-scoped applications, offers, immutable revisions, contracts, signatures, setlists and audit events.
+- [x] Add safe public edition read function and public lineup projection.
+- [x] Keep legacy participant flows as compatibility data pending performance-session migration.
+- [ ] Add canonical performance sessions, readiness and settlement in later PRs.
