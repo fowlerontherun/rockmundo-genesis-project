@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.542",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording sessions booked as a band member weren't showing in Sessions or Upcoming tabs. The Supabase `.or()` filter combining `profile_id.eq` with `band_id.in.(<uuid>)` silently returned zero rows because UUID hyphens/commas inside the parenthesized list confused the PostgREST filter parser. Split the lookup into two parallel queries (one by profile_id, one by band_id) and merged the results, so band-owned sessions now appear correctly." },
+    ],
+  },
+  {
     version: "1.1.540",
     date: "2026-07-16",
     changes: [
