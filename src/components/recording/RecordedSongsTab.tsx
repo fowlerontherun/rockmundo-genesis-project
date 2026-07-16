@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle, Loader2, Hourglass, XCircle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
