@@ -91,7 +91,6 @@ const AchievementsProgress = lazyWithRetry(() => import("./pages/AchievementsPro
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
-const CityFestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/CityFestivalsAdmin"));
 const SystemStatusAdminPage = lazyWithRetry(() => import("./pages/admin/SystemStatus"));
 const EurovisionAdminPage = lazyWithRetry(() => import("./pages/admin/EurovisionAdmin"));
 const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
@@ -695,6 +694,7 @@ function App() {
                     <Route path="festivals/simulation" element={<FestivalsNew />} />
                     <Route path="festivals/perform/:participationId" element={<FestivalPerformance />} />
                     <Route path="festivals/:festivalId/manage" element={<FestivalOwnerConsole />} />
+                    <Route path="festivals/:festivalId/manage/editions/:editionId" element={<FestivalOwnerConsole />} />
                     <Route path="festivals/sessions/:sessionId" element={<FestivalSessionPage />} />
                     <Route path="festivals/:festivalId/calendar" element={<FestivalBookingCalendar />} />
                     <Route path="festivals/:festivalId/run" element={<FestivalRunWizard />} />
@@ -836,7 +836,7 @@ function App() {
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/music-videos" element={<MusicVideosAdmin />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
-                    <Route path="admin/city-festivals" element={<CityFestivalsAdminPage />} />
+                    <Route path="admin/city-festivals" element={<Navigate to="/admin/festivals" replace />} />
                     <Route path="admin/system-status" element={<SystemStatusAdminPage />} />
                     <Route path="admin/eurovision" element={<EurovisionAdminPage />} />
                     <Route path="admin/awards" element={<AwardsAdmin />} />
