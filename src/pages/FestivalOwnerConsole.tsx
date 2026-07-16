@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, FileText, ShieldCheck, Ticket, Users, Music, History, Settings, Activity, Banknote, ClipboardList } from "lucide-react";
+import { ArrowLeft, CalendarDays } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { CanonicalOrganiserBookingWorkspace } from "@/features/festivals/booking/components";
 import { OwnerEditionSelector } from "@/features/festivals/admin/components/OwnerEditionSelector";
 import { useOwnerFestivalEditions } from "@/features/festivals/admin/hooks";
-import { festivalFeatureRegistry } from "@/features/festivals/festivalFeatureRegistry";
+import { FestivalStageManagement } from "@/features/festivals/admin/components/FestivalStageManagement";
+import { FestivalStaffManagement } from "@/features/festivals/admin/components/FestivalStaffManagement";
+import { FestivalPermitManagement } from "@/features/festivals/admin/components/FestivalPermitManagement";
+import { FestivalInsuranceManagement } from "@/features/festivals/admin/components/FestivalInsuranceManagement";
+import { FestivalFinanceManagement } from "@/features/festivals/admin/components/FestivalFinanceManagement";
+import { FestivalOutcomesManagement } from "@/features/festivals/admin/components/FestivalOutcomesManagement";
+import { FestivalSettlementManagement } from "@/features/festivals/admin/components/FestivalSettlementManagement";
 
 export default function FestivalOwnerConsole() {
   const { festivalId, editionId } = useParams();
@@ -59,40 +64,18 @@ export default function FestivalOwnerConsole() {
           <Card><CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5" />{selectedEdition.title}<Badge>{selectedEdition.status}</Badge></CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-3 text-sm"><div><p className="text-muted-foreground">City</p><p>{selectedEdition.cityName ?? "Not assigned"}</p></div><div><p className="text-muted-foreground">Dates</p><p>{selectedEdition.startAt ? new Date(selectedEdition.startAt).toLocaleDateString() : "Unscheduled"}</p></div><div><p className="text-muted-foreground">Currency</p><p>{selectedEdition.currencyCode}</p></div></CardContent></Card>
         </TabsContent>
         <TabsContent value="booking"><CanonicalOrganiserBookingWorkspace editionId={selectedEdition.id} /></TabsContent>
-        <TabsContent value="lineup"><FeatureWorkflow featureId="contracts" icon={<Music className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="stages"><FeatureWorkflow featureId="stages" icon={<Activity className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="staff"><FeatureWorkflow featureId="staff" icon={<Users className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="permits"><FeatureWorkflow featureId="permits" icon={<FileText className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="insurance"><FeatureWorkflow featureId="insurance" icon={<ShieldCheck className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="finance"><FeatureWorkflow featureId="finance" icon={<Banknote className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="live"><FeatureWorkflow featureId="live-sessions" icon={<Activity className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="outcomes"><FeatureWorkflow featureId="outcomes" icon={<ClipboardList className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="settlement"><FeatureWorkflow featureId="settlement" icon={<Ticket className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="history"><FeatureWorkflow featureId="legacy-records" icon={<History className="h-5 w-5" />} /></TabsContent>
-        <TabsContent value="settings"><FeatureWorkflow featureId="owner-editions" icon={<Settings className="h-5 w-5" />} /></TabsContent>
+        <TabsContent value="lineup"><CanonicalOrganiserBookingWorkspace editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="stages"><FestivalStageManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="staff"><FestivalStaffManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="permits"><FestivalPermitManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="insurance"><FestivalInsuranceManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="finance"><FestivalFinanceManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="live"><FestivalOutcomesManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="outcomes"><FestivalOutcomesManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="settlement"><FestivalSettlementManagement editionId={selectedEdition.id} /></TabsContent>
+        <TabsContent value="history"><Card><CardHeader><CardTitle>Edition history</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Historical edition records are read-only here; admin legacy migration tools live in /admin/festivals.</CardContent></Card></TabsContent>
+        <TabsContent value="settings"><Card><CardHeader><CardTitle>Edition settings</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Use the edition selector above to change editions. Server-projected permissions remain authoritative for all actions.</CardContent></Card></TabsContent>
       </Tabs>}
     </div>
   </FMPageScaffold>;
-}
-
-function FeatureWorkflow({ featureId, icon }: { featureId: string; icon: ReactNode }) {
-  const feature = festivalFeatureRegistry.find((entry) => entry.id === featureId);
-  if (!feature) return <Card><CardContent className="p-6 text-destructive">Feature registry entry missing: {featureId}</CardContent></Card>;
-  return <Card><CardHeader><CardTitle className="flex items-center gap-2">{icon}{feature.label}<Badge variant="outline">{feature.implementationStatus}</Badge></CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>{feature.description}</p><div className="grid gap-3 md:grid-cols-3"><div><p className="text-muted-foreground">Permission</p><p>{feature.requiredPermission}</p></div><div><p className="text-muted-foreground">Lifecycle</p><p>{feature.requiredLifecycleStates.length ? feature.requiredLifecycleStates.join(", ") : "Always available"}</p></div><div><p className="text-muted-foreground">Unavailable state</p><p>{feature.emptyState}</p></div></div><p className="text-muted-foreground">If this workflow is unavailable, resolve permission, lifecycle or migration blockers shown here before retrying. Error state: {feature.errorState}</p></CardContent></Card>;
-}
-
-function EditionOperationsSummary() {
-  return <div className="grid gap-4 md:grid-cols-3">
-    <Card><CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Staff</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Hiring and termination are server-authoritative, edition scoped and based on deterministic staff candidates.</CardContent></Card>
-    <Card><CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Permits</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Permit requirements derive from city, capacity, duration, stage count and operating policy. Owners cannot directly insert approvals.</CardContent></Card>
-    <Card><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />Insurance</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Quotes and purchases are edition scoped and ledger-backed without arbitrary client balance changes.</CardContent></Card>
-  </div>;
-}
-
-function ReadOnlyOutcomeSummary() {
-  return <Card><CardHeader><CardTitle>Read-only outcomes</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Audience generation, attendance, cohorts, crowd snapshots, performance outcomes, song outcomes, highlights and pending effects are displayed as canonical outcomes. Owners cannot edit scores.</CardContent></Card>;
-}
-
-function SettlementReadinessSummary() {
-  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Ticket className="h-5 w-5" />Settlement readiness</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">This console surfaces blockers from festival_edition_settlement_readiness. Fame, fans, streaming and money settlement are intentionally deferred to the next PR.</CardContent></Card>;
 }
