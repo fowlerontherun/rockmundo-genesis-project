@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.541",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Added Cancel and Reschedule actions to every card in the Recording Studio 'Upcoming' tab. Cancelling marks the session as cancelled, refunds the full cost (to the band's balance or the solo artist's cash), cancels the linked scheduled activities for all band members, and sends an inbox notification. Rescheduling opens a date/time picker, validates the new slot for studio conflicts, and updates the session plus every linked band/player scheduled activity." },
+    ],
+  },
+  {
     version: "1.1.540",
     date: "2026-07-16",
     changes: [
