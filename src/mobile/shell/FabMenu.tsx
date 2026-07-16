@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, X, Music4, Plane, PenLine, Zap, MessageSquare, Mic2, CalendarClock, Twitter, Moon, Utensils, ShoppingBag, Backpack, Shirt, Trophy, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { getMobileDestination } from "@/mobile/routeRegistry";
 
 type Action = {
   key: string;
@@ -14,13 +15,14 @@ type Action = {
 
 // Context-aware ordering: put likely actions first for the current section.
 function orderFor(pathname: string, base: Action[]): Action[] {
+  const destination = getMobileDestination(pathname);
   const bucket = (keys: string[]) => {
     const set = new Set(keys);
     return [...base.filter((a) => set.has(a.key)), ...base.filter((a) => !set.has(a.key))];
   };
-  if (pathname.startsWith("/mobile/career") || pathname.startsWith("/career")) return bucket(["practice", "write", "book-studio", "book-rehearsal", "jam"]);
-  if (pathname.startsWith("/mobile/social") || pathname.startsWith("/social")) return bucket(["message", "twaater", "jam"]);
-  if (pathname.startsWith("/mobile/world") || pathname.startsWith("/world")) return bucket(["travel", "shop", "book-studio"]);
+  if (destination === "career") return bucket(["practice", "write", "book-studio", "book-rehearsal", "jam"]);
+  if (destination === "social") return bucket(["message", "twaater", "jam"]);
+  if (destination === "world") return bucket(["travel", "shop", "book-studio"]);
   if (pathname.startsWith("/mobile/me/wellness")) return bucket(["eat", "sleep", "rest", "recovery-item"]);
   if (pathname.startsWith("/mobile/me/inventory")) return bucket(["use-item", "equip-item", "shop"]);
   if (pathname.startsWith("/mobile/me/wardrobe")) return bucket(["change-outfit", "shop"]);
