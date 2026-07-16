@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.530",
+    date: "2026-07-16",
+    changes: [
+      { type: 'improvement', description: "Simplified the Wellness page. Removed non-functional scaffolding panels (Lifestyle Routine, Nutrition/Hydration, Professional Support, Time Away, Career Stage Longevity, Canonical Readiness details, Accommodation & Travel forecast) that displayed data with no working buttons. The page now focuses on the actionable core: vitals summary, active blocks/ailments (with working Treat buttons), and the four activity categories (Recovery, Fitness, Medical, Indulgence) with real 'Do it now' actions wired to the wellness-perform-activity edge function. Clearer category descriptions and empty-state messages." },
+    ],
+  },
+  {
     version: "1.1.529",
     date: "2026-07-16",
     changes: [
