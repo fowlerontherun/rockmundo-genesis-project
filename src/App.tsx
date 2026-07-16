@@ -231,6 +231,7 @@ const POVClipAdmin = lazyWithRetry(() => import("./pages/admin/POVClipAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
+const PlayersBrowser = lazyWithRetry(() => import("./pages/PlayersBrowser"));
 const FriendsPage = lazyWithRetry(() => import("./pages/Friends"));
 const BlockedPlayersPage = lazyWithRetry(() => import("./pages/settings/BlockedPlayers"));
 const MyReportsPage = lazyWithRetry(() => import("./pages/settings/MyReports"));
@@ -713,7 +714,8 @@ function App() {
                     <Route path="twaater" element={<Twaater />} />
                     <Route path="social/overview" element={<PreserveQueryRedirect to="/social" />} />
                     <Route path="social/friends" element={<FriendsPage />} />
-                    <Route path="social/players" element={<PlayerDiscovery />} />
+                    <Route path="social/players" element={<PlayersBrowser />} />
+                    <Route path="social/players/discover" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
                     <Route path="social/activities" element={<SocialActivities />} />
@@ -735,7 +737,7 @@ function App() {
                     <Route path="community/friends" element={<FriendsPage />} />
                     <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
                     <Route path="settings/safety/reports" element={<MyReportsPage />} />
-                    <Route path="community/players" element={<PlayerDiscovery />} />
+                    <Route path="community/players" element={<PlayersBrowser />} />
                     <Route path="community/bands/recruitment" element={<BandRecruitmentDiscovery />} />
                     <Route path="community/invitations" element={<SocialHubUnified />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />

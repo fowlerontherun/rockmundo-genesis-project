@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.552",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "New simplified Players browser at /social/players — lists every active musician in the game by fame with avatar, level, city, active bands and roles. One-click 'Add friend' / 'Accept' / 'Sent' state, instant name/username search, and paginated browsing so no filters are required to discover people. The old multi-filter discovery page is still available via the Advanced button (/social/players/discover)." },
+    ],
+  },
+  {
     version: "1.1.551",
     date: "2026-07-16",
     changes: [
