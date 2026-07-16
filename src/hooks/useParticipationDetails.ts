@@ -118,7 +118,14 @@ export function useRehearsalAttendanceCorrectionRequests(rehearsalId: string | n
         .select(`id, rehearsal_id, participant_id, band_id, requester_profile_id, current_status, requested_status, request_reason, status, created_at, resolved_at, resolved_by_profile_id, resolution_note, sole_resolver_exception, profiles:profiles!rehearsal_attendance_correction_requests_requester_profile_id_fkey(${profileSelect})`)
         .eq("rehearsal_id", rehearsalId)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        const code = (error as any)?.code;
+        const message = (error as any)?.message ?? "";
+        if (code === "42P01" || code === "PGRST205" || /does not exist|schema cache/i.test(message)) {
+          return [];
+        }
+        throw error;
+      }
       const requests = (data ?? []) as RehearsalAttendanceCorrectionRequest[];
       if (requests.some((request) => request.status === "pending")) {
         const { data: eligibilityRows } = await (supabase as any).rpc(
