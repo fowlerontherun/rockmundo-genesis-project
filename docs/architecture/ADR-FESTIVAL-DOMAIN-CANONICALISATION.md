@@ -134,3 +134,7 @@ PR #1201 consolidates admin and owner festival management onto canonical brands 
 ## 2029-12-12 operational completion update
 
 The canonical edition operations PR completes the PR #1210 foundation by adding edition-scoped operational RPCs, deterministic operational backfill, migration issues, persistent system acts, persistent staff candidates, permit and insurance workflows, controlled ledger posting, data-health repairs, legacy migration apply, and expanded settlement readiness. Career effects and final financial settlement remain deferred to `feat(festivals): apply career effects and settle performance contracts`.
+
+## Settlement extension
+
+Festival editions now complete through a server-authoritative settlement lifecycle. Settlement locks a readiness and input snapshot, applies pending outcome effects through immutable application records, derives contract instructions from signed contract versions, reconciles operational ledger rows, stores final edition financial results and only then transitions the edition to completed.

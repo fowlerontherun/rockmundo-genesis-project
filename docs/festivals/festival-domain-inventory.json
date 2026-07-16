@@ -805,5 +805,21 @@
       "tax settlement",
       "edition closure"
     ]
+  },
+  "settlement": {
+    "tables": [
+      "festival_edition_settlements",
+      "festival_settlement_events",
+      "festival_effect_applications",
+      "festival_fan_conversion_applications",
+      "festival_contract_settlement_instructions",
+      "festival_settlement_transactions",
+      "festival_edition_financial_results"
+    ],
+    "rpcs": [
+      "prepare_festival_edition_settlement",
+      "apply_festival_settlement_batch",
+      "reconcile_festival_edition_settlement"
+    ]
   }
 }

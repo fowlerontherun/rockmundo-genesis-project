@@ -36,3 +36,7 @@ Highlights are generated from song scores and incidents, not random viewer behav
 ## Invalidation
 
 `invalidate_festival_performance_outcome` is admin-only, requires a reason and refuses to mutate finalised outcomes. Historical outcomes are preserved through status rather than silent rewrites.
+
+## Settlement handoff
+
+Finalised outcomes are now consumed by settlement as immutable source evidence. Pending effect rows remain proposals until `festival_effect_applications` records an applied, adjusted, blocked, rejected or superseded result.
