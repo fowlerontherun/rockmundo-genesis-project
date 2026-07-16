@@ -99,6 +99,89 @@ export function canShowFestivalEditionTransition(
   from: FestivalEditionStatus,
   to: FestivalEditionStatus,
 ): boolean {
-  if (from === to) return true;
+  if (from === to) return false;
   return TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export type ManagedFestivalEditionLike = {
+  id: string;
+  status: FestivalEditionStatus;
+  edition_number: number | null;
+  start_at: string | null;
+  end_at: string | null;
+  completed_at?: string | null;
+};
+
+const UPCOMING_ACTIVE = new Set<FestivalEditionStatus>([
+  "setup",
+  "on_sale",
+  "announced",
+]);
+const UPCOMING_PLANNING = new Set<FestivalEditionStatus>([
+  "booking",
+  "applications_open",
+  "planning",
+]);
+
+const timeOrInfinity = (value: string | null | undefined) =>
+  value ? new Date(value).getTime() : Number.POSITIVE_INFINITY;
+const timeOrZero = (value: string | null | undefined) =>
+  value ? new Date(value).getTime() : 0;
+
+export function selectManagedFestivalEdition<T extends ManagedFestivalEditionLike>(
+  editions: readonly T[],
+  now: Date = new Date(),
+): T | null {
+  if (editions.length === 0) return null;
+  const currentTime = now.getTime();
+  const byStartAsc = (a: T, b: T) =>
+    timeOrInfinity(a.start_at) - timeOrInfinity(b.start_at) ||
+    Number(b.edition_number ?? 0) - Number(a.edition_number ?? 0);
+  const byRecent = (a: T, b: T) =>
+    timeOrZero(b.completed_at ?? b.end_at) - timeOrZero(a.completed_at ?? a.end_at) ||
+    Number(b.edition_number ?? 0) - Number(a.edition_number ?? 0);
+  const live = editions
+    .filter((edition) => edition.status === "live")
+    .sort(byStartAsc)[0];
+  if (live) return live;
+  const upcomingActive = editions
+    .filter(
+      (edition) =>
+        UPCOMING_ACTIVE.has(edition.status) &&
+        timeOrInfinity(edition.start_at) >= currentTime,
+    )
+    .sort(byStartAsc)[0];
+  if (upcomingActive) return upcomingActive;
+  const upcomingPlanning = editions
+    .filter(
+      (edition) =>
+        UPCOMING_PLANNING.has(edition.status) &&
+        timeOrInfinity(edition.start_at) >= currentTime,
+    )
+    .sort(byStartAsc)[0];
+  if (upcomingPlanning) return upcomingPlanning;
+  const completed = editions
+    .filter((edition) => edition.status === "completed")
+    .sort(byRecent)[0];
+  if (completed) return completed;
+  return [...editions].sort(
+    (a, b) => Number(b.edition_number ?? 0) - Number(a.edition_number ?? 0),
+  )[0];
+}
+
+export function getFestivalEditionActionLabel(
+  status: FestivalEditionStatus | null | undefined,
+): string {
+  switch (status) {
+    case "announced":
+      return "Edition announced";
+    case "on_sale":
+      return "Tickets on sale";
+    case "setup":
+      return "Ready for live operations";
+    case "live":
+      return "Festival live";
+    default:
+      return "Announce edition";
+  }
 }

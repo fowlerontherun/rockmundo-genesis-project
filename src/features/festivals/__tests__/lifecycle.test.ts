@@ -29,6 +29,7 @@ describe("festival edition lifecycle UI helper", () => {
   });
 
   it("shows valid advisory transitions", () => {
+    expect(canShowFestivalEditionTransition("announced", "announced")).toBe(false);
     expect(canShowFestivalEditionTransition("concept", "planning")).toBe(true);
     expect(
       canShowFestivalEditionTransition("planning", "applications_open"),

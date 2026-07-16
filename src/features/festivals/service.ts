@@ -8,13 +8,14 @@ import type {
 } from "./types";
 
 const selectAll = "*" as string;
-const editionsTable = () => (supabase as any).from("festival_editions");
+const ownerEditionsTable = () => (supabase as any).from("festival_editions");
+const publicEditionsTable = () => (supabase as any).from("public_festival_editions");
 const mappingsTable = () => (supabase as any).from("festival_legacy_mappings");
 
-export async function listFestivalEditions(
+export async function listFestivalEditionsForOwner(
   festivalId: string,
 ): Promise<FestivalEdition[]> {
-  const { data, error } = await editionsTable()
+  const { data, error } = await ownerEditionsTable()
     .select(selectAll)
     .eq("festival_id", festivalId)
     .order("edition_number", { ascending: false });
@@ -22,10 +23,10 @@ export async function listFestivalEditions(
   return (data ?? []) as unknown as FestivalEdition[];
 }
 
-export async function getFestivalEdition(
+export async function getFestivalEditionForOwner(
   editionId: string,
 ): Promise<FestivalEdition | null> {
-  const { data, error } = await editionsTable()
+  const { data, error } = await ownerEditionsTable()
     .select(selectAll)
     .eq("id", editionId)
     .maybeSingle();
@@ -45,6 +46,7 @@ export async function createFestivalEdition(input: {
   minimumTicketPriceCents?: number | null;
   maximumTicketPriceCents?: number | null;
   publicMetadata?: Json;
+  idempotencyKey?: string | null;
 }): Promise<FestivalEdition> {
   const { data, error } = await (supabase as any).rpc("create_festival_edition", {
     p_festival_id: input.festivalId,
@@ -58,6 +60,7 @@ export async function createFestivalEdition(input: {
     p_minimum_ticket_price_cents: input.minimumTicketPriceCents ?? null,
     p_maximum_ticket_price_cents: input.maximumTicketPriceCents ?? null,
     p_public_metadata: input.publicMetadata ?? {},
+    p_idempotency_key: input.idempotencyKey ?? null,
   });
   if (error) throw error;
   return data as unknown as FestivalEdition;
@@ -83,17 +86,19 @@ export async function updateFestivalEditionPlanning(
     "update_festival_edition_planning",
     {
       p_edition_id: editionId,
-      p_title: input.title ?? null,
-      p_description: input.description ?? null,
-      p_start_at: input.startAt ?? null,
-      p_end_at: input.endAt ?? null,
-      p_city_id: input.cityId ?? null,
-      p_venue_id: input.venueId ?? null,
-      p_expected_attendance: input.expectedAttendance ?? null,
-      p_capacity: input.capacity ?? null,
-      p_minimum_ticket_price_cents: input.minimumTicketPriceCents ?? null,
-      p_maximum_ticket_price_cents: input.maximumTicketPriceCents ?? null,
-      p_public_metadata: input.publicMetadata ?? null,
+      p_patch: {
+        ...(Object.prototype.hasOwnProperty.call(input, "title") ? { title: input.title } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "description") ? { description: input.description } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "startAt") ? { start_at: input.startAt } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "endAt") ? { end_at: input.endAt } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "cityId") ? { city_id: input.cityId } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "venueId") ? { venue_id: input.venueId } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "expectedAttendance") ? { expected_attendance: input.expectedAttendance } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "capacity") ? { capacity: input.capacity } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "minimumTicketPriceCents") ? { minimum_ticket_price_cents: input.minimumTicketPriceCents } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "maximumTicketPriceCents") ? { maximum_ticket_price_cents: input.maximumTicketPriceCents } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "publicMetadata") ? { public_metadata: input.publicMetadata } : {}),
+      },
     },
   );
   if (error) throw error;
@@ -129,4 +134,27 @@ export async function resolveEditionFromLegacyIdentifier(
     .maybeSingle();
   if (error) throw error;
   return data as unknown as FestivalLegacyMapping | null;
+}
+
+
+export const listFestivalEditions = listFestivalEditionsForOwner;
+export const getFestivalEdition = getFestivalEditionForOwner;
+
+export async function listPublicFestivalEditions(): Promise<FestivalEdition[]> {
+  const { data, error } = await publicEditionsTable()
+    .select(selectAll)
+    .order("start_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as FestivalEdition[];
+}
+
+export async function getPublicFestivalEdition(
+  editionId: string,
+): Promise<FestivalEdition | null> {
+  const { data, error } = await publicEditionsTable()
+    .select(selectAll)
+    .eq("id", editionId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as unknown as FestivalEdition | null;
 }

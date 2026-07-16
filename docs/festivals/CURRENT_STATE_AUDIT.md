@@ -315,3 +315,9 @@ Flagged issues: browser score calculation, direct `bands.band_balance` and `band
 The canonical edition foundation PR introduces `festival_editions` as the dated occurrence model beneath permanent `festivals` brand rows. It adds a server-validated edition lifecycle RPC, immutable lifecycle history, dedicated-festival backfill into first editions, and explicit legacy mappings for dedicated festival rows plus conservatively matched festival `game_events`.
 
 Legacy event/player flows remain active during this migration. Stage, slot, ticket, attendance, application, contract, setlist, performance and settlement tables are not re-keyed in this step and remain outstanding for later PRs.
+
+## Canonical edition hardening update
+
+The corrective edition hardening PR retains the historical `20291204090000_create_festival_editions.sql` migration because this checkout cannot prove it has not been applied in a shared Supabase environment. A follow-up additive migration, `20291205090000_harden_festival_editions.sql`, fixes the public-view dependency ordering, recreates the public-safe view, adds creation/transition idempotency request records, changes planning updates to JSONB patch semantics, and strengthens lifecycle validation.
+
+Public festival discovery must read `public_festival_editions`; owner/admin tools use protected `festival_editions` reads. Owner workflow edits to attendance, ticket range, dates and title now target canonical editions when present, while permanent festival brand edits remain separate. Legacy player flows, stages, slots, applications, contracts, setlists and performances remain unchanged pending later canonical migration PRs.

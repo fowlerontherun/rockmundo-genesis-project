@@ -89,3 +89,11 @@ This PR establishes the first additive canonical schema layer:
 - Compatibility remains explicit: owner tools may display canonical edition lifecycle, but brand-scoped staff, permits, insurance, marketplace and legacy event-backed player flows remain unchanged until later migrations.
 
 Unresolved migration items remain canonical applications, contracts, setlists, performances, stage/slot re-keying, tickets, attendance, settlement, reward ledgers, audience/incident/vendor/staff-shift systems, and final legacy withdrawal.
+
+## Correction: deployable edition foundation
+
+The edition foundation is hardened by additive migration rather than by renaming the historical `20291204090000` migration. This preserves compatibility with any environment that may already have recorded that migration while allowing clean databases to apply a deterministic follow-up correction.
+
+The public edition projection is explicitly privacy-scoped and rebuilt after its helper function. Creation and transition RPCs now persist idempotency request records and reject mismatched idempotency reuse. Planning writes use JSONB patch semantics so clients can distinguish omitted values from intentional clears. Owner UI flows derive managed state from a shared edition selector and save occurrence planning to editions rather than permanent festival brands.
+
+Remaining canonicalisation work is intentionally deferred: applications, contracts, setlists, performance settlement, stage re-keying, ticket/attendance re-keying and reward/fame settlement are not included in this correction.
