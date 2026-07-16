@@ -45,19 +45,35 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     })
 
-    // Find in_progress sessions that have passed their scheduled_end time
-    const { data: sessions, error: sessionsError } = await supabase
+    // Find sessions that have passed their scheduled_end time
+    const nowIso = new Date().toISOString()
+    console.log(`Querying for sessions with scheduled_end < ${nowIso}`)
+    const { data: rawSessions, error: sessionsError } = await supabase
       .from('recording_sessions')
-      .select('*, songs(id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id)')
+      .select('*')
       .in('status', ['in_progress', 'scheduled'])
-      .lt('scheduled_end', new Date().toISOString())
+      .lt('scheduled_end', nowIso)
 
     if (sessionsError) {
       console.error('Error fetching sessions:', sessionsError)
       throw sessionsError
     }
 
-    console.log(`Found ${sessions?.length || 0} recording sessions to auto-complete`)
+    console.log(`Found ${rawSessions?.length || 0} raw recording sessions`)
+
+    // Hydrate song info separately (avoid embed edge-cases)
+    const songIds = Array.from(new Set((rawSessions || []).map((s: any) => s.song_id).filter(Boolean)))
+    const songMap = new Map<string, any>()
+    if (songIds.length > 0) {
+      const { data: songRows } = await supabase
+        .from('songs')
+        .select('id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id')
+        .in('id', songIds)
+      for (const row of songRows || []) songMap.set((row as any).id, row)
+    }
+    const sessions = (rawSessions || []).map((s: any) => ({ ...s, songs: s.song_id ? songMap.get(s.song_id) || null : null }))
+
+    console.log(`Found ${sessions.length} recording sessions to auto-complete`)
 
     for (const session of sessions || []) {
       try {
@@ -357,30 +373,29 @@ Deno.serve(async (req) => {
               }
             }
             
-            // Trigger audio generation for the version song if quality is good enough
-            if (newQuality >= 60 && targetSongId) {
+            // Trigger audio generation for the version song (automatic on recording completion)
+            if (targetSongId) {
               try {
                 const { data: versionSongData } = await supabase
                   .from('songs')
                   .select('user_id, audio_url, audio_generation_status, songwriting_project_id')
                   .eq('id', targetSongId)
                   .single()
-                
-                if (versionSongData?.user_id && 
-                    !versionSongData?.audio_url && 
+
+                if (versionSongData?.user_id &&
+                    !versionSongData?.audio_url &&
                     versionSongData?.audio_generation_status !== 'generating' &&
-                    versionSongData?.audio_generation_status !== 'completed' &&
-                    versionSongData?.songwriting_project_id) {
-                  
+                    versionSongData?.audio_generation_status !== 'completed') {
+
                   console.log(`Invoking generate-song-audio for version song ${targetSongId}`)
-                  
+
                   const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
-                    body: { 
-                      songId: targetSongId, 
-                      userId: versionSongData.user_id 
+                    body: {
+                      songId: targetSongId,
+                      userId: versionSongData.user_id
                     }
                   })
-                  
+
                   if (genError) {
                     console.error(`Failed to trigger audio generation for version song ${targetSongId}:`, genError)
                   } else {
@@ -414,47 +429,44 @@ Deno.serve(async (req) => {
             } else {
               console.log(`Updated song ${session.song_id}: status=recorded, quality=${newQuality}, band_id=${session.band_id || 'unchanged'}`)
               
-              // Trigger auto song audio generation if quality is good enough (≥60)
-              if (newQuality >= 60) {
-                try {
-                  console.log(`Song ${session.song_id} quality ${newQuality} >= 60, triggering auto audio generation...`)
-                  
-                  if (originalSong.user_id && originalSong.songwriting_project_id) {
-                    const { data: songData } = await supabase
-                      .from('songs')
-                      .select('audio_url, audio_generation_status')
-                      .eq('id', session.song_id)
-                      .single()
-                    
-                    if (!songData?.audio_url && 
-                        songData?.audio_generation_status !== 'generating' &&
-                        songData?.audio_generation_status !== 'completed') {
-                      
-                      console.log(`Invoking generate-song-audio for song ${session.song_id}`)
-                      
-                      const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
-                        body: { 
-                          songId: session.song_id, 
-                          userId: originalSong.user_id 
-                        }
-                      })
-                      
-                      if (genError) {
-                        console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
-                      } else {
-                        console.log(`✓ Audio generation triggered for song ${session.song_id}`)
+              // Automatically trigger AI song audio generation on recording completion
+              try {
+                console.log(`Song ${session.song_id} recorded (quality ${newQuality}), triggering auto audio generation...`)
+
+                if (originalSong.user_id) {
+                  const { data: songData } = await supabase
+                    .from('songs')
+                    .select('audio_url, audio_generation_status')
+                    .eq('id', session.song_id)
+                    .single()
+
+                  if (!songData?.audio_url &&
+                      songData?.audio_generation_status !== 'generating' &&
+                      songData?.audio_generation_status !== 'completed') {
+
+                    console.log(`Invoking generate-song-audio for song ${session.song_id}`)
+
+                    const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
+                      body: {
+                        songId: session.song_id,
+                        userId: originalSong.user_id
                       }
+                    })
+
+                    if (genError) {
+                      console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
                     } else {
-                      console.log(`Skipping audio generation for song ${session.song_id}: ` +
-                        `has_audio=${!!songData?.audio_url}, status=${songData?.audio_generation_status}`)
+                      console.log(`✓ Audio generation triggered for song ${session.song_id}`)
                     }
                   } else {
                     console.log(`Skipping audio generation for song ${session.song_id}: ` +
-                      `has_user=${!!originalSong.user_id}, has_project=${!!originalSong.songwriting_project_id}`)
+                      `has_audio=${!!songData?.audio_url}, status=${songData?.audio_generation_status}`)
                   }
-                } catch (genTriggerError) {
-                  console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
+                } else {
+                  console.log(`Skipping audio generation for song ${session.song_id}: no user_id`)
                 }
+              } catch (genTriggerError) {
+                console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
               }
             }
           }

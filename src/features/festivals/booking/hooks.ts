@@ -4,11 +4,12 @@ import { getBandApplications, listOrganiserApplications, submitFestivalApplicati
 import { acceptFestivalOffer, counterFestivalOffer, createFestivalOffer, declineFestivalOffer, listFestivalOffers } from './offers';
 import { getFestivalContract, listBandContracts, signFestivalContract } from './contracts';
 import { lockFestivalSetlist, reviewFestivalSetlist, saveFestivalSetlistDraft, submitFestivalSetlist } from './setlists';
+import type { FestivalApplicationRecord, FestivalOfferRecord, FestivalContractRecord } from './domainTypes';
 
 export function useFestivalApplications(bandId?: string, editionId?: string, profileId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.bandApplications(bandId, editionId, profileId),
-    queryFn: () => getBandApplications(bandId!, editionId),
+    queryFn: () => getBandApplications(bandId!, editionId) as Promise<FestivalApplicationRecord[]>,
     enabled: Boolean(bandId),
   });
 }
@@ -30,7 +31,7 @@ export function useFestivalApplicationActions(bandId?: string, editionId?: strin
 export function useOrganiserFestivalApplications(editionId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.organiserApplications(editionId),
-    queryFn: () => listOrganiserApplications(editionId!),
+    queryFn: () => listOrganiserApplications(editionId!) as Promise<FestivalApplicationRecord[]>,
     enabled: Boolean(editionId),
   });
 }
@@ -38,7 +39,7 @@ export function useOrganiserFestivalApplications(editionId?: string) {
 export function useFestivalOffers(bandId?: string, editionId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.offers(bandId, editionId),
-    queryFn: () => listFestivalOffers(bandId, editionId),
+    queryFn: () => listFestivalOffers(bandId, editionId) as Promise<FestivalOfferRecord[]>,
     enabled: Boolean(bandId || editionId),
   });
 }
@@ -63,7 +64,7 @@ export function useFestivalOfferActions(bandId?: string, editionId?: string) {
 }
 
 export function useFestivalContracts(bandId?: string) {
-  return useQuery({ queryKey: festivalBookingKeys.contracts(bandId), queryFn: () => listBandContracts(bandId!), enabled: Boolean(bandId) });
+  return useQuery({ queryKey: festivalBookingKeys.contracts(bandId), queryFn: () => listBandContracts(bandId!) as Promise<FestivalContractRecord[]>, enabled: Boolean(bandId) });
 }
 
 export function useFestivalContract(contractId?: string) {
