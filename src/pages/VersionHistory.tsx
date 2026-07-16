@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.554",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Seeded 134 real-world large venues across all major cities — 82 iconic stadiums (Wembley, Camp Nou, MetLife, Maracanã, MCG, Azteca, FNB, Tokyo Dome…) and 52 top arenas (The O2, Madison Square Garden, Accor Arena, Ziggo Dome, Scotiabank Arena…). Prestige, base payment, staff count, security requirements and amenities scale with capacity, and every venue is linked to its correct city." },
+    ],
+  },
+  {
     version: "1.1.553",
     date: "2026-07-16",
     changes: [
