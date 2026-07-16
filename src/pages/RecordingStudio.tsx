@@ -6,16 +6,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecordingWizard } from "@/components/recording/RecordingWizard";
 import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordingDialog";
 import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
-import { useRecordingSessions } from "@/hooks/useRecordingData";
+import {
+  useRecordingSessions,
+  useCancelRecordingSession,
+  useRescheduleRecordingSession,
+} from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
-import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock } from "lucide-react";
+import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock, CalendarDays, Trash2 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
