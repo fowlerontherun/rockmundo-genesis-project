@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Guitar, Users, Globe2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMobileDestination } from "@/mobile/routeRegistry";
 
 export const mobilePrimaryNavItems = [
   { to: "/mobile", label: "Home", icon: Home, exact: true },
@@ -12,6 +13,7 @@ export const mobilePrimaryNavItems = [
 
 export const BottomNav = () => {
   const location = useLocation();
+  const activeDestination = getMobileDestination(location.pathname);
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border"
@@ -25,9 +27,8 @@ export const BottomNav = () => {
               to={to}
               end={exact}
               className={({ isActive }) => {
-                const primaryPath = to.replace("/mobile", "") || "/home";
-                const primaryActive = exact ? ["/mobile", "/home", "/"].includes(location.pathname) : location.pathname.startsWith(primaryPath);
-                const active = isActive || primaryActive;
+                const destination = (to.replace("/mobile/", "") || "home") as ReturnType<typeof getMobileDestination>;
+                const active = isActive || activeDestination === destination;
                 return cn("h-full w-full flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium", active ? "text-primary" : "text-muted-foreground");
               }}
             >

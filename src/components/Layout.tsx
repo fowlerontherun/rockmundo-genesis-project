@@ -30,6 +30,7 @@ import MobileCareer from "@/mobile/pages/MobileCareer";
 import MobileSocial from "@/mobile/pages/MobileSocial";
 import MobileWorld from "@/mobile/pages/MobileWorld";
 import MobileMe from "@/mobile/pages/MobileMe";
+import { getMobileRouteMeta } from "@/mobile/routeRegistry";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
@@ -95,9 +96,9 @@ const Layout = () => {
 
   if (authLoading || (dataLoading && user)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-stage" role="status" aria-live="polite" aria-busy="true">
+      <div className={isMobile ? "rm-mobile flex min-h-[100dvh] items-center justify-center bg-background" : "flex h-screen items-center justify-center bg-gradient-stage"} role="status" aria-live="polite" aria-busy="true">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-32 w-32 animate-spin rounded-full border-b-2 border-primary" aria-hidden="true"></div>
+          <div className={isMobile ? "mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-primary" : "mx-auto mb-4 h-32 w-32 animate-spin rounded-full border-b-2 border-primary"} aria-hidden="true"></div>
           <p className="text-lg font-oswald">Loading Rockmundo...</p>
         </div>
       </div>
@@ -108,13 +109,15 @@ const Layout = () => {
     return null;
   }
 
-  // Mobile users get redirected to the dedicated /mobile shell only from the
-  // primary landing routes. Deep-links to feature pages (from mobile quick
-  // actions, FAB, etc.) must render inline so buttons actually work — otherwise
-  // every tap bounces back to /mobile.
   if (isMobile) {
-    const path = typeof window !== "undefined" ? window.location.pathname : "";
-    const mobileSection = (() => {
+    const path = typeof window !== "undefined" ? window.location.pathname : "/";
+    const routeMeta = getMobileRouteMeta(path);
+
+    if (import.meta.env.DEV && routeMeta?.fallbackStatus === "wrapped-desktop") {
+      console.warn(`[RockMundo mobile] Contained desktop fallback rendered in MobileShell: ${path}`);
+    }
+
+    const dedicatedEntry = (() => {
       if (path === "/" || path === "/home" || path === "/index") return <MobileHome />;
       if (path === "/career" || path === "/career/overview") return <MobileCareer />;
       if (path === "/social" || path === "/social/overview") return <MobileSocial />;
@@ -123,14 +126,15 @@ const Layout = () => {
       return null;
     })();
 
-    if (mobileSection) {
-      return (
-        <MobileShell>
-          <CharacterGate>{mobileSection}</CharacterGate>
-        </MobileShell>
-      );
-    }
+    return (
+      <MobileShell>
+        <CharacterGate>
+          {dedicatedEntry ?? <Outlet />}
+        </CharacterGate>
+      </MobileShell>
+    );
   }
+
 
 
 
