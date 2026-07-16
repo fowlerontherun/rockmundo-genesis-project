@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.570",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Returning-player wizard: fixed two related bugs. (1) The wizard sometimes never appeared for returning players because hasLivingCharacter counted ANY profile with died_at IS NULL as 'living' — so a stale inactive-alive profile would silently satisfy the check and the wizard branch in Index.tsx was skipped. It now requires is_active=true AND died_at IS NULL, so players with dead characters reliably reach the wizard. (2) Display name, stage name and backstory entered in the wizard were being overwritten by the /onboarding step 1, which started with empty inputs. The OnboardingWizard now hydrates displayName / artistName / backstoryText from the profile on load (ignoring auto-generated 'player-*' and 'child-of-*' fallback usernames), and handleComplete now also writes bio (backstory) to the profile — so the names and story set in the returning-player wizard actually stick." },
+    ],
+  },
+  {
     version: "1.1.569",
     date: "2026-07-16",
     changes: [

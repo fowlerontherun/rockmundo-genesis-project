@@ -67,11 +67,12 @@ export function useCharacterDeath() {
     enabled: !!user?.id,
   });
 
-  // Check if user has any living active profiles
-  // Any alive profile counts as a living character — getOrActivatePlayableProfile
-  // will auto-activate an alive-but-inactive profile on load. Requiring is_active
-  // here caused a loop where returning players with a valid alive profile were
-  // repeatedly sent through the "create new character" flow.
+  // A "living" character for wizard purposes is one that is BOTH alive
+  // (died_at IS NULL) AND currently active. Returning players may have an
+  // old inactive-but-alive profile lying around — we want them to see the
+  // returning-player wizard rather than silently getting re-activated into
+  // a stale character. `getOrActivatePlayableProfile` still handles the
+  // normal "single alive profile" auto-activation for continuing players.
   const hasLivingCharacter = useQuery({
     queryKey: ["has-living-character", user?.id],
     queryFn: async (): Promise<boolean> => {
@@ -81,6 +82,7 @@ export function useCharacterDeath() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .is("died_at", null);
 
       if (error) throw error;
