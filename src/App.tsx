@@ -498,6 +498,8 @@ function App() {
                     <Route path="world/:section" element={<MobileWorldPhase5 />} />
                     <Route path="world/:section/:id" element={<MobileWorldPhase5 />} />
                     <Route path="me" element={<MobileMe />} />
+                    <Route path="me/:section" element={<MobileMe />} />
+                    <Route path="me/:section/:id" element={<MobileMe />} />
                   </Route>
                   <Route element={<Layout />}>
                     <Route path="home" element={<Dashboard />} />
