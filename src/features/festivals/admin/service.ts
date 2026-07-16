@@ -71,7 +71,7 @@ export async function fetchFestivalEditionFinanceSummary(editionId: string) { re
 export async function previewCopyFestivalEdition(sourceEditionId: string, targetEditionId?: string | null) { return rpc("preview_copy_festival_edition" as RpcName, { p_source_edition_id: sourceEditionId, p_target_edition_id: targetEditionId ?? null }, jsonRecord); }
 
 const callMaybeRpc = async <T>(fn: string, args?: Record<string, unknown>, fallback?: () => Promise<T>): Promise<T> => {
-  try { return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>); } catch (error) { if (fallback) return fallback(); throw error; }
+  try { return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>); } catch (error) { if (fallback) { try { return await fallback(); } catch { /* graceful */ return ({} as T); } } throw error; }
 };
 
 export async function fetchFestivalEditionOperations(editionId: string) {
