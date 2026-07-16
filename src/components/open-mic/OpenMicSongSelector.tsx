@@ -44,14 +44,14 @@ export function OpenMicSongSelector({
   const { data: songs = [], isLoading } = useQuery({
     queryKey: ['songs-for-open-mic', bandId ?? null, profileId ?? null],
     queryFn: async () => {
-      // Any song that has been completed (written) is eligible for open mic —
-      // it does NOT need to be recorded. We consider a song "completed" when
-      // completed_at is set OR its status is beyond draft.
+      // Any song that exists in the songs table (i.e. has been written) is
+      // eligible for open mic — it does NOT need to be recorded. Some legacy
+      // rows have completed_at=NULL or status='draft' even though the
+      // songwriting project is fully complete, so we no longer filter on those.
       let query = supabase
         .from('songs')
         .select('id, title, duration_seconds, quality_score, genre, band_id, profile_id, completed_at, status')
-        .neq('archived', true)
-        .not('completed_at', 'is', null);
+        .neq('archived', true);
 
       if (bandId) {
         query = query.eq('band_id', bandId);

@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.546",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Open Mic sign-up now surfaces any non-archived song in your (or your band's) catalog. Previously the picker required completed_at to be set, which hid songs whose songwriting projects had reached 100% but never went through the completion dialog, so players with fully written songs saw an empty list." },
+    ],
+  },
+  {
     version: "1.1.545",
     date: "2026-07-16",
     changes: [
