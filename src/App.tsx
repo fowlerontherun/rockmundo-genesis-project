@@ -46,7 +46,7 @@ import Sponsorships from "./pages/Sponsorships";
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const MobileLayout = lazyWithRetry(() => import("./mobile/shell/MobileLayout"));
 const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
-const MobileCareer = lazyWithRetry(() => import("./mobile/pages/MobileCareer"));
+const MobileCareer = lazyWithRetry(() => import("./mobile/pages/MobileCareerRoutes"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
 const MobileWorld = lazyWithRetry(() => import("./mobile/pages/MobileWorld"));
 const MobileMe = lazyWithRetry(() => import("./mobile/pages/MobileMe"));
@@ -488,6 +488,8 @@ function App() {
                   <Route path="/mobile" element={<MobileLayout />}>
                     <Route index element={<MobileHome />} />
                     <Route path="career" element={<MobileCareer />} />
+                    <Route path="career/:section" element={<MobileCareer />} />
+                    <Route path="career/:section/:id" element={<MobileCareer />} />
                     <Route path="social" element={<MobileSocial />} />
                     <Route path="world" element={<MobileWorld />} />
                     <Route path="me" element={<MobileMe />} />
