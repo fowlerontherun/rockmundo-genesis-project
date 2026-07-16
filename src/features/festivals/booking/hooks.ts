@@ -4,6 +4,7 @@ import { getBandApplications, listOrganiserApplications, submitFestivalApplicati
 import { acceptFestivalOffer, counterFestivalOffer, createFestivalOffer, declineFestivalOffer, listFestivalOffers } from './offers';
 import { getFestivalContract, listBandContracts, signFestivalContract } from './contracts';
 import { lockFestivalSetlist, reviewFestivalSetlist, saveFestivalSetlistDraft, submitFestivalSetlist } from './setlists';
+import type { FestivalApplicationRecord, FestivalOfferRecord, FestivalContractRecord } from './domainTypes';
 
 export function useFestivalApplications(bandId?: string, editionId?: string, profileId?: string) {
   return useQuery({
