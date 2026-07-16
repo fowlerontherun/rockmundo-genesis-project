@@ -37,7 +37,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function OpenMicNights() {
   const navigate = useNavigate();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { data: primaryBand } = usePrimaryBand();
   const userBand = primaryBand?.bands ? { id: primaryBand.band_id, ...primaryBand.bands } : null;
@@ -48,7 +48,7 @@ export default function OpenMicNights() {
   const { data: venues = [], isLoading: venuesLoading } = useOpenMicVenues(
     selectedCityId === 'all' ? undefined : selectedCityId
   );
-  const { data: myPerformances = [] } = useOpenMicPerformances(profileId ?? undefined);
+  const { data: myPerformances = [] } = useOpenMicPerformances(userId ?? undefined);
   const signUp = useSignUpForOpenMic();
 
   const { data: cities = [] } = useQuery({
