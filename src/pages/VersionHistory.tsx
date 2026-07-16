@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.540",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Upcoming Recording Sessions tab was empty after booking. New sessions created without a future scheduled_start are stored as `in_progress` starting immediately, but the tab only listed `scheduled` sessions with a future start. Now it includes any session in `scheduled` or `in_progress` whose `scheduled_end` hasn't passed yet." },
+    ],
+  },
+  {
     version: "1.1.539",
     date: "2026-07-16",
     changes: [
