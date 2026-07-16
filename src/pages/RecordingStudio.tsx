@@ -336,9 +336,36 @@ export default function RecordingStudio() {
                               {new Date(s.scheduled_start).toLocaleString()}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              in {formatDistanceToNow(new Date(s.scheduled_start))}
+                              {new Date(s.scheduled_start) > new Date()
+                                ? `in ${formatDistanceToNow(new Date(s.scheduled_start))}`
+                                : `started ${formatDistanceToNow(new Date(s.scheduled_start))} ago`}
                             </div>
                           </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2 justify-end border-t pt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setRescheduleTarget(s);
+                              // default to 1 hour from now, format for datetime-local
+                              const d = new Date(Date.now() + 60 * 60 * 1000);
+                              const pad = (n: number) => String(n).padStart(2, '0');
+                              const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                              setRescheduleValue(local);
+                            }}
+                          >
+                            <CalendarDays className="h-4 w-4 mr-1" />
+                            Reschedule
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setCancelTarget(s)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
