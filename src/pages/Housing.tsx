@@ -267,22 +267,6 @@ const Housing = () => {
                     <CardContent className="pb-2">
                       {ht.image_url ? (
                         <img src={ht.image_url} alt={ht.name} className="w-full h-32 object-cover rounded-md" />
-                      ) : isAdmin() ? (
-                        <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleGenerateImage(ht.id)}
-                            disabled={generatingImage === ht.id}
-                          >
-                            {generatingImage === ht.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                            ) : (
-                              <ImageIcon className="h-4 w-4 mr-1" />
-                            )}
-                            Generate Image
-                          </Button>
-                        </div>
                       ) : (
                         <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
                           <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
