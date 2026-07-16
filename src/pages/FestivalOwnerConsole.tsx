@@ -38,8 +38,14 @@ import {
   Store,
 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { listFestivalEditions } from "@/features/festivals/service";
-import { getFestivalEditionStatusLabel } from "@/features/festivals/lifecycle";
+import {
+  createFestivalEdition,
+  listFestivalEditionsForOwner,
+} from "@/features/festivals/service";
+import {
+  getFestivalEditionStatusLabel,
+  selectManagedFestivalEdition,
+} from "@/features/festivals/lifecycle";
 
 const money = (cents: number | null | undefined) => {
   const c = Number(cents ?? 0);
@@ -82,10 +88,44 @@ export default function FestivalOwnerConsole() {
 
   const { data: editions = [] } = useQuery({
     queryKey: ["festival-editions", festivalId],
-    queryFn: () => listFestivalEditions(festivalId!),
+    queryFn: () => listFestivalEditionsForOwner(festivalId!),
     enabled: !!festivalId,
   });
-  const currentEdition = editions[0];
+  const currentEdition = selectManagedFestivalEdition(editions);
+
+  const createEdition = useMutation({
+    mutationFn: async () => {
+      if (!festivalId || !festival) throw new Error("Festival is unavailable");
+      return createFestivalEdition({
+        festivalId,
+        title: `${festival.name} ${new Date(
+          festival.start_date,
+        ).getFullYear()}`,
+        startAt: festival.start_date
+          ? new Date(festival.start_date).toISOString()
+          : null,
+        endAt: festival.end_date
+          ? new Date(festival.end_date).toISOString()
+          : null,
+        cityId: festival.city_id,
+        venueId: festival.venue_id,
+        expectedAttendance: festival.expected_attendance,
+        capacity: festival.expected_attendance,
+        minimumTicketPriceCents: Math.round(
+          Number(festival.ticket_price_low ?? 0) * 100,
+        ),
+        maximumTicketPriceCents: Math.round(
+          Number(festival.ticket_price_high ?? 0) * 100,
+        ),
+        idempotencyKey: `owner-console-create-${festivalId}`,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Canonical edition created");
+      qc.invalidateQueries({ queryKey: ["festival-editions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: staff = [] } = useQuery({
     queryKey: ["festival-staff", festivalId],
@@ -365,8 +405,15 @@ export default function FestivalOwnerConsole() {
               </span>
               <Button size="sm" variant="outline" asChild>
                 <Link to={`/festivals/${festivalId}/run`}>
-                  Create or resolve edition
+                  Open run wizard
                 </Link>
+              </Button>
+              <Button
+                size="sm"
+                disabled={createEdition.isPending}
+                onClick={() => createEdition.mutate()}
+              >
+                {createEdition.isPending ? "Creating…" : "Create edition"}
               </Button>
             </>
           )}

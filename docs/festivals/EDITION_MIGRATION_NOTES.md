@@ -1,34 +1,32 @@
 # Festival edition migration notes
 
-## Backfill rules
+## 2029 timestamp anomaly
 
-Every existing `festivals` row receives an initial `festival_editions` row when one does not already exist for the same brand and edition number. The migration preserves brand dates, city, venue, expected attendance, description, treasury and metadata. Existing `ticket_price_low` and `ticket_price_high` are decimal currency units, while the new edition ticket fields are cents, so the backfill multiplies those prices by 100 and records the compatibility decision in `legacy_metadata`.
+`supabase/migrations/20291204090000_create_festival_editions.sql` is retained under its historical identity. This workspace cannot confirm whether the merged migration has already run in a shared or production Supabase environment, so renaming it would only repair clean installs and could strand deployed databases that already recorded the 20291204090000 version.
 
-## Status mapping
+The corrective migration is therefore additive: `supabase/migrations/20291205090000_harden_festival_editions.sql`. Future festival migrations that depend on canonical editions must be timestamped after `20291205090000` or include explicit idempotent guards if they are ever backported.
 
-Dedicated festival statuses verified in repository code and migrations are mapped conservatively:
+## Dependency correction
 
-- `draft`, `upcoming` → `planning`
-- `confirmed` → `booking`
-- `published`, `announced` → `announced`
-- `live` → `live`
-- `completed` → `completed`
-- `postponed` → `postponed`
-- `cancelled` → `cancelled`
-- unknown values → `planning` with the original status retained in `legacy_metadata`
+PR #1190 created `public_festival_editions` before `is_public_festival_edition_status`. PostgreSQL cannot create a view with an unresolved function reference, so the corrective migration creates/replaces the helper first, then drops and recreates the public-safe view and reapplies grants.
 
-## Legacy event handling
+## Public/private read contract
 
-The migration creates explicit `dedicated_festival_row` mappings for all backfilled editions. Legacy `game_events` rows are mapped only when the match is deterministic: festival event type, exact/normalised title match, compatible venue when present, and overlapping dates. Unmatched legacy festival events are left unmapped for the later data-migration PR rather than creating placeholder brands.
+Public discovery reads use `public.public_festival_editions`, which exposes only edition identity, brand ID, title/description, city, venue, dates, public capacity/attendance, ticket price range, currency, public lifecycle status, public metadata and public lifecycle timestamps. It deliberately excludes budgets, treasury allocation, lifecycle metadata, legacy metadata, reasons, idempotency data, ownership and moderation fields.
 
-## Compatibility rules
+Owner/admin reads continue to use protected `festival_editions` access behind RLS and owner/admin checks.
 
-`festivals` remains the permanent brand and marketplace asset. Brand-level staff, permits, insurance and ledger screens continue to operate until later edition re-keying. Current player festival routes backed by `game_events` and `festival_participants` remain active.
+## RPC hardening
 
-## Rollback strategy
+- `create_festival_edition` accepts an optional idempotency key and records request hashes in `festival_edition_creation_requests` so retries return the original edition and mismatched reuse is rejected.
+- `update_festival_edition_planning` now accepts a JSONB patch, making omitted keys distinct from keys explicitly set to null.
+- `transition_festival_edition` locks the edition before checking transition idempotency, records transition request hashes, rejects mismatched idempotency reuse and returns unchanged rows for no-op requests without lifecycle events.
+- Lifecycle validation keeps free ticket ranges valid (`0..0` is allowed) while enforcing non-negative prices, date ordering, readiness and explicit admin override metadata for live launch exceptions.
 
-This change is additive. Rollback can drop the three new tables, the enum, policies, indexes, triggers and RPCs without changing existing festival primary keys or deleting legacy festival data. Because backfill writes only new canonical tables and mappings, existing `festivals`, `game_events`, `festival_participants`, stages, tickets and attendance data remain intact.
+## Owner workflow correction
 
-## Next migration PR
+Owner screens now share deterministic managed-edition selection. The run wizard saves occurrence planning values to the current edition instead of mutating permanent festival brand occurrence fields. When no edition exists, owner workflows present an explicit create-edition action rather than silently falling back to legacy lifecycle writes.
 
-Recommended next PR: `feat(festivals): add canonical applications contracts setlists and performances`.
+## Validation
+
+`supabase/tests/festival_editions_harness.sql` now checks schema contracts, view privacy, idempotency objects, transition graph invariants and legacy mapping uniqueness inside a rollback-only transaction. `scripts/festivals/check-edition-migration-order.mjs` statically verifies helper-before-view ordering and documents the 2029 anomaly.

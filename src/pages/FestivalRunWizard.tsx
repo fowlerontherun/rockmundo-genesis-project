@@ -37,10 +37,15 @@ import {
   useFestivalStageSlots,
 } from "@/hooks/useFestivalStages";
 import {
-  listFestivalEditions,
+  listFestivalEditionsForOwner,
   transitionFestivalEdition,
+  updateFestivalEditionPlanning,
 } from "@/features/festivals/service";
-import { getFestivalEditionStatusLabel } from "@/features/festivals/lifecycle";
+import {
+  getFestivalEditionActionLabel,
+  getFestivalEditionStatusLabel,
+  selectManagedFestivalEdition,
+} from "@/features/festivals/lifecycle";
 import { format } from "date-fns";
 
 type StepKey = "draft" | "booking" | "compliance" | "launch";
@@ -74,10 +79,10 @@ export default function FestivalRunWizard() {
 
   const { data: editions = [] } = useQuery({
     queryKey: ["festival-editions", festivalId],
-    queryFn: () => listFestivalEditions(festivalId!),
+    queryFn: () => listFestivalEditionsForOwner(festivalId!),
     enabled: !!festivalId,
   });
-  const currentEdition = editions[0];
+  const currentEdition = selectManagedFestivalEdition(editions);
 
   const { data: stages = [] } = useFestivalStages(festivalId);
   const { data: slots = [] } = useFestivalStageSlots(festivalId);
@@ -125,17 +130,27 @@ export default function FestivalRunWizard() {
   // Initialize once
   useMemo(() => {
     if (festival && draftName === "") {
-      const name = festival.name || "";
-      const attendance = String(festival.expected_attendance ?? "");
-      const low = String(festival.ticket_price_low ?? "");
-      const high = String(festival.ticket_price_high ?? "");
+      const name = currentEdition?.title || festival.name || "";
+      const attendance = String(
+        currentEdition?.expected_attendance ?? festival.expected_attendance ?? "",
+      );
+      const low = String(
+        currentEdition?.minimum_ticket_price_cents != null
+          ? currentEdition.minimum_ticket_price_cents / 100
+          : festival.ticket_price_low ?? "",
+      );
+      const high = String(
+        currentEdition?.maximum_ticket_price_cents != null
+          ? currentEdition.maximum_ticket_price_cents / 100
+          : festival.ticket_price_high ?? "",
+      );
       setDraftName(name);
       setDraftAttendance(attendance);
       setDraftLow(low);
       setDraftHigh(high);
       if (!originalDraft) setOriginalDraft({ name, attendance, low, high });
     }
-  }, [festival]);
+  }, [festival, currentEdition, draftName, originalDraft]);
 
   const saveDraft = useMutation({
     mutationFn: async () => {
@@ -147,20 +162,21 @@ export default function FestivalRunWizard() {
         throw new Error("Attendance must be positive");
       if (!Number.isFinite(low) || !Number.isFinite(high) || high < low)
         throw new Error("Ticket range invalid");
-      const { error } = await (supabase as any)
-        .from("festivals")
-        .update({
-          name: draftName.trim(),
-          expected_attendance: Math.round(attendance),
-          ticket_price_low: low,
-          ticket_price_high: high,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", festivalId);
-      if (error) throw error;
+      if (currentEdition) {
+        await updateFestivalEditionPlanning(currentEdition.id, {
+          title: draftName.trim(),
+          expectedAttendance: Math.round(attendance),
+          minimumTicketPriceCents: Math.round(low * 100),
+          maximumTicketPriceCents: Math.round(high * 100),
+        });
+        return;
+      }
+      throw new Error(
+        "Create a canonical edition before saving occurrence planning fields.",
+      );
     },
     onSuccess: () => {
-      toast.success("Draft saved");
+      toast.success(currentEdition ? "Edition planning saved" : "Draft saved");
       qc.invalidateQueries({ queryKey: ["run-wizard-festival", festivalId] });
       qc.invalidateQueries({ queryKey: ["festival-editions", festivalId] });
     },
@@ -248,7 +264,7 @@ export default function FestivalRunWizard() {
             festival?.status === "live" ||
             festival?.status === "announced",
         label: currentEdition
-          ? "Canonical edition lifecycle ready for launch"
+          ? "Canonical edition lifecycle ready"
           : "Legacy festival status ready (compatibility only)",
       },
     ],
@@ -274,7 +290,7 @@ export default function FestivalRunWizard() {
       );
     },
     onSuccess: () => {
-      toast.success("Festival is live! Announcement pushed.");
+      toast.success("Edition announced.");
       qc.invalidateQueries({ queryKey: ["run-wizard-festival", festivalId] });
       qc.invalidateQueries({ queryKey: ["festival-editions", festivalId] });
       setStepIdx(STEPS.length - 1);
@@ -413,8 +429,8 @@ export default function FestivalRunWizard() {
             </p>
           ) : (
             <p className="text-xs text-amber-500">
-              Canonical edition not resolved. The wizard will not mutate the
-              permanent festival brand lifecycle.
+              Canonical edition not resolved. Create one before editing
+              occurrence planning.
             </p>
           )}
         </CardContent>
@@ -481,12 +497,14 @@ export default function FestivalRunWizard() {
                 <Button
                   size="sm"
                   onClick={() => saveDraft.mutate()}
-                  disabled={saveDraft.isPending}
+                  disabled={saveDraft.isPending || !currentEdition}
                 >
                   {saveDraft.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
                   ) : null}
-                  Save Draft
+                  {currentEdition
+                    ? "Save edition planning"
+                    : "Create edition first"}
                 </Button>
               </div>
               <div className="md:col-span-2">
@@ -701,15 +719,30 @@ export default function FestivalRunWizard() {
                     <div className="flex items-center gap-2 text-sm">
                       <Ticket className="h-4 w-4 text-primary" />
                       <span>
-                        Ticket range: ${festival.ticket_price_low} – $
-                        {festival.ticket_price_high}
+                        Ticket range: $
+                        {(
+                          (currentEdition?.minimum_ticket_price_cents ??
+                            Math.round(Number(festival.ticket_price_low ?? 0) * 100)) /
+                          100
+                        ).toLocaleString()} – $
+                        {(
+                          (currentEdition?.maximum_ticket_price_cents ??
+                            Math.round(Number(festival.ticket_price_high ?? 0) * 100)) /
+                          100
+                        ).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CalendarIcon className="h-4 w-4 text-primary" />
                       <span>
-                        {format(new Date(festival.start_date), "MMM d")} –{" "}
-                        {format(new Date(festival.end_date), "MMM d, yyyy")}
+                        {format(
+                          new Date(currentEdition?.start_at ?? festival.start_date),
+                          "MMM d",
+                        )} –{" "}
+                        {format(
+                          new Date(currentEdition?.end_at ?? festival.end_date),
+                          "MMM d, yyyy",
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -891,9 +924,11 @@ export default function FestivalRunWizard() {
                     className="w-full"
                     disabled={
                       !canLaunch ||
+                      !currentEdition ||
                       launchMutation.isPending ||
-                      festival.status === "announced" ||
-                      festival.status === "live"
+                      ["announced", "on_sale", "setup", "live"].includes(
+                        currentEdition.status,
+                      )
                     }
                     onClick={() => launchMutation.mutate()}
                   >
@@ -902,10 +937,7 @@ export default function FestivalRunWizard() {
                     ) : (
                       <Rocket className="h-4 w-4 mr-2" />
                     )}
-                    {festival.status === "announced" ||
-                    festival.status === "live"
-                      ? "Festival is Live"
-                      : "Go Live & Announce"}
+                    {getFestivalEditionActionLabel(currentEdition?.status)}
                   </Button>
                 </div>
               );

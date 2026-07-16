@@ -655,5 +655,20 @@
       "abandoned"
     ],
     "compatibility": "Existing festivals rows are permanent brands; existing game_events festival player flows remain active and can be mapped through festival_legacy_mappings."
+  },
+  "canonical_edition_hardening": {
+    "migration_ordering": "historical 20291204090000 retained; additive 20291205090000 hardening migration added",
+    "public_reads": "public_festival_editions privacy view",
+    "owner_reads": "festival_editions protected by owner/admin RLS",
+    "creation_idempotency": "festival_edition_creation_requests",
+    "transition_idempotency": "festival_edition_transition_requests",
+    "owner_workflow": "run wizard writes edition planning fields when a canonical edition exists",
+    "deferred": [
+      "applications",
+      "contracts",
+      "setlists",
+      "canonical_performances",
+      "settlement"
+    ]
   }
 }
