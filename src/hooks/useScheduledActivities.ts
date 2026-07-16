@@ -358,7 +358,7 @@ export function useCreateScheduledActivity() {
           activity_type: data.activity_type,
           scheduled_start: data.scheduled_start.toISOString(),
           scheduled_end: data.scheduled_end.toISOString(),
-          duration_minutes: getDurationMinutes(data.scheduled_start, data.scheduled_end),
+          // duration_minutes is a generated column - omit from insert
           title: data.title,
           description: data.description,
           location: data.location,
