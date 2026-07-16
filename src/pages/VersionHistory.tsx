@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.539",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Added an 'Upcoming' tab to the Recording Studio page that lists all scheduled recording sessions that haven't started yet, sorted by start time with studio, producer, duration, cost, and countdown." },
+      { type: 'feature', description: "Booking a recording session now sends an inbox message to every active band member (or the solo artist), including song title, studio, start time, and duration." },
+    ],
+  },
+  {
     version: "1.1.538",
     date: "2026-07-16",
     changes: [
