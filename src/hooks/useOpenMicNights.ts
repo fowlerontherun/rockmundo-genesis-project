@@ -223,7 +223,7 @@ export function useSignUpForOpenMic() {
         .insert({
           user_id: userId,
           profile_id: profileId,
-          activity_type: 'open_mic',
+          activity_type: 'performance',
           status: 'scheduled',
           scheduled_start: scheduledDate.toISOString(),
           scheduled_end: endDate.toISOString(),
