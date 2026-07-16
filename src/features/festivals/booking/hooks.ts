@@ -9,7 +9,7 @@ import type { FestivalApplicationRecord, FestivalOfferRecord, FestivalContractRe
 export function useFestivalApplications(bandId?: string, editionId?: string, profileId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.bandApplications(bandId, editionId, profileId),
-    queryFn: () => getBandApplications(bandId!, editionId),
+    queryFn: () => getBandApplications(bandId!, editionId) as Promise<FestivalApplicationRecord[]>,
     enabled: Boolean(bandId),
   });
 }
