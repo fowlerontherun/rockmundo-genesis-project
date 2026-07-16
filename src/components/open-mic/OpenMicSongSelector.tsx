@@ -116,7 +116,7 @@ export function OpenMicSongSelector({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              You need recorded songs to perform. Record some songs first!
+              You need at least one completed song to perform. Finish a song in the Songwriting section — it doesn't need to be recorded.
             </AlertDescription>
           </Alert>
         ) : (
