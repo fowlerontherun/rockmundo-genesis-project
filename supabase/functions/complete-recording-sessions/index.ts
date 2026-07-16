@@ -429,47 +429,44 @@ Deno.serve(async (req) => {
             } else {
               console.log(`Updated song ${session.song_id}: status=recorded, quality=${newQuality}, band_id=${session.band_id || 'unchanged'}`)
               
-              // Trigger auto song audio generation if quality is good enough (≥60)
-              if (newQuality >= 60) {
-                try {
-                  console.log(`Song ${session.song_id} quality ${newQuality} >= 60, triggering auto audio generation...`)
-                  
-                  if (originalSong.user_id && originalSong.songwriting_project_id) {
-                    const { data: songData } = await supabase
-                      .from('songs')
-                      .select('audio_url, audio_generation_status')
-                      .eq('id', session.song_id)
-                      .single()
-                    
-                    if (!songData?.audio_url && 
-                        songData?.audio_generation_status !== 'generating' &&
-                        songData?.audio_generation_status !== 'completed') {
-                      
-                      console.log(`Invoking generate-song-audio for song ${session.song_id}`)
-                      
-                      const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
-                        body: { 
-                          songId: session.song_id, 
-                          userId: originalSong.user_id 
-                        }
-                      })
-                      
-                      if (genError) {
-                        console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
-                      } else {
-                        console.log(`✓ Audio generation triggered for song ${session.song_id}`)
+              // Automatically trigger AI song audio generation on recording completion
+              try {
+                console.log(`Song ${session.song_id} recorded (quality ${newQuality}), triggering auto audio generation...`)
+
+                if (originalSong.user_id) {
+                  const { data: songData } = await supabase
+                    .from('songs')
+                    .select('audio_url, audio_generation_status')
+                    .eq('id', session.song_id)
+                    .single()
+
+                  if (!songData?.audio_url &&
+                      songData?.audio_generation_status !== 'generating' &&
+                      songData?.audio_generation_status !== 'completed') {
+
+                    console.log(`Invoking generate-song-audio for song ${session.song_id}`)
+
+                    const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
+                      body: {
+                        songId: session.song_id,
+                        userId: originalSong.user_id
                       }
+                    })
+
+                    if (genError) {
+                      console.error(`Failed to trigger audio generation for song ${session.song_id}:`, genError)
                     } else {
-                      console.log(`Skipping audio generation for song ${session.song_id}: ` +
-                        `has_audio=${!!songData?.audio_url}, status=${songData?.audio_generation_status}`)
+                      console.log(`✓ Audio generation triggered for song ${session.song_id}`)
                     }
                   } else {
                     console.log(`Skipping audio generation for song ${session.song_id}: ` +
-                      `has_user=${!!originalSong.user_id}, has_project=${!!originalSong.songwriting_project_id}`)
+                      `has_audio=${!!songData?.audio_url}, status=${songData?.audio_generation_status}`)
                   }
-                } catch (genTriggerError) {
-                  console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
+                } else {
+                  console.log(`Skipping audio generation for song ${session.song_id}: no user_id`)
                 }
+              } catch (genTriggerError) {
+                console.error(`Error triggering audio generation for song ${session.song_id}:`, genTriggerError)
               }
             }
           }
