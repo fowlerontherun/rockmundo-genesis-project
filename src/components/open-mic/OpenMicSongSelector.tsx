@@ -27,7 +27,8 @@ interface Song {
 interface OpenMicSongSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  bandId: string;
+  bandId?: string | null;
+  profileId?: string | null;
   onConfirm: (song1Id: string, song2Id: string) => void;
 }
 
@@ -35,25 +36,36 @@ export function OpenMicSongSelector({
   open,
   onOpenChange,
   bandId,
+  profileId,
   onConfirm,
 }: OpenMicSongSelectorProps) {
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
 
   const { data: songs = [], isLoading } = useQuery({
-    queryKey: ['band-songs-for-open-mic', bandId],
+    queryKey: ['songs-for-open-mic', bandId ?? null, profileId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Any song that has been completed (written) is eligible for open mic —
+      // it does NOT need to be recorded. We consider a song "completed" when
+      // completed_at is set OR its status is beyond draft.
+      let query = supabase
         .from('songs')
-        .select('id, title, duration_seconds, quality_score, genre')
-        .eq('band_id', bandId)
-        .eq('status', 'recorded')
+        .select('id, title, duration_seconds, quality_score, genre, band_id, profile_id, completed_at, status')
         .neq('archived', true)
-        .order('quality_score', { ascending: false });
+        .not('completed_at', 'is', null);
 
+      if (bandId) {
+        query = query.eq('band_id', bandId);
+      } else if (profileId) {
+        query = query.eq('profile_id', profileId).is('band_id', null);
+      } else {
+        return [] as Song[];
+      }
+
+      const { data, error } = await query.order('quality_score', { ascending: false });
       if (error) throw error;
-      return data as Song[];
+      return (data || []) as Song[];
     },
-    enabled: open && !!bandId,
+    enabled: open && (!!bandId || !!profileId),
   });
 
   const toggleSong = (songId: string) => {
