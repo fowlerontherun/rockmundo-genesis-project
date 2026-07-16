@@ -28,6 +28,13 @@ export type DrawerPlayer = {
 
 export type DrawerFriendState = "self" | "none" | "friends" | "pending_sent" | "pending_received";
 
+export type MutualFriend = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
 interface Props {
   player: DrawerPlayer | null;
   open: boolean;
@@ -37,6 +44,7 @@ interface Props {
   onAdd: (profileId: string) => void | Promise<void>;
   onAccept: (friendshipId: string) => void | Promise<void>;
   busy?: boolean;
+  mutuals?: MutualFriend[];
 }
 
 export function PlayerProfileDrawer({
@@ -48,6 +56,7 @@ export function PlayerProfileDrawer({
   onAdd,
   onAccept,
   busy,
+  mutuals = [],
 }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
