@@ -699,3 +699,238 @@ export const useCompleteRecordingSession = () => {
     },
   });
 };
+
+// ============================================================================
+// Cancel & Reschedule upcoming recording sessions
+// ============================================================================
+
+export const useCancelRecordingSession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { data: session, error: fetchError } = await supabase
+        .from('recording_sessions')
+        .select('id, status, total_cost, band_id, user_id, scheduled_start, scheduled_end, songs(title)')
+        .eq('id', sessionId)
+        .single() as any;
+
+      if (fetchError) throw fetchError;
+      if (!session) throw new Error('Session not found');
+      if (session.status === 'completed' || session.status === 'cancelled') {
+        throw new Error(`Cannot cancel a ${session.status} session`);
+      }
+
+      const now = new Date();
+      const start = new Date(session.scheduled_start);
+      if (start <= now && session.status === 'in_progress') {
+        // Allow cancelling in-progress sessions that have already started, but warn
+        // (still refund - policy choice: full refund for now)
+      }
+
+      const totalCost = Number(session.total_cost || 0);
+
+      // Refund cost
+      if (session.band_id) {
+        await supabase.from('band_earnings').insert({
+          band_id: session.band_id,
+          amount: totalCost,
+          source: 'recording',
+          description: `Refund: cancelled recording session`,
+          earned_by_user_id: session.user_id,
+          metadata: { session_id: sessionId, refund: true }
+        } as any);
+      } else {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, cash')
+          .eq('user_id', session.user_id)
+          .eq('is_active', true)
+          .is('died_at', null)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from('profiles')
+            .update({ cash: (profile.cash || 0) + totalCost })
+            .eq('id', profile.id);
+        }
+      }
+
+      // Mark session cancelled
+      const { error: updErr } = await supabase
+        .from('recording_sessions')
+        .update({
+          status: 'cancelled',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+      if (updErr) throw updErr;
+
+      // Cancel any linked scheduled activities
+      try {
+        await (supabase as any)
+          .from('player_scheduled_activities')
+          .update({ status: 'cancelled' })
+          .eq('linked_recording_id', sessionId)
+          .in('status', ['scheduled', 'pending', 'in_progress']);
+      } catch (e) {
+        console.warn('Could not cancel scheduled activities:', e);
+      }
+
+      try {
+        await (supabase as any)
+          .from('band_scheduled_activities')
+          .update({ status: 'cancelled' })
+          .eq('linked_recording_id', sessionId)
+          .in('status', ['scheduled', 'pending', 'in_progress']);
+      } catch (e) {
+        console.warn('Could not cancel band scheduled activities:', e);
+      }
+
+      // Notify inbox
+      try {
+        const songTitle = session.songs?.title || 'a song';
+        const message = `Your recording session for "${songTitle}" has been cancelled. $${totalCost.toLocaleString()} has been refunded.`;
+
+        if (session.band_id) {
+          const { data: members } = await supabase
+            .from('band_members')
+            .select('user_id')
+            .eq('band_id', session.band_id)
+            .eq('member_status', 'active');
+
+          const rows = (members || [])
+            .map((m: any) => m.user_id)
+            .filter(Boolean)
+            .map((uid: string) => ({
+              user_id: uid,
+              category: 'system' as any,
+              priority: 'normal' as any,
+              title: `Recording session cancelled`,
+              message,
+              metadata: { source: 'recording_cancel', session_id: sessionId, band_id: session.band_id } as any,
+            }));
+          if (rows.length > 0) await supabase.from('player_inbox').insert(rows as any);
+        } else {
+          await supabase.from('player_inbox').insert({
+            user_id: session.user_id,
+            category: 'system' as any,
+            priority: 'normal' as any,
+            title: `Recording session cancelled`,
+            message,
+            metadata: { source: 'recording_cancel', session_id: sessionId } as any,
+          } as any);
+        }
+      } catch (e) {
+        console.warn('Inbox notification failed:', e);
+      }
+
+      return { sessionId, refunded: totalCost };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['band-scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['player-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['bands'] });
+      toast.success(`Session cancelled. $${result.refunded.toLocaleString()} refunded.`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to cancel session: ${error.message}`);
+    },
+  });
+};
+
+export const useRescheduleRecordingSession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { sessionId: string; newStart: Date }) => {
+      const { data: session, error: fetchError } = await supabase
+        .from('recording_sessions')
+        .select('id, status, duration_hours, studio_id, scheduled_start')
+        .eq('id', input.sessionId)
+        .single() as any;
+
+      if (fetchError) throw fetchError;
+      if (!session) throw new Error('Session not found');
+      if (session.status !== 'scheduled' && session.status !== 'in_progress') {
+        throw new Error(`Cannot reschedule a ${session.status} session`);
+      }
+
+      const now = new Date();
+      if (session.status === 'in_progress' && new Date(session.scheduled_start) <= now) {
+        throw new Error('Cannot reschedule a session that has already started');
+      }
+      if (input.newStart <= now) {
+        throw new Error('New start time must be in the future');
+      }
+
+      const durationMs = Number(session.duration_hours || 1) * 60 * 60 * 1000;
+      const newEnd = new Date(input.newStart.getTime() + durationMs);
+
+      // Check for studio conflicts (excluding this session)
+      const { data: conflicts } = await supabase
+        .from('recording_sessions')
+        .select('id, scheduled_start, scheduled_end')
+        .eq('studio_id', session.studio_id)
+        .in('status', ['scheduled', 'in_progress'])
+        .neq('id', input.sessionId);
+
+      const overlap = (conflicts || []).find((c: any) => {
+        const s = new Date(c.scheduled_start);
+        const e = c.scheduled_end ? new Date(c.scheduled_end) : null;
+        return s < newEnd && (!e || e > input.newStart);
+      });
+      if (overlap) throw new Error('The studio is already booked for that time slot.');
+
+      const { error: updErr } = await supabase
+        .from('recording_sessions')
+        .update({
+          status: 'scheduled',
+          scheduled_start: input.newStart.toISOString(),
+          scheduled_end: newEnd.toISOString(),
+        })
+        .eq('id', input.sessionId);
+      if (updErr) throw updErr;
+
+      // Update linked scheduled activities
+      try {
+        await (supabase as any)
+          .from('player_scheduled_activities')
+          .update({
+            scheduled_start: input.newStart.toISOString(),
+            scheduled_end: newEnd.toISOString(),
+          })
+          .eq('linked_recording_id', input.sessionId)
+          .in('status', ['scheduled', 'pending', 'in_progress']);
+      } catch (e) {
+        console.warn('Could not update scheduled activities:', e);
+      }
+      try {
+        await (supabase as any)
+          .from('band_scheduled_activities')
+          .update({
+            scheduled_start: input.newStart.toISOString(),
+            scheduled_end: newEnd.toISOString(),
+          })
+          .eq('linked_recording_id', input.sessionId)
+          .in('status', ['scheduled', 'pending', 'in_progress']);
+      } catch (e) {
+        console.warn('Could not update band scheduled activities:', e);
+      }
+
+      return { sessionId: input.sessionId, newStart: input.newStart, newEnd };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['band-scheduled-activities'] });
+      toast.success('Recording session rescheduled.');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to reschedule: ${error.message}`);
+    },
+  });
+};
