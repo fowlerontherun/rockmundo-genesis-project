@@ -338,14 +338,13 @@ export default function OpenMicNights() {
       </Tabs>
 
       {/* Song Selector Modal */}
-      {userBand && (
-        <OpenMicSongSelector
-          open={selectorOpen}
-          onOpenChange={setSelectorOpen}
-          bandId={userBand.id}
-          onConfirm={handleSongSelection}
-        />
-      )}
+      <OpenMicSongSelector
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        bandId={userBand?.id}
+        profileId={profileId}
+        onConfirm={handleSongSelection}
+      />
     </FMPageScaffold>
   );
 }
