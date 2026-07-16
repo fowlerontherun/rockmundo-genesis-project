@@ -55,6 +55,13 @@ export default function RecordingStudio() {
   const currentCityId = currentCity?.id || "";
   
   const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
+  const cancelMutation = useCancelRecordingSession();
+  const rescheduleMutation = useRescheduleRecordingSession();
+
+  // Cancel / reschedule dialog state
+  const [cancelTarget, setCancelTarget] = useState<any>(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<any>(null);
+  const [rescheduleValue, setRescheduleValue] = useState<string>("");
 
   useEffect(() => {
     const loadUserBand = async () => {
