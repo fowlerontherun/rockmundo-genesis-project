@@ -45,3 +45,8 @@ Contract cancellation requires a reason and releases compatible stage-slot claim
 ## Deferred work
 
 Canonical performance sessions, attendance simulation, fame, money, merch, reward settlement, full stage migration and historical performance migration are deferred to follow-up PRs.
+
+
+## 20291207090000 hardening correction
+
+The booking model now treats offer revisions and contract versions as immutable authority, with `festival_booking_requests` for idempotency, `festival_stage_slot_reservations` for slot concurrency, server-side band authority helpers, atomic activation, and immutable current setlist versions.

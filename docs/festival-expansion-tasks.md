@@ -61,3 +61,6 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 - [x] Add safe public edition read function and public lineup projection.
 - [x] Keep legacy participant flows as compatibility data pending performance-session migration.
 - [ ] Add canonical performance sessions, readiness and settlement in later PRs.
+
+
+- [x] Harden canonical booking contracts and setlists with idempotency, authority helpers, reservations, immutable versions, schedule integration and behavioural harness coverage.
