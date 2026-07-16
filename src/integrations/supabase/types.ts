@@ -21466,6 +21466,7 @@ export type Database = {
           contracted_at: string
           created_at: string
           description: string | null
+          expected_recovery_at: string | null
           id: string
           name: string
           profile_id: string
@@ -21482,6 +21483,7 @@ export type Database = {
           contracted_at?: string
           created_at?: string
           description?: string | null
+          expected_recovery_at?: string | null
           id?: string
           name: string
           profile_id: string
@@ -21498,6 +21500,7 @@ export type Database = {
           contracted_at?: string
           created_at?: string
           description?: string | null
+          expected_recovery_at?: string | null
           id?: string
           name?: string
           profile_id?: string
@@ -27140,6 +27143,7 @@ export type Database = {
           avatar_generation_count: number | null
           avatar_url: string | null
           bio: string | null
+          burnout_risk: number
           cash: number
           character_birth_date: string | null
           created_at: string | null
@@ -27154,8 +27158,11 @@ export type Database = {
           experience_at_last_weekly_bonus: number | null
           fame: number
           fans: number | null
+          fatigue: number
+          fitness: number
           gender: string | null
           generation_number: number | null
+          happiness: number
           has_active_lawyer: boolean | null
           health: number
           id: string
@@ -27172,11 +27179,16 @@ export type Database = {
           lawyer_hired_at: string | null
           level: number
           mood: number
+          motivation: number
+          nutrition: number
+          overall_wellness: number
           parent_profile_id: string | null
+          physical_health: number
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null
+          sleep_quality: number
           slot_number: number | null
           stress: number
           terms_accepted_at: string | null
@@ -27199,6 +27211,7 @@ export type Database = {
           avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
+          burnout_risk?: number
           cash?: number
           character_birth_date?: string | null
           created_at?: string | null
@@ -27213,8 +27226,11 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number
           fans?: number | null
+          fatigue?: number
+          fitness?: number
           gender?: string | null
           generation_number?: number | null
+          happiness?: number
           has_active_lawyer?: boolean | null
           health?: number
           id?: string
@@ -27231,11 +27247,16 @@ export type Database = {
           lawyer_hired_at?: string | null
           level?: number
           mood?: number
+          motivation?: number
+          nutrition?: number
+          overall_wellness?: number
           parent_profile_id?: string | null
+          physical_health?: number
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
+          sleep_quality?: number
           slot_number?: number | null
           stress?: number
           terms_accepted_at?: string | null
@@ -27258,6 +27279,7 @@ export type Database = {
           avatar_generation_count?: number | null
           avatar_url?: string | null
           bio?: string | null
+          burnout_risk?: number
           cash?: number
           character_birth_date?: string | null
           created_at?: string | null
@@ -27272,8 +27294,11 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number
           fans?: number | null
+          fatigue?: number
+          fitness?: number
           gender?: string | null
           generation_number?: number | null
+          happiness?: number
           has_active_lawyer?: boolean | null
           health?: number
           id?: string
@@ -27290,11 +27315,16 @@ export type Database = {
           lawyer_hired_at?: string | null
           level?: number
           mood?: number
+          motivation?: number
+          nutrition?: number
+          overall_wellness?: number
           parent_profile_id?: string | null
+          physical_health?: number
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
           rpm_avatar_url?: string | null
+          sleep_quality?: number
           slot_number?: number | null
           stress?: number
           terms_accepted_at?: string | null
@@ -37586,6 +37616,7 @@ export type Database = {
           avatar_generation_count: number | null
           avatar_url: string | null
           bio: string | null
+          burnout_risk: number
           cash: number
           character_birth_date: string | null
           created_at: string | null
@@ -37600,8 +37631,11 @@ export type Database = {
           experience_at_last_weekly_bonus: number | null
           fame: number
           fans: number | null
+          fatigue: number
+          fitness: number
           gender: string | null
           generation_number: number | null
+          happiness: number
           has_active_lawyer: boolean | null
           health: number
           id: string
@@ -37618,11 +37652,16 @@ export type Database = {
           lawyer_hired_at: string | null
           level: number
           mood: number
+          motivation: number
+          nutrition: number
+          overall_wellness: number
           parent_profile_id: string | null
+          physical_health: number
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
           rpm_avatar_url: string | null
+          sleep_quality: number
           slot_number: number | null
           stress: number
           terms_accepted_at: string | null
