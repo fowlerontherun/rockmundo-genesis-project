@@ -118,10 +118,10 @@ export default function OpenMicNights() {
       </Alert>
 
       {!userBand && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert>
+          <Info className="h-4 w-4" />
           <AlertDescription>
-            You need to be in a band to perform at open mic nights.
+            You're performing solo. Any completed song you've written is eligible — no band or recording required.
           </AlertDescription>
         </Alert>
       )}
