@@ -55,3 +55,7 @@ Player and organiser UI now consume canonical application, offer, contract and s
 ## UI hardening checkpoint
 
 The canonical booking UI now has a reusable stable idempotency hook, typed domain projections for booking records, modular components and unit tests for key retry behaviour, progress failure states and currency fallback. Database validation still requires a local Supabase stack.
+
+## Completion hardening
+
+The completion migration adds read-only preflight and projection RPCs for represented bands, application eligibility, organiser invitation candidates, stage slots, repertoire and setlist validation. These projections do not introduce performance simulation, score calculation, fame updates or settlement.

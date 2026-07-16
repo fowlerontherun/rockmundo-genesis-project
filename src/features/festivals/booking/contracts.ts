@@ -1,21 +1,35 @@
-import { bookingSupabase as supabase } from './supabaseBookingClient';
-import { mapBookingError } from './bookingTypes';
-import type { BookingSide, FestivalTerms } from './bookingTypes';
+import { supabase } from "@/integrations/supabase/client";
+import { mapBookingError } from "./bookingTypes";
+import type { BookingSide, FestivalTerms } from "./bookingTypes";
 
 export async function listBandContracts(bandId: string) {
-  const { data, error } = await supabase.from('festival_contracts').select('*').eq('band_id', bandId).order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from("festival_contracts")
+    .select("*")
+    .eq("band_id", bandId)
+    .order("created_at", { ascending: false });
   if (error) throw mapBookingError(error);
   return data ?? [];
 }
 
 export async function getFestivalContract(contractId: string) {
-  const { data, error } = await supabase.from('festival_contracts').select('*, festival_contract_signatures(*)').eq('id', contractId).single();
+  const { data, error } = await supabase
+    .from("festival_contracts")
+    .select("*, festival_contract_signatures(*)")
+    .eq("id", contractId)
+    .single();
   if (error) throw mapBookingError(error);
   return data;
 }
 
-export async function signFestivalContract(input: { contractId: string; expectedVersion: number; signingSide: BookingSide; acknowledgement: Record<string, unknown>; idempotencyKey: string }) {
-  const { data, error } = await supabase.rpc('sign_festival_contract', {
+export async function signFestivalContract(input: {
+  contractId: string;
+  expectedVersion: number;
+  signingSide: BookingSide;
+  acknowledgement: Record<string, unknown>;
+  idempotencyKey: string;
+}) {
+  const { data, error } = await supabase.rpc("sign_festival_contract", {
     p_contract_id: input.contractId,
     p_expected_contract_version: input.expectedVersion,
     p_signing_side: input.signingSide,
@@ -26,8 +40,13 @@ export async function signFestivalContract(input: { contractId: string; expected
   return data;
 }
 
-export async function amendFestivalContract(contractId: string, terms: FestivalTerms, reason: string, idempotencyKey: string) {
-  const { data, error } = await supabase.rpc('amend_festival_contract', {
+export async function amendFestivalContract(
+  contractId: string,
+  terms: FestivalTerms,
+  reason: string,
+  idempotencyKey: string,
+) {
+  const { data, error } = await supabase.rpc("amend_festival_contract", {
     p_contract_id: contractId,
     p_terms: terms,
     p_reason: reason,
@@ -37,8 +56,12 @@ export async function amendFestivalContract(contractId: string, terms: FestivalT
   return data;
 }
 
-export async function cancelFestivalContract(contractId: string, reason: string, idempotencyKey: string) {
-  const { data, error } = await supabase.rpc('cancel_festival_contract', {
+export async function cancelFestivalContract(
+  contractId: string,
+  reason: string,
+  idempotencyKey: string,
+) {
+  const { data, error } = await supabase.rpc("cancel_festival_contract", {
     p_contract_id: contractId,
     p_reason: reason,
     p_idempotency_key: idempotencyKey,
