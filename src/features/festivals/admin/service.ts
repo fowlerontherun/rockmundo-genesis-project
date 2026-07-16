@@ -65,3 +65,86 @@ export async function fetchOwnerFestivalEditions(festivalId: string): Promise<Ow
   if (error) throw new Error(error.message);
   return ((data as Record<string, unknown>[] | null) ?? []).map(mapOwnerEdition);
 }
+
+export async function createFestivalEditionStage(input: import("./types").StageInput) {
+  const { data, error } = await rpcClient.rpc("create_festival_edition_stage", {
+    p_edition_id: input.editionId,
+    p_name: input.name,
+    p_type: input.type ?? "main",
+    p_capacity: input.capacity ?? 0,
+    p_genre_focus: input.genreFocus ?? null,
+    p_stage_size: input.stageSize ?? null,
+    p_sound_capability: input.soundCapability ?? null,
+    p_lighting_capability: input.lightingCapability ?? null,
+    p_backstage_capability: input.backstageCapability ?? null,
+    p_weather_protection: input.weatherProtection ?? null,
+    p_changeover_duration: input.changeoverDuration ?? 30,
+    p_curfew: input.curfew ?? null,
+    p_technical_metadata: input.technicalMetadata ?? {},
+    p_public_metadata: input.publicMetadata ?? {},
+    p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function generateFestivalStageSlots(input: import("./types").SlotGenerationInput) {
+  const { data, error } = await rpcClient.rpc("generate_festival_stage_slots", {
+    p_stage_id: input.stageId,
+    p_date: input.date,
+    p_opening_time: input.openingTime,
+    p_curfew: input.curfew,
+    p_slot_templates: input.templates,
+    p_changeover_duration: input.changeoverDuration ?? 30,
+    p_soundcheck_policy: input.soundcheckPolicy ?? {},
+    p_idempotency_key: input.idempotencyKey,
+    p_apply: input.apply ?? false,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function hireFestivalEditionStaff(input: import("./types").StaffHireInput) {
+  const { data, error } = await rpcClient.rpc("hire_festival_edition_staff", {
+    p_edition_id: input.editionId,
+    p_candidate_id: input.candidateId,
+    p_role: input.role,
+    p_wage_cents: input.wageCents,
+    p_assignment_scope: input.assignmentScope ?? {},
+    p_shift_start_at: input.shiftStartAt ?? null,
+    p_shift_end_at: input.shiftEndAt ?? null,
+    p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function applyForFestivalEditionPermit(editionId: string, requirementCode: string, idempotencyKey: string) {
+  const { data, error } = await rpcClient.rpc("apply_for_festival_edition_permit", { p_edition_id: editionId, p_requirement_code: requirementCode, p_idempotency_key: idempotencyKey });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function quoteFestivalEditionInsurance(editionId: string, provider = "RockMundo Mutual", coverageType = "standard") {
+  const { data, error } = await rpcClient.rpc("quote_festival_edition_insurance", { p_edition_id: editionId, p_provider: provider, p_coverage_type: coverageType });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function purchaseFestivalEditionInsurance(quoteId: string, idempotencyKey: string) {
+  const { data, error } = await rpcClient.rpc("purchase_festival_edition_insurance", { p_quote_id: quoteId, p_idempotency_key: idempotencyKey });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function fetchFestivalEditionFinanceSummary(editionId: string) {
+  const { data, error } = await rpcClient.rpc("festival_edition_finance_summary", { p_edition_id: editionId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function previewCopyFestivalEdition(sourceEditionId: string, targetEditionId?: string | null) {
+  const { data, error } = await rpcClient.rpc("preview_copy_festival_edition", { p_source_edition_id: sourceEditionId, p_target_edition_id: targetEditionId ?? null });
+  if (error) throw new Error(error.message);
+  return data;
+}
