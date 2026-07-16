@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.537",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Career Overview now loads. The gig outcomes query embedded `venues` through gigs but two foreign keys (fk_gigs_venue and gigs_venue_id_fkey) point at the same table, so PostgREST returned PGRST201 'more than one relationship was found' and the page showed 'Failed to load career overview'. Pinned the embed to `venues!fk_gigs_venue` to remove the ambiguity." },
+    ],
+  },
+  {
     version: "1.1.536",
     date: "2026-07-16",
     changes: [

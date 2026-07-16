@@ -154,7 +154,7 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
           status,
           payment,
           band_id,
-          venue:venues(id, name, reputation),
+          venue:venues!fk_gigs_venue(id, name, reputation),
           promoter:promoters(id, name, reputation)
         )`
       )
