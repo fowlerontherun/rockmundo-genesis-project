@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Skull, Baby, Sparkles, Loader2, HeartPulse } from "lucide-react";
+import { Skull, Baby, Sparkles, Loader2, HeartPulse, ArrowRight, Music2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
