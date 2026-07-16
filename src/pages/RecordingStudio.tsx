@@ -127,11 +127,29 @@ export default function RecordingStudio() {
         </Card>
       )}
 
+      {(() => {
+        const now = new Date();
+        const upcomingSessions = (sessions || []).filter((s: any) =>
+          s.status === 'scheduled' && new Date(s.scheduled_start) > now
+        ).sort((a: any, b: any) =>
+          new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime()
+        );
+
+        return (
       <Tabs defaultValue="sessions" className="space-y-6">
         <TabsList>
           <TabsTrigger value="sessions" className="gap-2">
             <ListMusic className="h-4 w-4" />
             <span className="hidden sm:inline">{t('recording.currentSession', 'Sessions')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="upcoming" className="gap-2">
+            <CalendarClock className="h-4 w-4" />
+            <span className="hidden sm:inline">Upcoming</span>
+            {upcomingSessions.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {upcomingSessions.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="recorded" className="gap-2">
             <Disc3 className="h-4 w-4" />
@@ -238,6 +256,66 @@ export default function RecordingStudio() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="upcoming">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-primary" />
+                Upcoming Recording Sessions
+              </CardTitle>
+              <CardDescription>
+                Sessions you've booked that haven't started yet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+              ) : upcomingSessions.length === 0 ? (
+                <div className="text-center py-12 space-y-2">
+                  <CalendarClock className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <p className="text-muted-foreground font-medium">No upcoming sessions booked</p>
+                  <p className="text-sm text-muted-foreground">
+                    Book a new session to see it appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingSessions.map((s: any) => (
+                    <Card key={s.id} className="border-primary/30">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="h-4 w-4 text-yellow-500" />
+                              <h3 className="font-semibold truncate">{s.songs?.title || 'Unknown Song'}</h3>
+                              <Badge variant="outline">{t('gigs.scheduled', 'Scheduled')}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                              <div>Studio: {s.city_studios?.name || 'N/A'}</div>
+                              <div>Producer: {s.recording_producers?.name || 'Self-produced'}</div>
+                              <div>Duration: {s.duration_hours}h</div>
+                              <div>Cost: ${Number(s.total_cost || 0).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="text-right text-sm">
+                            <div className="text-xs uppercase text-muted-foreground">Starts</div>
+                            <div className="font-semibold">
+                              {new Date(s.scheduled_start).toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              in {formatDistanceToNow(new Date(s.scheduled_start))}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="recorded">
           <Card>
             <CardHeader>
@@ -252,6 +330,8 @@ export default function RecordingStudio() {
           </Card>
         </TabsContent>
       </Tabs>
+        );
+      })()}
 
       <RecordingWizard
         open={wizardOpen}
