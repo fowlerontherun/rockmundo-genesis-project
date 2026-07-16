@@ -20,7 +20,7 @@ const versionHistory: VersionEntry[] = [
     version: "1.1.562",
     date: "2026-07-16",
     changes: [
-      { type: 'change', description: "Housing: removed AI image generation for houses. Every housing type in every country now uses one of the existing pre-generated house images (backfilled by tier so all 1,280 properties display a house image). Removed the admin 'Generate Image' and 'Generate All Missing Images' buttons and deleted the generate-housing-image edge function." },
+      { type: 'improvement', description: "Housing: removed AI image generation for houses. Every housing type in every country now uses one of the existing pre-generated house images (backfilled by tier so all 1,280 properties display a house image). Removed the admin 'Generate Image' and 'Generate All Missing Images' buttons and deleted the generate-housing-image edge function." },
     ],
   },
   {
