@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { listPublicFestivalEditions } from '@/features/festivals/service';
 import { toast } from 'sonner';
 import { calculateTotalDuration, canAcceptRevision, festivalBookingKeys, mapBookingError, selectCurrentRevision, validateFestivalSetlist, type FestivalApplicationStatus, type FestivalTerms } from './bookingTypes';
-import { useFestivalApplicationActions, useFestivalApplications, useFestivalContracts, useFestivalOfferActions, useFestivalOffers, useFestivalSetlist, useOrganiserFestivalApplications } from './hooks';
+import { useFestivalApplicationActions, useFestivalApplications, useFestivalContracts, useFestivalContractActions, useFestivalOfferActions, useFestivalOffers, useFestivalSetlist, useOrganiserFestivalApplications } from './hooks';
 
 const money = (cents?: number | null, currency = 'USD') => typeof cents === 'number' ? new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100) : 'TBD';
 const dt = (value?: string | null) => value ? new Date(value).toLocaleString() : 'TBD';
