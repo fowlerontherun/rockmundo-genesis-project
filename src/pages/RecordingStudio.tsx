@@ -410,6 +410,97 @@ export default function RecordingStudio() {
           songTitle={selectedSession.songs?.title || "Unknown Song"}
         />
       )}
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel recording session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTarget && (
+                <>
+                  This will cancel the session for{" "}
+                  <strong>{cancelTarget.songs?.title || 'this song'}</strong> at{" "}
+                  <strong>{cancelTarget.city_studios?.name || 'the studio'}</strong> and refund{" "}
+                  <strong>${Number(cancelTarget.total_cost || 0).toLocaleString()}</strong>.
+                  All band members will be notified.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep session</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelMutation.isPending}
+              onClick={async () => {
+                if (!cancelTarget) return;
+                try {
+                  await cancelMutation.mutateAsync(cancelTarget.id);
+                  setCancelTarget(null);
+                } catch {
+                  // toast handled in hook
+                }
+              }}
+            >
+              {cancelMutation.isPending ? 'Cancelling…' : 'Cancel session'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!rescheduleTarget} onOpenChange={(o) => !o && setRescheduleTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reschedule recording session</DialogTitle>
+            <DialogDescription>
+              {rescheduleTarget && (
+                <>
+                  Pick a new start time for{" "}
+                  <strong>{rescheduleTarget.songs?.title || 'this session'}</strong>. The
+                  session will run for {rescheduleTarget.duration_hours}h.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reschedule-start">New start time</Label>
+            <Input
+              id="reschedule-start"
+              type="datetime-local"
+              value={rescheduleValue}
+              min={(() => {
+                const d = new Date(Date.now() + 60 * 1000);
+                const pad = (n: number) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+              })()}
+              onChange={(e) => setRescheduleValue(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRescheduleTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={rescheduleMutation.isPending || !rescheduleValue}
+              onClick={async () => {
+                if (!rescheduleTarget || !rescheduleValue) return;
+                const newStart = new Date(rescheduleValue);
+                if (isNaN(newStart.getTime())) return;
+                try {
+                  await rescheduleMutation.mutateAsync({
+                    sessionId: rescheduleTarget.id,
+                    newStart,
+                  });
+                  setRescheduleTarget(null);
+                } catch {
+                  // toast handled in hook
+                }
+              }}
+            >
+              {rescheduleMutation.isPending ? 'Saving…' : 'Reschedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FMPageScaffold>
   );
 }
