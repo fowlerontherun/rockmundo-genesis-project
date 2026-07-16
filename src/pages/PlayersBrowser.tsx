@@ -293,6 +293,31 @@ export default function PlayersBrowser() {
 
                   {p.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{p.bio}</p>}
 
+                  {(() => {
+                    const muts = mutualsMap?.get(p.id) ?? [];
+                    if (!muts.length) return null;
+                    return (
+                      <div className="flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1.5">
+                        <div className="flex -space-x-2">
+                          {muts.slice(0, 3).map((m) => (
+                            <Avatar key={m.id} className="h-5 w-5 border-2 border-background">
+                              <AvatarImage src={m.avatar_url ?? undefined} />
+                              <AvatarFallback className="text-[8px]">
+                                {(m.display_name || m.username || "?").slice(0, 1).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          <Users className="mr-1 inline h-3 w-3" />
+                          {muts.length} mutual{muts.length === 1 ? "" : "s"} · {muts.slice(0, 2).map((m) => m.display_name || m.username).join(", ")}
+                          {muts.length > 2 ? ` +${muts.length - 2}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+
                   <div className="flex flex-wrap justify-end gap-2 border-t pt-2" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedId(p.id)}>View</Button>
                     {state === "none" && profile?.id && (
