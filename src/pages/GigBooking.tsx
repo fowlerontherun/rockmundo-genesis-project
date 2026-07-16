@@ -138,10 +138,8 @@ const GigBooking = () => {
     setCountries(uniqueCountries);
   }, [toast]);
 
-  // Filter venues based on selected country and size
-  const filteredVenues = useMemo(() => {
-    return venues.filter(venue => {
-      // Country filter
+
+
   // Cities available under the selected country
   const availableCities = useMemo(() => {
     const filtered = selectedCountry === 'all'
