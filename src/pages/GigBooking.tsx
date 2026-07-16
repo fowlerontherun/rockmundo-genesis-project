@@ -142,11 +142,31 @@ const GigBooking = () => {
   const filteredVenues = useMemo(() => {
     return venues.filter(venue => {
       // Country filter
+  // Cities available under the selected country
+  const availableCities = useMemo(() => {
+    const filtered = selectedCountry === 'all'
+      ? venues
+      : venues.filter(v => v.cities?.country === selectedCountry);
+    return [...new Set(
+      filtered.map(v => v.cities?.name).filter((c): c is string => !!c)
+    )].sort();
+  }, [venues, selectedCountry]);
+
+  // Filter venues based on selected country, city and size
+  const filteredVenues = useMemo(() => {
+    return venues.filter(venue => {
+      // Country filter
       if (selectedCountry !== 'all') {
         const venueCountry = venue.cities?.country;
         if (venueCountry !== selectedCountry) return false;
       }
-      
+
+      // City filter
+      if (selectedCity !== 'all') {
+        const venueCity = venue.cities?.name;
+        if (venueCity !== selectedCity) return false;
+      }
+
       // Size filter
       if (selectedVenueSize !== 'all') {
         const sizeFilter = VENUE_SIZE_FILTERS.find(s => s.value === selectedVenueSize);
@@ -154,10 +174,11 @@ const GigBooking = () => {
           if (venue.capacity < sizeFilter.min || venue.capacity > sizeFilter.max) return false;
         }
       }
-      
+
       return true;
     });
-  }, [venues, selectedCountry, selectedVenueSize]);
+  }, [venues, selectedCountry, selectedCity, selectedVenueSize]);
+
 
   const resolveBand = useCallback(async (): Promise<BandRow | null> => {
     if (!profileId) {
