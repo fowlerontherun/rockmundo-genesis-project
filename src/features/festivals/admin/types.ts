@@ -70,6 +70,21 @@ export type OwnerEditionOption = {
   currencyCode: string;
 };
 
+export type OwnerManagementBootstrapStatus = "ready" | "no_editions" | "not_found" | "access_denied" | "migration_blocked" | "unauthenticated" | "rpc_unavailable";
+
+export type OwnerManagementBootstrap = {
+  status: OwnerManagementBootstrapStatus;
+  inputId: string | null;
+  identifierType: string | null;
+  festival: { id: string; name: string; ownerType: string | null; ownerProfileId: string | null } | null;
+  authority: { isOwner: boolean; isAdmin: boolean; delegatedRoles: string[]; canCreateEdition: boolean; canManage: boolean };
+  editions: OwnerEditionOption[];
+  preferredEditionId: string | null;
+  migration: { required: boolean; issues: FestivalDataHealthIssue[] };
+  availableActions: string[];
+  message: string | null;
+};
+
 export type PermissionRole = "platform_admin" | "festival_owner" | "delegated_manager" | "talent_booker" | "finance_manager" | "operations_manager" | "stage_manager" | "safety_officer";
 
 export type PermissionProjection = Record<"manageBrand" | "manageEdition" | "manageLifecycle" | "manageLineup" | "manageFinance" | "manageOperations" | "viewOutcomes", boolean>;
