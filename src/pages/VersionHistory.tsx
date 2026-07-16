@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.553",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Returning players no longer get stuck in a create-new-character loop. `hasLivingCharacter` now matches the profile picker (`getOrActivatePlayableProfile`) and treats any alive profile as playable — an alive-but-inactive profile is auto-activated on load instead of triggering the death/fresh-start screen." },
+      { type: 'improvement', description: "Creating a fresh character now retires ALL prior profiles: any still-alive profile is marked died_at=now and its fame/cash/fans are zeroed out so previous fame, money and fan following never bleed into the new character. The new profile is inserted clean (0 fame, 10k starter cash, 0 fans)." },
+    ],
+  },
+  {
     version: "1.1.552",
     date: "2026-07-16",
     changes: [
