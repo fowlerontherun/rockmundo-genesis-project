@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.551",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Completed rehearsals no longer show an 'Unable to load rehearsal attendance' error. The participants and attendance-correction queries now treat a missing band_rehearsal_participants / correction-requests table (not yet provisioned in this environment) as an empty result, so the card falls back to the 'attendance unavailable for older event' empty state instead of a destructive error card." },
+    ],
+  },
+  {
     version: "1.1.550",
     date: "2026-07-16",
     changes: [
