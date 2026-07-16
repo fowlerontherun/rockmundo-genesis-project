@@ -17,6 +17,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.564",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording pipeline: added an automatic backfill sweep so any song that is already marked 'recorded' but has no AI audio (e.g. songs completed before the ≥60 quality gate was removed, or with a stuck 'generating' status older than 10 minutes) is automatically re-queued for AI audio generation on every completion run. Also manually triggered generation for the stuck song 'That time when i made out with your mum'." },
+    ],
+  },
+  {
+    version: "1.1.563",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording pipeline: fixed auto-completion of recording sessions. The completion job's PostgREST embed on songs was silently returning zero rows, leaving finished sessions stuck as 'scheduled' — songs were never marked recorded and AI audio generation never fired. The completion job now fetches sessions and songs separately, correctly marks sessions completed, updates the song to status='recorded', and automatically triggers AI song audio generation for every completed recording (previously gated behind quality ≥60 and a songwriting_project_id requirement, so most solo/cover recordings never got audio)." },
+    ],
+  },
+  {
     version: "1.1.562",
     date: "2026-07-16",
     changes: [

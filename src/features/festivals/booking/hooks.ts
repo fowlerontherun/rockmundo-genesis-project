@@ -88,7 +88,7 @@ export function useFestivalApplicationActions(
 export function useOrganiserFestivalApplications(editionId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.organiserApplications(editionId),
-    queryFn: () => listOrganiserApplications(editionId!),
+    queryFn: () => listOrganiserApplications(editionId!) as Promise<FestivalApplicationRecord[]>,
     enabled: Boolean(editionId),
   });
 }
@@ -96,7 +96,7 @@ export function useOrganiserFestivalApplications(editionId?: string) {
 export function useFestivalOffers(bandId?: string, editionId?: string) {
   return useQuery({
     queryKey: festivalBookingKeys.offers(bandId, editionId),
-    queryFn: () => listFestivalOffers(bandId, editionId),
+    queryFn: () => listFestivalOffers(bandId, editionId) as Promise<FestivalOfferRecord[]>,
     enabled: Boolean(bandId || editionId),
   });
 }
