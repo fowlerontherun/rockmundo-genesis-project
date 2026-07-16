@@ -730,7 +730,13 @@ const GigBooking = () => {
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <label className="text-sm font-medium mb-2 block">Country</label>
-                  <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                  <Select
+                    value={selectedCountry}
+                    onValueChange={(val) => {
+                      setSelectedCountry(val);
+                      setSelectedCity('all');
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
@@ -739,6 +745,22 @@ const GigBooking = () => {
                       {countries.map(country => (
                         <SelectItem key={country} value={country}>
                           {country} {country === playerCountry && '(Your Location)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">City</label>
+                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cities</SelectItem>
+                      {availableCities.map(city => (
+                        <SelectItem key={city} value={city}>
+                          {city} {city === playerCity && '(Your City)'}
                         </SelectItem>
                       ))}
                     </SelectContent>
