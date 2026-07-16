@@ -28194,70 +28194,94 @@ export type Database = {
       }
       recording_sessions: {
         Row: {
+          applied_variance: number | null
           band_id: string | null
+          calculation_version: string | null
           city_id: string | null
           completed_at: string | null
           created_at: string | null
           duration_hours: number
+          final_master_quality: number | null
           id: string
+          outcome_breakdown: Json | null
           player_producer_id: string | null
           producer_id: string | null
           profile_id: string | null
           quality_improvement: number | null
+          recording_credits: Json | null
           recording_type: string
           recording_version: string | null
           scheduled_end: string
           scheduled_start: string
+          session_data: Json | null
           song_id: string
+          source_song_quality: number | null
           status: string
           studio_id: string
           total_cost: number
           updated_at: string | null
           user_id: string
+          xp_awards: Json | null
         }
         Insert: {
+          applied_variance?: number | null
           band_id?: string | null
+          calculation_version?: string | null
           city_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           duration_hours?: number
+          final_master_quality?: number | null
           id?: string
+          outcome_breakdown?: Json | null
           player_producer_id?: string | null
           producer_id?: string | null
           profile_id?: string | null
           quality_improvement?: number | null
+          recording_credits?: Json | null
           recording_type?: string
           recording_version?: string | null
           scheduled_end: string
           scheduled_start?: string
+          session_data?: Json | null
           song_id: string
+          source_song_quality?: number | null
           status?: string
           studio_id: string
           total_cost: number
           updated_at?: string | null
           user_id: string
+          xp_awards?: Json | null
         }
         Update: {
+          applied_variance?: number | null
           band_id?: string | null
+          calculation_version?: string | null
           city_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           duration_hours?: number
+          final_master_quality?: number | null
           id?: string
+          outcome_breakdown?: Json | null
           player_producer_id?: string | null
           producer_id?: string | null
           profile_id?: string | null
           quality_improvement?: number | null
+          recording_credits?: Json | null
           recording_type?: string
           recording_version?: string | null
           scheduled_end?: string
           scheduled_start?: string
+          session_data?: Json | null
           song_id?: string
+          source_song_quality?: number | null
           status?: string
           studio_id?: string
           total_cost?: number
           updated_at?: string | null
           user_id?: string
+          xp_awards?: Json | null
         }
         Relationships: [
           {
