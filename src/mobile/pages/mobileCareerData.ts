@@ -44,6 +44,22 @@ export function useMobileCareerData() {
     },
   });
 
+
+  const rehearsals = useQuery({
+    queryKey: ["mobile-career-rehearsals", bandId],
+    enabled: !!bandId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("band_rehearsals")
+        .select("id, band_id, rehearsal_room_id, duration_hours, total_cost, scheduled_start, scheduled_end, selected_song_id, setlist_id, status, chemistry_gain, xp_earned, familiarity_gained, rehearsal_rooms:rehearsal_room_id(name, location, hourly_rate)")
+        .eq("band_id", bandId)
+        .order("scheduled_start", { ascending: false })
+        .limit(40);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const completedGigs = useQuery({
     queryKey: ["mobile-career-completed-gigs", bandId],
     enabled: !!bandId,
@@ -60,7 +76,7 @@ export function useMobileCareerData() {
     },
   });
 
-  return { active, primaryBand, band: primaryBand.data?.bands ?? null, bandRole: primaryBand.data?.role ?? null, members, songs, songwriting, gigs, completedGigs };
+  return { active, primaryBand, band: primaryBand.data?.bands ?? null, bandRole: primaryBand.data?.role ?? null, members, songs, songwriting, rehearsals, gigs, completedGigs };
 }
 
 export function canManageBand(role?: string | null) {
