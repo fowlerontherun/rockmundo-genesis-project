@@ -6,7 +6,10 @@ export const deriveBookingProgress = _deriveBookingProgress;
 const classes: Record<BookingProgressStepState, string> = {
   complete: 'border-emerald-500/40 bg-emerald-500/10',
   active: 'border-primary/50 bg-primary/10',
-  pending: 'border-border bg-muted/30',
+  incomplete: 'border-border bg-muted/30',
+  blocked: 'border-amber-500/40 bg-amber-500/10',
+  failed: 'border-destructive/40 bg-destructive/10',
+  cancelled: 'border-muted bg-muted/20',
 };
 
 export function CanonicalBookingProgress(props: { application?: FestivalApplicationRecord; offer?: FestivalOfferRecord; contract?: FestivalContractRecord; setlist?: FestivalSetlistRecord }) {
