@@ -737,7 +737,7 @@ function App() {
                     <Route path="community/friends" element={<FriendsPage />} />
                     <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
                     <Route path="settings/safety/reports" element={<MyReportsPage />} />
-                    <Route path="community/players" element={<PlayerDiscovery />} />
+                    <Route path="community/players" element={<PlayersBrowser />} />
                     <Route path="community/bands/recruitment" element={<BandRecruitmentDiscovery />} />
                     <Route path="community/invitations" element={<SocialHubUnified />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
