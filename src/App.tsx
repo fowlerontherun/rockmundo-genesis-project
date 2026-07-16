@@ -49,6 +49,7 @@ const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
 const MobileCareer = lazyWithRetry(() => import("./mobile/pages/MobileCareerRoutes"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
 const MobileWorld = lazyWithRetry(() => import("./mobile/pages/MobileWorld"));
+const MobileWorldPhase5 = lazyWithRetry(() => import("./mobile/pages/MobileWorldPhase5"));
 const MobileMe = lazyWithRetry(() => import("./mobile/pages/MobileMe"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
@@ -491,7 +492,9 @@ function App() {
                     <Route path="career/:section" element={<MobileCareer />} />
                     <Route path="career/:section/:id" element={<MobileCareer />} />
                     <Route path="social" element={<MobileSocial />} />
-                    <Route path="world" element={<MobileWorld />} />
+                    <Route path="world" element={<MobileWorldPhase5 />} />
+                    <Route path="world/:section" element={<MobileWorldPhase5 />} />
+                    <Route path="world/:section/:id" element={<MobileWorldPhase5 />} />
                     <Route path="me" element={<MobileMe />} />
                   </Route>
                   <Route element={<Layout />}>
