@@ -180,7 +180,7 @@ export function useSignUpForOpenMic() {
       venueName,
     }: {
       venueId: string;
-      bandId: string;
+      bandId?: string | null;
       song1Id: string;
       song2Id: string;
       scheduledDate: Date;
@@ -205,7 +205,7 @@ export function useSignUpForOpenMic() {
         .from('open_mic_performances')
         .insert({
           user_id: profileId,
-          band_id: bandId,
+          band_id: bandId ?? null,
           venue_id: venueId,
           song_1_id: song1Id,
           song_2_id: song2Id,
