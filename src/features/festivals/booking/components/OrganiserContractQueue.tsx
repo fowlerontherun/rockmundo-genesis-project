@@ -1,0 +1,1 @@
+export function OrganiserContractQueue(){return <section className="space-y-3"><h3 className="font-semibold">Contracts</h3><p className="text-sm text-muted-foreground">Open each current contract before signing. One-click organiser signatures are intentionally disabled.</p></section>}

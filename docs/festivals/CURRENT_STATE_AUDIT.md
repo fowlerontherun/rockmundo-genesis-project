@@ -336,3 +336,7 @@ PR #1193 follow-up inspection found broad active-member authority, inconsistent 
 ## Booking UI migration update
 
 Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.
+
+## Canonical booking UI hardening state
+
+The booking UI scaffold from PR #1195 has been hardened with focused modules, stable idempotency handling, readable terms summaries and typed projections. Repertoire-backed song selection, direct invitation search, server-projected signing authority and realtime invalidation remain the next UI/domain integration risks before performance sessions.

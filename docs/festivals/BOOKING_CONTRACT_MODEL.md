@@ -54,3 +54,7 @@ The booking model now treats offer revisions and contract versions as immutable 
 ## Booking UI migration update
 
 Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.
+
+## UI contract handling update
+
+The booking UI now renders contract terms through readable sections shared with offer summaries. Signing actions are presented as authorised-side actions with immutable version acknowledgement, rather than letting users choose an arbitrary signing side from generic UI state.

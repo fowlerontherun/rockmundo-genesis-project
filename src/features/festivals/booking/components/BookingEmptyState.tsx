@@ -1,0 +1,1 @@
+export function BookingEmptyState({ title = 'Nothing here yet', description }: { title?: string; description?: string }) { return <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground"><p className="font-medium text-foreground">{title}</p>{description ? <p>{description}</p> : null}</div>; }
