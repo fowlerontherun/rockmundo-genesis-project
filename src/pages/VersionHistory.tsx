@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.565",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "RM Radio: now picks up newly generated AI songs without a page reload. Removed the strict audio_generation_status='completed' filter (any song with an audio_url is eligible), lowered the songs query stale time to 60s with refetch-on-focus, and the playlist now auto-refreshes when new AI songs land — preserving the currently-playing track. Also silenced the false 'Error fetching #1 chart song' console error when the singles chart is empty." },
+    ],
+  },
+  {
     version: "1.1.564",
     date: "2026-07-16",
     changes: [
