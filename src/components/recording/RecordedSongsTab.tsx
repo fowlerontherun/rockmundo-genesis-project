@@ -31,53 +31,31 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
   const { data: recordedSongs, isLoading, error } = useQuery({
     queryKey: ["recorded-songs-list", userId, profileId, bandId],
     queryFn: async () => {
-      const songResponses = bandId
-        ? [await supabase
-            .from("songs")
-            .select(recordedSongSelect)
-            .eq("status", "recorded")
-            .eq("band_id", bandId)
-            .order("updated_at", { ascending: false })
-            .limit(200)]
-        : await Promise.all([
-            profileId
-              ? supabase
-                  .from("songs")
-                  .select(recordedSongSelect)
-                  .eq("status", "recorded")
-                  .eq("profile_id", profileId)
-                  .is("band_id", null)
-                  .order("updated_at", { ascending: false })
-                  .limit(200)
-              : Promise.resolve({ data: [], error: null } as any),
-            userId
-              ? profileId
-                ? supabase
-                    .from("songs")
-                    .select(recordedSongSelect)
-                    .eq("status", "recorded")
-                    .eq("user_id", userId)
-                    .is("profile_id", null)
-                    .is("band_id", null)
-                    .order("updated_at", { ascending: false })
-                    .limit(200)
-                : supabase
-                    .from("songs")
-                    .select(recordedSongSelect)
-                    .eq("status", "recorded")
-                    .eq("user_id", userId)
-                    .is("band_id", null)
-                    .order("updated_at", { ascending: false })
-                    .limit(200)
-              : Promise.resolve({ data: [], error: null } as any),
-          ]);
+      const queries: Promise<any>[] = [];
+      const base = () =>
+        supabase
+          .from("songs")
+          .select(recordedSongSelect)
+          .eq("status", "recorded")
+          .order("updated_at", { ascending: false })
+          .limit(200);
 
+      if (userId) queries.push(base().eq("user_id", userId));
+      if (profileId) queries.push(base().eq("profile_id", profileId));
+      if (bandId) queries.push(base().eq("band_id", bandId));
+
+      if (queries.length === 0) return [];
+
+      const songResponses = await Promise.all(queries);
       for (const response of songResponses) {
         if (response.error) throw response.error;
       }
 
-      const songs = Array.from(new Map(songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])).values())
-        .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      const songs = Array.from(
+        new Map(
+          songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])
+        ).values()
+      ).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
       // Get recording sessions for these songs
       const songIds = songs.map((s: any) => s.id) || [];
