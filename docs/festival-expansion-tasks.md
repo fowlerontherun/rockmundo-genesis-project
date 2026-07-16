@@ -77,3 +77,8 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 - [x] Add stable deliberate-action idempotency key handling for booking mutations.
 - [x] Replace raw offer/contract JSON summaries with readable booking terms sections.
 - [ ] Complete server-projected direct invitations, repertoire-backed setlist picker and realtime invalidation before performance-session work.
+
+## PR: audience simulation and performance outcomes
+
+- Added canonical audience generations, aggregate cohorts, stage crowd snapshots, immutable performance audience snapshots, song outcomes, performance outcomes, fan conversion proposals, pending effects, media/sponsor outcomes, highlights and public projections.
+- Effects are stored as pending application only; financial and career settlement remains deferred.

@@ -21,3 +21,7 @@ Readiness lock returns the same snapshot on retry. Remaining blockers keep the s
 ## Deferred work
 
 Audience simulation, song quality scoring, crowd response, fan conversion, fame/popularity rewards, guarantees, bonuses, merch and ticket settlement are intentionally not calculated here. The next PR should consume this immutable readiness and progression evidence.
+
+## Festival audience outcome integration
+
+Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.

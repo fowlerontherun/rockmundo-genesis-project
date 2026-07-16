@@ -770,5 +770,16 @@
       "merch_settlement",
       "ticket_revenue_allocation"
     ]
+  },
+  "audience_and_outcomes": {
+    "tables": [
+      "festival_audience_generations",
+      "festival_audience_cohorts",
+      "festival_stage_crowd_snapshots",
+      "festival_performance_outcomes",
+      "festival_song_performance_outcomes",
+      "festival_performance_effects"
+    ],
+    "settlement": "deferred"
   }
 }

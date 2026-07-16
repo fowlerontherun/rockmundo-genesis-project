@@ -1,0 +1,1 @@
+export { useFestivalOutcomeRealtime } from "./hooks";

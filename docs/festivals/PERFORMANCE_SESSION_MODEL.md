@@ -34,3 +34,7 @@ Valid states are `scheduled`, `arrival_open`, `checked_in`, `soundcheck_pending`
 ## Public projection
 
 `public_festival_performance_sessions` exposes only safe festival, edition, band, stage, schedule, public status, progress counts, headline flag and coarse public incident state. It excludes private health, contract economics, staff notes, authority details, equipment ownership and attendance reasons.
+
+## Festival audience outcome integration
+
+Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.
