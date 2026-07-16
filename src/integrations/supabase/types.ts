@@ -37414,6 +37414,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_festival_catalogue: {
+        Args: never
+        Returns: {
+          active_contract_count: number
+          actual_finance_cents: number
+          attendance: number
+          brand_name: string
+          city_name: string
+          completed_edition_id: string
+          currency_code: string
+          current_edition_id: string
+          current_edition_title: string
+          data_health_warnings: Json
+          edition_count: number
+          festival_id: string
+          legacy_mappings: number
+          lifecycle_state: string
+          next_edition_id: string
+          operational_readiness: string
+          outcome_count: number
+          owner_name: string
+          performance_session_count: number
+          projected_finance_cents: number
+          stage_count: number
+        }[]
+      }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
