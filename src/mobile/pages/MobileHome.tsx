@@ -12,9 +12,12 @@ import { QuickActionCard } from "../components/QuickActionCard";
 import { NotificationCard } from "../components/NotificationCard";
 import { EmptyState } from "../components/EmptyState";
 import { SkeletonCard } from "../components/SkeletonCard";
+import { MobileBlockedActionSheet, MobileContextTip, MobileInstallPrompt, MobileNotificationGroups, MobileOfflineState, MobileQuickStartChecklist, MobileRecommendedAction, MobileReturningBriefing, MobileUpdateBanner, MobileWelcomeCard } from "../components/MobileOnboarding";
+import { useState } from "react";
 
 export default function MobileHome() {
   const navigate = useNavigate();
+  const [blockedKind, setBlockedKind] = useState<string | null>(null);
   const { profile } = useGameData();
   const { notifications, markRead, isLoading } = useNotificationsFeed();
   const [params] = useSearchParams();
@@ -68,6 +71,11 @@ export default function MobileHome() {
         </button>
       </div>
 
+      <MobileOfflineState />
+      <MobileUpdateBanner />
+      <MobileWelcomeCard />
+      <MobileReturningBriefing notifications={notifications} />
+
       {/* Vitals */}
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="Energy" value={energy} icon={<Zap className="h-4 w-4" />} color="hsl(var(--primary))" />
@@ -76,13 +84,9 @@ export default function MobileHome() {
       </div>
 
       {/* Objectives / today */}
-      <MCard
-        title="What's next?"
-        subtitle="Your recommended action right now"
-        onPress={() => navigate("/skills")}
-        chevron
-        icon={<Zap className="h-5 w-5" />}
-      />
+      <MobileRecommendedAction notifications={notifications} />
+      <MobileQuickStartChecklist />
+      <MobileContextTip id="mobile-home-priority" title="How mobile Home is ordered">Urgent blockers, current activity, required responses, quick actions and progression appear before lower-priority updates.</MobileContextTip>
 
       {/* Quick actions */}
       <section>
@@ -109,11 +113,16 @@ export default function MobileHome() {
           {!isLoading && shown.length === 0 && (
             <EmptyState title="All caught up" message="New activity will appear here." />
           )}
-          {shown.map((n) => (
+          {filter === "notifications" ? (
+            <MobileNotificationGroups notifications={shown} onOpen={(n) => { markRead(n.id); if (n.action_path) navigate(n.action_path); }} />
+          ) : shown.map((n) => (
             <NotificationCard key={n.id} n={n} onRead={markRead} />
           ))}
         </div>
       </section>
+      <MobileInstallPrompt />
+      <button className="sr-only" onClick={() => setBlockedKind("energy")}>Preview blocked action</button>
+      <MobileBlockedActionSheet kind={blockedKind || "energy"} open={!!blockedKind} onOpenChange={(v) => !v && setBlockedKind(null)} />
     </div>
   );
 }
