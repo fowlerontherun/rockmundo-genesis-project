@@ -108,6 +108,35 @@ export function PlayerProfileDrawer({
                 </div>
               )}
 
+              {mutuals.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                    <Users className="mr-1 inline h-3.5 w-3.5" />
+                    {mutuals.length} mutual friend{mutuals.length === 1 ? "" : "s"}
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {mutuals.slice(0, 8).map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-1.5 rounded-full border bg-muted/40 py-0.5 pl-0.5 pr-2"
+                      >
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={m.avatar_url ?? undefined} />
+                          <AvatarFallback className="text-[8px]">
+                            {(m.display_name || m.username).slice(0, 1).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs">{m.display_name || m.username}</span>
+                      </div>
+                    ))}
+                    {mutuals.length > 8 && (
+                      <span className="self-center text-xs text-muted-foreground">+{mutuals.length - 8} more</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Bands</h3>
                 {player.bands.length > 0 ? (
