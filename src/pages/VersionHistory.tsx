@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.534",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Wellness activities now actually execute. The edge-function quota was full so `wellness-perform-activity` never deployed, causing 'Failed to send a request to the Edge Function'. Replaced it with a Postgres RPC `perform_wellness_activity` that handles ownership, cooldowns, daily caps, energy/cash, gate evaluation, stat updates, activity logging, ailment rolls, and schedule blocks — all server-side under RLS." },
+      { type: 'fix', description: "Daily Habits panel now loads. Habit RPCs (start_wellness_habit / complete_wellness_habit / stop_wellness_habit) were querying `profiles.is_active_character`, which doesn't exist — switched to the correct `is_active` column so starting, completing, and stopping habits works for both primary and alt characters." },
+    ],
+  },
+  {
     version: "1.1.533",
     date: "2026-07-16",
     changes: [
