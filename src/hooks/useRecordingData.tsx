@@ -107,25 +107,40 @@ export const useRecordingSessions = (profileId: string) => {
       if (membershipError) throw membershipError;
 
       const bandIds = (membershipRows || []).map(row => row.band_id).filter(Boolean);
-      let query = supabase
-        .from('recording_sessions')
-        .select(`
-          id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, stage, scheduled_start, scheduled_end, started_at, completed_at, session_data, total_takes, quality_gain, notes, engineer_id, engineer_name, created_at, updated_at,
-          city_studios (name, quality_rating),
-          recording_producers (name, tier),
-          songs (title, genre)
-        `);
+      const selectCols = `
+        id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, stage, scheduled_start, scheduled_end, started_at, completed_at, session_data, total_takes, quality_gain, notes, engineer_id, engineer_name, created_at, updated_at,
+        city_studios (name, quality_rating),
+        recording_producers (name, tier),
+        songs (title, genre)
+      `;
 
-      query = bandIds.length > 0
-        ? query.or(`profile_id.eq.${profileId},band_id.in.(${bandIds.join(',')})`)
-        : query.eq('profile_id', profileId);
+      const [byProfile, byBand] = await Promise.all([
+        supabase
+          .from('recording_sessions')
+          .select(selectCols)
+          .eq('profile_id', profileId)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        bandIds.length > 0
+          ? supabase
+              .from('recording_sessions')
+              .select(selectCols)
+              .in('band_id', bandIds)
+              .order('created_at', { ascending: false })
+              .limit(100)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
 
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      return (data || []) as any as RecordingSession[];
+      if (byProfile.error) throw byProfile.error;
+      if (byBand.error) throw byBand.error;
+
+      const merged = new Map<string, any>();
+      for (const row of (byProfile.data || []) as any[]) merged.set(row.id, row);
+      for (const row of (byBand.data || []) as any[]) merged.set(row.id, row);
+
+      return Array.from(merged.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ) as any as RecordingSession[];
     },
     enabled: !!profileId,
   });
