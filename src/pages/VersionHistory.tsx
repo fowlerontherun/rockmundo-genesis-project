@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.568",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "RM Radio: jingles and adverts now play again. The playlist was being built the moment the songs query resolved, which was almost always before the radio_content query finished loading — so the playlist was built with an empty content list and the guard prevented rebuilds. The initializer now waits for radio_content to finish loading before assembling the playlist, so the 7 active jingles and 2 adverts are interleaved between songs (every 3-5 tracks) as intended." },
+    ],
+  },
+  {
     version: "1.1.564",
     date: "2026-07-16",
     changes: [
