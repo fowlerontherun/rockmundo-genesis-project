@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.550",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Seeded 47 new low-level (1–2 star) crew members across every tour role — guitar/drum/backline techs, monitor & FOH engineers, lighting, riggers, merch, security, bus drivers, stage managers, tour managers, tour accountant, physio, catering, wardrobe, video/LED and pyro/SFX — with affordable salaries and varied home cities so early-career bands have accessible hiring options." },
+    ],
+  },
+  {
     version: "1.1.549",
     date: "2026-07-16",
     changes: [
