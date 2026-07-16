@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.564",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording pipeline: added an automatic backfill sweep so any song that is already marked 'recorded' but has no AI audio (e.g. songs completed before the ≥60 quality gate was removed, or with a stuck 'generating' status older than 10 minutes) is automatically re-queued for AI audio generation on every completion run. Also manually triggered generation for the stuck song 'That time when i made out with your mum'." },
+    ],
+  },
+  {
     version: "1.1.563",
     date: "2026-07-16",
     changes: [

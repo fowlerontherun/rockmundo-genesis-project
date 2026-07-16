@@ -562,6 +562,51 @@ Deno.serve(async (req) => {
 
     console.log(`=== Recording Session Auto-Completion Complete: ${completedCount} sessions ===`)
 
+    // Backfill sweep: any song already marked 'recorded' but missing audio (never triggered,
+    // or previously blocked by the old quality gate) gets an AI audio generation kicked off.
+    try {
+      const { data: strandedSongs, error: strandedErr } = await supabase
+        .from('songs')
+        .select('id, user_id, audio_generation_status, audio_generation_started_at')
+        .eq('status', 'recorded')
+        .is('audio_url', null)
+        .not('user_id', 'is', null)
+        .limit(25)
+
+      if (strandedErr) {
+        console.error('Backfill sweep query error:', strandedErr)
+      } else if (strandedSongs && strandedSongs.length > 0) {
+        const tenMinAgo = Date.now() - 10 * 60 * 1000
+        const eligible = strandedSongs.filter((s: any) => {
+          if (s.audio_generation_status === 'completed') return false
+          if (s.audio_generation_status === 'generating') {
+            const startedMs = s.audio_generation_started_at ? new Date(s.audio_generation_started_at).getTime() : 0
+            return startedMs > 0 && startedMs < tenMinAgo
+          }
+          return true
+        })
+
+        console.log(`Backfill sweep: ${eligible.length} recorded songs missing audio`)
+        for (const song of eligible) {
+          try {
+            const { error: genError } = await supabase.functions.invoke('generate-song-audio', {
+              body: { songId: (song as any).id, userId: (song as any).user_id },
+            })
+            if (genError) {
+              console.error(`Backfill: failed to trigger audio for song ${(song as any).id}:`, genError)
+            } else {
+              console.log(`✓ Backfill: triggered audio generation for song ${(song as any).id}`)
+            }
+          } catch (e) {
+            console.error(`Backfill: exception triggering audio for song ${(song as any).id}:`, e)
+          }
+        }
+      }
+    } catch (sweepErr) {
+      console.error('Backfill sweep failed:', sweepErr)
+    }
+
+
     await completeJobRun({
       jobName: 'complete-recording-sessions',
       runId,
