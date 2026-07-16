@@ -493,11 +493,14 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   });
 
   // Initialize playlist when songs and content load
+  // Initialize (or refresh) playlist when songs and content load. This also
+  // re-runs whenever the song count changes, so newly generated AI tracks are
+  // picked up without needing a page reload.
   useEffect(() => {
-    if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
+    if (allSongs && allSongs.length > 0) {
       radio.initializePlaylist(allSongs, radioContent || []);
     }
-  }, [allSongs, radioContent, radio.isInitialized]);
+  }, [allSongs?.length, radioContent?.length]);
 
   // Audio time tracking
   useEffect(() => {
