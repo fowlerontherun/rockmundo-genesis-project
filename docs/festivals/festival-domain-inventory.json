@@ -709,5 +709,14 @@
       "canonical performance sessions",
       "financial settlement"
     ]
+  },
+  "bookingUiHardening": {
+    "status": "partial-hardening-landed",
+    "notes": [
+      "PR #1195 review documented in BOOKING_UI_HARDENING.md",
+      "Booking components split into focused modules",
+      "Stable idempotency hook added",
+      "Performance sessions and settlement deferred"
+    ]
   }
 }

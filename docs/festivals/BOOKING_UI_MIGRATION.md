@@ -52,3 +52,7 @@ Booking query keys are centralised under `festivalBookingKeys`, allowing existin
 ## Deferred work
 
 Canonical performance sessions, arrival/readiness validation, locked-setlist consumption during performance, rewards and financial settlement are deferred.
+
+## Booking UI hardening follow-up
+
+The PR #1195 scaffold has been split into focused booking components and now uses explicit booking projection types, stable deliberate-action idempotency keys, readable offer/contract terms and state-aware progress. Canonical and legacy routes remain separated; legacy history continues to be read-only from the canonical hub until canonical performance sessions are introduced.

@@ -51,3 +51,7 @@ Full UI migration, canonical performance sessions, fame rewards, guarantee/depos
 ## Booking UI migration update
 
 Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.
+
+## UI hardening checkpoint
+
+The canonical booking UI now has a reusable stable idempotency hook, typed domain projections for booking records, modular components and unit tests for key retry behaviour, progress failure states and currency fallback. Database validation still requires a local Supabase stack.

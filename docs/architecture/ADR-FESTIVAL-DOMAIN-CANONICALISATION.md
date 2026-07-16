@@ -110,3 +110,7 @@ Canonical festival booking mutations are database-authoritative. Band authority 
 ## 2026-07-16 booking UI migration decision
 
 The primary player festival route (`/festivals`) and organiser management booking tab (`/festivals/:festivalId/manage`) consume the hardened canonical booking services for applications, offers, contracts, signatures and setlists. Legacy festival rows remain available only through explicit compatibility mode for unresolved identifiers and historical performance data. Canonical performance sessions and reward/financial settlement remain outside this decision.
+
+## Booking UI hardening addendum
+
+Canonical booking UI code is now organised by workflow component rather than a monolithic shared file. The UI treats idempotency keys as deliberate-action state that survives retries, renders terms through typed projections, and keeps legacy booking/history reads separated from canonical writes. Performance sessions, audience simulation, settlement and rewards remain outside this ADR checkpoint.

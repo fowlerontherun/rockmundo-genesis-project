@@ -70,3 +70,10 @@ Below are 50 actionable tasks to implement the previously outlined festival expe
 - `/festivals` is now the canonical player booking hub for discovery, applications, offers, contracts and preparation.
 - `/festivals/:festivalId/manage` uses the canonical booking workspace for organiser review queues.
 - Performance sessions and settlement remain deferred to a later PR.
+
+## Canonical booking UI hardening checkpoint
+
+- [x] Split PR #1195 booking UI scaffold into focused booking modules.
+- [x] Add stable deliberate-action idempotency key handling for booking mutations.
+- [x] Replace raw offer/contract JSON summaries with readable booking terms sections.
+- [ ] Complete server-projected direct invitations, repertoire-backed setlist picker and realtime invalidation before performance-session work.
