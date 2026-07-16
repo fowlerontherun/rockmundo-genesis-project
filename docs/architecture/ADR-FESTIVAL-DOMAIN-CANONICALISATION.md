@@ -106,3 +106,7 @@ Canonical festival booking now follows application -> offer revision -> contract
 ## Booking hardening decision
 
 Canonical festival booking mutations are database-authoritative. Band authority follows leader/founder/co-leader/manager roles, idempotency is centralised in `festival_booking_requests`, offers/contracts/setlists are versioned immutably, and public reads use safe projections only.
+
+## 2026-07-16 booking UI migration decision
+
+The primary player festival route (`/festivals`) and organiser management booking tab (`/festivals/:festivalId/manage`) consume the hardened canonical booking services for applications, offers, contracts, signatures and setlists. Legacy festival rows remain available only through explicit compatibility mode for unresolved identifiers and historical performance data. Canonical performance sessions and reward/financial settlement remain outside this decision.

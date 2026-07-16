@@ -50,3 +50,7 @@ Canonical performance sessions, attendance simulation, fame, money, merch, rewar
 ## 20291207090000 hardening correction
 
 The booking model now treats offer revisions and contract versions as immutable authority, with `festival_booking_requests` for idempotency, `festival_stage_slot_reservations` for slot concurrency, server-side band authority helpers, atomic activation, and immutable current setlist versions.
+
+## Booking UI migration update
+
+Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.

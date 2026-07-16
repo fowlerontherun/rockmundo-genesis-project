@@ -332,3 +332,7 @@ Public browsing is corrected with `public_festival_editions_read()`, a security-
 ### Booking hardening update
 
 PR #1193 follow-up inspection found broad active-member authority, inconsistent idempotency, mutable setlist rows, and weak slot reservation semantics. `20291207090000_harden_festival_booking_contracts.sql` corrects these before UI wiring.
+
+## Booking UI migration update
+
+Player and organiser UI now consume canonical application, offer, contract and setlist services. Legacy festival participation remains only for unresolved compatibility flows; performance sessions and financial settlement are deferred.
