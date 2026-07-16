@@ -129,9 +129,11 @@ export default function RecordingStudio() {
 
       {(() => {
         const now = new Date();
-        const upcomingSessions = (sessions || []).filter((s: any) =>
-          s.status === 'scheduled' && new Date(s.scheduled_start) > now
-        ).sort((a: any, b: any) =>
+        const upcomingSessions = (sessions || []).filter((s: any) => {
+          if (s.status !== 'scheduled' && s.status !== 'in_progress') return false;
+          const end = s.scheduled_end ? new Date(s.scheduled_end) : null;
+          return !end || end > now;
+        }).sort((a: any, b: any) =>
           new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime()
         );
 
