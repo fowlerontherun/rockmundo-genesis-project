@@ -21600,14 +21600,14 @@ export type Database = {
           {
             foreignKeyName: "player_attributes_profile_id_fkey"
             columns: ["profile_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "player_attributes_profile_id_fkey"
             columns: ["profile_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
@@ -38507,80 +38507,3 @@ export const Constants = {
     },
   },
 } as const
-
-// Festival booking hardening additions from 20291207090000_harden_festival_booking_contracts.sql.
-// Kept as explicit exported interfaces when live Supabase type generation is unavailable locally.
-export type FestivalBookingSide = "band" | "organiser"
-export type FestivalStageSlotReservationStatus = "provisional" | "confirmed" | "released" | "expired"
-export type FestivalApplicationStatus = "draft" | "submitted" | "under_review" | "waitlisted" | "shortlisted" | "offer_pending" | "withdrawn" | "rejected" | "expired" | "converted_to_contract"
-export type FestivalOfferStatus = "draft" | "sent" | "viewed" | "countered" | "accepted_pending_contract" | "declined" | "withdrawn" | "expired" | "converted_to_contract"
-export type FestivalContractStatus = "draft" | "proposed" | "awaiting_band_signature" | "awaiting_organiser_signature" | "awaiting_signatures" | "active" | "amendment_required" | "cancelled" | "terminated" | "fulfilled" | "breached" | "expired"
-export type FestivalSetlistStatus = "draft" | "submitted" | "approved" | "changes_requested" | "locked" | "performed" | "cancelled"
-
-export interface FestivalBookingRequestRow {
-  id: string
-  operation: string
-  entity_scope: string
-  entity_id: string | null
-  actor_profile_id: string
-  idempotency_key: string
-  request_hash: string
-  result_entity_type: string | null
-  result_entity_id: string | null
-  result_snapshot: Json
-  created_at: string
-  completed_at: string | null
-}
-
-export interface FestivalStageSlotReservationRow {
-  id: string
-  edition_id: string
-  stage_slot_id: string
-  offer_id: string | null
-  contract_id: string | null
-  band_id: string
-  status: FestivalStageSlotReservationStatus
-  reserved_until: string | null
-  created_at: string
-  confirmed_at: string | null
-  released_at: string | null
-  release_reason: string | null
-}
-
-export interface FestivalOfferRevisionRow {
-  id: string
-  offer_id: string
-  revision_number: number
-  proposed_by_side: FestivalBookingSide
-  proposed_by_profile_id: string | null
-  terms_snapshot: Json
-  change_summary: string | null
-  request_hash: string
-  idempotency_key: string | null
-  created_at: string
-}
-
-export interface FestivalContractVersionRow {
-  id: string
-  contract_id: string
-  version: number
-  terms_snapshot: Json
-  terms_hash: string
-  created_by_profile_id: string | null
-  created_by_side: FestivalBookingSide
-  reason: string | null
-  created_at: string
-}
-
-export interface PublicFestivalLineupReadRow {
-  edition_id: string
-  festival_id: string | null
-  band_id: string
-  band_name: string
-  stage_name: string
-  start_at: string | null
-  end_at: string | null
-  slot_type: string | null
-  headline: boolean
-  public_status: string
-}
