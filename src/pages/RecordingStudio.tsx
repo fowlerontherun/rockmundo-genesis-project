@@ -6,40 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecordingWizard } from "@/components/recording/RecordingWizard";
 import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordingDialog";
 import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
-import {
-  useRecordingSessions,
-  useCancelRecordingSession,
-  useRescheduleRecordingSession,
-} from "@/hooks/useRecordingData";
+import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
-import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock, CalendarDays, Trash2 } from "lucide-react";
+import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
@@ -55,13 +31,6 @@ export default function RecordingStudio() {
   const currentCityId = currentCity?.id || "";
   
   const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
-  const cancelMutation = useCancelRecordingSession();
-  const rescheduleMutation = useRescheduleRecordingSession();
-
-  // Cancel / reschedule dialog state
-  const [cancelTarget, setCancelTarget] = useState<any>(null);
-  const [rescheduleTarget, setRescheduleTarget] = useState<any>(null);
-  const [rescheduleValue, setRescheduleValue] = useState<string>("");
 
   useEffect(() => {
     const loadUserBand = async () => {
@@ -336,36 +305,9 @@ export default function RecordingStudio() {
                               {new Date(s.scheduled_start).toLocaleString()}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {new Date(s.scheduled_start) > new Date()
-                                ? `in ${formatDistanceToNow(new Date(s.scheduled_start))}`
-                                : `started ${formatDistanceToNow(new Date(s.scheduled_start))} ago`}
+                              in {formatDistanceToNow(new Date(s.scheduled_start))}
                             </div>
                           </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2 justify-end border-t pt-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setRescheduleTarget(s);
-                              // default to 1 hour from now, format for datetime-local
-                              const d = new Date(Date.now() + 60 * 60 * 1000);
-                              const pad = (n: number) => String(n).padStart(2, '0');
-                              const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                              setRescheduleValue(local);
-                            }}
-                          >
-                            <CalendarDays className="h-4 w-4 mr-1" />
-                            Reschedule
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setCancelTarget(s)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Cancel
-                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -410,97 +352,6 @@ export default function RecordingStudio() {
           songTitle={selectedSession.songs?.title || "Unknown Song"}
         />
       )}
-
-      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel recording session?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {cancelTarget && (
-                <>
-                  This will cancel the session for{" "}
-                  <strong>{cancelTarget.songs?.title || 'this song'}</strong> at{" "}
-                  <strong>{cancelTarget.city_studios?.name || 'the studio'}</strong> and refund{" "}
-                  <strong>${Number(cancelTarget.total_cost || 0).toLocaleString()}</strong>.
-                  All band members will be notified.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep session</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={cancelMutation.isPending}
-              onClick={async () => {
-                if (!cancelTarget) return;
-                try {
-                  await cancelMutation.mutateAsync(cancelTarget.id);
-                  setCancelTarget(null);
-                } catch {
-                  // toast handled in hook
-                }
-              }}
-            >
-              {cancelMutation.isPending ? 'Cancelling…' : 'Cancel session'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={!!rescheduleTarget} onOpenChange={(o) => !o && setRescheduleTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reschedule recording session</DialogTitle>
-            <DialogDescription>
-              {rescheduleTarget && (
-                <>
-                  Pick a new start time for{" "}
-                  <strong>{rescheduleTarget.songs?.title || 'this session'}</strong>. The
-                  session will run for {rescheduleTarget.duration_hours}h.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reschedule-start">New start time</Label>
-            <Input
-              id="reschedule-start"
-              type="datetime-local"
-              value={rescheduleValue}
-              min={(() => {
-                const d = new Date(Date.now() + 60 * 1000);
-                const pad = (n: number) => String(n).padStart(2, '0');
-                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-              })()}
-              onChange={(e) => setRescheduleValue(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRescheduleTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={rescheduleMutation.isPending || !rescheduleValue}
-              onClick={async () => {
-                if (!rescheduleTarget || !rescheduleValue) return;
-                const newStart = new Date(rescheduleValue);
-                if (isNaN(newStart.getTime())) return;
-                try {
-                  await rescheduleMutation.mutateAsync({
-                    sessionId: rescheduleTarget.id,
-                    newStart,
-                  });
-                  setRescheduleTarget(null);
-                } catch {
-                  // toast handled in hook
-                }
-              }}
-            >
-              {rescheduleMutation.isPending ? 'Saving…' : 'Reschedule'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </FMPageScaffold>
   );
 }

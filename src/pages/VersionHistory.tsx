@@ -17,10 +17,10 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.541",
+    version: "1.1.542",
     date: "2026-07-16",
     changes: [
-      { type: 'feature', description: "Added Cancel and Reschedule actions to every card in the Recording Studio 'Upcoming' tab. Cancelling marks the session as cancelled, refunds the full cost (to the band's balance or the solo artist's cash), cancels the linked scheduled activities for all band members, and sends an inbox notification. Rescheduling opens a date/time picker, validates the new slot for studio conflicts, and updates the session plus every linked band/player scheduled activity." },
+      { type: 'fix', description: "Recording sessions booked as a band member weren't showing in Sessions or Upcoming tabs. The Supabase `.or()` filter combining `profile_id.eq` with `band_id.in.(<uuid>)` silently returned zero rows because UUID hyphens/commas inside the parenthesized list confused the PostgREST filter parser. Split the lookup into two parallel queries (one by profile_id, one by band_id) and merged the results, so band-owned sessions now appear correctly." },
     ],
   },
   {
