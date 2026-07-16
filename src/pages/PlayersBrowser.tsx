@@ -344,6 +344,7 @@ export default function PlayersBrowser() {
           onAdd={handleAdd}
           onAccept={handleAccept}
           busy={busy}
+          mutuals={selected ? mutualsMap?.get(selected.id) ?? [] : []}
         />
 
         {players.length >= PAGE_SIZE && (
