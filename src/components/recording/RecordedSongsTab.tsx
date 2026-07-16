@@ -40,9 +40,9 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
           .order("updated_at", { ascending: false })
           .limit(200);
 
-      if (userId) queries.push(base().eq("user_id", userId));
-      if (profileId) queries.push(base().eq("profile_id", profileId));
-      if (bandId) queries.push(base().eq("band_id", bandId));
+      if (userId) queries.push(Promise.resolve(base().eq("user_id", userId)));
+      if (profileId) queries.push(Promise.resolve(base().eq("profile_id", profileId)));
+      if (bandId) queries.push(Promise.resolve(base().eq("band_id", bandId)));
 
       if (queries.length === 0) return [];
 
