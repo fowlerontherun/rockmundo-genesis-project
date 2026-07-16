@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.560",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Book Gigs: added a City filter alongside the existing Country and Venue Size filters. The city dropdown lists cities within the selected country (or all cities when country is 'All'), defaults to the player's current city on load, and resets automatically when the country selection changes. The player's current city is labeled '(Your City)' in the list." },
+    ],
+  },
+  {
     version: "1.1.559",
     date: "2026-07-16",
     changes: [

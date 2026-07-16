@@ -64,9 +64,11 @@ const GigBooking = () => {
   
   // Filter state
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedCity, setSelectedCity] = useState<string>('all');
   const [selectedVenueSize, setSelectedVenueSize] = useState<string>('all');
   const [countries, setCountries] = useState<string[]>([]);
   const [playerCountry, setPlayerCountry] = useState<string | null>(null);
+  const [playerCity, setPlayerCity] = useState<string | null>(null);
 
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
@@ -93,13 +95,17 @@ const GigBooking = () => {
     return Math.max(0, Math.min(100, Math.round(combined)));
   }, [performanceSkill, stagePresence, crowdEngagement, fame]);
 
-  // Set player's country as default filter when currentCity loads
+  // Set player's country/city as default filter when currentCity loads
   useEffect(() => {
     if (currentCity?.country && !playerCountry) {
       setPlayerCountry(currentCity.country);
       setSelectedCountry(currentCity.country);
     }
-  }, [currentCity, playerCountry]);
+    if (currentCity?.name && !playerCity) {
+      setPlayerCity(currentCity.name);
+      setSelectedCity(currentCity.name);
+    }
+  }, [currentCity, playerCountry, playerCity]);
 
   const loadVenues = useCallback(async () => {
     const { data, error } = await supabase
@@ -132,7 +138,19 @@ const GigBooking = () => {
     setCountries(uniqueCountries);
   }, [toast]);
 
-  // Filter venues based on selected country and size
+
+
+  // Cities available under the selected country
+  const availableCities = useMemo(() => {
+    const filtered = selectedCountry === 'all'
+      ? venues
+      : venues.filter(v => v.cities?.country === selectedCountry);
+    return [...new Set(
+      filtered.map(v => v.cities?.name).filter((c): c is string => !!c)
+    )].sort();
+  }, [venues, selectedCountry]);
+
+  // Filter venues based on selected country, city and size
   const filteredVenues = useMemo(() => {
     return venues.filter(venue => {
       // Country filter
@@ -140,7 +158,13 @@ const GigBooking = () => {
         const venueCountry = venue.cities?.country;
         if (venueCountry !== selectedCountry) return false;
       }
-      
+
+      // City filter
+      if (selectedCity !== 'all') {
+        const venueCity = venue.cities?.name;
+        if (venueCity !== selectedCity) return false;
+      }
+
       // Size filter
       if (selectedVenueSize !== 'all') {
         const sizeFilter = VENUE_SIZE_FILTERS.find(s => s.value === selectedVenueSize);
@@ -148,10 +172,11 @@ const GigBooking = () => {
           if (venue.capacity < sizeFilter.min || venue.capacity > sizeFilter.max) return false;
         }
       }
-      
+
       return true;
     });
-  }, [venues, selectedCountry, selectedVenueSize]);
+  }, [venues, selectedCountry, selectedCity, selectedVenueSize]);
+
 
   const resolveBand = useCallback(async (): Promise<BandRow | null> => {
     if (!profileId) {
@@ -705,7 +730,13 @@ const GigBooking = () => {
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <label className="text-sm font-medium mb-2 block">Country</label>
-                  <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                  <Select
+                    value={selectedCountry}
+                    onValueChange={(val) => {
+                      setSelectedCountry(val);
+                      setSelectedCity('all');
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
@@ -714,6 +745,22 @@ const GigBooking = () => {
                       {countries.map(country => (
                         <SelectItem key={country} value={country}>
                           {country} {country === playerCountry && '(Your Location)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">City</label>
+                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cities</SelectItem>
+                      {availableCities.map(city => (
+                        <SelectItem key={city} value={city}>
+                          {city} {city === playerCity && '(Your City)'}
                         </SelectItem>
                       ))}
                     </SelectContent>
