@@ -1,4 +1,4 @@
-import type { AdminFestivalCatalogueRow, FestivalDataHealthIssue, OwnerEditionOption } from "./types";
+import type { AdminFestivalCatalogueRow, FestivalDataHealthIssue, OwnerEditionOption, OwnerManagementBootstrap } from "./types";
 
 const issueFromUnknown = (value: unknown): FestivalDataHealthIssue[] => {
   if (!Array.isArray(value)) return [];
@@ -50,4 +50,25 @@ export function mapOwnerEdition(row: Record<string, unknown>): OwnerEditionOptio
 
 export function formatFestivalMoney(cents: number | null | undefined, currencyCode = "USD") {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: currencyCode }).format((cents ?? 0) / 100);
+}
+
+
+const stringArray = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+
+export function mapOwnerManagementBootstrap(row: Record<string, unknown>): OwnerManagementBootstrap {
+  const authority = (row.authority && typeof row.authority === "object" ? row.authority : {}) as Record<string, unknown>;
+  const festival = (row.festival && typeof row.festival === "object" ? row.festival : null) as Record<string, unknown> | null;
+  const migration = (row.migration && typeof row.migration === "object" ? row.migration : {}) as Record<string, unknown>;
+  return {
+    status: (typeof row.status === "string" ? row.status : "rpc_unavailable") as OwnerManagementBootstrap["status"],
+    inputId: row.input_id ? String(row.input_id) : null,
+    identifierType: row.identifier_type ? String(row.identifier_type) : null,
+    festival: festival ? { id: String(festival.id), name: String(festival.name ?? "Untitled festival"), ownerType: festival.owner_type ? String(festival.owner_type) : null, ownerProfileId: festival.owner_profile_id ? String(festival.owner_profile_id) : null } : null,
+    authority: { isOwner: authority.is_owner === true, isAdmin: authority.is_admin === true, delegatedRoles: stringArray(authority.delegated_roles), canCreateEdition: authority.can_create_edition === true, canManage: authority.can_manage === true },
+    editions: Array.isArray(row.editions) ? row.editions.map((edition) => mapOwnerEdition((edition ?? {}) as Record<string, unknown>)) : [],
+    preferredEditionId: row.preferred_edition_id ? String(row.preferred_edition_id) : null,
+    migration: { required: migration.required === true, issues: issueFromUnknown(migration.issues) },
+    availableActions: stringArray(row.available_actions),
+    message: row.message ? String(row.message) : null,
+  };
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { mapCatalogueRow, mapOwnerEdition } from "./mappers";
-import type { AdminBrandInput, AdminEditionInput, AdminFestivalCatalogueRow, FestivalLifecycleState, OwnerEditionOption } from "./types";
+import { mapCatalogueRow, mapOwnerEdition, mapOwnerManagementBootstrap } from "./mappers";
+import type { AdminBrandInput, AdminEditionInput, AdminFestivalCatalogueRow, FestivalLifecycleState, OwnerEditionOption, OwnerManagementBootstrap } from "./types";
 
 type RpcName = keyof import("@/integrations/supabase/types").Database["public"]["Functions"];
 
@@ -54,6 +54,20 @@ export async function createAdminFestivalEdition(input: AdminEditionInput) {
 
 export async function transitionAdminFestivalEdition(editionId: string, targetStatus: FestivalLifecycleState, reason: string, override = false) {
   return rpc("admin_transition_festival_edition" as RpcName, { p_edition_id: editionId, p_target_status: targetStatus, p_reason: reason, p_override: override, p_metadata: { source: "admin_festival_workspace" }, p_idempotency_key: crypto.randomUUID() }, nonNullJson);
+}
+
+export async function fetchOwnerManagementBootstrap(identifier: string): Promise<OwnerManagementBootstrap> {
+  try {
+    const data = await rpc("festival_owner_management_bootstrap" as RpcName, { p_identifier: identifier }, jsonRecord);
+    return mapOwnerManagementBootstrap(data);
+  } catch (error) {
+    const cause = error instanceof FestivalAdminServiceError ? error.cause as { code?: string; message?: string; details?: string; hint?: string } | undefined : undefined;
+    const message = error instanceof Error ? error.message : "Festival management bootstrap failed.";
+    if (cause?.code === "PGRST202" || /festival_owner_management_bootstrap|schema cache|function/i.test(message)) {
+      return { status: "rpc_unavailable", inputId: identifier, identifierType: null, festival: null, authority: { isOwner: false, isAdmin: false, delegatedRoles: [], canCreateEdition: false, canManage: false }, editions: [], preferredEditionId: null, migration: { required: false, issues: [] }, availableActions: [], message: `Owner-management bootstrap RPC is not deployed. ${cause?.message ?? message}` };
+    }
+    throw error;
+  }
 }
 
 export async function fetchOwnerFestivalEditions(festivalId: string): Promise<OwnerEditionOption[]> {
