@@ -17,11 +17,11 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.558",
+    version: "1.1.559",
     date: "2026-07-16",
     changes: [
-      { type: 'fix', description: "Fixed 'no unique or exclusion constraint matching the ON CONFLICT specification' error hit by returning players creating a fresh character. Added a UNIQUE constraint on player_attributes.profile_id so the ensure_profile_progression_rows trigger's ON CONFLICT clause resolves cleanly." },
-      { type: 'feature', description: "Added a Returning Player Wizard: when a former player logs in with no living character, they now see a friendly 'Welcome back' intro step summarising resurrection lives, fame, and generation before advancing to the resurrect / continue bloodline / start fresh choices." },
+      { type: 'feature', description: "Completed the Returning Player Wizard for accounts logging in with no active character. The death screen is now a 4-step flow: (1) Welcome back — greets the player with a memorial card summarising their last character's name, cause of death, generation, fame, cash, skill count, and resurrection lives; (2) Choose your path — resurrect (if lives remain), continue the bloodline as a child, or start fresh; (3) Configure — collects a display name and username for new characters (username auto-slugs from the display name and can be overridden) or reviews the resurrection cost; (4) Confirm — a full summary of starting cash, fame, skills, and where the player will land next. The Back button lets players step through the wizard, a progress bar shows how far they've gone, and the new character is created with the chosen name so returners no longer arrive in-game as `player-abc12345-2`. Fresh accounts with no history still get a streamlined single-click welcome flow." },
+      { type: 'fix', description: "Fixed pre-existing type errors in the festival booking service (applications, contracts, offers, setlists) where several RPCs and tables aren't in the generated Supabase types yet." },
     ],
   },
   {
