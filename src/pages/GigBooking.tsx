@@ -64,9 +64,11 @@ const GigBooking = () => {
   
   // Filter state
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedCity, setSelectedCity] = useState<string>('all');
   const [selectedVenueSize, setSelectedVenueSize] = useState<string>('all');
   const [countries, setCountries] = useState<string[]>([]);
   const [playerCountry, setPlayerCountry] = useState<string | null>(null);
+  const [playerCity, setPlayerCity] = useState<string | null>(null);
 
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
