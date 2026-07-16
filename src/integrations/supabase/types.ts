@@ -10398,6 +10398,76 @@ export type Database = {
           },
         ]
       }
+      festival_editions: {
+        Row: {
+          id: string
+          festival_id: string
+          edition_number: number
+          edition_year: number | null
+          title: string | null
+          slug: string | null
+          description: string | null
+          city_id: string | null
+          venue_id: string | null
+          start_at: string | null
+          end_at: string | null
+          timezone: string
+          doors_open_at: string | null
+          curfew_at: string | null
+          expected_attendance: number | null
+          capacity: number | null
+          minimum_ticket_price_cents: number | null
+          maximum_ticket_price_cents: number | null
+          currency_code: string
+          budget_cents: number | null
+          treasury_allocation_cents: number | null
+          status: Database["public"]["Enums"]["festival_edition_status"]
+          lifecycle_metadata: Json
+          public_metadata: Json
+          legacy_metadata: Json
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          announced_at: string | null
+          on_sale_at: string | null
+          live_at: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+        }
+        Insert: Partial<Database["public"]["Tables"]["festival_editions"]["Row"]> & { festival_id: string; edition_number: number }
+        Update: Partial<Database["public"]["Tables"]["festival_editions"]["Row"]>
+        Relationships: []
+      }
+      festival_edition_lifecycle_events: {
+        Row: {
+          id: string
+          edition_id: string
+          from_status: Database["public"]["Enums"]["festival_edition_status"] | null
+          to_status: Database["public"]["Enums"]["festival_edition_status"]
+          actor_profile_id: string | null
+          reason: string | null
+          metadata: Json
+          idempotency_key: string | null
+          created_at: string
+        }
+        Insert: Partial<Database["public"]["Tables"]["festival_edition_lifecycle_events"]["Row"]> & { edition_id: string; to_status: Database["public"]["Enums"]["festival_edition_status"] }
+        Update: Partial<Database["public"]["Tables"]["festival_edition_lifecycle_events"]["Row"]>
+        Relationships: []
+      }
+      festival_legacy_mappings: {
+        Row: {
+          id: string
+          edition_id: string
+          legacy_source: "game_event" | "dedicated_festival_row" | "festival_lineup_source"
+          legacy_id: string
+          legacy_festival_id: string | null
+          created_at: string
+          metadata: Json
+        }
+        Insert: Partial<Database["public"]["Tables"]["festival_legacy_mappings"]["Row"]> & { edition_id: string; legacy_source: "game_event" | "dedicated_festival_row" | "festival_lineup_source"; legacy_id: string }
+        Update: Partial<Database["public"]["Tables"]["festival_legacy_mappings"]["Row"]>
+        Relationships: []
+      }
       festival_finances: {
         Row: {
           artist_bonuses_cents: number
@@ -37337,6 +37407,49 @@ export type Database = {
       }
     }
     Functions: {
+      create_festival_edition: {
+        Args: {
+          p_festival_id: string
+          p_title?: string | null
+          p_start_at?: string | null
+          p_end_at?: string | null
+          p_city_id?: string | null
+          p_venue_id?: string | null
+          p_expected_attendance?: number | null
+          p_capacity?: number | null
+          p_minimum_ticket_price_cents?: number | null
+          p_maximum_ticket_price_cents?: number | null
+          p_public_metadata?: Json
+        }
+        Returns: Database["public"]["Tables"]["festival_editions"]["Row"]
+      }
+      transition_festival_edition: {
+        Args: {
+          p_edition_id: string
+          p_target_status: Database["public"]["Enums"]["festival_edition_status"]
+          p_reason?: string | null
+          p_metadata?: Json
+          p_idempotency_key?: string | null
+        }
+        Returns: Database["public"]["Tables"]["festival_editions"]["Row"]
+      }
+      update_festival_edition_planning: {
+        Args: {
+          p_edition_id: string
+          p_title?: string | null
+          p_description?: string | null
+          p_start_at?: string | null
+          p_end_at?: string | null
+          p_city_id?: string | null
+          p_venue_id?: string | null
+          p_expected_attendance?: number | null
+          p_capacity?: number | null
+          p_minimum_ticket_price_cents?: number | null
+          p_maximum_ticket_price_cents?: number | null
+          p_public_metadata?: Json | null
+        }
+        Returns: Database["public"]["Tables"]["festival_editions"]["Row"]
+      }
       add_band_country_fame:
         | {
             Args: {
@@ -38268,6 +38381,20 @@ export type Database = {
       }
     }
     Enums: {
+      festival_edition_status:
+        | "concept"
+        | "planning"
+        | "applications_open"
+        | "booking"
+        | "announced"
+        | "on_sale"
+        | "setup"
+        | "live"
+        | "settling"
+        | "completed"
+        | "postponed"
+        | "cancelled"
+        | "abandoned"
       app_role: "admin" | "moderator" | "user"
       band_status: "active" | "on_hiatus" | "disbanded"
       book_reading_status: "reading" | "completed" | "abandoned"
