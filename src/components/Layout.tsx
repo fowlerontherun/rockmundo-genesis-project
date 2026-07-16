@@ -26,6 +26,7 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { FMShell } from "@/components/fm/FMShell";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -50,6 +51,9 @@ const Layout = () => {
 
   // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);
+
+  // Global auto-complete for recording sessions so finished studio bookings become recorded songs
+  useAutoRecordingCompletion(user?.id || null, profileId || null);
 
   // Auto-complete major events when game date passes event date
   useAutoMajorEventCompletion(user?.id || null);

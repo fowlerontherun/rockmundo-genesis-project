@@ -12,36 +12,75 @@ import { SongShareButtons } from "@/components/audio/SongShareButtons";
 
 interface RecordedSongsTabProps {
   userId: string;
+  profileId?: string | null;
   bandId?: string | null;
 }
 
 type SortOption = "newest" | "oldest" | "quality_high" | "quality_low" | "hype" | "fame" | "title";
 
-export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
+const recordedSongSelect = `
+  id, user_id, profile_id, band_id, title, genre, quality_score, status, updated_at, created_at, audio_url, audio_generation_status, hype, fame,
+  bands(name, artist_name)
+` as string;
+
+export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   const { data: recordedSongs, isLoading, error } = useQuery({
-    queryKey: ["recorded-songs-list", userId, bandId],
+    queryKey: ["recorded-songs-list", userId, profileId, bandId],
     queryFn: async () => {
-      // Get all songs with status = 'recorded' for this user
-      let songsQuery = supabase
-        .from("songs")
-        .select("*, bands(name, artist_name)")
-        .eq("status", "recorded")
-        .order("updated_at", { ascending: false });
+      const songResponses = bandId
+        ? [await supabase
+            .from("songs")
+            .select(recordedSongSelect)
+            .eq("status", "recorded")
+            .eq("band_id", bandId)
+            .order("updated_at", { ascending: false })
+            .limit(200)]
+        : await Promise.all([
+            profileId
+              ? supabase
+                  .from("songs")
+                  .select(recordedSongSelect)
+                  .eq("status", "recorded")
+                  .eq("profile_id", profileId)
+                  .is("band_id", null)
+                  .order("updated_at", { ascending: false })
+                  .limit(200)
+              : Promise.resolve({ data: [], error: null } as any),
+            userId
+              ? profileId
+                ? supabase
+                    .from("songs")
+                    .select(recordedSongSelect)
+                    .eq("status", "recorded")
+                    .eq("user_id", userId)
+                    .is("profile_id", null)
+                    .is("band_id", null)
+                    .order("updated_at", { ascending: false })
+                    .limit(200)
+                : supabase
+                    .from("songs")
+                    .select(recordedSongSelect)
+                    .eq("status", "recorded")
+                    .eq("user_id", userId)
+                    .is("band_id", null)
+                    .order("updated_at", { ascending: false })
+                    .limit(200)
+              : Promise.resolve({ data: [], error: null } as any),
+          ]);
 
-      songsQuery = bandId
-        ? songsQuery.eq("band_id", bandId)
-        : songsQuery.eq("user_id", userId).is("band_id", null);
+      for (const response of songResponses) {
+        if (response.error) throw response.error;
+      }
 
-      const { data: songs, error: songsError } = await songsQuery;
-
-      if (songsError) throw songsError;
+      const songs = Array.from(new Map(songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])).values())
+        .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
       // Get recording sessions for these songs
-      const songIds = songs?.map(s => s.id) || [];
+      const songIds = songs.map((s: any) => s.id) || [];
       let sessions: any[] = [];
 
       if (songIds.length > 0) {
@@ -69,7 +108,7 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
       }
 
       // Build result combining songs with their recording history
-      return songs?.map(song => {
+      return songs.map((song: any) => {
         const songRecordings = sessions.filter(s => s.song_id === song.id);
         const totalQualityGained = songRecordings.reduce((sum, r) => sum + (r.quality_improvement || 0), 0);
         const latestRecording = songRecordings[0]?.completed_at || song.updated_at;
@@ -80,9 +119,9 @@ export function RecordedSongsTab({ userId, bandId }: RecordedSongsTabProps) {
           totalQualityGained,
           latestRecording
         };
-      }) || [];
+      });
     },
-    enabled: !!userId
+    enabled: !!userId || !!profileId || !!bandId
   });
 
   // Extract unique genres for filter dropdown

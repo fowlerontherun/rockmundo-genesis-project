@@ -30,20 +30,44 @@ export default function RecordingStudio() {
   
   const currentCityId = currentCity?.id || "";
   
-  const { data: sessions, isLoading } = useRecordingSessions(profileId || "");
+  const { data: sessions, isLoading, error: sessionsError } = useRecordingSessions(profileId || null, session?.user?.id || null);
 
   useEffect(() => {
     const loadUserBand = async () => {
       if (!session?.user?.id) return;
 
-      const { data: bandMemberships, error } = await supabase
-        .from('band_members')
-        .select('band_id, bands!band_members_band_id_fkey(id, name, status, band_balance)')
-        .eq('user_id', session.user.id)
-        .eq('is_touring_member', false)
-        .eq('bands.status', 'active')
-        .limit(1)
-        .maybeSingle();
+      const profileMembership = profileId
+        ? await supabase
+            .from('band_members')
+            .select('band_id, bands!inner(id, name, status, band_balance)')
+            .eq('profile_id', profileId)
+            .eq('member_status', 'active')
+            .eq('is_touring_member', false)
+            .eq('bands.status', 'active')
+            .limit(1)
+            .maybeSingle()
+        : { data: null, error: null } as any;
+
+      const legacyMembership = !profileMembership.data
+        ? await supabase
+            .from('band_members')
+            .select('band_id, bands!inner(id, name, status, band_balance)')
+            .eq('user_id', session.user.id)
+            .eq('member_status', 'active')
+            .eq('is_touring_member', false)
+            .eq('bands.status', 'active')
+            .limit(1)
+            .maybeSingle()
+        : { data: null, error: null } as any;
+
+      const bandMemberships = profileMembership.data || legacyMembership.data;
+      const error = profileMembership.error || legacyMembership.error;
+
+      if (error) {
+        setUserBandId(null);
+        setLabelCompanyId(null);
+        return;
+      }
 
       if (bandMemberships?.band_id) {
         setUserBandId(bandMemberships.band_id);
@@ -65,7 +89,7 @@ export default function RecordingStudio() {
     };
 
     loadUserBand();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, profileId]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -172,6 +196,12 @@ export default function RecordingStudio() {
                 <div className="text-center py-8 text-muted-foreground">
                   {t('common.loading')}
                 </div>
+              ) : sessionsError ? (
+                <div className="text-center py-12 space-y-2 text-destructive">
+                  <AlertCircle className="h-12 w-12 mx-auto" />
+                  <p className="font-medium">Unable to load recording sessions</p>
+                  <p className="text-sm text-muted-foreground">{sessionsError instanceof Error ? sessionsError.message : 'Please try again.'}</p>
+                </div>
               ) : !sessions || sessions.length === 0 ? (
                 <div className="text-center py-12 space-y-4">
                   <Music className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -266,12 +296,18 @@ export default function RecordingStudio() {
                 Upcoming Recording Sessions
               </CardTitle>
               <CardDescription>
-                Sessions you've booked that haven't started yet
+                Sessions you've booked that are scheduled or still in progress
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+              ) : sessionsError ? (
+                <div className="text-center py-12 space-y-2 text-destructive">
+                  <AlertCircle className="h-12 w-12 mx-auto" />
+                  <p className="font-medium">Unable to load upcoming sessions</p>
+                  <p className="text-sm text-muted-foreground">{sessionsError instanceof Error ? sessionsError.message : 'Please try again.'}</p>
+                </div>
               ) : upcomingSessions.length === 0 ? (
                 <div className="text-center py-12 space-y-2">
                   <CalendarClock className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -327,7 +363,7 @@ export default function RecordingStudio() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RecordedSongsTab userId={session?.user?.id || ""} bandId={userBandId} />
+              <RecordedSongsTab userId={session?.user?.id || ""} profileId={profileId} bandId={userBandId} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -339,6 +375,7 @@ export default function RecordingStudio() {
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         userId={session?.user?.id || ""}
+        profileId={profileId}
         currentCityId={currentCityId}
         bandId={userBandId}
         labelCompanyId={labelCompanyId}

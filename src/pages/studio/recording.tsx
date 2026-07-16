@@ -118,7 +118,7 @@ export default function StudioRecordingDashboard() {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const { profileId } = useActiveProfile();
-  const { data: sessions, isLoading, error: sessionsError, refetch: refetchSessions } = useRecordingSessions(profileId || "");
+  const { data: sessions, isLoading, error: sessionsError, refetch: refetchSessions } = useRecordingSessions(profileId || null, userId || null);
   const queryClient = useQueryClient();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
@@ -139,7 +139,7 @@ export default function StudioRecordingDashboard() {
       } else {
         toast.success("Session status updated.");
       }
-      queryClient.invalidateQueries({ queryKey: ["recording-sessions", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Unable to update session status.");
@@ -159,7 +159,7 @@ export default function StudioRecordingDashboard() {
     },
     onSuccess: () => {
       toast.success("Session advanced to the next production stage.");
-      queryClient.invalidateQueries({ queryKey: ["recording-sessions", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
     },
     onError: (error: Error) => {
       toast.error(error.message ?? "Unable to advance the session stage.");

@@ -14,12 +14,13 @@ interface RecordingWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  profileId?: string | null;
   currentCityId: string;
   bandId?: string | null;
   labelCompanyId?: string | null;
 }
 
-export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, bandId, labelCompanyId }: RecordingWizardProps) => {
+export const RecordingWizard = ({ open, onOpenChange, userId, profileId, currentCityId, bandId, labelCompanyId }: RecordingWizardProps) => {
   const [activeTab, setActiveTab] = useState("studio");
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [recordingType, setRecordingType] = useState<'demo' | 'professional' | null>(null);
@@ -173,6 +174,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
               {selectedStudio && selectedSong && selectedProducer && recordingType && (
                 <SessionConfigurator
                   userId={userId}
+                  profileId={profileId}
                   bandId={bandId}
                   studio={selectedStudio}
                   song={selectedSong}
