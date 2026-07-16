@@ -29,3 +29,7 @@ Insurance quotes are stored and versioned in `festival_edition_insurance_quotes`
 ## Deferred settlement
 
 The model creates obligations and readiness evidence only. It does not apply career effects, pay guarantees, distribute revenue, calculate final taxes, or close settlement.
+
+## Settlement reconciliation
+
+Edition settlement reconciles existing operational ledger rows for staff, permits, insurance, system acts and other operational costs. It does not duplicate expenses already posted by operations.
