@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.536",
+    date: "2026-07-16",
+    changes: [
+      { type: 'improvement', description: "Wellness activities and lifestyle choices now directly affect health, energy, and mood stats. Completing a daily habit applies the template's stat bonuses with a streak multiplier (up to 1.5x at 10-day streaks). Performing any wellness activity now also layers your active lifestyle's health_regen, energy_regen, and mood_regen on top of the activity's own effects — so Straight Edge, Fitness Fanatic, Zen and other lifestyles actively shape recovery, while Party Animal and Bohemian drain it." },
+    ],
+  },
+  {
     version: "1.1.535",
     date: "2026-07-16",
     changes: [
