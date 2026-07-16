@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.548",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Open Mic upcoming list now shows sign-ups you just confirmed. The performances query was filtering by profile_id, but rows are stored against the auth user_id (per RLS), so the list was always empty and the venue appeared un-booked, letting you sign up again. Now filters by user_id." },
+      { type: 'fix', description: "Scheduled activity block for open mic sign-ups now uses the allowed 'performance' activity_type instead of 'open_mic', which violated the check constraint and silently failed to reserve the time slot." },
+    ],
+  },
+  {
     version: "1.1.547",
     date: "2026-07-16",
     changes: [
