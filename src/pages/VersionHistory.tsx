@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.556",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Added a Player Profile drawer on /social/players. Tapping any player card opens a right-side drawer showing their avatar, bio, level/fame/fans stats, home city, and every band they play in (with roles). The drawer includes a Send friend request / Accept / Already friends action so you can connect without leaving the browser, plus a shortcut to their full profile." },
+    ],
+  },
+  {
     version: "1.1.555",
     date: "2026-07-16",
     changes: [
