@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.555",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Add friend and Accept buttons on /social/players now always complete. The client used to call a `send_friend_request` RPC that isn't provisioned in this environment, so every request failed silently. sendFriendRequest now tries the RPC, and if it's missing falls back to a direct INSERT into friendships (which satisfies the existing RLS policy for requestors). It also detects an existing pending request from the other side and auto-accepts it, revives previously declined requests, and returns the existing row when a pending request already exists — so the button never gets stuck." },
+    ],
+  },
+  {
     version: "1.1.554",
     date: "2026-07-16",
     changes: [
