@@ -71,22 +71,22 @@ export default function OpenMicNights() {
   );
 
   const handleSignUp = (venueId: string) => {
-    if (!userBand) return;
+    if (!profileId) return;
     setSelectedVenue(venueId);
     setSelectorOpen(true);
   };
 
   const handleSongSelection = (song1Id: string, song2Id: string) => {
-    if (!selectedVenue || !userBand) return;
-    
+    if (!selectedVenue || !profileId) return;
+
     const venue = venues.find((v) => v.id === selectedVenue);
     if (!venue) return;
 
     const scheduledDate = getNextOpenMicDate(venue.day_of_week);
-    
+
     signUp.mutate({
       venueId: selectedVenue,
-      bandId: userBand.id,
+      bandId: userBand?.id,
       song1Id: song1Id,
       song2Id: song2Id,
       scheduledDate,
