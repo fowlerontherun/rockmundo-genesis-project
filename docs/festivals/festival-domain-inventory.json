@@ -788,5 +788,22 @@
     "audit_table": "festival_admin_audit_events",
     "settlement_readiness_rpc": "festival_edition_settlement_readiness",
     "legacy_policy": "read-only with preview migration tooling"
+  },
+  "operational_completion_20291212": {
+    "migration": "supabase/migrations/20291212090000_complete_festival_edition_operations.sql",
+    "adds": [
+      "festival_operation_migration_issues",
+      "festival_system_acts",
+      "festival_staff_candidates_persistent",
+      "festival_edition_insurance_quotes",
+      "festival_edition_budget_changes",
+      "festival_edition_poster_versions"
+    ],
+    "deferred": [
+      "career effects",
+      "final payments",
+      "tax settlement",
+      "edition closure"
+    ]
   }
 }

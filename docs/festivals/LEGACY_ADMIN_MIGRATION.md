@@ -14,3 +14,7 @@ The canonical admin page no longer creates, edits or deletes festival `game_even
 4. Mark the source read-only and preserve metadata.
 
 The preview RPC is side-effect free and reports `mutates_data: false`.
+
+## 2029-12-12 operational completion update
+
+The canonical edition operations PR completes the PR #1210 foundation by adding edition-scoped operational RPCs, deterministic operational backfill, migration issues, persistent system acts, persistent staff candidates, permit and insurance workflows, controlled ledger posting, data-health repairs, legacy migration apply, and expanded settlement readiness. Career effects and final financial settlement remain deferred to `feat(festivals): apply career effects and settle performance contracts`.

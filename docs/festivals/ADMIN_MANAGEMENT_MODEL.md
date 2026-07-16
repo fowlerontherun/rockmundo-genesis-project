@@ -23,3 +23,7 @@ Server-side checks distinguish platform admins, owners and delegated edition man
 ## Audit
 
 `festival_admin_audit_events` records actor, authority, festival, edition, operation, target, before/after snapshots, reason, idempotency key and timestamp. Destructive or corrective operations require a reason.
+
+## 2029-12-12 operational completion update
+
+The canonical edition operations PR completes the PR #1210 foundation by adding edition-scoped operational RPCs, deterministic operational backfill, migration issues, persistent system acts, persistent staff candidates, permit and insurance workflows, controlled ledger posting, data-health repairs, legacy migration apply, and expanded settlement readiness. Career effects and final financial settlement remain deferred to `feat(festivals): apply career effects and settle performance contracts`.

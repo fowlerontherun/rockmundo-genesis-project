@@ -14,3 +14,36 @@ SELECT col_exists('public','festival_staff','edition_id','staff belongs to editi
 SELECT col_exists('public','festival_permits','edition_id','permits belong to editions');
 SELECT col_exists('public','festival_insurance_policies','edition_id','insurance belongs to editions');
 SELECT col_exists('public','festival_expense_ledger','edition_id','ledger belongs to editions');
+
+-- Operational completion harness additions.
+SELECT has_table('public','festival_operation_migration_issues','operational migration issues table exists');
+SELECT has_table('public','festival_system_acts','canonical system acts table exists');
+SELECT has_table('public','festival_staff_candidates_persistent','persistent staff candidates table exists');
+SELECT has_table('public','festival_edition_insurance_quotes','stored insurance quotes table exists');
+SELECT has_table('public','festival_edition_budget_changes','budget changes are audited');
+SELECT has_table('public','festival_edition_poster_versions','poster versions are edition scoped');
+SELECT has_function('public','create_festival_edition_stage','stage creation RPC exists');
+SELECT has_function('public','update_festival_edition_stage','stage update RPC exists');
+SELECT has_function('public','archive_festival_edition_stage','stage archive RPC exists');
+SELECT has_function('public','generate_festival_stage_slots','slot generation RPC exists');
+SELECT has_function('public','update_festival_stage_slot','slot update RPC exists');
+SELECT has_function('public','archive_festival_stage_slot','slot archive RPC exists');
+SELECT has_function('public','remove_festival_system_act','system act removal RPC exists');
+SELECT has_function('public','move_festival_system_act','system act movement RPC exists');
+SELECT has_function('public','hire_festival_edition_staff','staff hire RPC exists');
+SELECT has_function('public','festival_edition_staffing_readiness','staffing readiness projection exists');
+SELECT has_function('public','festival_edition_permit_requirements','permit requirements projection exists');
+SELECT has_function('public','apply_for_festival_edition_permit','permit application RPC exists');
+SELECT has_function('public','admin_approve_festival_edition_permit','admin permit approval RPC exists');
+SELECT has_function('public','quote_festival_edition_insurance','insurance quote RPC exists');
+SELECT has_function('public','purchase_festival_edition_insurance','insurance purchase RPC exists');
+SELECT has_function('public','post_festival_edition_ledger_entry','canonical ledger posting RPC exists');
+SELECT has_function('public','festival_edition_finance_summary','finance summary projection exists');
+SELECT has_function('public','preview_copy_festival_edition','edition copy preview exists');
+SELECT has_function('public','copy_festival_edition','edition copy apply exists');
+SELECT has_function('public','admin_apply_legacy_festival_migration','legacy apply RPC exists');
+SELECT has_function('public','festival_data_health','data-health projection exists');
+SELECT has_function('public','repair_festival_data_health_issue','safe data-health repair RPC exists');
+SELECT col_exists('public','festival_stage_slots','start_time','slots use canonical timestamps');
+SELECT col_exists('public','festival_expense_ledger','source_type','ledger records source type');
+SELECT col_exists('public','festival_expense_ledger','source_id','ledger records source id');

@@ -73,3 +73,50 @@ export type OwnerEditionOption = {
 export type PermissionRole = "platform_admin" | "festival_owner" | "delegated_manager" | "talent_booker" | "finance_manager" | "operations_manager" | "stage_manager" | "safety_officer";
 
 export type PermissionProjection = Record<"manageBrand" | "manageEdition" | "manageLifecycle" | "manageLineup" | "manageFinance" | "manageOperations" | "viewOutcomes", boolean>;
+
+export type StageInput = {
+  editionId: string;
+  name: string;
+  type?: string;
+  capacity?: number;
+  genreFocus?: string | null;
+  stageSize?: string | null;
+  soundCapability?: string | null;
+  lightingCapability?: string | null;
+  backstageCapability?: string | null;
+  weatherProtection?: string | null;
+  changeoverDuration?: number;
+  curfew?: string | null;
+  technicalMetadata?: Record<string, unknown>;
+  publicMetadata?: Record<string, unknown>;
+  idempotencyKey: string;
+};
+
+export type SlotTemplate = {
+  type: "opener" | "support" | "headline" | "dj_intermission" | "host" | "flexible" | "reserved_emergency";
+  start_time: string;
+  duration_minutes: number;
+};
+
+export type SlotGenerationInput = {
+  stageId: string;
+  date: string;
+  openingTime: string;
+  curfew: string;
+  templates: SlotTemplate[];
+  changeoverDuration?: number;
+  soundcheckPolicy?: Record<string, unknown>;
+  idempotencyKey: string;
+  apply?: boolean;
+};
+
+export type StaffHireInput = {
+  editionId: string;
+  candidateId: string;
+  role: string;
+  wageCents: number;
+  assignmentScope?: Record<string, unknown>;
+  shiftStartAt?: string | null;
+  shiftEndAt?: string | null;
+  idempotencyKey: string;
+};
