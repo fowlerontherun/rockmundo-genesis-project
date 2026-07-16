@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle, Loader2, Hourglass, XCircle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
@@ -99,7 +99,15 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         };
       });
     },
-    enabled: !!userId || !!profileId || !!bandId
+    enabled: !!userId || !!profileId || !!bandId,
+    refetchInterval: (query) => {
+      const rows = (query.state.data as any[]) || [];
+      const active = rows.some((r: any) => {
+        const s = (r?.song?.audio_generation_status || '').toLowerCase();
+        return s === 'generating' || s === 'processing' || s === 'in_progress' || s === 'queued' || s === 'pending';
+      });
+      return active ? 15000 : false;
+    },
   });
 
   // Extract unique genres for filter dropdown
@@ -237,9 +245,54 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
 
       <div className="grid gap-4 max-w-full">
         {filteredSongs.map((item) => {
-          const hasAudio = item.song.audio_url && item.song.audio_generation_status === 'completed';
+          const genStatus = (item.song.audio_generation_status || '').toLowerCase();
+          const hasAudio = !!item.song.audio_url && (genStatus === 'completed' || genStatus === '');
+          const isProcessing = genStatus === 'generating' || genStatus === 'processing' || genStatus === 'in_progress';
+          const isQueued = genStatus === 'queued' || genStatus === 'pending';
+          const isFailed = genStatus === 'failed' || genStatus === 'error';
           const artistName = item.song.bands?.artist_name || item.song.bands?.name || 'Unknown Artist';
-          
+
+          const renderAiStatusBadge = () => {
+            if (hasAudio && item.song.audio_url) {
+              return (
+                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                  <Volume2 className="h-3 w-3 mr-1" />
+                  AI Audio Ready
+                </Badge>
+              );
+            }
+            if (isProcessing) {
+              return (
+                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Processing
+                </Badge>
+              );
+            }
+            if (isQueued) {
+              return (
+                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                  <Hourglass className="h-3 w-3 mr-1" />
+                  Queued
+                </Badge>
+              );
+            }
+            if (isFailed) {
+              return (
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Generation Failed
+                </Badge>
+              );
+            }
+            return (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                <Hourglass className="h-3 w-3 mr-1" />
+                Awaiting AI Audio
+              </Badge>
+            );
+          };
+
           return (
             <Card key={item.song.id}>
               <CardContent className="p-4">
@@ -249,12 +302,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       <Music className="h-4 w-4 text-primary shrink-0" />
                       <h3 className="font-semibold break-words min-w-0">{item.song.title}</h3>
                       <Badge variant="secondary" className="text-xs">{item.song.genre}</Badge>
-                      {hasAudio && (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-                          <Volume2 className="h-3 w-3 mr-1" />
-                          AI Audio
-                        </Badge>
-                      )}
+                      {renderAiStatusBadge()}
                       {(item.song.hype || 0) > 0 && (
                         <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
                           <Flame className="h-3 w-3 mr-1" />

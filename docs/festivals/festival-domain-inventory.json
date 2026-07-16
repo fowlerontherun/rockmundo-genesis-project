@@ -705,7 +705,10 @@
     "playerRoute": "/festivals",
     "ownerRoute": "/festivals/:festivalId/manage",
     "modeHelper": "getFestivalBookingMode",
-    "deferred": ["canonical performance sessions", "financial settlement"]
+    "deferred": [
+      "canonical performance sessions",
+      "financial settlement"
+    ]
   },
   "bookingUiHardening": {
     "status": "partial-hardening-landed",
@@ -714,24 +717,6 @@
       "Booking components split into focused modules",
       "Stable idempotency hook added",
       "Performance sessions and settlement deferred"
-    ]
-  },
-  "booking_workspace_completion": {
-    "migration": "20291208090000_complete_festival_booking_workspaces.sql",
-    "projections": [
-      "festival_represented_bands",
-      "festival_application_eligibility",
-      "festival_invitation_candidates",
-      "festival_booking_slots",
-      "festival_contract_repertoire",
-      "festival_setlist_preflight"
-    ],
-    "deferred": [
-      "canonical performance sessions",
-      "outcome scoring",
-      "fame updates",
-      "payments",
-      "financial settlement"
     ]
   }
 }

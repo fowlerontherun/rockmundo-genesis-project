@@ -1,11 +1,1 @@
-export function OrganiserSetlistQueue() {
-  return (
-    <section className="space-y-3">
-      <h3 className="font-semibold">Setlists needing review</h3>
-      <p className="text-sm text-muted-foreground">
-        Submitted setlists requiring review appear with their contract detail
-        once available.
-      </p>
-    </section>
-  );
-}
+export function OrganiserSetlistQueue(){return <section className="space-y-3"><h3 className="font-semibold">Setlists needing review</h3><p className="text-sm text-muted-foreground">Submitted setlists requiring review appear with their contract detail once available.</p></section>}

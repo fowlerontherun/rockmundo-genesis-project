@@ -56,7 +56,3 @@ Canonical performance sessions, arrival/readiness validation, locked-setlist con
 ## Booking UI hardening follow-up
 
 The PR #1195 scaffold has been split into focused booking components and now uses explicit booking projection types, stable deliberate-action idempotency keys, readable offer/contract terms and state-aware progress. Canonical and legacy routes remain separated; legacy history continues to be read-only from the canonical hub until canonical performance sessions are introduced.
-
-## Completion pass after PR #1196
-
-The canonical booking UI migration now has projection services for represented bands, application eligibility, organiser invitations, booking slots, contract repertoire and setlist preflight. The hand-written Supabase booking facade was removed; booking services use the normal typed Supabase client with isolated temporary RPC casts pending regenerated database types.

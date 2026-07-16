@@ -102,6 +102,7 @@ Remaining canonicalisation work is intentionally deferred: applications, contrac
 
 Canonical festival booking now follows application -> offer revision -> contract -> signature -> active lineup. Applications and offers are not bookings; only fully signed active contracts can reserve a compatible stage slot. Public projections exclude contract economics and signatures. Performance simulation and settlement remain deferred.
 
+
 ## Booking hardening decision
 
 Canonical festival booking mutations are database-authoritative. Band authority follows leader/founder/co-leader/manager roles, idempotency is centralised in `festival_booking_requests`, offers/contracts/setlists are versioned immutably, and public reads use safe projections only.
@@ -113,7 +114,3 @@ The primary player festival route (`/festivals`) and organiser management bookin
 ## Booking UI hardening addendum
 
 Canonical booking UI code is now organised by workflow component rather than a monolithic shared file. The UI treats idempotency keys as deliberate-action state that survives retries, renders terms through typed projections, and keeps legacy booking/history reads separated from canonical writes. Performance sessions, audience simulation, settlement and rewards remain outside this ADR checkpoint.
-
-## Booking workspace completion decision
-
-Canonical booking workspaces use additive server projections for represented bands, application eligibility, invitation candidates, booking slots, repertoire and setlist preflight. Client components may map these projections into view models, but they must not invent booking authority, song permissions or application blockers. Performance sessions, outcomes, rewards and settlement remain outside the booking-workspace boundary.

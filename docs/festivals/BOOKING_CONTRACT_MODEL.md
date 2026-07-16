@@ -46,6 +46,7 @@ Contract cancellation requires a reason and releases compatible stage-slot claim
 
 Canonical performance sessions, attendance simulation, fame, money, merch, reward settlement, full stage migration and historical performance migration are deferred to follow-up PRs.
 
+
 ## 20291207090000 hardening correction
 
 The booking model now treats offer revisions and contract versions as immutable authority, with `festival_booking_requests` for idempotency, `festival_stage_slot_reservations` for slot concurrency, server-side band authority helpers, atomic activation, and immutable current setlist versions.
@@ -57,7 +58,3 @@ Player and organiser UI now consume canonical application, offer, contract and s
 ## UI contract handling update
 
 The booking UI now renders contract terms through readable sections shared with offer summaries. Signing actions are presented as authorised-side actions with immutable version acknowledgement, rather than letting users choose an arbitrary signing side from generic UI state.
-
-## Workspace authority projections
-
-Booking workspaces must treat signing, negotiating, cancellation, setlist review and setlist lock authority as server-projected data. UI components may hide or disable unavailable actions, but the canonical RPCs remain authoritative and must reject stale or unauthorised writes.

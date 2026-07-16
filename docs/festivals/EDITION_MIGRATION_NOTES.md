@@ -37,4 +37,5 @@ Owner screens now share deterministic managed-edition selection. The run wizard 
 
 The booking migration also corrects public edition reads before introducing player-facing application RPCs by adding the `public_festival_editions_read()` security-definer function. The function returns only the same safe public projection as `public_festival_editions`, grants execution to `anon` and `authenticated`, and does not add direct public `SELECT` policies on private `festival_editions` columns.
 
+
 - `20291207090000_harden_festival_booking_contracts.sql` sorts after the booking foundation (`20291206090000`) and records the corrective hardening for idempotency, slot reservations, immutable versions, schedule blocks and public/private projections.

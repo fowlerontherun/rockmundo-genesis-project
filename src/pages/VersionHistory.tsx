@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.567",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Recording Studio → Recorded Songs: each track now shows an AI audio generation status badge — Queued, Processing (spinner), AI Audio Ready, Generation Failed, or Awaiting AI Audio. The list auto-refreshes every 15s while any song is still queued or processing so the badge flips to Ready without a reload." },
+    ],
+  },
+  {
     version: "1.1.566",
     date: "2026-07-16",
     changes: [
