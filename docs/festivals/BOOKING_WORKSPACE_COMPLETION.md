@@ -39,3 +39,7 @@ Implemented validation in this pass:
 - Focused Vitest coverage was added for the idempotency hook and projection mappers.
 
 Local Supabase reset and SQL harnesses still require a fully bootstrapped Supabase validation environment. Canonical performance sessions, performance outcomes, rewards and financial settlement remain deferred.
+
+## Handoff to performance sessions
+
+Active contracts now hand off to `ensure_festival_performance_session`, which requires a confirmed canonical stage reservation and an approved or locked current festival setlist. Booking workspaces remain responsible for applications, offers, signatures and setlist approval; the performance session layer owns arrival, readiness, soundcheck, stage call and live progression.

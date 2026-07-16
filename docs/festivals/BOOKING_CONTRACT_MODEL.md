@@ -61,3 +61,7 @@ The booking UI now renders contract terms through readable sections shared with 
 ## Workspace authority projections
 
 Booking workspaces must treat signing, negotiating, cancellation, setlist review and setlist lock authority as server-projected data. UI components may hide or disable unavailable actions, but the canonical RPCs remain authoritative and must reject stale or unauthorised writes.
+
+## Performance-session handoff
+
+An active `festival_contracts` row can produce exactly one `festival_performance_sessions` row. The session stores immutable setlist and readiness snapshots and creates settlement-pending completion evidence only. Financial settlement, guarantees, penalties and fame rewards are deferred to later outcome/settlement PRs.

@@ -117,3 +117,7 @@ Canonical booking UI code is now organised by workflow component rather than a m
 ## Booking workspace completion decision
 
 Canonical booking workspaces use additive server projections for represented bands, application eligibility, invitation candidates, booking slots, repertoire and setlist preflight. Client components may map these projections into view models, but they must not invent booking authority, song permissions or application blockers. Performance sessions, outcomes, rewards and settlement remain outside the booking-workspace boundary.
+
+## Follow-up: canonical performance sessions
+
+After booking activation, festival performance execution is canonicalised through `festival_performance_sessions` and its attendance, equipment, crew, incident and event-history child tables. The gig viewer and live UI are presentation consumers of this session state; they must not implement a parallel festival lifecycle or calculate rewards directly.

@@ -1,0 +1,11 @@
+import { describe, expect, it } from "vitest";
+import { calculateLateMinutes, canTransitionFestivalSession, festivalTimingWindows, healthReadiness, nextSetlistPosition, overallReadiness, publicProjectionIsPrivateSafe, realtimeInvalidationKeys } from "../model";
+
+describe("festival performance session model", () => {
+  it("validates the canonical transition graph", () => { expect(canTransitionFestivalSession("scheduled", "arrival_open")).toBe(true); expect(canTransitionFestivalSession("scheduled", "in_progress")).toBe(false); expect(canTransitionFestivalSession("in_progress", "completed")).toBe(true); });
+  it("calculates deterministic timing windows and late starts", () => { const w = festivalTimingWindows("2030-01-01T20:00:00.000Z", "2030-01-01T21:00:00.000Z"); expect(w.arrivalDeadlineAt).toBe("2030-01-01T19:15:00.000Z"); expect(w.stageCallAt).toBe("2030-01-01T19:45:00.000Z"); expect(calculateLateMinutes("2030-01-01T19:30:00.000Z", w.arrivalDeadlineAt)).toBe(15); });
+  it("bands health readiness without mutating wellness state", () => { expect(healthReadiness({ health: 95, energy: 90, morale: 80 })).toBe("excellent"); expect(healthReadiness({ fatigue: 90 })).toBe("compromised"); expect(healthReadiness({ illness: true })).toBe("unfit"); });
+  it("combines readiness dimensions", () => { expect(overallReadiness([{ status: "ready", blockers: [], warnings: [] }, { status: "strained", blockers: [], warnings: ["late"] }])).toBe("strained"); expect(overallReadiness([{ status: "ready", blockers: ["missing guitar"], warnings: [] }])).toBe("blocked"); });
+  it("advances song positions only through supported progression semantics", () => { expect(nextSetlistPosition(0, "start_song", 3)).toBe(0); expect(nextSetlistPosition(0, "complete_song", 3)).toBe(1); expect(nextSetlistPosition(1, "skip_song", 3)).toBe(2); expect(nextSetlistPosition(1, "curtail_remaining_set", 3)).toBe(3); });
+  it("guards public projection privacy and realtime invalidation", () => { expect(publicProjectionIsPrivateSafe({ public_status: "in_progress" })).toBe(true); expect(publicProjectionIsPrivateSafe({ health_snapshot: {} })).toBe(false); expect(realtimeInvalidationKeys("s1")).toContainEqual(["festival-session-events", "s1"]); });
+});
