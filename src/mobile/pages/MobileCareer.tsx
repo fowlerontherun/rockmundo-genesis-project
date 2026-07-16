@@ -24,7 +24,7 @@ export default function MobileCareer() {
   return <MobilePageShell>
     <MobileSectionHeader eyebrow="Career" title="Band command" description="Practice, write, rehearse and record without leaving the mobile shell." />
     {error && <MobileSectionCard title="Partial data issue" subtitle={error} action={<button onClick={refetch} className="text-xs font-semibold text-primary">Retry</button>} />}
-    <MobileSectionCard title="Current band" subtitle={profile?.stage_name || profile?.display_name || "Solo artist"} action={<MobileStatusBadge tone={currentActivity ? "info" : "neutral"}>{currentActivity ?? "Available"}</MobileStatusBadge>}>
+    <MobileSectionCard title="Current status" subtitle={profile?.display_name || profile?.username || "Solo artist"} action={<MobileStatusBadge tone={currentActivity ? "info" : "neutral"}>{currentActivity ?? "Available"}</MobileStatusBadge>}>
       <div className="grid grid-cols-2 gap-2">
         <MobileProgressCard label="Weekly XP" value={weeklyXp} detail="Progress from existing XP wallet" />
         <MobileProgressCard label="Readiness" value={topSkills[0] ? Math.min(100, Number(topSkills[0][1]) * 10) : 0} detail={topSkills[0] ? `${topSkills[0][0]} level ${topSkills[0][1]}` : "Build skills to improve"} />
