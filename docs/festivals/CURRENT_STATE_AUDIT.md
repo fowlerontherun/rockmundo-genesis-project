@@ -309,3 +309,9 @@ Flagged issues: browser score calculation, direct `bands.band_balance` and `band
 4. Which route should be canonical for discovery after migration: `/festivals` as browser, `/festivals/directory` as brand directory, or a tabbed shell combining both?
 5. Should `game_events` projection rows be one-to-one with `festival_editions`, and should existing event IDs remain stable for deep links?
 6. Are marketplace sale prices denominated in cents intended to affect player/band/company balances, or are they currently out-of-economy ownership transfers?
+
+## Implementation progress — canonical editions foundation
+
+The canonical edition foundation PR introduces `festival_editions` as the dated occurrence model beneath permanent `festivals` brand rows. It adds a server-validated edition lifecycle RPC, immutable lifecycle history, dedicated-festival backfill into first editions, and explicit legacy mappings for dedicated festival rows plus conservatively matched festival `game_events`.
+
+Legacy event/player flows remain active during this migration. Stage, slot, ticket, attendance, application, contract, setlist, performance and settlement tables are not re-keyed in this step and remain outstanding for later PRs.

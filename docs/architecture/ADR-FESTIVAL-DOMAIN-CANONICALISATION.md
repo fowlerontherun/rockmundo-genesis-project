@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -75,3 +75,17 @@ This ADR does not create the schema. It records the proposed direction for follo
 4. `feat(festivals): move performance settlement server-side`
 5. `refactor(festivals): migrate owner and admin tools to festival editions`
 6. `chore(festivals): stop and remove legacy festival writes after verification`
+
+## Accepted foundation implementation
+
+This PR establishes the first additive canonical schema layer:
+
+- `festival_editions` owns dated occurrence state, city, venue, capacity, ticket-price cents, budget allocation and lifecycle timestamps.
+- `festival_edition_status` is a PostgreSQL enum with: `concept`, `planning`, `applications_open`, `booking`, `announced`, `on_sale`, `setup`, `live`, `settling`, `completed`, `postponed`, `cancelled`, and `abandoned`.
+- `festival_edition_lifecycle_events` records immutable server-side lifecycle history with idempotency keys.
+- `festival_legacy_mappings` bridges canonical editions to `dedicated_festival_row`, conservatively matched `game_event`, and `festival_lineup_source` identifiers.
+- Owners derive edition-management rights from `festivals.owner_profile_id`; admins continue to use `public.has_role(auth.uid(), 'admin')`.
+- Direct browser writes are denied for edition, lifecycle and mapping tables. Mutations go through `create_festival_edition`, `update_festival_edition_planning`, and `transition_festival_edition`.
+- Compatibility remains explicit: owner tools may display canonical edition lifecycle, but brand-scoped staff, permits, insurance, marketplace and legacy event-backed player flows remain unchanged until later migrations.
+
+Unresolved migration items remain canonical applications, contracts, setlists, performances, stage/slot re-keying, tickets, attendance, settlement, reward ledgers, audience/incident/vendor/staff-shift systems, and final legacy withdrawal.

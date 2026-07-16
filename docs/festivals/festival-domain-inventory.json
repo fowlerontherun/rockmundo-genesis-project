@@ -281,7 +281,10 @@
     }
   ],
   "utilities": [
-    { "path": "src/data/festivals.ts", "classification": "mock/static data" },
+    {
+      "path": "src/data/festivals.ts",
+      "classification": "mock/static data"
+    },
     {
       "path": "src/utils/festivalCareerImpact.ts",
       "classification": "client-side reward impact utility"
@@ -292,31 +295,70 @@
     }
   ],
   "tables": [
-    { "name": "game_events", "classification": "legacy event authority" },
+    {
+      "name": "game_events",
+      "classification": "legacy event authority"
+    },
     {
       "name": "festival_participants",
       "classification": "legacy participation"
     },
-    { "name": "festival_revenue_streams", "classification": "legacy finance" },
-    { "name": "festival_stages", "classification": "hybrid event-backed" },
-    { "name": "festival_stage_slots", "classification": "hybrid event-backed" },
-    { "name": "festival_tickets", "classification": "hybrid event-backed" },
-    { "name": "festival_attendance", "classification": "hybrid event-backed" },
+    {
+      "name": "festival_revenue_streams",
+      "classification": "legacy finance"
+    },
+    {
+      "name": "festival_stages",
+      "classification": "hybrid event-backed"
+    },
+    {
+      "name": "festival_stage_slots",
+      "classification": "hybrid event-backed"
+    },
+    {
+      "name": "festival_tickets",
+      "classification": "hybrid event-backed"
+    },
+    {
+      "name": "festival_attendance",
+      "classification": "hybrid event-backed"
+    },
     {
       "name": "festival_watch_rewards",
       "classification": "hybrid event-backed"
     },
-    { "name": "festival_finances", "classification": "hybrid summary finance" },
-    { "name": "festival_quality_ratings", "classification": "hybrid quality" },
+    {
+      "name": "festival_finances",
+      "classification": "hybrid summary finance"
+    },
+    {
+      "name": "festival_quality_ratings",
+      "classification": "hybrid quality"
+    },
     {
       "name": "festival_performance_history",
       "classification": "hybrid performance history"
     },
-    { "name": "festival_sponsorships", "classification": "hybrid sponsorship" },
-    { "name": "festival_rivalries", "classification": "hybrid rivalry" },
-    { "name": "festival_reviews", "classification": "hybrid reviews" },
-    { "name": "festival_merch_sales", "classification": "hybrid merch" },
-    { "name": "festival_slot_offers", "classification": "hybrid offers" },
+    {
+      "name": "festival_sponsorships",
+      "classification": "hybrid sponsorship"
+    },
+    {
+      "name": "festival_rivalries",
+      "classification": "hybrid rivalry"
+    },
+    {
+      "name": "festival_reviews",
+      "classification": "hybrid reviews"
+    },
+    {
+      "name": "festival_merch_sales",
+      "classification": "hybrid merch"
+    },
+    {
+      "name": "festival_slot_offers",
+      "classification": "hybrid offers"
+    },
     {
       "name": "festival_offer_negotiations",
       "classification": "hybrid negotiations"
@@ -325,8 +367,14 @@
       "name": "festival_backstage_events",
       "classification": "hybrid incidents"
     },
-    { "name": "festivals", "classification": "canonical brand candidate" },
-    { "name": "festival_lineups", "classification": "dedicated but uncertain" },
+    {
+      "name": "festivals",
+      "classification": "canonical brand candidate"
+    },
+    {
+      "name": "festival_lineups",
+      "classification": "dedicated but uncertain"
+    },
     {
       "name": "festival_sale_listings",
       "classification": "canonical brand marketplace"
@@ -373,27 +421,78 @@
   ],
   "edge_functions": [],
   "statuses": [
-    { "name": "pending", "classification": "overloaded" },
-    { "name": "invited", "classification": "legacy participant" },
+    {
+      "name": "pending",
+      "classification": "overloaded"
+    },
+    {
+      "name": "invited",
+      "classification": "legacy participant"
+    },
     {
       "name": "confirmed",
       "classification": "overloaded participant/festival"
     },
-    { "name": "performed", "classification": "legacy terminal participant" },
-    { "name": "withdrawn", "classification": "legacy participant" },
-    { "name": "rejected", "classification": "application/offer" },
-    { "name": "accepted", "classification": "application/offer/negotiation" },
-    { "name": "declined", "classification": "legacy participant constraint" },
-    { "name": "cancelled", "classification": "overloaded terminal" },
-    { "name": "postponed", "classification": "festival lifecycle" },
-    { "name": "draft", "classification": "festival lifecycle" },
-    { "name": "published", "classification": "festival lifecycle" },
-    { "name": "announced", "classification": "festival lifecycle" },
-    { "name": "live", "classification": "festival lifecycle" },
-    { "name": "completed", "classification": "activity/edition target" },
-    { "name": "booked", "classification": "stage slot" },
-    { "name": "approved", "classification": "permit" },
-    { "name": "upcoming", "classification": "dedicated festival seed" }
+    {
+      "name": "performed",
+      "classification": "legacy terminal participant"
+    },
+    {
+      "name": "withdrawn",
+      "classification": "legacy participant"
+    },
+    {
+      "name": "rejected",
+      "classification": "application/offer"
+    },
+    {
+      "name": "accepted",
+      "classification": "application/offer/negotiation"
+    },
+    {
+      "name": "declined",
+      "classification": "legacy participant constraint"
+    },
+    {
+      "name": "cancelled",
+      "classification": "overloaded terminal"
+    },
+    {
+      "name": "postponed",
+      "classification": "festival lifecycle"
+    },
+    {
+      "name": "draft",
+      "classification": "festival lifecycle"
+    },
+    {
+      "name": "published",
+      "classification": "festival lifecycle"
+    },
+    {
+      "name": "announced",
+      "classification": "festival lifecycle"
+    },
+    {
+      "name": "live",
+      "classification": "festival lifecycle"
+    },
+    {
+      "name": "completed",
+      "classification": "activity/edition target"
+    },
+    {
+      "name": "booked",
+      "classification": "stage slot"
+    },
+    {
+      "name": "approved",
+      "classification": "permit"
+    },
+    {
+      "name": "upcoming",
+      "classification": "dedicated festival seed"
+    }
   ],
   "mutations": [
     {
@@ -522,5 +621,39 @@
       "path": "src/pages/admin/FestivalsAdmin.tsx",
       "classification": "merge after admin migration"
     }
-  ]
+  ],
+  "canonical_foundation": {
+    "tables": [
+      "festival_editions",
+      "festival_edition_lifecycle_events",
+      "festival_legacy_mappings"
+    ],
+    "rpcs": [
+      "create_festival_edition",
+      "update_festival_edition_planning",
+      "transition_festival_edition"
+    ],
+    "frontend_services": [
+      "src/features/festivals/types.ts",
+      "src/features/festivals/service.ts",
+      "src/features/festivals/lifecycle.ts",
+      "src/features/festivals/legacyResolver.ts"
+    ],
+    "statuses": [
+      "concept",
+      "planning",
+      "applications_open",
+      "booking",
+      "announced",
+      "on_sale",
+      "setup",
+      "live",
+      "settling",
+      "completed",
+      "postponed",
+      "cancelled",
+      "abandoned"
+    ],
+    "compatibility": "Existing festivals rows are permanent brands; existing game_events festival player flows remain active and can be mapped through festival_legacy_mappings."
+  }
 }
