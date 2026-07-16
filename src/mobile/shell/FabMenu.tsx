@@ -18,10 +18,10 @@ function orderFor(pathname: string, base: Action[]): Action[] {
     const set = new Set(keys);
     return [...base.filter((a) => set.has(a.key)), ...base.filter((a) => !set.has(a.key))];
   };
-  if (pathname.startsWith("/mobile/career")) return bucket(["practice", "write", "book-studio", "book-rehearsal", "jam"]);
-  if (pathname.startsWith("/mobile/social")) return bucket(["message", "twaater", "jam"]);
-  if (pathname.startsWith("/mobile/world")) return bucket(["travel", "shop", "book-studio"]);
-  if (pathname.startsWith("/mobile/me")) return bucket(["sleep", "eat", "shop"]);
+  if (pathname.startsWith("/mobile/career") || pathname.startsWith("/career")) return bucket(["practice", "write", "book-studio", "book-rehearsal", "jam"]);
+  if (pathname.startsWith("/mobile/social") || pathname.startsWith("/social")) return bucket(["message", "twaater", "jam"]);
+  if (pathname.startsWith("/mobile/world") || pathname.startsWith("/world")) return bucket(["travel", "shop", "book-studio"]);
+  if (pathname.startsWith("/mobile/me") || pathname.startsWith("/me") || pathname.startsWith("/character")) return bucket(["sleep", "eat", "shop"]);
   return base;
 }
 

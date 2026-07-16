@@ -4,6 +4,7 @@ import "../theme/tokens.css";
 import { TopAppBar } from "./TopAppBar";
 import { BottomNav } from "./BottomNav";
 import { FabMenu } from "./FabMenu";
+import { MobileActivityBar } from "./MobileActivityBar";
 
 export const MobileShell = ({ children }: { children?: ReactNode }) => {
   useEffect(() => {
@@ -16,12 +17,13 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
       <TopAppBar />
       <main
         className="rm-mobile-scroll flex-1"
-        style={{ paddingBottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 90px)" }}
+        style={{ paddingBottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 120px)" }}
       >
         <div className="px-3 pt-3 pb-6 space-y-3">
           {children ?? <Outlet />}
         </div>
       </main>
+      <MobileActivityBar />
       <FabMenu />
       <BottomNav />
     </div>

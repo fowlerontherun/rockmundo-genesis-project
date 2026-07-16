@@ -10,6 +10,11 @@ const TITLES: Record<string, string> = {
   "/mobile/social": "Social",
   "/mobile/world": "World",
   "/mobile/me": "Me",
+  "/career": "Career",
+  "/social": "Social",
+  "/world": "World",
+  "/me": "Me",
+  "/character": "Me",
 };
 
 export const TopAppBar = () => {

@@ -24,6 +24,12 @@ import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { FMShell } from "@/components/fm/FMShell";
+import { MobileShell } from "@/mobile/shell/MobileShell";
+import MobileHome from "@/mobile/pages/MobileHome";
+import MobileCareer from "@/mobile/pages/MobileCareer";
+import MobileSocial from "@/mobile/pages/MobileSocial";
+import MobileWorld from "@/mobile/pages/MobileWorld";
+import MobileMe from "@/mobile/pages/MobileMe";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
@@ -108,8 +114,21 @@ const Layout = () => {
   // every tap bounces back to /mobile.
   if (isMobile) {
     const path = typeof window !== "undefined" ? window.location.pathname : "";
-    if (path === "/" || path === "/home" || path === "/index") {
-      return <Navigate to="/mobile" replace />;
+    const mobileSection = (() => {
+      if (path === "/" || path === "/home" || path === "/index") return <MobileHome />;
+      if (path === "/career" || path === "/career/overview") return <MobileCareer />;
+      if (path === "/social" || path === "/social/overview") return <MobileSocial />;
+      if (path === "/world" || path === "/world/overview") return <MobileWorld />;
+      if (path === "/me" || path === "/character" || path === "/character/overview") return <MobileMe />;
+      return null;
+    })();
+
+    if (mobileSection) {
+      return (
+        <MobileShell>
+          <CharacterGate>{mobileSection}</CharacterGate>
+        </MobileShell>
+      );
     }
   }
 
