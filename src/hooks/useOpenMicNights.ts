@@ -180,7 +180,7 @@ export function useSignUpForOpenMic() {
       venueName,
     }: {
       venueId: string;
-      bandId: string;
+      bandId?: string | null;
       song1Id: string;
       song2Id: string;
       scheduledDate: Date;
@@ -205,7 +205,7 @@ export function useSignUpForOpenMic() {
         .from('open_mic_performances')
         .insert({
           user_id: profileId,
-          band_id: bandId,
+          band_id: bandId ?? null,
           venue_id: venueId,
           song_1_id: song1Id,
           song_2_id: song2Id,
@@ -230,7 +230,7 @@ export function useSignUpForOpenMic() {
           title: `Open Mic at ${venueName}`,
           description: 'Open mic night performance - 2 songs',
           metadata: {
-            band_id: bandId,
+            band_id: bandId ?? null,
             linked_open_mic_id: data.id,
           },
         });

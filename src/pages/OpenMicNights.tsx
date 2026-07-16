@@ -71,22 +71,22 @@ export default function OpenMicNights() {
   );
 
   const handleSignUp = (venueId: string) => {
-    if (!userBand) return;
+    if (!profileId) return;
     setSelectedVenue(venueId);
     setSelectorOpen(true);
   };
 
   const handleSongSelection = (song1Id: string, song2Id: string) => {
-    if (!selectedVenue || !userBand) return;
-    
+    if (!selectedVenue || !profileId) return;
+
     const venue = venues.find((v) => v.id === selectedVenue);
     if (!venue) return;
 
     const scheduledDate = getNextOpenMicDate(venue.day_of_week);
-    
+
     signUp.mutate({
       venueId: selectedVenue,
-      bandId: userBand.id,
+      bandId: userBand?.id,
       song1Id: song1Id,
       song2Id: song2Id,
       scheduledDate,
@@ -118,10 +118,10 @@ export default function OpenMicNights() {
       </Alert>
 
       {!userBand && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert>
+          <Info className="h-4 w-4" />
           <AlertDescription>
-            You need to be in a band to perform at open mic nights.
+            You're performing solo. Any completed song you've written is eligible — no band or recording required.
           </AlertDescription>
         </Alert>
       )}
@@ -209,7 +209,7 @@ export default function OpenMicNights() {
                         <Button
                           className="w-full"
                           size="sm"
-                          disabled={!userBand || !isCurrentCity}
+                          disabled={!profileId || !isCurrentCity}
                           onClick={() => handleSignUp(venue.id)}
                         >
                           <Music className="h-4 w-4 mr-2" />
@@ -217,7 +217,7 @@ export default function OpenMicNights() {
                         </Button>
                       )}
                       
-                      {!isCurrentCity && userBand && (
+                      {!isCurrentCity && (
                         <p className="text-xs text-muted-foreground text-center mt-2">
                           Travel to this city to sign up
                         </p>
@@ -338,14 +338,13 @@ export default function OpenMicNights() {
       </Tabs>
 
       {/* Song Selector Modal */}
-      {userBand && (
-        <OpenMicSongSelector
-          open={selectorOpen}
-          onOpenChange={setSelectorOpen}
-          bandId={userBand.id}
-          onConfirm={handleSongSelection}
-        />
-      )}
+      <OpenMicSongSelector
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        bandId={userBand?.id}
+        profileId={profileId}
+        onConfirm={handleSongSelection}
+      />
     </FMPageScaffold>
   );
 }

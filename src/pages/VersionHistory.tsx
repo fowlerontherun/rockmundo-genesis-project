@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.543",
+    date: "2026-07-16",
+    changes: [
+      { type: 'feature', description: "Open Mic Nights now accept any completed song — it no longer needs to be recorded. Solo players can also sign up without being in a band; their profile-owned completed songs are eligible. The song picker filters by `completed_at IS NOT NULL` and pulls band songs when in a band, or the player's personal songs when performing solo." },
+    ],
+  },
+  {
     version: "1.1.542",
     date: "2026-07-16",
     changes: [
