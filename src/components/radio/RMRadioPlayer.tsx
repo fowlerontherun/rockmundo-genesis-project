@@ -492,7 +492,6 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Initialize playlist when songs and content load
   // Initialize (or refresh) playlist when songs and content load. This also
   // re-runs whenever the song count changes, so newly generated AI tracks are
   // picked up without needing a page reload.
