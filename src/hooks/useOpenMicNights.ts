@@ -166,7 +166,7 @@ export function useOpenMicSongPerformances(performanceId: string | null) {
 }
 
 export function useSignUpForOpenMic() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -186,7 +186,7 @@ export function useSignUpForOpenMic() {
       scheduledDate: Date;
       venueName: string;
     }) => {
-      if (!profileId) throw new Error('Must be logged in');
+      if (!profileId || !userId) throw new Error('Must be logged in');
 
       // Check if time slot is available (open mic is ~30 min for 2 songs)
       const endDate = new Date(scheduledDate.getTime() + 30 * 60 * 1000);
@@ -204,7 +204,7 @@ export function useSignUpForOpenMic() {
       const { data, error } = await supabase
         .from('open_mic_performances')
         .insert({
-          user_id: profileId,
+          user_id: userId,
           band_id: bandId ?? null,
           venue_id: venueId,
           song_1_id: song1Id,
