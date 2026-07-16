@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.566",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Recording Studio → Recorded Songs: broadened the query so any recorded song tied to the current user, active profile, or their band is listed. Previously band members only saw band songs (and solo songs required band_id IS NULL), which hid tracks recorded under a band from anyone whose band membership hadn't loaded yet." },
+    ],
+  },
+  {
     version: "1.1.565",
     date: "2026-07-16",
     changes: [
