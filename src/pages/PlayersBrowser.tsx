@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { useToast } from "@/hooks/use-toast";
+import { PlayerProfileDrawer } from "@/components/players/PlayerProfileDrawer";
 
 type BrowsePlayer = {
   id: string;
@@ -98,6 +99,8 @@ export default function PlayersBrowser() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebounced(search); setPage(0); }, 300);
@@ -127,16 +130,22 @@ export default function PlayersBrowser() {
   };
 
   const handleAdd = async (id: string) => {
+    setBusy(true);
     try { await sendRequest(id); toast({ title: "Friend request sent" }); }
     catch (e: any) { toast({ title: "Couldn't send request", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
   };
 
   const handleAccept = async (fid: string) => {
+    setBusy(true);
     try { await acceptRequest(fid); toast({ title: "Friend request accepted" }); }
     catch (e: any) { toast({ title: "Couldn't accept", description: e?.message, variant: "destructive" }); }
+    finally { setBusy(false); }
   };
 
   const players = data ?? [];
+  const selected = selectedId ? players.find((p) => p.id === selectedId) ?? null : null;
+  const selectedState = selected ? getState(selected.id) : { state: "none" as FriendState, friendshipId: "" };
 
   return (
     <FMPageScaffold
@@ -180,7 +189,11 @@ export default function PlayersBrowser() {
           {players.map((p) => {
             const { state, friendshipId } = getState(p.id);
             return (
-              <Card key={p.id} className="transition-shadow hover:shadow-lg">
+              <Card
+                key={p.id}
+                className="cursor-pointer transition-shadow hover:shadow-lg"
+                onClick={() => setSelectedId(p.id)}
+              >
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-14 w-14">
@@ -215,17 +228,15 @@ export default function PlayersBrowser() {
 
                   {p.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{p.bio}</p>}
 
-                  <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link to={`/player/${p.id}`}>View</Link>
-                    </Button>
+                  <div className="flex flex-wrap justify-end gap-2 border-t pt-2" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedId(p.id)}>View</Button>
                     {state === "none" && profile?.id && (
-                      <Button size="sm" onClick={() => handleAdd(p.id)}>
+                      <Button size="sm" onClick={() => handleAdd(p.id)} disabled={busy}>
                         <UserPlus className="mr-1 h-4 w-4" /> Add friend
                       </Button>
                     )}
                     {state === "pending_sent" && <Button size="sm" variant="secondary" disabled><Clock className="mr-1 h-4 w-4" /> Sent</Button>}
-                    {state === "pending_received" && <Button size="sm" onClick={() => handleAccept(friendshipId)}><Check className="mr-1 h-4 w-4" /> Accept</Button>}
+                    {state === "pending_received" && <Button size="sm" onClick={() => handleAccept(friendshipId)} disabled={busy}><Check className="mr-1 h-4 w-4" /> Accept</Button>}
                     {state === "friends" && <Badge variant="default"><Check className="mr-1 h-3 w-3" /> Friends</Badge>}
                   </div>
                 </CardContent>
@@ -233,6 +244,17 @@ export default function PlayersBrowser() {
             );
           })}
         </div>
+
+        <PlayerProfileDrawer
+          player={selected}
+          open={!!selected}
+          onOpenChange={(o) => !o && setSelectedId(null)}
+          state={selectedState.state === "self" ? "self" : selectedState.state}
+          friendshipId={selectedState.friendshipId}
+          onAdd={handleAdd}
+          onAccept={handleAccept}
+          busy={busy}
+        />
 
         {players.length >= PAGE_SIZE && (
           <div className="flex justify-between">
