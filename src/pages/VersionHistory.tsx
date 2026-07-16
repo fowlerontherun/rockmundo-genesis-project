@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.529",
+    date: "2026-07-16",
+    changes: [
+      { type: 'fix', description: "Fixed 'column bm.is_active does not exist' error when a secondary character applied to join a band. The submit_band_application RPC now uses band_members.member_status = 'active' for the duplicate-membership check, and resolves the applicant to the currently active character profile instead of the oldest profile row on the account." },
+    ],
+  },
+  {
     version: "1.1.528",
     date: "2026-07-15",
     changes: [
