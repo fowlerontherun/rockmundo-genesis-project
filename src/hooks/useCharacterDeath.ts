@@ -91,8 +91,11 @@ export function useCharacterDeath() {
 
   // Create child character inheriting 10% skills, 50% cash
   const createChildCharacter = useMutation({
-    mutationFn: async (parentProfileId: string) => {
+    mutationFn: async (input: string | { parentProfileId: string; displayName?: string; username?: string }) => {
       if (!user?.id) throw new Error("Not authenticated");
+      const parentProfileId = typeof input === "string" ? input : input.parentProfileId;
+      const displayName = typeof input === "string" ? undefined : input.displayName?.trim() || undefined;
+      const providedUsername = typeof input === "string" ? undefined : input.username?.trim() || undefined;
 
       const parent = deadCharactersQuery.data?.find((d) => d.profile_id === parentProfileId);
       if (!parent) throw new Error("Parent character not found");
@@ -118,13 +121,15 @@ export function useCharacterDeath() {
         .update({ is_active: false })
         .eq("user_id", user.id);
 
+      const fallbackUsername = `child-of-${parent.character_name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 24)}-${slotNumber}`;
+
       // Create new profile
       const { data: newProfile, error } = await supabase
         .from("profiles")
         .insert({
           user_id: user.id,
-          username: `child-of-${parent.character_name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30)}`,
-          display_name: null,
+          username: providedUsername || fallbackUsername,
+          display_name: displayName ?? null,
           avatar_url: null,
           bio: null,
           cash: inheritedCash,
