@@ -11,7 +11,7 @@ interface FestivalManagementTabsProps {
 }
 
 export const FestivalManagementTabs = ({ bandId }: FestivalManagementTabsProps) => {
-  const { applications, isLoading } = useFestivalSlotApplications(undefined, bandId);
+  const { applications, isLoading } = useFestivalSlotApplications(bandId ? { scope: "band", bandId } : undefined);
 
   const pendingApps = applications?.filter((a) => a.status === "pending") || [];
   const acceptedApps = applications?.filter((a) => a.status === "accepted") || [];

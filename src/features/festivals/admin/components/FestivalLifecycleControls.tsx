@@ -16,22 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { transitionAdminFestivalEdition } from "../service";
+import { useAdminFestivalLifecycleOptions } from "../hooks";
 import { festivalAdminQueryKeys } from "../queryKeys";
 import type { FestivalLifecycleState } from "../types";
 
-const nextStates: Record<string, FestivalLifecycleState[]> = {
-  concept: ["planning"],
-  planning: ["applications_open", "booking"],
-  applications_open: ["booking"],
-  booking: ["announced"],
-  announced: ["on_sale", "setup"],
-  on_sale: ["setup"],
-  setup: ["live"],
-  live: ["settling"],
-  settling: ["completed"],
-};
 export function FestivalLifecycleControls({
   editionId,
   status,
@@ -42,19 +33,27 @@ export function FestivalLifecycleControls({
   const qc = useQueryClient();
   const [target, setTarget] = useState<FestivalLifecycleState | "">("");
   const [reason, setReason] = useState("");
+  const lifecycleOptions = useAdminFestivalLifecycleOptions(editionId);
+  const transitionKey = useMemo(() => target ? `lifecycle:${editionId}:${target}` : "", [editionId, target]);
   const mutation = useMutation({
     mutationFn: () =>
       transitionAdminFestivalEdition(
         editionId as string,
         target as FestivalLifecycleState,
         reason,
+        false,
+        transitionKey,
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.catalogue });
-      if (editionId)
+      if (editionId) {
         qc.invalidateQueries({
           queryKey: festivalAdminQueryKeys.operations("admin", editionId),
         });
+        qc.invalidateQueries({
+          queryKey: ["festivals", "admin", "lifecycle-options", editionId],
+        });
+      }
       setReason("");
       setTarget("");
     },
@@ -70,7 +69,7 @@ export function FestivalLifecycleControls({
         </CardHeader>
       </Card>
     );
-  const options = nextStates[status] ?? [];
+  const options = (lifecycleOptions.data?.transitions ?? []).filter((option) => option.available);
   return (
     <Card>
       <CardHeader>
@@ -98,9 +97,10 @@ export function FestivalLifecycleControls({
                 />
               </SelectTrigger>
               <SelectContent>
-                {options.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state.replaceAll("_", " ")}
+                {options.map((option) => (
+                  <SelectItem key={option.targetState} value={option.targetState}>
+                    {option.targetState.replaceAll("_", " ")}
+                    {option.confirmationRequired ? " (confirmation required)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -115,10 +115,15 @@ export function FestivalLifecycleControls({
             />
           </Label>
         </div>
-        {options.length === 0 && (
+        {lifecycleOptions.isLoading && (
+          <p className="text-sm text-muted-foreground">Loading server-projected lifecycle options…</p>
+        )}
+        {lifecycleOptions.error && (
+          <p className="text-sm text-destructive">Lifecycle options could not be loaded from the server.</p>
+        )}
+        {options.length === 0 && !lifecycleOptions.isLoading && (
           <p className="text-sm text-muted-foreground">
-            This edition has no standard forward transition from its current
-            state.
+            The server currently exposes no standard forward transition from this state.
           </p>
         )}
         {mutation.error && (

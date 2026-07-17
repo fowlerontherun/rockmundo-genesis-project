@@ -39,7 +39,7 @@ export default function FestivalAdmin() {
     },
   });
 
-  const { applications, reviewApplication, isReviewing } = useFestivalSlotApplications();
+  const { applications, reviewApplication, isReviewing } = useFestivalSlotApplications(undefined);
 
   const playerCreatedFestivals = festivals?.filter(f => !f.created_by_admin);
   const adminCreatedFestivals = festivals?.filter(f => f.created_by_admin);

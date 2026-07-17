@@ -59,3 +59,7 @@ Administrators no longer paste a festival edition UUID. When a festival has no e
 - **Phase 2:** Unified stage, slot, lineup and application management.
 - **Phase 3:** Commercial, staffing and operating decisions.
 - **Phase 4:** Live festival execution and outcomes.
+
+## Phase 1 hardening update
+
+Festival creation now relies on server-projected reference data, server-authoritative edition numbering, authenticated actor idempotency, lifecycle/audit writes in the aggregate transaction, and explicit stage festival/edition consistency. Phase 1 is not considered fully verified unless frontend checks and the executable SQL harness pass in the target environment.

@@ -21,6 +21,7 @@ import {
   createFestivalWithFirstEdition,
   createFestivalEditionFromWizard,
   fetchFestivalReferenceData,
+  fetchAdminFestivalLifecycleOptions,
 } from "./service";
 import { festivalAdminQueryKeys } from "./queryKeys";
 import type {
@@ -54,6 +55,13 @@ export function useOwnerFestivalEditions(festivalId: string | undefined) {
     queryKey: festivalAdminQueryKeys.ownerEditions(festivalId ?? "missing"),
     queryFn: () => fetchOwnerFestivalEditions(festivalId as string),
     enabled: Boolean(festivalId),
+  });
+}
+export function useAdminFestivalLifecycleOptions(editionId?: string) {
+  return useQuery({
+    queryKey: ["festivals", "admin", "lifecycle-options", editionId ?? "missing"],
+    queryFn: () => fetchAdminFestivalLifecycleOptions(editionId as string),
+    enabled: Boolean(editionId),
   });
 }
 export function useFestivalEditionOperations(
