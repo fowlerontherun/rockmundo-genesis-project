@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { financeService } from "@/services/finance/financeService";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -155,7 +156,17 @@ export function useRehearsalBooking() {
 
       if (rehearsalError) throw rehearsalError;
 
-      // Deduct cost from band balance
+      await financeService.debit(
+        "band",
+        params.bandId,
+        params.totalCost,
+        "rehearsal_payment",
+        `Rehearsal booking: ${params.roomName}`,
+        `rehearsal-booking-${rehearsalData.id}`,
+        params.profileId,
+      );
+
+      // Compatibility mirror while legacy bands.band_balance remains deprecated.
       const { data: bandData } = await supabase
         .from('bands')
         .select('band_balance')

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeService } from "@/services/finance/financeService";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -176,6 +177,19 @@ export const useDepositToCompany = () => {
       if (profileError) throw profileError;
       if (Number(profile.cash) < amount) throw new Error("Insufficient funds");
       
+      await financeService.transfer({
+        source: { ownerType: "player", ownerId: profileId },
+        destination: { ownerType: "company", ownerId: companyId },
+        amount,
+        category: "company_revenue",
+        description: "Owner deposit",
+        idempotencyKey: `company-deposit-${companyId}-${profileId}-${Date.now()}`,
+        relatedEntityType: "company",
+        relatedEntityId: companyId,
+        createdByProfileId: profileId,
+      });
+
+      // Compatibility mirror while legacy profiles.cash remains deprecated.
       const { error: updateProfileError } = await supabase
         .from("profiles")
         .update({ cash: Number(profile.cash) - amount })

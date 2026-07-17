@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import { financeService } from "@/services/finance/financeService";
 
 export interface EquipmentItem {
   id: string;
@@ -104,7 +105,17 @@ export const useEquipmentStore = (_profileId?: string) => {
         throw new Error("Insufficient funds");
       }
 
-      // Deduct cost
+      await financeService.debit(
+        "player",
+        profileId,
+        equipment.base_price,
+        "equipment_purchase",
+        `Equipment purchase: ${equipment.name}`,
+        `equipment-purchase-${profileId}-${equipmentId}`,
+        profileId,
+      );
+
+      // Compatibility mirror while legacy profiles.cash remains deprecated.
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: profile.cash - equipment.base_price })
