@@ -74,7 +74,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       setlist_id?: string;
       application_message?: string;
     }) => {
-      const { error } = await supabase.from("festival_slot_applications").insert(applicationData as never);
+      const { error } = await (supabase as any).from("festival_slot_applications").insert(applicationData as never);
       if (error) throw error;
     },
     onSuccess: () => {
