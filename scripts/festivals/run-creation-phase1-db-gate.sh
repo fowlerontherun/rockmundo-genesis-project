@@ -10,3 +10,4 @@ supabase start
 supabase db reset
 DB_URL="${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_creation_phase1_harness.sql
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_phase2a_scheduling_harness.sql
