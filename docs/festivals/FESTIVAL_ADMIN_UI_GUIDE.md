@@ -1,5 +1,14 @@
-# Festival admin UI guide
+# Festival Admin UI Guide
 
-Open `/admin/festivals`. Catalogue, brands, editions and lifecycle use the canonical catalogue workspace. Edition-specific operations require an edition id in the admin edition selector.
+Open `/admin/festivals` for festival administration. This is the only primary admin workspace for festivals; older festival admin routes redirect here.
 
-Admin-only screens include Data Health, Legacy Records and Audit. Data-health repairs use classified actions only; there is no generic SQL action. Legacy migration preview/apply failures are rendered in the card that launched the operation.
+The page flow is:
+
+1. View the Festivals catalogue.
+2. Select a festival.
+3. Select an available festival edition, or allow the page to select the most relevant edition automatically.
+4. Use Overview, Applications, Operations, Results, or Advanced.
+
+Administrators should not paste database UUIDs. If a festival has no edition, the page shows `No edition has been created for this festival.` and a disabled `Create first edition` placeholder until Phase 1 restores creation.
+
+Technical support tools such as legacy records, system checks, and audit logs are available from Advanced and are not required for normal festival management.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatFestivalMoney, mapCatalogueRow, mapOwnerEdition } from "../mappers";
 import { projectFestivalPermissions } from "../permissions";
+import { selectPreferredFestivalEdition } from "@/pages/admin/FestivalsAdmin";
 
 describe("canonical festival admin management", () => {
   it("keeps brand and edition fields separated in catalogue mapping", () => {
@@ -24,5 +25,16 @@ describe("canonical festival admin management", () => {
 
   it("formats currencies without assuming USD", () => {
     expect(formatFestivalMoney(12345, "EUR")).toContain("123");
+  });
+});
+
+describe("festival admin edition selection", () => {
+  const edition = (id: string, status: any, endAt = `2027-01-0${id}`) => ({ id, festivalId: "festival-1", title: id, editionNumber: Number(id), status, startAt: null, endAt, cityName: null, currencyCode: "USD" });
+
+  it("selects live, then upcoming, then most recently completed, then first available edition", () => {
+    expect(selectPreferredFestivalEdition([edition("1", "completed"), edition("2", "live")])?.id).toBe("2");
+    expect(selectPreferredFestivalEdition([edition("1", "completed"), edition("2", "planning")])?.id).toBe("2");
+    expect(selectPreferredFestivalEdition([edition("1", "completed", "2027-01-01"), edition("2", "completed", "2027-02-01")])?.id).toBe("2");
+    expect(selectPreferredFestivalEdition([edition("1", "cancelled")])?.id).toBe("1");
   });
 });
