@@ -26,6 +26,7 @@ interface BookRehearsalParams {
   familiarityGained: number;
   roomName: string;
   roomLocation: string;
+  profileId?: string;
 }
 
 // Helper to manually complete rehearsal with skill efficiency
