@@ -94,7 +94,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       if (scope?.scope === "edition" && applications?.some((app) => app.id === applicationId && app.edition_id !== scope.editionId)) {
         throw new Error("Application does not belong to the selected edition.");
       }
-      let mutation = supabase
+      let mutation = (supabase as any)
         .from("festival_slot_applications")
         .update({
           status,
