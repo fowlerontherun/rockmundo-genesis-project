@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.575",
+    date: "2026-07-17",
+    changes: [
+      { type: 'feature', description: "Database migrations · Phase B · Batch 2 (1 of 13) deployed: canonical Festival Editions foundation. Adds current_profile_id() helper, festival_editions / festival_edition_lifecycle_events / festival_legacy_mappings tables, public_festival_editions view, and create/update/transition edition RPCs. Existing festival rows are backfilled as their first edition. Guarded the legacy festival_lineups mapping so the missing table no longer blocks the migration." },
+      { type: 'fix', description: "Restored typecheck: patched unclosed <TableBody> in PlayerFinanceHub, cast unknown-typed festival applications (FestivalManagementTabs, FestivalAdmin, FestivalsAdmin) to any[], routed festival_slot_applications queries through (supabase as any) until types regenerate, added missing profileId to BookRehearsalParams, and fixed imports for isFestivalCreationDraftDirty and selectPreferredFestivalEdition." },
+    ],
+  },
+  {
     version: "1.1.574",
     date: "2026-07-17",
     changes: [
