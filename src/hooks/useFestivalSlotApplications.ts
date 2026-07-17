@@ -41,7 +41,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
   const { data: applications, isLoading } = useQuery({
     queryKey,
     queryFn: async (): Promise<FestivalSlotApplication[]> => {
-      let query = supabase
+      let query = (supabase as any)
         .from("festival_slot_applications")
         .select(`
           *,
