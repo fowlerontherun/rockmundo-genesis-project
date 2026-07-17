@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.574",
+    date: "2026-07-17",
+    changes: [
+      { type: 'feature', description: "Database migrations · Phase A · Batch 1 deployed: added new tables schedule_events (user-owned calendar), community_charity_campaigns / _impact_metrics / _donations (public charity feed), and band_membership_roles / band_membership_status_history (band role catalogue + audit trail). All tables include GRANTs and RLS scoped to owners/leaders." },
+      { type: 'fix', description: "Festival admin components: WorkflowState now accepts an optional 'action' render prop and text() accepts a numeric fallback, fixing TS errors in FestivalStaffManagement and FestivalStageManagement." },
+      { type: 'improvement', description: "Generated docs/db/pending_migration_drift_report.md — 5-phase deployment plan for the remaining 124 pending migrations. Skipped this batch: brand_sponsorships (invalid CREATE TYPE IF NOT EXISTS), skills (\\i psql meta-command), plus files depending on unverified helper functions — deferred to later batches." },
+    ],
+  },
+  {
     version: "1.1.573",
     date: "2026-07-16",
     changes: [
