@@ -59,3 +59,28 @@ Manager, accountant, marketing, sound-engineer and customer-service roles now ha
 ### Future dependencies
 
 City cost multipliers, country taxation, local labour markets, regional rent, commercial utility prices and macroeconomic demand are deferred to Finance Phase 4 and later tax/economy phases.
+
+## Finance Phase 4 city-economy additions
+
+### City-linked costs migrated to shared city pricing
+
+- Commercial rent, residential rent, utilities, fuel, transport, accommodation, cost of living and wage guidance now have a single bounded quote contract through `city_price_quote` / `quoteCityPrice`.
+- Company business licence fees can be charged through `city_collect_business_licence_fee`, leaving the company account and entering the city treasury account through the unified ledger.
+- City grant awards can be paid through `city_pay_grant_award`, leaving the city treasury and entering the recipient account exactly once via idempotency keys.
+
+### City-linked revenues migrated
+
+- Business licence fees are the first real municipal revenue category.
+- Grant funding and budget spending are represented as treasury-backed flows rather than direct balance mutation.
+- Public treasury summaries are exposed through `city_economy_public_view` without allowing player-controlled treasury transfers.
+
+### Remaining hard-coded prices and regional values
+
+- Some gig, studio, rehearsal, nightlife, university, festival and travel surfaces still display or calculate fixed prices at the route/function level.
+- The legacy city-name hash multiplier in gig completion should be replaced by `city_local_audience_demand` and `city_price_quote` once the live-gig settlement path is fully migrated.
+- Existing city law/tax placeholders remain deferred to Finance Phase 5 country taxation work.
+
+### Systems awaiting city modifier rollout
+
+- Full hotel inventory, property ownership, detailed venue booking prices, studio engineer costs, merchandise logistics and education costs still need call-site migration.
+- Country currency, national taxation, VAT/sales tax, payroll withholding and exchange-rate support are intentionally out of scope for Phase 4.
