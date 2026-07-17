@@ -158,6 +158,42 @@ CREATE OR REPLACE FUNCTION public.festival_schedule_publish(p_edition_id uuid,p_
 DECLARE r public.festival_schedule_revisions%ROWTYPE; conflicts jsonb; blockers int; actor uuid:=public.festival_schedule_actor();
 BEGIN SELECT * INTO r FROM public.festival_schedule_revisions WHERE id=p_revision_id AND edition_id=p_edition_id FOR UPDATE; IF NOT FOUND THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_REVISION_NOT_FOUND'; END IF; IF NOT public.festival_schedule_can_manage(p_edition_id) THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_PERMISSION_DENIED'; END IF; conflicts:=public.festival_schedule_conflicts(p_revision_id); SELECT count(*) INTO blockers FROM jsonb_array_elements(conflicts) c WHERE (c->>'blocksPublication')::boolean; IF blockers>0 THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_PUBLICATION_BLOCKED'; END IF; UPDATE public.festival_schedule_revisions SET state='archived', archived_at=now(), updated_at=now() WHERE edition_id=p_edition_id AND state='published' AND id<>p_revision_id; UPDATE public.festival_schedule_revisions SET state='published', published_at=now(), published_by_profile_id=actor, version=version+1, updated_at=now() WHERE id=p_revision_id RETURNING * INTO r; UPDATE public.festival_schedule_items SET public_visible=true, status='published' WHERE revision_id=p_revision_id AND stage_id IS NOT NULL; INSERT INTO public.festival_schedule_audit_events(actor_profile_id,festival_id,edition_id,revision_id,action,after_snapshot,idempotency_key) VALUES(actor,r.festival_id,r.edition_id,r.id,'schedule_published',to_jsonb(r),p_idempotency_key); RETURN jsonb_build_object('published',true,'revision',to_jsonb(r)); END $$;
 
+
+CREATE OR REPLACE FUNCTION public.festival_schedule_lock(p_edition_id uuid,p_revision_id uuid,p_reason text,p_idempotency_key text DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE r public.festival_schedule_revisions%ROWTYPE; actor uuid:=public.festival_schedule_actor();
+BEGIN
+  IF COALESCE(trim(p_reason),'')='' THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_LOCK_REASON_REQUIRED'; END IF;
+  SELECT * INTO r FROM public.festival_schedule_revisions WHERE id=p_revision_id AND edition_id=p_edition_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_REVISION_NOT_FOUND'; END IF;
+  IF NOT public.festival_schedule_can_manage(p_edition_id) THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_PERMISSION_DENIED'; END IF;
+  UPDATE public.festival_schedule_revisions SET state='locked', locked_at=now(), locked_by_profile_id=actor, notes=COALESCE(notes,'')||E'\nLocked: '||p_reason, version=version+1, updated_at=now() WHERE id=p_revision_id RETURNING * INTO r;
+  INSERT INTO public.festival_schedule_audit_events(actor_profile_id,festival_id,edition_id,revision_id,action,after_snapshot,reason,idempotency_key) VALUES(actor,r.festival_id,r.edition_id,r.id,'schedule_locked',to_jsonb(r),p_reason,p_idempotency_key);
+  RETURN jsonb_build_object('locked',true,'revision',to_jsonb(r));
+END $$;
+
+CREATE OR REPLACE FUNCTION public.festival_schedule_reopen(p_edition_id uuid,p_revision_id uuid,p_reason text,p_idempotency_key text DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE r public.festival_schedule_revisions%ROWTYPE; draft uuid; actor uuid:=public.festival_schedule_actor();
+BEGIN
+  IF COALESCE(trim(p_reason),'')='' THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_REOPEN_REASON_REQUIRED'; END IF;
+  SELECT * INTO r FROM public.festival_schedule_revisions WHERE id=p_revision_id AND edition_id=p_edition_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_REVISION_NOT_FOUND'; END IF;
+  IF NOT public.festival_schedule_can_manage(p_edition_id) THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_PERMISSION_DENIED'; END IF;
+  draft:=public.ensure_festival_schedule_draft_revision(p_edition_id);
+  INSERT INTO public.festival_schedule_audit_events(actor_profile_id,festival_id,edition_id,revision_id,action,after_snapshot,reason,idempotency_key) VALUES(actor,r.festival_id,r.edition_id,draft,'schedule_reopened',jsonb_build_object('sourceRevisionId',r.id,'draftRevisionId',draft),p_reason,p_idempotency_key);
+  RETURN jsonb_build_object('reopened',true,'draftRevisionId',draft);
+END $$;
+
+CREATE OR REPLACE FUNCTION public.festival_schedule_discard_draft(p_edition_id uuid,p_revision_id uuid,p_reason text DEFAULT NULL,p_idempotency_key text DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE r public.festival_schedule_revisions%ROWTYPE; actor uuid:=public.festival_schedule_actor();
+BEGIN
+  SELECT * INTO r FROM public.festival_schedule_revisions WHERE id=p_revision_id AND edition_id=p_edition_id AND state IN ('draft','ready_for_review') FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_DRAFT_NOT_FOUND'; END IF;
+  IF NOT public.festival_schedule_can_manage(p_edition_id) THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_PERMISSION_DENIED'; END IF;
+  UPDATE public.festival_schedule_revisions SET state='archived', archived_at=now(), notes=COALESCE(notes,'')||E'\nDiscarded draft: '||COALESCE(p_reason,'No reason supplied'), version=version+1, updated_at=now() WHERE id=r.id RETURNING * INTO r;
+  INSERT INTO public.festival_schedule_audit_events(actor_profile_id,festival_id,edition_id,revision_id,action,before_snapshot,after_snapshot,reason,idempotency_key) VALUES(actor,r.festival_id,r.edition_id,r.id,'draft_discarded',to_jsonb(r),to_jsonb(r),p_reason,p_idempotency_key);
+  RETURN jsonb_build_object('discarded',true,'revision',to_jsonb(r));
+END $$;
+
 CREATE OR REPLACE FUNCTION public.public_festival_edition_schedule(p_edition_id uuid) RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$
 WITH r AS (SELECT * FROM public.festival_schedule_revisions WHERE edition_id=p_edition_id AND state='published' ORDER BY revision_number DESC LIMIT 1)
 SELECT COALESCE(jsonb_build_object('editionId',p_edition_id,'revision',(SELECT to_jsonb(r) FROM r),'festivalDates',COALESCE((SELECT jsonb_agg(DISTINCT festival_date ORDER BY festival_date) FROM public.festival_schedule_items i JOIN r ON r.id=i.revision_id WHERE i.public_visible),'[]'::jsonb),'stages',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',s.id,'name',COALESCE(s.public_name,s.stage_name),'capacity',s.capacity) ORDER BY s.stage_number NULLS LAST, s.stage_name) FROM public.festival_stages s WHERE s.edition_id=p_edition_id AND s.archived_at IS NULL),'[]'::jsonb),'items',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',i.id,'stageId',i.stage_id,'festivalDate',i.festival_date,'itemType',i.item_type,'startsAt',i.starts_at,'endsAt',i.ends_at,'title',i.title,'status',i.status,'performerName',COALESCE(b.name,i.title),'publicVisible',i.public_visible) ORDER BY i.festival_date,i.starts_at) FROM public.festival_schedule_items i JOIN r ON r.id=i.revision_id LEFT JOIN public.bands b ON b.id=i.band_id WHERE i.public_visible AND i.stage_id IS NOT NULL),'[]'::jsonb)), jsonb_build_object('editionId',p_edition_id,'items','[]'::jsonb,'stages','[]'::jsonb,'festivalDates','[]'::jsonb)) $$;
@@ -168,4 +204,7 @@ GRANT EXECUTE ON FUNCTION public.festival_schedule_upsert_item(uuid,uuid,jsonb,i
 GRANT EXECUTE ON FUNCTION public.festival_schedule_preview_template(uuid,uuid,date,text,time,time) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.festival_schedule_apply_template(uuid,uuid,uuid,date,text,time,time,boolean,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.festival_schedule_publish(uuid,uuid,boolean,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.festival_schedule_lock(uuid,uuid,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.festival_schedule_reopen(uuid,uuid,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.festival_schedule_discard_draft(uuid,uuid,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.public_festival_edition_schedule(uuid) TO anon, authenticated;
