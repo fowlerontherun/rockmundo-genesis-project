@@ -29,3 +29,7 @@ The hardened Phase 1 model treats festival creation as a server-authoritative ag
 
 - Edition lifecycle history and admin audit history are inserted in the same transaction as festival, edition, and stage creation.
 - Any failure during validation, audit, or stage insertion rolls back the aggregate and the request row.
+
+## Phase 1.1 deployment correction note
+
+Phase 1 hardening is considered verified only after the new forward migration is applied and the executable checks pass. The forward migration preserves historical request rows, backfills actor identity from profiles where deterministic, enforces server creation modes, removes nested public creation for first editions, and requires one external idempotency request row per operation.

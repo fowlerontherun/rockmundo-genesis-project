@@ -36,3 +36,7 @@
 ## Deferred Phase 2 work
 
 - Drag-and-drop scheduling, unified lineup management, performer recommendation, offer/contract redesign, setlist readiness, live simulation, sponsorship gameplay, and player festival licensing remain out of scope.
+
+## Phase 1.1 deployment correction note
+
+Phase 1 hardening is considered verified only after the new forward migration is applied and the executable checks pass. The forward migration preserves historical request rows, backfills actor identity from profiles where deterministic, enforces server creation modes, removes nested public creation for first editions, and requires one external idempotency request row per operation.

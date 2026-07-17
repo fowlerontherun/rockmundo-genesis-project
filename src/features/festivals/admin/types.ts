@@ -270,7 +270,7 @@ export type FestivalReferenceData = {
   genres: string[];
   currencies: string[];
   countries: { code: string; name: string }[];
-  cities: { id: string; name: string; country: string; timezone: string; currencyCode: string }[];
+  cities: { id: string; name: string; country: string; countryName?: string; timezone: string; currencyCode: string }[];
   venues: { id: string; name: string; cityId: string; capacity: number | null }[];
   stageTypes: string[];
   weatherOptions: string[];

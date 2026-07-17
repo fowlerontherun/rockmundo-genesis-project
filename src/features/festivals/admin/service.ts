@@ -241,7 +241,7 @@ const referenceDataSchema = z.object({
   genres: z.array(z.string()).default([]),
   currencies: z.array(z.string()).default([]),
   countries: z.array(z.object({ code: z.string(), name: z.string() })).default([]),
-  cities: z.array(z.object({ id: z.string(), name: z.string(), country: z.string(), timezone: z.string(), currencyCode: z.string() })).default([]),
+  cities: z.array(z.object({ id: z.string(), name: z.string(), country: z.string(), countryName: z.string().optional(), timezone: z.string(), currencyCode: z.string() })).default([]),
   venues: z.array(z.object({ id: z.string(), name: z.string(), cityId: z.string(), capacity: z.coerce.number().nullable() })).default([]),
   stageTypes: z.array(z.string()).default([]),
   weatherOptions: z.array(z.string()).default([]),

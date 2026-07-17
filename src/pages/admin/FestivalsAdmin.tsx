@@ -13,6 +13,7 @@ import { FestivalLegacyRecordsManagement } from "@/features/festivals/admin/comp
 import { FestivalLifecycleControls } from "@/features/festivals/admin/components/FestivalLifecycleControls";
 import { FestivalCreationWizard } from "@/features/festivals/admin/components/FestivalCreationWizard";
 import { FestivalAuditLog } from "@/features/festivals/admin/components/FestivalAuditLog";
+import { selectPreferredFestivalEdition } from "@/features/festivals/admin/components/workspace/selectPreferredFestivalEdition";
 import {
   useAdminFestivalCatalogue,
   useOwnerFestivalEditions,
@@ -48,35 +49,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-
-export function selectPreferredFestivalEdition(editions: OwnerEditionOption[]) {
-  const ranked = [
-    (e: OwnerEditionOption) => e.status === "live",
-    (e: OwnerEditionOption) =>
-      [
-        "applications_open",
-        "booking",
-        "announced",
-        "on_sale",
-        "setup",
-        "planning",
-        "concept",
-      ].includes(e.status),
-    (e: OwnerEditionOption) => e.status === "completed",
-    () => true,
-  ];
-  for (const match of ranked) {
-    const candidates = editions
-      .filter(match)
-      .sort((a, b) =>
-        String(b.endAt ?? b.startAt ?? "").localeCompare(
-          String(a.endAt ?? a.startAt ?? ""),
-        ),
-      );
-    if (candidates[0]) return candidates[0];
-  }
-  return undefined;
-}
 
 function EditionRequired({
   editionId,

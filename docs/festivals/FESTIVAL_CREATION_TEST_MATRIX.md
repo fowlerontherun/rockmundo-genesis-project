@@ -28,3 +28,7 @@
 
 - True two-session concurrent SQL execution remains a recommended database stress test outside the single-session harness.
 - Screenshot capture was not performed in this headless change because the app could not be reliably run against a seeded Supabase instance in this environment.
+
+## Phase 1.1 deployment correction note
+
+Phase 1 hardening is considered verified only after the new forward migration is applied and the executable checks pass. The forward migration preserves historical request rows, backfills actor identity from profiles where deterministic, enforces server creation modes, removes nested public creation for first editions, and requires one external idempotency request row per operation.
