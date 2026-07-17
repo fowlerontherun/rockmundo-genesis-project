@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.577",
+    date: "2026-07-17",
+    changes: [
+      { type: 'feature', description: "Database migrations · Phase B · Batch 2 (3 of 13) deployed: canonical Festival Booking Contracts layer. Adds application/offer/contract/setlist status enums plus 9 new tables (festival_applications, festival_contract_offers, festival_offer_revisions, festival_contracts, festival_contract_signatures, festival_contract_setlists, festival_contract_setlist_items, festival_application_events, festival_contract_events) and 14 SECURITY DEFINER RPCs covering submit/withdraw applications, create/counter/accept/decline offers, sign/amend/cancel contracts, and draft/submit/review/lock setlists. RLS scopes rows to the band or festival brand manager. Swapped pgcrypto digest() for md5() since pgcrypto is not on the default search path." },
+    ],
+  },
+  {
     version: "1.1.576",
     date: "2026-07-17",
     changes: [
