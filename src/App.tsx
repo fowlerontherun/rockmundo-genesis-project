@@ -301,7 +301,6 @@ const OpenMicNights = lazyWithRetry(() => import("./pages/OpenMicNights"));
 const PerformOpenMic = lazyWithRetry(() => import("./pages/PerformOpenMic"));
 const MajorEvents = lazyWithRetry(() => import("./pages/MajorEvents"));
 const PerformMajorEvent = lazyWithRetry(() => import("./pages/PerformMajorEvent"));
-const FestivalAdmin = lazyWithRetry(() => import("./pages/admin/FestivalAdmin"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
@@ -836,6 +835,8 @@ function App() {
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/music-videos" element={<MusicVideosAdmin />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
+                    <Route path="admin/festival" element={<Navigate to="/admin/festivals" replace />} />
+                    <Route path="admin/festival-admin" element={<Navigate to="/admin/festivals" replace />} />
                     <Route path="admin/city-festivals" element={<Navigate to="/admin/festivals" replace />} />
                     <Route path="admin/system-status" element={<SystemStatusAdminPage />} />
                     <Route path="admin/eurovision" element={<EurovisionAdminPage />} />

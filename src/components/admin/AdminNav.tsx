@@ -85,7 +85,6 @@ export const adminCategories: AdminCategory[] = [
     icon: Trophy,
     items: [
       { path: "/admin/festivals", label: "Festivals", description: "Festival system" },
-      { path: "/admin/city-festivals", label: "City Festival Editor", description: "Adjust capacity, ticket range, and run dates per city" },
       { path: "/admin/eurovision", label: "Eurovision", description: "Eurovision management" },
       { path: "/admin/awards", label: "Awards", description: "Award shows" },
       { path: "/admin/random-events", label: "Random Events", description: "In-game random events" },
