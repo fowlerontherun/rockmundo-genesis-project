@@ -159,7 +159,7 @@ export default function FestivalAdmin() {
 
           <TabsContent value="bulk-review" className="space-y-4">
             <FestivalBulkReviewPanel 
-              applications={applications || []} 
+              applications={(applications as any[]) || []} 
               onReviewComplete={() => {}}
             />
           </TabsContent>
