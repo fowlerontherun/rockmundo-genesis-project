@@ -1,23 +1,226 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchAdminFestivalCatalogue, fetchOwnerManagementBootstrap, fetchOwnerFestivalEditions, fetchFestivalEditionOperations, createFestivalEditionStage, generateFestivalStageSlots, hireFestivalEditionStaff, applyForFestivalEditionPermit, quoteFestivalEditionInsurance, purchaseFestivalEditionInsurance, fetchFestivalEditionFinanceSummary, fetchFestivalAdminDataHealth, fetchFestivalLegacyRecords, fetchFestivalAuditEvents, repairFestivalDataHealthIssue, previewLegacyFestivalMigration, applyLegacyFestivalMigration, reviewFestivalEditionPermit } from "./service";
+import {
+  fetchAdminFestivalCatalogue,
+  fetchOwnerManagementBootstrap,
+  fetchOwnerFestivalEditions,
+  fetchFestivalEditionOperations,
+  createFestivalEditionStage,
+  generateFestivalStageSlots,
+  hireFestivalEditionStaff,
+  applyForFestivalEditionPermit,
+  quoteFestivalEditionInsurance,
+  purchaseFestivalEditionInsurance,
+  fetchFestivalEditionFinanceSummary,
+  fetchFestivalAdminDataHealth,
+  fetchFestivalLegacyRecords,
+  fetchFestivalAuditEvents,
+  repairFestivalDataHealthIssue,
+  previewLegacyFestivalMigration,
+  applyLegacyFestivalMigration,
+  reviewFestivalEditionPermit,
+  createFestivalWithFirstEdition,
+  createFestivalEditionFromWizard,
+  fetchFestivalReferenceData,
+} from "./service";
 import { festivalAdminQueryKeys } from "./queryKeys";
-import type { SlotGenerationInput, StaffHireInput, StageInput } from "./types";
+import type {
+  SlotGenerationInput,
+  StaffHireInput,
+  StageInput,
+  FestivalCreationDraft,
+} from "./types";
 
-export function useAdminFestivalCatalogue() { return useQuery({ queryKey: festivalAdminQueryKeys.catalogue, queryFn: fetchAdminFestivalCatalogue }); }
-export function useOwnerManagementBootstrap(identifier: string | undefined) { return useQuery({ queryKey: festivalAdminQueryKeys.ownerBootstrap(identifier ?? "missing"), queryFn: () => fetchOwnerManagementBootstrap(identifier as string), enabled: Boolean(identifier) }); }
-export function useOwnerFestivalEditions(festivalId: string | undefined) { return useQuery({ queryKey: festivalAdminQueryKeys.ownerEditions(festivalId ?? "missing"), queryFn: () => fetchOwnerFestivalEditions(festivalId as string), enabled: Boolean(festivalId) }); }
-export function useFestivalEditionOperations(editionId?: string, scope: "owner" | "admin" = "owner") { return useQuery({ queryKey: festivalAdminQueryKeys.operations(scope, editionId ?? "missing"), queryFn: () => fetchFestivalEditionOperations(editionId as string), enabled: Boolean(editionId) }); }
-export function useFestivalEditionFinance(editionId?: string, scope: "owner" | "admin" = "owner") { return useQuery({ queryKey: festivalAdminQueryKeys.finance(scope, editionId ?? "missing"), queryFn: () => fetchFestivalEditionFinanceSummary(editionId as string), enabled: Boolean(editionId) }); }
-export function useAdminDataHealth() { return useQuery({ queryKey: festivalAdminQueryKeys.dataHealth, queryFn: fetchFestivalAdminDataHealth }); }
-export function useAdminLegacyRecords() { return useQuery({ queryKey: festivalAdminQueryKeys.legacyRecords, queryFn: fetchFestivalLegacyRecords }); }
-export function useAdminAuditEvents(filters: Record<string, string>) { return useQuery({ queryKey: festivalAdminQueryKeys.audit(filters), queryFn: () => fetchFestivalAuditEvents(filters) }); }
+export function useAdminFestivalCatalogue() {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.catalogue,
+    queryFn: fetchAdminFestivalCatalogue,
+  });
+}
+export function useFestivalReferenceData() {
+  return useQuery({
+    queryKey: ["festivals", "admin", "reference-data"],
+    queryFn: fetchFestivalReferenceData,
+  });
+}
+export function useOwnerManagementBootstrap(identifier: string | undefined) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.ownerBootstrap(identifier ?? "missing"),
+    queryFn: () => fetchOwnerManagementBootstrap(identifier as string),
+    enabled: Boolean(identifier),
+  });
+}
+export function useOwnerFestivalEditions(festivalId: string | undefined) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.ownerEditions(festivalId ?? "missing"),
+    queryFn: () => fetchOwnerFestivalEditions(festivalId as string),
+    enabled: Boolean(festivalId),
+  });
+}
+export function useFestivalEditionOperations(
+  editionId?: string,
+  scope: "owner" | "admin" = "owner",
+) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.operations(scope, editionId ?? "missing"),
+    queryFn: () => fetchFestivalEditionOperations(editionId as string),
+    enabled: Boolean(editionId),
+  });
+}
+export function useFestivalEditionFinance(
+  editionId?: string,
+  scope: "owner" | "admin" = "owner",
+) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.finance(scope, editionId ?? "missing"),
+    queryFn: () => fetchFestivalEditionFinanceSummary(editionId as string),
+    enabled: Boolean(editionId),
+  });
+}
+export function useAdminDataHealth() {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.dataHealth,
+    queryFn: fetchFestivalAdminDataHealth,
+  });
+}
+export function useAdminLegacyRecords() {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.legacyRecords,
+    queryFn: fetchFestivalLegacyRecords,
+  });
+}
+export function useAdminAuditEvents(filters: Record<string, string>) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.audit(filters),
+    queryFn: () => fetchFestivalAuditEvents(filters),
+  });
+}
 
-export function useCreateFestivalStage(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (input: Omit<StageInput, "editionId" | "idempotencyKey">) => createFestivalEditionStage({ ...input, editionId, idempotencyKey: `stage:${editionId}:${input.name}` }), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useGenerateFestivalSlots(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (input: Omit<SlotGenerationInput, "idempotencyKey">) => generateFestivalStageSlots({ ...input, idempotencyKey: `slots:${input.stageId}:${input.date}:${input.apply ? "apply" : "preview"}` }), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useHireFestivalStaff(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (input: Omit<StaffHireInput, "editionId" | "idempotencyKey">) => hireFestivalEditionStaff({ ...input, editionId, idempotencyKey: `staff:${editionId}:${input.candidateId}:${input.role}` }), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useApplyFestivalPermit(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (requirementCode: string) => applyForFestivalEditionPermit(editionId, requirementCode, `permit:${editionId}:${requirementCode}`), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useFestivalInsuranceQuote(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: () => quoteFestivalEditionInsurance(editionId), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useFestivalInsurancePurchase(editionId: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (quoteId: string) => purchaseFestivalEditionInsurance(quoteId, `insurance:${quoteId}`), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) }) }); }
-export function useRepairDataHealth() { const qc = useQueryClient(); return useMutation({ mutationFn: (input: { issueId: string; action: string; reason?: string }) => repairFestivalDataHealthIssue(input), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.dataHealth }) }); }
-export function useLegacyMigration() { const qc = useQueryClient(); return useMutation({ mutationFn: (input: { mappingId: string; apply?: boolean }) => input.apply ? applyLegacyFestivalMigration(input.mappingId) : previewLegacyFestivalMigration(input.mappingId), onSuccess: () => qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.legacyRecords }) }); }
-export function useReviewPermit(editionId?: string) { const qc = useQueryClient(); return useMutation({ mutationFn: (input: { permitId: string; action: string; reason?: string }) => reviewFestivalEditionPermit(input), onSuccess: () => { qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.catalogue }); if (editionId) qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("admin", editionId) }); } }); }
+export function useCreateFestivalStage(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<StageInput, "editionId" | "idempotencyKey">) =>
+      createFestivalEditionStage({
+        ...input,
+        editionId,
+        idempotencyKey: `stage:${editionId}:${input.name}`,
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useGenerateFestivalSlots(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<SlotGenerationInput, "idempotencyKey">) =>
+      generateFestivalStageSlots({
+        ...input,
+        idempotencyKey: `slots:${input.stageId}:${input.date}:${input.apply ? "apply" : "preview"}`,
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useHireFestivalStaff(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<StaffHireInput, "editionId" | "idempotencyKey">) =>
+      hireFestivalEditionStaff({
+        ...input,
+        editionId,
+        idempotencyKey: `staff:${editionId}:${input.candidateId}:${input.role}`,
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useApplyFestivalPermit(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requirementCode: string) =>
+      applyForFestivalEditionPermit(
+        editionId,
+        requirementCode,
+        `permit:${editionId}:${requirementCode}`,
+      ),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useFestivalInsuranceQuote(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => quoteFestivalEditionInsurance(editionId),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useFestivalInsurancePurchase(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (quoteId: string) =>
+      purchaseFestivalEditionInsurance(quoteId, `insurance:${quoteId}`),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("owner", editionId),
+      }),
+  });
+}
+export function useRepairDataHealth() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { issueId: string; action: string; reason?: string }) =>
+      repairFestivalDataHealthIssue(input),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.dataHealth }),
+  });
+}
+export function useLegacyMigration() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { mappingId: string; apply?: boolean }) =>
+      input.apply
+        ? applyLegacyFestivalMigration(input.mappingId)
+        : previewLegacyFestivalMigration(input.mappingId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.legacyRecords }),
+  });
+}
+export function useReviewPermit(editionId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      permitId: string;
+      action: string;
+      reason?: string;
+    }) => reviewFestivalEditionPermit(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.catalogue });
+      if (editionId)
+        qc.invalidateQueries({
+          queryKey: festivalAdminQueryKeys.operations("admin", editionId),
+        });
+    },
+  });
+}
+
+export function useCreateFestivalFromWizard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FestivalCreationDraft) =>
+      input.mode === "create_festival"
+        ? createFestivalWithFirstEdition(input)
+        : createFestivalEditionFromWizard(input),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.catalogue }),
+  });
+}

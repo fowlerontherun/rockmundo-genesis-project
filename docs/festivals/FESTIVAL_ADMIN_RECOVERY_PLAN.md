@@ -2,7 +2,7 @@
 
 ## Why the admin interface is being simplified
 
-Festival administration had drifted into multiple competing admin pages, duplicate catalogue tabs, manual database UUID entry, and technical support tooling shown as normal admin workflow. Phase 0 stabilises the current canonical implementation without restoring legacy `game_events` writes or rebuilding festival creation.
+Festival administration had drifted into multiple competing admin pages, duplicate catalogue tabs, manual database UUID entry, and technical support tooling shown as normal admin workflow. Phase 0 (completed) stabilises the current canonical implementation without restoring legacy `game_events` writes or rebuilding festival creation.
 
 ## Canonical page and routes
 
@@ -37,7 +37,7 @@ Administrators select a festival from the canonical catalogue. Once a festival i
 3. Most recently completed edition.
 4. First available edition.
 
-Administrators no longer paste a festival edition UUID. When a festival has no edition, the UI displays `No edition has been created for this festival.` and a disabled `Create first edition` action. First-edition creation is deliberately deferred.
+Administrators no longer paste a festival edition UUID. When a festival has no edition, the UI displays `No edition has been created for this festival.` and the `Create first edition` action opens the guided edition setup workflow.
 
 ## Retained functionality
 
@@ -46,16 +46,16 @@ Administrators no longer paste a festival edition UUID. When a festival has no e
 - Edition-scoped operational tools for stages, staff, permits, insurance, live operation, outcomes, and settlement.
 - Legacy records, system checks, and audit log access in Advanced.
 
-## Deferred functionality
+## Completed Phase 1 functionality
 
 - New festival creation.
 - New first-edition creation.
-- Full festival creation wizard.
-- Major schema replacement or legacy `game_events` restoration.
+- Guided festival creation wizard.
+- Transactional canonical RPCs without restoring legacy `game_events` festival writes.
 
 ## Planned next phases
 
-- **Phase 1:** Restore festival creation and first-edition setup.
+- **Phase 1 (completed by this PR):** Restore festival creation and first-edition setup.
 - **Phase 2:** Unified stage, slot, lineup and application management.
 - **Phase 3:** Commercial, staffing and operating decisions.
 - **Phase 4:** Live festival execution and outcomes.
