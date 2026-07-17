@@ -37,7 +37,7 @@ export function PlayerFinanceHub({ summary, transactions }: { summary: Financial
         <CardContent>
           <Table><TableHeader><TableRow><TableHead>Due</TableHead><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
             {upcoming.length ? upcoming.map((t) => <TableRow key={t.id}><TableCell>{new Date(t.date).toLocaleDateString()}</TableCell><TableCell>{t.description ?? t.source}</TableCell><TableCell>{t.source}</TableCell><TableCell className="text-right">{money.format(t.amount)}</TableCell><TableCell><Badge>Scheduled</Badge></TableCell></TableRow>) : <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">No upcoming obligations yet.</TableCell></TableRow>}
-          </Table></CardContent>
+          </TableBody></Table></CardContent>
       </Card>
     </div>
   );

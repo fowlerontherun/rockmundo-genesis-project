@@ -1,6 +1,6 @@
 export const asObject = (v: unknown): Record<string, any> => (v && typeof v === "object" ? (v as Record<string, any>) : {});
 export const asArray = (v: unknown): any[] => Array.isArray(v) ? v : [];
-export const text = (v: unknown, fallback = "—") => v === null || v === undefined || v === "" ? fallback : String(v);
+export const text = (v: unknown, fallback: unknown = "—") => v === null || v === undefined || v === "" ? String(fallback) : String(v);
 export const money = (cents?: unknown, currency = "USD") => typeof cents === "number" ? new Intl.NumberFormat(undefined,{style:"currency",currency}).format(cents/100) : "—";
 export const pct = (n: number, d: number) => d > 0 ? Math.round((n/d)*100) : 0;
 export const statusTone = (s?: string) => /approved|complete|ready|active|covered/i.test(s||"") ? "default" : /blocked|rejected|expired|overdue|missing/i.test(s||"") ? "destructive" : "secondary";

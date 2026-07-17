@@ -44,8 +44,8 @@ export default function FestivalAdmin() {
   const playerCreatedFestivals = festivals?.filter(f => !f.created_by_admin);
   const adminCreatedFestivals = festivals?.filter(f => f.created_by_admin);
 
-  const pendingApplications = applications?.filter(a => a.status === "pending");
-  const reviewedApplications = applications?.filter(a => a.status !== "pending");
+  const pendingApplications = ((applications as any[]) ?? []).filter((a: any) => a.status === "pending");
+  const reviewedApplications = ((applications as any[]) ?? []).filter((a: any) => a.status !== "pending");
 
   const handleReview = (status: "accepted" | "rejected") => {
     if (!selectedApplication) return;
@@ -159,7 +159,7 @@ export default function FestivalAdmin() {
 
           <TabsContent value="bulk-review" className="space-y-4">
             <FestivalBulkReviewPanel 
-              applications={applications || []} 
+              applications={(applications as any[]) || []} 
               onReviewComplete={() => {}}
             />
           </TabsContent>

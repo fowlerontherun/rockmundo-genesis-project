@@ -46,6 +46,7 @@ import type {
   FestivalCreationDraft,
   FestivalCreationResult,
 } from "../types";
+import { isFestivalCreationDraftDirty } from "./creation/festivalCreationDirtyState";
 
 const stepNames = [
   "Festival",

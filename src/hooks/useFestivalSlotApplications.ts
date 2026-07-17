@@ -41,7 +41,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
   const { data: applications, isLoading } = useQuery({
     queryKey,
     queryFn: async (): Promise<FestivalSlotApplication[]> => {
-      let query = supabase
+      let query = (supabase as any)
         .from("festival_slot_applications")
         .select(`
           *,
@@ -74,7 +74,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       setlist_id?: string;
       application_message?: string;
     }) => {
-      const { error } = await supabase.from("festival_slot_applications").insert(applicationData as never);
+      const { error } = await (supabase as any).from("festival_slot_applications").insert(applicationData as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -94,7 +94,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       if (scope?.scope === "edition" && applications?.some((app) => app.id === applicationId && app.edition_id !== scope.editionId)) {
         throw new Error("Application does not belong to the selected edition.");
       }
-      let mutation = supabase
+      let mutation = (supabase as any)
         .from("festival_slot_applications")
         .update({
           status,

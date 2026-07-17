@@ -252,11 +252,11 @@ const referenceDataSchema = z.object({
 
 export async function fetchFestivalReferenceData(): Promise<FestivalReferenceData> {
   try {
-    return await rpc(
+    return (await rpc(
       "admin_festival_reference_data" as RpcName,
       undefined,
       referenceDataSchema,
-    );
+    )) as FestivalReferenceData;
   } catch (error) {
     throw new FestivalAdminServiceError(
       "Festival reference data is unavailable. Refresh after migrations are deployed, then try again.",
