@@ -2242,6 +2242,92 @@ export type Database = {
           },
         ]
       }
+      band_membership_roles: {
+        Row: {
+          band_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          role_code: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          role_code: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          role_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_membership_roles_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_membership_status_history: {
+        Row: {
+          band_id: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          member_id: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          band_id: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          member_id: string
+          notes?: string | null
+          status: string
+        }
+        Update: {
+          band_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          member_id?: string
+          notes?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_membership_status_history_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_membership_status_history_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "band_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_merch_assets: {
         Row: {
           band_id: string | null
@@ -5919,6 +6005,124 @@ export type Database = {
             columns: ["payee_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_charity_campaigns: {
+        Row: {
+          beneficiary: string
+          created_at: string | null
+          end_date: string | null
+          goal_amount: number
+          id: string
+          impact_focus: string | null
+          slug: string
+          start_date: string | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          beneficiary: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_amount: number
+          id?: string
+          impact_focus?: string | null
+          slug: string
+          start_date?: string | null
+          status?: string
+          summary: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          beneficiary?: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_amount?: number
+          id?: string
+          impact_focus?: string | null
+          slug?: string
+          start_date?: string | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      community_charity_donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          donated_at: string | null
+          donor_name: string | null
+          id: string
+          message: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          donated_at?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          donated_at?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_charity_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "community_charity_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_charity_impact_metrics: {
+        Row: {
+          campaign_id: string
+          description: string | null
+          id: string
+          metric_label: string
+          metric_unit: string | null
+          metric_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          description?: string | null
+          id?: string
+          metric_label: string
+          metric_unit?: string | null
+          metric_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          description?: string | null
+          id?: string
+          metric_label?: string
+          metric_unit?: string | null
+          metric_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_charity_impact_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "community_charity_campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -29813,6 +30017,66 @@ export type Database = {
           stage_changed_at?: string | null
           tension_score?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_events: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          duration_minutes: number
+          energy_cost: number | null
+          id: string
+          last_notified: string | null
+          location: string
+          metadata: Json | null
+          recurrence_rule: string | null
+          reminder_minutes: number | null
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          duration_minutes?: number
+          energy_cost?: number | null
+          id?: string
+          last_notified?: string | null
+          location: string
+          metadata?: Json | null
+          recurrence_rule?: string | null
+          reminder_minutes?: number | null
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number
+          energy_cost?: number | null
+          id?: string
+          last_notified?: string | null
+          location?: string
+          metadata?: Json | null
+          recurrence_rule?: string | null
+          reminder_minutes?: number | null
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
