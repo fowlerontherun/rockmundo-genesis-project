@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.576",
+    date: "2026-07-17",
+    changes: [
+      { type: 'feature', description: "Database migrations · Phase B · Batch 2 (2 of 13) deployed: hardened Festival Editions. Added festival_edition_creation_requests + festival_edition_transition_requests idempotency tables (RLS scoped to festival brand managers), validate_festival_edition_transition() state-machine, and secured create_festival_edition / update_festival_edition_planning / transition_festival_edition RPCs with authorisation, planning-lock and go-live window checks. Rebuilt public_festival_editions view to only expose safe lifecycle statuses." },
+    ],
+  },
+  {
     version: "1.1.575",
     date: "2026-07-17",
     changes: [
