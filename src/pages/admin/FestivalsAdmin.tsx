@@ -305,8 +305,8 @@ function Applications({
   const [offeredPayment, setOfferedPayment] = useState("");
   const { applications, isLoading, reviewApplication, isReviewing } =
     useFestivalSlotApplications(editionId ? { scope: "edition", editionId, festivalId } : festivalId ? { scope: "festival", festivalId } : undefined);
-  const pending = applications?.filter((a) => a.status === "pending") ?? [];
-  const reviewed = applications?.filter((a) => a.status !== "pending") ?? [];
+  const pending = ((applications as any[]) ?? []).filter((a: any) => a.status === "pending");
+  const reviewed = ((applications as any[]) ?? []).filter((a: any) => a.status !== "pending");
   const submit = (status: "accepted" | "rejected") => {
     if (!selectedApplication) return;
     reviewApplication({
