@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatFestivalMoney, mapCatalogueRow, mapOwnerEdition } from "../mappers";
 import { projectFestivalPermissions } from "../permissions";
-import { selectPreferredFestivalEdition } from "@/pages/admin/FestivalsAdmin";
+import { selectPreferredFestivalEdition } from "@/features/festivals/admin/components/workspace/selectPreferredFestivalEdition";
 
 describe("canonical festival admin management", () => {
   it("keeps brand and edition fields separated in catalogue mapping", () => {
