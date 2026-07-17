@@ -71,6 +71,7 @@ export function FestivalCreationWizard({
   const [draft, setDraft] = useState(() =>
     defaultFestivalCreationDraft(mode, festival?.festivalId),
   );
+  const [initialDraft, setInitialDraft] = useState(draft);
   const [step, setStep] = useState(0);
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const refs = useFestivalReferenceData();
@@ -85,6 +86,7 @@ export function FestivalCreationWizard({
         next.location.cityName = festival.cityName;
       }
       setDraft(next);
+      setInitialDraft(next);
       setStep(mode === "create_festival" ? 0 : 1);
     }
   }, [open, mode, festival]);
@@ -98,7 +100,12 @@ export function FestivalCreationWizard({
   const update = (patch: Partial<FestivalCreationDraft>) =>
     setDraft((d) => ({ ...d, ...patch }));
   const submit = () =>
-    create.mutate(draft, { onSuccess: (result) => onCreated(result) });
+    create.mutate(draft, {
+      onSuccess: (result) => {
+        setInitialDraft(draft);
+        onCreated(result);
+      },
+    });
   const referenceData = refs.data;
   const genres = referenceData?.genres ?? [];
   const festivalTypes = referenceData?.festivalTypes ?? [];
@@ -112,7 +119,8 @@ export function FestivalCreationWizard({
   );
   const selectedVenue = venues.find((venue) => venue.id === draft.location.venueId);
   const venueCapacityExceeded = Boolean(selectedVenue?.capacity && draft.location.capacity > selectedVenue.capacity);
-  const canCloseWithoutPrompt = !open || create.isSuccess || draft.idempotencyKey === defaultFestivalCreationDraft(mode, festival?.festivalId).idempotencyKey;
+  const canCloseWithoutPrompt =
+    !open || create.isSuccess || !isFestivalCreationDraftDirty(initialDraft, draft);
   const canNext =
     step === 5 ? !hasCreationErrors(errors) : currentErrors.length === 0;
   return (
@@ -565,16 +573,23 @@ export function FestivalCreationWizard({
                       })
                     }
                   />
-                  <Input
+                  <Select
                     value={stage.type}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       update({
                         stages: draft.stages.map((s, i) =>
-                          i === index ? { ...s, type: e.target.value } : s,
+                          i === index ? { ...s, type: value } : s,
                         ),
                       })
                     }
-                  />
+                  >
+                    <SelectTrigger><SelectValue placeholder="Stage type" /></SelectTrigger>
+                    <SelectContent>
+                      {(referenceData?.stageTypes ?? []).map((option) => (
+                        <SelectItem key={option} value={option}>{option.replace("_", " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="number"
                     value={stage.capacity}
@@ -614,42 +629,57 @@ export function FestivalCreationWizard({
                       })
                     }
                   />
-                  <Input
+                  <Select
                     value={stage.weatherProtection}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       update({
                         stages: draft.stages.map((s, i) =>
-                          i === index
-                            ? { ...s, weatherProtection: e.target.value }
-                            : s,
+                          i === index ? { ...s, weatherProtection: value } : s,
                         ),
                       })
                     }
-                  />
-                  <Input
+                  >
+                    <SelectTrigger><SelectValue placeholder="Weather protection" /></SelectTrigger>
+                    <SelectContent>
+                      {(referenceData?.weatherOptions ?? []).map((option) => (
+                        <SelectItem key={option} value={option}>{option.replace("_", " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
                     value={stage.soundCapability}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       update({
                         stages: draft.stages.map((s, i) =>
-                          i === index
-                            ? { ...s, soundCapability: e.target.value }
-                            : s,
+                          i === index ? { ...s, soundCapability: value } : s,
                         ),
                       })
                     }
-                  />
-                  <Input
+                  >
+                    <SelectTrigger><SelectValue placeholder="Sound capability" /></SelectTrigger>
+                    <SelectContent>
+                      {(referenceData?.soundOptions ?? []).map((option) => (
+                        <SelectItem key={option} value={option}>{option.replace("_", " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
                     value={stage.lightingCapability}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       update({
                         stages: draft.stages.map((s, i) =>
-                          i === index
-                            ? { ...s, lightingCapability: e.target.value }
-                            : s,
+                          i === index ? { ...s, lightingCapability: value } : s,
                         ),
                       })
                     }
-                  />
+                  >
+                    <SelectTrigger><SelectValue placeholder="Lighting capability" /></SelectTrigger>
+                    <SelectContent>
+                      {(referenceData?.lightingOptions ?? []).map((option) => (
+                        <SelectItem key={option} value={option}>{option.replace("_", " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="destructive"
                     onClick={() =>
@@ -812,7 +842,13 @@ export function FestivalCreationWizard({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Continue editing</AlertDialogCancel>
-          <AlertDialogAction onClick={() => { setDiscardPromptOpen(false); onOpenChange(false); }}>
+          <AlertDialogAction
+            onClick={() => {
+              setDiscardPromptOpen(false);
+              setInitialDraft(draft);
+              onOpenChange(false);
+            }}
+          >
             Discard draft
           </AlertDialogAction>
         </AlertDialogFooter>

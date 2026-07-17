@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -7,17 +8,40 @@ type FestivalApplicationScope =
   | { scope: "festival"; festivalId: string; editionId?: never; bandId?: string }
   | { scope: "band"; bandId: string; festivalId?: string; editionId?: string };
 
+const relatedRecord = z.object({ id: z.string() }).passthrough().nullable();
+export const festivalSlotApplicationSchema = z.object({
+  id: z.string(),
+  festival_id: z.string(),
+  edition_id: z.string().nullable(),
+  band_id: z.string(),
+  slot_type: z.string().nullable(),
+  status: z.string(),
+  requested_payment: z.coerce.number().nullable().optional(),
+  offered_payment: z.coerce.number().nullable().optional(),
+  admin_notes: z.string().nullable().optional(),
+  application_message: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+  reviewed_at: z.string().nullable().optional(),
+  edition: relatedRecord,
+  festival: relatedRecord,
+  band: relatedRecord,
+  setlist: relatedRecord,
+}).passthrough();
+export type FestivalSlotApplication = z.infer<typeof festivalSlotApplicationSchema>;
+
 export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const editionId = scope?.editionId;
   const festivalId = scope?.festivalId;
   const bandId = scope?.bandId;
+  const queryKey = ["festival-slot-applications", scope?.scope ?? "none", festivalId ?? null, editionId ?? null, bandId ?? null];
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["festival-slot-applications", scope?.scope ?? "none", festivalId ?? null, editionId ?? null, bandId ?? null],
-    queryFn: async () => {
-      let query = (supabase as any)
+    queryKey,
+    queryFn: async (): Promise<FestivalSlotApplication[]> => {
+      let query = supabase
         .from("festival_slot_applications")
         .select(`
           *,
@@ -34,7 +58,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as any[];
+      return z.array(festivalSlotApplicationSchema).parse(data ?? []);
     },
     enabled: Boolean(scope && (editionId || festivalId || bandId)),
   });
@@ -50,35 +74,18 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       setlist_id?: string;
       application_message?: string;
     }) => {
-      const { error } = await (supabase as any)
-        .from("festival_slot_applications")
-        .insert(applicationData);
-
+      const { error } = await supabase.from("festival_slot_applications").insert(applicationData as never);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["festival-slot-applications"] });
-      toast({
-        title: "Application submitted!",
-        description: "Your festival slot application has been sent for review.",
-      });
+      toast({ title: "Application submitted!", description: "Your festival slot application has been sent for review." });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Application failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: (error: Error) => toast({ title: "Application failed", description: error.message, variant: "destructive" }),
   });
 
   const reviewApplicationMutation = useMutation({
-    mutationFn: async ({
-      applicationId,
-      status,
-      adminNotes,
-      offeredPayment,
-    }: {
+    mutationFn: async ({ applicationId, status, adminNotes, offeredPayment }: {
       applicationId: string;
       status: "accepted" | "rejected";
       adminNotes?: string;
@@ -87,7 +94,7 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
       if (scope?.scope === "edition" && applications?.some((app) => app.id === applicationId && app.edition_id !== scope.editionId)) {
         throw new Error("Application does not belong to the selected edition.");
       }
-      const { error } = await (supabase as any)
+      let mutation = supabase
         .from("festival_slot_applications")
         .update({
           status,
@@ -95,26 +102,17 @@ export const useFestivalSlotApplications = (scope?: FestivalApplicationScope) =>
           reviewed_by_admin_id: (await supabase.auth.getUser()).data.user?.id,
           admin_notes: adminNotes,
           offered_payment: offeredPayment,
-        })
-        .eq("id", applicationId)
-        .match(scope?.scope === "edition" ? { edition_id: scope.editionId } : {});
-
+        } as never)
+        .eq("id", applicationId);
+      if (scope?.scope === "edition") mutation = mutation.eq("edition_id", scope.editionId);
+      const { error } = await mutation;
       if (error) throw error;
     },
     onSuccess: (_, { status }) => {
-      queryClient.invalidateQueries({ queryKey: ["festival-slot-applications", scope?.scope ?? "none", festivalId ?? null, editionId ?? null, bandId ?? null] });
-      toast({
-        title: status === "accepted" ? "Application accepted" : "Application rejected",
-        description: `The festival application has been ${status}.`,
-      });
+      queryClient.invalidateQueries({ queryKey });
+      toast({ title: status === "accepted" ? "Application accepted" : "Application rejected", description: `The festival application has been ${status}.` });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Review failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: (error: Error) => toast({ title: "Review failed", description: error.message, variant: "destructive" }),
   });
 
   return {

@@ -35,6 +35,13 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.31.8
       - name: Festival SQL tests
         run: npm run test:festivals:db
+      - name: Upload Supabase logs on festival DB gate failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-logs
+          path: supabase/.branches/**/logs/**
+          if-no-files-found: ignore

@@ -63,3 +63,7 @@ Administrators no longer paste a festival edition UUID. When a festival has no e
 ## Phase 1 hardening update
 
 Festival creation now relies on server-projected reference data, server-authoritative edition numbering, authenticated actor idempotency, lifecycle/audit writes in the aggregate transaction, and explicit stage festival/edition consistency. Phase 1 is not considered fully verified unless frontend checks and the executable SQL harness pass in the target environment.
+
+## Phase 1.1 deployment correction note
+
+Phase 1 hardening is considered verified only after the new forward migration is applied and the executable checks pass. The forward migration preserves historical request rows, backfills actor identity from profiles where deterministic, enforces server creation modes, removes nested public creation for first editions, and requires one external idempotency request row per operation.
