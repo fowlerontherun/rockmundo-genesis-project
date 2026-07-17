@@ -13,8 +13,8 @@ interface FestivalManagementTabsProps {
 export const FestivalManagementTabs = ({ bandId }: FestivalManagementTabsProps) => {
   const { applications, isLoading } = useFestivalSlotApplications(bandId ? { scope: "band", bandId } : undefined);
 
-  const pendingApps = applications?.filter((a) => a.status === "pending") || [];
-  const acceptedApps = applications?.filter((a) => a.status === "accepted") || [];
+  const pendingApps = ((applications as any[]) ?? []).filter((a: any) => a.status === "pending");
+  const acceptedApps = ((applications as any[]) ?? []).filter((a: any) => a.status === "accepted");
 
   return (
     <Tabs defaultValue="offers" className="w-full">
