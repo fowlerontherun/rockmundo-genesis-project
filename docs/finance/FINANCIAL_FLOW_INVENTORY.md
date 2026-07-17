@@ -16,3 +16,18 @@
 | Company weekly finances | `supabase/migrations/20260711001000_company_weekly_finances_recruitment.sql`, hooks | No | `company_operating_expense` | High | Phase 2 |
 | Travel and tours | `src/hooks/useTours.ts`, `supabase/functions/process-tour-travel/index.ts` | No | `travel_cost` | Medium | Phase 3 |
 | Casino/lottery/underworld | `src/hooks/useCasino.ts`, `src/hooks/useLottery.ts`, `src/hooks/useUnderworldStore.ts` | No | `administrative_adjustment`/future categories | Medium | Phase 3 |
+
+## Finance Phase 2 updates
+
+| Flow | Phase 2 status | Canonical category | Notes |
+| --- | --- | --- | --- |
+| Player finance dashboard summaries | Added | Ledger-derived | Shows weekly cash flow, categories, upcoming payments and tax-period placeholders. |
+| Band treasury operating accounts | Added | `starting_funds`, ledger-derived | Band balances are preserved through Phase 1 primary accounts; `bands.band_balance` remains a deprecated compatibility mirror. |
+| Member band contributions | Migrated | `band_contribution` | Player-to-band transfers must use `financeService.transfer` with idempotency keys. |
+| Band reimbursements | Added | `band_reimbursement` | Request state is separate from payment; payment uses the central finance service. |
+| Band revenue distributions | Added | `band_distribution` | Eligible categories are explicit; member contributions and refunds are ineligible. |
+| Recurring player and band obligations | Added | `recurring_obligation` plus source category | Server-side processing only; failed attempts do not create negative balances. |
+| Weekly player and band snapshots | Added | Ledger-derived | Snapshots are reproducible summaries, not financial truth. |
+| Tax period summaries | Added | `tax_placeholder`, `tax_withholding` | Basic aggregation only; country-specific taxes are Phase 3+. |
+
+Remaining direct balance mutations to review include legacy casino flows, some gig completion utilities, label advances, company weekly finance and older edge functions that pre-date the unified finance service.

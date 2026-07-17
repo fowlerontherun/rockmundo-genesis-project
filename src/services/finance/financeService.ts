@@ -6,7 +6,7 @@ export type FinanceTransactionCategory =
   | "wage_payment" | "ticket_sale" | "gig_payment" | "festival_payment" | "recording_studio_payment" | "rehearsal_payment"
   | "travel_cost" | "accommodation_cost" | "equipment_purchase" | "equipment_sale" | "equipment_repair" | "merchandise_revenue"
   | "merchandise_production_cost" | "streaming_royalty" | "song_release_royalty" | "company_revenue" | "company_operating_expense"
-  | "refund" | "tax_placeholder" | "system_fee";
+  | "refund" | "tax_placeholder" | "system_fee" | "rent" | "subscription" | "education_fee" | "food_lifestyle" | "band_reimbursement" | "band_distribution" | "recurring_obligation" | "tax_withholding";
 
 export class FinanceError extends Error { constructor(message: string, public code: string) { super(message); } }
 export const toMinorUnits = (amount: number) => {

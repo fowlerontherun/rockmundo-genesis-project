@@ -14,6 +14,7 @@ import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
 import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPanel";
 import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
 import { FinancialHistoryLedger } from "@/components/finance/FinancialHistoryLedger";
+import { PlayerFinanceHub } from "@/components/finance/PlayerFinanceHub";
 import { Loader2, DollarSign } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
@@ -58,7 +59,8 @@ const Finances = () => {
       <Tabs defaultValue={searchParams.get("tab") || "overview"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="bands">Bands</TabsTrigger>
+          <TabsTrigger value="personal">Personal Hub</TabsTrigger>
+          <TabsTrigger value="bands">Band Treasury</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="loans">Loans</TabsTrigger>
           <TabsTrigger value="charity">Charity</TabsTrigger>
@@ -84,6 +86,10 @@ const Finances = () => {
 
           {/* Recent Transactions */}
           <TransactionsList transactions={transactions.slice(0, 10)} />
+        </TabsContent>
+
+        <TabsContent value="personal" className="space-y-6">
+          <PlayerFinanceHub summary={summary} transactions={transactions} />
         </TabsContent>
 
         <TabsContent value="bands" className="space-y-6">

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, TrendingUp, TrendingDown, ShieldCheck } from "lucide-react";
 import { FMFilterBar, type FilterPill } from "@/components/fm/FMFilterBar";
 import type { BandFinance, FinancialTransaction } from "@/hooks/useFinances";
 
@@ -89,7 +89,7 @@ export const BandFinanceDetail = ({ bands, transactions }: BandFinanceDetailProp
       <CardHeader>
         <CardTitle>Band Finances</CardTitle>
         <CardDescription>
-          Your equity: {fmt.format(totalBandEquity)} across {bands.length} band{bands.length !== 1 ? "s" : ""}
+          Treasury access: {fmt.format(totalBandEquity)} member share across {bands.length} band{bands.length !== 1 ? "s" : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -149,6 +149,12 @@ export const BandFinanceDetail = ({ bands, transactions }: BandFinanceDetailProp
             )}
           </TableBody>
         </Table>
+
+        <div className="grid gap-3 md:grid-cols-3" aria-label="Band treasury summary cards">
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Reserve target progress</p><p className="font-semibold">Tracked by band finance policy</p></div>
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Awaiting approvals</p><p className="font-semibold">Withdrawals and reimbursements</p></div>
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Permissions</p><p className="font-semibold flex items-center gap-1"><ShieldCheck className="h-4 w-4" /> Role-based actions</p></div>
+        </div>
 
         {/* Income source badges */}
         {bandBreakdowns.map(
