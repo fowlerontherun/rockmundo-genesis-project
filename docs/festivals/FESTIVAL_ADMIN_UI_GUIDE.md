@@ -16,3 +16,6 @@ Technical support tools such as legacy records, system checks, and audit logs ar
 ## Phase 1 hardening update
 
 Festival creation now relies on server-projected reference data, server-authoritative edition numbering, authenticated actor idempotency, lifecycle/audit writes in the aggregate transaction, and explicit stage festival/edition consistency. Phase 1 is not considered fully verified unless frontend checks and the executable SQL harness pass in the target environment.
+
+## Phase 2A Schedule tab
+The canonical admin workspace now has a top-level **Schedule** destination. Use it for timetable construction, template application, conflict review, unscheduled items and publication. Stage configuration remains under Operations/Stages.

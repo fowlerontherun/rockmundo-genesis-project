@@ -67,3 +67,6 @@ Festival creation now relies on server-projected reference data, server-authorit
 ## Phase 1.1 deployment correction note
 
 Phase 1 hardening is considered verified only after the new forward migration is applied and the executable checks pass. The forward migration preserves historical request rows, backfills actor identity from profiles where deterministic, enforces server creation modes, removes nested public creation for first editions, and requires one external idempotency request row per operation.
+
+## Phase 2A scheduling recovery notes
+If a schedule workspace fails to load, verify `festival_schedule_revisions`, `festival_schedule_items`, `festival_stage_operating_hours`, and `festival_edition_schedule_workspace`. Published public schedules should be recovered from the latest `published` revision; draft revisions may be discarded without affecting public output.

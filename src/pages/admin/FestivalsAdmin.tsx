@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink, XCircle } from "lucide-react";
 import { AdminFestivalCatalogue } from "@/features/festivals/admin/components/AdminFestivalCatalogue";
 import { FestivalStageManagement } from "@/features/festivals/admin/components/FestivalStageManagement";
+import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { FestivalStaffManagement } from "@/features/festivals/admin/components/FestivalStaffManagement";
 import { FestivalPermitManagement } from "@/features/festivals/admin/components/FestivalPermitManagement";
 import { FestivalInsuranceManagement } from "@/features/festivals/admin/components/FestivalInsuranceManagement";
@@ -524,6 +525,7 @@ export default function FestivalsAdminPage() {
         <TabsList className="flex h-auto flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="results">Results</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -545,6 +547,11 @@ export default function FestivalsAdminPage() {
             festivalId={selectedFestivalId}
             editionId={selectedEditionId}
           />
+        </TabsContent>
+        <TabsContent value="schedule">
+          <EditionRequired editionId={selectedEditionId} onCreateFirstEdition={() => selectedFestivalId && openCreateEdition(selectedFestivalId, "create_first_edition")}>
+            <FestivalScheduleWorkspace editionId={selectedEditionId} />
+          </EditionRequired>
         </TabsContent>
         <TabsContent value="operations">
           <EditionRequired
