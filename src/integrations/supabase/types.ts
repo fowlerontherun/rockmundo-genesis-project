@@ -10428,6 +10428,182 @@ export type Database = {
           },
         ]
       }
+      festival_application_events: {
+        Row: {
+          actor_profile_id: string | null
+          application_id: string | null
+          created_at: string
+          from_state: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          reason: string | null
+          to_state: string | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          application_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          reason?: string | null
+          to_state?: string | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          application_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          reason?: string | null
+          to_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "festival_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_applications: {
+        Row: {
+          application_message: string | null
+          band_id: string
+          band_snapshot: Json
+          created_at: string
+          currency_code: string
+          edition_id: string
+          eligibility_snapshot: Json
+          expires_at: string | null
+          genre_fit_snapshot: Json
+          id: string
+          idempotency_key: string | null
+          legacy_application_id: string | null
+          legacy_participant_id: string | null
+          minimum_fee_cents: number | null
+          organiser_notes: string | null
+          preferred_dates: Json
+          preferred_slot_types: string[] | null
+          preferred_stage_types: string[] | null
+          rejection_reason: string | null
+          request_hash: string | null
+          requested_fee_cents: number | null
+          requested_set_minutes: number | null
+          reviewed_at: string | null
+          source: string
+          status: Database["public"]["Enums"]["festival_application_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          updated_at: string
+          withdrawal_reason: string | null
+        }
+        Insert: {
+          application_message?: string | null
+          band_id: string
+          band_snapshot?: Json
+          created_at?: string
+          currency_code?: string
+          edition_id: string
+          eligibility_snapshot?: Json
+          expires_at?: string | null
+          genre_fit_snapshot?: Json
+          id?: string
+          idempotency_key?: string | null
+          legacy_application_id?: string | null
+          legacy_participant_id?: string | null
+          minimum_fee_cents?: number | null
+          organiser_notes?: string | null
+          preferred_dates?: Json
+          preferred_slot_types?: string[] | null
+          preferred_stage_types?: string[] | null
+          rejection_reason?: string | null
+          request_hash?: string | null
+          requested_fee_cents?: number | null
+          requested_set_minutes?: number | null
+          reviewed_at?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["festival_application_status"]
+          submitted_at?: string | null
+          submitted_by_profile_id?: string | null
+          updated_at?: string
+          withdrawal_reason?: string | null
+        }
+        Update: {
+          application_message?: string | null
+          band_id?: string
+          band_snapshot?: Json
+          created_at?: string
+          currency_code?: string
+          edition_id?: string
+          eligibility_snapshot?: Json
+          expires_at?: string | null
+          genre_fit_snapshot?: Json
+          id?: string
+          idempotency_key?: string | null
+          legacy_application_id?: string | null
+          legacy_participant_id?: string | null
+          minimum_fee_cents?: number | null
+          organiser_notes?: string | null
+          preferred_dates?: Json
+          preferred_slot_types?: string[] | null
+          preferred_stage_types?: string[] | null
+          rejection_reason?: string | null
+          request_hash?: string | null
+          requested_fee_cents?: number | null
+          requested_set_minutes?: number | null
+          reviewed_at?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["festival_application_status"]
+          submitted_at?: string | null
+          submitted_by_profile_id?: string | null
+          updated_at?: string
+          withdrawal_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_applications_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_applications_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_applications_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_applications_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_applications_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_attendance: {
         Row: {
           current_stage_id: string | null
@@ -10548,6 +10724,609 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contract_events: {
+        Row: {
+          actor_profile_id: string | null
+          contract_id: string | null
+          created_at: string
+          from_state: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          offer_id: string | null
+          reason: string | null
+          to_state: string | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          offer_id?: string | null
+          reason?: string | null
+          to_state?: string | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          offer_id?: string | null
+          reason?: string | null
+          to_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_events_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contract_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contract_offers: {
+        Row: {
+          accommodation_terms: Json | null
+          application_id: string | null
+          band_id: string
+          cancellation_terms: Json | null
+          created_at: string
+          created_by_profile_id: string | null
+          currency_code: string
+          deposit_cents: number | null
+          edition_id: string
+          exclusivity_terms: Json | null
+          expires_at: string | null
+          guarantee_fee_cents: number | null
+          hospitality_terms: Json | null
+          id: string
+          idempotency_key: string | null
+          merch_share_percent: number | null
+          message: string | null
+          offer_revision: number
+          performance_bonus_cents: number | null
+          proposed_end_at: string | null
+          proposed_slot_type: string | null
+          proposed_stage_name: string | null
+          proposed_start_at: string | null
+          request_hash: string | null
+          responded_at: string | null
+          sent_at: string | null
+          set_duration_minutes: number | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms: Json | null
+          ticket_bonus_terms: Json | null
+          travel_terms: Json | null
+          updated_at: string
+        }
+        Insert: {
+          accommodation_terms?: Json | null
+          application_id?: string | null
+          band_id: string
+          cancellation_terms?: Json | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          currency_code?: string
+          deposit_cents?: number | null
+          edition_id: string
+          exclusivity_terms?: Json | null
+          expires_at?: string | null
+          guarantee_fee_cents?: number | null
+          hospitality_terms?: Json | null
+          id?: string
+          idempotency_key?: string | null
+          merch_share_percent?: number | null
+          message?: string | null
+          offer_revision?: number
+          performance_bonus_cents?: number | null
+          proposed_end_at?: string | null
+          proposed_slot_type?: string | null
+          proposed_stage_name?: string | null
+          proposed_start_at?: string | null
+          request_hash?: string | null
+          responded_at?: string | null
+          sent_at?: string | null
+          set_duration_minutes?: number | null
+          stage_slot_id?: string | null
+          status?: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms?: Json | null
+          ticket_bonus_terms?: Json | null
+          travel_terms?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          accommodation_terms?: Json | null
+          application_id?: string | null
+          band_id?: string
+          cancellation_terms?: Json | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          currency_code?: string
+          deposit_cents?: number | null
+          edition_id?: string
+          exclusivity_terms?: Json | null
+          expires_at?: string | null
+          guarantee_fee_cents?: number | null
+          hospitality_terms?: Json | null
+          id?: string
+          idempotency_key?: string | null
+          merch_share_percent?: number | null
+          message?: string | null
+          offer_revision?: number
+          performance_bonus_cents?: number | null
+          proposed_end_at?: string | null
+          proposed_slot_type?: string | null
+          proposed_stage_name?: string | null
+          proposed_start_at?: string | null
+          request_hash?: string | null
+          responded_at?: string | null
+          sent_at?: string | null
+          set_duration_minutes?: number | null
+          stage_slot_id?: string | null
+          status?: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms?: Json | null
+          ticket_bonus_terms?: Json | null
+          travel_terms?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "festival_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_offers_stage_slot_id_fkey"
+            columns: ["stage_slot_id"]
+            isOneToOne: false
+            referencedRelation: "festival_stage_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contract_setlist_items: {
+        Row: {
+          created_at: string
+          guest_profile_id: string | null
+          id: string
+          is_encore: boolean
+          performance_notes: string | null
+          planned_duration_seconds: number
+          position: number
+          setlist_id: string
+          song_id: string | null
+          transition_notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          guest_profile_id?: string | null
+          id?: string
+          is_encore?: boolean
+          performance_notes?: string | null
+          planned_duration_seconds: number
+          position: number
+          setlist_id: string
+          song_id?: string | null
+          transition_notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          guest_profile_id?: string | null
+          id?: string
+          is_encore?: boolean
+          performance_notes?: string | null
+          planned_duration_seconds?: number
+          position?: number
+          setlist_id?: string
+          song_id?: string | null
+          transition_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_setlist_items_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlist_items_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlist_items_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contract_setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contract_setlists: {
+        Row: {
+          approved_at: string | null
+          band_id: string
+          changes_requested_reason: string | null
+          contract_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          idempotency_key: string | null
+          locked_at: string | null
+          maximum_duration_seconds: number
+          status: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          total_duration_seconds: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          band_id: string
+          changes_requested_reason?: string | null
+          contract_id: string
+          created_at?: string
+          edition_id: string
+          id?: string
+          idempotency_key?: string | null
+          locked_at?: string | null
+          maximum_duration_seconds: number
+          status?: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at?: string | null
+          submitted_by_profile_id?: string | null
+          total_duration_seconds?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          approved_at?: string | null
+          band_id?: string
+          changes_requested_reason?: string | null
+          contract_id?: string
+          created_at?: string
+          edition_id?: string
+          id?: string
+          idempotency_key?: string | null
+          locked_at?: string | null
+          maximum_duration_seconds?: number
+          status?: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at?: string | null
+          submitted_by_profile_id?: string | null
+          total_duration_seconds?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_setlists_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlists_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlists_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlists_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlists_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_setlists_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contract_signatures: {
+        Row: {
+          acknowledgement_snapshot: Json
+          contract_id: string
+          contract_version: number
+          id: string
+          idempotency_key: string | null
+          profile_id: string | null
+          signed_at: string
+          signing_side: Database["public"]["Enums"]["festival_booking_side"]
+          terms_hash: string
+        }
+        Insert: {
+          acknowledgement_snapshot?: Json
+          contract_id: string
+          contract_version: number
+          id?: string
+          idempotency_key?: string | null
+          profile_id?: string | null
+          signed_at?: string
+          signing_side: Database["public"]["Enums"]["festival_booking_side"]
+          terms_hash: string
+        }
+        Update: {
+          acknowledgement_snapshot?: Json
+          contract_id?: string
+          contract_version?: number
+          id?: string
+          idempotency_key?: string | null
+          profile_id?: string | null
+          signed_at?: string
+          signing_side?: Database["public"]["Enums"]["festival_booking_side"]
+          terms_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_signatures_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_signatures_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_signatures_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_contracts: {
+        Row: {
+          accepted_offer_revision_id: string | null
+          activated_at: string | null
+          application_id: string | null
+          band_id: string
+          band_signature_status: string
+          band_signed_at: string | null
+          band_signed_by_profile_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contract_version: number
+          created_at: string
+          edition_id: string
+          festival_id: string | null
+          fulfilled_at: string | null
+          id: string
+          legacy_participant_id: string | null
+          offer_id: string | null
+          organiser_signature_status: string
+          organiser_signed_at: string | null
+          organiser_signed_by_profile_id: string | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at: string | null
+          termination_reason: string | null
+          terms_snapshot: Json
+          updated_at: string
+        }
+        Insert: {
+          accepted_offer_revision_id?: string | null
+          activated_at?: string | null
+          application_id?: string | null
+          band_id: string
+          band_signature_status?: string
+          band_signed_at?: string | null
+          band_signed_by_profile_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contract_version?: number
+          created_at?: string
+          edition_id: string
+          festival_id?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          legacy_participant_id?: string | null
+          offer_id?: string | null
+          organiser_signature_status?: string
+          organiser_signed_at?: string | null
+          organiser_signed_by_profile_id?: string | null
+          stage_slot_id?: string | null
+          status?: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at?: string | null
+          termination_reason?: string | null
+          terms_snapshot?: Json
+          updated_at?: string
+        }
+        Update: {
+          accepted_offer_revision_id?: string | null
+          activated_at?: string | null
+          application_id?: string | null
+          band_id?: string
+          band_signature_status?: string
+          band_signed_at?: string | null
+          band_signed_by_profile_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contract_version?: number
+          created_at?: string
+          edition_id?: string
+          festival_id?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          legacy_participant_id?: string | null
+          offer_id?: string | null
+          organiser_signature_status?: string
+          organiser_signed_at?: string | null
+          organiser_signed_by_profile_id?: string | null
+          stage_slot_id?: string | null
+          status?: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at?: string | null
+          termination_reason?: string | null
+          terms_snapshot?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contracts_accepted_offer_revision_id_fkey"
+            columns: ["accepted_offer_revision_id"]
+            isOneToOne: false
+            referencedRelation: "festival_offer_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "festival_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_band_signed_by_profile_id_fkey"
+            columns: ["band_signed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_band_signed_by_profile_id_fkey"
+            columns: ["band_signed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contract_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_organiser_signed_by_profile_id_fkey"
+            columns: ["organiser_signed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_organiser_signed_by_profile_id_fkey"
+            columns: ["organiser_signed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_stage_slot_id_fkey"
+            columns: ["stage_slot_id"]
+            isOneToOne: false
+            referencedRelation: "festival_stage_slots"
             referencedColumns: ["id"]
           },
         ]
@@ -11291,6 +12070,67 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_offer_revisions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          id: string
+          idempotency_key: string | null
+          offer_id: string
+          proposed_by_profile_id: string | null
+          proposed_by_side: Database["public"]["Enums"]["festival_booking_side"]
+          request_hash: string
+          revision_number: number
+          terms_snapshot: Json
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          offer_id: string
+          proposed_by_profile_id?: string | null
+          proposed_by_side: Database["public"]["Enums"]["festival_booking_side"]
+          request_hash: string
+          revision_number: number
+          terms_snapshot: Json
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          offer_id?: string
+          proposed_by_profile_id?: string | null
+          proposed_by_side?: Database["public"]["Enums"]["festival_booking_side"]
+          request_hash?: string
+          revision_number?: number
+          terms_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_offer_revisions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contract_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_offer_revisions_proposed_by_profile_id_fkey"
+            columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_offer_revisions_proposed_by_profile_id_fkey"
+            columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -12090,6 +12930,7 @@ export type Database = {
       festival_stage_slots: {
         Row: {
           band_id: string | null
+          canonical_contract_id: string | null
           created_at: string | null
           day_number: number
           end_time: string | null
@@ -12108,6 +12949,7 @@ export type Database = {
         }
         Insert: {
           band_id?: string | null
+          canonical_contract_id?: string | null
           created_at?: string | null
           day_number: number
           end_time?: string | null
@@ -12126,6 +12968,7 @@ export type Database = {
         }
         Update: {
           band_id?: string | null
+          canonical_contract_id?: string | null
           created_at?: string | null
           day_number?: number
           end_time?: string | null
@@ -38014,6 +38857,61 @@ export type Database = {
           },
         ]
       }
+      public_festival_lineup: {
+        Row: {
+          band_id: string | null
+          edition_id: string | null
+          end_at: string | null
+          headline: boolean | null
+          public_status: string | null
+          slot_type: string | null
+          stage_display_name: string | null
+          start_at: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          edition_id?: string | null
+          end_at?: never
+          headline?: never
+          public_status?: never
+          slot_type?: never
+          stage_display_name?: never
+          start_at?: never
+        }
+        Update: {
+          band_id?: string | null
+          edition_id?: string | null
+          end_at?: never
+          headline?: never
+          public_status?: never
+          slot_type?: never
+          stage_display_name?: never
+          start_at?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contracts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_player_cards: {
         Row: {
           avatar_url: string | null
@@ -38114,6 +39012,47 @@ export type Database = {
       }
     }
     Functions: {
+      accept_festival_offer: {
+        Args: {
+          p_idempotency_key?: string
+          p_offer_id: string
+          p_revision_number: number
+        }
+        Returns: {
+          accepted_offer_revision_id: string | null
+          activated_at: string | null
+          application_id: string | null
+          band_id: string
+          band_signature_status: string
+          band_signed_at: string | null
+          band_signed_by_profile_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contract_version: number
+          created_at: string
+          edition_id: string
+          festival_id: string | null
+          fulfilled_at: string | null
+          id: string
+          legacy_participant_id: string | null
+          offer_id: string | null
+          organiser_signature_status: string
+          organiser_signed_at: string | null
+          organiser_signed_by_profile_id: string | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at: string | null
+          termination_reason: string | null
+          terms_snapshot: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       add_band_country_fame:
         | {
             Args: {
@@ -38296,6 +39235,48 @@ export type Database = {
         Args: { p_days?: number; p_job_id: string }
         Returns: Json
       }
+      amend_festival_contract: {
+        Args: {
+          p_contract_id: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_terms: Json
+        }
+        Returns: {
+          accepted_offer_revision_id: string | null
+          activated_at: string | null
+          application_id: string | null
+          band_id: string
+          band_signature_status: string
+          band_signed_at: string | null
+          band_signed_by_profile_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contract_version: number
+          created_at: string
+          edition_id: string
+          festival_id: string | null
+          fulfilled_at: string | null
+          id: string
+          legacy_participant_id: string | null
+          offer_id: string | null
+          organiser_signature_status: string
+          organiser_signed_at: string | null
+          organiser_signed_by_profile_id: string | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at: string | null
+          termination_reason: string | null
+          terms_snapshot: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_child_interaction: {
         Args: {
           p_child_id: string
@@ -38396,6 +39377,47 @@ export type Database = {
         Args: { p_festival_id: string }
         Returns: boolean
       }
+      cancel_festival_contract: {
+        Args: {
+          p_contract_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: {
+          accepted_offer_revision_id: string | null
+          activated_at: string | null
+          application_id: string | null
+          band_id: string
+          band_signature_status: string
+          band_signed_at: string | null
+          band_signed_by_profile_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contract_version: number
+          created_at: string
+          edition_id: string
+          festival_id: string | null
+          fulfilled_at: string | null
+          id: string
+          legacy_participant_id: string | null
+          offer_id: string | null
+          organiser_signature_status: string
+          organiser_signed_at: string | null
+          organiser_signed_by_profile_id: string | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_contract_status"]
+          terminated_at: string | null
+          termination_reason: string | null
+          terms_snapshot: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
         Returns: Json
@@ -38440,6 +39462,56 @@ export type Database = {
             Returns: string
           }
       coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
+      counter_festival_offer: {
+        Args: {
+          p_change_summary?: string
+          p_expected_revision: number
+          p_idempotency_key?: string
+          p_offer_id: string
+          p_terms: Json
+        }
+        Returns: {
+          accommodation_terms: Json | null
+          application_id: string | null
+          band_id: string
+          cancellation_terms: Json | null
+          created_at: string
+          created_by_profile_id: string | null
+          currency_code: string
+          deposit_cents: number | null
+          edition_id: string
+          exclusivity_terms: Json | null
+          expires_at: string | null
+          guarantee_fee_cents: number | null
+          hospitality_terms: Json | null
+          id: string
+          idempotency_key: string | null
+          merch_share_percent: number | null
+          message: string | null
+          offer_revision: number
+          performance_bonus_cents: number | null
+          proposed_end_at: string | null
+          proposed_slot_type: string | null
+          proposed_stage_name: string | null
+          proposed_start_at: string | null
+          request_hash: string | null
+          responded_at: string | null
+          sent_at: string | null
+          set_duration_minutes: number | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms: Json | null
+          ticket_bonus_terms: Json | null
+          travel_terms: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_character_profile: {
         Args: never
         Returns: {
@@ -38635,6 +39707,56 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      create_festival_offer: {
+        Args: {
+          p_application_id?: string
+          p_band_id: string
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_terms?: Json
+        }
+        Returns: {
+          accommodation_terms: Json | null
+          application_id: string | null
+          band_id: string
+          cancellation_terms: Json | null
+          created_at: string
+          created_by_profile_id: string | null
+          currency_code: string
+          deposit_cents: number | null
+          edition_id: string
+          exclusivity_terms: Json | null
+          expires_at: string | null
+          guarantee_fee_cents: number | null
+          hospitality_terms: Json | null
+          id: string
+          idempotency_key: string | null
+          merch_share_percent: number | null
+          message: string | null
+          offer_revision: number
+          performance_bonus_cents: number | null
+          proposed_end_at: string | null
+          proposed_slot_type: string | null
+          proposed_stage_name: string | null
+          proposed_start_at: string | null
+          request_hash: string | null
+          responded_at: string | null
+          sent_at: string | null
+          set_duration_minutes: number | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms: Json | null
+          ticket_bonus_terms: Json | null
+          travel_terms: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_notification: {
         Args: {
           p_action_path: string
@@ -38659,7 +39781,56 @@ export type Database = {
         Returns: undefined
       }
       current_profile_id: { Args: never; Returns: string }
+      current_profile_id_safe: { Args: never; Returns: string }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
+      decline_festival_offer: {
+        Args: {
+          p_idempotency_key?: string
+          p_offer_id: string
+          p_reason?: string
+        }
+        Returns: {
+          accommodation_terms: Json | null
+          application_id: string | null
+          band_id: string
+          cancellation_terms: Json | null
+          created_at: string
+          created_by_profile_id: string | null
+          currency_code: string
+          deposit_cents: number | null
+          edition_id: string
+          exclusivity_terms: Json | null
+          expires_at: string | null
+          guarantee_fee_cents: number | null
+          hospitality_terms: Json | null
+          id: string
+          idempotency_key: string | null
+          merch_share_percent: number | null
+          message: string | null
+          offer_revision: number
+          performance_bonus_cents: number | null
+          proposed_end_at: string | null
+          proposed_slot_type: string | null
+          proposed_stage_name: string | null
+          proposed_start_at: string | null
+          request_hash: string | null
+          responded_at: string | null
+          sent_at: string | null
+          set_duration_minutes: number | null
+          stage_slot_id: string | null
+          status: Database["public"]["Enums"]["festival_offer_status"]
+          technical_terms: Json | null
+          ticket_bonus_terms: Json | null
+          travel_terms: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decrement_gettit_comment_vote: {
         Args: { comment_id: string; vote_field: string }
         Returns: undefined
@@ -38706,6 +39877,7 @@ export type Database = {
         }[]
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
+      festival_terms_hash: { Args: { p_terms: Json }; Returns: string }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       generate_child_school_milestones: {
         Args: { p_child_id: string }
@@ -38871,6 +40043,7 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
+      is_active_band_member: { Args: { p_band_id: string }; Returns: boolean }
       is_company_owner: { Args: { _company_id: string }; Returns: boolean }
       is_master_discovered: {
         Args: { p_mentor_id: string; p_profile_id: string }
@@ -38892,6 +40065,33 @@ export type Database = {
       list_festival_for_sale: {
         Args: { p_festival_id: string; p_notes?: string; p_price_cents: number }
         Returns: string
+      }
+      lock_festival_setlist: {
+        Args: { p_setlist_id: string }
+        Returns: {
+          approved_at: string | null
+          band_id: string
+          changes_requested_reason: string | null
+          contract_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          idempotency_key: string | null
+          locked_at: string | null
+          maximum_duration_seconds: number
+          status: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          total_duration_seconds: number
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_setlists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       log_child_school_event: {
         Args: {
@@ -38997,6 +40197,32 @@ export type Database = {
         Args: { p_hours: number; p_twaat_id: string }
         Returns: Json
       }
+      public_festival_editions_read: {
+        Args: never
+        Returns: {
+          announced_at: string
+          capacity: number
+          city_id: string
+          completed_at: string
+          currency_code: string
+          description: string
+          edition_number: number
+          edition_year: number
+          end_at: string
+          expected_attendance: number
+          festival_id: string
+          id: string
+          live_at: string
+          maximum_ticket_price_cents: number
+          minimum_ticket_price_cents: number
+          on_sale_at: string
+          public_metadata: Json
+          start_at: string
+          status: Database["public"]["Enums"]["festival_edition_status"]
+          title: string
+          venue_id: string
+        }[]
+      }
       purchase_festival: {
         Args: {
           p_buyer_profile_id: string
@@ -39047,11 +40273,80 @@ export type Database = {
         Args: { p_action: string; p_application_id: string }
         Returns: undefined
       }
+      review_festival_application: {
+        Args: {
+          p_action: string
+          p_application_id: string
+          p_idempotency_key?: string
+          p_offer_terms?: Json
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      review_festival_setlist: {
+        Args: { p_action: string; p_reason?: string; p_setlist_id: string }
+        Returns: {
+          approved_at: string | null
+          band_id: string
+          changes_requested_reason: string | null
+          contract_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          idempotency_key: string | null
+          locked_at: string | null
+          maximum_duration_seconds: number
+          status: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          total_duration_seconds: number
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_setlists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       revoke_endorsement: {
         Args: { p_election_id: string; p_party_id: string }
         Returns: undefined
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
+      save_festival_setlist_draft: {
+        Args: {
+          p_contract_id: string
+          p_expected_version: number
+          p_idempotency_key?: string
+          p_items: Json
+        }
+        Returns: {
+          approved_at: string | null
+          band_id: string
+          changes_requested_reason: string | null
+          contract_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          idempotency_key: string | null
+          locked_at: string | null
+          maximum_duration_seconds: number
+          status: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          total_duration_seconds: number
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_setlists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       schedule_songwriting_session: {
         Args: {
           p_effort_hours: number
@@ -39064,6 +40359,16 @@ export type Database = {
         Returns: Json
       }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
+      sign_festival_contract: {
+        Args: {
+          p_acknowledgement?: Json
+          p_contract_id: string
+          p_expected_contract_version: number
+          p_idempotency_key?: string
+          p_signing_side: Database["public"]["Enums"]["festival_booking_side"]
+        }
+        Returns: Json
+      }
       simulate_ticket_sales: { Args: never; Returns: undefined }
       skill_tier_unlocked: {
         Args: { p_profile_id: string; p_slug: string }
@@ -39115,6 +40420,78 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_festival_application: {
+        Args: {
+          p_band_id: string
+          p_details?: Json
+          p_edition_id: string
+          p_idempotency_key?: string
+        }
+        Returns: {
+          application_message: string | null
+          band_id: string
+          band_snapshot: Json
+          created_at: string
+          currency_code: string
+          edition_id: string
+          eligibility_snapshot: Json
+          expires_at: string | null
+          genre_fit_snapshot: Json
+          id: string
+          idempotency_key: string | null
+          legacy_application_id: string | null
+          legacy_participant_id: string | null
+          minimum_fee_cents: number | null
+          organiser_notes: string | null
+          preferred_dates: Json
+          preferred_slot_types: string[] | null
+          preferred_stage_types: string[] | null
+          rejection_reason: string | null
+          request_hash: string | null
+          requested_fee_cents: number | null
+          requested_set_minutes: number | null
+          reviewed_at: string | null
+          source: string
+          status: Database["public"]["Enums"]["festival_application_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          updated_at: string
+          withdrawal_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_festival_setlist: {
+        Args: { p_setlist_id: string }
+        Returns: {
+          approved_at: string | null
+          band_id: string
+          changes_requested_reason: string | null
+          contract_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          idempotency_key: string | null
+          locked_at: string | null
+          maximum_duration_seconds: number
+          status: Database["public"]["Enums"]["festival_setlist_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          total_duration_seconds: number
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_contract_setlists"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -39353,6 +40730,50 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      withdraw_festival_application: {
+        Args: {
+          p_application_id: string
+          p_idempotency_key?: string
+          p_reason?: string
+        }
+        Returns: {
+          application_message: string | null
+          band_id: string
+          band_snapshot: Json
+          created_at: string
+          currency_code: string
+          edition_id: string
+          eligibility_snapshot: Json
+          expires_at: string | null
+          genre_fit_snapshot: Json
+          id: string
+          idempotency_key: string | null
+          legacy_application_id: string | null
+          legacy_participant_id: string | null
+          minimum_fee_cents: number | null
+          organiser_notes: string | null
+          preferred_dates: Json
+          preferred_slot_types: string[] | null
+          preferred_stage_types: string[] | null
+          rejection_reason: string | null
+          request_hash: string | null
+          requested_fee_cents: number | null
+          requested_set_minutes: number | null
+          reviewed_at: string | null
+          source: string
+          status: Database["public"]["Enums"]["festival_application_status"]
+          submitted_at: string | null
+          submitted_by_profile_id: string | null
+          updated_at: string
+          withdrawal_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
@@ -39369,6 +40790,31 @@ export type Database = {
         | "legalized"
       election_status: "nomination" | "voting" | "completed" | "cancelled"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
+      festival_application_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "waitlisted"
+        | "shortlisted"
+        | "offer_pending"
+        | "withdrawn"
+        | "rejected"
+        | "expired"
+        | "converted_to_contract"
+      festival_booking_side: "band" | "organiser"
+      festival_contract_status:
+        | "draft"
+        | "proposed"
+        | "awaiting_band_signature"
+        | "awaiting_organiser_signature"
+        | "awaiting_signatures"
+        | "active"
+        | "amendment_required"
+        | "cancelled"
+        | "terminated"
+        | "fulfilled"
+        | "breached"
+        | "expired"
       festival_edition_status:
         | "concept"
         | "planning"
@@ -39383,6 +40829,24 @@ export type Database = {
         | "postponed"
         | "cancelled"
         | "abandoned"
+      festival_offer_status:
+        | "draft"
+        | "sent"
+        | "viewed"
+        | "countered"
+        | "accepted_pending_contract"
+        | "declined"
+        | "withdrawn"
+        | "expired"
+        | "converted_to_contract"
+      festival_setlist_status:
+        | "draft"
+        | "submitted"
+        | "approved"
+        | "changes_requested"
+        | "locked"
+        | "performed"
+        | "cancelled"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       inbox_category:
         | "random_event"
@@ -39563,6 +41027,33 @@ export const Constants = {
       ],
       election_status: ["nomination", "voting", "completed", "cancelled"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
+      festival_application_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "waitlisted",
+        "shortlisted",
+        "offer_pending",
+        "withdrawn",
+        "rejected",
+        "expired",
+        "converted_to_contract",
+      ],
+      festival_booking_side: ["band", "organiser"],
+      festival_contract_status: [
+        "draft",
+        "proposed",
+        "awaiting_band_signature",
+        "awaiting_organiser_signature",
+        "awaiting_signatures",
+        "active",
+        "amendment_required",
+        "cancelled",
+        "terminated",
+        "fulfilled",
+        "breached",
+        "expired",
+      ],
       festival_edition_status: [
         "concept",
         "planning",
@@ -39577,6 +41068,26 @@ export const Constants = {
         "postponed",
         "cancelled",
         "abandoned",
+      ],
+      festival_offer_status: [
+        "draft",
+        "sent",
+        "viewed",
+        "countered",
+        "accepted_pending_contract",
+        "declined",
+        "withdrawn",
+        "expired",
+        "converted_to_contract",
+      ],
+      festival_setlist_status: [
+        "draft",
+        "submitted",
+        "approved",
+        "changes_requested",
+        "locked",
+        "performed",
+        "cancelled",
       ],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
       inbox_category: [
