@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeService } from "@/services/finance/financeService";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
@@ -36,13 +37,6 @@ export const useDikCokTips = (videoId?: string) => {
       if (pErr) throw pErr;
       if ((profile?.cash || 0) < amount) throw new Error("Not enough cash");
 
-      // Deduct from tipper
-      const { error: deductErr } = await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) - amount })
-        .eq("id", profileId);
-      if (deductErr) throw deductErr;
-
       // Credit to band balance
       const { data: video } = await supabase
         .from("dikcok_videos")
@@ -50,6 +44,24 @@ export const useDikCokTips = (videoId?: string) => {
         .eq("id", videoId)
         .single();
       if (video?.band_id) {
+        await financeService.transfer({
+          source: { ownerType: "player", ownerId: profileId },
+          destination: { ownerType: "band", ownerId: video.band_id },
+          amount,
+          category: "merchandise_revenue",
+          description: "DikCok fan tip",
+          idempotencyKey: `dikcok-tip-${profileId}-${videoId}-${Date.now()}`,
+          relatedEntityType: "dikcok_video",
+          relatedEntityId: videoId,
+          createdByProfileId: profileId,
+        });
+
+        // Compatibility mirrors while legacy balances remain deprecated.
+        const { error: deductErr } = await supabase
+          .from("profiles")
+          .update({ cash: (profile.cash || 0) - amount })
+          .eq("id", profileId);
+        if (deductErr) throw deductErr;
         const { data: band } = await supabase
           .from("bands")
           .select("band_balance")

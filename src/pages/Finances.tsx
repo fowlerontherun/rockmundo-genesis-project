@@ -13,6 +13,7 @@ import { TransactionsList } from "@/components/finance/TransactionsList";
 import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
 import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPanel";
 import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
+import { FinancialHistoryLedger } from "@/components/finance/FinancialHistoryLedger";
 import { Loader2, DollarSign } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
@@ -64,6 +65,7 @@ const Finances = () => {
           <TabsTrigger value="sponsorships">Sponsorships</TabsTrigger>
           <TabsTrigger value="city">City Treasury</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="ledger">Ledger</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -118,6 +120,10 @@ const Finances = () => {
 
         <TabsContent value="transactions" className="space-y-6">
           <TransactionsList transactions={transactions} />
+        </TabsContent>
+
+        <TabsContent value="ledger" className="space-y-6">
+          <FinancialHistoryLedger />
         </TabsContent>
       </Tabs>
     </FMPageScaffold>
