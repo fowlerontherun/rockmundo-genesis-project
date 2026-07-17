@@ -31,3 +31,31 @@
 | Tax period summaries | Added | `tax_placeholder`, `tax_withholding` | Basic aggregation only; country-specific taxes are Phase 3+. |
 
 Remaining direct balance mutations to review include legacy casino flows, some gig completion utilities, label advances, company weekly finance and older edge functions that pre-date the unified finance service.
+
+## Finance Phase 3 company operations update
+
+### Migrated or standardised flows
+
+- Company operating accounts are primary `financial_accounts` rows with `owner_type = 'company'`.
+- Legacy company balances are preserved through the Phase 1 opening-balance migration and Phase 3 financial profiles.
+- Representative company service revenue is routed through `company_record_service_revenue`, debiting a player account and crediting the company account with idempotency.
+- Company weekly operating costs are represented as `recurring_financial_obligations` for `owner_type = 'company'`.
+- Company payroll is represented by `company_payroll_batches`, `company_payroll_lines` and ledger-backed wage payments.
+- Failed payroll creates `company_wage_liabilities` instead of creating money or allowing unauthorised negative balances.
+- Owner investment, withdrawal and dividend records are separated from ordinary revenue and payroll.
+
+### Remaining direct company balance mutations
+
+The following areas still need targeted migration to ledger-only movement in future PRs: legacy hooks that update `companies.balance`, legacy `company_transactions`, company closure transfer behaviour, storefront purchases, food company sales, merch factory worker/equipment payments, recording-studio staff/equipment payments, automated company revenue simulations, share purchases and specialised booking refunds.
+
+### Company types identified for staged integration
+
+Current company-related systems include holding companies, venues, recording studios, rehearsal rooms, merch factories, logistics/transport companies, labels, management businesses, security firms and storefront/product-service companies. Phase 3 provides cost profiles and role foundations for these types but intentionally migrates only representative revenue and payroll paths.
+
+### Missing employee role gameplay
+
+Manager, accountant, marketing, sound-engineer and customer-service roles now have finance/performance definitions. Role-specific actions for teaching, driving, security shifts, production work, publicist activity and festival coordination remain follow-up gameplay integrations.
+
+### Future dependencies
+
+City cost multipliers, country taxation, local labour markets, regional rent, commercial utility prices and macroeconomic demand are deferred to Finance Phase 4 and later tax/economy phases.
