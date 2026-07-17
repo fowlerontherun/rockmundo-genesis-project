@@ -45,7 +45,7 @@ export default function FestivalAdmin() {
   const adminCreatedFestivals = festivals?.filter(f => f.created_by_admin);
 
   const pendingApplications = ((applications as any[]) ?? []).filter((a: any) => a.status === "pending");
-  const reviewedApplications = applications?.filter(a => a.status !== "pending");
+  const reviewedApplications = ((applications as any[]) ?? []).filter((a: any) => a.status !== "pending");
 
   const handleReview = (status: "accepted" | "rejected") => {
     if (!selectedApplication) return;
