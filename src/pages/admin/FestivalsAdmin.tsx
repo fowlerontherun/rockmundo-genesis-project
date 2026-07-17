@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink, XCircle } from "lucide-react";
 import { AdminFestivalCatalogue } from "@/features/festivals/admin/components/AdminFestivalCatalogue";
 import { FestivalStageManagement } from "@/features/festivals/admin/components/FestivalStageManagement";
@@ -331,7 +331,7 @@ function Applications({
   const [adminNotes, setAdminNotes] = useState("");
   const [offeredPayment, setOfferedPayment] = useState("");
   const { applications, isLoading, reviewApplication, isReviewing } =
-    useFestivalSlotApplications(editionId || festivalId);
+    useFestivalSlotApplications(editionId ? { scope: "edition", editionId, festivalId } : festivalId ? { scope: "festival", festivalId } : undefined);
   const pending = applications?.filter((a) => a.status === "pending") ?? [];
   const reviewed = applications?.filter((a) => a.status !== "pending") ?? [];
   const submit = (status: "accepted" | "rejected") => {
@@ -457,6 +457,7 @@ function Applications({
 }
 
 export default function FestivalsAdminPage() {
+  const navigate = useNavigate();
   const catalogue = useAdminFestivalCatalogue();
   const rows = catalogue.data ?? [];
   const [selectedFestivalId, setSelectedFestivalId] = useState("");
@@ -487,7 +488,7 @@ export default function FestivalsAdminPage() {
       festival: rows.find((row) => row.festivalId === festivalId),
     });
   const openManagement = (_festivalId: string, editionId: string) => {
-    window.location.href = `/festivals/${_festivalId}/manage/editions/${editionId}`;
+    navigate(`/festivals/${_festivalId}/manage/editions/${editionId}`);
   };
   return (
     <div className="space-y-6">

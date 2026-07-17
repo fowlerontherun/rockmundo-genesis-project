@@ -265,6 +265,35 @@ export type FestivalCreationValidationErrors = Partial<
     string[]
   >
 >;
+export type FestivalReferenceData = {
+  festivalTypes: string[];
+  genres: string[];
+  currencies: string[];
+  countries: { code: string; name: string }[];
+  cities: { id: string; name: string; country: string; timezone: string; currencyCode: string }[];
+  venues: { id: string; name: string; cityId: string; capacity: number | null }[];
+  stageTypes: string[];
+  weatherOptions: string[];
+  soundOptions: string[];
+  lightingOptions: string[];
+  commercialDefaults: Record<string, unknown>;
+};
+export type FestivalLifecycleTransitionOption = {
+  targetState: FestivalLifecycleState;
+  available: boolean;
+  blockers: string[];
+  warnings: string[];
+  adminOverrideAllowed: boolean;
+  reasonRequired: boolean;
+  confirmationRequired: boolean;
+  severity: "standard" | "warning" | "destructive";
+  explanation: string;
+};
+export type FestivalLifecycleOptions = {
+  editionId: string;
+  currentState: FestivalLifecycleState;
+  transitions: FestivalLifecycleTransitionOption[];
+};
 export type FestivalCreationResult = {
   festivalId: string;
   editionId: string;

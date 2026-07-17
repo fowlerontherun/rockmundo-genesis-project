@@ -23,3 +23,7 @@ The wizard generates one stable idempotency key when it opens. Retries reuse the
 ## Lifecycle and recovery
 
 New editions start in `planning`. Final submission is disabled while pending, form data is retained after recoverable failures, and the success state offers continuation, management workspace and public page links. If a later catalogue refresh fails, the returned route remains available from the creation result.
+
+## Phase 1 hardening update
+
+Festival creation now relies on server-projected reference data, server-authoritative edition numbering, authenticated actor idempotency, lifecycle/audit writes in the aggregate transaction, and explicit stage festival/edition consistency. Phase 1 is not considered fully verified unless frontend checks and the executable SQL harness pass in the target environment.

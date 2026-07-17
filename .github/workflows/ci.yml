@@ -32,3 +32,9 @@ jobs:
         run: npm run test:smoke -- --reporter=default
       - name: Build
         run: npm run build
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Festival SQL tests
+        run: npm run test:festivals:db

@@ -14,6 +14,8 @@ import type {
   OwnerManagementBootstrap,
   FestivalCreationDraft,
   FestivalCreationResult,
+  FestivalReferenceData,
+  FestivalLifecycleOptions,
 } from "./types";
 
 type RpcName =
@@ -24,7 +26,15 @@ type DomainErrorCode =
   | "FESTIVAL_RESPONSE_INVALID"
   | "FESTIVAL_PERMISSION_DENIED"
   | "FESTIVAL_EDITION_NOT_FOUND"
-  | "FESTIVAL_MIGRATION_REQUIRED";
+  | "FESTIVAL_MIGRATION_REQUIRED"
+  | "FESTIVAL_CREATE_INVALID_DATE"
+  | "FESTIVAL_CREATE_CITY_INVALID"
+  | "FESTIVAL_CREATE_VENUE_INVALID"
+  | "FESTIVAL_CREATE_CAPACITY_EXCEEDED"
+  | "FESTIVAL_CREATE_STAGE_DUPLICATE"
+  | "FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT"
+  | "FESTIVAL_CREATE_REFERENCE_DATA_UNAVAILABLE"
+  | "FESTIVAL_CREATE_TRANSACTION_FAILED";
 
 export class FestivalAdminServiceError extends Error {
   constructor(
@@ -62,7 +72,43 @@ export function mapFestivalError(error: {
   hint?: string;
 }) {
   const message = error.message ?? "Festival operation failed.";
-  if (/permission|not authorised|not authorized|rls/i.test(message))
+  if (/FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT/i.test(message))
+    return new FestivalAdminServiceError(
+      "This retry key was already used for different festival creation details.",
+      "FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT",
+      error,
+    );
+  if (/FESTIVAL_CREATE_INVALID_DATE|date/i.test(message))
+    return new FestivalAdminServiceError(
+      "Check the festival, application and booking dates before trying again.",
+      "FESTIVAL_CREATE_INVALID_DATE",
+      error,
+    );
+  if (/FESTIVAL_CREATE_CITY_INVALID/i.test(message))
+    return new FestivalAdminServiceError(
+      "Select a supported festival city from the current reference data.",
+      "FESTIVAL_CREATE_CITY_INVALID",
+      error,
+    );
+  if (/FESTIVAL_CREATE_VENUE_INVALID/i.test(message))
+    return new FestivalAdminServiceError(
+      "Select a venue that belongs to the selected city, or use a named custom site.",
+      "FESTIVAL_CREATE_VENUE_INVALID",
+      error,
+    );
+  if (/FESTIVAL_CREATE_CAPACITY_EXCEEDED/i.test(message))
+    return new FestivalAdminServiceError(
+      "The requested capacity exceeds the selected venue capacity.",
+      "FESTIVAL_CREATE_CAPACITY_EXCEEDED",
+      error,
+    );
+  if (/FESTIVAL_CREATE_STAGE_DUPLICATE/i.test(message))
+    return new FestivalAdminServiceError(
+      "Stage names must be unique within an edition.",
+      "FESTIVAL_CREATE_STAGE_DUPLICATE",
+      error,
+    );
+  if (/permission|not authorised|not authorized|rls|FESTIVAL_CREATE_PERMISSION_DENIED/i.test(message))
     return new FestivalAdminServiceError(
       "You do not have permission to perform this festival operation.",
       "FESTIVAL_PERMISSION_DENIED",
@@ -190,19 +236,34 @@ export async function createFestivalEditionFromWizard(
     created: data.created,
   };
 }
-export async function fetchFestivalReferenceData() {
-  const client = supabase as any;
-  const [cities, venues] = await Promise.all([
-    client
-      .from("cities")
-      .select("id,name,country,timezone")
-      .order("country")
-      .order("name"),
-    client.from("venues").select("id,name,city_id,capacity").order("name"),
-  ]);
-  if (cities.error) throw mapFestivalError(cities.error);
-  if (venues.error) throw mapFestivalError(venues.error);
-  return { cities: cities.data ?? [], venues: venues.data ?? [] };
+const referenceDataSchema = z.object({
+  festivalTypes: z.array(z.string()).default([]),
+  genres: z.array(z.string()).default([]),
+  currencies: z.array(z.string()).default([]),
+  countries: z.array(z.object({ code: z.string(), name: z.string() })).default([]),
+  cities: z.array(z.object({ id: z.string(), name: z.string(), country: z.string(), timezone: z.string(), currencyCode: z.string() })).default([]),
+  venues: z.array(z.object({ id: z.string(), name: z.string(), cityId: z.string(), capacity: z.coerce.number().nullable() })).default([]),
+  stageTypes: z.array(z.string()).default([]),
+  weatherOptions: z.array(z.string()).default([]),
+  soundOptions: z.array(z.string()).default([]),
+  lightingOptions: z.array(z.string()).default([]),
+  commercialDefaults: z.record(z.unknown()).default({}),
+}).passthrough();
+
+export async function fetchFestivalReferenceData(): Promise<FestivalReferenceData> {
+  try {
+    return await rpc(
+      "admin_festival_reference_data" as RpcName,
+      undefined,
+      referenceDataSchema,
+    );
+  } catch (error) {
+    throw new FestivalAdminServiceError(
+      "Festival reference data is unavailable. Refresh after migrations are deployed, then try again.",
+      "FESTIVAL_CREATE_REFERENCE_DATA_UNAVAILABLE",
+      error,
+    );
+  }
 }
 
 export async function createAdminFestivalBrand(input: AdminBrandInput) {
@@ -245,11 +306,33 @@ export async function createAdminFestivalEdition(input: AdminEditionInput) {
   );
 }
 
+export async function fetchAdminFestivalLifecycleOptions(
+  editionId: string,
+): Promise<FestivalLifecycleOptions> {
+  const schema = z.object({
+    editionId: z.string(),
+    currentState: z.string(),
+    transitions: z.array(z.object({
+      targetState: z.string(),
+      available: z.boolean(),
+      blockers: z.array(z.string()).default([]),
+      warnings: z.array(z.string()).default([]),
+      adminOverrideAllowed: z.boolean().default(false),
+      reasonRequired: z.boolean().default(false),
+      confirmationRequired: z.boolean().default(false),
+      severity: z.enum(["standard", "warning", "destructive"]).default("standard"),
+      explanation: z.string().default(""),
+    })).default([]),
+  }).passthrough();
+  return rpc("admin_festival_edition_lifecycle_options" as RpcName, { p_edition_id: editionId }, schema) as Promise<FestivalLifecycleOptions>;
+}
+
 export async function transitionAdminFestivalEdition(
   editionId: string,
   targetStatus: FestivalLifecycleState,
   reason: string,
   override = false,
+  idempotencyKey = `lifecycle:${editionId}:${targetStatus}`,
 ) {
   return rpc(
     "admin_transition_festival_edition" as RpcName,
@@ -259,7 +342,7 @@ export async function transitionAdminFestivalEdition(
       p_reason: reason,
       p_override: override,
       p_metadata: { source: "admin_festival_workspace" },
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotencyKey,
     },
     nonNullJson,
   );

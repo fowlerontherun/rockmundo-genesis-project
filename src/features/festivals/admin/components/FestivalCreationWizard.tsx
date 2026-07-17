@@ -19,6 +19,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   defaultFestivalCreationDraft,
   validateFestivalCreationDraft,
   hasCreationErrors,
@@ -26,9 +36,6 @@ import {
   moneyToCents,
   centsToMoney,
   buildEditionTitle,
-  FESTIVAL_TYPE_OPTIONS,
-  SUPPORTED_CURRENCIES,
-  SUPPORTED_TIMEZONES,
 } from "../creationValidation";
 import {
   useCreateFestivalFromWizard,
@@ -40,16 +47,6 @@ import type {
   FestivalCreationResult,
 } from "../types";
 
-const genres = [
-  "Rock",
-  "Pop",
-  "Electronic",
-  "Metal",
-  "Indie",
-  "Folk",
-  "Hip Hop",
-  "Jazz",
-];
 const stepNames = [
   "Festival",
   "First event",
@@ -75,6 +72,7 @@ export function FestivalCreationWizard({
     defaultFestivalCreationDraft(mode, festival?.festivalId),
   );
   const [step, setStep] = useState(0);
+  const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const refs = useFestivalReferenceData();
   const create = useCreateFestivalFromWizard();
   useEffect(() => {
@@ -101,23 +99,34 @@ export function FestivalCreationWizard({
     setDraft((d) => ({ ...d, ...patch }));
   const submit = () =>
     create.mutate(draft, { onSuccess: (result) => onCreated(result) });
-  const cities = refs.data?.cities ?? [];
-  const venues = (refs.data?.venues ?? []).filter(
-    (v: any) => v.city_id === draft.location.cityId,
+  const referenceData = refs.data;
+  const genres = referenceData?.genres ?? [];
+  const festivalTypes = referenceData?.festivalTypes ?? [];
+  const currencies = referenceData?.currencies ?? [];
+  const countries = referenceData?.countries ?? [];
+  const cities = (referenceData?.cities ?? []).filter(
+    (city) => !draft.location.country || city.country === draft.location.country,
   );
+  const venues = (referenceData?.venues ?? []).filter(
+    (venue) => venue.cityId === draft.location.cityId,
+  );
+  const selectedVenue = venues.find((venue) => venue.id === draft.location.venueId);
+  const venueCapacityExceeded = Boolean(selectedVenue?.capacity && draft.location.capacity > selectedVenue.capacity);
+  const canCloseWithoutPrompt = !open || create.isSuccess || draft.idempotencyKey === defaultFestivalCreationDraft(mode, festival?.festivalId).idempotencyKey;
   const canNext =
     step === 5 ? !hasCreationErrors(errors) : currentErrors.length === 0;
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (
-          !v &&
-          !create.isPending &&
-          confirm("Discard this festival setup draft?")
-        )
-          onOpenChange(false);
-        if (v) onOpenChange(true);
+        if (v) {
+          onOpenChange(true);
+          return;
+        }
+        if (create.isPending) return;
+        if (canCloseWithoutPrompt) onOpenChange(false);
+        else setDiscardPromptOpen(true);
       }}
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
@@ -136,8 +145,9 @@ export function FestivalCreationWizard({
               key={name}
               size="sm"
               variant={i === step ? "default" : "outline"}
-              disabled={mode !== "create_festival" && i === 0}
-              onClick={() => setStep(i)}
+              aria-current={i === step ? "step" : undefined}
+              disabled={(mode !== "create_festival" && i === 0) || i > step + 1 || (i > step && currentErrors.length > 0)}
+              onClick={() => { if (i <= step || currentErrors.length === 0) setStep(i); }}
             >
               {i + 1}. {name}
             </Button>
@@ -211,7 +221,7 @@ export function FestivalCreationWizard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {FESTIVAL_TYPE_OPTIONS.map((type) => (
+                  {festivalTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type.replace("_", " ")}
                     </SelectItem>
@@ -328,7 +338,7 @@ export function FestivalCreationWizard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_TIMEZONES.map((tz) => (
+                  {[draft.edition.timezone].filter(Boolean).map((tz) => (
                     <SelectItem key={tz} value={tz}>
                       {tz}
                     </SelectItem>
@@ -348,7 +358,7 @@ export function FestivalCreationWizard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
+                  {currencies.map((currency) => (
                     <SelectItem key={currency} value={currency}>
                       {currency}
                     </SelectItem>
@@ -361,6 +371,22 @@ export function FestivalCreationWizard({
         {step === 2 && (
           <div className="grid gap-3 md:grid-cols-2">
             <Label>
+              Country
+              <Select
+                value={draft.location.country}
+                onValueChange={(country) => update({
+                  location: { ...draft.location, country, cityId: "", cityName: "", venueId: "" },
+                })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                <SelectContent>
+                  {countries.map((country) => (
+                    <SelectItem key={country.code} value={country.code}>{country.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Label>
+            <Label>
               City
               <Select
                 value={draft.location.cityId}
@@ -372,10 +398,12 @@ export function FestivalCreationWizard({
                       cityId,
                       cityName: city?.name,
                       country: city?.country ?? "",
+                      venueId: "",
                     },
                     edition: {
                       ...draft.edition,
                       timezone: city?.timezone || draft.edition.timezone,
+                      currencyCode: city?.currencyCode || draft.edition.currencyCode,
                     },
                   });
                 }}
@@ -384,7 +412,7 @@ export function FestivalCreationWizard({
                   <SelectValue placeholder="Select city" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cities.map((city: any) => (
+                  {cities.map((city) => (
                     <SelectItem key={city.id} value={city.id}>
                       {city.name}, {city.country}
                     </SelectItem>
@@ -412,7 +440,7 @@ export function FestivalCreationWizard({
                   <SelectItem value="custom">
                     Public festival site name
                   </SelectItem>
-                  {venues.map((venue: any) => (
+                  {venues.map((venue) => (
                     <SelectItem key={venue.id} value={venue.id}>
                       {venue.name}
                     </SelectItem>
@@ -431,6 +459,12 @@ export function FestivalCreationWizard({
                 }
               />
             </Label>
+            {selectedVenue?.capacity && (
+              <p className={venueCapacityExceeded ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+                Venue capacity: {selectedVenue.capacity.toLocaleString()}
+                {venueCapacityExceeded ? " — requested capacity exceeds this venue." : ""}
+              </p>
+            )}
             <Label>
               Overall capacity
               <Input
@@ -753,7 +787,7 @@ export function FestivalCreationWizard({
             Back
           </Button>
           {step < 5 ? (
-            <Button disabled={!canNext} onClick={() => setStep(step + 1)}>
+            <Button disabled={!canNext || venueCapacityExceeded} onClick={() => setStep(step + 1)}>
               Continue
             </Button>
           ) : (
@@ -768,5 +802,22 @@ export function FestivalCreationWizard({
         </div>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={discardPromptOpen} onOpenChange={setDiscardPromptOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard this festival setup draft?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Continue editing to keep this setup, or discard the draft and lose unsaved festival creation changes.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continue editing</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { setDiscardPromptOpen(false); onOpenChange(false); }}>
+            Discard draft
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

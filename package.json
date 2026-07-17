@@ -32,7 +32,8 @@
     "test:achievements": "vitest run src/features/achievements/__tests__/validator.test.ts",
     "validate:balance": "vitest run src/balance/__tests__/balance.test.ts",
     "simulate:balance": "node scripts/progression-simulations/run-balance-simulations.mjs",
-    "validate:progression-programme": "node scripts/progression/validate-programme.mjs"
+    "validate:progression-programme": "node scripts/progression/validate-programme.mjs",
+    "test:festivals:db": "bash scripts/festivals/run-creation-phase1-db-gate.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
