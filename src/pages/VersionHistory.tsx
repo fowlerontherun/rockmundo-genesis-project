@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.578",
+    date: "2026-07-17",
+    changes: [
+      { type: 'feature', description: "Database migrations · Phase B · Batch 2 (4 of 13) deployed: Hardened Festival Booking Contracts. Adds `festival_stage_slot_reservation_status` enum plus 3 tables — `festival_booking_requests` (idempotency ledger), `festival_stage_slot_reservations` (slot holds), `festival_contract_versions` (term history). Extends offers/contracts/setlists with revision-tracking columns and unique indexes enforcing one live reservation per stage/offer/contract. Adds authorisation helpers (`current_profile_id_safe`, `is_current_band_member`, `can_manage_festival_booking`, `can_apply/negotiate/sign_for_band`), term/transition validators, and hardened idempotent RPCs for submit application, create/counter/accept offer, sign/cancel contract, and save/submit/review/lock setlist. Dropped pre-existing RPC variants with mismatched return types to allow the redefinition. RLS scopes the three new tables to band members, festival brand managers, or admins." },
+    ],
+  },
+  {
     version: "1.1.577",
     date: "2026-07-17",
     changes: [
