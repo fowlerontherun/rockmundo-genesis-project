@@ -10428,6 +10428,90 @@ export type Database = {
           },
         ]
       }
+      festival_admin_audit_events: {
+        Row: {
+          actor_profile_id: string | null
+          after_snapshot: Json
+          authority: string
+          before_snapshot: Json
+          created_at: string
+          edition_id: string | null
+          festival_id: string | null
+          id: string
+          idempotency_key: string | null
+          operation: string
+          reason: string | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          after_snapshot?: Json
+          authority?: string
+          before_snapshot?: Json
+          created_at?: string
+          edition_id?: string | null
+          festival_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation: string
+          reason?: string | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          after_snapshot?: Json
+          authority?: string
+          before_snapshot?: Json
+          created_at?: string
+          edition_id?: string | null
+          festival_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation?: string
+          reason?: string | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_admin_audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_admin_audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_admin_audit_events_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_admin_audit_events_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_admin_audit_events_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_application_events: {
         Row: {
           actor_profile_id: string | null
@@ -11886,6 +11970,88 @@ export type Database = {
           },
         ]
       }
+      festival_edition_management_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          edition_id: string
+          ends_at: string | null
+          id: string
+          permissions: Json
+          profile_id: string
+          role: string
+          starts_at: string
+          status: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          edition_id: string
+          ends_at?: string | null
+          id?: string
+          permissions?: Json
+          profile_id: string
+          role: string
+          starts_at?: string
+          status?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          edition_id?: string
+          ends_at?: string | null
+          id?: string
+          permissions?: Json
+          profile_id?: string
+          role?: string
+          starts_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_management_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_management_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_management_roles_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_management_roles_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_management_roles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_management_roles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_edition_transition_requests: {
         Row: {
           actor_profile_id: string | null
@@ -12111,6 +12277,7 @@ export type Database = {
           created_at: string
           description: string | null
           direction: string
+          edition_id: string | null
           edition_number: number
           festival_id: string
           id: string
@@ -12124,6 +12291,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           direction: string
+          edition_id?: string | null
           edition_number?: number
           festival_id: string
           id?: string
@@ -12137,12 +12305,27 @@ export type Database = {
           created_at?: string
           description?: string | null
           direction?: string
+          edition_id?: string | null
           edition_number?: number
           festival_id?: string
           id?: string
           posted_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_expense_ledger_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_expense_ledger_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_expense_ledger_festival_id_fkey"
             columns: ["festival_id"]
@@ -12323,6 +12506,7 @@ export type Database = {
           active: boolean
           coverage_type: string
           created_at: string
+          edition_id: string | null
           effective_from: string
           effective_to: string | null
           festival_id: string
@@ -12336,6 +12520,7 @@ export type Database = {
           active?: boolean
           coverage_type: string
           created_at?: string
+          edition_id?: string | null
           effective_from?: string
           effective_to?: string | null
           festival_id: string
@@ -12349,6 +12534,7 @@ export type Database = {
           active?: boolean
           coverage_type?: string
           created_at?: string
+          edition_id?: string | null
           effective_from?: string
           effective_to?: string | null
           festival_id?: string
@@ -12359,6 +12545,20 @@ export type Database = {
           weather_rider?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_insurance_policies_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_insurance_policies_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_insurance_policies_festival_id_fkey"
             columns: ["festival_id"]
@@ -13732,6 +13932,7 @@ export type Database = {
           approved_at: string | null
           city_id: string | null
           created_at: string
+          edition_id: string | null
           expires_on: string | null
           festival_id: string
           id: string
@@ -13745,6 +13946,7 @@ export type Database = {
           approved_at?: string | null
           city_id?: string | null
           created_at?: string
+          edition_id?: string | null
           expires_on?: string | null
           festival_id: string
           id?: string
@@ -13758,6 +13960,7 @@ export type Database = {
           approved_at?: string | null
           city_id?: string | null
           created_at?: string
+          edition_id?: string | null
           expires_on?: string | null
           festival_id?: string
           id?: string
@@ -13768,6 +13971,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_permits_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_permits_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_permits_festival_id_fkey"
             columns: ["festival_id"]
@@ -14511,6 +14728,7 @@ export type Database = {
       festival_staff: {
         Row: {
           created_at: string
+          edition_id: string | null
           festival_id: string
           hired_at: string
           id: string
@@ -14525,6 +14743,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          edition_id?: string | null
           festival_id: string
           hired_at?: string
           id?: string
@@ -14539,6 +14758,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          edition_id?: string | null
           festival_id?: string
           hired_at?: string
           id?: string
@@ -14552,6 +14772,20 @@ export type Database = {
           weekly_wage_cents?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_staff_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_staff_festival_id_fkey"
             columns: ["festival_id"]
@@ -14762,18 +14996,23 @@ export type Database = {
         Row: {
           band_id: string | null
           canonical_contract_id: string | null
+          changeover_minutes: number | null
           created_at: string | null
           day_number: number
+          edition_id: string | null
           end_time: string | null
           festival_id: string
+          headline_eligible: boolean
           id: string
           is_npc_dj: boolean | null
           npc_dj_genre: string | null
           npc_dj_name: string | null
           npc_dj_quality: number | null
           payout_amount: number | null
+          public_status: string
           slot_number: number
           slot_type: string
+          soundcheck_at: string | null
           stage_id: string
           start_time: string | null
           status: string | null
@@ -14781,18 +15020,23 @@ export type Database = {
         Insert: {
           band_id?: string | null
           canonical_contract_id?: string | null
+          changeover_minutes?: number | null
           created_at?: string | null
           day_number: number
+          edition_id?: string | null
           end_time?: string | null
           festival_id: string
+          headline_eligible?: boolean
           id?: string
           is_npc_dj?: boolean | null
           npc_dj_genre?: string | null
           npc_dj_name?: string | null
           npc_dj_quality?: number | null
           payout_amount?: number | null
+          public_status?: string
           slot_number: number
           slot_type?: string
+          soundcheck_at?: string | null
           stage_id: string
           start_time?: string | null
           status?: string | null
@@ -14800,18 +15044,23 @@ export type Database = {
         Update: {
           band_id?: string | null
           canonical_contract_id?: string | null
+          changeover_minutes?: number | null
           created_at?: string | null
           day_number?: number
+          edition_id?: string | null
           end_time?: string | null
           festival_id?: string
+          headline_eligible?: boolean
           id?: string
           is_npc_dj?: boolean | null
           npc_dj_genre?: string | null
           npc_dj_name?: string | null
           npc_dj_quality?: number | null
           payout_amount?: number | null
+          public_status?: string
           slot_number?: number
           slot_type?: string
+          soundcheck_at?: string | null
           stage_id?: string
           start_time?: string | null
           status?: string | null
@@ -14829,6 +15078,20 @@ export type Database = {
             columns: ["canonical_contract_id"]
             isOneToOne: false
             referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_stage_slots_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_stage_slots_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
             referencedColumns: ["id"]
           },
           {
@@ -14851,6 +15114,7 @@ export type Database = {
         Row: {
           capacity: number | null
           created_at: string | null
+          edition_id: string | null
           festival_id: string
           genre_focus: string | null
           id: string
@@ -14860,6 +15124,7 @@ export type Database = {
         Insert: {
           capacity?: number | null
           created_at?: string | null
+          edition_id?: string | null
           festival_id: string
           genre_focus?: string | null
           id?: string
@@ -14869,6 +15134,7 @@ export type Database = {
         Update: {
           capacity?: number | null
           created_at?: string | null
+          edition_id?: string | null
           festival_id?: string
           genre_focus?: string | null
           id?: string
@@ -14876,6 +15142,20 @@ export type Database = {
           stage_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_stages_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_stages_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_stages_festival_id_fkey"
             columns: ["festival_id"]
@@ -40938,6 +41218,68 @@ export type Database = {
         }
         Returns: number
       }
+      admin_assign_festival_system_act: {
+        Args: {
+          p_edition_id: string
+          p_genre: string
+          p_idempotency_key?: string
+          p_quality_tier: string
+          p_reason: string
+          p_slot_id: string
+          p_system_act_type: string
+        }
+        Returns: Json
+      }
+      admin_create_festival_brand: {
+        Args: {
+          p_brand_type?: string
+          p_description?: string
+          p_genre_identity?: string
+          p_home_city_id?: string
+          p_idempotency_key?: string
+          p_name: string
+          p_owner_profile_id?: string
+          p_public_metadata?: Json
+          p_recurring_policy?: string
+          p_scale?: string
+        }
+        Returns: {
+          annual_operating_cost_cents: number
+          cancellation_reason: string | null
+          city_id: string
+          created_at: string
+          description: string | null
+          edition_number: number
+          end_date: string
+          expected_attendance: number | null
+          founded_year: number | null
+          genre: string | null
+          id: string
+          list_price_cents: number | null
+          metadata: Json
+          name: string
+          next_edition_start: string | null
+          owner_company_id: string | null
+          owner_profile_id: string | null
+          owner_type: string
+          prestige_tier: number
+          sale_status: string
+          scale: string
+          start_date: string
+          status: string
+          ticket_price_high: number | null
+          ticket_price_low: number | null
+          treasury_cents: number
+          updated_at: string
+          venue_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festivals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_disable_maintenance: {
         Args: never
         Returns: {
@@ -40990,7 +41332,7 @@ export type Database = {
           edition_count: number
           festival_id: string
           legacy_mappings: number
-          lifecycle_state: string
+          lifecycle_state: Database["public"]["Enums"]["festival_edition_status"]
           next_edition_id: string
           operational_readiness: string
           outcome_count: number
@@ -41060,6 +41402,109 @@ export type Database = {
           schema_name: string
           table_count: number
         }[]
+      }
+      admin_preview_festival_seed: {
+        Args: { p_country_id?: string; p_strategy?: string; p_year?: number }
+        Returns: Json
+      }
+      admin_preview_legacy_festival_migration: {
+        Args: { p_game_event_id: string }
+        Returns: Json
+      }
+      admin_transition_festival_edition: {
+        Args: {
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_metadata?: Json
+          p_override?: boolean
+          p_reason: string
+          p_target_status: Database["public"]["Enums"]["festival_edition_status"]
+        }
+        Returns: {
+          announced_at: string | null
+          budget_cents: number | null
+          cancelled_at: string | null
+          capacity: number | null
+          city_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          curfew_at: string | null
+          currency_code: string
+          description: string | null
+          doors_open_at: string | null
+          edition_number: number
+          edition_year: number | null
+          end_at: string | null
+          expected_attendance: number | null
+          festival_id: string
+          id: string
+          legacy_metadata: Json
+          lifecycle_metadata: Json
+          live_at: string | null
+          maximum_ticket_price_cents: number | null
+          minimum_ticket_price_cents: number | null
+          on_sale_at: string | null
+          public_metadata: Json
+          slug: string | null
+          start_at: string | null
+          status: Database["public"]["Enums"]["festival_edition_status"]
+          timezone: string
+          title: string | null
+          treasury_allocation_cents: number | null
+          updated_at: string
+          venue_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_editions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_update_festival_brand: {
+        Args: {
+          p_festival_id: string
+          p_idempotency_key?: string
+          p_patch: Json
+          p_reason?: string
+        }
+        Returns: {
+          annual_operating_cost_cents: number
+          cancellation_reason: string | null
+          city_id: string
+          created_at: string
+          description: string | null
+          edition_number: number
+          end_date: string
+          expected_attendance: number | null
+          founded_year: number | null
+          genre: string | null
+          id: string
+          list_price_cents: number | null
+          metadata: Json
+          name: string
+          next_edition_start: string | null
+          owner_company_id: string | null
+          owner_profile_id: string | null
+          owner_type: string
+          prestige_tier: number
+          sale_status: string
+          scale: string
+          start_date: string
+          status: string
+          ticket_price_high: number | null
+          ticket_price_low: number | null
+          treasury_cents: number
+          updated_at: string
+          venue_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festivals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_world_reset: { Args: { p_confirm: string }; Returns: Json }
       admin_world_reset_preview: {
@@ -42133,6 +42578,10 @@ export type Database = {
         }[]
       }
       festival_crew_preflight: { Args: { p_session_id: string }; Returns: Json }
+      festival_edition_settlement_readiness: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
       festival_equipment_preflight: {
         Args: { p_session_id: string }
         Returns: Json
@@ -42158,6 +42607,20 @@ export type Database = {
       }
       festival_jsonb_sha256: { Args: { p_value: Json }; Returns: string }
       festival_outcome_hash: { Args: { p_value: Json }; Returns: string }
+      festival_owner_edition_options: {
+        Args: { p_festival_id: string }
+        Returns: {
+          city_name: string
+          currency_code: string
+          edition_number: number
+          end_at: string
+          festival_id: string
+          id: string
+          start_at: string
+          status: Database["public"]["Enums"]["festival_edition_status"]
+          title: string
+        }[]
+      }
       festival_performance_narrative: {
         Args: { p_session_id: string }
         Returns: Json
@@ -42249,24 +42712,43 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      festival_staff_candidates: {
+        Args: { p_edition_id: string; p_role: string }
+        Returns: {
+          availability: string
+          candidate_id: string
+          conflicts: Json
+          name: string
+          prior_festival_experience: number
+          reliability: number
+          role: string
+          skill: number
+          wage_cents: number
+        }[]
+      }
       festival_terms_hash: { Args: { p_terms: Json }; Returns: string }
       festival_validate_stage_slot: {
         Args: { p_edition_id: string; p_slot_id: string; p_terms: Json }
         Returns: {
           band_id: string | null
           canonical_contract_id: string | null
+          changeover_minutes: number | null
           created_at: string | null
           day_number: number
+          edition_id: string | null
           end_time: string | null
           festival_id: string
+          headline_eligible: boolean
           id: string
           is_npc_dj: boolean | null
           npc_dj_genre: string | null
           npc_dj_name: string | null
           npc_dj_quality: number | null
           payout_amount: number | null
+          public_status: string
           slot_number: number
           slot_type: string
+          soundcheck_at: string | null
           stage_id: string
           start_time: string | null
           status: string | null
