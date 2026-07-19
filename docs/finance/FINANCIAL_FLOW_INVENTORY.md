@@ -84,3 +84,18 @@ City cost multipliers, country taxation, local labour markets, regional rent, co
 
 - Full hotel inventory, property ownership, detailed venue booking prices, studio engineer costs, merchandise logistics and education costs still need call-site migration.
 - Country currency, national taxation, VAT/sales tax, payroll withholding and exchange-rate support are intentionally out of scope for Phase 4.
+
+## Finance Phase 7 borrowing and banking flows
+
+- Bank account opening now creates or reuses a linked `financial_accounts` row and records a banking audit event; no separate bank balance is maintained.
+- Savings interest accrual is represented by `deposit_interest_accruals`; payment must use a ledger-backed `savings_interest` transaction and remains taxable interest income where configured.
+- Loan application flow is `loan_applications` → `underwriting_results` → `loan_offers` → explicit `accept_loan_offer` → `loan_contracts` + `loan_schedule_lines` + `recurring_financial_obligations`.
+- Loan disbursement uses `loan_disbursement` with `metadata.taxable=false` and `metadata.liability=true`; this prevents borrowed principal from being counted as income or profit by compliant reports.
+- Repayments are allocated as late fee, accrued interest, scheduled interest and principal. Principal, interest and fees remain separate in `loan_payments` and schedule lines.
+- Missed repayments progress through grace, late, seriously late, final warning and default without duplicate late fees.
+- Refinancing uses `loan_refinance_records` to settle the old loan once and link to the new contract. Complex consolidation remains disabled.
+- Remaining negative-balance behaviour is legacy-only: `financial_accounts` blocks non-system negative balances, but historical company/admin fields such as negative-balance and bankruptcy flags still need follow-up migration.
+- Remaining informal liabilities include legacy `player_loans`, unpaid wage liabilities, reimbursements, withdrawals and operational arrears that are not automatically converted to Phase 7 loans.
+- Systems awaiting collateral support include equipment finance, premises improvement lending and any future secured loan products.
+- Systems awaiting bankruptcy integration include personal default recovery, band debt recovery, company administration, court proceedings and liquidation.
+- Existing costs that may require finance products include touring, recording, equipment purchase/repair, payroll shortfalls, premises upgrades and large company expansions.
