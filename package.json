@@ -33,7 +33,8 @@
     "validate:balance": "vitest run src/balance/__tests__/balance.test.ts",
     "simulate:balance": "node scripts/progression-simulations/run-balance-simulations.mjs",
     "validate:progression-programme": "node scripts/progression/validate-programme.mjs",
-    "test:festivals:db": "bash scripts/festivals/run-creation-phase1-db-gate.sh"
+    "test:festivals:db": "bash scripts/festivals/run-creation-phase1-db-gate.sh",
+    "test:finance:phase8b:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for Finance Phase 8B DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/finance_phase8b_mortgage_integration.sql'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
