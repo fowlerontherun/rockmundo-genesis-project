@@ -41130,6 +41130,34 @@ export type Database = {
       }
     }
     Functions: {
+      get_banking_dashboard: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      create_loan_application: {
+        Args: {
+          p_borrower_type: string
+          p_borrower_id: string
+          p_product_id: string
+          p_requested_amount_minor: number
+          p_requested_term_months: number
+          p_purpose: string
+          p_related_entity_type?: string | null
+          p_related_entity_id?: string | null
+          p_expected_use?: string | null
+          p_idempotency_key?: string | null
+        }
+        Returns: string
+      }
+      accept_loan_offer: {
+        Args: {
+          p_offer_id: string
+          p_disbursement_bank_account_id: string
+          p_repayment_bank_account_id: string
+          p_idempotency_key: string
+        }
+        Returns: string
+      }
       accept_festival_offer: {
         Args: {
           p_idempotency_key?: string
