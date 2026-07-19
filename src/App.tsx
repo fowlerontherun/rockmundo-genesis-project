@@ -314,6 +314,7 @@ const NarrativeStoryPage = lazyWithRetry(
 );
 const EurovisionPage = lazyWithRetry(() => import("./pages/Eurovision"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
+const Banking = lazyWithRetry(() => import("./pages/Banking"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
@@ -704,6 +705,7 @@ function App() {
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
                     <Route path="band-crew" element={<BandCrewManagement />} />
                     <Route path="finances" element={<Finances />} />
+                    <Route path="finance/banking" element={<Banking />} />
                     <Route path="sponsorships" element={<Sponsorships />} />
                     <Route path="gear" element={<Gear />} />
                     <Route path="education" element={<Education />} />

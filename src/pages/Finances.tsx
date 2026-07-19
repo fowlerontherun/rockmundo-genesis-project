@@ -1,5 +1,6 @@
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useFinances } from "@/hooks/useFinances";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { IncomeBreakdownChart } from "@/components/finance/IncomeBreakdownChart";
@@ -63,6 +64,7 @@ const Finances = () => {
           <TabsTrigger value="bands">Band Treasury</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="loans">Loans</TabsTrigger>
+          <Button asChild size="sm" variant="outline"><Link to="/finance/banking">Banking</Link></Button>
           <TabsTrigger value="charity">Charity</TabsTrigger>
           <TabsTrigger value="sponsorships">Sponsorships</TabsTrigger>
           <TabsTrigger value="city">City Treasury</TabsTrigger>
