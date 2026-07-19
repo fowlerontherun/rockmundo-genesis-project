@@ -158,3 +158,111 @@ export function mapBankingError(error: { code?: string; message?: string }): str
   if (error.message?.toLowerCase().includes("insufficient funds")) return "There is not enough money in the selected account.";
   return error.message ?? "Banking is temporarily unavailable.";
 }
+
+export type BankingProduct = {
+  id: string;
+  providerId: string;
+  providerName: string;
+  productName: string;
+  allowedPurposes: string[];
+  supportedCurrencies: string[];
+  minimumAmountMinor: number;
+  maximumAmountMinor: number;
+  minimumTermMonths: number;
+  maximumTermMonths: number;
+  interestRateBps: number;
+  originationFeeBps: number;
+  originationFeeFlatMinor: number;
+  scheduleType: string;
+  eligibilityNotes?: unknown;
+};
+
+export type PlayerBankAccount = {
+  id: string;
+  providerName: string;
+  accountType: string;
+  currencyCode: string;
+  status: string;
+  balanceMinor: number;
+};
+
+export type LoanDetail = {
+  id: string;
+  providerName: string;
+  status: string;
+  purpose: string;
+  principalMinor: number;
+  outstandingPrincipalMinor: number;
+  currencyCode: string;
+  interestRateBps: number;
+  originationFeeMinor: number;
+  nextPaymentMinor: number;
+  nextPaymentDate?: string;
+  repaymentBankAccountId?: string;
+};
+
+export type LoanScheduleLine = {
+  id: string;
+  instalmentNumber: number;
+  dueDate: string;
+  openingPrincipalMinor: number;
+  principalMinor: number;
+  interestMinor: number;
+  feeMinor: number;
+  totalDueMinor: number;
+  amountPaidMinor: number;
+  status: string;
+};
+
+export function estimateEqualPrincipalSchedule(input: { principalMinor: number; interestRateBps: number; termMonths: number; firstPaymentDate?: Date }) {
+  const monthlyPrincipal = Math.floor(input.principalMinor / input.termMonths);
+  let remaining = input.principalMinor;
+  return Array.from({ length: input.termMonths }, (_, index) => {
+    const principal = index === input.termMonths - 1 ? remaining : monthlyPrincipal;
+    const interest = Math.floor((remaining * input.interestRateBps) / 120000);
+    remaining -= principal;
+    return { instalmentNumber: index + 1, principalMinor: principal, interestMinor: interest, feeMinor: 0, totalDueMinor: principal + interest };
+  });
+}
+
+export async function listEligibleLoanProducts(): Promise<BankingProduct[]> {
+  const { data, error } = await (supabase.rpc as any)("list_eligible_loan_products", { p_borrower_type: "player" });
+  if (error) throw new Error(mapBankingError(error));
+  return (data as BankingProduct[] | null) ?? [];
+}
+
+export async function listPlayerBankAccounts(): Promise<PlayerBankAccount[]> {
+  const { data, error } = await (supabase.rpc as any)("list_player_bank_accounts");
+  if (error) throw new Error(mapBankingError(error));
+  return (data as PlayerBankAccount[] | null) ?? [];
+}
+
+export async function getLoanApplicationResult(applicationId: string) {
+  const { data, error } = await (supabase.rpc as any)("get_loan_application_result", { p_application_id: applicationId });
+  if (error) throw new Error(mapBankingError(error));
+  return data as any;
+}
+
+export async function getLoanDetails(loanContractId: string): Promise<LoanDetail | null> {
+  const { data, error } = await (supabase.rpc as any)("get_loan_details", { p_loan_contract_id: loanContractId });
+  if (error) throw new Error(mapBankingError(error));
+  return (data as LoanDetail | null) ?? null;
+}
+
+export async function getLoanSchedule(loanContractId: string): Promise<LoanScheduleLine[]> {
+  const { data, error } = await (supabase.rpc as any)("get_loan_schedule", { p_loan_contract_id: loanContractId });
+  if (error) throw new Error(mapBankingError(error));
+  return (data as LoanScheduleLine[] | null) ?? [];
+}
+
+export async function listLoanPaymentAttempts(loanContractId: string) {
+  const { data, error } = await (supabase.rpc as any)("list_loan_payment_attempts", { p_loan_contract_id: loanContractId });
+  if (error) throw new Error(mapBankingError(error));
+  return (data as any[] | null) ?? [];
+}
+
+export async function retryLoanPayment(input: { loanContractId: string; scheduleLineId: string; idempotencyKey: string }) {
+  const { data, error } = await (supabase.rpc as any)("retry_loan_payment", { p_loan_contract_id: input.loanContractId, p_schedule_line_id: input.scheduleLineId, p_idempotency_key: input.idempotencyKey });
+  if (error) throw new Error(mapBankingError(error));
+  return data as any;
+}
