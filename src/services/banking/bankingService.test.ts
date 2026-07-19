@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { formatCurrencyMinor, mapBankingError, summarizeEqualPrincipalOffer } from "./bankingService";
 
 describe("bankingService", () => {
-  it("formats minor-unit currencies", () => {
-    expect(formatCurrencyMinor({ amountMinor: 123456, currencyCode: "USD" })).toContain("1,234.56");
+  it("formats configured currency minor units", () => {
+    expect(formatCurrencyMinor({ amountMinor: 123456, currencyCode: "USD", locale: "en-US" })).toContain("$1,234.56");
+    expect(formatCurrencyMinor({ amountMinor: 123456, currencyCode: "GBP", locale: "en-GB" })).toContain("£1,234.56");
+    expect(formatCurrencyMinor({ amountMinor: 123456, currencyCode: "EUR", locale: "de-DE" })).toContain("1.234,56");
+    expect(formatCurrencyMinor({ amountMinor: 123456, currencyCode: "JPY", locale: "ja-JP" })).toContain("￥123,456");
   });
 
   it("summarizes declining equal-principal schedules without fixed-payment wording", () => {

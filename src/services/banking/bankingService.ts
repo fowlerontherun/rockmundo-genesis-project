@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrencyMinor } from "./currency";
 
 export type CurrencyMinor = {
   amountMinor: number;
@@ -66,13 +67,7 @@ const fallbackDashboard: BankingDashboard = {
   recentActivity: [],
 };
 
-export function formatCurrencyMinor({ amountMinor, currencyCode }: CurrencyMinor): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: currencyCode,
-    maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
-}
+export { formatCurrencyMinor };
 
 export function summarizeEqualPrincipalOffer(input: {
   principalMinor: number;
@@ -97,7 +92,7 @@ export function summarizeEqualPrincipalOffer(input: {
 }
 
 export async function fetchBankingDashboard(): Promise<BankingDashboard> {
-  const { data, error } = await (supabase as any).rpc("get_banking_dashboard");
+  const { data, error } = await supabase.rpc("get_banking_dashboard");
 
   if (error) {
     throw new Error(mapBankingError(error));
@@ -118,7 +113,7 @@ export async function createLoanApplication(input: {
   expectedUse: string;
   idempotencyKey: string;
 }): Promise<string> {
-  const { data, error } = await (supabase as any).rpc("create_loan_application", {
+  const { data, error } = await supabase.rpc("create_loan_application", {
     p_borrower_type: input.borrowerType,
     p_borrower_id: input.borrowerId,
     p_product_id: input.productId,
@@ -144,7 +139,7 @@ export async function acceptLoanOffer(input: {
   repaymentBankAccountId: string;
   idempotencyKey: string;
 }): Promise<string> {
-  const { data, error } = await (supabase as any).rpc("accept_loan_offer", {
+  const { data, error } = await supabase.rpc("accept_loan_offer", {
     p_offer_id: input.offerId,
     p_disbursement_bank_account_id: input.disbursementBankAccountId,
     p_repayment_bank_account_id: input.repaymentBankAccountId,
