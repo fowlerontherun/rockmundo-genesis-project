@@ -65,6 +65,7 @@ const Finances = () => {
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="loans">Loans</TabsTrigger>
           <Button asChild size="sm" variant="outline"><Link to="/finance/banking">Banking</Link></Button>
+          <Button asChild size="sm" variant="outline"><Link to="/finance/properties">Properties</Link></Button>
           <TabsTrigger value="charity">Charity</TabsTrigger>
           <TabsTrigger value="sponsorships">Sponsorships</TabsTrigger>
           <TabsTrigger value="city">City Treasury</TabsTrigger>
