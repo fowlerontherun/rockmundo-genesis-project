@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Landmark, Loader2 } from "lucide-react";
+import { Bell, CalendarClock, Landmark, Loader2, PiggyBank, Target, TrendingUp, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ export default function Banking() {
   });
 
   return (
-    <FMPageScaffold title="Banking" subtitle="Open accounts, apply for credit, and manage declining-payment loans." icon={Landmark} backTo="/finances">
+    <FMPageScaffold title="Banking" subtitle="Manage current accounts, savings, fixed deposits, goals, statements and reusable liquidity foundations." icon={Landmark} backTo="/finances">
       {isLoading ? (
         <div className="flex min-h-[320px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : error ? (
@@ -22,18 +22,16 @@ export default function Banking() {
       ) : (
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
-            <Card><CardHeader><CardTitle>Accounts</CardTitle><CardDescription>Balances stay separated by currency.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{data?.accounts.length ?? 0}</CardContent></Card>
-            <Card><CardHeader><CardTitle>Active borrowing</CardTitle><CardDescription>Next unpaid schedule line drives payment summaries.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{data?.loans.length ?? 0}</CardContent></Card>
-            <Card><CardHeader><CardTitle>Credit band</CardTitle><CardDescription>Guidance without exposing scoring internals.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{data?.creditProfile?.band ?? "—"}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="flex items-center gap-2"><WalletCards className="h-5 w-5" /> Net worth</CardTitle><CardDescription>Cash and savings across supported currencies.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{formatCurrencyMinor({ amountMinor: data?.savingsSummary?.netWorthMinor ?? data?.accounts.reduce((sum, account) => sum + account.balanceMinor, 0) ?? 0, currencyCode: data?.savingsSummary?.currencyCode ?? data?.accounts[0]?.currencyCode ?? "USD" })}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="flex items-center gap-2"><PiggyBank className="h-5 w-5" /> Savings</CardTitle><CardDescription>Easy access, premium and reserve balances.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{formatCurrencyMinor({ amountMinor: data?.savingsSummary?.savingsMinor ?? 0, currencyCode: data?.savingsSummary?.currencyCode ?? "USD" })}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Locked deposits</CardTitle><CardDescription>Next maturity {data?.savingsSummary?.nextMaturityDate ?? "not scheduled"}.</CardDescription></CardHeader><CardContent className="text-3xl font-bold">{formatCurrencyMinor({ amountMinor: data?.savingsSummary?.lockedDepositsMinor ?? 0, currencyCode: data?.savingsSummary?.currencyCode ?? "USD" })}</CardContent></Card>
           </div>
 
-          <Card>
-            <CardHeader><CardTitle>Borrow</CardTitle><CardDescription>Guided applications use server-generated affordability snapshots and disclose equal-principal, declining payments.</CardDescription></CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2">
-              <Button asChild><Link to="/finance/banking/apply">Start loan application</Link></Button>
-              <Button variant="outline" asChild><Link to="/finances?tab=loans">Compare existing loan offers</Link></Button>
-            </CardContent>
-          </Card>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Card><CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Interest</CardTitle><CardDescription>Accrued daily, posted monthly through balanced journals.</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrencyMinor({ amountMinor: data?.savingsSummary?.monthlyInterestMinor ?? 0, currencyCode: data?.savingsSummary?.currencyCode ?? "USD" })}</p><p className="text-sm text-muted-foreground">YTD {formatCurrencyMinor({ amountMinor: data?.savingsSummary?.interestEarnedYtdMinor ?? 0, currencyCode: data?.savingsSummary?.currencyCode ?? "USD" })}</p></CardContent></Card>
+            <Card><CardHeader><CardTitle>Cash flow health</CardTitle><CardDescription>Income, expenses and savings-rate indicators.</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold capitalize">{data?.cashFlowAnalytics?.financialHealth ?? "building"}</p><p className="text-sm text-muted-foreground">Savings rate {Math.round((data?.cashFlowAnalytics?.savingsRateBps ?? 0) / 100)}%</p></CardContent></Card>
+            <Card><CardHeader><CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" /> Notifications</CardTitle><CardDescription>Interest, maturity, minimum-balance and rate alerts.</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{data?.notifications?.length ?? 0}</p><p className="text-sm text-muted-foreground">Latest banking alerts</p></CardContent></Card>
+          </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
             <Card>
@@ -59,6 +57,19 @@ export default function Banking() {
                     <p className="text-sm">Next payment: {formatCurrencyMinor({ amountMinor: loan.nextPaymentMinor, currencyCode: loan.currencyCode })} {loan.nextPaymentDate ? `on ${loan.nextPaymentDate}` : ""}</p>
                   </Link>
                 )) : <p className="text-sm text-muted-foreground">No active loans.</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5" /> Savings goals</CardTitle><CardDescription>Goals can receive scheduled or threshold-based transfers.</CardDescription></CardHeader>
+              <CardContent className="space-y-3">
+                {data?.savingsGoals?.length ? data.savingsGoals.map((goal) => (
+                  <div key={goal.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between"><strong>{goal.name}</strong><span className="text-sm text-muted-foreground">{Math.round(goal.completionBps / 100)}%</span></div>
+                    <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, goal.completionBps / 100)}%` }} /></div>
+                    <p className="mt-2 text-sm text-muted-foreground">{formatCurrencyMinor({ amountMinor: goal.currentMinor, currencyCode: goal.currencyCode })} of {formatCurrencyMinor({ amountMinor: goal.targetMinor, currencyCode: goal.currencyCode })}</p>
+                  </div>
+                )) : <p className="text-sm text-muted-foreground">No savings goals yet. Create goals for a new guitar, tour bus, studio or house deposit.</p>}
               </CardContent>
             </Card>
           </section>

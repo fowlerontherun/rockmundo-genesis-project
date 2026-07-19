@@ -41,6 +41,12 @@ export type BankingDashboard = {
     currencyCode: string;
     createdAt: string;
   }>;
+  savingsSummary?: {
+    netWorthMinor: number; cashMinor: number; savingsMinor: number; lockedDepositsMinor: number; monthlyInterestMinor: number; interestEarnedYtdMinor: number; currencyCode: string; nextMaturityDate?: string;
+  };
+  cashFlowAnalytics?: { incomeMinor: number; expensesMinor: number; savingsRateBps: number; financialHealth: string; largestExpenseCategories: Array<[string, number]> };
+  savingsGoals?: Array<{ id: string; name: string; targetMinor: number; currentMinor: number; currencyCode: string; completionBps: number; projectedCompletionDate?: string }>;
+  notifications?: Array<{ id: string; type: string; title: string; body: string; severity: "info" | "warning" | "success"; createdAt: string }>;
 };
 
 export type LoanOfferSummary = {
