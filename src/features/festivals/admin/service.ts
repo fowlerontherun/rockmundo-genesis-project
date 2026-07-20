@@ -21,7 +21,12 @@ import type {
 type RpcName =
   keyof import("@/integrations/supabase/types").Database["public"]["Functions"];
 
-type DomainErrorCode =
+export type DomainErrorCode =
+  | "FESTIVAL_NOT_SIGNED_IN"
+  | "FESTIVAL_NOT_ADMIN"
+  | "FESTIVAL_RPC_NOT_DEPLOYED"
+  | "FESTIVAL_SCHEMA_MISMATCH"
+  | "FESTIVAL_NETWORK_FAILED"
   | "FESTIVAL_RPC_FAILED"
   | "FESTIVAL_RESPONSE_INVALID"
   | "FESTIVAL_PERMISSION_DENIED"
@@ -47,13 +52,16 @@ export class FestivalAdminServiceError extends Error {
   }
 }
 
+const isNetworkFailure = (error: { message?: string; code?: string }) =>
+  !error.code || /failed to fetch|network|load failed|abort/i.test(error.message ?? "");
+
 const rpc = async <T>(
   fn: RpcName,
   args?: Record<string, unknown>,
   schema?: z.ZodType<T>,
 ): Promise<T> => {
   const { data, error } = await supabase.rpc(fn as never, args as never);
-  if (error) throw mapFestivalError(error);
+  if (error) throw mapFestivalError(error, fn as string);
   if (!schema) return data as T;
   const parsed = schema.safeParse(data);
   if (!parsed.success)
@@ -70,13 +78,32 @@ export function mapFestivalError(error: {
   code?: string;
   details?: string;
   hint?: string;
-}) {
+}, rpcName?: string) {
   const message = error.message ?? "Festival operation failed.";
+  const diagnostic = { ...error, rpcName };
+  if (error.code === "PGRST202" || /could not find the function|schema cache/i.test(message))
+    return new FestivalAdminServiceError(
+      "Festival administration services have not been deployed.",
+      "FESTIVAL_RPC_NOT_DEPLOYED",
+      diagnostic,
+    );
+  if (["42P01", "42703", "42883"].includes(error.code ?? ""))
+    return new FestivalAdminServiceError(
+      "The festival database needs migration before this page can load.",
+      "FESTIVAL_SCHEMA_MISMATCH",
+      diagnostic,
+    );
+  if (isNetworkFailure(error))
+    return new FestivalAdminServiceError(
+      "Festival administration could not be loaded due to a network failure.",
+      "FESTIVAL_NETWORK_FAILED",
+      diagnostic,
+    );
   if (/FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT/i.test(message))
     return new FestivalAdminServiceError(
       "This retry key was already used for different festival creation details.",
       "FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT",
-      error,
+      diagnostic,
     );
   if (/FESTIVAL_CREATE_INVALID_DATE|date/i.test(message))
     return new FestivalAdminServiceError(
@@ -295,9 +322,38 @@ const nonNullJson = z
     "RPC returned no result",
   );
 
+
+export async function fetchCurrentUserIsPlatformAdmin(): Promise<boolean> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError)
+    throw new FestivalAdminServiceError(
+      "Sign in before opening festival administration.",
+      "FESTIVAL_NOT_SIGNED_IN",
+      userError,
+    );
+  if (!userData.user)
+    throw new FestivalAdminServiceError(
+      "Sign in before opening festival administration.",
+      "FESTIVAL_NOT_SIGNED_IN",
+    );
+
+  const data = await rpc(
+    "current_user_is_platform_admin" as RpcName,
+    undefined,
+    z.boolean(),
+  );
+  if (!data)
+    throw new FestivalAdminServiceError(
+      "You do not have festival administration access.",
+      "FESTIVAL_NOT_ADMIN",
+    );
+  return data;
+}
+
 export async function fetchAdminFestivalCatalogue(): Promise<
   AdminFestivalCatalogueRow[]
 > {
+  await fetchCurrentUserIsPlatformAdmin();
   const data = await rpc(
     "admin_festival_catalogue" as RpcName,
     undefined,

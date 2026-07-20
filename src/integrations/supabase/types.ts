@@ -41342,6 +41342,10 @@ export type Database = {
           stage_count: number
         }[]
       }
+      current_user_is_platform_admin: {
+        Args: never
+        Returns: boolean
+      }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
