@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -168,7 +168,12 @@ interface DashboardContribution {
 }
 
 interface TreasuryDashboard {
-  status?: "ok" | "treasury_missing" | "profile_missing" | "permission_denied";
+  status?:
+    | "ok"
+    | "treasury_missing"
+    | "profile_missing"
+    | "permission_denied"
+    | "band_missing";
   primaryCurrencyCode: string;
   treasuries: TreasuryAccount[];
   contributions: DashboardContribution[];
@@ -231,6 +236,20 @@ interface SupabaseFinanceRpcClient {
 
 const financeRpc = supabase as unknown as SupabaseFinanceRpcClient;
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function formatDateTime(value: string) {
   try {
     return format(new Date(value), "MMM d, yyyy h:mm a");
@@ -274,12 +293,17 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const [contributions, setContributions] = useState<DashboardContribution[]>(
     [],
   );
+  const treasuryRequestId = useRef(0);
+  const accountsRequestId = useRef(0);
 
   const fetchEligibleAccounts = async () => {
+    const requestId = ++accountsRequestId.current;
     if (!bandId || !profileId) {
-      setPersonalAccounts([]);
-      setSelectedAccountId("");
-      setAccountStatus(profileId ? null : "profile_missing");
+      if (requestId === accountsRequestId.current) {
+        setPersonalAccounts([]);
+        setSelectedAccountId("");
+        setAccountStatus(profileId ? null : "profile_missing");
+      }
       return;
     }
 
@@ -293,13 +317,14 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           dashboard?.primaryCurrencyCode ?? (band ? "GBP" : null),
       },
     );
+    if (requestId !== accountsRequestId.current) return;
     setAccountsLoading(false);
 
     if (error) {
       setPersonalAccounts([]);
       setSelectedAccountId("");
       setAccountStatus(null);
-      setAccountError(error.message);
+      setAccountError(getErrorMessage(error, "Unable to load accounts."));
       return;
     }
 
@@ -318,6 +343,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   };
 
   const fetchTreasuryDashboard = async () => {
+    const requestId = ++treasuryRequestId.current;
     if (!bandId || !profileId) return;
     setDashboardLoading(true);
     setDashboardError(null);
@@ -329,19 +355,21 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         },
       );
       if (error) throw error;
+      if (requestId !== treasuryRequestId.current) return;
       setDashboard(data);
       setContributions(data?.contributions ?? []);
     } catch (caught) {
-      const message =
-        caught instanceof Error
-          ? caught.message
-          : "Unable to load treasury dashboard.";
+      if (requestId !== treasuryRequestId.current) return;
+      const message = getErrorMessage(
+        caught,
+        "Unable to load treasury dashboard.",
+      );
       console.error("Failed to load band treasury dashboard", caught);
       setDashboard(null);
       setContributions([]);
       setDashboardError(message);
     } finally {
-      setDashboardLoading(false);
+      if (requestId === treasuryRequestId.current) setDashboardLoading(false);
     }
   };
 
@@ -352,7 +380,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       const [
         { data: bandData, error: bandError },
         { data: earningData, error: earningError },
-        { data: membersData },
+        { data: membersData, error: membersError },
       ] = await Promise.all([
         supabase.from("bands").select("*").eq("id", bandId).single(),
         supabase
@@ -369,6 +397,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
       if (bandError) throw bandError;
       if (earningError) throw earningError;
+      if (membersError) throw membersError;
 
       const b = bandData as BandRow;
       setBand(b);
@@ -391,6 +420,15 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   };
 
   useEffect(() => {
+    treasuryRequestId.current += 1;
+    accountsRequestId.current += 1;
+    setDashboard(null);
+    setDashboardError(null);
+    setContributions([]);
+    setPersonalAccounts([]);
+    setSelectedAccountId("");
+    setContributionPreview(null);
+    setContributionIdempotencyKey(null);
     void fetchFinances();
   }, [bandId, profileId]);
 
@@ -404,7 +442,17 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     ) ??
     dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
     dashboard?.treasuries[0];
-  const balanceSource = primaryTreasury ? "ledger" : "legacy_fallback";
+  const dashboardStatus = dashboard?.status ?? null;
+  const canUseLegacyFallback =
+    !primaryTreasury &&
+    !!band &&
+    (dashboardStatus === "treasury_missing" ||
+      (!!dashboardError && dashboardStatus !== "permission_denied"));
+  const balanceSource = primaryTreasury
+    ? "ledger"
+    : canUseLegacyFallback
+      ? "legacy_fallback"
+      : "unavailable";
   const treasuryCurrency =
     primaryTreasury?.currencyCode ?? dashboard?.primaryCurrencyCode ?? "GBP";
 
@@ -412,7 +460,9 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     const balance =
       primaryTreasury?.availableBalanceMinor !== undefined
         ? primaryTreasury.availableBalanceMinor / 100
-        : Number(band?.band_balance ?? 0);
+        : canUseLegacyFallback
+          ? Number(band?.band_balance ?? 0)
+          : 0;
     if (earnings.length === 0) {
       return {
         balance,
@@ -457,7 +507,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       recentActivity: earnings,
       bySource,
     };
-  }, [primaryTreasury, band?.band_balance, earnings]);
+  }, [primaryTreasury, canUseLegacyFallback, band?.band_balance, earnings]);
 
   const topSources = useMemo(() => {
     return Object.entries(aggregated.bySource)
@@ -479,8 +529,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         description: `${clamped}% of band balance will be paid out each Saturday at 10:00 AM.`,
       });
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Unable to save weekly pay.";
+      const message = getErrorMessage(e, "Unable to save weekly pay.");
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setSavingPay(false);
@@ -511,8 +560,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setContributionPreview(data);
       setContributionIdempotencyKey(crypto.randomUUID());
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Unable to preview contribution.";
+      const message = getErrorMessage(e, "Unable to preview contribution.");
       toast({
         title: "Contribution preview failed",
         description: message,
@@ -564,8 +612,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       void fetchFinances();
       void fetchEligibleAccounts();
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Unable to post contribution.";
+      const message = getErrorMessage(e, "Unable to post contribution.");
       toast({
         title: "Contribution failed",
         description: message,
@@ -640,6 +687,32 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           <AlertDescription>
             Showing the legacy band balance until a ledger treasury is
             available.
+          </AlertDescription>
+        </Alert>
+      )}
+      {!dashboardError && dashboard?.status === "permission_denied" && (
+        <Alert variant="destructive">
+          <AlertTitle>Band treasury permission required.</AlertTitle>
+          <AlertDescription>
+            You do not have permission to view this band treasury. Legacy
+            balance fallback is disabled for explicit permission denials.
+          </AlertDescription>
+        </Alert>
+      )}
+      {!dashboardError && dashboard?.status === "profile_missing" && (
+        <Alert variant="destructive">
+          <AlertTitle>Active profile required.</AlertTitle>
+          <AlertDescription>
+            Select or create an active player profile before using Band
+            Finances.
+          </AlertDescription>
+        </Alert>
+      )}
+      {!dashboardError && dashboard?.status === "band_missing" && (
+        <Alert variant="destructive">
+          <AlertTitle>Band not found.</AlertTitle>
+          <AlertDescription>
+            This band could not be found by the treasury dashboard.
           </AlertDescription>
         </Alert>
       )}
@@ -725,7 +798,13 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <Select
                 value={selectedAccountId}
                 onValueChange={setSelectedAccountId}
-                disabled={accountsLoading || personalAccounts.length === 0}
+                disabled={
+                  accountsLoading ||
+                  personalAccounts.length === 0 ||
+                  dashboardStatus === "permission_denied" ||
+                  dashboardStatus === "profile_missing" ||
+                  dashboardStatus === "band_missing"
+                }
               >
                 <SelectTrigger>
                   <SelectValue
@@ -816,7 +895,10 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                 previewingContribution ||
                 contributing ||
                 accountsLoading ||
-                !selectedAccountId
+                !selectedAccountId ||
+                dashboardStatus === "permission_denied" ||
+                dashboardStatus === "profile_missing" ||
+                dashboardStatus === "band_missing"
               }
             >
               {previewingContribution
