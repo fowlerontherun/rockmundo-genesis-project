@@ -319,6 +319,8 @@ const PropertyHub = lazyWithRetry(() => import("./pages/PropertyHub"));
 const PropertyDetailPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.PropertyDetailPage })));
 const MortgageApplicationPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.MortgageApplicationPage })));
 const MortgagesPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.MortgagesPage })));
+const MortgageApplicationResultPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.MortgageApplicationResultPage })));
+const MortgageOfferPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.MortgageOfferPage })));
 const MortgageDashboardPage = lazyWithRetry(() => import("./pages/MortgageJourney").then((m) => ({ default: m.MortgageDashboardPage })));
 const BankingApply = lazyWithRetry(() => import("./pages/BankingApply"));
 const BankingLoanDetail = lazyWithRetry(() => import("./pages/BankingLoanDetail"));
@@ -716,6 +718,8 @@ function App() {
                     <Route path="finance/properties" element={<PropertyHub />} />
                     <Route path="finance/properties/:propertyId" element={<PropertyDetailPage />} />
                     <Route path="finance/properties/:propertyId/mortgage" element={<MortgageApplicationPage />} />
+                    <Route path="finance/mortgage-applications/:applicationId" element={<MortgageApplicationResultPage />} />
+                    <Route path="finance/mortgage-offers/:offerId" element={<MortgageOfferPage />} />
                     <Route path="finance/mortgages" element={<MortgagesPage />} />
                     <Route path="finance/mortgages/:mortgageId" element={<MortgageDashboardPage />} />
                     <Route path="finance/banking/apply" element={<BankingApply />} />
