@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink, XCircle } from "lucide-react";
 import { AdminFestivalCatalogue } from "@/features/festivals/admin/components/AdminFestivalCatalogue";
@@ -19,6 +20,8 @@ import {
   useAdminFestivalCatalogue,
   useOwnerFestivalEditions,
 } from "@/features/festivals/admin/hooks";
+import { FestivalAdminServiceError } from "@/features/festivals/admin/service";
+import { festivalAdminQueryKeys } from "@/features/festivals/admin/queryKeys";
 import type {
   AdminFestivalCatalogueRow,
   OwnerEditionOption,
@@ -50,6 +53,46 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+
+
+const getCatalogueErrorMessage = (error: unknown) => {
+  if (!(error instanceof FestivalAdminServiceError))
+    return "Festival administration could not be loaded. Retry or inspect the error details.";
+
+  switch (error.code) {
+    case "FESTIVAL_NOT_SIGNED_IN":
+      return "Sign in before opening festival administration.";
+    case "FESTIVAL_NOT_ADMIN":
+    case "FESTIVAL_PERMISSION_DENIED":
+      return "You do not have festival administration access.";
+    case "FESTIVAL_RPC_NOT_DEPLOYED":
+      return "Festival administration services have not been deployed.";
+    case "FESTIVAL_SCHEMA_MISMATCH":
+    case "FESTIVAL_MIGRATION_REQUIRED":
+      return "The festival database needs migration before this page can load.";
+    case "FESTIVAL_RESPONSE_INVALID":
+      return "Festival administration returned an unexpected response. Retry or inspect the error details.";
+    case "FESTIVAL_NETWORK_FAILED":
+      return "Festival administration could not be loaded because the network request failed.";
+    default:
+      return "Festival administration could not be loaded. Retry or inspect the error details.";
+  }
+};
+
+const getCatalogueDiagnostic = (error: unknown) => {
+  if (!(error instanceof FestivalAdminServiceError)) return null;
+  const cause = error.cause as
+    | { code?: string; message?: string; details?: string; hint?: string; rpcName?: string }
+    | undefined;
+  return {
+    domainCode: error.code,
+    postgresCode: cause?.code,
+    message: cause?.message ?? error.message,
+    details: cause?.details,
+    hint: cause?.hint,
+    rpcName: cause?.rpcName ?? "admin_festival_catalogue",
+  };
+};
 
 function EditionRequired({
   editionId,
@@ -431,6 +474,7 @@ function Applications({
 
 export default function FestivalsAdminPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const catalogue = useAdminFestivalCatalogue();
   const rows = catalogue.data ?? [];
   const [selectedFestivalId, setSelectedFestivalId] = useState("");
@@ -474,6 +518,7 @@ export default function FestivalsAdminPage() {
           </p>
         </div>
         <Button
+          disabled={catalogue.isLoading || Boolean(catalogue.error)}
           onClick={() => setWizard({ open: true, mode: "create_festival" })}
         >
           Create Festival
@@ -506,9 +551,23 @@ export default function FestivalsAdminPage() {
       )}
       {catalogue.error && (
         <Card>
-          <CardContent className="p-6 text-destructive">
-            Festivals could not be loaded. You may not have permission to manage
-            festivals.
+          <CardContent className="space-y-3 p-6 text-destructive">
+            <p>{getCatalogueErrorMessage(catalogue.error)}</p>
+            {import.meta.env.DEV && getCatalogueDiagnostic(catalogue.error) && (
+              <pre className="overflow-auto rounded bg-muted p-3 text-xs text-muted-foreground">
+                {JSON.stringify(getCatalogueDiagnostic(catalogue.error), null, 2)}
+              </pre>
+            )}
+            <Button
+              variant="outline"
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: festivalAdminQueryKeys.catalogue,
+                })
+              }
+            >
+              Retry
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -521,6 +580,7 @@ export default function FestivalsAdminPage() {
           setSelectedEditionId={setSelectedEditionId}
         />
       )}
+      {!catalogue.isLoading && !catalogue.error && (
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex h-auto flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -640,6 +700,7 @@ export default function FestivalsAdminPage() {
           <FestivalAuditLog />
         </TabsContent>
       </Tabs>
+      )}
       <FestivalCreationWizard
         open={wizard.open}
         mode={wizard.mode}
