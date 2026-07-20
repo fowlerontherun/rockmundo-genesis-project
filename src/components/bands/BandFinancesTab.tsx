@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   DollarSign, TrendingUp, PiggyBank, Receipt, ArrowUpRight, ArrowDownRight,
-  Music, Mic, ShoppingBag, Radio, Settings, Users, Calendar,
+  Music, Mic, ShoppingBag, Radio, Settings, Users, Calendar, HandCoins,
 } from "lucide-react";
 
 interface BandFinancesTabProps {
@@ -87,6 +87,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const [weeklyPayPct, setWeeklyPayPct] = useState(0);
   const [savingPay, setSavingPay] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
+  const [personalAccounts, setPersonalAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [contributionAmount, setContributionAmount] = useState("");
+  const [contributionNote, setContributionNote] = useState("");
+  const [contributing, setContributing] = useState(false);
+  const [contributions, setContributions] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,10 +101,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setLoading(true);
       setError(null);
       try {
-        const [{ data: bandData, error: bandError }, { data: earningData, error: earningError }, { data: membersData }] = await Promise.all([
+        const [{ data: bandData, error: bandError }, { data: earningData, error: earningError }, { data: membersData }, { data: accountData }, { data: contributionData }] = await Promise.all([
           supabase.from("bands").select("*").eq("id", bandId).single(),
           supabase.from("band_earnings").select("*").eq("band_id", bandId).order("created_at", { ascending: false }).limit(50),
           supabase.from("band_members").select("id, is_touring_member, user_id").eq("band_id", bandId),
+          supabase.from("bank_accounts").select("id, account_type, currency_code, status, linked_finance_account_id, financial_accounts(current_balance_minor, available_balance_minor)").eq("owner_type", "player").eq("owner_id", profileId ?? "00000000-0000-0000-0000-000000000000").eq("status", "active"),
+          supabase.from("band_financial_contributions").select("id, amount_minor, currency_code, contribution_type, related_expense_type, related_expense_id, refundable_status, notes, created_at, contributing_player_id").eq("band_id", bandId).order("created_at", { ascending: false }).limit(25),
         ]);
 
         if (bandError) throw bandError;
@@ -113,6 +121,9 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         setIsLeader(!!profileId && profileId === b.leader_id);
         const realMembers = (membersData ?? []).filter(m => !m.is_touring_member);
         setMemberCount(realMembers.length);
+        setPersonalAccounts((accountData as any[]) ?? []);
+        setSelectedAccountId((accountData as any[])?.[0]?.id ?? "");
+        setContributions((contributionData as any[]) ?? []);
       } catch (caught) {
         console.error("Failed to load band finances", caught);
         if (isMounted) {
@@ -180,6 +191,35 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     }
   };
 
+  const refreshFinances = () => window.location.reload();
+
+  const handleContribute = async () => {
+    const amount = Number(contributionAmount);
+    if (!selectedAccountId || !Number.isFinite(amount) || amount <= 0) {
+      toast({ title: "Contribution needs an account and positive amount", variant: "destructive" });
+      return;
+    }
+    setContributing(true);
+    try {
+      const { error } = await supabase.rpc("contribute_personal_funds_to_band" as any, {
+        p_band_id: bandId,
+        p_personal_bank_account_id: selectedAccountId,
+        p_amount_minor: Math.round(amount * 100),
+        p_idempotency_key: `band-contribution:${bandId}:${selectedAccountId}:${Date.now()}`,
+        p_notes: contributionNote || null,
+      } as any);
+      if (error) throw error;
+      toast({ title: "Contribution posted", description: "Your personal account was debited and the band treasury was credited." });
+      setContributionAmount("");
+      setContributionNote("");
+      refreshFinances();
+    } catch (e: any) {
+      toast({ title: "Contribution failed", description: e.message, variant: "destructive" });
+    } finally {
+      setContributing(false);
+    }
+  };
+
   const projectedTotal = Math.floor((aggregated.balance * Math.max(0, Math.min(100, weeklyPayPct))) / 100);
   const projectedPerMember = memberCount > 0 ? Math.floor(projectedTotal / memberCount) : 0;
 
@@ -241,6 +281,26 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
             <p className="text-2xl font-bold">{aggregated.monthlyRunway} <span className="text-sm font-normal text-muted-foreground">months</span></p>
             <Progress value={Math.min(100, aggregated.monthlyRunway * 10)} className="mt-1 h-1.5" />
           </CardContent>
+        </Card>
+      </div>
+
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><HandCoins className="h-4 w-4" /> Add Money to Band</CardTitle>
+            <CardDescription>Move personal funds into the real band treasury with explicit confirmation.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1"><Label className="text-xs">Personal account</Label><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>{personalAccounts.map((a) => <option key={a.id} value={a.id}>{a.account_type ?? "Account"} · {a.currency_code} · {formatCurrency(((a.financial_accounts as any)?.available_balance_minor ?? 0) / 100)}</option>)}</select></div>
+            <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label className="text-xs">Amount</Label><Input type="number" min="0" step="0.01" value={contributionAmount} onChange={(e) => setContributionAmount(e.target.value)} placeholder="50.00" /></div><div className="space-y-1"><Label className="text-xs">Optional note</Label><Input value={contributionNote} onChange={(e) => setContributionNote(e.target.value)} placeholder="New rehearsal fund" /></div></div>
+            <Alert><AlertTitle>Contribution warning</AlertTitle><AlertDescription>This contribution is not automatically repayable and does not grant additional band ownership or voting rights.</AlertDescription></Alert>
+            <Button onClick={handleContribute} disabled={contributing || !selectedAccountId}>{contributing ? "Contributing…" : "Contribute to band"}</Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Member Contributions</CardTitle><CardDescription>Voluntary deposits, personal expense payments, shortfalls and refunds.</CardDescription></CardHeader>
+          <CardContent>{contributions.length === 0 ? <p className="text-sm text-muted-foreground">No contributions recorded yet.</p> : <div className="space-y-2">{contributions.map((c) => <div key={c.id} className="rounded-md border p-2 text-sm"><div className="flex justify-between gap-2"><span className="font-medium">{getSourceLabel(c.contribution_type)}</span><Badge>{formatCurrency((c.amount_minor ?? 0) / 100)}</Badge></div><p className="text-xs text-muted-foreground">{c.currency_code} · {formatDateTime(c.created_at)} · refund: {c.refundable_status}</p>{c.related_expense_type && <p className="text-xs text-muted-foreground">Related: {c.related_expense_type}</p>}{c.notes && <p className="text-xs">{c.notes}</p>}</div>)}</div>}</CardContent>
         </Card>
       </div>
 
