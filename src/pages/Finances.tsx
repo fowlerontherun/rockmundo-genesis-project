@@ -18,6 +18,8 @@ import { FinancialHistoryLedger } from "@/components/finance/FinancialHistoryLed
 import { PlayerFinanceHub } from "@/components/finance/PlayerFinanceHub";
 import { Loader2, DollarSign } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { FinancialObligationsPanel } from "@/components/finance/FinancialObligationsPanel";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const Finances = () => {
   const [searchParams] = useSearchParams();
@@ -33,6 +35,7 @@ const Finances = () => {
     investmentOptions,
     isLoading,
   } = useFinances();
+  const { profileId } = useActiveProfile();
 
   if (isLoading) {
     return (
@@ -64,6 +67,7 @@ const Finances = () => {
           <TabsTrigger value="bands">Band Treasury</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
           <TabsTrigger value="loans">Loans</TabsTrigger>
+          <TabsTrigger value="obligations">Obligations</TabsTrigger>
           <Button asChild size="sm" variant="outline"><Link to="/finance/banking">Banking</Link></Button>
           <Button asChild size="sm" variant="outline"><Link to="/finance/properties">Properties</Link></Button>
           <TabsTrigger value="charity">Charity</TabsTrigger>
@@ -113,6 +117,10 @@ const Finances = () => {
             loanOffers={loanOffers}
             cash={summary.cash}
           />
+        </TabsContent>
+
+        <TabsContent value="obligations" className="space-y-6">
+          <FinancialObligationsPanel profileId={profileId ?? undefined} />
         </TabsContent>
 
         <TabsContent value="charity" className="space-y-6">
