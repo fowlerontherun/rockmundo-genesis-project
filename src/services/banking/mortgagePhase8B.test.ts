@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateCityProperties, isPropertyJournalBalanced, type PropertyTemplate } from "./propertyPhase8A";
-import { assessAffordability, buildMortgageDashboard, calculateLtvBps, canTransferProperty, createPurchaseCompletion, generateSettlementQuote, makeOverpayment, processMortgagePayment, progressArrears, refinanceMortgage, resolveMortgageRate, type BorrowerFinancials, type MortgageAdminPolicy, type MortgageProduct } from "./mortgagePhase8B";
+import { assessAffordability, buildMortgageDashboard, calculateLtvBps, canTransferProperty, createPurchaseCompletion, generateSettlementQuote, makeOverpayment, processMortgagePayment, progressArrears, refinanceMortgage, resolveMortgageRate, type BorrowerFinancials, type BorrowerType, type MortgageAdminPolicy, type MortgageProduct } from "./mortgagePhase8B";
 
 const propertyTemplate: PropertyTemplate = { id: "flat", city: "London", district: "Camden", category: "residential", type: "Flat", quality: 4, sizeSqm: 50, rooms: 3, bedrooms: 1, capacity: 2, monthlyCosts: { maintenance: { amountMinor: 12000, currencyCode: "GBP" } }, purchaseValue: { amountMinor: 30000000, currencyCode: "GBP" }, rentalValue: { amountMinor: 120000, currencyCode: "GBP" }, maintenanceLevel: 2, prestige: 5, upgradePotential: 6, storageCapacity: 140 };
 const policy: MortgageAdminPolicy = { baseRates: [{ currencyCode: "GBP", effectiveDate: "2026-01-01", annualRateBps: 425 }], affordabilityStressRateBps: 700, maxDebtToIncomeBps: 4500, recoveryGraceDays: 14, products: [] };
