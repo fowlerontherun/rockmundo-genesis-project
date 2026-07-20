@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.582",
+    date: "2026-07-20",
+    changes: [
+      { type: 'fix', description: "Wellness: recovery and medical actions (sleep, doctor visits, therapy) no longer require energy, so exhausted characters can actually recover. Cash cost check corrected (was comparing dollars vs cents and rejecting affordable purchases)." },
+      { type: 'improvement', description: "Health drain rebalanced: base activity costs cut by ~40% and now scale with in-game age. Under-20 characters drain at 25% of the old rate, under-30 at 40%, under-40 at 70%. Older characters (50+) feel their years progressively. Health is now easy to manage for young players." },
+      { type: 'fix', description: "Build: added positional-arg overload to formatCurrencyMinor for Banking pages, cast newly-added banking RPCs, and imported BorrowerType in mortgage test." },
+    ],
+  },
+  {
     version: "1.1.578",
     date: "2026-07-17",
     changes: [

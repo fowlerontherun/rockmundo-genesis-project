@@ -100,26 +100,37 @@ export async function applyHealthDrain(
 ): Promise<void> {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("health, energy")
+    .select("health, energy, age")
     .eq("id", profileId)
     .single();
 
   if (!profile) return;
 
+  // Rebalanced base drain: much gentler than before. Age scales the impact
+  // so under-30 characters can comfortably manage their vitals.
   const healthCosts: Record<string, number> = {
-    gig: 8,
-    recording: 4,
-    songwriting: 2,
-    rehearsal: 3,
-    travel: 6,
-    busking: 5,
-    release_promo: 4,
-    default: 3,
+    gig: 5,
+    recording: 2,
+    songwriting: 1,
+    rehearsal: 2,
+    travel: 3,
+    busking: 3,
+    release_promo: 2,
+    default: 2,
   };
+
+  const age = (profile as any).age ?? 25;
+  const ageMultiplier =
+    age < 20 ? 0.25 :
+    age < 30 ? 0.4 :
+    age < 40 ? 0.7 :
+    age < 50 ? 1.0 :
+    age < 60 ? 1.25 :
+    age < 70 ? 1.55 : 1.9;
 
   const hourlyHealthDrain = healthCosts[activityType] || healthCosts.default;
   const hours = durationMinutes / 60;
-  const healthDrain = Math.round(hourlyHealthDrain * hours);
+  const healthDrain = Math.max(0, Math.round(hourlyHealthDrain * hours * ageMultiplier));
 
   const newHealth = Math.max(0, (profile.health ?? 100) - healthDrain);
   const newEnergy = Math.max(0, (profile.energy ?? 100) - energyCost);
