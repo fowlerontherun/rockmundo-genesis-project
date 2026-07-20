@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const from = vi.fn();
@@ -121,9 +121,7 @@ describe("BandFinancesTab treasury regression handling", () => {
     expect(
       screen.queryByText("Unable to load band finances"),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Legacy balance fallback active"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Legacy balance fallback active")).toBeInTheDocument();
     expect(screen.getByText("Add Money to Band")).toBeInTheDocument();
     expect(screen.getByText("Weekly Member Pay")).toBeInTheDocument();
     expect(screen.getByText(/£1,234.00/)).toBeInTheDocument();
@@ -274,5 +272,83 @@ describe("BandFinancesTab treasury regression handling", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Add Money to Band")).toBeInTheDocument();
     expect(screen.getByText("Revenue Breakdown")).toBeInTheDocument();
+  });
+
+
+  it("reports not_band_member without exposing balances or contributions", async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") {
+        return Promise.resolve({
+          data: {
+            status: "not_band_member",
+            canViewBalance: false,
+            canViewDetails: false,
+            primaryCurrencyCode: "GBP",
+            treasuries: [],
+            contributions: [],
+          },
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { status: "not_band_member", accounts: [] },
+        error: null,
+      });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+
+    expect(await screen.findByText("Band membership required.")).toBeInTheDocument();
+    expect(screen.queryByText("Legacy balance fallback active")).not.toBeInTheDocument();
+    expect(screen.getByText("£0.00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Preview contribution/i })).toBeDisabled();
+  });
+
+  it("shows first-contribution previews with treasury creation semantics", async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") {
+        return Promise.resolve({ data: { status: "treasury_missing", canViewBalance: true, canViewDetails: false, primaryCurrencyCode: "GBP", treasuries: [], contributions: [] }, error: null });
+      }
+      if (fn === "get_my_eligible_band_contribution_accounts") {
+        return Promise.resolve({ data: { status: "ok", accounts: [{ id: "account-1", displayName: "Current Account", providerName: "Test Bank", accountType: "current", maskedAccountNumber: "•••• 1234", currencyCode: "GBP", currentBalanceMinor: 10000, availableBalanceMinor: 10000, isPrimary: true, eligible: true, ineligibleReason: null }] }, error: null });
+      }
+      if (fn === "preview_my_band_contribution") {
+        return Promise.resolve({ data: { sourceAccountDisplay: "Current Account •••• 1234", currencyCode: "GBP", currentPersonalBalanceMinor: 10000, amountMinor: 2500, resultingPersonalBalanceMinor: 7500, destinationTreasuryName: "Band treasury", currentTreasuryBalanceMinor: 0, resultingTreasuryBalanceMinor: 2500, eligible: true, ineligibleReason: null, warningText: "warning", treasuryWillBeCreated: true }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+    await screen.findByText("Band treasury is not available yet.");
+    fireEvent.change(screen.getByPlaceholderText("50.00"), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /Preview contribution/i }));
+
+    expect(await screen.findByText("Band treasury")).toBeInTheDocument();
+    expect(screen.getAllByText(/£25.00/).length).toBeGreaterThan(0);
+    expect(rpc).toHaveBeenCalledWith("preview_my_band_contribution", expect.objectContaining({ p_amount_minor: 2500 }));
+  });
+
+  it("updates contribution balances in minor units without synthetic treasury ids", async () => {
+    const dashboardResponses = [
+      { status: "treasury_missing", canViewBalance: true, canViewDetails: false, primaryCurrencyCode: "GBP", treasuries: [], contributions: [] },
+      { status: "ok", canViewBalance: true, canViewDetails: false, primaryCurrencyCode: "GBP", treasuries: [{ accountId: "treasury-1", currencyCode: "GBP", currentBalanceMinor: 2500, availableBalanceMinor: 2500, isPrimary: true }], contributions: [] },
+    ];
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") return Promise.resolve({ data: dashboardResponses.shift() ?? dashboardResponses[0], error: null });
+      if (fn === "get_my_eligible_band_contribution_accounts") return Promise.resolve({ data: { status: "ok", accounts: [{ id: "account-1", displayName: "Current Account", providerName: "Test Bank", accountType: "current", maskedAccountNumber: "•••• 1234", currencyCode: "GBP", currentBalanceMinor: 10000, availableBalanceMinor: 10000, isPrimary: true, eligible: true, ineligibleReason: null }] }, error: null });
+      if (fn === "preview_my_band_contribution") return Promise.resolve({ data: { sourceAccountDisplay: "Current Account •••• 1234", currencyCode: "GBP", currentPersonalBalanceMinor: 10000, amountMinor: 2500, resultingPersonalBalanceMinor: 7500, destinationTreasuryName: "Band treasury", currentTreasuryBalanceMinor: 0, resultingTreasuryBalanceMinor: 2500, eligible: true, ineligibleReason: null, warningText: "warning", treasuryWillBeCreated: true }, error: null });
+      if (fn === "contribute_my_personal_funds_to_band") return Promise.resolve({ data: { contributionId: "contribution-1", transactionId: "tx-1", newBandTreasuryBalanceMinor: 2500, newPlayerAvailableBalanceMinor: 7500 }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+    await screen.findByText("Band treasury is not available yet.");
+    fireEvent.change(screen.getByPlaceholderText("50.00"), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /Preview contribution/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Confirm contribution/i }));
+
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("contribute_my_personal_funds_to_band", expect.any(Object)));
+    expect(screen.queryByText("pending-refresh")).not.toBeInTheDocument();
+    expect(await screen.findByText(/£25.00/)).toBeInTheDocument();
   });
 });
