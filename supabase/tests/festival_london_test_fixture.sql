@@ -43,8 +43,11 @@ DECLARE
   v_fn text := pg_get_functiondef('public.festival_edition_operations_summary(uuid)'::regprocedure);
   v_internal_priv boolean;
 BEGIN
-  IF v_fn NOT LIKE '%can_manage_festival_edition(auth.uid(), p_edition_id)%' THEN RAISE EXCEPTION 'operations summary missing authorisation guard'; END IF;
+  IF v_fn NOT LIKE '%can_manage_festival_edition(p_edition_id)%' THEN RAISE EXCEPTION 'operations summary missing authorisation guard'; END IF;
   IF v_fn NOT LIKE '%permission_denied%' THEN RAISE EXCEPTION 'operations summary missing structured permission denial'; END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname='can_manage_festival_edition' AND oidvectortypes(proargtypes)='uuid, uuid') THEN RAISE EXCEPTION 'legacy caller-selectable helper still exists'; END IF;
+  IF pg_get_function_arguments('public.can_manage_festival_edition(uuid)'::regprocedure) <> 'p_edition_id uuid' THEN RAISE EXCEPTION 'authenticated helper exposes unexpected arguments'; END IF;
+  IF has_function_privilege('authenticated','public.can_manage_festival_edition_internal(uuid,uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'authenticated can execute explicit-identity helper'; END IF;
   IF has_function_privilege('anon','public.festival_edition_operations_summary(uuid)','EXECUTE') THEN RAISE EXCEPTION 'anon can execute operations summary'; END IF;
   IF NOT has_function_privilege('authenticated','public.festival_edition_operations_summary(uuid)','EXECUTE') THEN RAISE EXCEPTION 'authenticated wrapper execute missing'; END IF;
   SELECT has_function_privilege('authenticated','public.festival_edition_operations_summary_internal(uuid)','EXECUTE') INTO v_internal_priv;
@@ -86,6 +89,9 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_unrelated_user::text, true);
   BEGIN PERFORM public.festival_edition_operations_summary(v_edition); RAISE EXCEPTION 'unrelated user unexpectedly read summary'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  IF public.can_manage_festival_edition(v_edition) THEN RAISE EXCEPTION 'unrelated user can manage edition'; END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname='can_manage_festival_edition' AND oidvectortypes(proargtypes)='uuid, uuid') THEN RAISE EXCEPTION 'ordinary user could target removed actor-id helper'; END IF;
+  IF has_function_privilege('authenticated','public.can_manage_festival_edition_internal(uuid,uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'ordinary user can execute internal spoof helper'; END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_owner_user::text, true);
   v_ops := public.festival_edition_operations_summary(v_edition);
@@ -101,6 +107,17 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role','service_role', true);
   PERFORM set_config('request.jwt.claim.sub', '', true);
   IF public.festival_edition_operations_summary(v_edition)->>'edition_id' <> v_edition::text THEN RAISE EXCEPTION 'service role denied'; END IF;
+
+  PERFORM set_config('request.jwt.claim.role','authenticated', true);
+  UPDATE public.festival_editions SET capacity=7777, lifecycle_metadata=jsonb_build_object('is_test_fixture','yes','ticket_summary',jsonb_build_object('capacity','','tickets_sold','unknown')) WHERE id=v_other_edition;
+  PERFORM set_config('request.jwt.claim.sub', v_other_owner_user::text, true);
+  v_ops := public.festival_edition_operations_summary(v_other_edition);
+  IF (v_ops->'ticket_summary'->>'capacity')::int <> 7777 THEN RAISE EXCEPTION 'production metadata overrode capacity %', v_ops->'ticket_summary'; END IF;
+  IF v_ops->'ticket_summary'->>'tickets_sold' IS NOT NULL THEN RAISE EXCEPTION 'missing ticket source should be null %', v_ops->'ticket_summary'; END IF;
+  IF v_ops->'ticket_summary'->>'source' <> 'unavailable' THEN RAISE EXCEPTION 'missing ticket source should be unavailable %', v_ops->'ticket_summary'; END IF;
+  UPDATE public.festival_editions SET lifecycle_metadata=jsonb_build_object('is_test_fixture',true,'ticket_summary',jsonb_build_object('capacity',10000,'tickets_sold',-1)) WHERE id=v_other_edition;
+  v_ops := public.festival_edition_operations_summary(v_other_edition);
+  IF v_ops->'ticket_summary'->>'tickets_sold' IS NOT NULL THEN RAISE EXCEPTION 'negative fixture tickets should be rejected %', v_ops->'ticket_summary'; END IF;
 END $$;
 
 ROLLBACK;
