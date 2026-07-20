@@ -64,7 +64,7 @@ describe("Finance Phase 8B mortgages, collateral and secured lending", () => {
 
     const usdTemplate = { ...propertyTemplate, id: "loft", city: "New York", purchaseValue: { amountMinor: 50000000, currencyCode: "USD" }, rentalValue: { amountMinor: 200000, currencyCode: "USD" }, monthlyCosts: { maintenance: { amountMinor: 15000, currencyCode: "USD" } } };
     const [usdProperty] = generateCityProperties([usdTemplate], { loft: 1 });
-    const usdProduct = { ...product, id: "usd-commercial", currencyCode: "USD", eligibleBorrowerTypes: ["company"] as const };
+    const usdProduct = { ...product, id: "usd-commercial", currencyCode: "USD", eligibleBorrowerTypes: ["company"] as BorrowerType[] };
     const usdFinancials: BorrowerFinancials = { borrowerType: "company", borrowerId: "company-1", operatingProfitMinor: 1_500_000, cashFlowMinor: 500_000, payrollMinor: 300_000, existingCommitmentsMinor: 100_000, savingsMinor: 12_000_000, creditScore: 760, currencyCode: "USD" };
     const usdPurchase = createPurchaseCompletion({ property: usdProperty, buyer: { type: "company", id: "company-1" }, sellerId: "world", product: usdProduct, policy, financials: usdFinancials, lenderId: "bank-us", termMonths: 240, completionDate: "2026-11-01", firstPaymentDate: "2026-12-01", repaymentMethod: "manual" });
     expect(usdPurchase.journals.flatMap((j) => j.lines).every((l) => l.currencyCode === "USD")).toBe(true);
