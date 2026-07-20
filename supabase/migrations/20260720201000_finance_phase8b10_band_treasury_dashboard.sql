@@ -93,21 +93,68 @@ AS $$
 DECLARE
   pid uuid := public.current_player_profile_id();
   primary_currency char(3);
-  can_view boolean;
+  active_member boolean;
   can_detail boolean;
 BEGIN
-  IF pid IS NULL THEN RAISE EXCEPTION 'profile_missing'; END IF;
-  can_view := public.user_has_band_finance_permission(p_band_id,pid,'view_band_balance'::public.band_finance_permission);
-  can_detail := public.user_has_band_finance_permission(p_band_id,pid,'view_transaction_history'::public.band_finance_permission);
-  IF NOT can_view THEN RAISE EXCEPTION 'permission_denied'; END IF;
-  SELECT COALESCE((metadata->>'primary_operating_currency')::char(3), (SELECT default_currency_code FROM public.financial_accounts WHERE owner_type='band' AND owner_id=p_band_id AND account_status='active' ORDER BY is_primary DESC, created_at LIMIT 1), 'GBP'::char(3)) INTO primary_currency FROM public.bands WHERE id=p_band_id;
+  IF pid IS NULL THEN
+    RETURN jsonb_build_object('status','profile_missing','primaryCurrencyCode','GBP','treasuries','[]'::jsonb,'contributions','[]'::jsonb);
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.band_members bm
+    WHERE bm.band_id = p_band_id
+      AND bm.profile_id = pid
+      AND COALESCE(bm.member_status,'active') = 'active'
+  ) INTO active_member;
+
+  IF NOT active_member THEN
+    RETURN jsonb_build_object('status','permission_denied','primaryCurrencyCode','GBP','treasuries','[]'::jsonb,'contributions','[]'::jsonb);
+  END IF;
+
+  can_detail := public.user_has_band_finance_permission(p_band_id,pid,'view_detailed_income_expenses'::public.band_finance_permission);
+
+  SELECT COALESCE(
+    (b.metadata->>'primary_operating_currency')::char(3),
+    (SELECT fa.currency_code FROM public.financial_accounts fa WHERE fa.owner_type='band' AND fa.owner_id=p_band_id AND fa.account_status='active' ORDER BY fa.is_primary DESC, fa.created_at LIMIT 1),
+    (SELECT fa.default_currency_code FROM public.financial_accounts fa WHERE fa.owner_type='band' AND fa.owner_id=p_band_id AND fa.account_status='active' ORDER BY fa.is_primary DESC, fa.created_at LIMIT 1),
+    'GBP'::char(3)
+  ) INTO primary_currency
+  FROM public.bands b
+  WHERE b.id = p_band_id;
+
+  primary_currency := COALESCE(primary_currency, 'GBP'::char(3));
+
   RETURN jsonb_build_object(
+    'status', CASE WHEN EXISTS (SELECT 1 FROM public.financial_accounts fa WHERE fa.owner_type='band' AND fa.owner_id=p_band_id AND fa.account_status='active') THEN 'ok' ELSE 'treasury_missing' END,
     'primaryCurrencyCode', primary_currency,
-    'treasuries', COALESCE((SELECT jsonb_agg(jsonb_build_object('accountId',id,'currencyCode',default_currency_code,'currentBalanceMinor',current_balance_minor,'reservedBalanceMinor',reserved_balance_minor,'availableBalanceMinor',available_balance_minor,'isPrimary',COALESCE(is_primary,false)) ORDER BY (default_currency_code=primary_currency) DESC, default_currency_code) FROM public.financial_accounts WHERE owner_type='band' AND owner_id=p_band_id AND account_status='active'),'[]'::jsonb),
-    'recentTransactions', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t.id,'transactionCategory',t.transaction_category,'amountMinor',t.net_amount_minor,'currencyCode',t.currency_code,'description',t.description,'createdAt',t.created_at) ORDER BY t.created_at DESC) FROM (SELECT DISTINCT t.* FROM public.financial_transactions t JOIN public.financial_ledger_entries le ON le.transaction_id=t.id JOIN public.financial_accounts fa ON fa.id=le.account_id WHERE fa.owner_type='band' AND fa.owner_id=p_band_id ORDER BY t.created_at DESC LIMIT 25) t),'[]'::jsonb),
-    'contributions', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'amountMinor',c.amount_minor,'currencyCode',c.currency_code,'contributionType',c.contribution_type,'refundableStatus',c.refundable_status,'notes',c.notes,'createdAt',c.created_at,'contributorDisplayName',COALESCE(p.display_name,p.username,'Band member'),'contributorAvatarUrl',p.avatar_url) ORDER BY c.created_at DESC) FROM public.band_financial_contributions c LEFT JOIN public.profiles p ON p.id=c.contributing_player_id WHERE c.band_id=p_band_id AND (can_detail OR c.contributing_player_id=pid) LIMIT 25),'[]'::jsonb),
-    'upcomingObligations','[]'::jsonb,
-    'reconciliation', jsonb_build_object('status','clean','exceptions','[]'::jsonb)
+    'treasuries', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'accountId', fa.id,
+        'currencyCode', COALESCE(fa.currency_code, fa.default_currency_code),
+        'currentBalanceMinor', fa.current_balance_minor,
+        'availableBalanceMinor', fa.available_balance_minor,
+        'isPrimary', COALESCE(fa.is_primary,false)
+      ) ORDER BY (COALESCE(fa.currency_code, fa.default_currency_code)=primary_currency) DESC, fa.is_primary DESC, fa.created_at)
+      FROM public.financial_accounts fa
+      WHERE fa.owner_type='band' AND fa.owner_id=p_band_id AND fa.account_status='active'
+    ),'[]'::jsonb),
+    'contributions', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'id', c.id,
+        'amountMinor', c.amount_minor,
+        'currencyCode', c.currency_code,
+        'contributionType', c.contribution_type,
+        'refundableStatus', c.refundable_status,
+        'notes', c.notes,
+        'createdAt', c.created_at,
+        'contributorDisplayName', COALESCE(p.display_name,p.username,'Band member'),
+        'contributorAvatarUrl', p.avatar_url
+      ) ORDER BY c.created_at DESC)
+      FROM public.band_financial_contributions c
+      LEFT JOIN public.profiles p ON p.id=c.contributing_player_id
+      WHERE c.band_id=p_band_id AND (can_detail OR c.contributing_player_id=pid)
+      LIMIT 25
+    ),'[]'::jsonb)
   );
 END $$;
 
@@ -118,6 +165,7 @@ DECLARE
 BEGIN
   IF pid IS NULL THEN RAISE EXCEPTION 'profile_missing'; END IF;
   IF p_amount_minor IS NULL OR p_amount_minor <= 0 THEN RAISE EXCEPTION 'amount_must_be_positive'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.band_members WHERE band_id=p_band_id AND profile_id=pid AND COALESCE(member_status,'active')='active') THEN RAISE EXCEPTION 'not_band_member'; END IF;
   SELECT * INTO ba FROM public.bank_accounts WHERE id=p_bank_account_id;
   IF ba.owner_type <> 'player' OR ba.owner_id <> pid THEN RAISE EXCEPTION 'personal_account_invalid'; END IF;
   SELECT * INTO fa FROM public.financial_accounts WHERE id=ba.linked_finance_account_id;
