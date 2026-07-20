@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFestivalDashboardModel } from "./buildFestivalDashboardModel";
+import { buildFestivalDashboardModel, isInsurancePolicyActiveForEdition } from "./buildFestivalDashboardModel";
 
 const edition = (overrides = {}) => ({ id: "ed", festivalId: "fest", title: "Summer Noise 2027", editionNumber: 1, status: "planning" as const, startAt: "2027-08-01T12:00:00Z", endAt: "2027-08-03T23:00:00Z", cityName: "London", currencyCode: "GBP", ...overrides });
 const slot = (id: string, extra = {}) => ({ id, band_id: `band-${id}`, contract_status: "signed", ...extra });
@@ -27,4 +27,46 @@ describe("buildFestivalDashboardModel", () => {
   it("omits absent sponsor and reputation data", () => { const m = build({ operations: {} }); expect(m.sponsorCount).toBeNull(); expect(m.reputation).toBeNull(); });
   it("uses only valid checklist destinations", () => { const valid = new Set(["#lineup", "#schedule", "#stages", "#staff", "#permits", "#insurance", "#finance", "#operations", "#settings"]); expect(build({}).checks.every(c=>valid.has(c.destination))).toBe(true); });
   it("never returns non-finite percentages", () => { const m = build({ operations: { ticket_summary: { capacity: 0, tickets_sold: 0 }, slots: [] }, finance: { approved_budget_cents: 0, committed_costs_cents: 0 } }); expect([m.ticketSalesPercent, m.lineupPercent, m.budgetUsedPercent].every(v=>v===null || Number.isFinite(v))).toBe(true); });
+});
+
+
+describe("canonical insurance coverage matching", () => {
+  const complete = (policy: Record<string, unknown>) => build({ operations: { insurance_policies: [policy] } }).checks.find((c) => c.key === "insurance")?.status;
+
+  it("recognises canonical active pending-payment policies", () => {
+    expect(complete({ active: true, policy_status: "pending_payment", effective_from: "2027-07-25", effective_to: "2027-08-10" })).toBe("complete");
+  });
+
+  it("recognises accepted active statuses with valid dates", () => {
+    expect(complete({ policy_status: "in_force", effective_from: "2027-07-01T00:00:00Z", effective_to: "2027-08-04T00:00:00Z" })).toBe("complete");
+  });
+
+  it("rejects inactive flags without an active status", () => {
+    expect(complete({ active: false, policy_status: "pending_payment", effective_from: "2027-07-01", effective_to: "2027-08-04" })).toBe("blocked");
+  });
+
+  it("rejects explicitly cancelled policies even when active is true", () => {
+    expect(complete({ active: true, policy_status: "cancelled", effective_from: "2027-07-01", effective_to: "2027-08-04" })).toBe("blocked");
+  });
+
+  it("rejects expired policies", () => {
+    expect(complete({ active: true, policy_status: "expired", effective_from: "2027-07-01", effective_to: "2027-08-04" })).toBe("blocked");
+  });
+
+  it("rejects policies beginning after the edition starts", () => {
+    expect(complete({ active: true, policy_status: "pending_payment", effective_from: "2027-08-02T00:00:00Z", effective_to: "2027-08-04T00:00:00Z" })).toBe("blocked");
+  });
+
+  it("rejects policies ending before the edition finishes", () => {
+    expect(complete({ active: true, policy_status: "pending_payment", effective_from: "2027-07-01T00:00:00Z", effective_to: "2027-08-03T12:00:00Z" })).toBe("blocked");
+  });
+
+  it("allows missing canonical boundaries as open ended but not invalid boundaries", () => {
+    expect(isInsurancePolicyActiveForEdition({ active: true, policy_status: "pending_payment" }, "2027-08-01T12:00:00Z", "2027-08-03T23:00:00Z")).toBe(true);
+    expect(complete({ active: true, policy_status: "pending_payment", effective_from: "not-a-date", effective_to: "2027-08-04" })).toBe("blocked");
+  });
+
+  it("keeps insurance unavailable when operations loading fails", () => {
+    expect(build({ operationsUnavailable: true, operations: { insurance_policies: [{ active: true, policy_status: "pending_payment" }] } }).checks.find((c) => c.key === "insurance")?.status).toBe("unavailable");
+  });
 });

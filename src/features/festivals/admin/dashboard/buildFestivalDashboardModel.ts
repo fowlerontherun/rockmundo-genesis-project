@@ -22,6 +22,37 @@ function check(key: string, label: string, status: DashboardCheckStatus, explana
 function isOccupied(s: Record<string, unknown>) { return Boolean(s.reservation_id || s.band_id || s.system_act_id || s.booking_id || s.act_id); }
 function isContracted(s: Record<string, unknown>) { return Boolean(s.canonical_contract_id || /signed|executed|confirmed/i.test(String(s.contract_status ?? ""))); }
 
+function parsePolicyBoundary(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const time = Date.parse(String(value));
+  return Number.isFinite(time) ? time : Number.NaN;
+}
+
+function policyBoundary(policy: Record<string, unknown>, fields: string[]): number | null {
+  for (const field of fields) {
+    if (policy[field] !== null && policy[field] !== undefined && policy[field] !== "") return parsePolicyBoundary(policy[field]);
+  }
+  return null;
+}
+
+export function isInsurancePolicyActiveForEdition(policy: Record<string, unknown>, editionStart: string | null | undefined, editionEnd: string | null | undefined): boolean {
+  const status = String(policy.policy_status ?? policy.status ?? policy.coverage_status ?? "").toLowerCase();
+  const explicitlyInactive = /cancel|expired|reject|void/.test(status);
+  const activeByFlag = policy.active === true || policy.is_active === true;
+  const activeByStatus = /active|bound|issued|covered|in_force/.test(status);
+  const isActive = !explicitlyInactive && (activeByFlag || activeByStatus);
+  if (!isActive) return false;
+
+  const eventStart = editionStart ? Date.parse(editionStart) : null;
+  const eventEnd = editionEnd ? Date.parse(editionEnd) : eventStart;
+  if ((eventStart !== null && !Number.isFinite(eventStart)) || (eventEnd !== null && !Number.isFinite(eventEnd))) return false;
+
+  const fromTime = policyBoundary(policy, ["effective_from", "coverage_start_at", "starts_at", "start_at", "effective_at"]);
+  const toTime = policyBoundary(policy, ["effective_to", "coverage_end_at", "ends_at", "end_at", "expires_at"]);
+  if (Number.isNaN(fromTime) || Number.isNaN(toTime)) return false;
+  return (eventStart === null || fromTime === null || fromTime <= eventStart) && (eventEnd === null || toTime === null || toTime >= eventEnd);
+}
+
 export function buildFestivalDashboardModel(input: { festivalName?: string | null; edition: Pick<OwnerEditionOption, "title" | "status" | "startAt" | "endAt" | "cityName" | "currencyCode"> & Partial<OwnerEditionOption>; operations?: unknown; finance?: unknown; operationsUnavailable?: boolean; financeUnavailable?: boolean; now?: Date; }): FestivalDashboardModel {
   const ops = asObject(input.operations), fin = input.financeUnavailable ? {} : asObject(input.finance ?? ops.finance);
   const stages = asArray(ops.stages), slots = asArray(ops.slots), staff = asArray(ops.staff), permits = asArray(ops.permit_requirements), policies = asArray(ops.insurance_policies);
@@ -39,9 +70,7 @@ export function buildFestivalDashboardModel(input: { festivalName?: string | nul
   const approvedPermits = permits.filter((p) => /approved|not_required/i.test(String(p.status ?? p.requirement_status ?? p.decision))).length;
   const permitsNotRequired = permits.length === 0 && Boolean(ops.permits_not_required ?? ops.permit_requirements_not_required);
   const permitsReady = permits.length > 0 ? approvedPermits === permits.length : permitsNotRequired;
-  const eventStart = input.edition.startAt ? new Date(input.edition.startAt).getTime() : null;
-  const eventEnd = input.edition.endAt ? new Date(input.edition.endAt).getTime() : eventStart;
-  const activePolicies = policies.filter((p) => { const status = String(p.policy_status ?? p.status ?? p.coverage_status ?? "").toLowerCase(); const active = /active|bound|issued|covered|in_force/.test(status) && !/cancel|expired|reject|draft|void/.test(status); const from = p.coverage_start_at ?? p.starts_at ?? p.start_at ?? p.effective_at; const to = p.coverage_end_at ?? p.ends_at ?? p.end_at ?? p.expires_at; const fromTime = from ? new Date(String(from)).getTime() : null; const toTime = to ? new Date(String(to)).getTime() : null; return active && (eventStart === null || fromTime === null || fromTime <= eventStart) && (eventEnd === null || toTime === null || toTime >= eventEnd); });
+  const activePolicies = policies.filter((p) => isInsurancePolicyActiveForEdition(p, input.edition.startAt, input.edition.endAt));
   const operationsAvailable = !input.operationsUnavailable;
   const op = (ready: boolean) => operationsAvailable ? ready : null;
   const readinessChecks = [Boolean(input.edition.startAt && input.edition.endAt), Boolean(input.edition.cityName || ops.venue_name || ops.location_name), op(stageCount > 0), op(availableSlots > 0), op(availableSlots > 0 && bookedActs >= availableSlots), op(bookedActs === 0 ? false : contractedActs >= bookedActs), op(capacity !== null && ticketsSold !== null), op(staff.length >= requiredStaff), op(permitsReady), op(activePolicies.length > 0), approvedBudgetMinor !== null && approvedBudgetMinor > 0];
