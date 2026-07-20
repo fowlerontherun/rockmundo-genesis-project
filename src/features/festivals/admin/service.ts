@@ -169,50 +169,123 @@ const ownerEditionSchema = z
   })
   .passthrough();
 const jsonRecord = z.record(z.unknown());
+const uuidLike = z.string().min(1);
+const nullableDateString = z.string().datetime({ offset: true }).or(z.string().date()).nullable().optional();
+const nonnegativeInteger = z.coerce.number().int().nonnegative();
+const accessSchema = z.enum(["granted", "limited", "denied"]);
+const financeAccessSchema = z.enum(["granted", "denied"]);
+const festivalStageSummarySchema = z
+  .object({
+    id: uuidLike,
+    stage_name: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    stage_number: nonnegativeInteger.nullable().optional(),
+    stage_type: z.string().nullable().optional(),
+    capacity: nonnegativeInteger.nullable().optional(),
+    genre_focus: z.string().nullable().optional(),
+  })
+  .passthrough();
+const festivalSlotSummarySchema = z
+  .object({
+    id: uuidLike,
+    stage_id: uuidLike,
+    day_number: nonnegativeInteger,
+    start_time: z.string().nullable().optional(),
+    end_time: z.string().nullable().optional(),
+    slot_type: z.string(),
+    status: z.string(),
+    public_status: z.string(),
+    slot_number: nonnegativeInteger,
+    changeover_minutes: nonnegativeInteger.nullable().optional(),
+    changeover_duration_minutes: nonnegativeInteger.nullable().optional(),
+    system_act_id: z.string().nullable().optional(),
+    system_act_name: z.string().nullable().optional(),
+    system_act_status: z.string().nullable().optional(),
+    contract_status: z.string().nullable().optional(),
+  })
+  .passthrough();
+const festivalStaffSummarySchema = z
+  .object({
+    id: uuidLike,
+    role: z.string(),
+    name: z.string().nullable().optional(),
+    skill_level: nonnegativeInteger.nullable().optional(),
+    status: z.string().nullable().optional(),
+    weekly_wage_cents: nonnegativeInteger.nullable().optional(),
+  })
+  .passthrough();
+const festivalScheduleSummarySchema = z
+  .object({
+    total_slots: nonnegativeInteger,
+    occupied_slots: nonnegativeInteger,
+    open_slots: nonnegativeInteger,
+    contracted_acts: nonnegativeInteger,
+    published_acts: nonnegativeInteger,
+    system_acts: nonnegativeInteger,
+  })
+  .passthrough();
+const festivalPermissionsSchema = z
+  .object({
+    can_manage: z.boolean(),
+    finance_access: z.boolean(),
+    full_access: z.boolean(),
+  })
+  .passthrough();
+const festivalLifecycleSchema = z
+  .object({
+    status: z.string().nullable().optional(),
+    start_at: nullableDateString,
+    end_at: nullableDateString,
+    currency_code: z.string().nullable().optional(),
+  })
+  .passthrough();
 const ticketSourceSchema = z.enum([
   "test_fixture_metadata",
   "audience_simulation",
   "canonical_sales",
   "unavailable",
 ]);
-const operationsSummarySchema = z
+const ticketSummarySchema = z
+  .object({
+    capacity: nonnegativeInteger.nullable().optional(),
+    tickets_sold: nonnegativeInteger.nullable().optional(),
+    tiers: z.array(z.unknown()).default([]),
+    source: ticketSourceSchema,
+  })
+  .passthrough();
+const insurancePolicySchema = z
+  .object({
+    coverage_type: z.string().nullable().optional(),
+    policy_status: z.string().nullable().optional(),
+    active: z.boolean().nullable().optional(),
+    effective_from: nullableDateString,
+    effective_to: nullableDateString,
+    premium_cents: nonnegativeInteger.nullable().optional(),
+    payout_ceiling_cents: nonnegativeInteger.nullable().optional(),
+  })
+  .passthrough();
+export const operationsSummarySchema = z
   .object({
     edition_id: z.string().optional(),
     festival_id: z.string().optional(),
-    stages: z.array(z.record(z.unknown())).default([]),
-    slots: z.array(z.record(z.unknown())).default([]),
-    staff: z.array(z.record(z.unknown())).default([]),
+    stages: z.array(festivalStageSummarySchema).default([]),
+    slots: z.array(festivalSlotSummarySchema).default([]),
+    staff: z.array(festivalStaffSummarySchema).default([]),
     permit_requirements: z.array(z.unknown()).default([]),
-    insurance_policies: z.array(z.record(z.unknown())).default([]),
-    ticket_summary: z
-      .object({
-        capacity: z.number().int().nonnegative().nullable().optional(),
-        tickets_sold: z.number().int().nonnegative().nullable().optional(),
-        tiers: z.array(z.unknown()).default([]),
-        source: ticketSourceSchema,
-      })
-      .passthrough()
-      .optional(),
-    ticketing: z
-      .object({
-        capacity: z.number().int().nonnegative().nullable().optional(),
-        tickets_sold: z.number().int().nonnegative().nullable().optional(),
-        tiers: z.array(z.unknown()).default([]),
-        source: ticketSourceSchema,
-      })
-      .passthrough()
-      .optional(),
-    tickets_sold: z.number().int().nonnegative().nullable().optional(),
+    insurance_policies: z.array(insurancePolicySchema).default([]),
+    ticket_summary: ticketSummarySchema.optional(),
+    ticketing: ticketSummarySchema.optional(),
+    tickets_sold: nonnegativeInteger.nullable().optional(),
     ticket_summary_source: ticketSourceSchema.optional(),
-    schedule_summary: z.record(z.unknown()).optional(),
+    schedule_summary: festivalScheduleSummarySchema.optional(),
     finance: z.record(z.unknown()).nullable().optional(),
-    finance_access: z.enum(["granted", "denied"]).optional(),
-    staff_wages_access: z.enum(["granted", "denied"]).optional(),
-    insurance_access: z.enum(["granted", "limited", "denied"]).optional(),
+    finance_access: financeAccessSchema.optional(),
+    staff_wages_access: financeAccessSchema.optional(),
+    insurance_access: accessSchema.optional(),
     data_health: z.array(z.unknown()).optional(),
-    data_health_access: z.enum(["granted", "denied"]).optional(),
-    permissions: z.record(z.unknown()).optional(),
-    lifecycle: z.record(z.unknown()).optional(),
+    data_health_access: financeAccessSchema.optional(),
+    permissions: festivalPermissionsSchema.optional(),
+    lifecycle: festivalLifecycleSchema.optional(),
   })
   .passthrough();
 const nonNullJson = z
@@ -594,8 +667,23 @@ const callMaybeRpc = async <T>(
     if (mapped.code === "FESTIVAL_PERMISSION_DENIED") throw mapped;
     if (fallback) {
       try {
-        return await fallback();
+        const fallbackResult = await fallback();
+        const parsedFallback = schema.safeParse(fallbackResult);
+        if (!parsedFallback.success) {
+          throw new FestivalAdminServiceError(
+            `The ${fn} fallback returned a malformed response.`,
+            "FESTIVAL_RESPONSE_INVALID",
+            parsedFallback.error,
+          );
+        }
+        return parsedFallback.data;
       } catch (fallbackError) {
+        if (
+          fallbackError instanceof FestivalAdminServiceError &&
+          fallbackError.code === "FESTIVAL_RESPONSE_INVALID"
+        ) {
+          throw fallbackError;
+        }
         throw new FestivalAdminServiceError(
           `The ${fn} RPC failed and its fallback also failed.`,
           "FESTIVAL_RPC_FAILED",
