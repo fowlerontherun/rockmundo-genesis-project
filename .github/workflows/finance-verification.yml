@@ -18,26 +18,28 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.19.0
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.31.8
       - run: npm ci
       - run: supabase db start
       - run: supabase db reset
       - run: supabase db lint
       - run: supabase test db
-      - run: supabase gen types typescript --local > src/integrations/supabase/types.generated.ts
+      - run: |
+          supabase gen types typescript --local > /tmp/supabase-types.ts
+          diff -u src/integrations/supabase/types.ts /tmp/supabase-types.ts
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test -- --run
       - run: npm run build
       - name: Browser E2E availability
         run: |
-          if [ -d tests ] && find tests -name '*.spec.ts' -print -quit | grep -q .; then
-            npx playwright install --with-deps chromium
-            npx playwright test --project=chromium
-          else
-            echo "No browser E2E specs found; finance workflow will run them automatically when specs exist."
+          if [ ! -f tests/finance/rehearsal-funding.spec.ts ]; then
+            echo "Required finance rehearsal E2E spec is missing." >&2
+            exit 1
           fi
+          npx playwright install --with-deps chromium
+          npx playwright test tests/finance/rehearsal-funding.spec.ts --project=chromium
