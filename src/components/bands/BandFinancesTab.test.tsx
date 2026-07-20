@@ -9,7 +9,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 vi.mock("@/hooks/useActiveProfile", () => ({
-  useActiveProfile: () => ({ profileId: "profile-1" }),
+  useActiveProfile: () => ({ profileId: "profile-1", userId: "user-1" }),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -63,14 +63,12 @@ function mockCoreQueries() {
     if (table === "band_members") {
       return {
         select: vi.fn().mockReturnThis(),
-        eq: vi
-          .fn()
-          .mockResolvedValue({
-            data: [
-              { id: "member-1", is_touring_member: false, user_id: "user-1" },
-            ],
-            error: null,
-          }),
+        eq: vi.fn().mockResolvedValue({
+          data: [
+            { id: "member-1", is_touring_member: false, user_id: "user-1" },
+          ],
+          error: null,
+        }),
       };
     }
     throw new Error(`Unexpected table ${table}`);
@@ -108,6 +106,9 @@ describe("BandFinancesTab treasury regression handling", () => {
       screen.getByText("Your other finance information is still available."),
     ).toBeInTheDocument();
     expect(
+      screen.getByText("invalid input value for enum"),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByText("Unable to load band finances"),
     ).not.toBeInTheDocument();
     expect(
@@ -115,7 +116,7 @@ describe("BandFinancesTab treasury regression handling", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Add Money to Band")).toBeInTheDocument();
     expect(screen.getByText("Weekly Member Pay")).toBeInTheDocument();
-    expect(screen.getByText(/\$1,234/)).toBeInTheDocument();
+    expect(screen.getByText(/£1,234.00/)).toBeInTheDocument();
   });
 
   it("does not replace a legacy balance with zero when no treasury exists", async () => {
@@ -142,8 +143,83 @@ describe("BandFinancesTab treasury regression handling", () => {
     expect(
       await screen.findByText("Band treasury is not available yet."),
     ).toBeInTheDocument();
-    expect(screen.getByText(/\$1,234/)).toBeInTheDocument();
-    expect(screen.queryByText(/\$0\.00/)).not.toBeInTheDocument();
+    expect(screen.getByText(/£1,234.00/)).toBeInTheDocument();
+    expect(screen.queryByText(/£0\.00/)).not.toBeInTheDocument();
+  });
+
+  it("does not activate legacy fallback after treasury permission denial", async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") {
+        return Promise.resolve({
+          data: {
+            status: "permission_denied",
+            primaryCurrencyCode: "GBP",
+            treasuries: [],
+            contributions: [
+              {
+                id: "hidden",
+                amountMinor: 5000,
+                currencyCode: "GBP",
+                contributionType: "voluntary_deposit",
+                refundableStatus: "not_refundable",
+                notes: "protected",
+                createdAt: "2026-07-20T12:00:00Z",
+                contributorDisplayName: "Hidden Member",
+                contributorAvatarUrl: null,
+              },
+            ],
+          },
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { status: "no_eligible_accounts", accounts: [] },
+        error: null,
+      });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+
+    expect(
+      await screen.findByText("Band treasury permission required."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Legacy balance fallback active"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Hidden Member")).not.toBeInTheDocument();
+    expect(screen.getByText("£0.00")).toBeInTheDocument();
+  });
+
+  it("shows active profile errors without contribution controls enabled", async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") {
+        return Promise.resolve({
+          data: {
+            status: "profile_missing",
+            primaryCurrencyCode: "GBP",
+            treasuries: [],
+            contributions: [],
+          },
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { status: "profile_missing", accounts: [] },
+        error: null,
+      });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+
+    expect(
+      await screen.findByText("Active profile required."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Legacy balance fallback active"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Preview contribution/i }),
+    ).toBeDisabled();
   });
 
   it("isolates personal account RPC failures to the contribution section", async () => {
