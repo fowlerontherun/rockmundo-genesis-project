@@ -33,7 +33,8 @@
     "validate:balance": "vitest run src/balance/__tests__/balance.test.ts",
     "simulate:balance": "node scripts/progression-simulations/run-balance-simulations.mjs",
     "validate:progression-programme": "node scripts/progression/validate-programme.mjs",
-    "test:festivals:db": "bash scripts/festivals/run-creation-phase1-db-gate.sh"
+    "test:festivals:db": "bash scripts/festivals/run-creation-phase1-db-gate.sh",
+    "seed:festival:london": "psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/seeds/festival_london_test.sql"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
