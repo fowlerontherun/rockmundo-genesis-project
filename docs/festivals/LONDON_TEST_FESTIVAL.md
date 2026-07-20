@@ -10,17 +10,18 @@ Run manually after a local Supabase reset:
 npm run seed:festival:london
 ```
 
-The seed is idempotent and owns only records marked with `fixture = london-dashboard` / `fixture_key = RM-LONDON-TEST-FESTIVAL`.
+The seed contains a hard SQL guard and refuses to run unless `app.allow_test_fixtures=true` is set. The npm script sets this via `PGOPTIONS`, so use `npm run seed:festival:london` or an equivalent `PGOPTIONS="-c app.allow_test_fixtures=true" psql ...` command. Rerunning the seed is a destructive fixture reset for deterministic fixture-owned stages, slots, acts, staff, permits, insurance and ledger rows; cleanup is scoped to fixture idempotency keys and metadata.
 
 ## Assign an owner
 
 Create or sign in with a local test account, find its profile id, then run:
 
 ```sql
-select assign_london_test_festival_owner('<profile uuid>');
+-- run with the local service-role connection
+select public.assign_london_test_festival_owner('<profile uuid>');
 ```
 
-This updates only the fixture festival owner and does not weaken RLS.
+This updates only the deterministic fixture festival owner and does not weaken RLS. The helper is `SECURITY DEFINER`, revokes `PUBLIC`, `anon` and `authenticated`, and grants execute only to `service_role` (database owner/postgres can still manage it naturally).
 
 ## Stable URLs
 
@@ -49,9 +50,9 @@ where f.metadata->>'fixture_key' = 'RM-LONDON-TEST-FESTIVAL';
 - Tickets sold target represented by fixture metadata/dashboard checks: 3,250 / 10,000
 - Budget: £250,000 approved, £110,000 committed, £140,000 remaining, 44% used
 - Stages: Main Stage, River Stage, New Music Stage
-- Slots: 24 total, 15 occupied, 9 intentionally empty
-- Staff: seven roles arranged
-- Permits: 4 / 4 approved
+- Slots: 36 total: 3 days × 3 stages × 4 slots, with 21 occupied and 15 intentionally empty
+- Staff: promoter, booker, safety officer, medic, one stage manager per stage and one sound engineer per stage
+- Permits: canonical `public_event`, `noise`, `temporary_structures`, `fire_safety` and `amplified_music` approved
 - Insurance: active canonical policy with `active = true` and `policy_status = pending_payment`
 
 ## Checklist
@@ -59,15 +60,15 @@ where f.metadata->>'fixture_key' = 'RM-LONDON-TEST-FESTIVAL';
 - ✓ Festival details
 - ✓ Dates and location
 - ✓ Three stages configured
-- ✓ Performance slots created
+- ✓ Performance slots created on all three stages
 - ⚠ Lineup partially filled
 - ⚠ Some contracts outstanding
 - ✓ Tickets configured
-- ✓ Staffing arranged
-- ✓ Four permits approved
+- ✓ Staffing arranged, including sound engineers
+- ✓ Five canonical permits approved
 - ✓ Insurance active
 - ✓ Budget approved
-- ⚠ Operational readiness incomplete
+- ✓ Operational readiness complete for fixture baseline
 
 ## Why pending-payment insurance?
 
@@ -76,3 +77,7 @@ The canonical purchase workflow can produce a valid policy row with `active = tr
 ## Remove/reset
 
 Use `supabase db reset` to remove local fixture data, or rerun the seed to restore it. Do not run this seed as part of production deployment.
+
+## Compatibility event
+
+The fixture retains a read-only `game_events` compatibility row (`11111111-1111-4111-8111-111111111113`) only for legacy route and migration mapping coverage through `festival_legacy_mappings` and resolver functions that still understand `legacy_source = 'game_event'`. Canonical stages and slots use the festival brand id in their canonical `festival_id` field; no participant, booking, finance or state mutation should be written through the compatibility event. The future removal path is to retire legacy `game_events` identifier resolution after all festival routes and RPCs accept canonical brand or edition ids only.
