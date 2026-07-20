@@ -9,7 +9,17 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 vi.mock("@/hooks/useActiveProfile", () => ({
-  useActiveProfile: () => ({ profileId: "profile-1", userId: "user-1" }),
+  useActiveProfile: () => ({
+    profile: {
+      id: "profile-1",
+      user_id: "user-1",
+      display_name: "Active Player",
+      is_active: true,
+    },
+    profileId: "profile-1",
+    userId: "user-1",
+    isLoading: false,
+  }),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -112,8 +122,8 @@ describe("BandFinancesTab treasury regression handling", () => {
       screen.queryByText("Unable to load band finances"),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("Legacy balance fallback active"),
-    ).toBeInTheDocument();
+      screen.queryByText("Legacy balance fallback active"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Add Money to Band")).toBeInTheDocument();
     expect(screen.getByText("Weekly Member Pay")).toBeInTheDocument();
     expect(screen.getByText(/£1,234.00/)).toBeInTheDocument();
@@ -125,6 +135,8 @@ describe("BandFinancesTab treasury regression handling", () => {
         return Promise.resolve({
           data: {
             status: "treasury_missing",
+            canViewBalance: true,
+            canViewDetails: false,
             primaryCurrencyCode: "GBP",
             treasuries: [],
             contributions: [],
@@ -153,6 +165,8 @@ describe("BandFinancesTab treasury regression handling", () => {
         return Promise.resolve({
           data: {
             status: "permission_denied",
+            canViewBalance: false,
+            canViewDetails: false,
             primaryCurrencyCode: "GBP",
             treasuries: [],
             contributions: [
@@ -196,6 +210,8 @@ describe("BandFinancesTab treasury regression handling", () => {
         return Promise.resolve({
           data: {
             status: "profile_missing",
+            canViewBalance: false,
+            canViewDetails: false,
             primaryCurrencyCode: "GBP",
             treasuries: [],
             contributions: [],
@@ -228,6 +244,8 @@ describe("BandFinancesTab treasury regression handling", () => {
         return Promise.resolve({
           data: {
             status: "ok",
+            canViewBalance: true,
+            canViewDetails: false,
             primaryCurrencyCode: "GBP",
             treasuries: [],
             contributions: [],

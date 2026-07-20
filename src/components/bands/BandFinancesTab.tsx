@@ -173,7 +173,11 @@ interface TreasuryDashboard {
     | "treasury_missing"
     | "profile_missing"
     | "permission_denied"
-    | "band_missing";
+    | "not_band_member"
+    | "band_missing"
+    | "technical_error";
+  canViewBalance?: boolean;
+  canViewDetails?: boolean;
   primaryCurrencyCode: string;
   treasuries: TreasuryAccount[];
   contributions: DashboardContribution[];
@@ -191,6 +195,7 @@ interface ContributionPreview {
   eligible: boolean;
   ineligibleReason: string | null;
   warningText: string;
+  treasuryWillBeCreated?: boolean;
 }
 
 interface SupabaseFinanceRpcClient {
@@ -295,6 +300,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   );
   const treasuryRequestId = useRef(0);
   const accountsRequestId = useRef(0);
+  const financesRequestId = useRef(0);
 
   const fetchEligibleAccounts = async () => {
     const requestId = ++accountsRequestId.current;
@@ -374,6 +380,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   };
 
   const fetchFinances = async () => {
+    const requestId = ++financesRequestId.current;
     setLoading(true);
     setError(null);
     try {
@@ -399,6 +406,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       if (earningError) throw earningError;
       if (membersError) throw membersError;
 
+      if (requestId !== financesRequestId.current) return;
       const b = bandData as BandRow;
       setBand(b);
       setEarnings((earningData as BandEarningRow[]) ?? []);
@@ -410,16 +418,18 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setMemberCount(realMembers.length);
       void fetchTreasuryDashboard();
     } catch (caught) {
+      if (requestId !== financesRequestId.current) return;
       console.error("Failed to load band finances", caught);
       setBand(null);
       setEarnings([]);
       setError("We were unable to load the financial data for this band.");
     } finally {
-      setLoading(false);
+      if (requestId === financesRequestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
+    financesRequestId.current += 1;
     treasuryRequestId.current += 1;
     accountsRequestId.current += 1;
     setDashboard(null);
@@ -428,6 +438,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     setPersonalAccounts([]);
     setSelectedAccountId("");
     setContributionPreview(null);
+    setContributionAmount("");
+    setContributionNote("");
     setContributionIdempotencyKey(null);
     void fetchFinances();
   }, [bandId, profileId]);
@@ -443,11 +455,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
     dashboard?.treasuries[0];
   const dashboardStatus = dashboard?.status ?? null;
+  const wasAuthorisedForBalance = dashboard?.canViewBalance === true;
   const canUseLegacyFallback =
     !primaryTreasury &&
     !!band &&
-    (dashboardStatus === "treasury_missing" ||
-      (!!dashboardError && dashboardStatus !== "permission_denied"));
+    ((dashboardStatus === "treasury_missing" && wasAuthorisedForBalance) ||
+      (!!dashboardError && wasAuthorisedForBalance));
   const balanceSource = primaryTreasury
     ? "ledger"
     : canUseLegacyFallback
@@ -595,6 +608,39 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setContributionNote("");
       setContributionPreview(null);
       setContributionIdempotencyKey(null);
+      if (data?.newBandTreasuryBalance !== undefined) {
+        setDashboard((current) =>
+          current
+            ? {
+                ...current,
+                status: "ok",
+                treasuries: current.treasuries.length
+                  ? current.treasuries.map((treasury) =>
+                      treasury.currencyCode === contributionPreview.currencyCode
+                        ? {
+                            ...treasury,
+                            currentBalanceMinor:
+                              data.newBandTreasuryBalance ??
+                              treasury.currentBalanceMinor,
+                            availableBalanceMinor:
+                              data.newBandTreasuryBalance ??
+                              treasury.availableBalanceMinor,
+                          }
+                        : treasury,
+                    )
+                  : [
+                      {
+                        accountId: "pending-refresh",
+                        currencyCode: contributionPreview.currencyCode,
+                        currentBalanceMinor: data.newBandTreasuryBalance,
+                        availableBalanceMinor: data.newBandTreasuryBalance,
+                        isPrimary: true,
+                      },
+                    ],
+              }
+            : current,
+        );
+      }
       if (data?.newPlayerAvailableBalance !== undefined) {
         setPersonalAccounts((accounts) =>
           accounts.map((account) =>
@@ -609,7 +655,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           ),
         );
       }
-      void fetchFinances();
+      void fetchTreasuryDashboard();
       void fetchEligibleAccounts();
     } catch (e: unknown) {
       const message = getErrorMessage(e, "Unable to post contribution.");
@@ -708,6 +754,15 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           </AlertDescription>
         </Alert>
       )}
+      {!dashboardError && dashboard?.status === "not_band_member" && (
+        <Alert variant="destructive">
+          <AlertTitle>Band membership required.</AlertTitle>
+          <AlertDescription>
+            You must be an active member of this band to view finances or make
+            contributions.
+          </AlertDescription>
+        </Alert>
+      )}
       {!dashboardError && dashboard?.status === "band_missing" && (
         <Alert variant="destructive">
           <AlertTitle>Band not found.</AlertTitle>
@@ -720,8 +775,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         <Alert>
           <AlertTitle>Legacy balance fallback active</AlertTitle>
           <AlertDescription>
-            Ledger treasury data is unavailable, so this page is using the
-            existing band balance.
+            Using legacy band balance while ledger treasury data is unavailable.
           </AlertDescription>
         </Alert>
       )}
@@ -803,7 +857,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   personalAccounts.length === 0 ||
                   dashboardStatus === "permission_denied" ||
                   dashboardStatus === "profile_missing" ||
-                  dashboardStatus === "band_missing"
+                  dashboardStatus === "band_missing" ||
+                  dashboardStatus === "not_band_member"
                 }
               >
                 <SelectTrigger>
@@ -898,7 +953,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                 !selectedAccountId ||
                 dashboardStatus === "permission_denied" ||
                 dashboardStatus === "profile_missing" ||
-                dashboardStatus === "band_missing"
+                dashboardStatus === "band_missing" ||
+                dashboardStatus === "not_band_member"
               }
             >
               {previewingContribution
