@@ -22,6 +22,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -95,7 +105,7 @@ function getSourceLabel(source: string) {
   );
 }
 
-function formatCurrency(value: number, currency = "USD") {
+function formatCurrency(value: number, currency = "GBP") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -129,24 +139,52 @@ interface EligibleAccountsResponse {
   message?: string | null;
 }
 
-interface BandContribution {
-  id: string;
-  amount_minor: number;
-  currency_code: string;
-  contribution_type: string;
-  related_expense_type: string | null;
-  related_expense_id: string | null;
-  refundable_status: string;
-  notes: string | null;
-  created_at: string;
-  contributing_player_id: string;
-}
-
 interface ContributionResult {
   contributionId?: string;
   transactionId?: string;
   newPlayerAvailableBalance?: number;
   newBandTreasuryBalance?: number;
+}
+
+interface TreasuryAccount {
+  accountId: string;
+  currencyCode: string;
+  currentBalanceMinor: number;
+  reservedBalanceMinor: number;
+  availableBalanceMinor: number;
+  isPrimary: boolean;
+}
+
+interface DashboardContribution {
+  id: string;
+  amountMinor: number;
+  currencyCode: string;
+  contributionType: string;
+  refundableStatus: string;
+  notes: string | null;
+  createdAt: string;
+  contributorDisplayName: string;
+  contributorAvatarUrl: string | null;
+}
+
+interface TreasuryDashboard {
+  primaryCurrencyCode: string;
+  treasuries: TreasuryAccount[];
+  contributions: DashboardContribution[];
+}
+
+interface ContributionPreview {
+  sourceAccountDisplay: string;
+  currencyCode: string;
+  currentPersonalBalanceMinor: number;
+  amountMinor: number;
+  resultingPersonalBalanceMinor: number;
+  destinationTreasuryName: string;
+  currentTreasuryBalanceMinor: number;
+  resultingTreasuryBalanceMinor: number;
+  eligible: boolean;
+  ineligibleReason: string | null;
+  warningText: string;
 }
 
 interface SupabaseFinanceRpcClient {
@@ -155,6 +193,24 @@ interface SupabaseFinanceRpcClient {
     args: { p_band_id: string; p_currency_code: string | null },
   ): Promise<{
     data: EligibleAccountsResponse | null;
+    error: { message: string } | null;
+  }>;
+  rpc(
+    fn: "get_band_treasury_dashboard",
+    args: { p_band_id: string },
+  ): Promise<{
+    data: TreasuryDashboard | null;
+    error: { message: string } | null;
+  }>;
+  rpc(
+    fn: "preview_my_band_contribution",
+    args: {
+      p_band_id: string;
+      p_bank_account_id: string;
+      p_amount_minor: number;
+    },
+  ): Promise<{
+    data: ContributionPreview | null;
     error: { message: string } | null;
   }>;
   rpc(
@@ -205,7 +261,16 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const [contributionAmount, setContributionAmount] = useState("");
   const [contributionNote, setContributionNote] = useState("");
   const [contributing, setContributing] = useState(false);
-  const [contributions, setContributions] = useState<BandContribution[]>([]);
+  const [previewingContribution, setPreviewingContribution] = useState(false);
+  const [contributionPreview, setContributionPreview] =
+    useState<ContributionPreview | null>(null);
+  const [contributionIdempotencyKey, setContributionIdempotencyKey] = useState<
+    string | null
+  >(null);
+  const [dashboard, setDashboard] = useState<TreasuryDashboard | null>(null);
+  const [contributions, setContributions] = useState<DashboardContribution[]>(
+    [],
+  );
 
   const fetchEligibleAccounts = async () => {
     if (!bandId || !profileId) {
@@ -221,7 +286,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       "get_my_eligible_band_contribution_accounts",
       {
         p_band_id: bandId,
-        p_currency_code: null,
+        p_currency_code: dashboard?.primaryCurrencyCode ?? null,
       },
     );
     setAccountsLoading(false);
@@ -256,7 +321,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         { data: bandData, error: bandError },
         { data: earningData, error: earningError },
         { data: membersData },
-        { data: contributionData, error: contributionError },
+        { data: dashboardData, error: dashboardError },
       ] = await Promise.all([
         supabase.from("bands").select("*").eq("id", bandId).single(),
         supabase
@@ -269,19 +334,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           .from("band_members")
           .select("id, is_touring_member, user_id")
           .eq("band_id", bandId),
-        supabase
-          .from("band_financial_contributions")
-          .select(
-            "id, amount_minor, currency_code, contribution_type, related_expense_type, related_expense_id, refundable_status, notes, created_at, contributing_player_id",
-          )
-          .eq("band_id", bandId)
-          .order("created_at", { ascending: false })
-          .limit(25),
+        financeRpc.rpc("get_band_treasury_dashboard", { p_band_id: bandId }),
       ]);
 
       if (bandError) throw bandError;
       if (earningError) throw earningError;
-      if (contributionError) throw contributionError;
+      if (dashboardError) throw dashboardError;
 
       const b = bandData as BandRow;
       setBand(b);
@@ -292,7 +350,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         (m) => !m.is_touring_member,
       );
       setMemberCount(realMembers.length);
-      setContributions((contributionData as BandContribution[]) ?? []);
+      setDashboard(dashboardData);
+      setContributions(dashboardData?.contributions ?? []);
     } catch (caught) {
       console.error("Failed to load band finances", caught);
       setBand(null);
@@ -309,10 +368,19 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
   useEffect(() => {
     void fetchEligibleAccounts();
-  }, [bandId, profileId]);
+  }, [bandId, profileId, dashboard?.primaryCurrencyCode]);
+
+  const primaryTreasury =
+    dashboard?.treasuries.find(
+      (treasury) => treasury.currencyCode === dashboard.primaryCurrencyCode,
+    ) ??
+    dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
+    dashboard?.treasuries[0];
+  const treasuryCurrency =
+    primaryTreasury?.currencyCode ?? dashboard?.primaryCurrencyCode ?? "GBP";
 
   const aggregated = useMemo(() => {
-    const balance = band?.band_balance ?? 0;
+    const balance = (primaryTreasury?.availableBalanceMinor ?? 0) / 100;
     if (earnings.length === 0) {
       return {
         balance,
@@ -357,7 +425,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       recentActivity: earnings,
       bySource,
     };
-  }, [band, earnings]);
+  }, [primaryTreasury, earnings]);
 
   const topSources = useMemo(() => {
     return Object.entries(aggregated.bySource)
@@ -387,7 +455,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     }
   };
 
-  const handleContribute = async () => {
+  const startContributionPreview = async () => {
     const amount = Number(contributionAmount);
     if (!selectedAccountId || !Number.isFinite(amount) || amount <= 0) {
       toast({
@@ -396,17 +464,45 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       });
       return;
     }
+    setPreviewingContribution(true);
+    try {
+      const amountMinor = Math.round(amount * 100);
+      const { data, error } = await financeRpc.rpc(
+        "preview_my_band_contribution",
+        {
+          p_band_id: bandId,
+          p_bank_account_id: selectedAccountId,
+          p_amount_minor: amountMinor,
+        },
+      );
+      if (error) throw error;
+      setContributionPreview(data);
+      setContributionIdempotencyKey(crypto.randomUUID());
+    } catch (e: unknown) {
+      const message =
+        e instanceof Error ? e.message : "Unable to preview contribution.";
+      toast({
+        title: "Contribution preview failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewingContribution(false);
+    }
+  };
+
+  const handleContribute = async () => {
+    if (!contributionPreview || !contributionIdempotencyKey) return;
     setContributing(true);
     try {
-      const idempotencyKey = crypto.randomUUID();
       const { data, error } = await financeRpc.rpc(
         "contribute_my_personal_funds_to_band",
         {
           p_band_id: bandId,
           p_bank_account_id: selectedAccountId,
-          p_amount_minor: Math.round(amount * 100),
+          p_amount_minor: contributionPreview.amountMinor,
           p_note: contributionNote || null,
-          p_idempotency_key: idempotencyKey,
+          p_idempotency_key: contributionIdempotencyKey,
         },
       );
       if (error) throw error;
@@ -417,6 +513,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       });
       setContributionAmount("");
       setContributionNote("");
+      setContributionPreview(null);
+      setContributionIdempotencyKey(null);
       if (data?.newPlayerAvailableBalance !== undefined) {
         setPersonalAccounts((accounts) =>
           accounts.map((account) =>
@@ -494,7 +592,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <PiggyBank className="h-3.5 w-3.5" /> Balance
             </div>
             <p className="text-2xl font-bold">
-              {formatCurrency(aggregated.balance)}
+              {formatCurrency(aggregated.balance, treasuryCurrency)}
             </p>
           </CardContent>
         </Card>
@@ -506,7 +604,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               Income
             </div>
             <p className="text-2xl font-bold text-emerald-500">
-              {formatCurrency(aggregated.totalIncome)}
+              {formatCurrency(aggregated.totalIncome, treasuryCurrency)}
             </p>
           </CardContent>
         </Card>
@@ -518,7 +616,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               Expenses
             </div>
             <p className="text-2xl font-bold text-destructive">
-              {formatCurrency(aggregated.totalExpenses)}
+              {formatCurrency(aggregated.totalExpenses, treasuryCurrency)}
             </p>
           </CardContent>
         </Card>
@@ -549,8 +647,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <HandCoins className="h-4 w-4" /> Add Money to Band
             </CardTitle>
             <CardDescription>
-              Move personal funds into the real band treasury with explicit
-              confirmation.
+              Move personal funds into the {treasuryCurrency} band treasury with
+              explicit confirmation.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -645,10 +743,17 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               </AlertDescription>
             </Alert>
             <Button
-              onClick={handleContribute}
-              disabled={contributing || accountsLoading || !selectedAccountId}
+              onClick={startContributionPreview}
+              disabled={
+                previewingContribution ||
+                contributing ||
+                accountsLoading ||
+                !selectedAccountId
+              }
             >
-              {contributing ? "Contributing…" : "Contribute to band"}
+              {previewingContribution
+                ? "Preparing preview…"
+                : "Preview contribution"}
             </Button>
           </CardContent>
         </Card>
@@ -671,24 +776,20 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   <div key={c.id} className="rounded-md border p-2 text-sm">
                     <div className="flex justify-between gap-2">
                       <span className="font-medium">
-                        {getSourceLabel(c.contribution_type)}
+                        {c.contributorDisplayName} · {getSourceLabel(c.contributionType)}
                       </span>
                       <Badge>
                         {formatCurrency(
-                          (c.amount_minor ?? 0) / 100,
-                          c.currency_code,
+                          (c.amountMinor ?? 0) / 100,
+                          c.currencyCode,
                         )}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {c.currency_code} · {formatDateTime(c.created_at)} ·
-                      refund: {c.refundable_status}
+                      {c.currencyCode} · {formatDateTime(c.createdAt)} ·
+                      refund: {c.refundableStatus}
                     </p>
-                    {c.related_expense_type && (
-                      <p className="text-xs text-muted-foreground">
-                        Related: {c.related_expense_type}
-                      </p>
-                    )}
+
                     {c.notes && <p className="text-xs">{c.notes}</p>}
                   </div>
                 ))}
@@ -738,7 +839,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                     <span
                       className={`text-xs font-semibold w-16 text-right ${amount >= 0 ? "text-emerald-500" : "text-destructive"}`}
                     >
-                      {formatCurrency(amount)}
+                      {formatCurrency(amount, treasuryCurrency)}
                     </span>
                   </div>
                 );
@@ -775,13 +876,13 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <div className="flex justify-between">
                 <span>Projected total payout:</span>
                 <span className="font-semibold text-foreground">
-                  {formatCurrency(projectedTotal)}
+                  {formatCurrency(projectedTotal, treasuryCurrency)}
                 </span>
               </div>
               <div className="flex justify-between border-t border-border pt-1 mt-1">
                 <span>Per member / week:</span>
                 <span className="font-semibold text-foreground">
-                  {formatCurrency(projectedPerMember)}
+                  {formatCurrency(projectedPerMember, treasuryCurrency)}
                 </span>
               </div>
             </div>
@@ -819,8 +920,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Example: 10% of a {formatCurrency(aggregated.balance)} balance
-                  = {formatCurrency(Math.floor(aggregated.balance * 0.1))} split
+                  Example: 10% of a {formatCurrency(aggregated.balance, treasuryCurrency)} balance
+                  = {formatCurrency(Math.floor(aggregated.balance * 0.1), treasuryCurrency)} split
                   between members.
                 </p>
               </div>
@@ -882,7 +983,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                           className="text-xs"
                         >
                           {entry.amount >= 0 ? "+" : ""}
-                          {formatCurrency(entry.amount)}
+                          {formatCurrency(entry.amount, treasuryCurrency)}
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[200px] truncate">
@@ -899,6 +1000,52 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           )}
         </CardContent>
       </Card>
+      <AlertDialog
+        open={!!contributionPreview}
+        onOpenChange={(open) => {
+          if (!open && !contributing) setContributionPreview(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm band contribution</AlertDialogTitle>
+            <AlertDialogDescription>
+              Review the source account, destination treasury and resulting balances before posting.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {contributionPreview && (
+            <div className="space-y-3 text-sm">
+              <div className="rounded-md border p-3 space-y-1">
+                <p className="font-medium">From: {contributionPreview.sourceAccountDisplay}</p>
+                <p>Personal balance: {formatCurrency(contributionPreview.currentPersonalBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+                <p>Contribution: {formatCurrency(contributionPreview.amountMinor / 100, contributionPreview.currencyCode)}</p>
+                <p>Resulting personal balance: {formatCurrency(contributionPreview.resultingPersonalBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+              </div>
+              <div className="rounded-md border p-3 space-y-1">
+                <p className="font-medium">To: {contributionPreview.destinationTreasuryName}</p>
+                <p>Current treasury balance: {formatCurrency(contributionPreview.currentTreasuryBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+                <p>Resulting treasury balance: {formatCurrency(contributionPreview.resultingTreasuryBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+              </div>
+              <Alert>
+                <AlertTitle>Contribution warning</AlertTitle>
+                <AlertDescription>{contributionPreview.warningText}</AlertDescription>
+              </Alert>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={contributing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleContribute();
+              }}
+              disabled={contributing || !contributionPreview?.eligible}
+            >
+              {contributing ? "Confirming…" : "Confirm contribution"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
