@@ -8,7 +8,7 @@
 
 1. `festival_owner_management_bootstrap(p_identifier)` via `fetchOwnerManagementBootstrap` supplies access, festival identity, migration state, available canonical editions and preferred edition selection.
 2. `festival_edition_operations_summary(p_edition_id)` via `fetchFestivalEditionOperations` supplies operational arrays and summaries: stages, slots, staff, permit requirements, insurance quotes/policies, lifecycle, permissions, venue/location, ticket summary and optional finance-like counters.
-3. `festival_edition_finance_summary(p_edition_id)` via `fetchFestivalEditionFinanceSummary` supplies finance card fields: `currency_code`, `approved_budget_cents`, `committed_costs_cents`, ledger and category breakdowns.
+3. `festival_edition_finance_summary(p_edition_id)` via `fetchFestivalEditionFinanceSummary` supplies finance card fields: `currency`, `budget_cents`, `committed_cost_cents`, ledger and category breakdowns.
 4. Section workspaces may issue their own queries/RPCs for booking, scheduling, stages, staff, permits, insurance and finance, but the overview should depend only on the bootstrap, operations summary and finance summary.
 
 ## Expected response shape and guarantees
