@@ -6,13 +6,13 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `20260720120000_repair_london_fixture_operations_projection.sql` | `CREATE OR REPLACE FUNCTION public.festival_edition_operations_summary` | `p_edition_id uuid` | `jsonb` | `SECURITY DEFINER` | `authenticated`, `service_role` | None in function body | Applied before the later 2029 festival domain migrations and before this finalisation migration. Its definition is not authoritative after this PR. |
 | `20291217100000_finalise_festival_operations_summary.sql` | `CREATE OR REPLACE FUNCTION public.festival_edition_operations_summary_internal` | `p_edition_id uuid` | `jsonb` | `SECURITY DEFINER` | `service_role` only | Internal helper; caller must be pre-authorised | Private builder used by the final wrapper. |
-| `20291217100000_finalise_festival_operations_summary.sql` | `CREATE OR REPLACE FUNCTION public.festival_edition_operations_summary` | `p_edition_id uuid` | `jsonb` | `SECURITY DEFINER` | `authenticated`, `service_role`; `anon` and `PUBLIC` revoked | `public.can_manage_festival_edition(auth.uid(), p_edition_id)` before aggregation | Final authoritative definition on both clean reset and forward-upgraded databases. |
+| `20291217100000_finalise_festival_operations_summary.sql` | `CREATE OR REPLACE FUNCTION public.festival_edition_operations_summary` | `p_edition_id uuid` | `jsonb` | `SECURITY DEFINER` | `authenticated`, `service_role`; `anon` and `PUBLIC` revoked | `public.can_manage_festival_edition(p_edition_id)` before aggregation | Final authoritative definition on both clean reset and forward-upgraded databases. |
 
 Repository search found only the 2026 PR definition before this finalisation work. The authoritative festival operations domain is otherwise established later, especially by `20291212090000_complete_festival_edition_operations.sql`, which defines the private source tables and helper functions consumed by the summary. Because migrations run in filename order, a clean reset applies the 2026 summary before later festival operations migrations; this final `20291217100000` migration is now later than the currently relevant festival migrations and wins on clean reset.
 
 ## Current authoritative access model
 
-`public.festival_edition_operations_summary(uuid)` is owner-only. It rejects callers unless `public.can_manage_festival_edition(auth.uid(), p_edition_id)` returns true. The helper allows:
+`public.festival_edition_operations_summary(uuid)` is owner-only. It rejects callers unless `public.can_manage_festival_edition(p_edition_id)` returns true. The helper allows:
 
 - service role;
 - platform administrators;
@@ -47,7 +47,7 @@ The final wrapper preserves the keys required by current owner console consumers
 | `lifecycle` | retained | Status/date/currency owner context. |
 | `candidates` | retained as empty array | Compatibility placeholder for older owner screens. |
 | `insurance_quotes` | retained as empty array | Compatibility placeholder for older owner screens. |
-| `ticket_summary_source` | added | Internal authority marker: `canonical_sales`, `server_projection`, or `test_fixture_metadata`. |
+| `ticket_summary_source` | added | Internal authority marker: `test_fixture_metadata` or `unavailable` until a canonical commercial ticket ledger exists. |
 
 No existing keys from the PR #1259 summary were intentionally removed. Deprecated compatibility placeholders should remain until all owner console consumers stop reading them.
 
@@ -59,13 +59,9 @@ No existing keys from the PR #1259 summary were intentionally removed. Deprecate
 
 ## Ticket summary authority
 
-The final summary uses this precedence order:
+The final summary uses edition capacity as the normal capacity authority. It does not treat `festival_audience_generations` or `festival_audience_cohorts.ticket_holders` as completed commercial sales, because those tables model audience simulation rather than a paid ticket ledger. Ticket totals therefore remain unavailable for real festivals until the later Ticket Sales PR introduces canonical ticket inventory, order, purchase, refund, complimentary-ticket, and box-office settlement structures.
 
-1. Canonical audience/ticket-holder projection from `festival_audience_generations` and `festival_audience_cohorts`.
-2. Server projection defaults based on edition capacity when no canonical sales exist.
-3. `lifecycle_metadata.ticket_summary` only when `lifecycle_metadata.is_test_fixture = true`.
-
-The London fixture may therefore keep using simulated metadata, but ordinary production festivals cannot make arbitrary lifecycle metadata authoritative for owner ticket totals.
+Fixture metadata is only considered when `lifecycle_metadata.is_test_fixture = true`; production metadata cannot override edition capacity or supply sales totals. The London fixture may keep using guarded fixture metadata so QA continues to show 3,250 / 10,000.
 
 ## Upgraded environment vs clean reset
 

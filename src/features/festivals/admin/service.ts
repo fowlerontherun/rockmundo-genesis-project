@@ -169,6 +169,52 @@ const ownerEditionSchema = z
   })
   .passthrough();
 const jsonRecord = z.record(z.unknown());
+const ticketSourceSchema = z.enum([
+  "test_fixture_metadata",
+  "audience_simulation",
+  "canonical_sales",
+  "unavailable",
+]);
+const operationsSummarySchema = z
+  .object({
+    edition_id: z.string().optional(),
+    festival_id: z.string().optional(),
+    stages: z.array(z.record(z.unknown())).default([]),
+    slots: z.array(z.record(z.unknown())).default([]),
+    staff: z.array(z.record(z.unknown())).default([]),
+    permit_requirements: z.array(z.unknown()).default([]),
+    insurance_policies: z.array(z.record(z.unknown())).default([]),
+    ticket_summary: z
+      .object({
+        capacity: z.number().int().nonnegative().nullable().optional(),
+        tickets_sold: z.number().int().nonnegative().nullable().optional(),
+        tiers: z.array(z.unknown()).default([]),
+        source: ticketSourceSchema,
+      })
+      .passthrough()
+      .optional(),
+    ticketing: z
+      .object({
+        capacity: z.number().int().nonnegative().nullable().optional(),
+        tickets_sold: z.number().int().nonnegative().nullable().optional(),
+        tiers: z.array(z.unknown()).default([]),
+        source: ticketSourceSchema,
+      })
+      .passthrough()
+      .optional(),
+    tickets_sold: z.number().int().nonnegative().nullable().optional(),
+    ticket_summary_source: ticketSourceSchema.optional(),
+    schedule_summary: z.record(z.unknown()).optional(),
+    finance: z.record(z.unknown()).nullable().optional(),
+    finance_access: z.enum(["granted", "denied"]).optional(),
+    staff_wages_access: z.enum(["granted", "denied"]).optional(),
+    insurance_access: z.enum(["granted", "limited", "denied"]).optional(),
+    data_health: z.array(z.unknown()).optional(),
+    data_health_access: z.enum(["granted", "denied"]).optional(),
+    permissions: z.record(z.unknown()).optional(),
+    lifecycle: z.record(z.unknown()).optional(),
+  })
+  .passthrough();
 const nonNullJson = z
   .unknown()
   .refine(
@@ -539,17 +585,22 @@ const callMaybeRpc = async <T>(
   fn: string,
   args?: Record<string, unknown>,
   fallback?: () => Promise<T>,
+  schema: z.ZodType<T> = jsonRecord as z.ZodType<T>,
 ): Promise<T> => {
   try {
-    return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>);
+    return await rpc(fn as RpcName, args, schema);
   } catch (error) {
     const mapped = mapFestivalError(error as { message?: string; code?: string });
     if (mapped.code === "FESTIVAL_PERMISSION_DENIED") throw mapped;
     if (fallback) {
       try {
         return await fallback();
-      } catch {
-        /* graceful */ return {} as T;
+      } catch (fallbackError) {
+        throw new FestivalAdminServiceError(
+          `The ${fn} RPC failed and its fallback also failed.`,
+          "FESTIVAL_RPC_FAILED",
+          { rpcError: mapped, fallbackError },
+        );
       }
     }
     throw mapped;
@@ -591,6 +642,7 @@ export async function fetchFestivalEditionOperations(editionId: string) {
         lifecycle: {},
       };
     },
+    operationsSummarySchema,
   );
 }
 
