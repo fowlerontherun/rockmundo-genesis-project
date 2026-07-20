@@ -144,6 +144,8 @@ interface ContributionResult {
   transactionId?: string;
   newPlayerAvailableBalance?: number;
   newBandTreasuryBalance?: number;
+  newPlayerAvailableBalanceMinor?: number;
+  newBandTreasuryBalanceMinor?: number;
 }
 
 interface TreasuryAccount {
@@ -455,11 +457,11 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
     dashboard?.treasuries[0];
   const dashboardStatus = dashboard?.status ?? null;
-  const wasAuthorisedForBalance = dashboard?.canViewBalance === true;
+  const wasAuthorisedForBalance = dashboard?.canViewBalance === true || isLeader;
   const canUseLegacyFallback =
     !primaryTreasury &&
     !!band &&
-    ((dashboardStatus === "treasury_missing" && wasAuthorisedForBalance) ||
+    ((dashboardStatus === "treasury_missing" && dashboard?.canViewBalance === true) ||
       (!!dashboardError && wasAuthorisedForBalance));
   const balanceSource = primaryTreasury
     ? "ledger"
@@ -608,48 +610,36 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       setContributionNote("");
       setContributionPreview(null);
       setContributionIdempotencyKey(null);
-      if (data?.newBandTreasuryBalance !== undefined) {
+      const newBandTreasuryBalanceMinor =
+        data?.newBandTreasuryBalanceMinor ?? data?.newBandTreasuryBalance;
+      const newPlayerAvailableBalanceMinor =
+        data?.newPlayerAvailableBalanceMinor ?? data?.newPlayerAvailableBalance;
+      if (newBandTreasuryBalanceMinor !== undefined) {
         setDashboard((current) =>
           current
             ? {
                 ...current,
                 status: "ok",
-                treasuries: current.treasuries.length
-                  ? current.treasuries.map((treasury) =>
-                      treasury.currencyCode === contributionPreview.currencyCode
-                        ? {
-                            ...treasury,
-                            currentBalanceMinor:
-                              data.newBandTreasuryBalance ??
-                              treasury.currentBalanceMinor,
-                            availableBalanceMinor:
-                              data.newBandTreasuryBalance ??
-                              treasury.availableBalanceMinor,
-                          }
-                        : treasury,
-                    )
-                  : [
-                      {
-                        accountId: "pending-refresh",
-                        currencyCode: contributionPreview.currencyCode,
-                        currentBalanceMinor: data.newBandTreasuryBalance,
-                        availableBalanceMinor: data.newBandTreasuryBalance,
-                        isPrimary: true,
-                      },
-                    ],
+                treasuries: current.treasuries.map((treasury) =>
+                  treasury.currencyCode === contributionPreview.currencyCode
+                    ? {
+                        ...treasury,
+                        currentBalanceMinor: newBandTreasuryBalanceMinor,
+                        availableBalanceMinor: newBandTreasuryBalanceMinor,
+                      }
+                    : treasury,
+                ),
               }
             : current,
         );
       }
-      if (data?.newPlayerAvailableBalance !== undefined) {
+      if (newPlayerAvailableBalanceMinor !== undefined) {
         setPersonalAccounts((accounts) =>
           accounts.map((account) =>
             account.id === selectedAccountId
               ? {
                   ...account,
-                  availableBalanceMinor:
-                    data.newPlayerAvailableBalance ??
-                    account.availableBalanceMinor,
+                  availableBalanceMinor: newPlayerAvailableBalanceMinor,
                 }
               : account,
           ),
