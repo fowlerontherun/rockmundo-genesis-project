@@ -1,10 +1,18 @@
 import type { AdminFestivalCatalogueRow, FestivalDataHealthIssue, OwnerEditionOption, OwnerManagementBootstrap } from "./types";
 
-const issueFromUnknown = (value: unknown): FestivalDataHealthIssue[] => {
+export const issueFromUnknown = (value: unknown): FestivalDataHealthIssue[] => {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is FestivalDataHealthIssue => {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      return false;
+    }
+
     const candidate = item as Partial<FestivalDataHealthIssue>;
-    return typeof candidate.code === "string" && typeof candidate.message === "string" && (candidate.severity === "warning" || candidate.severity === "blocker");
+    return (
+      typeof candidate.code === "string" &&
+      typeof candidate.message === "string" &&
+      (candidate.severity === "warning" || candidate.severity === "blocker")
+    );
   });
 };
 
