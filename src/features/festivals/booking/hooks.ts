@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { festivalBookingKeys } from "./bookingTypes";
+import { festivalAdminQueryKeys } from "../admin/queryKeys";
 import {
   getBandApplications,
   listOrganiserApplications,
@@ -57,10 +58,10 @@ export function useFestivalApplicationActions(
   editionId?: string,
 ) {
   const queryClient = useQueryClient();
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: festivalBookingKeys.bandApplications(bandId, editionId),
-    });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: festivalBookingKeys.bandApplications(bandId, editionId) });
+    if (editionId) queryClient.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) });
+  };
   return {
     submitApplication: useMutation({
       mutationFn: submitFestivalApplication,
@@ -80,8 +81,10 @@ export function useFestivalApplicationActions(
     }),
     reviewApplication: useMutation({
       mutationFn: reviewFestivalApplication,
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root });
+        if (editionId) queryClient.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) });
+      },
     }),
   };
 }
@@ -104,10 +107,10 @@ export function useFestivalOffers(bandId?: string, editionId?: string) {
 
 export function useFestivalOfferActions(bandId?: string, editionId?: string) {
   const queryClient = useQueryClient();
-  const invalidateOffers = () =>
-    queryClient.invalidateQueries({
-      queryKey: festivalBookingKeys.offers(bandId, editionId),
-    });
+  const invalidateOffers = () => {
+    queryClient.invalidateQueries({ queryKey: festivalBookingKeys.offers(bandId, editionId) });
+    if (editionId) queryClient.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) });
+  };
   return {
     createOffer: useMutation({
       mutationFn: createFestivalOffer,
@@ -127,8 +130,10 @@ export function useFestivalOfferActions(bandId?: string, editionId?: string) {
         revision: number;
         idempotencyKey: string;
       }) => acceptFestivalOffer(offerId, revision, idempotencyKey),
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root });
+        if (editionId) queryClient.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) });
+      },
     }),
     declineOffer: useMutation({
       mutationFn: ({
