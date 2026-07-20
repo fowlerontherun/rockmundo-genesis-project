@@ -1,0 +1,43 @@
+name: Finance verification
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/finance-verification.yml'
+  workflow_dispatch:
+
+jobs:
+  finance-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: npm ci
+      - run: supabase db start
+      - run: supabase db reset
+      - run: supabase db lint
+      - run: supabase test db
+      - run: supabase gen types typescript --local > src/integrations/supabase/types.generated.ts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test -- --run
+      - run: npm run build
+      - name: Browser E2E availability
+        run: |
+          if [ -d tests ] && find tests -name '*.spec.ts' -print -quit | grep -q .; then
+            npx playwright install --with-deps chromium
+            npx playwright test --project=chromium
+          else
+            echo "No browser E2E specs found; finance workflow will run them automatically when specs exist."
+          fi

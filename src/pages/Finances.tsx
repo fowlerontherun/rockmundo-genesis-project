@@ -120,7 +120,7 @@ const Finances = () => {
         </TabsContent>
 
         <TabsContent value="obligations" className="space-y-6">
-          <FinancialObligationsPanel profileId={profileId ?? undefined} />
+          <FinancialObligationsPanel />
         </TabsContent>
 
         <TabsContent value="charity" className="space-y-6">
