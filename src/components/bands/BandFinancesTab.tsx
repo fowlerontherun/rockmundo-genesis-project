@@ -150,7 +150,7 @@ interface TreasuryAccount {
   accountId: string;
   currencyCode: string;
   currentBalanceMinor: number;
-  reservedBalanceMinor: number;
+  reservedBalanceMinor?: number;
   availableBalanceMinor: number;
   isPrimary: boolean;
 }
@@ -168,6 +168,7 @@ interface DashboardContribution {
 }
 
 interface TreasuryDashboard {
+  status?: "ok" | "treasury_missing" | "profile_missing" | "permission_denied";
   primaryCurrencyCode: string;
   treasuries: TreasuryAccount[];
   contributions: DashboardContribution[];
@@ -268,6 +269,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     string | null
   >(null);
   const [dashboard, setDashboard] = useState<TreasuryDashboard | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [contributions, setContributions] = useState<DashboardContribution[]>(
     [],
   );
@@ -286,7 +289,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       "get_my_eligible_band_contribution_accounts",
       {
         p_band_id: bandId,
-        p_currency_code: dashboard?.primaryCurrencyCode ?? null,
+        p_currency_code:
+          dashboard?.primaryCurrencyCode ?? (band ? "GBP" : null),
       },
     );
     setAccountsLoading(false);
@@ -313,6 +317,34 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     });
   };
 
+  const fetchTreasuryDashboard = async () => {
+    if (!bandId || !profileId) return;
+    setDashboardLoading(true);
+    setDashboardError(null);
+    try {
+      const { data, error } = await financeRpc.rpc(
+        "get_band_treasury_dashboard",
+        {
+          p_band_id: bandId,
+        },
+      );
+      if (error) throw error;
+      setDashboard(data);
+      setContributions(data?.contributions ?? []);
+    } catch (caught) {
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "Unable to load treasury dashboard.";
+      console.error("Failed to load band treasury dashboard", caught);
+      setDashboard(null);
+      setContributions([]);
+      setDashboardError(message);
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
+
   const fetchFinances = async () => {
     setLoading(true);
     setError(null);
@@ -321,7 +353,6 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         { data: bandData, error: bandError },
         { data: earningData, error: earningError },
         { data: membersData },
-        { data: dashboardData, error: dashboardError },
       ] = await Promise.all([
         supabase.from("bands").select("*").eq("id", bandId).single(),
         supabase
@@ -334,12 +365,10 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           .from("band_members")
           .select("id, is_touring_member, user_id")
           .eq("band_id", bandId),
-        financeRpc.rpc("get_band_treasury_dashboard", { p_band_id: bandId }),
       ]);
 
       if (bandError) throw bandError;
       if (earningError) throw earningError;
-      if (dashboardError) throw dashboardError;
 
       const b = bandData as BandRow;
       setBand(b);
@@ -350,8 +379,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         (m) => !m.is_touring_member,
       );
       setMemberCount(realMembers.length);
-      setDashboard(dashboardData);
-      setContributions(dashboardData?.contributions ?? []);
+      void fetchTreasuryDashboard();
     } catch (caught) {
       console.error("Failed to load band finances", caught);
       setBand(null);
@@ -368,7 +396,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
   useEffect(() => {
     void fetchEligibleAccounts();
-  }, [bandId, profileId, dashboard?.primaryCurrencyCode]);
+  }, [bandId, profileId, dashboard?.primaryCurrencyCode, band?.id]);
 
   const primaryTreasury =
     dashboard?.treasuries.find(
@@ -376,11 +404,15 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     ) ??
     dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
     dashboard?.treasuries[0];
+  const balanceSource = primaryTreasury ? "ledger" : "legacy_fallback";
   const treasuryCurrency =
     primaryTreasury?.currencyCode ?? dashboard?.primaryCurrencyCode ?? "GBP";
 
   const aggregated = useMemo(() => {
-    const balance = (primaryTreasury?.availableBalanceMinor ?? 0) / 100;
+    const balance =
+      primaryTreasury?.availableBalanceMinor !== undefined
+        ? primaryTreasury.availableBalanceMinor / 100
+        : Number(band?.band_balance ?? 0);
     if (earnings.length === 0) {
       return {
         balance,
@@ -425,7 +457,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       recentActivity: earnings,
       bySource,
     };
-  }, [primaryTreasury, earnings]);
+  }, [primaryTreasury, band?.band_balance, earnings]);
 
   const topSources = useMemo(() => {
     return Object.entries(aggregated.bySource)
@@ -584,6 +616,42 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
 
   return (
     <div className="space-y-6">
+      {dashboardError && (
+        <Alert variant="destructive">
+          <AlertTitle>Band treasury could not be loaded.</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>Your other finance information is still available.</p>
+            <p className="text-xs">{dashboardError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchTreasuryDashboard()}
+              disabled={dashboardLoading}
+            >
+              {dashboardLoading ? "Retrying treasury…" : "Retry treasury"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {!dashboardError && dashboard?.status === "treasury_missing" && (
+        <Alert>
+          <AlertTitle>Band treasury is not available yet.</AlertTitle>
+          <AlertDescription>
+            Showing the legacy band balance until a ledger treasury is
+            available.
+          </AlertDescription>
+        </Alert>
+      )}
+      {balanceSource === "legacy_fallback" && (
+        <Alert>
+          <AlertTitle>Legacy balance fallback active</AlertTitle>
+          <AlertDescription>
+            Ledger treasury data is unavailable, so this page is using the
+            existing band balance.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Key metrics */}
       <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -776,7 +844,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   <div key={c.id} className="rounded-md border p-2 text-sm">
                     <div className="flex justify-between gap-2">
                       <span className="font-medium">
-                        {c.contributorDisplayName} · {getSourceLabel(c.contributionType)}
+                        {c.contributorDisplayName} ·{" "}
+                        {getSourceLabel(c.contributionType)}
                       </span>
                       <Badge>
                         {formatCurrency(
@@ -786,8 +855,8 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {c.currencyCode} · {formatDateTime(c.createdAt)} ·
-                      refund: {c.refundableStatus}
+                      {c.currencyCode} · {formatDateTime(c.createdAt)} · refund:{" "}
+                      {c.refundableStatus}
                     </p>
 
                     {c.notes && <p className="text-xs">{c.notes}</p>}
@@ -920,9 +989,14 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Example: 10% of a {formatCurrency(aggregated.balance, treasuryCurrency)} balance
-                  = {formatCurrency(Math.floor(aggregated.balance * 0.1), treasuryCurrency)} split
-                  between members.
+                  Example: 10% of a{" "}
+                  {formatCurrency(aggregated.balance, treasuryCurrency)} balance
+                  ={" "}
+                  {formatCurrency(
+                    Math.floor(aggregated.balance * 0.1),
+                    treasuryCurrency,
+                  )}{" "}
+                  split between members.
                 </p>
               </div>
             ) : (
@@ -1010,30 +1084,69 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm band contribution</AlertDialogTitle>
             <AlertDialogDescription>
-              Review the source account, destination treasury and resulting balances before posting.
+              Review the source account, destination treasury and resulting
+              balances before posting.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {contributionPreview && (
             <div className="space-y-3 text-sm">
               <div className="rounded-md border p-3 space-y-1">
-                <p className="font-medium">From: {contributionPreview.sourceAccountDisplay}</p>
-                <p>Personal balance: {formatCurrency(contributionPreview.currentPersonalBalanceMinor / 100, contributionPreview.currencyCode)}</p>
-                <p>Contribution: {formatCurrency(contributionPreview.amountMinor / 100, contributionPreview.currencyCode)}</p>
-                <p>Resulting personal balance: {formatCurrency(contributionPreview.resultingPersonalBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+                <p className="font-medium">
+                  From: {contributionPreview.sourceAccountDisplay}
+                </p>
+                <p>
+                  Personal balance:{" "}
+                  {formatCurrency(
+                    contributionPreview.currentPersonalBalanceMinor / 100,
+                    contributionPreview.currencyCode,
+                  )}
+                </p>
+                <p>
+                  Contribution:{" "}
+                  {formatCurrency(
+                    contributionPreview.amountMinor / 100,
+                    contributionPreview.currencyCode,
+                  )}
+                </p>
+                <p>
+                  Resulting personal balance:{" "}
+                  {formatCurrency(
+                    contributionPreview.resultingPersonalBalanceMinor / 100,
+                    contributionPreview.currencyCode,
+                  )}
+                </p>
               </div>
               <div className="rounded-md border p-3 space-y-1">
-                <p className="font-medium">To: {contributionPreview.destinationTreasuryName}</p>
-                <p>Current treasury balance: {formatCurrency(contributionPreview.currentTreasuryBalanceMinor / 100, contributionPreview.currencyCode)}</p>
-                <p>Resulting treasury balance: {formatCurrency(contributionPreview.resultingTreasuryBalanceMinor / 100, contributionPreview.currencyCode)}</p>
+                <p className="font-medium">
+                  To: {contributionPreview.destinationTreasuryName}
+                </p>
+                <p>
+                  Current treasury balance:{" "}
+                  {formatCurrency(
+                    contributionPreview.currentTreasuryBalanceMinor / 100,
+                    contributionPreview.currencyCode,
+                  )}
+                </p>
+                <p>
+                  Resulting treasury balance:{" "}
+                  {formatCurrency(
+                    contributionPreview.resultingTreasuryBalanceMinor / 100,
+                    contributionPreview.currencyCode,
+                  )}
+                </p>
               </div>
               <Alert>
                 <AlertTitle>Contribution warning</AlertTitle>
-                <AlertDescription>{contributionPreview.warningText}</AlertDescription>
+                <AlertDescription>
+                  {contributionPreview.warningText}
+                </AlertDescription>
               </Alert>
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={contributing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={contributing}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
