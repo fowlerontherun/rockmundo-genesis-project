@@ -9,15 +9,24 @@ export function getCurrencyMinorUnit(currencyCode: string): number {
   return FALLBACK_MINOR_UNITS[currencyCode.toUpperCase()] ?? 2;
 }
 
-export function formatCurrencyMinor(input: { amountMinor: number; currencyCode: string; locale?: string; minorUnitPrecision?: number }): string {
-  const currencyCode = input.currencyCode.toUpperCase();
-  const minorUnitPrecision = input.minorUnitPrecision ?? getCurrencyMinorUnit(currencyCode);
-  const amount = input.amountMinor / 10 ** minorUnitPrecision;
-
+export function formatCurrencyMinor(input: { amountMinor: number; currencyCode: string; locale?: string; minorUnitPrecision?: number }): string;
+export function formatCurrencyMinor(amountMinor: number, currencyCode: string, locale?: string, minorUnitPrecision?: number): string;
+export function formatCurrencyMinor(
+  inputOrAmount: number | { amountMinor: number; currencyCode: string; locale?: string; minorUnitPrecision?: number },
+  currencyCode?: string,
+  locale?: string,
+  minorUnitPrecision?: number,
+): string {
+  const input = typeof inputOrAmount === "number"
+    ? { amountMinor: inputOrAmount, currencyCode: currencyCode ?? "USD", locale, minorUnitPrecision }
+    : inputOrAmount;
+  const cc = input.currencyCode.toUpperCase();
+  const precision = input.minorUnitPrecision ?? getCurrencyMinorUnit(cc);
+  const amount = input.amountMinor / 10 ** precision;
   return new Intl.NumberFormat(input.locale, {
     style: "currency",
-    currency: currencyCode,
-    minimumFractionDigits: minorUnitPrecision,
-    maximumFractionDigits: minorUnitPrecision,
+    currency: cc,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
   }).format(amount);
 }
