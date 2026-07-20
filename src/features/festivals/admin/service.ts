@@ -108,7 +108,7 @@ export function mapFestivalError(error: {
       "FESTIVAL_CREATE_STAGE_DUPLICATE",
       error,
     );
-  if (/permission|not authorised|not authorized|rls|FESTIVAL_CREATE_PERMISSION_DENIED/i.test(message))
+  if (/permission|permission_denied|not authorised|not authorized|rls|FESTIVAL_CREATE_PERMISSION_DENIED/i.test(message))
     return new FestivalAdminServiceError(
       "You do not have permission to perform this festival operation.",
       "FESTIVAL_PERMISSION_DENIED",
@@ -543,6 +543,8 @@ const callMaybeRpc = async <T>(
   try {
     return await rpc(fn as RpcName, args, jsonRecord as z.ZodType<T>);
   } catch (error) {
+    const mapped = mapFestivalError(error as { message?: string; code?: string });
+    if (mapped.code === "FESTIVAL_PERMISSION_DENIED") throw mapped;
     if (fallback) {
       try {
         return await fallback();
@@ -550,7 +552,7 @@ const callMaybeRpc = async <T>(
         /* graceful */ return {} as T;
       }
     }
-    throw error;
+    throw mapped;
   }
 };
 

@@ -37,4 +37,70 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.festival_participants fp WHERE fp.festival_id=v_brand) THEN RAISE EXCEPTION 'forbidden legacy festival_participants write'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.public_festival_editions WHERE id=v_edition) THEN RAISE EXCEPTION 'public projection missing'; END IF;
 END $$;
+
+DO $$
+DECLARE
+  v_fn text := pg_get_functiondef('public.festival_edition_operations_summary(uuid)'::regprocedure);
+  v_internal_priv boolean;
+BEGIN
+  IF v_fn NOT LIKE '%can_manage_festival_edition(auth.uid(), p_edition_id)%' THEN RAISE EXCEPTION 'operations summary missing authorisation guard'; END IF;
+  IF v_fn NOT LIKE '%permission_denied%' THEN RAISE EXCEPTION 'operations summary missing structured permission denial'; END IF;
+  IF has_function_privilege('anon','public.festival_edition_operations_summary(uuid)','EXECUTE') THEN RAISE EXCEPTION 'anon can execute operations summary'; END IF;
+  IF NOT has_function_privilege('authenticated','public.festival_edition_operations_summary(uuid)','EXECUTE') THEN RAISE EXCEPTION 'authenticated wrapper execute missing'; END IF;
+  SELECT has_function_privilege('authenticated','public.festival_edition_operations_summary_internal(uuid)','EXECUTE') INTO v_internal_priv;
+  IF v_internal_priv THEN RAISE EXCEPTION 'authenticated can execute internal operations summary'; END IF;
+END $$;
+
+DO $$
+DECLARE
+  v_edition uuid := '11111111-1111-4111-8111-111111111112';
+  v_owner_user uuid := '22222222-2222-4222-8222-222222222201';
+  v_unrelated_user uuid := '22222222-2222-4222-8222-222222222202';
+  v_manager_user uuid := '22222222-2222-4222-8222-222222222203';
+  v_admin_user uuid := '22222222-2222-4222-8222-222222222204';
+  v_other_owner_user uuid := '22222222-2222-4222-8222-222222222205';
+  v_owner_profile uuid := '33333333-3333-4333-8333-333333333301';
+  v_unrelated_profile uuid := '33333333-3333-4333-8333-333333333302';
+  v_manager_profile uuid := '33333333-3333-4333-8333-333333333303';
+  v_admin_profile uuid := '33333333-3333-4333-8333-333333333304';
+  v_other_profile uuid := '33333333-3333-4333-8333-333333333305';
+  v_other_brand uuid := '11111111-1111-4111-8111-111111111121';
+  v_other_edition uuid := '11111111-1111-4111-8111-111111111122';
+  v_ops jsonb;
+BEGIN
+  INSERT INTO auth.users(id, email) VALUES
+    (v_owner_user,'fixture-owner@example.test'),(v_unrelated_user,'fixture-unrelated@example.test'),(v_manager_user,'fixture-manager@example.test'),(v_admin_user,'fixture-admin@example.test'),(v_other_owner_user,'fixture-other@example.test')
+  ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.profiles(id,user_id,username,display_name) VALUES
+    (v_owner_profile,v_owner_user,'fixture_owner','Fixture Owner'),(v_unrelated_profile,v_unrelated_user,'fixture_unrelated','Fixture Unrelated'),(v_manager_profile,v_manager_user,'fixture_manager','Fixture Manager'),(v_admin_profile,v_admin_user,'fixture_admin','Fixture Admin'),(v_other_profile,v_other_owner_user,'fixture_other','Fixture Other')
+  ON CONFLICT (id) DO NOTHING;
+  UPDATE public.festivals SET owner_profile_id = v_owner_profile WHERE id = '11111111-1111-4111-8111-111111111111';
+  INSERT INTO public.user_roles(user_id, role) VALUES (v_admin_user, 'admin') ON CONFLICT DO NOTHING;
+  INSERT INTO public.festival_edition_management_roles(edition_id, profile_id, role, status) VALUES (v_edition, v_manager_profile, 'operations_manager', 'active') ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.festivals(id,name,city_id,venue_id,owner_profile_id,status,metadata) SELECT v_other_brand,'Other Fixture Festival',city_id,venue_id,v_other_profile,'planning','{}'::jsonb FROM public.festivals WHERE id='11111111-1111-4111-8111-111111111111' ON CONFLICT DO NOTHING;
+  INSERT INTO public.festival_editions(id,festival_id,edition_number,edition_year,title,city_id,venue_id,start_at,end_at,timezone,time_zone,capacity,currency_code,budget_cents,status,lifecycle_metadata,public_metadata)
+  SELECT v_other_edition,v_other_brand,1,edition_year,'Other Fixture Edition',city_id,venue_id,start_at,end_at,timezone,time_zone,capacity,currency_code,budget_cents,'planning','{}'::jsonb,'{}'::jsonb FROM public.festival_editions WHERE id=v_edition ON CONFLICT DO NOTHING;
+
+  PERFORM set_config('request.jwt.claim.role','authenticated', true);
+
+  PERFORM set_config('request.jwt.claim.sub', v_unrelated_user::text, true);
+  BEGIN PERFORM public.festival_edition_operations_summary(v_edition); RAISE EXCEPTION 'unrelated user unexpectedly read summary'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner_user::text, true);
+  v_ops := public.festival_edition_operations_summary(v_edition);
+  IF (v_ops->'stages') IS NULL THEN RAISE EXCEPTION 'owner summary malformed'; END IF;
+  BEGIN PERFORM public.festival_edition_operations_summary(v_other_edition); RAISE EXCEPTION 'owner read another festival'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  PERFORM set_config('request.jwt.claim.sub', v_manager_user::text, true);
+  IF public.festival_edition_operations_summary(v_edition)->>'edition_id' <> v_edition::text THEN RAISE EXCEPTION 'manager denied'; END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin_user::text, true);
+  IF public.festival_edition_operations_summary(v_edition)->>'edition_id' <> v_edition::text THEN RAISE EXCEPTION 'admin denied'; END IF;
+
+  PERFORM set_config('request.jwt.claim.role','service_role', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  IF public.festival_edition_operations_summary(v_edition)->>'edition_id' <> v_edition::text THEN RAISE EXCEPTION 'service role denied'; END IF;
+END $$;
+
 ROLLBACK;
