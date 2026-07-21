@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyMinor } from "./currency";
+import { SUPABASE_RPC_SCHEMA_UNAVAILABLE_MESSAGE, isMissingSupabaseRpcError } from "@/services/supabaseRpcErrors";
 
 export type CurrencyMinor = {
   amountMinor: number;
@@ -98,9 +99,13 @@ export function summarizeEqualPrincipalOffer(input: {
 }
 
 export async function fetchBankingDashboard(): Promise<BankingDashboard> {
-  const { data, error } = await (supabase as any).rpc("get_banking_dashboard");
+  const getBankingDashboardRpc = supabase.rpc as unknown as (fn: "get_banking_dashboard") => Promise<{ data: unknown; error: { code?: string; message?: string; details?: string; hint?: string } | null }>;
+  const { data, error } = await getBankingDashboardRpc("get_banking_dashboard");
 
   if (error) {
+    if (isMissingSupabaseRpcError(error)) {
+      console.error("[banking] dashboard RPC unavailable", { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    }
     throw new Error(mapBankingError(error));
   }
 
@@ -159,7 +164,8 @@ export async function acceptLoanOffer(input: {
   return String(data);
 }
 
-export function mapBankingError(error: { code?: string; message?: string }): string {
+export function mapBankingError(error: { code?: string; message?: string; details?: string; hint?: string }): string {
+  if (isMissingSupabaseRpcError(error)) return SUPABASE_RPC_SCHEMA_UNAVAILABLE_MESSAGE;
   if (error.code === "42501") return "You do not have permission to perform this banking action.";
   if (error.message?.toLowerCase().includes("insufficient funds")) return "There is not enough money in the selected account.";
   return error.message ?? "Banking is temporarily unavailable.";
