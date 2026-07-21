@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.583",
+    date: "2026-07-21",
+    changes: [
+      { type: 'improvement', description: "Wellness: further reduced base health drain across all activities (gig 5→3, recording 2→1, songwriting 1→0.5, travel 3→2, busking 3→2, rehearsal 2→1) and softened age multipliers (under-20 15%, under-30 25%, under-40 50%). Young characters barely lose health during normal play." },
+      { type: 'fix', description: "Wellness page: audited action pipeline — recovery/medical actions bypass energy + gate checks, cash cost compares correctly against dollar balance, cooldowns and daily caps still enforced." },
+      { type: 'feature', description: "One-time health boost applied to all existing characters (+30%, capped at 100) so returning players start the rebalance with full vitality." },
+    ],
+  },
+  {
     version: "1.1.582",
     date: "2026-07-20",
     changes: [
