@@ -7,13 +7,13 @@ type Profile = Tables<"profiles">;
 // notice fatigue, older players feel the cost).
 const HEALTH_COSTS = {
   busking_session: 3,
-  gig: 5,
-  recording: 2,
-  jam_session: 2,
-  songwriting: 1,
-  travel: 3,
-  release_promo: 2,
-  default: 2,
+  gig: 3,
+  recording: 1,
+  jam_session: 1,
+  songwriting: 0.5,
+  travel: 2,
+  release_promo: 1,
+  default: 1,
 } as const;
 
 /**
@@ -22,13 +22,13 @@ const HEALTH_COSTS = {
  */
 export function getAgeHealthDrainMultiplier(age?: number | null): number {
   const a = Math.max(0, Math.floor(age ?? 25));
-  if (a < 20) return 0.25;
-  if (a < 30) return 0.4;
-  if (a < 40) return 0.7;
-  if (a < 50) return 1.0;
-  if (a < 60) return 1.25;
-  if (a < 70) return 1.55;
-  return 1.9;
+  if (a < 20) return 0.15;
+  if (a < 30) return 0.25;
+  if (a < 40) return 0.5;
+  if (a < 50) return 0.75;
+  if (a < 60) return 1.0;
+  if (a < 70) return 1.3;
+  return 1.6;
 }
 
 export function calculateHealthDrain(

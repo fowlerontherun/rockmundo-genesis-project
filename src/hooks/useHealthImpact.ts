@@ -106,27 +106,27 @@ export async function applyHealthDrain(
 
   if (!profile) return;
 
-  // Rebalanced base drain: much gentler than before. Age scales the impact
-  // so under-30 characters can comfortably manage their vitals.
+  // Rebalanced base drain: gentler baseline. Age scales impact so
+  // under-30 characters can comfortably manage their vitals.
   const healthCosts: Record<string, number> = {
-    gig: 5,
-    recording: 2,
-    songwriting: 1,
-    rehearsal: 2,
-    travel: 3,
-    busking: 3,
-    release_promo: 2,
-    default: 2,
+    gig: 3,
+    recording: 1,
+    songwriting: 0.5,
+    rehearsal: 1,
+    travel: 2,
+    busking: 2,
+    release_promo: 1,
+    default: 1,
   };
 
   const age = (profile as any).age ?? 25;
   const ageMultiplier =
-    age < 20 ? 0.25 :
-    age < 30 ? 0.4 :
-    age < 40 ? 0.7 :
-    age < 50 ? 1.0 :
-    age < 60 ? 1.25 :
-    age < 70 ? 1.55 : 1.9;
+    age < 20 ? 0.15 :
+    age < 30 ? 0.25 :
+    age < 40 ? 0.5 :
+    age < 50 ? 0.75 :
+    age < 60 ? 1.0 :
+    age < 70 ? 1.3 : 1.6;
 
   const hourlyHealthDrain = healthCosts[activityType] || healthCosts.default;
   const hours = durationMinutes / 60;
