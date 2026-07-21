@@ -42878,6 +42878,7 @@ export type Database = {
         Args: { p_setlist_id: string }
         Returns: number
       }
+      get_banking_dashboard: { Args: never; Returns: Json }
       get_song_vote_score: { Args: { p_song_id: string }; Returns: number }
       get_songs_on_albums: {
         Args: { p_band_id: string; p_user_id: string }
