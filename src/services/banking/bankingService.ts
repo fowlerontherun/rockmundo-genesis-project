@@ -99,17 +99,25 @@ export function summarizeEqualPrincipalOffer(input: {
 }
 
 export async function fetchBankingDashboard(): Promise<BankingDashboard> {
-  const getBankingDashboardRpc = supabase.rpc as unknown as (fn: "get_banking_dashboard") => Promise<{ data: unknown; error: { code?: string; message?: string; details?: string; hint?: string } | null }>;
-  const { data, error } = await getBankingDashboardRpc("get_banking_dashboard");
+  try {
+    const { data, error } = await supabase.rpc("get_banking_dashboard");
 
-  if (error) {
-    if (isMissingSupabaseRpcError(error)) {
-      console.error("[banking] dashboard RPC unavailable", { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    if (error) {
+      if (isMissingSupabaseRpcError(error)) {
+        logBankingDiagnostic("[banking] dashboard RPC unavailable", error);
+      }
+      throw new Error(mapBankingError(error));
     }
-    throw new Error(mapBankingError(error));
-  }
 
-  return (data as BankingDashboard | null) ?? fallbackDashboard;
+    return (data as BankingDashboard | null) ?? fallbackDashboard;
+  } catch (error) {
+    if (error instanceof Error && isPlayerSafeBankingError(error.message)) {
+      throw error;
+    }
+
+    logBankingDiagnostic("[banking] dashboard RPC invocation failed", error);
+    throw new Error("Banking could not be loaded. Please try again.");
+  }
 }
 
 export async function createLoanApplication(input: {
@@ -164,11 +172,28 @@ export async function acceptLoanOffer(input: {
   return String(data);
 }
 
+const PLAYER_SAFE_BANKING_ERRORS = new Set([
+  SUPABASE_RPC_SCHEMA_UNAVAILABLE_MESSAGE,
+  "You do not have permission to perform this banking action.",
+  "There is not enough money in the selected account.",
+  "Banking could not be loaded. Please try again.",
+]);
+
+function isPlayerSafeBankingError(message: string): boolean {
+  return PLAYER_SAFE_BANKING_ERRORS.has(message);
+}
+
+function logBankingDiagnostic(message: string, error: unknown): void {
+  if (import.meta.env.DEV) {
+    console.error(message, error);
+  }
+}
+
 export function mapBankingError(error: { code?: string; message?: string; details?: string; hint?: string }): string {
   if (isMissingSupabaseRpcError(error)) return SUPABASE_RPC_SCHEMA_UNAVAILABLE_MESSAGE;
   if (error.code === "42501") return "You do not have permission to perform this banking action.";
   if (error.message?.toLowerCase().includes("insufficient funds")) return "There is not enough money in the selected account.";
-  return error.message ?? "Banking is temporarily unavailable.";
+  return "Banking could not be loaded. Please try again.";
 }
 
 export type BankingProduct = {
