@@ -299,6 +299,8 @@ export const operationsSummarySchema = z
     slots: z.array(festivalSlotSummarySchema).default([]),
     staff: z.array(festivalStaffSummarySchema).default([]),
     permit_requirements: z.array(z.unknown()).default([]),
+    candidates: z.array(z.unknown()).default([]),
+    insurance_quotes: z.array(z.unknown()).default([]),
     insurance_policies: z.array(insurancePolicySchema).default([]),
     ticket_summary: ticketSummarySchema.optional(),
     ticketing: ticketSummarySchema.optional(),
@@ -752,7 +754,8 @@ const callMaybeRpc = async <T>(
 };
 
 export async function fetchFestivalEditionOperations(editionId: string) {
-  return callMaybeRpc(
+  type OpsSummary = z.infer<typeof operationsSummarySchema>;
+  return callMaybeRpc<OpsSummary>(
     "festival_edition_operations_summary",
     { p_edition_id: editionId },
     async () => {

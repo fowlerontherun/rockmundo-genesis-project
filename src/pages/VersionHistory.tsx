@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.584",
+    date: "2026-07-21",
+    changes: [
+      { type: 'fix', description: "Band Finances: added stub RPCs (get_band_treasury_dashboard, get_my_eligible_band_contribution_accounts) so the page renders an empty treasury/no-eligible-accounts state instead of 'function not found in schema cache' errors." },
+      { type: 'fix', description: "Build: relaxed festival dashboard test helper typing and added candidates/insurance_quotes to operations summary schema so the festival admin service compiles cleanly." },
+    ],
+  },
+  {
     version: "1.1.583",
     date: "2026-07-21",
     changes: [

@@ -3,7 +3,7 @@ import { buildFestivalDashboardModel, isInsurancePolicyActiveForEdition } from "
 
 const edition = (overrides = {}) => ({ id: "ed", festivalId: "fest", title: "Summer Noise 2027", editionNumber: 1, status: "planning" as const, startAt: "2027-08-01T12:00:00Z", endAt: "2027-08-03T23:00:00Z", cityName: "London", currencyCode: "GBP", ...overrides });
 const slot = (id: string, extra = {}) => ({ id, band_id: `band-${id}`, contract_status: "signed", ...extra });
-const build = (overrides: Parameters<typeof buildFestivalDashboardModel>[0]) => buildFestivalDashboardModel({ now: new Date("2027-06-20T12:00:00Z"), festivalName: "Summer Noise", edition: edition(), operations: {}, ...overrides });
+const build = (overrides: Partial<Parameters<typeof buildFestivalDashboardModel>[0]> = {}) => buildFestivalDashboardModel({ now: new Date("2027-06-20T12:00:00Z"), festivalName: "Summer Noise", edition: edition(), operations: {}, ...overrides });
 
 describe("buildFestivalDashboardModel", () => {
   it("handles brand-new editions with no stages or slots", () => { const m = build({ operations: {} }); expect(m.stageCount).toBe(0); expect(m.availableSlots).toBe(0); expect(m.nextAction?.destination).toBe("#stages"); });

@@ -42813,6 +42813,10 @@ export type Database = {
         Args: { p_band_id: string; p_country: string }
         Returns: number
       }
+      get_band_treasury_dashboard: {
+        Args: { p_band_id: string }
+        Returns: Json
+      }
       get_company_workforce_counts: {
         Args: { _owner_id: string }
         Returns: {
@@ -42844,6 +42848,10 @@ export type Database = {
       get_friendship_tier: {
         Args: { profile_a: string; profile_b: string }
         Returns: string
+      }
+      get_my_eligible_band_contribution_accounts: {
+        Args: { p_band_id: string; p_currency_code: string }
+        Returns: Json
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
