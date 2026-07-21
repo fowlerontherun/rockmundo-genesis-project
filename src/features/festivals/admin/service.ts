@@ -754,7 +754,8 @@ const callMaybeRpc = async <T>(
 };
 
 export async function fetchFestivalEditionOperations(editionId: string) {
-  return callMaybeRpc(
+  type OpsSummary = z.infer<typeof operationsSummarySchema>;
+  return callMaybeRpc<OpsSummary>(
     "festival_edition_operations_summary",
     { p_edition_id: editionId },
     async () => {
