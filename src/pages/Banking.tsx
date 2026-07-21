@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { fetchBankingDashboard, formatCurrencyMinor } from "@/services/banking/bankingService";
 
+function getBankingErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "Banking is temporarily unavailable.";
+}
+
 export default function Banking() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["banking-dashboard"],
@@ -18,7 +23,7 @@ export default function Banking() {
       {isLoading ? (
         <div className="flex min-h-[320px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : error ? (
-        <Card><CardHeader><CardTitle>Banking unavailable</CardTitle><CardDescription>{String(error)}</CardDescription></CardHeader><CardContent><Button onClick={() => void refetch()}>Retry</Button></CardContent></Card>
+        <Card><CardHeader><CardTitle>Banking unavailable</CardTitle><CardDescription>{getBankingErrorMessage(error)}</CardDescription></CardHeader><CardContent><Button onClick={() => void refetch()}>Retry</Button></CardContent></Card>
       ) : (
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">

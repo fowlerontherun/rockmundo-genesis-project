@@ -4,9 +4,12 @@ import { join } from 'node:path';
 const root = process.cwd();
 const requiredRpcs = [
   {
+    name: 'get_banking_dashboard',
+    arguments: [],
+  },
+  {
     name: 'festival_owner_management_bootstrap',
-    argument: 'p_identifier',
-    type: 'uuid',
+    arguments: [{ name: 'p_identifier', type: 'uuid' }],
     references: ['FESTIVAL_OWNER_BOOTSTRAP_RPC'],
   },
 ];
@@ -25,18 +28,23 @@ const sourceText = ['src', 'docs']
 
 const missing = [];
 for (const rpc of requiredRpcs) {
-  const isReferenced = [rpc.name, ...rpc.references].some((needle) => sourceText.includes(needle));
+  const isReferenced = [rpc.name, ...(rpc.references ?? [])].some((needle) => sourceText.includes(needle));
   if (!isReferenced) {
     missing.push(`${rpc.name} is no longer referenced; remove it from requiredRpcs if intentionally retired`);
     continue;
   }
 
+  const args = rpc.arguments ?? [];
+  const signatureBody = args.length === 0
+    ? '\\s*'
+    : args.map((arg) => `${arg.name}\\s+${arg.type}\\b`).join('[\\s\\S]*?,[\\s\\S]*?');
   const signature = new RegExp(
-    `CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.${rpc.name}\\s*\\(\\s*${rpc.argument}\\s+${rpc.type}\\b`,
+    `CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.${rpc.name}\\s*\\(${signatureBody}`,
     'i',
   );
   if (!signature.test(migrations)) {
-    missing.push(`public.${rpc.name}(${rpc.argument} ${rpc.type}) is absent from Supabase migrations`);
+    const renderedArgs = args.map((arg) => `${arg.name} ${arg.type}`).join(', ');
+    missing.push(`public.${rpc.name}(${renderedArgs}) is absent from Supabase migrations`);
   }
 }
 
