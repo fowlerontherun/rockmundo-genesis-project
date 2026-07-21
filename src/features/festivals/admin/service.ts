@@ -555,6 +555,13 @@ export async function fetchOwnerManagementBootstrap(
       cause?.code === "PGRST202" ||
       /festival_owner_management_bootstrap|schema cache|function/i.test(message)
     ) {
+      console.warn("Festival owner bootstrap RPC unavailable", {
+        reference: "FESTIVAL_OWNER_BOOTSTRAP_RPC",
+        rpc: "festival_owner_management_bootstrap",
+        code: cause?.code ?? null,
+        hasDetails: Boolean(cause?.details),
+        hasHint: Boolean(cause?.hint),
+      });
       return {
         status: "rpc_unavailable",
         inputId: identifier,
