@@ -41342,10 +41342,7 @@ export type Database = {
           stage_count: number
         }[]
       }
-      current_user_is_platform_admin: {
-        Args: never
-        Returns: boolean
-      }
+      admin_festival_reference_data: { Args: never; Returns: Json }
       admin_force_complete_release: {
         Args: { p_release_id: string }
         Returns: undefined
@@ -42394,6 +42391,7 @@ export type Database = {
       }
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
+      current_user_is_platform_admin: { Args: never; Returns: boolean }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decline_festival_offer: {
         Args: {
@@ -42580,6 +42578,14 @@ export type Database = {
           unavailable_reason: string
           writers: string[]
         }[]
+      }
+      festival_creation_country_code: {
+        Args: { p_country: string }
+        Returns: string
+      }
+      festival_creation_currency_for_country: {
+        Args: { p_country: string }
+        Returns: string
       }
       festival_crew_preflight: { Args: { p_session_id: string }; Returns: Json }
       festival_edition_settlement_readiness: {
