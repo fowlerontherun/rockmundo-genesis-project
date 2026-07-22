@@ -689,15 +689,19 @@ export async function quoteFestivalEditionInsurance(
   );
 }
 export async function purchaseFestivalEditionInsurance(
-  quoteId: string,
-  idempotencyKey: string,
+  input: { editionId: string; coverageType: string; idempotencyKey: string },
 ) {
   return rpc(
     "purchase_festival_edition_insurance" as RpcName,
-    { p_quote_id: quoteId, p_idempotency_key: idempotencyKey },
+    {
+      p_edition_id: input.editionId,
+      p_coverage_type: input.coverageType,
+      p_idempotency_key: input.idempotencyKey,
+    },
     nonNullJson,
   );
 }
+
 export async function fetchFestivalEditionFinanceSummary(editionId: string) {
   return rpc(
     "festival_edition_finance_summary" as RpcName,
