@@ -17,10 +17,12 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
-    version: "1.1.595",
+    version: "1.1.596",
     date: "2026-07-22",
     changes: [
-      { type: 'fix', description: "Fixed 'Festival management update required' error when opening full festival management. Deployed the missing festival_owner_management_bootstrap(p_identifier) RPC (plus its resolve_festival_management_identifier helper) so owners, delegates, and admins can load the management console again." },
+      { type: 'fix', description: "Fixed 'Festival service is unavailable (FESTIVAL_RPC_UNAVAILABLE)' error on Permits, Stages, Staff, Insurance and Finance tabs by deploying schema-accurate festival_edition_operations_summary, festival_edition_finance_summary and can_manage_festival_edition RPCs." },
+      { type: 'change', description: "Removed all 180 seeded system festivals from the world." },
+      { type: 'feature', description: "Seeded a single completed festival — Victorious — in Portsmouth on Southsea Common, owned by Big Fowler, with a completed 2026 edition." },
     ],
   },
   {
