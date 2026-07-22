@@ -26560,6 +26560,9 @@ export type Database = {
           hired_at: string | null
           id: string
           job_id: string
+          last_auto_attempt_at: string | null
+          last_auto_attempt_outcome: string | null
+          last_auto_attempt_reason: string | null
           last_shift_at: string | null
           profile_id: string
           shifts_completed: number | null
@@ -26574,6 +26577,9 @@ export type Database = {
           hired_at?: string | null
           id?: string
           job_id: string
+          last_auto_attempt_at?: string | null
+          last_auto_attempt_outcome?: string | null
+          last_auto_attempt_reason?: string | null
           last_shift_at?: string | null
           profile_id: string
           shifts_completed?: number | null
@@ -26588,6 +26594,9 @@ export type Database = {
           hired_at?: string | null
           id?: string
           job_id?: string
+          last_auto_attempt_at?: string | null
+          last_auto_attempt_outcome?: string | null
+          last_auto_attempt_reason?: string | null
           last_shift_at?: string | null
           profile_id?: string
           shifts_completed?: number | null
