@@ -27,18 +27,13 @@ export function AddTouringMember({ bandId, onAdded }: AddTouringMemberProps) {
     try {
       const memberName = generateTouringMemberName();
       
-      const { error } = await supabase
-        .from('band_members')
-        .insert({
-          band_id: bandId,
-          user_id: null,
-          role: memberName,
-          instrument_role: instrument,
-          is_touring_member: true,
-          touring_member_tier: tier,
-          touring_member_cost: selectedTier.weeklyCost,
-          salary: selectedTier.weeklyCost,
-        });
+      const { error } = await (supabase as any).rpc('hire_band_touring_member', {
+        p_band_id: bandId,
+        p_member_name: memberName,
+        p_instrument_role: instrument,
+        p_tier: tier,
+        p_weekly_cost: selectedTier.weeklyCost,
+      });
 
       if (error) throw error;
 
