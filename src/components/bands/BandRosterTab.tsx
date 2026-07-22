@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -175,6 +176,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
   const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
+  const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string>>({});
 
   const currentMember = useMemo(() => (
     members.find((member) => (
@@ -263,6 +265,12 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         if (!isMounted) return;
 
         setMembers(membersWithProfiles);
+        setDraftPerformanceRoles(
+          membersWithProfiles.reduce((acc, member) => {
+            acc[member.id] = member.instrument_role || "Other";
+            return acc;
+          }, {} as Record<string, string>),
+        );
 
         const historyMap = (historyData as BandMembershipStatusHistory[] | null)?.reduce(
           (acc, entry) => {
@@ -336,7 +344,11 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     }
   };
 
-  const handlePerformanceRoleChange = async (memberId: string, nextRole: string) => {
+  const handlePerformanceRoleDraftChange = (memberId: string, nextRole: string) => {
+    setDraftPerformanceRoles((current) => ({ ...current, [memberId]: nextRole }));
+  };
+
+  const handlePerformanceRoleSave = async (memberId: string) => {
     if (!isLeader) {
       toast({
         title: "Permission denied",
@@ -347,33 +359,36 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     }
 
     const member = members.find((candidate) => candidate.id === memberId);
-    if (!member || member.instrument_role === nextRole) return;
+    const nextRole = draftPerformanceRoles[memberId];
+    if (!member || !nextRole || member.instrument_role === nextRole) return;
 
     setUpdatingRoleMemberId(memberId);
     try {
-      const { error } = await supabase
-        .from("band_members")
-        .update({ instrument_role: nextRole })
-        .eq("id", memberId)
-        .eq("band_id", bandId);
+      const { data, error } = await (supabase as any).rpc("update_band_member_performance_role", {
+        p_member_id: memberId,
+        p_instrument_role: nextRole,
+      });
 
       if (error) throw error;
 
+      const updatedRole = data?.instrument_role ?? nextRole;
+
       setMembers(prev =>
         prev.map(m =>
-          m.id === memberId ? { ...m, instrument_role: nextRole } : m
+          m.id === memberId ? { ...m, instrument_role: updatedRole } : m
         )
       );
+      setDraftPerformanceRoles((current) => ({ ...current, [memberId]: updatedRole }));
 
       toast({
-        title: "Performance role updated",
-        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} is now assigned to ${nextRole}.`,
+        title: "Performance role saved",
+        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} is now assigned to ${updatedRole}.`,
       });
     } catch (error) {
-      console.error("Failed to update performance role", error);
+      console.error("Failed to save performance role", error);
       toast({
-        title: "Update failed",
-        description: "Could not update the member performance role",
+        title: "Save failed",
+        description: "Could not save the member performance role",
         variant: "destructive",
       });
     } finally {
@@ -537,9 +552,11 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                   {members.map((member) => {
                     const lastStatus = statusHistory[member.id]?.[0];
                     const statusLabel = getStatusLabel(member.member_status);
-                    const roleOptions = member.instrument_role && !performanceRoleOptions.includes(member.instrument_role)
-                      ? [member.instrument_role, ...performanceRoleOptions]
+                    const draftRole = draftPerformanceRoles[member.id] ?? member.instrument_role ?? "Other";
+                    const roleOptions = draftRole && !performanceRoleOptions.includes(draftRole)
+                      ? [draftRole, ...performanceRoleOptions]
                       : performanceRoleOptions;
+                    const hasUnsavedRole = draftRole !== (member.instrument_role || "Other");
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
@@ -577,8 +594,8 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                         <TableCell className="align-middle">
                           <div className="flex flex-col gap-2">
                             <Select
-                              value={member.instrument_role || "Other"}
-                              onValueChange={(value) => handlePerformanceRoleChange(member.id, value)}
+                              value={draftRole}
+                              onValueChange={(value) => handlePerformanceRoleDraftChange(member.id, value)}
                               disabled={!isLeader || updatingRoleMemberId === member.id}
                             >
                               <SelectTrigger className="h-8 w-[190px]">
@@ -592,6 +609,18 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                                 ))}
                               </SelectContent>
                             </Select>
+                            {isLeader && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={hasUnsavedRole ? "default" : "outline"}
+                                className="h-8 w-fit"
+                                disabled={!hasUnsavedRole || updatingRoleMemberId === member.id}
+                                onClick={() => handlePerformanceRoleSave(member.id)}
+                              >
+                                {updatingRoleMemberId === member.id ? "Saving…" : "Save role"}
+                              </Button>
+                            )}
                             <div className="flex flex-wrap gap-1">
                               {member.role === "leader" && <Badge>Leader</Badge>}
                               {member.role !== "leader" && <Badge variant="outline">{member.role}</Badge>}
