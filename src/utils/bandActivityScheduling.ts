@@ -82,56 +82,55 @@ export async function getBandMemberUserIds(bandId: string): Promise<string[]> {
 }
 
 /**
- * Get band member details including names for conflict reporting
- * Only includes REAL players (user_id is not null), excludes touring/hired members
+ * Get band member details including names for conflict reporting.
+ * Returns per-character profile_ids (NOT auth user_ids) so conflict checks
+ * are scoped to a specific character — a user's other characters in other
+ * bands must not block this band's scheduling.
  */
-export async function getBandMemberDetails(bandId: string): Promise<{ userId: string; name: string }[]> {
-  // First get band members - only real players (have user_id)
+export async function getBandMemberDetails(bandId: string): Promise<{ profileId: string; userId: string | null; name: string }[]> {
   const { data: members, error: membersError } = await supabase
     .from('band_members')
-    .select('user_id')
+    .select('profile_id, user_id')
     .eq('band_id', bandId)
     .eq('member_status', 'active')
     .eq('is_touring_member', false)
-    .not('user_id', 'is', null);  // Only real players
-  
+    .not('profile_id', 'is', null);
+
   if (membersError) {
     console.error('Error fetching band members:', membersError);
     throw membersError;
   }
-  
-  const userIds = (members || [])
-    .map(m => m.user_id)
-    .filter((id): id is string => id !== null);
-  
-  if (userIds.length === 0) {
-    return [];
-  }
-  
-  // Then fetch profiles separately
+
+  const rows = (members || []).filter((m: any) => m.profile_id) as { profile_id: string; user_id: string | null }[];
+  if (rows.length === 0) return [];
+
+  const profileIds = rows.map(r => r.profile_id);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('user_id, display_name, username')
-    .in('user_id', userIds);
-  
+    .select('id, display_name, username')
+    .in('id', profileIds);
+
   if (profilesError) {
     console.error('Error fetching profiles:', profilesError);
-    // Don't throw - just use fallback names
   }
-  
-  const profileMap = new Map<string, ProfileSummary>(
-    ((profiles || []) as ProfileSummary[]).map(p => [p.user_id, p])
+
+  const profileMap = new Map<string, { display_name: string | null; username: string | null }>(
+    (profiles || []).map((p: any) => [p.id, { display_name: p.display_name, username: p.username }])
   );
-  
-  return userIds.map(userId => {
-    const profile = profileMap.get(userId);
-    const name = profile?.display_name || profile?.username || 'Band member';
-    return { userId, name };
+
+  return rows.map(r => {
+    const p = profileMap.get(r.profile_id);
+    return {
+      profileId: r.profile_id,
+      userId: r.user_id,
+      name: p?.display_name || p?.username || 'Band member',
+    };
   });
 }
 
 /**
- * Check if all band members are available for a time slot
+ * Check if all band members are available for a time slot.
+ * Uses profile_id so a member's OTHER characters do not create false conflicts.
  */
 export async function checkBandAvailability(
   bandId: string,
@@ -140,29 +139,44 @@ export async function checkBandAvailability(
   excludeActivityId?: string
 ): Promise<{ available: boolean; conflicts: ConflictInfo[] }> {
   const memberDetails = await getBandMemberDetails(bandId);
-  const conflicts: ConflictInfo[] = [];
-  
-  for (const member of memberDetails) {
-    const { available, conflictingActivity } = await checkTimeSlotAvailable(
-      member.userId, 
-      start, 
-      end,
-      excludeActivityId
-    );
-    
-    if (!available) {
-      conflicts.push({
-        userId: member.userId,
-        userName: member.name,
-        activityTitle: conflictingActivity?.title || 'Unknown activity'
-      });
-    }
+  if (memberDetails.length === 0) {
+    return { available: true, conflicts: [] };
   }
-  
-  return {
-    available: conflicts.length === 0,
-    conflicts
-  };
+
+  const profileIds = memberDetails.map(m => m.profileId);
+
+  let query = (supabase as any)
+    .from('player_scheduled_activities')
+    .select('id, profile_id, title, scheduled_start, scheduled_end, status')
+    .in('profile_id', profileIds)
+    .in('status', ['scheduled', 'in_progress'])
+    .lt('scheduled_start', end.toISOString())
+    .gt('scheduled_end', start.toISOString());
+
+  if (excludeActivityId) {
+    query = query.neq('id', excludeActivityId);
+  }
+
+  const { data: overlapping, error } = await query;
+  if (error) {
+    console.warn('Band availability check failed, allowing booking:', error);
+    return { available: true, conflicts: [] };
+  }
+
+  const conflicts: ConflictInfo[] = [];
+  const seen = new Set<string>();
+  for (const row of (overlapping || []) as any[]) {
+    if (seen.has(row.profile_id)) continue;
+    seen.add(row.profile_id);
+    const member = memberDetails.find(m => m.profileId === row.profile_id);
+    conflicts.push({
+      userId: member?.userId || row.profile_id,
+      userName: member?.name,
+      activityTitle: row.title || 'Unknown activity',
+    });
+  }
+
+  return { available: conflicts.length === 0, conflicts };
 }
 
 /**
