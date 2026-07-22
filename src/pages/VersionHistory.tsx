@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.585",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Multi-character bands: band rehearsal/recording conflict checks now scope by character profile_id instead of auth user_id, so a user's OTHER character (in a different band) no longer blocks bookings for this band." },
+      { type: 'fix', description: "Band scheduling: createBandScheduledActivities now fetches profile_ids directly from band_members and dedupes by profile_id so each character gets its own scheduled activity row." },
+    ],
+  },
+  {
     version: "1.1.584",
     date: "2026-07-21",
     changes: [
