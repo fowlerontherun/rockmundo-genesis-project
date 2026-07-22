@@ -41605,6 +41605,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_festival_audit_events: { Args: { p_filters?: Json }; Returns: Json }
       admin_festival_catalogue: {
         Args: never
         Returns: {
@@ -41631,6 +41632,12 @@ export type Database = {
           stage_count: number
         }[]
       }
+      admin_festival_data_health: { Args: never; Returns: Json }
+      admin_festival_edition_lifecycle_options: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
+      admin_festival_legacy_records: { Args: never; Returns: Json }
       admin_festival_reference_data: { Args: never; Returns: Json }
       admin_force_complete_release: {
         Args: { p_release_id: string }
@@ -41719,6 +41726,15 @@ export type Database = {
       }
       admin_preview_legacy_festival_migration: {
         Args: { p_game_event_id: string }
+        Returns: Json
+      }
+      admin_review_festival_edition_permit: {
+        Args: {
+          p_action: string
+          p_idempotency_key?: string
+          p_permit_id: string
+          p_reason?: string
+        }
         Returns: Json
       }
       admin_transition_festival_edition: {
@@ -41913,6 +41929,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      apply_festival_legacy_migration: {
+        Args: { p_idempotency_key?: string; p_mapping_id: string }
+        Returns: Json
+      }
+      apply_for_festival_edition_permit: {
+        Args: {
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_requirement_code: string
+        }
+        Returns: Json
       }
       apply_missed_gig_consequences: {
         Args: { p_gig_id: string; p_reason?: string }
@@ -42659,6 +42687,26 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      create_festival_edition_stage: {
+        Args: {
+          p_backstage_capability?: string
+          p_capacity?: number
+          p_changeover_duration?: number
+          p_curfew?: string
+          p_edition_id: string
+          p_genre_focus?: string
+          p_idempotency_key?: string
+          p_lighting_capability?: string
+          p_name: string
+          p_public_metadata?: Json
+          p_sound_capability?: string
+          p_stage_size?: string
+          p_technical_metadata?: Json
+          p_type?: string
+          p_weather_protection?: string
+        }
+        Returns: Json
+      }
       create_festival_offer: {
         Args: {
           p_application_id?: string
@@ -42968,6 +43016,7 @@ export type Database = {
         Returns: string
       }
       festival_crew_preflight: { Args: { p_session_id: string }; Returns: Json }
+      festival_current_user_is_admin: { Args: never; Returns: boolean }
       festival_edition_finance_summary: {
         Args: { p_edition_id: string }
         Returns: Json
@@ -43193,6 +43242,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      generate_festival_stage_slots: {
+        Args: {
+          p_apply?: boolean
+          p_changeover_duration?: number
+          p_curfew: string
+          p_date: string
+          p_idempotency_key?: string
+          p_opening_time: string
+          p_slot_templates: Json
+          p_soundcheck_policy?: Json
+          p_stage_id: string
+        }
+        Returns: Json
+      }
       generate_pending_company_taxes: {
         Args: never
         Returns: {
@@ -43348,6 +43411,19 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hire_festival_edition_staff: {
+        Args: {
+          p_assignment_scope?: Json
+          p_candidate_id: string
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_role: string
+          p_shift_end_at?: string
+          p_shift_start_at?: string
+          p_wage_cents: number
+        }
+        Returns: Json
       }
       hire_player: {
         Args: { p_job_id: string; p_profile_id: string }
@@ -43601,6 +43677,14 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_copy_festival_edition: {
+        Args: { p_source_edition_id: string; p_target_edition_id?: string }
+        Returns: Json
+      }
+      preview_festival_legacy_migration: {
+        Args: { p_mapping_id: string }
+        Returns: Json
+      }
       process_gear_sale: {
         Args: {
           p_buyer_user_id: string
@@ -43707,7 +43791,26 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_festival_edition_insurance: {
+        Args: {
+          p_coverage_type?: string
+          p_edition_id?: string
+          p_idempotency_key?: string
+          p_payout_ceiling_cents?: number
+          p_premium_cents?: number
+          p_quote_id: string
+        }
+        Returns: Json
+      }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
+      quote_festival_edition_insurance: {
+        Args: {
+          p_coverage_type?: string
+          p_edition_id: string
+          p_provider?: string
+        }
+        Returns: Json
+      }
       recompute_candidate_endorsement_bonus: {
         Args: { p_candidate_id: string }
         Returns: undefined
@@ -43748,6 +43851,10 @@ export type Database = {
       reorder_setlist_items: {
         Args: { p_setlist_id: string; p_updates: Json }
         Returns: undefined
+      }
+      repair_festival_data_health_issue: {
+        Args: { p_action: string; p_issue_id: string; p_reason?: string }
+        Returns: Json
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       resolve_company_demand: {
