@@ -215,40 +215,35 @@ export function formatConflictMessage(conflicts: ConflictInfo[], currentUserId?:
  * This ensures every member is blocked during band activities
  */
 export async function createBandScheduledActivities(params: BandActivityParams): Promise<string[]> {
-  const memberIds = await getBandMemberUserIds(params.bandId);
-  
-  if (memberIds.length === 0) {
-    console.warn('No active band members found for band:', params.bandId);
-    return [];
+  // Fetch band members with their profile_ids (character-scoped, not auth-scoped)
+  const { data: members, error: membersError } = await supabase
+    .from('band_members')
+    .select('profile_id, user_id')
+    .eq('band_id', params.bandId)
+    .eq('member_status', 'active')
+    .eq('is_touring_member', false)
+    .not('profile_id', 'is', null);
+
+  if (membersError) {
+    console.error('Error fetching band members:', membersError);
+    throw new Error('Failed to fetch band members');
   }
-  
-  // Fetch profile IDs for each member (required by the table schema)
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, user_id')
-    .in('user_id', memberIds);
-  
-  if (profileError) {
-    console.error('Error fetching profiles for band members:', profileError);
-    throw new Error('Failed to fetch member profiles');
-  }
-  
-  const profileMap = new Map(
-    (profiles || []).map(p => [p.user_id, p.id])
-  );
-  
-  // Filter to only members with valid profiles
-  const validMembers = memberIds.filter(userId => profileMap.has(userId));
-  
+
+  const validMembers = ((members || []) as any[])
+    .filter(m => m.profile_id)
+    .map(m => ({ profileId: m.profile_id as string, userId: (m.user_id as string | null) ?? null }));
+
   if (validMembers.length === 0) {
-    console.warn('No valid profiles found for band members');
+    console.warn('No active band members with profiles found for band:', params.bandId);
     return [];
   }
 
+  const profileIds = validMembers.map(m => m.profileId);
+
   let existingQuery = supabase
     .from('player_scheduled_activities' as any)
-    .select('user_id')
-    .in('user_id', validMembers)
+    .select('profile_id')
+    .in('profile_id', profileIds)
     .eq('activity_type', params.activityType)
     .neq('status', 'cancelled');
 
@@ -269,17 +264,16 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     throw new Error('Failed to verify existing band schedule entries');
   }
 
-  const alreadyScheduled = new Set((existingActivities || []).map((activity: any) => activity.user_id));
-  const membersToSchedule = validMembers.filter(userId => !alreadyScheduled.has(userId));
+  const alreadyScheduled = new Set((existingActivities || []).map((activity: any) => activity.profile_id));
+  const membersToSchedule = validMembers.filter(m => !alreadyScheduled.has(m.profileId));
 
   if (membersToSchedule.length === 0) {
     return [];
   }
-  
-  // Create activity for each band member
-  const insertData = membersToSchedule.map(userId => ({
-    user_id: userId,
-    profile_id: profileMap.get(userId),
+
+  const insertData = membersToSchedule.map(m => ({
+    user_id: m.userId,
+    profile_id: m.profileId,
     activity_type: params.activityType,
     scheduled_start: params.scheduledStart.toISOString(),
     scheduled_end: params.scheduledEnd.toISOString(),
@@ -296,17 +290,17 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     linked_gig_id: params.linkedGigId || null,
     status: 'scheduled',
   }));
-  
+
   const { data, error } = await supabase
     .from('player_scheduled_activities' as any)
     .insert(insertData)
     .select('id');
-  
+
   if (error) {
     console.error('Failed to create band scheduled activities:', error);
     throw new Error('Failed to schedule activity for all band members');
   }
-  
+
   console.log(`Created ${data?.length || 0} scheduled activities for band ${params.bandId}`);
   return (data || []).map((d: any) => d.id);
 }
