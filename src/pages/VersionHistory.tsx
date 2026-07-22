@@ -22,7 +22,7 @@ const versionHistory: VersionEntry[] = [
     changes: [
       { type: 'fix', description: "Festival owner management buttons now respect server-projected can_manage and full_access permissions, so authorised owners can use stage, permit, insurance and finance actions." },
       { type: 'fix', description: "Festival schedule and slot RPCs now project existing stage slots into the schedule workspace, accept generated template fields, and save new slot timelines from the owner console." },
-      { type: 'fix', description: "Festival lifecycle controls now appear in owner Settings, with standard owner transitions enabled while admin overrides remain platform-admin only." },
+      { type: 'fix', description: "Festival lifecycle RPCs now allow standard owner transitions while keeping admin override transitions platform-admin only, and owner operation caches refresh after lifecycle changes." },
     ],
   },
   {
