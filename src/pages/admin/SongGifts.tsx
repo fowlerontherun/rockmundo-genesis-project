@@ -102,43 +102,28 @@ const SongGifts = () => {
 
       const duration = generateSongDuration();
       const song_rating = calculateSongRating();
-      
-      const { data: song, error: songError } = await supabase
-        .from('songs')
-        .insert([{
-          title: songData.title,
-          genre: songData.genre,
-          lyrics: songData.lyrics || null,
-          quality_score: songData.quality_score,
-          song_rating: song_rating,
-          status: 'recorded',
-          band_id: selectedBandId,
-          user_id: band.leader_id,
-          duration_seconds: duration.durationSeconds,
-          duration_display: duration.durationDisplay,
-          lyrics_strength: songData.lyrics_strength,
-          melody_strength: songData.melody_strength,
-          rhythm_strength: songData.rhythm_strength,
-          arrangement_strength: songData.arrangement_strength,
-          production_potential: songData.production_potential,
-          ai_generated_lyrics: songData.ai_generated_lyrics,
-          ownership_type: 'band',
-          catalog_status: 'private'
-        }])
-        .select()
-        .single();
 
-      if (songError) throw songError;
+      const { data: songId, error: rpcError } = await (supabase as any).rpc('admin_gift_song_to_band', {
+        p_band_id: selectedBandId,
+        p_title: songData.title,
+        p_genre: songData.genre,
+        p_lyrics: songData.lyrics || null,
+        p_quality_score: songData.quality_score,
+        p_song_rating: song_rating,
+        p_lyrics_strength: songData.lyrics_strength,
+        p_melody_strength: songData.melody_strength,
+        p_rhythm_strength: songData.rhythm_strength,
+        p_arrangement_strength: songData.arrangement_strength,
+        p_production_potential: songData.production_potential,
+        p_ai_generated_lyrics: songData.ai_generated_lyrics,
+        p_duration_seconds: duration.durationSeconds,
+        p_duration_display: duration.durationDisplay,
+        p_gift_message: songData.gift_message || null,
+      });
 
-      await supabase.from('admin_song_gifts').insert([{
-        song_id: song.id,
-        gifted_to_band_id: selectedBandId,
-        gifted_to_user_id: band.leader_id,
-        gifted_by_admin_id: user.id,
-        gift_message: songData.gift_message || null
-      }]);
+      if (rpcError) throw rpcError;
+      return { id: songId };
 
-      return song;
     },
     onSuccess: () => {
       toast.success("Song gifted successfully!");
