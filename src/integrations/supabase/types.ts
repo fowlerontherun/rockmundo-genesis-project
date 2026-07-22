@@ -3148,6 +3148,107 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_type: string
+          annual_rate_bps: number
+          balance_minor: number
+          created_at: string
+          currency_code: string
+          id: string
+          locked_until: string | null
+          maturity_date: string | null
+          nickname: string | null
+          profile_id: string
+          provider_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_type: string
+          annual_rate_bps?: number
+          balance_minor?: number
+          created_at?: string
+          currency_code?: string
+          id?: string
+          locked_until?: string | null
+          maturity_date?: string | null
+          nickname?: string | null
+          profile_id: string
+          provider_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          annual_rate_bps?: number
+          balance_minor?: number
+          created_at?: string
+          currency_code?: string
+          id?: string
+          locked_until?: string | null
+          maturity_date?: string | null
+          nickname?: string | null
+          profile_id?: string
+          provider_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bank_transactions: {
+        Row: {
+          account_id: string
+          amount_minor: number
+          balance_after_minor: number
+          created_at: string
+          currency_code: string
+          description: string | null
+          id: string
+          profile_id: string
+          related_account_id: string | null
+          related_band_id: string | null
+          related_goal_id: string | null
+          tx_type: string
+        }
+        Insert: {
+          account_id: string
+          amount_minor: number
+          balance_after_minor: number
+          created_at?: string
+          currency_code?: string
+          description?: string | null
+          id?: string
+          profile_id: string
+          related_account_id?: string | null
+          related_band_id?: string | null
+          related_goal_id?: string | null
+          tx_type: string
+        }
+        Update: {
+          account_id?: string
+          amount_minor?: number
+          balance_after_minor?: number
+          created_at?: string
+          currency_code?: string
+          description?: string | null
+          id?: string
+          profile_id?: string
+          related_account_id?: string | null
+          related_band_id?: string | null
+          related_goal_id?: string | null
+          tx_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beta_v2_signups: {
         Row: {
           created_at: string
@@ -33379,6 +33480,56 @@ export type Database = {
         }
         Relationships: []
       }
+      savings_goals: {
+        Row: {
+          created_at: string
+          currency_code: string
+          current_minor: number
+          id: string
+          linked_account_id: string | null
+          name: string
+          profile_id: string
+          status: string
+          target_date: string | null
+          target_minor: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_code?: string
+          current_minor?: number
+          id?: string
+          linked_account_id?: string | null
+          name: string
+          profile_id: string
+          status?: string
+          target_date?: string | null
+          target_minor: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_code?: string
+          current_minor?: number
+          id?: string
+          linked_account_id?: string | null
+          name?: string
+          profile_id?: string
+          status?: string
+          target_date?: string | null
+          target_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_goals_linked_account_id_fkey"
+            columns: ["linked_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_events: {
         Row: {
           created_at: string
@@ -41130,6 +41281,7 @@ export type Database = {
       }
     }
     Functions: {
+      _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {
           p_idempotency_key?: string
@@ -41637,6 +41789,22 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      bank_deposit_from_cash: {
+        Args: { p_account_id: string; p_amount_cents: number }
+        Returns: number
+      }
+      bank_transfer: {
+        Args: {
+          p_amount_cents: number
+          p_from_account: string
+          p_to_account: string
+        }
+        Returns: undefined
+      }
+      bank_withdraw_to_cash: {
+        Args: { p_account_id: string; p_amount_cents: number }
+        Returns: number
+      }
       begin_festival_soundcheck: {
         Args: { p_idempotency_key?: string; p_session_id: string }
         Returns: {
@@ -42084,6 +42252,14 @@ export type Database = {
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
+      contribute_to_savings_goal: {
+        Args: {
+          p_amount_cents: number
+          p_from_account: string
+          p_goal_id: string
+        }
+        Returns: undefined
+      }
       convert_child_to_playable:
         | { Args: { p_child_id: string }; Returns: string }
         | {
@@ -42117,6 +42293,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_bank_account: {
+        Args: {
+          p_account_type: string
+          p_initial_deposit_cents?: number
+          p_nickname?: string
+          p_term_months?: number
+        }
+        Returns: string
       }
       create_character_profile: {
         Args: never
@@ -42379,6 +42564,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_savings_goal: {
+        Args: {
+          p_linked_account?: string
+          p_name: string
+          p_target_cents: number
+          p_target_date?: string
+        }
+        Returns: string
+      }
       credit_city_treasury: {
         Args: {
           p_amount: number
@@ -42455,6 +42649,14 @@ export type Database = {
       decrement_merch_stock: {
         Args: { amount: number; merch_id: string }
         Returns: undefined
+      }
+      deposit_to_band_treasury: {
+        Args: {
+          p_amount_cents: number
+          p_band_id: string
+          p_from_account: string
+        }
+        Returns: number
       }
       discover_master: {
         Args: {
@@ -42817,6 +43019,7 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      get_banking_dashboard: { Args: never; Returns: Json }
       get_company_workforce_counts: {
         Args: { _owner_id: string }
         Returns: {
@@ -42850,8 +43053,15 @@ export type Database = {
         Returns: string
       }
       get_my_eligible_band_contribution_accounts: {
-        Args: { p_band_id: string; p_currency_code: string }
-        Returns: Json
+        Args: { p_band_id: string; p_currency_code?: string }
+        Returns: {
+          account_type: string
+          balance_minor: number
+          currency_code: string
+          id: string
+          nickname: string
+          provider_name: string
+        }[]
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
