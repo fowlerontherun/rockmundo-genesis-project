@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.595",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Fixed 'Festival management update required' error when opening full festival management. Deployed the missing festival_owner_management_bootstrap(p_identifier) RPC (plus its resolve_festival_management_identifier helper) so owners, delegates, and admins can load the management console again." },
+    ],
+  },
+  {
     version: "1.1.594",
     date: "2026-07-22",
     changes: [
