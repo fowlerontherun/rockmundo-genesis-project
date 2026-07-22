@@ -23,13 +23,14 @@ type BandMemberRow = Database["public"]["Tables"]["band_members"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 type MemberWithProfile = BandMemberRow & {
-  profiles: { 
-    user_id: string; 
-    display_name: string | null; 
-    username: string; 
-    avatar_url: string | null; 
+  profiles: {
+    id: string;
+    user_id: string;
+    display_name: string | null;
+    username: string;
+    avatar_url: string | null;
     rpm_avatar_url?: string | null;
-    level: number | null; 
+    level: number | null;
   } | null;
 };
 
@@ -175,7 +176,18 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
   const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
 
-  const isLeader = profile?.user_id === bandLeaderId;
+  const currentMember = useMemo(() => (
+    members.find((member) => (
+      (profile?.id && member.profile_id === profile.id) ||
+      (profile?.user_id && member.user_id === profile.user_id)
+    ))
+  ), [members, profile?.id, profile?.user_id]);
+
+  const isLeader = Boolean(
+    currentMember?.role === "leader" ||
+    (profile?.id && bandLeaderId === profile.id) ||
+    (profile?.user_id && bandLeaderId === profile.user_id),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -204,17 +216,39 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
 
         if (memberError) throw memberError;
 
-        // Fetch profiles separately with rpm_avatar_url
+        // Fetch profiles by profile_id first so active characters show the correct name/avatar.
+        // Fall back to user_id for legacy/touring member records that may not have profile_id populated.
+        const profileIds = memberData?.map(m => m.profile_id).filter(Boolean) ?? [];
         const userIds = memberData?.map(m => m.user_id).filter(Boolean) ?? [];
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("user_id, display_name, username, avatar_url, rpm_avatar_url, level")
-          .in("user_id", userIds);
+        const profileData: Array<MemberWithProfile["profiles"]> = [];
+
+        if (profileIds.length > 0) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
+            .in("id", profileIds);
+
+          profileData.push(...(data ?? []));
+        }
+
+        if (userIds.length > 0) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
+            .in("user_id", userIds);
+
+          profileData.push(...(data ?? []));
+        }
+
+        const profilesById = new Map(profileData.filter(Boolean).map(p => [p!.id, p]));
+        const profilesByUserId = new Map(profileData.filter(Boolean).map(p => [p!.user_id, p]));
 
         // Merge members with profiles
         const membersWithProfiles: MemberWithProfile[] = (memberData ?? []).map(member => ({
           ...member,
-          profiles: profileData?.find(p => p.user_id === member.user_id) ?? null
+          profiles: (member.profile_id ? profilesById.get(member.profile_id) : null)
+            ?? (member.user_id ? profilesByUserId.get(member.user_id) : null)
+            ?? null
         }));
 
         // Fetch status history
@@ -503,6 +537,9 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                   {members.map((member) => {
                     const lastStatus = statusHistory[member.id]?.[0];
                     const statusLabel = getStatusLabel(member.member_status);
+                    const roleOptions = member.instrument_role && !performanceRoleOptions.includes(member.instrument_role)
+                      ? [member.instrument_role, ...performanceRoleOptions]
+                      : performanceRoleOptions;
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
@@ -548,7 +585,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                                 <SelectValue placeholder="Assign performance role" />
                               </SelectTrigger>
                               <SelectContent>
-                                {performanceRoleOptions.map((role) => (
+                                {roleOptions.map((role) => (
                                   <SelectItem key={role} value={role}>
                                     {role}
                                   </SelectItem>
