@@ -42036,6 +42036,10 @@ export type Database = {
         Args: { p_festival_id: string }
         Returns: boolean
       }
+      can_manage_festival_edition: {
+        Args: { p_edition_id: string }
+        Returns: boolean
+      }
       can_negotiate_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
@@ -42819,6 +42823,14 @@ export type Database = {
         Returns: string
       }
       festival_crew_preflight: { Args: { p_session_id: string }; Returns: Json }
+      festival_edition_finance_summary: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
+      festival_edition_operations_summary: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
       festival_edition_settlement_readiness: {
         Args: { p_edition_id: string }
         Returns: Json
