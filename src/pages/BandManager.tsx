@@ -29,6 +29,7 @@ import { ChemistryDisplay } from "@/components/band/ChemistryDisplay";
 import { BandChat } from "@/components/band/BandChat";
 import { BandEarnings } from "@/components/band/BandEarnings";
 import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
+import { BandRosterTab } from "@/components/bands/BandRosterTab";
 import { InviteFriendToBand } from "@/components/band/InviteFriendToBand";
 import { BandSettingsTab } from "@/components/band/BandSettingsTab";
 import { BandStatusBanner } from "@/components/band/BandStatusBanner";
@@ -442,6 +443,8 @@ export default function BandManager() {
               onMemberAdded={() => loadBandMembers(selectedBand.id)}
             />
           )}
+
+          <BandRosterTab bandId={selectedBand.id} />
 
           <Card>
             <CardHeader>
