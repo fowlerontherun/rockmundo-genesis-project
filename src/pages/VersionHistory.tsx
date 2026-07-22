@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.589",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Fixed 'Position conflict' error when adding a second performance item to a setlist. Replaced the overly strict unique_setlist_song_item constraint (which treated NULL song_id as equal across all performance items) with two partial unique indexes — one for songs, one for performance items — so multiple distinct performance items can now coexist in the same section." },
+    ],
+  },
+  {
     version: "1.1.588",
     date: "2026-07-22",
     changes: [
