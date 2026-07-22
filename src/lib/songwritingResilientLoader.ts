@@ -128,8 +128,9 @@ export async function loadSongsByOwnership(client: any, columns: string, profile
     if (res.error) { const f = normalizeFailure(name, "songs", res.error, { selectedColumns: columns, profileId, userId, legacyUserFallbackAttempted: Boolean(validUserId) }); failures.push(f); logFailure(f, "warn"); }
     else rows.push(...(res.data || []));
   };
+  // Character isolation: prefer profile_id when available; only fall back to user_id for legacy rows.
   if (validProfileId) await run("songs by profile", "profile_id", validProfileId);
-  if (validUserId) await run("songs by legacy user", "user_id", validUserId);
+  else if (validUserId) await run("songs by legacy user", "user_id", validUserId);
   const byId = new Map<string, any>();
   for (const row of rows) if (row?.id && !byId.has(row.id)) byId.set(row.id, row);
   return { songs: Array.from(byId.values()), failures };
