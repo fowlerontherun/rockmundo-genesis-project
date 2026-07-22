@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.588",
+    date: "2026-07-22",
+    changes: [
+      { type: 'feature', description: "Banking online: introduced bank_accounts, bank_transactions and savings_goals tables plus get_banking_dashboard/create_bank_account/bank_deposit_from_cash/bank_withdraw_to_cash/bank_transfer/create_savings_goal/contribute_to_savings_goal RPCs so players can open current/savings/fixed-deposit accounts, move money in and out of their wallet, transfer between accounts and fund savings goals." },
+      { type: 'feature', description: "Band deposits: new deposit_to_band_treasury RPC and Banking > Band deposit tab lets any band member send personal savings straight into their band's treasury (fixed deposits are blocked until maturity)." },
+      { type: 'feature', description: "Rewrote /finance/banking with Accounts, Goals, Statements and Band deposit tabs, per-account deposit/withdraw/transfer actions and a live statement feed." },
+    ],
+  },
+  {
     version: "1.1.587",
     date: "2026-07-22",
     changes: [
