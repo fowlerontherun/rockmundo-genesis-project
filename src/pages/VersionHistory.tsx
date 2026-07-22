@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.586",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Banking: cast the get_banking_dashboard RPC call through (supabase as any) so it compiles cleanly while the generated Supabase types are missing the RPC definition." },
+    ],
+  },
+  {
     version: "1.1.585",
     date: "2026-07-22",
     changes: [
