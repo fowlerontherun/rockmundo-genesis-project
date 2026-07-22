@@ -175,14 +175,19 @@ export function useFestivalInsuranceQuote(editionId: string) {
 export function useFestivalInsurancePurchase(editionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (quoteId: string) =>
-      purchaseFestivalEditionInsurance(quoteId, `insurance:${quoteId}`),
+    mutationFn: (input: { coverageType: string; quoteId?: string }) =>
+      purchaseFestivalEditionInsurance({
+        editionId,
+        coverageType: input.coverageType,
+        idempotencyKey: `insurance:${editionId}:${input.coverageType}:${input.quoteId ?? "quote"}`,
+      }),
     onSuccess: () =>
       qc.invalidateQueries({
         queryKey: festivalAdminQueryKeys.operations("owner", editionId),
       }),
   });
 }
+
 export function useRepairDataHealth() {
   const qc = useQueryClient();
   return useMutation({
