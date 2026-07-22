@@ -933,8 +933,36 @@ export default function Employment() {
                       </p>
                     )}
                   </div>
+
+                  {autoAttendEnabled && lastAutoAttempt?.last_auto_attempt_outcome && (() => {
+                    const meta = AUTO_OUTCOME_META[lastAutoAttempt.last_auto_attempt_outcome!] ?? {
+                      label: lastAutoAttempt.last_auto_attempt_outcome!,
+                      tone: "muted" as const,
+                      variant: "default" as const,
+                    };
+                    return (
+                      <Alert variant={meta.variant === "destructive" ? "destructive" : "default"}>
+                        <CalendarCheck className="h-4 w-4" />
+                        <AlertDescription className="flex flex-wrap items-center gap-2">
+                          <StandardStatusBadge tone={meta.tone}>Auto-Attend: {meta.label}</StandardStatusBadge>
+                          <span className="text-xs text-muted-foreground">
+                            {lastAutoAttempt.last_auto_attempt_at
+                              ? `Checked ${format(parseISO(lastAutoAttempt.last_auto_attempt_at), "MMM d, HH:mm")}`
+                              : ""}
+                          </span>
+                          <span className="text-sm">{lastAutoAttempt.last_auto_attempt_reason}</span>
+                        </AlertDescription>
+                      </Alert>
+                    );
+                  })()}
+                  {autoAttendEnabled && !lastAutoAttempt?.last_auto_attempt_outcome && (
+                    <p className="text-xs text-muted-foreground">
+                      Auto-attend is on. Status will appear here after the next scheduled shift window.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
+
             ) : (
               <Card className="p-8 text-center">
                 <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
