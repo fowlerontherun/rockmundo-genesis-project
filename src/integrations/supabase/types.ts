@@ -43798,7 +43798,7 @@ export type Database = {
           p_idempotency_key?: string
           p_payout_ceiling_cents?: number
           p_premium_cents?: number
-          p_quote_id: string
+          p_quote_id?: string
         }
         Returns: Json
       }

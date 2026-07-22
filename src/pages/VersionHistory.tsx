@@ -17,7 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.602",
+    date: "2026-07-22",
+    changes: [
+      { type: 'feature', description: "Festival owner console can now fully staff, permit and insure an edition. festival_edition_operations_summary now returns a live crew_catalog candidate browser (200 vetted crew), a canonical permit requirement catalogue (public event, alcohol, noise, fire safety, medical, security) merged with any in-flight applications, three insurance quote tiers (basic/standard/premium) priced from capacity × days, and a staffing readiness block listing missing required roles." },
+      { type: 'fix', description: "hire_festival_edition_staff now accepts the crew_catalog text id and hydrates name/skill/wage from the catalogue, so hiring from the candidate browser succeeds. apply_for_festival_edition_permit upserts per (edition, permit type) with the correct fee, and purchase_festival_edition_insurance now takes edition_id + coverage_type (with quote_id kept for compatibility) and retires previous active policies on the same tier." },
+      { type: 'fix', description: "festival_edition_finance_summary now returns approved_budget, committed/paid costs (staff wages, permits, insurance), forecast income, cash requirement, cost/income category breakdowns and a posted ledger, clearing the 'undefined' finance warnings in the owner console." },
+    ],
+  },
+  {
     version: "1.1.601",
+
     date: "2026-07-22",
     changes: [
       { type: 'fix', description: "Festival edition creation no longer fails with 'festival_stages_festival_id_fkey' violations. The festival_stages.festival_id foreign key was still pointing at the legacy game_events table from an older schema; it now correctly references public.festivals(id), so stages created by the wizard resolve against the parent festival record. Orphaned legacy stage rows were also cleaned up." },
