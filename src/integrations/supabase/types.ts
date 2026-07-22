@@ -15381,7 +15381,7 @@ export type Database = {
             foreignKeyName: "festival_stages_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
-            referencedRelation: "game_events"
+            referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
         ]
