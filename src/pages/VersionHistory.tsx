@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.587",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Wellness activities: perform_wellness_activity no longer inserts the generated duration_minutes column into player_scheduled_activities, so sleep/food/medical actions succeed instead of throwing 'cannot insert a non-DEFAULT value' errors. The timeline insert is also wrapped so failures never abort the activity." },
+      { type: 'improvement', description: "Health drain rebalanced again: per-activity base costs halved (gigs 3→1.5, recording 1→0.5, songwriting 0.5→0.25) and age multipliers softened (under 20: 15%→8%, under 30: 25%→15%, under 40: 50%→35%)." },
+      { type: 'improvement', description: "One-time restore: all characters received +20 health and physical_health (capped at 100) to offset earlier over-aggressive drain." },
+    ],
+  },
+  {
     version: "1.1.586",
     date: "2026-07-22",
     changes: [
