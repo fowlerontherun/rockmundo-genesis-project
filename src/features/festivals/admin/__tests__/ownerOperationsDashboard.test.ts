@@ -3,7 +3,7 @@ import { buildReadiness } from "../components/FestivalOperationalReadiness";
 import { validateStageForm } from "../components/FestivalStageManagement";
 import { buildSlotPreview } from "../components/FestivalStageSchedule";
 import { filterCandidates } from "../components/FestivalStaffManagement";
-import { permitStateLabel } from "../components/FestivalPermitManagement";
+import { permitApplicationStatus, permitRequirementCode, permitStateLabel } from "../components/FestivalPermitManagement";
 import { isQuoteExpired } from "../components/FestivalInsuranceManagement";
 import { calculateFinanceSummary } from "../components/FestivalFinanceManagement";
 import { canManage, lifecycleReadOnly } from "../components/managementUtils";
@@ -31,8 +31,15 @@ describe("festival owner operations dashboard models", () => {
   });
 
   it("labels owner permit states", () => {
+    expect(permitStateLabel("information_requested")).toBe("More information required");
     expect(permitStateLabel("more_information_required")).toBe("More information required");
     expect(permitStateLabel("expired")).toBe("Expired");
+  });
+
+  it("normalises permit requirement rows from edition operations", () => {
+    expect(permitRequirementCode({ permit_type: "public_event" })).toBe("public_event");
+    expect(permitApplicationStatus({ status: "required" })).toBe("not_started");
+    expect(permitApplicationStatus({ status: "required", current_application: { id: "permit-1", status: "pending" } })).toBe("pending");
   });
 
   it("detects insurance quote expiry", () => {
