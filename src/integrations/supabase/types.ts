@@ -15305,6 +15305,7 @@ export type Database = {
           idempotency_key: string | null
           lighting_capability: string | null
           public_metadata: Json
+          public_name: string | null
           sound_capability: string | null
           stage_name: string
           stage_number: number
@@ -15329,6 +15330,7 @@ export type Database = {
           idempotency_key?: string | null
           lighting_capability?: string | null
           public_metadata?: Json
+          public_name?: string | null
           sound_capability?: string | null
           stage_name: string
           stage_number: number
@@ -15353,6 +15355,7 @@ export type Database = {
           idempotency_key?: string | null
           lighting_capability?: string | null
           public_metadata?: Json
+          public_name?: string | null
           sound_capability?: string | null
           stage_name?: string
           stage_number?: number
@@ -43025,6 +43028,10 @@ export type Database = {
         Args: { p_edition_id: string }
         Returns: Json
       }
+      festival_edition_schedule_workspace: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
       festival_edition_settlement_readiness: {
         Args: { p_edition_id: string }
         Returns: Json
@@ -43129,6 +43136,40 @@ export type Database = {
           p_type: string
         }
         Returns: undefined
+      }
+      festival_schedule_apply_template: {
+        Args: {
+          p_confirm_overwrite?: boolean
+          p_curfew?: string
+          p_edition_id: string
+          p_festival_date: string
+          p_idempotency_key?: string
+          p_opening_time?: string
+          p_revision_id: string
+          p_stage_id: string
+          p_template: string
+        }
+        Returns: Json
+      }
+      festival_schedule_preview_template: {
+        Args: {
+          p_curfew?: string
+          p_edition_id: string
+          p_festival_date: string
+          p_opening_time?: string
+          p_stage_id: string
+          p_template: string
+        }
+        Returns: Json
+      }
+      festival_schedule_publish: {
+        Args: {
+          p_acknowledge_warnings?: boolean
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_revision_id: string
+        }
+        Returns: Json
       }
       festival_score_clamp: { Args: { p_value: number }; Returns: number }
       festival_seeded_variation: {
