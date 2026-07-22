@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.599",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Festival creation wizard no longer masks every failure as 'FESTIVAL_CREATE_TRANSACTION'. The review step now surfaces the real Postgres error code (e.g. FESTIVAL_CREATE_INVALID_DATE, FESTIVAL_CREATE_TIMEZONE_INVALID, FESTIVAL_CREATE_CITY_INVALID) so admins can see exactly which validation failed and correct it." },
+    ],
+  },
+  {
     version: "1.1.598",
     date: "2026-07-22",
     changes: [
