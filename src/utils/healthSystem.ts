@@ -6,29 +6,29 @@ type Profile = Tables<"profiles">;
 // Health drain rates per hour (post-rebalance: young players should barely
 // notice fatigue, older players feel the cost).
 const HEALTH_COSTS = {
-  busking_session: 3,
-  gig: 3,
-  recording: 1,
-  jam_session: 1,
-  songwriting: 0.5,
-  travel: 2,
-  release_promo: 1,
-  default: 1,
+  busking_session: 1.5,
+  gig: 1.5,
+  recording: 0.5,
+  jam_session: 0.5,
+  songwriting: 0.25,
+  travel: 1,
+  release_promo: 0.5,
+  default: 0.5,
 } as const;
 
 /**
- * Age-based drain multiplier. Under 30 = very forgiving. Scales up smoothly
+ * Age-based drain multiplier. Under 30 = extremely forgiving. Scales up smoothly
  * so older characters feel their years. Applied on top of activity base cost.
  */
 export function getAgeHealthDrainMultiplier(age?: number | null): number {
   const a = Math.max(0, Math.floor(age ?? 25));
-  if (a < 20) return 0.15;
-  if (a < 30) return 0.25;
-  if (a < 40) return 0.5;
-  if (a < 50) return 0.75;
-  if (a < 60) return 1.0;
-  if (a < 70) return 1.3;
-  return 1.6;
+  if (a < 20) return 0.08;
+  if (a < 30) return 0.15;
+  if (a < 40) return 0.35;
+  if (a < 50) return 0.6;
+  if (a < 60) return 0.85;
+  if (a < 70) return 1.1;
+  return 1.4;
 }
 
 export function calculateHealthDrain(
