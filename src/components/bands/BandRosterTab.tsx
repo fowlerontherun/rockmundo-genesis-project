@@ -186,7 +186,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   ), [members, profile?.id, profile?.user_id]);
 
   const isLeader = Boolean(
-    currentMember?.role === "leader" ||
+    ["leader", "founder", "co-leader", "manager"].includes(currentMember?.role?.toLowerCase() ?? "") ||
     (profile?.id && bandLeaderId === profile.id) ||
     (profile?.user_id && bandLeaderId === profile.user_id),
   );
