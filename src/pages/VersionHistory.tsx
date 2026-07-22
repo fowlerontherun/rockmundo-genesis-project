@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.592",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Removed the 'Welcome to Rockmundo' inbox message from the generate-system-inbox cron. Its dedup check was unreliable, so it was reappearing in every player's inbox daily. The onboarding flow already covers this introduction. Also cleared existing welcome messages from all inboxes." },
+    ],
+  },
+  {
     version: "1.1.591",
     date: "2026-07-22",
     changes: [
