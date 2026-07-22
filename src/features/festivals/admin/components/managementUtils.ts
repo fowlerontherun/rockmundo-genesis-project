@@ -5,11 +5,12 @@ export const money = (cents?: unknown, currency = "USD") => typeof cents === "nu
 export const pct = (n: number, d: number) => d > 0 ? Math.round((n/d)*100) : 0;
 export const statusTone = (s?: string) => /approved|complete|ready|active|covered/i.test(s||"") ? "default" : /blocked|rejected|expired|overdue|missing/i.test(s||"") ? "destructive" : "secondary";
 export const canManage = (permissions: any, area: "stages"|"staff"|"permits"|"insurance"|"finance") => {
-  if (permissions?.admin || permissions?.manageEdition || permissions?.manageOperations || permissions?.manageFinance) return true;
-  if (area === "stages") return Boolean(permissions?.stageManager || permissions?.manageStages || permissions?.manageSlots);
-  if (area === "permits") return Boolean(permissions?.safetyOfficer || permissions?.inspectPermits);
-  if (area === "insurance" || area === "finance") return Boolean(permissions?.financeManager || permissions?.manageFinance);
-  return Boolean(permissions?.operationsManager);
+  if (permissions?.admin || permissions?.can_manage || permissions?.full_access || permissions?.manageEdition || permissions?.manageOperations || permissions?.manageFinance) return true;
+  if (area === "stages") return Boolean(permissions?.stages || permissions?.stageManager || permissions?.manageStages || permissions?.manageSlots);
+  if (area === "permits") return Boolean(permissions?.permits || permissions?.safetyOfficer || permissions?.inspectPermits);
+  if (area === "insurance") return Boolean(permissions?.insurance || permissions?.financeManager || permissions?.manageFinance);
+  if (area === "finance") return Boolean(permissions?.finance || permissions?.finance_access || permissions?.financeManager || permissions?.manageFinance);
+  return Boolean(permissions?.staff || permissions?.operationsManager);
 };
 export const lifecycleReadOnly = (status?: string) => ["live","settling","completed","cancelled","abandoned"].includes(status || "");
 export const lifecycleWarns = (status?: string) => ["announced","on_sale","setup"].includes(status || "");

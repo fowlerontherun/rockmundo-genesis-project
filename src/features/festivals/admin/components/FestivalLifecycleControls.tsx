@@ -65,6 +65,7 @@ export function FestivalLifecycleControls({
       qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.catalogue });
       if (editionId) {
         qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("admin", editionId) });
+        qc.invalidateQueries({ queryKey: festivalAdminQueryKeys.operations("owner", editionId) });
         qc.invalidateQueries({ queryKey: ["festivals", "admin", "lifecycle-options", editionId] });
       }
       resetAttempt();
