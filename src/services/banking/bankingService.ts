@@ -100,7 +100,7 @@ export function summarizeEqualPrincipalOffer(input: {
 
 export async function fetchBankingDashboard(): Promise<BankingDashboard> {
   try {
-    const { data, error } = await supabase.rpc("get_banking_dashboard");
+    const { data, error } = await (supabase as any).rpc("get_banking_dashboard");
 
     if (error) {
       if (isMissingSupabaseRpcError(error)) {
