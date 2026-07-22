@@ -42,6 +42,23 @@ Deno.serve(async (req) => {
   let errorCount = 0;
   let skippedCount = 0;
 
+  // Persist a per-employment attempt outcome so the Employment UI can surface
+  // exactly what happened on the last auto-attend cycle.
+  async function recordOutcome(employmentId: string, outcome: string, reason: string) {
+    try {
+      await supabase
+        .from('player_employment')
+        .update({
+          last_auto_attempt_at: new Date().toISOString(),
+          last_auto_attempt_outcome: outcome,
+          last_auto_attempt_reason: reason,
+        })
+        .eq('id', employmentId);
+    } catch (err) {
+      console.warn('[shift-clock-in] Failed to record outcome', employmentId, err);
+    }
+  }
+
   try {
     runId = await startJobRun({
       jobName: 'shift-clock-in',
@@ -55,10 +72,8 @@ Deno.serve(async (req) => {
     const now = new Date();
     const nowIso = now.toISOString();
     const todayName = DAY_NAMES[now.getUTCDay()];
-    const yesterdayName = DAY_NAMES[(now.getUTCDay() + 6) % 7];
     const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
 
-    // Fetch all auto-attend employments with job + profile snapshot
     const { data: rows, error: fetchError } = await supabase
       .from('player_employment')
       .select(`
@@ -77,11 +92,19 @@ Deno.serve(async (req) => {
     for (const row of rows || []) {
       const job = (row as any).jobs;
       const profile = (row as any).profiles;
-      if (!job || !profile) { skippedCount++; continue; }
+      if (!job || !profile) {
+        skippedCount++;
+        await recordOutcome(row.id, 'missing_data', 'Job or profile record missing.');
+        continue;
+      }
 
       try {
         const workDays: string[] = Array.isArray(job.work_days) ? job.work_days : [];
-        if (workDays.length === 0) { skippedCount++; continue; }
+        if (workDays.length === 0) {
+          skippedCount++;
+          await recordOutcome(row.id, 'not_scheduled', 'This job has no scheduled work days.');
+          continue;
+        }
 
         const start = parseHHMM(job.start_time);
         const end = parseHHMM(job.end_time);
@@ -89,32 +112,59 @@ Deno.serve(async (req) => {
         const endMin = end.h * 60 + end.m;
         const overnight = endMin <= startMin;
 
-        // Does *today* start a shift?
         const startsToday = workDays.includes(todayName)
           && nowMinutes >= startMin
           && nowMinutes <= startMin + CLOCK_IN_WINDOW_MINUTES;
 
-        // Overnight shift begun *yesterday* and still within its start window
-        // (rare: only if this cron missed the last window; skipped to avoid duplicates).
-        if (!startsToday) { skippedCount++; continue; }
+        if (!startsToday) {
+          skippedCount++;
+          const reason = workDays.includes(todayName)
+            ? `Outside the ${CLOCK_IN_WINDOW_MINUTES}-minute clock-in window (shift starts at ${job.start_time}).`
+            : `Not a scheduled work day today (${todayName}).`;
+          await recordOutcome(row.id, 'not_scheduled', reason);
+          continue;
+        }
 
-        // City requirement
         if (job.city_id && profile.current_city_id && job.city_id !== profile.current_city_id) {
           skippedCount++;
+          await recordOutcome(row.id, 'wrong_city', 'Player is not in the job\'s city.');
           continue;
         }
 
         // Already clocked in / any active work_shift?
-        const { data: active } = await supabase
+        const { data: activeShift } = await supabase
           .from('profile_activity_statuses')
-          .select('id')
+          .select('id, activity_type')
           .eq('profile_id', profile.id)
           .eq('activity_type', 'work_shift')
           .eq('status', 'active')
           .maybeSingle();
-        if (active) { skippedCount++; continue; }
+        if (activeShift) {
+          skippedCount++;
+          await recordOutcome(row.id, 'already_clocked_in', 'A work shift is already in progress.');
+          continue;
+        }
 
-        // Already have a shift_history row today for this employment?
+        // Any other active activity blocking work?
+        const { data: otherActivity } = await supabase
+          .from('profile_activity_statuses')
+          .select('id, activity_type')
+          .eq('profile_id', profile.id)
+          .eq('status', 'active')
+          .neq('activity_type', 'work_shift')
+          .limit(1)
+          .maybeSingle();
+        if (otherActivity) {
+          skippedCount++;
+          await recordOutcome(
+            row.id,
+            'scheduling_conflict',
+            `Blocked by another active activity: ${otherActivity.activity_type}.`,
+          );
+          continue;
+        }
+
+        // Already have a shift_history row today for this employment (daily cooldown)?
         const today = now.toISOString().slice(0, 10);
         const { data: existing } = await supabase
           .from('shift_history')
@@ -122,9 +172,12 @@ Deno.serve(async (req) => {
           .eq('employment_id', row.id)
           .eq('shift_date', today)
           .maybeSingle();
-        if (existing) { skippedCount++; continue; }
+        if (existing) {
+          skippedCount++;
+          await recordOutcome(row.id, 'cooldown', 'Already worked a shift for this job today.');
+          continue;
+        }
 
-        // Build shift
         const hours = overnight
           ? ((24 * 60 - startMin) + endMin) / 60
           : (endMin - startMin) / 60;
@@ -169,15 +222,20 @@ Deno.serve(async (req) => {
           });
         if (statusErr) throw statusErr;
 
-        // Apply energy/health drain (mirror manual clockIn)
         const newHealth = Math.max(0, Math.min(100, (profile.health ?? 100) + (job.health_impact_per_shift || 0)));
         const newEnergy = Math.max(0, (profile.energy ?? 100) - (job.energy_cost_per_shift || 0));
         await supabase.from('profiles').update({ health: newHealth, energy: newEnergy }).eq('id', profile.id);
 
         processedCount++;
+        await recordOutcome(
+          row.id,
+          'clocked_in',
+          `Auto-clocked in for "${job.title}" (${job.start_time}-${job.end_time}). Earnings pending: $${earnings}.`,
+        );
         console.log(`[shift-clock-in] Auto-clocked in profile ${profile.id} for "${job.title}" (shift ${shift.id})`);
       } catch (err) {
         errorCount++;
+        await recordOutcome(row.id, 'error', getErrorMessage(err).slice(0, 500));
         console.error(`[shift-clock-in] Error on employment ${row.id}:`, err);
       }
     }

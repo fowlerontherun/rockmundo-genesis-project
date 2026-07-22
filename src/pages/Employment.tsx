@@ -532,6 +532,23 @@ export default function Employment() {
 
   const autoAttendEnabled = Boolean(currentEmployment?.auto_clock_in);
   const currentJob = currentEmployment?.jobs ?? null;
+  const lastAutoAttempt = currentEmployment as unknown as {
+    last_auto_attempt_at?: string | null;
+    last_auto_attempt_outcome?: string | null;
+    last_auto_attempt_reason?: string | null;
+  } | null;
+
+  const AUTO_OUTCOME_META: Record<string, { label: string; tone: "success" | "warning" | "danger" | "muted"; variant: "default" | "destructive" }> = {
+    clocked_in: { label: "Clocked in", tone: "success", variant: "default" },
+    cooldown: { label: "Cooldown", tone: "muted", variant: "default" },
+    not_scheduled: { label: "Not scheduled", tone: "muted", variant: "default" },
+    wrong_city: { label: "Wrong city", tone: "warning", variant: "destructive" },
+    already_clocked_in: { label: "Already working", tone: "muted", variant: "default" },
+    scheduling_conflict: { label: "Scheduling conflict", tone: "warning", variant: "destructive" },
+    missing_data: { label: "Missing data", tone: "danger", variant: "destructive" },
+    error: { label: "Error", tone: "danger", variant: "destructive" },
+  };
+
 
   return (
     <FMPageScaffold
@@ -916,8 +933,36 @@ export default function Employment() {
                       </p>
                     )}
                   </div>
+
+                  {autoAttendEnabled && lastAutoAttempt?.last_auto_attempt_outcome && (() => {
+                    const meta = AUTO_OUTCOME_META[lastAutoAttempt.last_auto_attempt_outcome!] ?? {
+                      label: lastAutoAttempt.last_auto_attempt_outcome!,
+                      tone: "muted" as const,
+                      variant: "default" as const,
+                    };
+                    return (
+                      <Alert variant={meta.variant === "destructive" ? "destructive" : "default"}>
+                        <CalendarCheck className="h-4 w-4" />
+                        <AlertDescription className="flex flex-wrap items-center gap-2">
+                          <StandardStatusBadge tone={meta.tone}>Auto-Attend: {meta.label}</StandardStatusBadge>
+                          <span className="text-xs text-muted-foreground">
+                            {lastAutoAttempt.last_auto_attempt_at
+                              ? `Checked ${format(parseISO(lastAutoAttempt.last_auto_attempt_at), "MMM d, HH:mm")}`
+                              : ""}
+                          </span>
+                          <span className="text-sm">{lastAutoAttempt.last_auto_attempt_reason}</span>
+                        </AlertDescription>
+                      </Alert>
+                    );
+                  })()}
+                  {autoAttendEnabled && !lastAutoAttempt?.last_auto_attempt_outcome && (
+                    <p className="text-xs text-muted-foreground">
+                      Auto-attend is on. Status will appear here after the next scheduled shift window.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
+
             ) : (
               <Card className="p-8 text-center">
                 <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
