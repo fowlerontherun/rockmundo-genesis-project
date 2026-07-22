@@ -105,7 +105,7 @@ export function mapFestivalError(error: {
       "FESTIVAL_CREATE_IDEMPOTENCY_CONFLICT",
       diagnostic,
     );
-  if (/FESTIVAL_CREATE_INVALID_DATE|date/i.test(message))
+  if (/FESTIVAL_CREATE_INVALID_DATE/i.test(message))
     return new FestivalAdminServiceError(
       "Check the festival, application and booking dates before trying again.",
       "FESTIVAL_CREATE_INVALID_DATE",
