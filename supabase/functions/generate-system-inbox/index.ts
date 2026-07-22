@@ -36,29 +36,8 @@ Deno.serve(async (req) => {
     for (const p of profiles ?? []) {
       const baseMeta = { profile_id: p.id };
 
-      // ===== 1. WELCOME (once per profile, ever) =====
-      const { data: existingWelcome } = await supabase
-        .from("player_inbox")
-        .select("id")
-        .eq("user_id", p.user_id)
-        .eq("category", "system")
-        .contains("metadata", { kind: "welcome", profile_id: p.id })
-        .limit(1)
-        .maybeSingle();
+      // Welcome message removed — it was re-appearing daily and duplicates the onboarding flow.
 
-      if (!existingWelcome) {
-        await supabase.from("player_inbox").insert({
-          user_id: p.user_id,
-          category: "system",
-          priority: "normal",
-          title: "Welcome to Rockmundo",
-          message: `Hey ${p.username || "there"} — your inbox is where you'll see gig results, label offers, random events, sales milestones, and daily recaps. Check back often!`,
-          metadata: { ...baseMeta, kind: "welcome" },
-          is_read: false,
-          is_archived: false,
-        });
-        stats.welcome++;
-      }
 
       // ===== 2. LOW CASH (per profile, 14-day dedup, only if this profile is poor) =====
       const cashDollars = (p.cash ?? 0) / 100;
