@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.590",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Employment auto-attend now actually works. The auto_clock_in flag existed on player_employment but nothing consumed it, so auto-attend players were never clocked in, never activity-blocked, and never paid. Added a new shift-clock-in edge function plus a 5-minute cron that inserts the shift, sets the work_shift activity status, and applies the health/energy drain — mirroring the manual Clock In flow — for any auto-attend employee whose scheduled start_time is within the last 30 minutes (respecting job city and avoiding duplicate shifts). The existing shift-clock-out cron then pays wages and awards XP as normal." },
+    ],
+  },
+  {
     version: "1.1.589",
     date: "2026-07-22",
     changes: [
