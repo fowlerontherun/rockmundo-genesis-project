@@ -41548,6 +41548,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_gift_song_to_band: {
+        Args: {
+          p_ai_generated_lyrics: boolean
+          p_arrangement_strength: number
+          p_band_id: string
+          p_duration_display: string
+          p_duration_seconds: number
+          p_genre: string
+          p_gift_message: string
+          p_lyrics: string
+          p_lyrics_strength: number
+          p_melody_strength: number
+          p_production_potential: number
+          p_quality_score: number
+          p_rhythm_strength: number
+          p_song_rating: number
+          p_title: string
+        }
+        Returns: string
+      }
       admin_list_reset_archives: {
         Args: never
         Returns: {
