@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users, Shield, Zap, Activity, Bus, UserCheck, User, UserX } from "lucide-react";
 import { BandMemberDetailDialog } from "./BandMemberDetailDialog";
@@ -55,6 +56,22 @@ const statusColors: Record<string, string> = {
   suspended: "bg-red-500/20 text-red-700",
   probation: "bg-sky-500/20 text-sky-700",
 };
+
+const performanceRoleOptions = [
+  "Vocals",
+  "Lead Vocals",
+  "Backing Vocals",
+  "Guitar",
+  "Lead Guitar",
+  "Rhythm Guitar",
+  "Bass",
+  "Drums",
+  "Keyboard",
+  "DJ",
+  "Producer",
+  "Multi-instrumentalist",
+  "Other",
+];
 
 function getStatusLabel(status?: string | null) {
   if (!status) return "Active";
@@ -156,6 +173,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [statusHistory, setStatusHistory] = useState<Record<string, BandMembershipStatusHistory[]>>({});
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
+  const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
 
   const isLeader = profile?.user_id === bandLeaderId;
 
@@ -281,6 +299,51 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         description: "Could not update travel setting",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePerformanceRoleChange = async (memberId: string, nextRole: string) => {
+    if (!isLeader) {
+      toast({
+        title: "Permission denied",
+        description: "Only the band leader can change member performance roles",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const member = members.find((candidate) => candidate.id === memberId);
+    if (!member || member.instrument_role === nextRole) return;
+
+    setUpdatingRoleMemberId(memberId);
+    try {
+      const { error } = await supabase
+        .from("band_members")
+        .update({ instrument_role: nextRole })
+        .eq("id", memberId)
+        .eq("band_id", bandId);
+
+      if (error) throw error;
+
+      setMembers(prev =>
+        prev.map(m =>
+          m.id === memberId ? { ...m, instrument_role: nextRole } : m
+        )
+      );
+
+      toast({
+        title: "Performance role updated",
+        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} is now assigned to ${nextRole}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update performance role", error);
+      toast({
+        title: "Update failed",
+        description: "Could not update the member performance role",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingRoleMemberId(null);
     }
   };
 
@@ -416,7 +479,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Band roster</CardTitle>
-          <CardDescription>Overview of every active member and their contributions.</CardDescription>
+          <CardDescription>Overview of every active member and their contributions. Band leaders can change performance roles, including solo-act lineups.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {members.length === 0 ? (
@@ -475,10 +538,29 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                           </div>
                         </TableCell>
                         <TableCell className="align-middle">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm font-medium">{member.role}</span>
-                            {member.can_be_leader && <Badge variant="outline">Leadership pool</Badge>}
-                            {member.is_touring_member && <Badge variant="secondary">Session</Badge>}
+                          <div className="flex flex-col gap-2">
+                            <Select
+                              value={member.instrument_role || "Other"}
+                              onValueChange={(value) => handlePerformanceRoleChange(member.id, value)}
+                              disabled={!isLeader || updatingRoleMemberId === member.id}
+                            >
+                              <SelectTrigger className="h-8 w-[190px]">
+                                <SelectValue placeholder="Assign performance role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {performanceRoleOptions.map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {role}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-1">
+                              {member.role === "leader" && <Badge>Leader</Badge>}
+                              {member.role !== "leader" && <Badge variant="outline">{member.role}</Badge>}
+                              {member.can_be_leader && <Badge variant="outline">Leadership pool</Badge>}
+                              {member.is_touring_member && <Badge variant="secondary">Session</Badge>}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="align-middle">
