@@ -40,7 +40,8 @@ const logFailure = (failure: QueryFailure, level: "warn" | "error" = "error") =>
 export const withOwnership = (query: any, profileId?: string | null, userId?: string | null) => {
   const validProfileId = isUuid(profileId) ? profileId : null;
   const validUserId = isUuid(userId) ? userId : null;
-  if (validProfileId && validUserId) return query.or(`profile_id.eq.${validProfileId},user_id.eq.${validUserId}`);
+  // Character isolation: when a profile is active, ONLY show that character's projects.
+  // Falling back to user_id would leak sibling characters' songwriting on the same account.
   if (validProfileId) return query.eq("profile_id", validProfileId);
   if (validUserId) return query.eq("user_id", validUserId);
   return query;
