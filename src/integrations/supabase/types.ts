@@ -42862,6 +42862,10 @@ export type Database = {
           title: string
         }[]
       }
+      festival_owner_management_bootstrap: {
+        Args: { p_identifier: string }
+        Returns: Json
+      }
       festival_performance_narrative: {
         Args: { p_session_id: string }
         Returns: Json
@@ -43592,6 +43596,20 @@ export type Database = {
       resolve_company_demand: {
         Args: { target_date?: string }
         Returns: number
+      }
+      resolve_festival_management_identifier: {
+        Args: { p_identifier: string }
+        Returns: {
+          edition_id: string
+          festival_id: string
+          identifier_type: string
+          input_id: string
+          legacy_id: string
+          legacy_source: string
+          message: string
+          migration_issue_id: string
+          resolution_status: string
+        }[]
       }
       resolve_festival_soundcheck_issue: {
         Args: {
