@@ -25,8 +25,9 @@ const versionHistory: VersionEntry[] = [
       { type: 'fix', description: "festival_edition_finance_summary now returns approved_budget, committed/paid costs (staff wages, permits, insurance), forecast income, cash requirement, cost/income category breakdowns and a posted ledger, clearing the 'undefined' finance warnings in the owner console." },
     ],
   },
-
+  {
     version: "1.1.601",
+
     date: "2026-07-22",
     changes: [
       { type: 'fix', description: "Festival edition creation no longer fails with 'festival_stages_festival_id_fkey' violations. The festival_stages.festival_id foreign key was still pointing at the legacy game_events table from an older schema; it now correctly references public.festivals(id), so stages created by the wizard resolve against the parent festival record. Orphaned legacy stage rows were also cleaned up." },
