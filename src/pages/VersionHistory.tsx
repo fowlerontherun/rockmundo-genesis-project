@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.593",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Admin 'Gift Song to Band' no longer fails with a row-level security error. The client was inserting into the songs table directly with the band leader as owner, which RLS correctly rejected. Added a SECURITY DEFINER RPC admin_gift_song_to_band that verifies the caller has the admin role, creates the song, and records the gift atomically." },
+    ],
+  },
+  {
     version: "1.1.592",
     date: "2026-07-22",
     changes: [
