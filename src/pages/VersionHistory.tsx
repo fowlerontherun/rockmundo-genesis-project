@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.591",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Songwriting now respects character isolation. The resilient project/song loader previously OR'd profile_id with the account-level user_id, so a second character on the same account saw projects and songs authored by their sibling character. When an active profile is set we now filter strictly by profile_id (user_id is only used as a legacy fallback when no profile is selected)." },
+    ],
+  },
+  {
     version: "1.1.590",
     date: "2026-07-22",
     changes: [

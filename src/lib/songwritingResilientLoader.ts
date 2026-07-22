@@ -40,7 +40,8 @@ const logFailure = (failure: QueryFailure, level: "warn" | "error" = "error") =>
 export const withOwnership = (query: any, profileId?: string | null, userId?: string | null) => {
   const validProfileId = isUuid(profileId) ? profileId : null;
   const validUserId = isUuid(userId) ? userId : null;
-  if (validProfileId && validUserId) return query.or(`profile_id.eq.${validProfileId},user_id.eq.${validUserId}`);
+  // Character isolation: when a profile is active, ONLY show that character's projects.
+  // Falling back to user_id would leak sibling characters' songwriting on the same account.
   if (validProfileId) return query.eq("profile_id", validProfileId);
   if (validUserId) return query.eq("user_id", validUserId);
   return query;
@@ -127,8 +128,9 @@ export async function loadSongsByOwnership(client: any, columns: string, profile
     if (res.error) { const f = normalizeFailure(name, "songs", res.error, { selectedColumns: columns, profileId, userId, legacyUserFallbackAttempted: Boolean(validUserId) }); failures.push(f); logFailure(f, "warn"); }
     else rows.push(...(res.data || []));
   };
+  // Character isolation: prefer profile_id when available; only fall back to user_id for legacy rows.
   if (validProfileId) await run("songs by profile", "profile_id", validProfileId);
-  if (validUserId) await run("songs by legacy user", "user_id", validUserId);
+  else if (validUserId) await run("songs by legacy user", "user_id", validUserId);
   const byId = new Map<string, any>();
   for (const row of rows) if (row?.id && !byId.has(row.id)) byId.set(row.id, row);
   return { songs: Array.from(byId.values()), failures };
