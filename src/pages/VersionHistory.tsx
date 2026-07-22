@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.594",
+    date: "2026-07-22",
+    changes: [
+      { type: 'feature', description: "Employment page now shows an Auto-Attend status indicator. The shift-clock-in cron records the last attempt outcome per employment (Clocked in, Cooldown, Not scheduled, Wrong city, Already working, Scheduling conflict, Missing data, Error) with a human-readable reason and timestamp, so players can immediately see whether their auto-attend worked and why." },
+    ],
+  },
+  {
     version: "1.1.593",
     date: "2026-07-22",
     changes: [
