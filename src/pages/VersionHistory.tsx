@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.597",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Fixed FESTIVAL_CREATE_TRANSACTION error in the 'Add new edition' and 'Create festival' wizards by deploying the missing admin_create_festival_with_first_edition and admin_create_festival_edition_with_setup RPCs, plus the admin_festival_creation_requests ledger, festival_creation_request_hash helper and festival_audit writer." },
+      { type: 'improvement', description: "Extended the festival_stages catalogue with stage_type, sound/lighting/weather capability, changeover minutes, curfew, metadata, idempotency key and archived flag so wizard-created stages persist all of their setup fields." },
+    ],
+  },
+  {
     version: "1.1.596",
     date: "2026-07-22",
     changes: [
