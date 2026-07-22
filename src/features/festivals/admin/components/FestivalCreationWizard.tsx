@@ -802,10 +802,12 @@ export function FestivalCreationWizard({
           </div>
         )}
         {create.error && (
-          <p className="text-sm text-destructive">
-            The festival could not be created. No records were saved. Reference
-            FESTIVAL_CREATE_TRANSACTION.
-          </p>
+          <div className="rounded border border-destructive p-3 text-sm text-destructive space-y-1">
+            <p className="font-semibold">The festival could not be created. No records were saved.</p>
+            <p className="font-mono text-xs break-all">
+              {(create.error as Error)?.message ?? "FESTIVAL_CREATE_TRANSACTION"}
+            </p>
+          </div>
         )}
         <div className="flex justify-between">
           <Button
