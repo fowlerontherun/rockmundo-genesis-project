@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.600",
+    date: "2026-07-22",
+    changes: [
+      { type: 'fix', description: "Festival wizard error mapper no longer mis-classifies unrelated errors as FESTIVAL_CREATE_INVALID_DATE. The greedy /date/i regex was tightened to match only the exact FESTIVAL_CREATE_INVALID_DATE code, so the real underlying Postgres error (permission, city, venue, stage, etc.) now surfaces to the admin instead of a misleading 'check your dates' message." },
+    ],
+  },
+  {
     version: "1.1.599",
     date: "2026-07-22",
     changes: [
