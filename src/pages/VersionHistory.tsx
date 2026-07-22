@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.598",
+    date: "2026-07-22",
+    changes: [
+      { type: 'feature', description: "Full festival management workspace is now functional end-to-end. Deployed the remaining owner and admin RPCs: create_festival_edition_stage, generate_festival_stage_slots, hire_festival_edition_staff, apply_for_festival_edition_permit, quote_festival_edition_insurance and purchase_festival_edition_insurance — all permission-checked via can_manage_festival_edition and audited to festival_admin_audit_events." },
+      { type: 'feature', description: "Admin lifecycle transitions now show real options via admin_festival_edition_lifecycle_options, listing every valid next status for the edition with blockers (no stages, missing permits), warnings (no active insurance), severity and required-reason flags." },
+      { type: 'feature', description: "Admin Data Health, Legacy Records and Audit tabs now load real data through admin_festival_data_health, admin_festival_legacy_records and admin_festival_audit_events (with festival/edition/operation filters). Added repair_festival_data_health_issue, preview_festival_legacy_migration, apply_festival_legacy_migration and admin_review_festival_edition_permit so admins can act on what those tabs surface." },
+      { type: 'feature', description: "Added preview_copy_festival_edition RPC that returns counts of stages, staff, permits and insurance policies that would be duplicated from a source edition, along with human-readable notes for the copy plan." },
+    ],
+  },
+  {
     version: "1.1.597",
     date: "2026-07-22",
     changes: [
