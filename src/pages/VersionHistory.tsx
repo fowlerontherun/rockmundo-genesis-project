@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.604",
+    date: "2026-07-23",
+    changes: [
+      { type: 'feature', description: "Festival replacement programme PR1: added a safe feature-flag boundary (legacyFestivalSystemEnabled default on) and a LegacyFestivalGate wrapper that renders a 'Festivals are being rebuilt' screen when the legacy system is disabled — no redirects, no blank screens." },
+      { type: 'feature', description: "Introduced new src/features/festival-company/ module skeleton (domain, application, data, permissions, finance, scheduling, performance, history, ui) with documented bounded contexts for the incoming VIP-owned festival-company system." },
+      { type: 'feature', description: "Shipped architecture docs: FESTIVAL_REPLACEMENT_ARCHITECTURE.md, FESTIVAL_CURRENT_INVENTORY.md, FESTIVAL_DATABASE_RETIREMENT_PLAN.md, machine-readable festival-domain-inventory.json, and ADRs 0001–0005 (festival as company type, edition split, server-authoritative booking, immutable settled history, delayed destructive DB removal)." },
+      { type: 'improvement', description: "Added automated safeguards: featureFlags defaults test, LegacyFestivalGate render test, and an inventoryRegistry test that fails CI if a new festival route is added without updating the inventory JSON." },
+      { type: 'fix', description: "No destructive changes to legacy festival tables, routes or gameplay — existing festival flows behave exactly as before while the flag remains on." },
+    ],
+  },
+  {
     version: "1.1.603",
     date: "2026-07-22",
     changes: [
