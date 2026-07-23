@@ -1,142 +1,98 @@
-# Wellness System Expansion Plan
+# PR1: Isolate Legacy Festivals & Define Replacement System
 
-Turn the Wellness page from a single-activity picker into a full lifestyle-management hub, giving players persistent choices that grant real bonuses and penalties across the game.
+Scope: architecture, inventory, isolation, and safeguards only. No destructive DB changes, no new gameplay, no client-authoritative logic.
 
-## 1. Lifestyle Presets (headline feature)
+## 1. Inventory (verified against current repo)
 
-Add a **Lifestyle** that the player selects and can switch (with a cooldown / adjustment cost). Each lifestyle passively modifies stats each day, changes activity cooldowns, and affects other systems (gigs, fame, addictions, XP).
+Sweep the codebase and DB for every festival-related asset. Produce two artifacts:
 
-Suggested presets:
+- `docs/festivals/FESTIVAL_CURRENT_INVENTORY.md` — human-readable audit grouped by layer (routes, pages, components, hooks, services, RPCs, edge functions, tables, views, enums, triggers, policies, realtime, cron, tests, seeds, admin, integrations, generated types).
+- `docs/festivals/festival-domain-inventory.json` — machine-readable list. Each item: `{path, kind, responsibility, authority, callers, dependencies, proposed_replacement, removal_phase, risk, disposition, notes}` where `disposition ∈ {remove, replace, reuse, adapt, archive, unknown_requires_investigation}`.
 
-| Lifestyle | Bonuses | Penalties |
-|---|---|---|
-| Balanced | Small +to all vitals, no drift | No standout bonus |
-| Straight Edge | +Health, +Focus, immune to substance ailments, faster skill XP | −Fame gain, −Party rep, some indulgences locked |
-| Party Animal | +Fame gain, +Charisma, +Nightclub rep, cheaper indulgences | −Health drift, higher addiction risk, energy drain |
-| Fitness Fanatic | +Stamina, +Health regen, longer gig endurance | −Creativity XP, higher food cost |
-| Workaholic | +XP from practice/recording, +Money from jobs | −Mood, −Relationship XP, burnout risk |
-| Bohemian / Creative | +Songwriting XP, +Inspiration events | −Money income, −Health regen |
-| Spiritual / Zen | +Mood floor, resistance to stress ailments | −Aggression-based reputation, slower fame |
-| Luxury / Rockstar | +Fame multiplier, +VIP access, +Charisma | Weekly upkeep drain, higher tabloid risk |
+Search terms: `festival`, `festivals`, `festival_edition`, `festival_stage_slot`, `festival_participation`, `festival_application`, `festival_offer`, `festival_contract`, `festival_performance`, `city_festival`, plus RPC prefixes (`admin_festival_`, `festival_edition_`, `apply_for_festival_`, `hire_festival_`, `purchase_festival_`, `generate_festival_`, `simulate_festival_`, `calculate_festival_`, `prepare_festival_`, `apply_festival_`, `transition_festival_`, `create_festival_`).
 
-Each has a numeric modifier bundle applied by cron / edge fn (mood, health, energy drift, xp_multiplier, fame_multiplier, addiction_risk, money_upkeep).
+## 2. Replacement architecture
 
-## 2. Daily Habits (routines)
+`docs/festivals/FESTIVAL_REPLACEMENT_ARCHITECTURE.md` covering: rationale, dependency map, bounded contexts, canonical route structure (`/world/festivals`, `/company/festival/*`, `/festival-company/*`), festival-company vs annual-edition ownership, authority boundaries, integration with companies/VIP/finance/bands/scheduling/gigs, immutable snapshot strategy, feature-flag rollout, legacy-data strategy, safe table-retirement process, full PR sequence (12 PRs), risks and mitigations.
 
-Player builds a small routine (max 3–5 slots) from a **habit catalog**:
+## 3. Feature boundary
 
-- Morning run, Meditation, Balanced meals, 8h sleep, Vocal warm-up, Journaling, Cold shower, Social hour, etc.
+Add `src/features/festival-company/config/featureFlags.ts` exposing:
 
-Habits auto-tick daily. Streaks compound (+bonus at 7 / 30 / 90 day marks). Missing habits break streaks and give small penalties. Habits interact with lifestyle (e.g. Straight Edge locks "nightcap", Fitness boosts "morning run" gains).
+- `legacyFestivalSystemEnabled`
+- `newFestivalSystemEnabled`
+- `festivalCreationEnabled`
+- `festivalApplicationsEnabled`
+- `festivalLivePerformanceEnabled`
 
-## 3. Sleep & Diet controls
+Flags resolved from `import.meta.env` following existing patterns; defaults preserve current behaviour (legacy on, new off). Add central `useFestivalFeatureFlags()` hook.
 
-Two sliders/pickers persistently set on the player:
+Route all currently registered legacy festival routes through a `<LegacyFestivalGate>` wrapper that renders a "Festivals are being rebuilt" page (`src/features/festival-company/ui/FestivalRebuildingScreen.tsx`) when `legacyFestivalSystemEnabled === false`. Admin diagnostic path preserved at `/admin/festivals/diagnostic`.
 
-- **Sleep schedule**: 4h Grind / 6h Standard / 8h Restful / 10h Recovery — affects energy cap, mood, next-day activity slots.
-- **Diet plan**: Junk / Standard / Balanced / Athlete / Vegan / Custom — affects health regen, weight (cosmetic), stamina, and weekly food cost.
+Do NOT delete legacy pages.
 
-Both feed into the daily drift calculation.
-
-## 4. Goals & Programs
-
-Multi-day programs the player commits to for rewards:
-
-- 7-day Detox, 30-day Fitness Challenge, Rehab program, Weight loss plan, Mindfulness course.
-
-Track progress, allow abandon (with penalty), pay out on completion (permanent stat, achievement, insurance discount).
-
-## 5. Medical & Professional care
-
-Expand medical beyond the current one-shot activities:
-
-- **Doctor visits**: full check-up reveals hidden ailments early.
-- **Therapy** (recurring): reduces stress/addiction risk while attending.
-- **Personal trainer** (weekly cost): boosts fitness activity effectiveness.
-- **Nutritionist**: unlocks better diet plans.
-- **Rehab clinic**: cures addictions faster (already partly present — integrate here).
-
-Weekly retainer costs, appointment slots, ties into existing hospitals & mentors tables where possible.
-
-## 6. Health Insurance
-
-Simple tiered policy (None / Basic / Standard / Premium). Monthly premium; reduces medical costs, unlocks premium clinics, prevents big hospitalisation bills.
-
-## 7. Ailments overhaul (light)
-
-Keep current ailments; add:
-
-- Severity progression if untreated (mild → serious → critical → hospitalisation).
-- Chronic conditions from long-term bad lifestyle (back pain, vocal strain, burnout, addiction).
-- Visible risk meter driven by lifestyle + habits + recent activities.
-
-## 8. Wellness effects surfaced game-wide
-
-Wellness must matter outside its page:
-
-- Gig performance modifier (already partial) — expose in gig pre-check.
-- Skill XP multiplier from lifestyle/habits.
-- Fame gain multiplier.
-- Activity slot count per day (currently 3) becomes lifestyle-driven (2–5).
-- Random events biased by lifestyle (Party Animal → more tabloid events; Zen → more inspiration).
-
-## 9. UI redesign of `/wellness`
-
-Reorganise into clear tabs, keeping the working activity core intact:
+## 4. New module skeleton
 
 ```text
-Header:  Vitals summary  |  Lifestyle badge  |  Active blocks
-Tabs:
-  1. Overview   — vitals, active modifiers, today's habits, quick actions
-  2. Lifestyle  — pick/change lifestyle, see modifiers, switch cost
-  3. Routine    — habits builder, streaks, sleep + diet pickers
-  4. Activities — existing 4-category catalog (unchanged core)
-  5. Care       — doctor / therapist / trainer / insurance
-  6. Goals      — active programs + available programs
-  7. Ailments   — current + chronic conditions with treat buttons
+src/features/festival-company/
+  README.md
+  config/featureFlags.ts
+  domain/README.md              (types placeholders)
+  application/README.md         (service boundaries)
+  data/README.md
+  permissions/README.md
+  finance/README.md
+  scheduling/README.md
+  performance/README.md
+  history/README.md
+  ui/FestivalRebuildingScreen.tsx
+  index.ts
 ```
 
-Mobile: collapse tabs into a segmented control; keep dense card layout consistent with FM style.
+No gameplay logic; only boundary definitions + README describing intent per bounded context.
 
-## Technical Details
+## 5. ADRs
 
-### New tables (public schema, with GRANTs + RLS scoped to `profile_id`)
+`docs/architecture/decisions/` (create if absent):
 
-- `wellness_lifestyles` — catalog: slug, name, description, modifiers jsonb, unlock_requirements, switch_cost, icon.
-- `player_wellness_lifestyle` — one row per profile: profile_id, lifestyle_slug, started_at, switch_available_at.
-- `wellness_habits_catalog` — slug, name, category, daily_effects jsonb, streak_bonuses jsonb, lifestyle_synergy.
-- `player_wellness_habits` — profile_id, habit_slug, slot, active, current_streak, best_streak, last_ticked_at.
-- `player_wellness_routine` — profile_id, sleep_plan, diet_plan, updated_at.
-- `wellness_programs_catalog` — multi-day programs (slug, duration_days, requirements, rewards jsonb).
-- `player_wellness_programs` — profile_id, program_slug, status, started_at, progress, completed_at.
-- `wellness_care_providers` — doctor / therapist / trainer / nutritionist listings (reuse `hospitals` where sensible).
-- `player_wellness_care_subscriptions` — profile_id, provider_type, tier, next_charge_at, benefits jsonb.
-- `player_health_insurance` — profile_id, tier, monthly_premium, coverage jsonb, active_since.
-- Extend `player_ailments` with `severity`, `is_chronic`, `escalates_at`.
+- `0001-festival-as-company-type.md`
+- `0002-festival-company-vs-edition.md`
+- `0003-server-authoritative-booking-and-performance.md`
+- `0004-immutable-settled-history.md`
+- `0005-delayed-destructive-db-removal.md`
 
-### Server logic
+## 6. DB retirement plan
 
-- Edge function `wellness-apply-daily-drift` (cron): applies lifestyle + habit + routine + insurance effects to vitals, ticks streaks, escalates ailments, charges upkeep.
-- RPC `switch_wellness_lifestyle(new_slug)` with cost + cooldown validation.
-- RPC `set_wellness_routine(sleep, diet)` and `toggle_wellness_habit(slug, slot)`.
-- RPC `start_wellness_program(slug)` / `complete_wellness_program(id)`.
-- RPC `purchase_health_insurance(tier)` / `cancel_health_insurance()`.
-- Update `wellness-perform-activity` to read lifestyle modifiers for cost/effect scaling and to honour lifestyle activity locks.
-- Hook lifestyle multipliers into: gig outcome calc, skill XP grant, fame delta, addiction risk roll, random-event weighting.
+`docs/festivals/FESTIVAL_DATABASE_RETIREMENT_PLAN.md`: every festival table/view/function/trigger/policy classified (retain/migrate/archive/drop-after/unknown) with FK map, callers, rollback, backup requirements, ordering. No destructive migration. Optional non-destructive migration limited to `COMMENT ON TABLE` markers tagging legacy tables (`'legacy_festival_domain: pending replacement per PR1'`) if it clarifies the plan.
 
-### Frontend
+## 7. Automated safeguards
 
-- New components under `src/components/wellness/`: `LifestylePickerPanel`, `HabitsRoutinePanel`, `SleepDietPanel`, `ProgramsPanel`, `CarePanel`, `InsurancePanel`, `WellnessModifiersBadge`.
-- New hooks: `usePlayerLifestyle`, `usePlayerHabits`, `usePlayerRoutine`, `usePlayerPrograms`, `usePlayerCare`, `usePlayerInsurance`.
-- Rework `src/pages/wellness/index.tsx` into the tabbed layout above; keep `ActivityCard`, `AilmentsPanel`, `WellnessVitalsPanel`.
-- Surface active lifestyle badge + modifiers in `FMShell` top bar and pre-gig confirm dialog.
+`src/features/festival-company/__tests__/`:
 
-### Rollout order
+- `featureFlags.test.ts` — flag resolution, defaults.
+- `legacyFestivalGate.test.tsx` — renders rebuilding screen when disabled; renders children when enabled.
+- `festivalRoutes.registry.test.ts` — enumerates all festival routes and asserts each is present in inventory JSON (fails CI if a new festival route is added without inventory update).
+- `worldNavigation.festivals.test.ts` — asserts World nav respects gate.
+- `nonFestivalSmoke.test.ts` — asserts a sample of company + gig routes still resolve.
 
-1. Migration: lifestyles catalog + `player_wellness_lifestyle` + switch RPC + UI picker.
-2. Habits + routine (sleep/diet) tables, RPCs, daily drift edge fn, UI.
-3. Programs + goals.
-4. Care providers + insurance.
-5. Ailment severity & chronic conditions.
-6. Cross-system wiring (gig / XP / fame / random events).
-7. Version bump + version history entry per milestone.
+## 8. Version + history
+
+Bump banner to `v1.1.604`; add version-history entry summarising PR1.
+
+## Out of scope (deferred to later PRs)
+
+- New festival company type creation, $2M founding transaction, VIP server check.
+- Wizard, upgrades, stages, slots, applications, offers, contracts, NPC fallbacks, performance simulation, settlement, history schema.
+- Legacy table drops.
+
+## Technical details
+
+- Feature flags: read `import.meta.env.VITE_FEATURE_*` with safe defaults; matches how the repo already reads env.
+- Legacy gate: minimal HOC; wrap route element in `App.tsx` route registry. Zero behavioural change while `legacyFestivalSystemEnabled` defaults to `true`.
+- Inventory generation is manual for PR1 (script optional in PR2); focus on completeness over automation.
+- Tests use existing Vitest setup; no new frameworks.
+- No Supabase migrations required. If a `COMMENT ON` marker migration is included, it will be a single reversible statement batch.
+
+## Acceptance
+
+Build passes, typecheck passes, lint passes, tests pass. Legacy routes still function (flag on). Toggling flag off renders rebuilding screen everywhere legacy festival lives. Inventory + architecture + retirement plan + ADRs committed. Next PR clearly identified: "secure festival-company type and founding transaction".
