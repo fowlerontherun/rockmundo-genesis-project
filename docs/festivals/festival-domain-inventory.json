@@ -1,168 +1,831 @@
 {
   "$schema": "./festival-domain-inventory.schema.json",
   "generatedAt": "2026-07-23",
-  "generatedFor": "v1.1.604 (PR2 secure festival founding foundation)",
-  "note": "Verified against repository. Every festival-touching asset appears here. Dispositions: remove | replace | reuse | adapt | archive | unknown_requires_investigation.",
+  "generatedFor": "v1.1.605 (PR3 festival founding hardening)",
+  "note": "Verified against repository. Every festival-touching asset appears here. Dispositions: remove | replace | reuse | adapt | archive | unknown_requires_investigation. PR3 adds authorised setup-shell retrieval, server rollout config, canonical active-profile founding, company-limit enforcement and personal-ledger founding fees.",
   "routes": [
-    { "path": "/companies/festivals/:festivalCompanyId/setup", "kind": "route", "target": "FestivalCompanySetupPlaceholder", "disposition": "reuse", "removal_phase": null, "risk": "low", "notes": "New-system setup placeholder behind new festival flags." },
-    { "path": "/world/festivals", "kind": "route", "target": "PreserveQueryRedirect->/festivals", "disposition": "replace", "removal_phase": 6, "risk": "low" },
-    { "path": "/world/festivals/:festivalId", "kind": "route", "target": "FestivalDetail", "disposition": "replace", "removal_phase": 6, "risk": "low" },
-    { "path": "/festivals", "kind": "route", "target": "FestivalBrowser", "disposition": "replace", "removal_phase": 6, "risk": "medium" },
-    { "path": "/festivals/marketplace", "kind": "route", "target": "FestivalMarketplace", "disposition": "remove", "removal_phase": 6, "risk": "low", "notes": "Duplicate of directory." },
-    { "path": "/festivals/directory", "kind": "route", "target": "FestivalDirectory", "disposition": "replace", "removal_phase": 6, "risk": "low" },
-    { "path": "/festivals/:festivalId", "kind": "route", "target": "FestivalDetail", "disposition": "replace", "removal_phase": 6, "risk": "medium" },
-    { "path": "/festivals/simulation", "kind": "route", "target": "FestivalsNew", "disposition": "remove", "removal_phase": 6, "risk": "low", "notes": "Dev-only simulation harness." },
-    { "path": "/festivals/perform/:participationId", "kind": "route", "target": "FestivalPerformance", "disposition": "replace", "removal_phase": 9, "risk": "high", "notes": "Currently client-authoritative in parts; must move server-side." },
-    { "path": "/festivals/:festivalId/manage", "kind": "route", "target": "FestivalOwnerConsole", "disposition": "replace", "removal_phase": 5, "risk": "medium" },
-    { "path": "/festivals/:festivalId/manage/editions/:editionId", "kind": "route", "target": "FestivalOwnerConsole", "disposition": "replace", "removal_phase": 5, "risk": "medium" },
-    { "path": "/festivals/sessions/:sessionId", "kind": "route", "target": "FestivalSessionPage", "disposition": "replace", "removal_phase": 9, "risk": "high" },
-    { "path": "/festivals/:festivalId/calendar", "kind": "route", "target": "FestivalBookingCalendar", "disposition": "replace", "removal_phase": 5, "risk": "medium" },
-    { "path": "/festivals/:festivalId/run", "kind": "route", "target": "FestivalRunWizard", "disposition": "remove", "removal_phase": 6, "risk": "low" },
-    { "path": "/admin/festivals", "kind": "route", "target": "FestivalsAdmin", "disposition": "adapt", "removal_phase": 12, "risk": "low", "notes": "Keep as admin diagnostic + catalogue." },
-    { "path": "/admin/festival", "kind": "route", "target": "redirect", "disposition": "remove", "removal_phase": 6, "risk": "low" },
-    { "path": "/admin/festival-admin", "kind": "route", "target": "redirect", "disposition": "remove", "removal_phase": 6, "risk": "low" },
-    { "path": "/admin/city-festivals", "kind": "route", "target": "redirect", "disposition": "remove", "removal_phase": 6, "risk": "low" }
+    {
+      "path": "/companies/festivals/:festivalCompanyId/setup",
+      "kind": "route",
+      "target": "FestivalCompanySetupPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "New-system setup shell loads authorised typed setup state via get_festival_company_setup; full wizard remains next PR."
+    },
+    {
+      "path": "/world/festivals",
+      "kind": "route",
+      "target": "PreserveQueryRedirect->/festivals",
+      "disposition": "replace",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/world/festivals/:festivalId",
+      "kind": "route",
+      "target": "FestivalDetail",
+      "disposition": "replace",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/festivals",
+      "kind": "route",
+      "target": "FestivalBrowser",
+      "disposition": "replace",
+      "removal_phase": 6,
+      "risk": "medium"
+    },
+    {
+      "path": "/festivals/marketplace",
+      "kind": "route",
+      "target": "FestivalMarketplace",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low",
+      "notes": "Duplicate of directory."
+    },
+    {
+      "path": "/festivals/directory",
+      "kind": "route",
+      "target": "FestivalDirectory",
+      "disposition": "replace",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/festivals/:festivalId",
+      "kind": "route",
+      "target": "FestivalDetail",
+      "disposition": "replace",
+      "removal_phase": 6,
+      "risk": "medium"
+    },
+    {
+      "path": "/festivals/simulation",
+      "kind": "route",
+      "target": "FestivalsNew",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low",
+      "notes": "Dev-only simulation harness."
+    },
+    {
+      "path": "/festivals/perform/:participationId",
+      "kind": "route",
+      "target": "FestivalPerformance",
+      "disposition": "replace",
+      "removal_phase": 9,
+      "risk": "high",
+      "notes": "Currently client-authoritative in parts; must move server-side."
+    },
+    {
+      "path": "/festivals/:festivalId/manage",
+      "kind": "route",
+      "target": "FestivalOwnerConsole",
+      "disposition": "replace",
+      "removal_phase": 5,
+      "risk": "medium"
+    },
+    {
+      "path": "/festivals/:festivalId/manage/editions/:editionId",
+      "kind": "route",
+      "target": "FestivalOwnerConsole",
+      "disposition": "replace",
+      "removal_phase": 5,
+      "risk": "medium"
+    },
+    {
+      "path": "/festivals/sessions/:sessionId",
+      "kind": "route",
+      "target": "FestivalSessionPage",
+      "disposition": "replace",
+      "removal_phase": 9,
+      "risk": "high"
+    },
+    {
+      "path": "/festivals/:festivalId/calendar",
+      "kind": "route",
+      "target": "FestivalBookingCalendar",
+      "disposition": "replace",
+      "removal_phase": 5,
+      "risk": "medium"
+    },
+    {
+      "path": "/festivals/:festivalId/run",
+      "kind": "route",
+      "target": "FestivalRunWizard",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/admin/festivals",
+      "kind": "route",
+      "target": "FestivalsAdmin",
+      "disposition": "adapt",
+      "removal_phase": 12,
+      "risk": "low",
+      "notes": "Keep as admin diagnostic + catalogue."
+    },
+    {
+      "path": "/admin/festival",
+      "kind": "route",
+      "target": "redirect",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/admin/festival-admin",
+      "kind": "route",
+      "target": "redirect",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low"
+    },
+    {
+      "path": "/admin/city-festivals",
+      "kind": "route",
+      "target": "redirect",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "risk": "low"
+    }
   ],
   "pages": [
-    { "path": "src/pages/FestivalBrowser.tsx", "kind": "page", "disposition": "replace", "removal_phase": 6 },
-    { "path": "src/pages/FestivalDetail.tsx", "kind": "page", "disposition": "replace", "removal_phase": 6 },
-    { "path": "src/pages/FestivalDirectory.tsx", "kind": "page", "disposition": "replace", "removal_phase": 6 },
-    { "path": "src/pages/FestivalMarketplace.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6 },
-    { "path": "src/pages/FestivalOwnerConsole.tsx", "kind": "page", "disposition": "replace", "removal_phase": 5 },
-    { "path": "src/pages/FestivalPerformance.tsx", "kind": "page", "disposition": "replace", "removal_phase": 9, "risk": "high" },
-    { "path": "src/pages/FestivalRunWizard.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6 },
-    { "path": "src/pages/FestivalBookingCalendar.tsx", "kind": "page", "disposition": "replace", "removal_phase": 5 },
-    { "path": "src/pages/FestivalsNew.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6 },
-    { "path": "src/pages/Festivals.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6, "notes": "Unrouted duplicate hub." },
-    { "path": "src/pages/festivals/FestivalSessionPage.tsx", "kind": "page", "disposition": "replace", "removal_phase": 9, "risk": "high" },
-    { "path": "src/pages/admin/FestivalsAdmin.tsx", "kind": "page", "disposition": "adapt", "removal_phase": 12 },
-    { "path": "src/pages/admin/FestivalAdmin.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6, "notes": "Duplicate of FestivalsAdmin." },
-    { "path": "src/pages/admin/CityFestivalsAdmin.tsx", "kind": "page", "disposition": "remove", "removal_phase": 6 }
+    {
+      "path": "src/pages/FestivalBrowser.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/FestivalDetail.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/FestivalDirectory.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/FestivalMarketplace.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/FestivalOwnerConsole.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 5
+    },
+    {
+      "path": "src/pages/FestivalPerformance.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 9,
+      "risk": "high"
+    },
+    {
+      "path": "src/pages/FestivalRunWizard.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/FestivalBookingCalendar.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 5
+    },
+    {
+      "path": "src/pages/FestivalsNew.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6
+    },
+    {
+      "path": "src/pages/Festivals.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "notes": "Unrouted duplicate hub."
+    },
+    {
+      "path": "src/pages/festivals/FestivalSessionPage.tsx",
+      "kind": "page",
+      "disposition": "replace",
+      "removal_phase": 9,
+      "risk": "high"
+    },
+    {
+      "path": "src/pages/admin/FestivalsAdmin.tsx",
+      "kind": "page",
+      "disposition": "adapt",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/pages/admin/FestivalAdmin.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6,
+      "notes": "Duplicate of FestivalsAdmin."
+    },
+    {
+      "path": "src/pages/admin/CityFestivalsAdmin.tsx",
+      "kind": "page",
+      "disposition": "remove",
+      "removal_phase": 6
+    }
   ],
   "feature_modules": [
-    { "path": "src/features/festivals/admin", "kind": "module", "disposition": "replace", "removal_phase": 12 },
-    { "path": "src/features/festivals/booking", "kind": "module", "disposition": "replace", "removal_phase": 7 },
-    { "path": "src/features/festivals/outcomes", "kind": "module", "disposition": "replace", "removal_phase": 9 },
-    { "path": "src/features/festivals/performance", "kind": "module", "disposition": "replace", "removal_phase": 9 },
-    { "path": "src/features/festivals/scheduling", "kind": "module", "disposition": "replace", "removal_phase": 5 },
-    { "path": "src/features/festivals/settlement", "kind": "module", "disposition": "replace", "removal_phase": 10 },
-    { "path": "src/features/festivals/service.ts", "kind": "service", "disposition": "replace", "removal_phase": 12 },
-    { "path": "src/features/festivals/festivalFeatureRegistry.ts", "kind": "registry", "disposition": "replace", "removal_phase": 12 },
-    { "path": "src/features/festivals/legacyResolver.ts", "kind": "adapter", "disposition": "adapt", "removal_phase": 12 },
-    { "path": "src/features/festivals/lifecycle.ts", "kind": "domain", "disposition": "replace", "removal_phase": 12 },
-    { "path": "src/features/festivals/types.ts", "kind": "types", "disposition": "replace", "removal_phase": 12 }
+    {
+      "path": "src/features/festivals/admin",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/features/festivals/booking",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 7
+    },
+    {
+      "path": "src/features/festivals/outcomes",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 9
+    },
+    {
+      "path": "src/features/festivals/performance",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 9
+    },
+    {
+      "path": "src/features/festivals/scheduling",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 5
+    },
+    {
+      "path": "src/features/festivals/settlement",
+      "kind": "module",
+      "disposition": "replace",
+      "removal_phase": 10
+    },
+    {
+      "path": "src/features/festivals/service.ts",
+      "kind": "service",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/features/festivals/festivalFeatureRegistry.ts",
+      "kind": "registry",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/features/festivals/legacyResolver.ts",
+      "kind": "adapter",
+      "disposition": "adapt",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/features/festivals/lifecycle.ts",
+      "kind": "domain",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "path": "src/features/festivals/types.ts",
+      "kind": "types",
+      "disposition": "replace",
+      "removal_phase": 12
+    }
   ],
   "edge_functions": [
-    { "path": "supabase/functions/generate-festival-poster", "kind": "edge_function", "disposition": "reuse", "removal_phase": null, "risk": "low" }
+    {
+      "path": "supabase/functions/generate-festival-poster",
+      "kind": "edge_function",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low"
+    }
   ],
   "tables": [
-    { "name": "festivals", "disposition": "archive", "removal_phase": 12, "risk": "high", "notes": "Legacy root; snapshotted before drop." },
-    { "name": "festival_editions", "disposition": "archive", "removal_phase": 12, "risk": "high" },
-    { "name": "festival_legacy_mappings", "disposition": "adapt", "removal_phase": 12, "notes": "Extend to bridge to new schema." },
-    { "name": "festival_edition_lifecycle_events", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_edition_management_roles", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_edition_transition_requests", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_edition_creation_requests", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_ownership_history", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_applications", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_application_events", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_booking_requests", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_offer_negotiations", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_offer_revisions", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_slot_offers", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contracts", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_events", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_offers", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_versions", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_setlists", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_setlist_items", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_contract_signatures", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_stages", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_stage_slots", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_stage_slot_reservations", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_stage_crowd_snapshots", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_staff", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_permits", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_insurance_policies", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_expense_ledger", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_finances", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_revenue_streams", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_sponsorships", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_sponsor_outcomes", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_merch_sales", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_tickets", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_watch_rewards", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_participants", "disposition": "unknown_requires_investigation", "removal_phase": 12, "notes": "Overlaps with festival_performance_sessions." },
-    { "name": "festival_attendance", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_audience_cohorts", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_audience_generations", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_audience_simulation_configs", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_backstage_events", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_fan_conversion_outcomes", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_media_outcomes", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_outcome_publications", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_attendance", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_audience_snapshots", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_effects", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_highlights", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_history", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_incidents", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_outcomes", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_session_events", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_performance_sessions", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_song_performance_outcomes", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_session_crew", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_session_equipment", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_reviews", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_quality_ratings", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_rivalries", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_sale_listings", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_purchase_offers", "disposition": "archive", "removal_phase": 12 },
-    { "name": "festival_admin_audit_events", "disposition": "archive", "removal_phase": 12 }
+    {
+      "name": "festivals",
+      "disposition": "archive",
+      "removal_phase": 12,
+      "risk": "high",
+      "notes": "Legacy root; snapshotted before drop."
+    },
+    {
+      "name": "festival_editions",
+      "disposition": "archive",
+      "removal_phase": 12,
+      "risk": "high"
+    },
+    {
+      "name": "festival_legacy_mappings",
+      "disposition": "adapt",
+      "removal_phase": 12,
+      "notes": "Extend to bridge to new schema."
+    },
+    {
+      "name": "festival_edition_lifecycle_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_edition_management_roles",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_edition_transition_requests",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_edition_creation_requests",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_ownership_history",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_applications",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_application_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_booking_requests",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_offer_negotiations",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_offer_revisions",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_slot_offers",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contracts",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_offers",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_versions",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_setlists",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_setlist_items",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_contract_signatures",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_stages",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_stage_slots",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_stage_slot_reservations",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_stage_crowd_snapshots",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_staff",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_permits",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_insurance_policies",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_expense_ledger",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_finances",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_revenue_streams",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_sponsorships",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_sponsor_outcomes",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_merch_sales",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_tickets",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_watch_rewards",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_participants",
+      "disposition": "unknown_requires_investigation",
+      "removal_phase": 12,
+      "notes": "Overlaps with festival_performance_sessions."
+    },
+    {
+      "name": "festival_attendance",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_audience_cohorts",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_audience_generations",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_audience_simulation_configs",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_backstage_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_fan_conversion_outcomes",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_media_outcomes",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_outcome_publications",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_attendance",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_audience_snapshots",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_effects",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_highlights",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_history",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_incidents",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_outcomes",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_session_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_performance_sessions",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_song_performance_outcomes",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_session_crew",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_session_equipment",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_reviews",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_quality_ratings",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_rivalries",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_sale_listings",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_purchase_offers",
+      "disposition": "archive",
+      "removal_phase": 12
+    },
+    {
+      "name": "festival_admin_audit_events",
+      "disposition": "archive",
+      "removal_phase": 12
+    }
   ],
   "rpc_prefixes": [
-    { "prefix": "create_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "update_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "transition_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "admin_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "admin_transition_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "festival_edition_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "generate_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "simulate_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "calculate_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "apply_for_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "purchase_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "hire_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "prepare_festival_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "apply_festival_settlement_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "festival_settlement_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "festival_owner_management_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "resolve_festival_management_", "disposition": "replace", "removal_phase": 12 },
-    { "prefix": "public_festival_", "disposition": "replace", "removal_phase": 12 }
+    {
+      "prefix": "create_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "update_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "transition_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "admin_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "admin_transition_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "festival_edition_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "generate_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "simulate_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "calculate_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "apply_for_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "purchase_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "hire_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "prepare_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "apply_festival_settlement_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "festival_settlement_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "festival_owner_management_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "resolve_festival_management_",
+      "disposition": "replace",
+      "removal_phase": 12
+    },
+    {
+      "prefix": "public_festival_",
+      "disposition": "replace",
+      "removal_phase": 12
+    }
   ],
   "hub_links": [
-    { "path": "src/pages/hubs/WorldOverview.tsx", "target": "/world/festivals", "disposition": "adapt" },
-    { "path": "src/pages/hubs/EventsHub.tsx", "target": "/festivals", "disposition": "adapt" },
-    { "path": "src/pages/hubs/BandLiveHub.tsx", "target": "/festivals", "disposition": "adapt" }
+    {
+      "path": "src/pages/hubs/WorldOverview.tsx",
+      "target": "/world/festivals",
+      "disposition": "adapt"
+    },
+    {
+      "path": "src/pages/hubs/EventsHub.tsx",
+      "target": "/festivals",
+      "disposition": "adapt"
+    },
+    {
+      "path": "src/pages/hubs/BandLiveHub.tsx",
+      "target": "/festivals",
+      "disposition": "adapt"
+    }
   ],
   "tests": [
-    { "path": "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts", "disposition": "adapt" },
-    { "path": "src/pages/FestivalOwnerConsole.test.ts", "disposition": "replace" },
-    { "path": "supabase/tests/festival_*_harness.sql", "disposition": "reuse", "notes": "Regression harness retained." }
+    {
+      "path": "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
+      "disposition": "adapt"
+    },
+    {
+      "path": "src/pages/FestivalOwnerConsole.test.ts",
+      "disposition": "replace"
+    },
+    {
+      "path": "supabase/tests/festival_*_harness.sql",
+      "disposition": "reuse",
+      "notes": "Regression harness retained."
+    }
   ],
   "scripts": [
-    { "path": "scripts/festivals/check-edition-migration-order.mjs", "disposition": "reuse" },
-    { "path": "scripts/festivals/run-creation-phase1-db-gate.sh", "disposition": "reuse" }
+    {
+      "path": "scripts/festivals/check-edition-migration-order.mjs",
+      "disposition": "reuse"
+    },
+    {
+      "path": "scripts/festivals/run-creation-phase1-db-gate.sh",
+      "disposition": "reuse"
+    }
   ],
   "unknowns": [
-    { "id": "participants-vs-sessions", "notes": "festival_participants overlaps with festival_performance_sessions; requires runtime callsite audit before archive." },
-    { "id": "city-festival-seeder", "notes": "Whether any active seeder still writes to legacy festivals table post-Victorious cleanup." }
+    {
+      "id": "participants-vs-sessions",
+      "notes": "festival_participants overlaps with festival_performance_sessions; requires runtime callsite audit before archive."
+    },
+    {
+      "id": "city-festival-seeder",
+      "notes": "Whether any active seeder still writes to legacy festivals table post-Victorious cleanup."
+    }
   ],
   "replacement_foundation_pr2": [
-    { "name": "festival_companies", "kind": "table", "disposition": "reuse", "notes": "New replacement festival-company extension." },
-    { "name": "festival_editions_v2", "kind": "table", "disposition": "reuse", "notes": "New replacement annual-edition table; not populated by founding RPC yet." },
-    { "name": "festival_company_audit_log", "kind": "table", "disposition": "reuse", "notes": "New replacement audit log." },
-    { "name": "festival_company_founding_requests", "kind": "table", "disposition": "reuse", "notes": "Idempotency ledger for secure founding RPC." },
-    { "name": "found_festival_company", "kind": "rpc", "disposition": "reuse", "notes": "Server-authoritative VIP-only atomic founding RPC." }
-  ]
+    {
+      "name": "festival_companies",
+      "kind": "table",
+      "disposition": "reuse",
+      "notes": "New replacement festival-company extension."
+    },
+    {
+      "name": "festival_editions_v2",
+      "kind": "table",
+      "disposition": "reuse",
+      "notes": "New replacement annual-edition table; not populated by founding RPC yet."
+    },
+    {
+      "name": "festival_company_audit_log",
+      "kind": "table",
+      "disposition": "reuse",
+      "notes": "New replacement audit log."
+    },
+    {
+      "name": "festival_company_founding_requests",
+      "kind": "table",
+      "disposition": "reuse",
+      "notes": "Idempotency ledger for secure founding RPC."
+    },
+    {
+      "name": "found_festival_company",
+      "kind": "rpc",
+      "disposition": "reuse",
+      "notes": "Server-authoritative VIP-only atomic founding RPC."
+    }
+  ],
+  "replacement_programme": {
+    "pr3_hardening": {
+      "active_profile_source": "public._caller_profile_id()",
+      "server_feature_setting": "game_config:festival_company_creation",
+      "company_limit_rule": "Top-level non-bankrupt/non-dissolved companies count; festivals count as normal top-level companies.",
+      "accounting": "Personal financial_transactions debit category festival_company_founding_fee; no ordinary company operating expense.",
+      "setup_authorisation": "get_festival_company_setup resolves caller profile and allows owner or has_role admin only."
+    }
+  }
 }

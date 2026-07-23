@@ -218,3 +218,39 @@ All replacement tables have RLS enabled. Owners can read their own festival comp
 ### Next PR
 
 The next PR should build the festival configuration wizard and first annual edition creation. Month, location, vibe, site type, duration, environmental policy, applications, stages, lineups, tickets and simulation remain non-goals here.
+
+## 18. PR3 foundation hardening before configuration wizard
+
+PR3 repairs the security, retry and accounting foundations introduced by PR2 before any month/location/vibe/site wizard depends on them.
+
+### Active profile source of truth
+
+Festival founding and setup reads now use the existing `public._caller_profile_id()` helper. That helper is the canonical database boundary already used by game banking RPCs because it delegates to `current_profile_id()` when available and only then falls back to profile lookup. The founding RPC locks exactly that profile row and rejects missing or invalid active characters with `profile_not_eligible`; it no longer chooses the newest active profile.
+
+### Company-limit rule
+
+Festival companies count as normal top-level owned companies. The database counts `companies` for the authenticated owner where `parent_company_id IS NULL`, `status NOT IN ('dissolved','bankrupt')` and `is_bankrupt = false`. The default limit is read from `game_config.config_key = 'festival_company_creation'` (`company_limit`, currently `3`) and `found_festival_company` raises `company_limit_reached` before deducting cash.
+
+### Server rollout configuration
+
+Vite flags remain useful for route visibility, but creation authority now lives in `game_config.config_key = 'festival_company_creation'`. Both `new_festival_system_enabled` and `festival_company_creation_enabled` must be true or direct RPC calls return `festival_creation_disabled`.
+
+### Idempotency concurrency behaviour
+
+Retries are serialized with a transaction-scoped advisory lock derived from the authenticated user and idempotency key. A completed same-payload retry returns the stored result plus `idempotent: true`; a changed payload returns `idempotency_conflict`; a still-processing same-key request returns `festival_request_in_progress`. The previous global `unique_violation => festival_name_taken` handler was narrowed so public-name/slug duplicates are classified separately from unrelated integrity failures.
+
+### Founding-fee accounting and personal ledger
+
+The `$2,000,000` founding fee is a personal expense. The company still starts with `$0`, and the hardened RPC does not insert an ordinary `company_transactions` expense. Instead it inserts one canonical `financial_transactions` debit using the dedicated `festival_company_founding_fee` category with metadata linking the festival company and company. Legacy PR2 founding rows in `company_transactions` are reclassified to non-P&L `investment` rows only when matched by `festival_companies.company_id`, `related_entity_id` and `related_entity_type`; no broad description-only deletion is performed.
+
+### Setup page authorisation
+
+`/companies/festivals/:festivalCompanyId/setup` now loads data through `get_festival_company_setup(p_festival_company_id)`. The RPC resolves the caller profile, checks owner/admin permission server-side, and returns only the setup-shell fields required by React. Non-owners receive a generic unavailable/not-found outcome so private UUID existence is not revealed.
+
+### Tests and remaining debt
+
+This PR adds a DB hardening harness covering the RPC definitions, idempotency strategy, server feature flag, setup RPC authorisation and accounting semantics, plus React/TypeScript coverage for typed setup retrieval and rendered setup states. The complete festival configuration wizard and first annual edition creation remain the next PR.
+
+### Next PR
+
+The next PR should implement the festival configuration wizard and first annual edition creation. Month, country/city, vibe, site type, duration, environmental policy and initial edition creation belong there; stages, bookings, tickets, simulation, settlement and legacy-table deletion remain later programme work.

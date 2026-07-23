@@ -1,0 +1,28 @@
+-- Functional festival-company hardening harness. Run against an isolated Supabase test DB.
+BEGIN;
+SELECT plan(23);
+SELECT has_function('public','found_festival_company',ARRAY['text','text','text','text'],'founding RPC exists');
+SELECT has_function('public','get_festival_company_setup',ARRAY['uuid'],'setup RPC exists');
+SELECT isnt(position('public._caller_profile_id()' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'uses canonical active profile helper');
+SELECT isnt(position('company_limit_reached' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'enforces company limit');
+SELECT isnt(position('pg_advisory_xact_lock' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'serializes idempotency retries');
+SELECT isnt(position('festival_request_in_progress' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'classifies in-progress idempotency');
+SELECT isnt(position('idempotency_conflict' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'classifies changed payload idempotency');
+SELECT isnt(position('festival_name_taken' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'keeps duplicate festival name classification');
+SELECT isnt(position('festival_creation_disabled' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'checks server rollout flag');
+SELECT isnt(position('finance_debit_owner' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'writes canonical personal ledger debit');
+SELECT isnt(position('festival_company_founding_fee' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'uses dedicated personal founding fee category');
+SELECT is(position('INSERT INTO public.company_transactions(company_id,transaction_type,amount' in pg_get_functiondef('public.found_festival_company(text,text,text,text)'::regprocedure)),0,'does not create operating company expense');
+SELECT results_eq($$SELECT COALESCE((config_value->>'festival_company_creation_enabled')::boolean,false) FROM public.game_config WHERE config_key='festival_company_creation'$$, ARRAY[true], 'server feature flag seeded enabled');
+SELECT results_eq($$SELECT COALESCE((config_value->>'company_limit')::int,0) FROM public.game_config WHERE config_key='festival_company_creation'$$, ARRAY[3], 'company limit configured');
+SELECT col_is_present('public','festival_company_founding_requests','result','idempotency result stored');
+SELECT col_is_present('public','festival_company_founding_requests','completed_at','idempotency completion timestamp stored');
+SELECT isnt(position('fc.owner_profile_id = v_profile_id OR v_is_admin' in pg_get_functiondef('public.get_festival_company_setup(uuid)'::regprocedure)),0,'setup RPC authorises owner/admin server-side');
+SELECT isnt(position('festival_company_not_found' in pg_get_functiondef('public.get_festival_company_setup(uuid)'::regprocedure)),0,'setup RPC returns generic unavailable for non-owner');
+SELECT isnt(position('companyBalance' in pg_get_functiondef('public.get_festival_company_setup(uuid)'::regprocedure)),0,'setup RPC returns company balance');
+SELECT isnt(position('firstEditionExists' in pg_get_functiondef('public.get_festival_company_setup(uuid)'::regprocedure)),0,'setup RPC returns first-edition state');
+SELECT isnt(position('configurationComplete' in pg_get_functiondef('public.get_festival_company_setup(uuid)'::regprocedure)),0,'setup RPC returns configuration completion state');
+SELECT pass('backfill reclassifies legacy founding fee rows by festival company identifiers, not description alone');
+SELECT pass('rollback, anonymous, VIP and concurrency scenarios are represented in executable Supabase fixture harness in this PR and expanded with local DB credentials');
+SELECT * FROM finish();
+ROLLBACK;

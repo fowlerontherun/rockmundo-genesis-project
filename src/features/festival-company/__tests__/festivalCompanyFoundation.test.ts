@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { COMPANY_CREATION_COSTS, COMPANY_TYPE_INFO, CORPORATE_TAX_RATES } from "@/types/company";
 import { FESTIVAL_FOUNDING_COST, mapFestivalFoundingError } from "../domain/festivalCompany";
 
-const migration = readFileSync("supabase/migrations/20260723120000_secure_vip_festival_company_founding.sql", "utf8");
+const originalMigration = readFileSync("supabase/migrations/20260723120000_secure_vip_festival_company_founding.sql", "utf8");
+const hardeningMigration = readFileSync("supabase/migrations/20260723153000_harden_festival_company_founding.sql", "utf8");
 const hookSource = readFileSync("src/hooks/useCompanies.ts", "utf8");
 const repositorySource = readFileSync("src/features/festival-company/data/festivalCompanyRepository.ts", "utf8");
 const appSource = readFileSync("src/App.tsx", "utf8");
@@ -22,6 +23,7 @@ describe("festival company secure founding foundation", () => {
 
   it("sends only user-entered fields plus idempotency key to the RPC", () => {
     expect(repositorySource).toContain('supabase.rpc("found_festival_company"');
+    expect(repositorySource).toContain('supabase.rpc("get_festival_company_setup"');
     expect(repositorySource).toContain("p_company_name: input.companyName");
     expect(repositorySource).toContain("p_public_name: input.publicName");
     expect(repositorySource).not.toContain("foundingCost:");
@@ -33,27 +35,23 @@ describe("festival company secure founding foundation", () => {
     expect(mapFestivalFoundingError("festival_vip_required")).toMatch(/VIP subscription/);
     expect(mapFestivalFoundingError("insufficient_personal_funds")).toMatch(/\$2,000,000/);
     expect(mapFestivalFoundingError("idempotency_conflict")).toMatch(/already used/);
+    expect(mapFestivalFoundingError("festival_request_in_progress")).toMatch(/processing/);
   });
 
   it("defines atomic SQL objects for secure founding and idempotency", () => {
     expect(FESTIVAL_FOUNDING_COST).toBe(2_000_000);
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.festival_companies");
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.festival_editions_v2");
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.festival_company_audit_log");
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS public.festival_company_founding_requests");
-    expect(migration).toContain("UNIQUE(actor_user_id, idempotency_key)");
-    expect(migration).toContain("FOR UPDATE");
-    expect(migration).toContain("v_cost numeric := 2000000");
-    expect(migration).toContain("balance,weekly_operating_costs) VALUES (v_user,v_company,'festival',p_description,0,0)");
-    expect(migration).toContain("company_shareholders");
-    expect(migration).toContain("company_transactions");
-    expect(migration).toContain("festival_vip_required");
-    expect(migration).toContain("insufficient_personal_funds");
-    expect(migration).toContain("idempotency_conflict");
+    expect(originalMigration).toContain("CREATE TABLE IF NOT EXISTS public.festival_companies");
+    expect(originalMigration).toContain("UNIQUE(actor_user_id, idempotency_key)");
+    expect(hardeningMigration).toContain("public._caller_profile_id()");
+    expect(hardeningMigration).toContain("pg_advisory_xact_lock");
+    expect(hardeningMigration).toContain("company_limit_reached");
+    expect(hardeningMigration).toContain("festival_creation_disabled");
+    expect(hardeningMigration).toContain("festival_company_founding_fee");
+    expect(hardeningMigration).not.toContain("INSERT INTO public.company_transactions(company_id,transaction_type,amount");
   });
 
-  it("registers the new setup route without LegacyFestivalGate", () => {
-    expect(appSource).toContain('path="companies/festivals/:festivalCompanyId/setup" element={<FestivalCompanySetupPlaceholder />}');
+  it("registers the authorised setup route without LegacyFestivalGate", () => {
+    expect(appSource).toContain('path="companies/festivals/:festivalCompanyId/setup" element={<FestivalCompanySetupPage />}');
     expect(appSource).not.toContain('path="companies/festivals/:festivalCompanyId/setup" element={<LegacyFestivalGate');
   });
 });
