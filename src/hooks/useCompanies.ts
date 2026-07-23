@@ -18,7 +18,8 @@ export const useCompanies = () => {
         .select(`
           *,
           headquarters_city:cities!headquarters_city_id(id, name, country),
-          parent_company:companies!parent_company_id(id, name)
+          parent_company:companies!parent_company_id(id, name),
+          festival_companies(id)
         `)
         .eq("owner_id", userId)
         .order("created_at", { ascending: false });
@@ -28,7 +29,10 @@ export const useCompanies = () => {
         throw error;
       }
 
-      return (data || []) as Company[];
+      return (data || []).map((company: any) => ({
+        ...company,
+        festival_company_id: Array.isArray(company.festival_companies) ? company.festival_companies[0]?.id ?? null : null,
+      })) as Company[];
     },
     enabled: !!userId,
   });
@@ -45,7 +49,8 @@ export const useCompany = (companyId: string | undefined) => {
         .select(`
           *,
           headquarters_city:cities!headquarters_city_id(id, name, country),
-          parent_company:companies!parent_company_id(id, name)
+          parent_company:companies!parent_company_id(id, name),
+          festival_companies(id)
         `)
         .eq("id", companyId)
         .maybeSingle();

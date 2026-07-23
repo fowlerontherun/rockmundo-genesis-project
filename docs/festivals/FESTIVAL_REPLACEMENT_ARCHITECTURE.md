@@ -270,3 +270,48 @@ Company-limit checks now flow through `can_profile_found_company(profile_id, 'fe
 Operational diagnostic for PR #1279 deployments: identify possible double-visible-charge cases by joining successful `festival_company_founding_requests`, `festival_companies`, and `financial_transactions` with idempotency keys matching `festival-company-founding:<request key>`, then compare profile balance-history evidence from any production audit source available to administrators. Do not refund automatically unless a one-to-one duplicate debit is proven from the founding request, festival company, transaction reference and profile balance history.
 
 The executable gate added for this correction is `supabase/tests/festival_company_financial_correctness_harness.sql`. It verifies the deployed RPC shape, rollout capability contract, financial idempotency uniqueness and currency-unit mapping. The next feature PR after this gate remains the configuration wizard and first annual edition creation.
+
+## PR #1281 runtime gate: founding money, capabilities and listing
+
+This gate corrects the PR #1280 source-inspection harness: financial correctness is no longer claimed from `pg_get_functiondef` string checks. The runtime harness in `supabase/tests/festival_company_financial_correctness_harness.sql` creates real auth users, active and inactive profiles, VIP entitlement, finance accounts and rollout configuration, then calls `public.found_festival_company(...)` and verifies persisted rows and balances.
+
+### Authoritative player-money source
+
+The finance audit found that Phase 1 finance migrations define `financial_accounts.current_balance_minor` / `available_balance_minor` as the canonical spendable wallet for player money. `profiles.cash` is a whole-USD legacy compatibility projection used by older UI and gameplay code. `finance_transfer`, `finance_debit_owner` and `finance_credit_owner` lock `financial_accounts`, enforce non-system insufficient-funds checks, create immutable `financial_transactions`, and write balanced `financial_ledger_entries`. They do not update `profiles.cash` themselves.
+
+Answers to the source-of-truth review:
+
+1. `profiles.cash` is not the new authoritative spendable balance; it remains a visible legacy projection.
+2. The player-owned primary `financial_accounts` row is authoritative for migrated finance-domain personal cash.
+3. They are not intended to be two separately spendable festival wallets.
+4. `profiles.cash` is a compatibility mirror/projection of the canonical finance account for this flow.
+5. The new reusable `finance_debit_player_personal_cash(...)` bridge mutates finance once and updates the projection atomically in the same transaction.
+6. Ordinary legacy gameplay purchases still vary: some older flows update `profiles.cash`, while finance-domain flows use `finance_transfer`/`finance_debit_owner`/`finance_credit_owner`; harmonising every purchase remains finance migration debt.
+7. Existing personal-cash UI primarily displays active-profile `cash`; festival eligibility now reads the authoritative finance balance from the server and treats malformed responses as disabled.
+8. Festival founding debits the player primary finance account once through the finance service.
+9. During the wider migration the two balances can differ temporarily for legacy flows, but a festival founding success projects the canonical post-transaction balance back to `profiles.cash`.
+10. PR #1280's direct `profiles.cash` update plus `finance_debit_owner` call was economically unsafe because it could charge two independent spendable stores or fail one store after the other appeared sufficient.
+
+### Final single-debit mechanism
+
+`found_festival_company` no longer directly subtracts the founding fee from `profiles.cash`. It creates the company/festival rows inside the same transaction, then calls `finance_debit_player_personal_cash(...)`, which performs exactly one canonical `finance_debit_owner('player', profile_id, 200000000, 'festival_company_founding_fee', ...)` debit and projects the resulting finance balance back into `profiles.cash`. A player wallet starting at `1,000,000,000` minor units (`$10,000,000`) ends at `800,000,000` minor units (`$8,000,000`). The festival company still starts with `$0`, and the founding fee does not create a company operating expense.
+
+### Runtime and rollback verification
+
+The festival runtime gate covers successful founding, same-key retry, changed-payload conflict, duplicate names, anonymous access, capability totality and a test-only late rollback triggered with the transaction-local `app.festival_foundation_fail_after_extension` setting. The rollback assertion proves money movement, company rows, festival extension rows, shareholder rows, founding request rows, audit rows and financial events do not survive the failed transaction. The gate command is `npm run test:festivals:company-runtime`; it fails clearly when `psql` or `SUPABASE_DB_URL` is missing.
+
+Concurrent idempotent retries are serialized by `pg_advisory_xact_lock(user_id || ':' || idempotency_key)`. Because the request row is inserted and committed in the founding transaction, a waiting same-key retry should observe the committed `succeeded` request and return the stored result with `idempotent = true`; the previous `festival_request_in_progress` expectation is not documented as the normal concurrent outcome.
+
+### Capability and eligibility design
+
+`festival_company_capabilities()` is total and disabled-by-default even if the `game_config` row is missing. Authenticated UI uses `get_festival_company_founding_eligibility()` to read server-authoritative system, creation, management and configuration flags plus active-profile-only ownership capacity, VIP eligibility, canonical personal balance, founding cost and affordability. The founding RPC repeats every validation inside the write transaction.
+
+### Festival company listing and navigation
+
+Owned festival listings no longer rely on an optional client-side `Company.festival_company_id` alone. `get_owned_festival_companies()` joins `festival_companies` to `companies` and returns `festivalCompanyId`, public festival name, legal company name, setup status, configuration completeness, first-edition existence, company balance and management availability. The Festivals tab renders a dedicated festival company card and navigates with `festival_companies.id`.
+
+### Company-limit scope
+
+The generically named PR #1280 helpers overstated their scope because their limit came from festival configuration. This PR introduces honest `festival_company_ownership_limit` and `can_profile_found_festival_company` helpers, keeps the old wrappers for compatibility, and documents that generic company, holding-company, VIP allowance and subsidiary limit harmonisation remains future company-system debt.
+
+The next PR can now implement the festival configuration wizard and first annual festival edition without adding month, country, city, date, vibe, site, duration, booking, ticketing, staffing, simulation or settlement work to this runtime gate.

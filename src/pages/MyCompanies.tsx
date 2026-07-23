@@ -9,7 +9,7 @@ import { CompanyCard } from "@/components/company/CompanyCard";
 import { CompanySynergies } from "@/components/company/CompanySynergies";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { CreateCompanyDialog } from "@/components/company/CreateCompanyDialog";
-import { FestivalCompanyEligibilityCard } from "@/features/festival-company";
+import { FestivalCompanyCard, FestivalCompanyEligibilityCard, useOwnedFestivalCompanies } from "@/features/festival-company";
 import { useCompanies, useCompanyFinancialSummary } from "@/hooks/useCompanies";
 import { useAllCompanyTaxRecords } from "@/hooks/useCompanyFinance";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,7 @@ const formatCurrency = (amount: number) => {
 const CompanyDashboardContent = () => {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const { data: financialSummary, isLoading: summaryLoading } = useCompanyFinancialSummary();
+  const { data: festivalCompanies = [] } = useOwnedFestivalCompanies();
   const companyIds = companies?.map(c => c.id) || [];
   const { data: pendingTaxes = [] } = useAllCompanyTaxRecords(companyIds);
 
@@ -295,8 +296,8 @@ const CompanyDashboardContent = () => {
           <TabsContent value="festivals" className="space-y-4">
             <FestivalCompanyEligibilityCard />
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {companies?.filter((company) => company.company_type === "festival").map((company) => (
-                <CompanyCard key={company.id} company={company} />
+              {festivalCompanies.map((festival) => (
+                <FestivalCompanyCard key={festival.festivalCompanyId} festival={festival} />
               ))}
             </div>
           </TabsContent>
