@@ -1,16 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { FoundFestivalCompanyInput, FoundFestivalCompanyResult } from "../domain/festivalCompany";
+import { parseFoundFestivalCompanyResult, type FoundFestivalCompanyInput, type FoundFestivalCompanyResult } from "../domain/festivalCompany";
 import type { FestivalCompanySetupState } from "../domain/festivalSetup";
-import { disabledFestivalCompanyCapabilities, type FestivalCompanyCapabilities } from "../domain/festivalCapabilities";
+import { disabledFestivalCompanyCapabilities, parseFestivalCompanyCapabilities, type FestivalCompanyCapabilities } from "../domain/festivalCapabilities";
 import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility, type FestivalCompanyFoundingEligibility } from "../domain/festivalEligibility";
-
-interface FoundFestivalCompanyRpcResult {
-  companyId: string;
-  festivalCompanyId: string;
-  personalCash: number;
-  foundingCost: number;
-  idempotent: boolean;
-}
 
 export const foundFestivalCompany = async (
   input: FoundFestivalCompanyInput,
@@ -23,14 +15,7 @@ export const foundFestivalCompany = async (
   });
 
   if (error) throw error;
-  const result = data as FoundFestivalCompanyRpcResult;
-  return {
-    companyId: result.companyId,
-    festivalCompanyId: result.festivalCompanyId,
-    personalCash: Number(result.personalCash),
-    foundingCost: Number(result.foundingCost),
-    idempotent: Boolean(result.idempotent),
-  };
+  return parseFoundFestivalCompanyResult(data);
 };
 
 const isFestivalSetupState = (value: unknown): value is FestivalCompanySetupState => {
@@ -62,24 +47,14 @@ export const getFestivalCompanySetup = async (festivalCompanyId: string): Promis
 };
 
 
-const isCapabilityObject = (value: unknown): value is FestivalCompanyCapabilities => {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.newFestivalSystemEnabled === "boolean"
-    && typeof candidate.festivalCompanyCreationEnabled === "boolean"
-    && typeof candidate.festivalCompanyManagementEnabled === "boolean"
-    && typeof candidate.festivalConfigurationEnabled === "boolean"
-    && Number.isFinite(Number(candidate.companyLimit));
-};
-
 export const getFestivalCompanyCapabilities = async (): Promise<FestivalCompanyCapabilities> => {
   const { data, error } = await supabase.rpc("festival_company_capabilities");
-  if (error || !isCapabilityObject(data)) return disabledFestivalCompanyCapabilities;
-  return { ...data, companyLimit: Number(data.companyLimit) };
+  if (error) return disabledFestivalCompanyCapabilities;
+  return parseFestivalCompanyCapabilities(data);
 };
 
 export const getFestivalCompanyFoundingEligibility = async (): Promise<FestivalCompanyFoundingEligibility> => {
-  const { data, error } = await supabase.rpc("get_festival_company_founding_eligibility" as never);
+  const { data, error } = await supabase.rpc("get_festival_company_founding_eligibility");
   if (error) return disabledFestivalCompanyEligibility;
   return parseFestivalCompanyEligibility(data);
 };
@@ -97,21 +72,25 @@ export interface OwnedFestivalCompanySummary {
   managementEnabled: boolean;
 }
 
-const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFestivalCompanySummary => {
-  if (!value || typeof value !== "object") return false;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
+const parseOwnedFestivalCompanySummary = (value: unknown): OwnedFestivalCompanySummary => {
+  if (!value || typeof value !== "object") throw new Error("malformed_owned_festival_company");
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.festivalCompanyId === "string" && typeof candidate.companyId === "string" && typeof candidate.publicName === "string" && typeof candidate.legalCompanyName === "string";
+  if (!isNonEmptyString(candidate.festivalCompanyId) || !uuidPattern.test(candidate.festivalCompanyId)) throw new Error("malformed_owned_festival_company");
+  if (!isNonEmptyString(candidate.companyId) || !uuidPattern.test(candidate.companyId)) throw new Error("malformed_owned_festival_company");
+  if (!isNonEmptyString(candidate.publicName) || !isNonEmptyString(candidate.legalCompanyName) || !isNonEmptyString(candidate.setupStatus)) throw new Error("malformed_owned_festival_company");
+  if (typeof candidate.setupCompleted !== "boolean" || typeof candidate.configurationComplete !== "boolean" || typeof candidate.firstEditionExists !== "boolean" || typeof candidate.managementEnabled !== "boolean") throw new Error("malformed_owned_festival_company");
+  const companyBalance = Number(candidate.companyBalance);
+  if (!Number.isFinite(companyBalance) || companyBalance < 0) throw new Error("malformed_owned_festival_company");
+  return {
+    festivalCompanyId: candidate.festivalCompanyId, companyId: candidate.companyId, publicName: candidate.publicName, legalCompanyName: candidate.legalCompanyName, setupStatus: candidate.setupStatus,
+    setupCompleted: candidate.setupCompleted, configurationComplete: candidate.configurationComplete, firstEditionExists: candidate.firstEditionExists, companyBalance, managementEnabled: candidate.managementEnabled,
+  };
 };
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {
-  const { data, error } = await supabase.rpc("get_owned_festival_companies" as never);
+  const { data, error } = await supabase.rpc("get_owned_festival_companies");
   if (error || !Array.isArray(data)) return [];
-  return data.filter(isOwnedFestivalCompanySummary).map((company) => ({
-    ...company,
-    setupCompleted: Boolean(company.setupCompleted),
-    configurationComplete: Boolean(company.configurationComplete),
-    firstEditionExists: Boolean(company.firstEditionExists),
-    companyBalance: Number(company.companyBalance),
-    managementEnabled: Boolean(company.managementEnabled),
-  }));
+  try { return data.map(parseOwnedFestivalCompanySummary); } catch { return []; }
 };

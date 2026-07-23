@@ -41413,6 +41413,21 @@ export type Database = {
       }
     }
     Functions: {
+      finance_debit_player_personal_cash: {
+        Args: {
+          p_profile_id: string
+          p_amount_minor: number
+          p_category: Database["public"]["Enums"]["financial_transaction_category"]
+          p_description: string
+          p_idempotency_key: string
+          p_metadata?: Json
+        }
+        Returns: Json
+      }
+      festival_company_capabilities: {
+        Args: never
+        Returns: Json
+      }
       found_festival_company: {
         Args: {
           p_public_name: string
@@ -41422,8 +41437,16 @@ export type Database = {
         }
         Returns: Json
       }
+      get_festival_company_founding_eligibility: {
+        Args: never
+        Returns: Json
+      }
       get_festival_company_setup: {
         Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      get_owned_festival_companies: {
+        Args: never
         Returns: Json
       }
       _caller_profile_id: { Args: never; Returns: string }

@@ -55,3 +55,29 @@ describe("festival company secure founding foundation", () => {
     expect(appSource).not.toContain('path="companies/festivals/:festivalCompanyId/setup" element={<LegacyFestivalGate');
   });
 });
+
+import { parseFestivalCompanyCapabilities } from "../domain/festivalCapabilities";
+import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility } from "../domain/festivalEligibility";
+import { parseFoundFestivalCompanyResult } from "../domain/festivalCompany";
+
+describe("festival company strict RPC response parsing", () => {
+  const uuid = "81290000-0000-4000-8000-000000000001";
+  it("fails closed for malformed capability and eligibility payloads", () => {
+    expect(parseFestivalCompanyCapabilities({ newFestivalSystemEnabled: true })).toEqual({
+      newFestivalSystemEnabled: false,
+      festivalCompanyCreationEnabled: false,
+      festivalCompanyManagementEnabled: false,
+      festivalConfigurationEnabled: false,
+      companyLimit: 3,
+    });
+    expect(parseFestivalCompanyEligibility({ canFoundCompany: true, foundingCost: 2_000_000 })).toEqual(disabledFestivalCompanyEligibility);
+  });
+
+  it("rejects malformed founding results instead of updating caches", () => {
+    expect(() => parseFoundFestivalCompanyResult({ companyId: uuid, festivalCompanyId: uuid, personalCash: 8_000_000, foundingCost: 1, idempotent: false })).toThrow("malformed_festival_founding_result");
+  });
+
+  it("accepts complete founding results with transaction ids", () => {
+    expect(parseFoundFestivalCompanyResult({ companyId: uuid, festivalCompanyId: uuid, personalCash: 8_000_000, foundingCost: 2_000_000, idempotent: false, personalFinancialTransactionId: uuid })).toMatchObject({ companyId: uuid, festivalCompanyId: uuid, personalCash: 8_000_000 });
+  });
+});
