@@ -10,8 +10,11 @@ BEGIN EXECUTE 'SET LOCAL ROLE service_role'; PERFORM set_config('request.jwt.cla
 CREATE TEMP TABLE festival_runtime_assertions(label text PRIMARY KEY, passed boolean NOT NULL, detail text) ON COMMIT DROP;
 CREATE OR REPLACE FUNCTION test_festival_runtime.record_assertion(label text, passed boolean, detail text DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO festival_runtime_assertions VALUES (label, passed, detail);
-  IF passed IS DISTINCT FROM true THEN RAISE EXCEPTION 'assertion failed: % %', label, coalesce(detail,''); END IF;
+  BEGIN
+    INSERT INTO festival_runtime_assertions VALUES (label, passed, detail);
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'duplicate runtime assertion label: %', label;
+  END;
 END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_true(label text, actual boolean) RETURNS void LANGUAGE plpgsql AS $$ BEGIN PERFORM test_festival_runtime.record_assertion(label, actual IS TRUE, 'expected true'); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_eq(label text, actual numeric, expected numeric) RETURNS void LANGUAGE plpgsql AS $$ BEGIN PERFORM test_festival_runtime.record_assertion(label, actual IS NOT DISTINCT FROM expected, format('expected %s, got %s', expected, actual)); END $$;
@@ -24,7 +27,9 @@ DECLARE
   u uuid := '81280000-0000-0000-0000-000000000001'; p uuid := '81280000-0000-0000-0000-000000000101'; p2 uuid := '81280000-0000-0000-0000-000000000102';
   other_user uuid := '81280000-0000-0000-0000-000000000002'; other_profile uuid := '81280000-0000-0000-0000-000000000202';
   res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint;
-  rollback_token text := 'trusted-runtime-rollback-token'; post_debit_token text := 'trusted-runtime-post-debit-token'; ran bigint; failures bigint;
+  run_id text := 'runtime-' || replace(gen_random_uuid()::text,'-','');
+  expected_assertions constant integer := 34;
+  rollback_token text := encode(gen_random_bytes(32),'hex'); post_debit_token text := encode(gen_random_bytes(32),'hex'); ran bigint; failures bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
   PERFORM set_config('app.allow_test_fixtures','true', true); -- untrusted compatibility GUC: assertions below prove it is ignored without a trusted token.
@@ -79,9 +84,9 @@ BEGIN
   PERFORM set_config('app.festival_foundation_fail_after_debit','', true);
 
   PERFORM test_festival_runtime.as_service();
-  SELECT festival_test.create_run('runtime-rollback-extension', rollback_token, 'rollback', false, true, false, interval '15 minutes');
-  SELECT festival_test.create_run('runtime-rollback-post-debit', post_debit_token, 'rollback', false, false, true, interval '15 minutes');
-  UPDATE public.financial_accounts SET current_balance_minor=1000000000, available_balance_minor=1000000000 WHERE owner_type='player' AND owner_id=p AND is_primary; UPDATE public.profiles SET cash=10000000 WHERE id=p;
+  SELECT festival_test.create_run(run_id || '-runtime-rollback-extension', rollback_token, 'rollback', false, true, false, interval '15 minutes');
+  SELECT festival_test.create_run(run_id || '-runtime-rollback-post-debit', post_debit_token, 'rollback', false, false, true, interval '15 minutes');
+  UPDATE public.financial_accounts SET current_balance_minor=1000000000, reserved_balance_minor=0 WHERE owner_type='player' AND owner_id=p AND is_primary; UPDATE public.profiles SET cash=10000000 WHERE id=p;
   PERFORM test_festival_runtime.as_user(u);
   PERFORM set_config('app.festival_test_run_token', rollback_token, true);
   PERFORM test_festival_runtime.assert_raises('late rollback','SELECT public.found_festival_company(''Rollback Proof Fest'',''Rollback Proof LLC'',NULL,''runtime-rollback-0001'')','festival_test_late_failure');
@@ -99,8 +104,12 @@ BEGIN
   PERFORM test_festival_runtime.assert_true('retry after rolled-back post-debit failure succeeds', (retry->>'companyId') IS NOT NULL AND (retry->>'idempotent')::boolean IS FALSE);
 
   SELECT count(*), count(*) FILTER (WHERE NOT passed) INTO ran, failures FROM festival_runtime_assertions;
-  IF ran <> 34 OR failures <> 0 THEN
-    RAISE EXCEPTION 'festival runtime assertion accounting failed: expected 34, ran %, failed %', ran, failures;
+  RAISE NOTICE 'festival runtime assertion totals: expected %, executed %, passed %, failed %', expected_assertions, ran, ran - failures, failures;
+  IF failures <> 0 THEN
+    RAISE NOTICE 'failed runtime assertions: %', (SELECT jsonb_agg(jsonb_build_object('label',label,'detail',detail)) FROM festival_runtime_assertions WHERE NOT passed);
+  END IF;
+  IF ran <> expected_assertions OR failures <> 0 THEN
+    RAISE EXCEPTION 'festival runtime assertion accounting failed: expected %, ran %, failed %', expected_assertions, ran, failures;
   END IF;
   RAISE NOTICE 'ok - festival company runtime scenarios completed: % assertions', ran;
 END $$;

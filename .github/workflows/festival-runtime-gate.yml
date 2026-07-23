@@ -27,18 +27,20 @@ jobs:
       - name: Start Supabase
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.31.8
+      - name: Print tool versions
+        run: |
+          node --version
+          npm --version
+          supabase --version
+          psql --version
       - name: Start local Supabase stack
         run: supabase start
       - name: Reset migrated test database
         run: supabase db reset
       - name: Export local database URL
         run: echo "SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> "$GITHUB_ENV"
-      - name: Verify Supabase RPC types
-        run: npm run verify:supabase-rpcs
-      - name: Run SQL runtime harness
-        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_company_financial_correctness_harness.sql
-      - name: Run deterministic concurrency gate
+      - name: Run canonical festival runtime gate
         run: npm run test:festivals:company-runtime
       - name: Run festival frontend unit tests
         run: npm run test:unit -- src/features/festival-company
@@ -46,3 +48,18 @@ jobs:
         run: npm run typecheck
       - name: Build
         run: npm run build
+
+      - name: Print runtime diagnostics on failure
+        if: failure()
+        run: |
+          supabase status || true
+          supabase logs db || true
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 <<'SQL' || true
+          SET ROLE service_role;
+          SELECT run_id, mode, pause_after_lock, fail_after_extension, fail_after_debit, reached_pause_at IS NOT NULL AS reached_pause, second_started_at IS NOT NULL AS second_started, release_after_lock, expires_at > now() AS unexpired FROM festival_test.runs ORDER BY created_at DESC LIMIT 10;
+          SELECT count(*) AS companies FROM public.companies WHERE company_type='festival';
+          SELECT count(*) AS festival_extensions FROM public.festival_companies;
+          SELECT count(*) AS founding_requests FROM public.festival_company_founding_requests;
+          SELECT count(*) AS founding_transactions FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee';
+          SELECT count(*) AS founding_ledger_entries FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee';
+          SQL

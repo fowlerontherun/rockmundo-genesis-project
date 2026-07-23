@@ -69,6 +69,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.31.8
       - run: npm ci --legacy-peer-deps
       - run: npm run test:gig-experience:db
