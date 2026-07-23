@@ -19,6 +19,7 @@ import { bandHubNavigation, businessHubNavigation, careerHubNavigation, characte
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
+import { LegacyFestivalGate } from "./features/festival-company";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -649,8 +650,8 @@ function App() {
                     <Route path="world/studios" element={<PreserveQueryRedirect to="/recording-studio" />} />
                     <Route path="world/companies" element={<PreserveQueryRedirect to="/world-companies" />} />
                     <Route path="world/events" element={<PreserveQueryRedirect to="/major-events" />} />
-                    <Route path="world/festivals" element={<PreserveQueryRedirect to="/festivals" />} />
-                    <Route path="world/festivals/:festivalId" element={<FestivalDetail />} />
+                    <Route path="world/festivals" element={<LegacyFestivalGate area="World festival directory"><PreserveQueryRedirect to="/festivals" /></LegacyFestivalGate>} />
+                    <Route path="world/festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
                     <Route path="world/pulse" element={<PreserveQueryRedirect to="/world-pulse" />} />
                     <Route path="world/leaderboards" element={<PreserveQueryRedirect to="/band-rankings" />} />
                     <Route path="cities" element={<WorldEnvironment />} />
@@ -696,17 +697,17 @@ function App() {
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
-                    <Route path="festivals" element={<FestivalBrowser />} />
-                    <Route path="festivals/marketplace" element={<FestivalMarketplace />} />
-                    <Route path="festivals/directory" element={<FestivalDirectory />} />
-                    <Route path="festivals/:festivalId" element={<FestivalDetail />} />
-                    <Route path="festivals/simulation" element={<FestivalsNew />} />
-                    <Route path="festivals/perform/:participationId" element={<FestivalPerformance />} />
-                    <Route path="festivals/:festivalId/manage" element={<FestivalOwnerConsole />} />
-                    <Route path="festivals/:festivalId/manage/editions/:editionId" element={<FestivalOwnerConsole />} />
-                    <Route path="festivals/sessions/:sessionId" element={<FestivalSessionPage />} />
-                    <Route path="festivals/:festivalId/calendar" element={<FestivalBookingCalendar />} />
-                    <Route path="festivals/:festivalId/run" element={<FestivalRunWizard />} />
+                    <Route path="festivals" element={<LegacyFestivalGate area="Festival browser"><FestivalBrowser /></LegacyFestivalGate>} />
+                    <Route path="festivals/marketplace" element={<LegacyFestivalGate area="Festival marketplace"><FestivalMarketplace /></LegacyFestivalGate>} />
+                    <Route path="festivals/directory" element={<LegacyFestivalGate area="Festival directory"><FestivalDirectory /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
+                    <Route path="festivals/simulation" element={<LegacyFestivalGate area="Festival simulation"><FestivalsNew /></LegacyFestivalGate>} />
+                    <Route path="festivals/perform/:participationId" element={<LegacyFestivalGate area="Festival performance"><FestivalPerformance /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/manage" element={<LegacyFestivalGate area="Festival owner console"><FestivalOwnerConsole /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/manage/editions/:editionId" element={<LegacyFestivalGate area="Festival owner console"><FestivalOwnerConsole /></LegacyFestivalGate>} />
+                    <Route path="festivals/sessions/:sessionId" element={<LegacyFestivalGate area="Festival live session"><FestivalSessionPage /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/calendar" element={<LegacyFestivalGate area="Festival calendar"><FestivalBookingCalendar /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/run" element={<LegacyFestivalGate area="Festival run wizard"><FestivalRunWizard /></LegacyFestivalGate>} />
                     <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="bands/finder" element={<BandFinder />} />
