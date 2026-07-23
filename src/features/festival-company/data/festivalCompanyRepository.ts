@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FoundFestivalCompanyInput, FoundFestivalCompanyResult } from "../domain/festivalCompany";
 import type { FestivalCompanySetupState } from "../domain/festivalSetup";
+import { disabledFestivalCompanyCapabilities } from "../domain/festivalCapabilities";
 
 interface FoundFestivalCompanyRpcResult {
   companyId: string;
@@ -55,5 +56,6 @@ export const getFestivalCompanySetup = async (festivalCompanyId: string): Promis
     setupCompleted: Boolean(data.setupCompleted),
     configurationComplete: Boolean(data.configurationComplete),
     firstEditionExists: Boolean(data.firstEditionExists),
+    capabilities: { ...disabledFestivalCompanyCapabilities, ...(data.capabilities ?? {}) },
   };
 };

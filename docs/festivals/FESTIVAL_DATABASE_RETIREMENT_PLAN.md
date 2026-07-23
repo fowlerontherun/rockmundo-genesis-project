@@ -85,3 +85,7 @@ PR3 is forward-only and does not edit the PR2 migration. It replaces `found_fest
 Existing PR2 founding requests are backfilled with stored JSON results where company and festival-company IDs already exist. Misleading PR2 company founding-fee rows are not deleted broadly; they are reclassified to non-P&L `investment` only when a row is linked by the festival company ID, company ID and `related_entity_type = 'festival_company'`. The canonical personal ledger is used for new founding fees through `financial_transactions` category `festival_company_founding_fee`.
 
 Legacy festival tables remain untouched and are still outside the destructive retirement window.
+
+## Replacement company financial gate
+
+Before any replacement configuration wizard work, the financial gate confirms that founding a festival company charges the founder once, leaves the new company at a zero balance, and creates no company operating P&L row. Legacy festival tables remain out of scope and are not retired by the single-charge correction. Rollout migrations must preserve existing administrator configuration and must not enable creation, management or configuration as a side effect of deployment.

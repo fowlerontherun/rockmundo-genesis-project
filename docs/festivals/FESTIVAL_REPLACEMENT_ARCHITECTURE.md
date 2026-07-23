@@ -254,3 +254,19 @@ This PR adds a DB hardening harness covering the RPC definitions, idempotency st
 ### Next PR
 
 The next PR should implement the festival configuration wizard and first annual edition creation. Month, country/city, vibe, site type, duration, environmental policy and initial edition creation belong there; stages, bookings, tickets, simulation, settlement and legacy-table deletion remain later programme work.
+
+## PR #1279 financial and rollout correction
+
+The PR #1279 hardening review identified that `found_festival_company` updated `profiles.cash` and then called `finance_debit_owner`. The finance implementation was inspected in `20260717090000_finance_phase1_ledger.sql`: `finance_debit_owner` delegates to `finance_transfer`, creates a completed `financial_transactions` row, updates the source and destination `financial_accounts.current_balance_minor`, inserts balanced ledger entries, locks the financial accounts with `FOR UPDATE`, rejects insufficient financial-account balances for non-system accounts, uses minor units, and returns the transaction id. It does not update `profiles.cash`.
+
+Festival founding now treats `profiles.cash` as the visible whole-USD profile balance and `financial_transactions` as the canonical minor-unit finance ledger for the same personal founding charge. The required $2,000,000 founding cost is represented as `2000000` in `profiles.cash` and `200000000` in `financial_transactions.gross_amount_minor` / `net_amount_minor`. The festival company starts with `companies.balance = 0`, `weekly_operating_costs = 0`, and no company operating expense or operating loss is posted for the founding fee.
+
+Idempotency is successful-result idempotency only. Failed attempts raise and roll back the request row with the rest of the transaction. Successful requests persist `result`, `completed_at`, the company ids and the resulting personal cash; retries with the same request hash return the saved result, while changed payloads raise `idempotency_conflict`. The personal ledger reference remains `festival-company-founding:<idempotency-key>` and relies on the existing unique `financial_transactions.idempotency_key` constraint.
+
+Rollout capabilities are separated and server-authoritative: `new_festival_system_enabled`, `festival_company_creation_enabled`, `festival_company_management_enabled`, and `festival_configuration_enabled`. A new migration only inserts defaults when the config row is absent and only fills missing JSON keys on existing rows, preserving administrator choices and defaulting replacement festival features to disabled.
+
+Company-limit checks now flow through `can_profile_found_company(profile_id, 'festival')` and `company_ownership_limit`. The rule is scoped to the active profile's user, counts normal top-level active/suspended companies, excludes subsidiaries, dissolved companies and bankrupt companies, does not add a VIP allowance, and counts festivals as ordinary top-level companies unless future game design changes the helper.
+
+Operational diagnostic for PR #1279 deployments: identify possible double-visible-charge cases by joining successful `festival_company_founding_requests`, `festival_companies`, and `financial_transactions` with idempotency keys matching `festival-company-founding:<request key>`, then compare profile balance-history evidence from any production audit source available to administrators. Do not refund automatically unless a one-to-one duplicate debit is proven from the founding request, festival company, transaction reference and profile balance history.
+
+The executable gate added for this correction is `supabase/tests/festival_company_financial_correctness_harness.sql`. It verifies the deployed RPC shape, rollout capability contract, financial idempotency uniqueness and currency-unit mapping. The next feature PR after this gate remains the configuration wizard and first annual edition creation.

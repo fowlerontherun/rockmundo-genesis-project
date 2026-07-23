@@ -58,7 +58,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 // Smart navigation based on company type
-const getManageRoute = (company: Company): string => {
+export const getManageRoute = (company: Company): string => {
   switch (company.company_type) {
     case 'security':
       return `/security-firm/${company.id}`;
@@ -74,6 +74,8 @@ const getManageRoute = (company: Company): string => {
       return `/recording-studio-business/${company.id}`;
     case 'label':
       return `/labels/${company.id}/manage`; // Navigate to dedicated label management page
+    case 'festival':
+      return company.festival_company_id ? `/companies/festivals/${company.festival_company_id}/setup` : `/company/${company.id}`;
     default:
       return `/company/${company.id}`;
   }
