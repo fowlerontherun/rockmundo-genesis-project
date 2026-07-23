@@ -9,6 +9,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useFestivalFeatureFlags } from "../config/featureFlags";
 import { useFoundFestivalCompany } from "../application/useFoundFestivalCompany";
+import { useFestivalCompanyFoundingEligibility } from "../application/useFestivalCompanyCapabilities";
 import { FESTIVAL_FOUNDING_COST } from "../domain/festivalCompany";
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
@@ -18,17 +19,21 @@ export const FestivalCompanyEligibilityCard = () => {
   const flags = useFestivalFeatureFlags();
   const { profile } = useActiveProfile();
   const { data: vipStatus, isLoading: vipLoading } = useVipStatus();
+  const { data: eligibility, isLoading: capabilitiesLoading } = useFestivalCompanyFoundingEligibility();
   const foundFestival = useFoundFestivalCompany();
   const [companyName, setCompanyName] = useState("");
   const [publicName, setPublicName] = useState("");
   const [description, setDescription] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(newKey);
 
-  const personalCash = Number(profile?.cash ?? 0);
-  const creationEnabled = flags.newFestivalSystemEnabled && flags.festivalCreationEnabled;
+  const personalCash = Number(eligibility?.authoritativePersonalBalance ?? profile?.cash ?? 0);
+  const localCreationEnabled = flags.newFestivalSystemEnabled && flags.festivalCreationEnabled;
+  const serverSystemEnabled = Boolean(eligibility?.newFestivalSystemEnabled);
+  const serverCreationEnabled = Boolean(eligibility?.festivalCompanyCreationEnabled);
+  const effectiveVip = Boolean(eligibility?.vipEligible ?? vipStatus?.isVip);
   const canSubmit = useMemo(() => (
-    creationEnabled && Boolean(vipStatus?.isVip) && personalCash >= FESTIVAL_FOUNDING_COST && companyName.trim().length >= 3 && publicName.trim().length >= 3
-  ), [creationEnabled, vipStatus?.isVip, personalCash, companyName, publicName]);
+    localCreationEnabled && !capabilitiesLoading && serverSystemEnabled && serverCreationEnabled && effectiveVip && Boolean(eligibility?.canAfford) && Boolean(eligibility?.canFoundCompany) && companyName.trim().length >= 3 && publicName.trim().length >= 3
+  ), [localCreationEnabled, capabilitiesLoading, serverSystemEnabled, serverCreationEnabled, effectiveVip, eligibility?.canAfford, eligibility?.canFoundCompany, companyName, publicName]);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -63,9 +68,14 @@ export const FestivalCompanyEligibilityCard = () => {
           <div className="rounded-lg border p-3"><div className="text-sm text-muted-foreground">Personal cash</div><div className="font-semibold">{formatCurrency(personalCash)}</div></div>
         </div>
         <p className="text-sm text-muted-foreground flex gap-2"><DollarSign className="h-4 w-4 shrink-0" /> The $2,000,000 is a founding/setup expense charged from personal cash. It does not become company capital; owner funding transfers arrive in a later PR.</p>
-        {!creationEnabled && <p className="text-sm text-amber-600">New festival creation is currently disabled by feature flag.</p>}
-        {!vipLoading && !vipStatus?.isVip && <p className="text-sm text-amber-600">An active VIP subscription is required. The backend verifies VIP again during founding.</p>}
-        {personalCash < FESTIVAL_FOUNDING_COST && <p className="text-sm text-amber-600">You do not currently have enough personal cash.</p>}
+        {capabilitiesLoading && <p className="text-sm text-muted-foreground">Checking server festival creation capabilities...</p>}
+        {!localCreationEnabled && <p className="text-sm text-amber-600">Festival creation is disabled by the local emergency UI flag.</p>}
+        {!capabilitiesLoading && !serverSystemEnabled && <p className="text-sm text-amber-600">The replacement festival system is disabled on the server.</p>}
+        {!capabilitiesLoading && serverSystemEnabled && !serverCreationEnabled && <p className="text-sm text-amber-600">Festival company creation is paused on the server.</p>}
+        {!vipLoading && !effectiveVip && <p className="text-sm text-amber-600">An active VIP subscription is required. The backend verifies VIP again during founding.</p>}
+        {eligibility && !eligibility.canAfford && <p className="text-sm text-amber-600">You do not currently have enough authoritative personal cash.</p>}
+        {eligibility && !eligibility.canFoundCompany && eligibility.companyLimitReason === "company_limit_reached" && <p className="text-sm text-amber-600">Company limit reached ({eligibility.ownedCompanyCount}/{eligibility.companyLimit}).</p>}
+        {canSubmit && <p className="text-sm text-emerald-600">Eligible to found a festival company.</p>}
         <form onSubmit={onSubmit} className="space-y-3">
           <Input placeholder="Company legal name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
           <Input placeholder="Public festival name" value={publicName} onChange={(e) => setPublicName(e.target.value)} />
