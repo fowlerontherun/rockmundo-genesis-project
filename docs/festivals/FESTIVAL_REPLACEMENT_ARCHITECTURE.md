@@ -182,3 +182,39 @@ See `docs/festivals/FESTIVAL_DATABASE_RETIREMENT_PLAN.md`.
 - Tests cover flag behaviour, gate rendering, route registry drift, and
   non-festival smoke.
 - Version bumped, history updated.
+
+## 17. PR2 secure VIP festival founding foundation
+
+PR2 introduces `festival` as a canonical company type and adds the first server-authoritative company founding path. Festival founding is deliberately not wired through the legacy browser-controlled `useCreateCompany` sequence because that generic path still reads cash, deducts cash, inserts the company, inserts ledger rows and attempts refunds from the browser. That remains known company-creation security debt for non-festival companies.
+
+### Replacement schema
+
+New replacement tables are `festival_companies`, `festival_editions_v2`, `festival_company_audit_log` and `festival_company_founding_requests`. Legacy festival tables are intentionally retained and untouched until migration and retirement PRs can prove data parity.
+
+### RPC and authority boundary
+
+`public.found_festival_company(p_public_name, p_company_name, p_description, p_idempotency_key)` owns festival founding. The browser sends only names, optional description and an idempotency key. It cannot send owner IDs, VIP status, company type, founding price, starting balance, tax rate or weekly cost.
+
+### VIP source of truth
+
+The RPC checks `vip_subscriptions` for an entitlement whose status is active or cancelled-but-unexpired, with `starts_at <= now()` and `expires_at > now()`. It also honours the existing `profiles.is_vip` compatibility flag used elsewhere in the app for admin/test/lifetime-style entitlement sync.
+
+### Money semantics
+
+All values are whole USD game dollars, matching `profiles.cash`, `companies.balance` and `company_transactions.amount`. The founding charge is exactly `$2,000,000`, deducted from personal cash as a setup expense. The new company starts with `$0`; the fee is not minted into company balance and owner funding transfers are deferred.
+
+### Atomic sequence and idempotency
+
+The RPC runs in one PostgreSQL transaction: authenticate, lock the active profile row with `FOR UPDATE`, validate VIP and cash, reserve/check idempotency, deduct cash, create the `companies` row with `company_type = 'festival'`, create the festival extension, add founder shareholder ownership, write the company transaction, write audit events and persist the idempotent result. Repeating the same key with the same payload returns the original IDs and balance without a second charge. Reusing the key with different input raises `idempotency_conflict`.
+
+### RLS
+
+All replacement tables have RLS enabled. Owners can read their own festival company, draft editions and audit/founding records. Admins use the canonical `has_role(auth.uid(),'admin')` helper. Direct client inserts and broad public reads are not opened in this PR.
+
+### Frontend entry point
+
+`src/features/festival-company` now contains the typed founding repository, React Query mutation and eligibility card. My Companies exposes the VIP-only card and setup placeholder route at `/companies/festivals/:festivalCompanyId/setup`, guarded by `newFestivalSystemEnabled` and `festivalCreationEnabled` rather than `LegacyFestivalGate`.
+
+### Next PR
+
+The next PR should build the festival configuration wizard and first annual edition creation. Month, location, vibe, site type, duration, environmental policy, applications, stages, lineups, tickets and simulation remain non-goals here.

@@ -9,6 +9,7 @@ import { CompanyCard } from "@/components/company/CompanyCard";
 import { CompanySynergies } from "@/components/company/CompanySynergies";
 import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { CreateCompanyDialog } from "@/components/company/CreateCompanyDialog";
+import { FestivalCompanyEligibilityCard } from "@/features/festival-company";
 import { useCompanies, useCompanyFinancialSummary } from "@/hooks/useCompanies";
 import { useAllCompanyTaxRecords } from "@/hooks/useCompanyFinance";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -214,6 +215,7 @@ const CompanyDashboardContent = () => {
               <TabsTrigger value="holding">Holding ({holdingCompanies.length})</TabsTrigger>
               <TabsTrigger value="subsidiaries">Subsidiaries ({subsidiaries.length})</TabsTrigger>
               <TabsTrigger value="synergies">Synergies</TabsTrigger>
+              <TabsTrigger value="festivals">Festivals</TabsTrigger>
             </TabsList>
             <CreateCompanyDialog
               holdingCompanies={holdingCompanies}
@@ -288,6 +290,15 @@ const CompanyDashboardContent = () => {
 
           <TabsContent value="synergies" className="space-y-4">
             <CompanySynergies />
+          </TabsContent>
+
+          <TabsContent value="festivals" className="space-y-4">
+            <FestivalCompanyEligibilityCard />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {companies?.filter((company) => company.company_type === "festival").map((company) => (
+                <CompanyCard key={company.id} company={company} />
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
       )}

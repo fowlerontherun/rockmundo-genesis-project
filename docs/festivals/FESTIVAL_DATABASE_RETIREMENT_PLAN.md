@@ -71,3 +71,9 @@ Each destructive migration requires:
 - Signed-off inventory JSON entry with `removal_phase` and `risk`.
 - Green build + typecheck + `festival` test suite.
 - Manual approval on the migration.
+
+## PR2 replacement objects retained alongside legacy data
+
+PR2 adds replacement-only tables: `festival_companies`, `festival_editions_v2`, `festival_company_audit_log` and `festival_company_founding_requests`. These tables do not reuse or delete legacy festival tables. They establish the new festival-company ownership, idempotency and audit boundary while legacy player-facing routes remain behind the PR1 safety gate.
+
+The secure founding RPC records whole-USD game-dollar movement: personal `profiles.cash` decreases by `$2,000,000`; `companies.balance` starts at `$0`; `company_transactions.amount` records the founding/setup expense for audit without treating it as company capital. Legacy table retirement remains deferred until later migration PRs can map old brands/editions into the replacement model safely.

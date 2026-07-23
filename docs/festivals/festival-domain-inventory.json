@@ -1,9 +1,10 @@
 {
   "$schema": "./festival-domain-inventory.schema.json",
   "generatedAt": "2026-07-23",
-  "generatedFor": "v1.1.604 (PR1)",
+  "generatedFor": "v1.1.604 (PR2 secure festival founding foundation)",
   "note": "Verified against repository. Every festival-touching asset appears here. Dispositions: remove | replace | reuse | adapt | archive | unknown_requires_investigation.",
   "routes": [
+    { "path": "/companies/festivals/:festivalCompanyId/setup", "kind": "route", "target": "FestivalCompanySetupPlaceholder", "disposition": "reuse", "removal_phase": null, "risk": "low", "notes": "New-system setup placeholder behind new festival flags." },
     { "path": "/world/festivals", "kind": "route", "target": "PreserveQueryRedirect->/festivals", "disposition": "replace", "removal_phase": 6, "risk": "low" },
     { "path": "/world/festivals/:festivalId", "kind": "route", "target": "FestivalDetail", "disposition": "replace", "removal_phase": 6, "risk": "low" },
     { "path": "/festivals", "kind": "route", "target": "FestivalBrowser", "disposition": "replace", "removal_phase": 6, "risk": "medium" },
@@ -156,5 +157,12 @@
   "unknowns": [
     { "id": "participants-vs-sessions", "notes": "festival_participants overlaps with festival_performance_sessions; requires runtime callsite audit before archive." },
     { "id": "city-festival-seeder", "notes": "Whether any active seeder still writes to legacy festivals table post-Victorious cleanup." }
+  ],
+  "replacement_foundation_pr2": [
+    { "name": "festival_companies", "kind": "table", "disposition": "reuse", "notes": "New replacement festival-company extension." },
+    { "name": "festival_editions_v2", "kind": "table", "disposition": "reuse", "notes": "New replacement annual-edition table; not populated by founding RPC yet." },
+    { "name": "festival_company_audit_log", "kind": "table", "disposition": "reuse", "notes": "New replacement audit log." },
+    { "name": "festival_company_founding_requests", "kind": "table", "disposition": "reuse", "notes": "Idempotency ledger for secure founding RPC." },
+    { "name": "found_festival_company", "kind": "rpc", "disposition": "reuse", "notes": "Server-authoritative VIP-only atomic founding RPC." }
   ]
 }
