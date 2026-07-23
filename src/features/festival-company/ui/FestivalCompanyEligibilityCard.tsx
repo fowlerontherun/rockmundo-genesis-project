@@ -33,7 +33,15 @@ export const FestivalCompanyEligibilityCard = () => {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     foundFestival.mutate({ companyName: companyName.trim(), publicName: publicName.trim(), description: description.trim() || undefined, idempotencyKey }, {
-      onError: () => setIdempotencyKey(newKey()),
+      onSuccess: () => {
+        setCompanyName("");
+        setPublicName("");
+        setDescription("");
+        setIdempotencyKey(newKey());
+      },
+      onError: (error) => {
+        if (error.message.includes("idempotency_conflict")) setIdempotencyKey(newKey());
+      },
     });
   };
 

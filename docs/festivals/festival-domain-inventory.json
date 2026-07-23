@@ -827,5 +827,22 @@
       "accounting": "Personal financial_transactions debit category festival_company_founding_fee; no ordinary company operating expense.",
       "setup_authorisation": "get_festival_company_setup resolves caller profile and allows owner or has_role admin only."
     }
+  },
+  "replacementFestivalCompanyProgramme": {
+    "singleChargeRolloutGate": {
+      "status": "documented",
+      "canonicalCurrencyUnits": {
+        "profiles.cash": "whole USD",
+        "financial_transactions.amounts": "minor units"
+      },
+      "personalDebitPath": "profiles.cash visible debit plus finance_debit_owner minor-unit ledger/account transaction in one database transaction",
+      "rolloutCapabilities": [
+        "new_festival_system_enabled",
+        "festival_company_creation_enabled",
+        "festival_company_management_enabled",
+        "festival_configuration_enabled"
+      ],
+      "nextPr": "configuration wizard and first annual edition creation"
+    }
   }
 }

@@ -65,6 +65,7 @@ export interface Company {
   } | null;
   subsidiaries?: Company[];
   employee_count?: number;
+  festival_company_id?: string | null;
 }
 
 export interface CompanyEmployee {

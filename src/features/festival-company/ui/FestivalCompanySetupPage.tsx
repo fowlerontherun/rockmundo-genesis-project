@@ -11,7 +11,7 @@ import { FestivalSetupState } from "./FestivalSetupState";
 const FestivalCompanySetupPage = () => {
   const { festivalCompanyId } = useParams();
   const flags = useFestivalFeatureFlags();
-  const featureEnabled = flags.newFestivalSystemEnabled && flags.festivalCreationEnabled;
+  const featureEnabled = flags.newFestivalSystemEnabled;
   const setupQuery = useFestivalCompanySetup(festivalCompanyId, featureEnabled);
 
   if (!festivalCompanyId) {
@@ -19,7 +19,7 @@ const FestivalCompanySetupPage = () => {
   }
 
   if (!featureEnabled) {
-    return <FMPageScaffold title="Festival setup unavailable" subtitle="The festival rollout is currently disabled." icon={Tent} backTo="/my-companies"><FestivalSetupState title="Feature disabled" message={mapFestivalSetupError("festival_creation_disabled")} /></FMPageScaffold>;
+    return <FMPageScaffold title="Festival setup unavailable" subtitle="The festival rollout is currently disabled." icon={Tent} backTo="/my-companies"><FestivalSetupState title="Feature disabled" message={mapFestivalSetupError("festival_system_disabled")} /></FMPageScaffold>;
   }
 
   if (setupQuery.isLoading) {
@@ -33,6 +33,10 @@ const FestivalCompanySetupPage = () => {
   const setup = setupQuery.data;
   if (setup.companyStatus === "suspended" || setup.companyStatus === "bankrupt" || setup.companyStatus === "dissolved" || setup.isBankrupt || setup.setupStatus === "retired") {
     return <FMPageScaffold title={setup.publicName} subtitle="Setup is locked for this company." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Setup locked" message="This festival company is suspended, bankrupt, dissolved or retired." /></FMPageScaffold>;
+  }
+
+  if (!setup.capabilities.festivalConfigurationEnabled) {
+    return <FMPageScaffold title={setup.publicName} subtitle="Festival configuration is paused." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Configuration unavailable" message="The setup shell is readable, but configuration submission is disabled by server rollout settings." /></FMPageScaffold>;
   }
 
   if (setup.setupCompleted) {
