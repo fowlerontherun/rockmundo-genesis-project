@@ -1,0 +1,48 @@
+name: Festival runtime gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/festival_**'
+      - 'scripts/festivals/**'
+      - 'src/features/festival-company/**'
+      - 'src/integrations/supabase/types.ts'
+      - '.github/workflows/festival-runtime-gate.yml'
+
+jobs:
+  festival-runtime-gate:
+    runs-on: ubuntu-latest
+    env:
+      FESTIVAL_TEST_DATABASE_CONFIRMED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Start Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase stack
+        run: supabase start
+      - name: Reset migrated test database
+        run: supabase db reset
+      - name: Export local database URL
+        run: echo "SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> "$GITHUB_ENV"
+      - name: Verify Supabase RPC types
+        run: npm run verify:supabase-rpcs
+      - name: Run SQL runtime harness
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_company_financial_correctness_harness.sql
+      - name: Run deterministic concurrency gate
+        run: npm run test:festivals:company-runtime
+      - name: Run festival frontend unit tests
+        run: npm run test:unit -- src/features/festival-company
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
