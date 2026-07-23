@@ -41413,6 +41413,46 @@ export type Database = {
       }
     }
     Functions: {
+
+      festival_company_capabilities: {
+        Args: never
+        Returns: Json
+      }
+      festival_company_ownership_limit: {
+        Args: { p_profile_id?: string | null }
+        Returns: number
+      }
+      can_profile_found_festival_company: {
+        Args: { p_profile_id: string }
+        Returns: boolean
+      }
+      company_ownership_limit: {
+        Args: { p_profile_id: string; p_company_type?: string | null }
+        Returns: number
+      }
+      can_profile_found_company: {
+        Args: { p_profile_id: string; p_company_type?: string | null }
+        Returns: boolean
+      }
+      get_festival_company_founding_eligibility: {
+        Args: never
+        Returns: Json
+      }
+      get_owned_festival_companies: {
+        Args: never
+        Returns: Json
+      }
+      finance_debit_player_personal_cash: {
+        Args: {
+          p_profile_id: string
+          p_amount_minor: number
+          p_category: Database["public"]["Enums"]["financial_transaction_category"]
+          p_description: string
+          p_idempotency_key: string
+          p_metadata?: Json
+        }
+        Returns: Json
+      }
       found_festival_company: {
         Args: {
           p_public_name: string

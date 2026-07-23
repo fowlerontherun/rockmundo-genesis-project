@@ -8,6 +8,10 @@ const hardeningMigration = readFileSync("supabase/migrations/20260723153000_hard
 const hookSource = readFileSync("src/hooks/useCompanies.ts", "utf8");
 const repositorySource = readFileSync("src/features/festival-company/data/festivalCompanyRepository.ts", "utf8");
 const appSource = readFileSync("src/App.tsx", "utf8");
+const correctiveMigration = readFileSync("supabase/migrations/20260723210000_secure_festival_runtime_gate.sql", "utf8");
+const cardSource = readFileSync("src/features/festival-company/ui/FestivalCompanyCard.tsx", "utf8");
+const mutationSource = readFileSync("src/features/festival-company/application/useFoundFestivalCompany.ts", "utf8");
+const concurrencyScript = readFileSync("scripts/festivals/run-company-runtime-concurrency.sh", "utf8");
 
 describe("festival company secure founding foundation", () => {
   it("registers festival as a canonical company type with $0 starting balance metadata", () => {
@@ -48,6 +52,38 @@ describe("festival company secure founding foundation", () => {
     expect(hardeningMigration).toContain("festival_creation_disabled");
     expect(hardeningMigration).toContain("festival_company_founding_fee");
     expect(hardeningMigration).not.toContain("INSERT INTO public.company_transactions(company_id,transaction_type,amount");
+  });
+
+  it("secures internal finance and deprecated limit helpers", () => {
+    expect(correctiveMigration).toContain("REVOKE ALL ON FUNCTION public.finance_debit_player_personal_cash");
+    expect(correctiveMigration).toContain("FROM PUBLIC");
+    expect(correctiveMigration).toContain("FROM anon");
+    expect(correctiveMigration).toContain("FROM authenticated");
+    expect(correctiveMigration).toContain("Use festival_company_ownership_limit");
+    expect(correctiveMigration).toContain("p_company_type = 'festival'");
+  });
+
+  it("uses genuine concurrency and test-only fixture guards", () => {
+    expect(concurrencyScript).toContain("p1=$!");
+    expect(concurrencyScript).toContain("p2=$!");
+    expect(concurrencyScript).toContain("app.allow_test_fixtures");
+    expect(concurrencyScript).toContain("festival_foundation_delay_after_lock");
+    expect(concurrencyScript).toContain("expected one debit transaction");
+    expect(correctiveMigration).toContain("_festival_test_fixtures_allowed");
+    expect(correctiveMigration).toContain("festival_foundation_fail_after_debit");
+  });
+
+  it("invalidates all festival company queries after founding", () => {
+    expect(mutationSource).toContain("ownedFestivalCompaniesQueryKey");
+    expect(mutationSource).toContain("festivalCompanyFoundingEligibilityQueryKey");
+    expect(mutationSource).toContain("festivalCompanyCapabilitiesQueryKey");
+    expect(mutationSource).toContain("festivalCompanySetupQueryKey(result.festivalCompanyId)");
+  });
+
+  it("routes card actions only to the registered setup route", () => {
+    expect(cardSource).toContain("View setup summary");
+    expect(cardSource).toContain("/companies/festivals/${festival.festivalCompanyId}/setup");
+    expect(cardSource).not.toContain("/companies/festivals/${festival.festivalCompanyId}`");
   });
 
   it("registers the authorised setup route without LegacyFestivalGate", () => {
