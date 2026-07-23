@@ -77,3 +77,11 @@ Each destructive migration requires:
 PR2 adds replacement-only tables: `festival_companies`, `festival_editions_v2`, `festival_company_audit_log` and `festival_company_founding_requests`. These tables do not reuse or delete legacy festival tables. They establish the new festival-company ownership, idempotency and audit boundary while legacy player-facing routes remain behind the PR1 safety gate.
 
 The secure founding RPC records whole-USD game-dollar movement: personal `profiles.cash` decreases by `$2,000,000`; `companies.balance` starts at `$0`; `company_transactions.amount` records the founding/setup expense for audit without treating it as company capital. Legacy table retirement remains deferred until later migration PRs can map old brands/editions into the replacement model safely.
+
+## PR3 hardening migration safety
+
+PR3 is forward-only and does not edit the PR2 migration. It replaces `found_festival_company`, adds `get_festival_company_setup`, seeds the server-side `game_config` rollout row, extends idempotency result storage and preserves all existing `festival_companies` and `festival_editions_v2` records.
+
+Existing PR2 founding requests are backfilled with stored JSON results where company and festival-company IDs already exist. Misleading PR2 company founding-fee rows are not deleted broadly; they are reclassified to non-P&L `investment` only when a row is linked by the festival company ID, company ID and `related_entity_type = 'festival_company'`. The canonical personal ledger is used for new founding fees through `financial_transactions` category `festival_company_founding_fee`.
+
+Legacy festival tables remain untouched and are still outside the destructive retirement window.

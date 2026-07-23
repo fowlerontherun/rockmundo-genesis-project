@@ -41422,6 +41422,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_festival_company_setup: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {
