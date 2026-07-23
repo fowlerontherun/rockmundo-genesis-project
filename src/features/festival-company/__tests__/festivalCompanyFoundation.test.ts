@@ -9,6 +9,7 @@ const hookSource = readFileSync("src/hooks/useCompanies.ts", "utf8");
 const repositorySource = readFileSync("src/features/festival-company/data/festivalCompanyRepository.ts", "utf8");
 const appSource = readFileSync("src/App.tsx", "utf8");
 const correctiveMigration = readFileSync("supabase/migrations/20260723210000_secure_festival_runtime_gate.sql", "utf8");
+const trustedRuntimeMigration = readFileSync("supabase/migrations/20260723223000_trusted_festival_runtime_gate.sql", "utf8");
 const cardSource = readFileSync("src/features/festival-company/ui/FestivalCompanyCard.tsx", "utf8");
 const mutationSource = readFileSync("src/features/festival-company/application/useFoundFestivalCompany.ts", "utf8");
 const concurrencyScript = readFileSync("scripts/festivals/run-company-runtime-concurrency.sh", "utf8");
@@ -66,11 +67,12 @@ describe("festival company secure founding foundation", () => {
   it("uses genuine concurrency and test-only fixture guards", () => {
     expect(concurrencyScript).toContain("p1=$!");
     expect(concurrencyScript).toContain("p2=$!");
-    expect(concurrencyScript).toContain("app.allow_test_fixtures");
-    expect(concurrencyScript).toContain("festival_foundation_delay_after_lock");
-    expect(concurrencyScript).toContain("expected one debit transaction");
-    expect(correctiveMigration).toContain("_festival_test_fixtures_allowed");
-    expect(correctiveMigration).toContain("festival_foundation_fail_after_debit");
+    expect(concurrencyScript).toContain("festival_test_run_token");
+    expect(concurrencyScript).toContain("reached_pause_at");
+    expect(concurrencyScript).toContain("exactly one JSON line");
+    expect(trustedRuntimeMigration).toContain("CREATE SCHEMA IF NOT EXISTS festival_test");
+    expect(trustedRuntimeMigration).toContain("_festival_test_context");
+    expect(trustedRuntimeMigration).toContain("festival_primary_financial_account_required");
   });
 
   it("invalidates all festival company queries after founding", () => {
