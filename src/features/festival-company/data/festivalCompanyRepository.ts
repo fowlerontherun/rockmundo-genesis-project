@@ -7,6 +7,8 @@ import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility, ty
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value: unknown) => typeof value === "string" && UUID_RE.test(value);
 const isFiniteNonNegative = (value: unknown) => Number.isFinite(Number(value)) && Number(value) >= 0;
+const isNonNegativeInteger = (value: unknown) => Number.isInteger(Number(value)) && Number(value) >= 0;
+const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 
 interface FoundFestivalCompanyRpcResult {
   companyId: string;
@@ -39,20 +41,22 @@ export const foundFestivalCompany = async (
   };
 };
 
-const isFoundFestivalCompanyRpcResult = (value: unknown): value is FoundFestivalCompanyRpcResult => {
+export const isFoundFestivalCompanyRpcResult = (value: unknown): value is FoundFestivalCompanyRpcResult => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return isUuid(candidate.companyId) && isUuid(candidate.festivalCompanyId) && isUuid(candidate.personalFinancialTransactionId)
-    && isFiniteNonNegative(candidate.personalCash) && isFiniteNonNegative(candidate.foundingCost) && typeof candidate.idempotent === "boolean";
+    && isFiniteNonNegative(candidate.personalCash)
+    && Number(candidate.foundingCost) === 2_000_000
+    && typeof candidate.idempotent === "boolean";
 };
 
-const isFestivalSetupState = (value: unknown): value is FestivalCompanySetupState => {
+export const isFestivalSetupState = (value: unknown): value is FestivalCompanySetupState => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return isUuid(candidate.festivalCompanyId)
     && isUuid(candidate.companyId)
-    && typeof candidate.publicName === "string"
-    && typeof candidate.legalCompanyName === "string"
+    && isNonEmptyString(candidate.publicName)
+    && isNonEmptyString(candidate.legalCompanyName)
     && isFiniteNonNegative(candidate.companyBalance)
     && typeof candidate.isBankrupt === "boolean"
     && typeof candidate.setupCompleted === "boolean"
@@ -75,19 +79,21 @@ export const getFestivalCompanySetup = async (festivalCompanyId: string): Promis
     setupCompleted: Boolean(data.setupCompleted),
     configurationComplete: Boolean(data.configurationComplete),
     firstEditionExists: Boolean(data.firstEditionExists),
-    capabilities: { ...disabledFestivalCompanyCapabilities, ...(data.capabilities ?? {}) },
+    capabilities: isCapabilityObject(data.capabilities)
+      ? { ...data.capabilities, companyLimit: Number(data.capabilities.companyLimit) }
+      : disabledFestivalCompanyCapabilities,
   };
 };
 
 
-const isCapabilityObject = (value: unknown): value is FestivalCompanyCapabilities => {
+export const isCapabilityObject = (value: unknown): value is FestivalCompanyCapabilities => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return typeof candidate.newFestivalSystemEnabled === "boolean"
     && typeof candidate.festivalCompanyCreationEnabled === "boolean"
     && typeof candidate.festivalCompanyManagementEnabled === "boolean"
     && typeof candidate.festivalConfigurationEnabled === "boolean"
-    && Number.isInteger(Number(candidate.companyLimit)) && Number(candidate.companyLimit) >= 0;
+    && isNonNegativeInteger(candidate.companyLimit);
 };
 
 export const getFestivalCompanyCapabilities = async (): Promise<FestivalCompanyCapabilities> => {
@@ -115,16 +121,26 @@ export interface OwnedFestivalCompanySummary {
   managementEnabled: boolean;
 }
 
-const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFestivalCompanySummary => {
+export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFestivalCompanySummary => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return isUuid(candidate.festivalCompanyId) && isUuid(candidate.companyId) && typeof candidate.publicName === "string" && candidate.publicName.length > 0 && typeof candidate.legalCompanyName === "string" && candidate.legalCompanyName.length > 0 && typeof candidate.setupStatus === "string" && typeof candidate.setupCompleted === "boolean" && typeof candidate.configurationComplete === "boolean" && typeof candidate.firstEditionExists === "boolean" && isFiniteNonNegative(candidate.companyBalance) && typeof candidate.managementEnabled === "boolean";
+  return isUuid(candidate.festivalCompanyId)
+    && isUuid(candidate.companyId)
+    && isNonEmptyString(candidate.publicName)
+    && isNonEmptyString(candidate.legalCompanyName)
+    && typeof candidate.setupStatus === "string"
+    && typeof candidate.setupCompleted === "boolean"
+    && typeof candidate.configurationComplete === "boolean"
+    && typeof candidate.firstEditionExists === "boolean"
+    && isFiniteNonNegative(candidate.companyBalance)
+    && typeof candidate.managementEnabled === "boolean";
 };
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {
   const { data, error } = await supabase.rpc("get_owned_festival_companies");
   if (error || !Array.isArray(data)) return [];
-  return data.filter(isOwnedFestivalCompanySummary).map((company) => ({
+  if (!data.every(isOwnedFestivalCompanySummary)) return [];
+  return data.map((company) => ({
     ...company,
     setupCompleted: Boolean(company.setupCompleted),
     configurationComplete: Boolean(company.configurationComplete),
