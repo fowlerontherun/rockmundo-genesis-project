@@ -25,26 +25,41 @@ export const disabledFestivalCompanyEligibility: FestivalCompanyFoundingEligibil
   canAfford: false,
 };
 
-const booleanOrFalse = (value: unknown) => typeof value === "boolean" ? value : false;
-const numberOrDefault = (value: unknown, fallback: number) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const isFiniteNonNegative = (value: unknown) => Number.isFinite(Number(value)) && Number(value) >= 0;
+const isNonNegativeInteger = (value: unknown) => Number.isInteger(Number(value)) && Number(value) >= 0;
 
 export const parseFestivalCompanyEligibility = (value: unknown): FestivalCompanyFoundingEligibility => {
   if (!value || typeof value !== "object") return disabledFestivalCompanyEligibility;
   const candidate = value as Record<string, unknown>;
+  const valid = typeof candidate.newFestivalSystemEnabled === "boolean"
+    && typeof candidate.festivalCompanyCreationEnabled === "boolean"
+    && typeof candidate.festivalCompanyManagementEnabled === "boolean"
+    && typeof candidate.festivalConfigurationEnabled === "boolean"
+    && isNonNegativeInteger(candidate.companyLimit)
+    && isNonNegativeInteger(candidate.ownedCompanyCount)
+    && typeof candidate.canFoundCompany === "boolean"
+    && typeof candidate.companyLimitReason === "string"
+    && typeof candidate.vipEligible === "boolean"
+    && isFiniteNonNegative(candidate.authoritativePersonalBalance)
+    && isNonNegativeInteger(candidate.authoritativePersonalBalanceMinor)
+    && isFiniteNonNegative(candidate.foundingCost)
+    && isNonNegativeInteger(candidate.foundingCostMinor)
+    && typeof candidate.canAfford === "boolean";
+  if (!valid) return disabledFestivalCompanyEligibility;
   return {
-    newFestivalSystemEnabled: booleanOrFalse(candidate.newFestivalSystemEnabled),
-    festivalCompanyCreationEnabled: booleanOrFalse(candidate.festivalCompanyCreationEnabled),
-    festivalCompanyManagementEnabled: booleanOrFalse(candidate.festivalCompanyManagementEnabled),
-    festivalConfigurationEnabled: booleanOrFalse(candidate.festivalConfigurationEnabled),
-    companyLimit: numberOrDefault(candidate.companyLimit, 3),
-    ownedCompanyCount: numberOrDefault(candidate.ownedCompanyCount, 0),
-    canFoundCompany: booleanOrFalse(candidate.canFoundCompany),
-    companyLimitReason: typeof candidate.companyLimitReason === "string" ? candidate.companyLimitReason : "capabilities_unavailable",
-    vipEligible: booleanOrFalse(candidate.vipEligible),
-    authoritativePersonalBalance: numberOrDefault(candidate.authoritativePersonalBalance, 0),
-    authoritativePersonalBalanceMinor: numberOrDefault(candidate.authoritativePersonalBalanceMinor, 0),
-    foundingCost: numberOrDefault(candidate.foundingCost, 2_000_000),
-    foundingCostMinor: numberOrDefault(candidate.foundingCostMinor, 200_000_000),
-    canAfford: booleanOrFalse(candidate.canAfford),
+    newFestivalSystemEnabled: candidate.newFestivalSystemEnabled,
+    festivalCompanyCreationEnabled: candidate.festivalCompanyCreationEnabled,
+    festivalCompanyManagementEnabled: candidate.festivalCompanyManagementEnabled,
+    festivalConfigurationEnabled: candidate.festivalConfigurationEnabled,
+    companyLimit: Number(candidate.companyLimit),
+    ownedCompanyCount: Number(candidate.ownedCompanyCount),
+    canFoundCompany: candidate.canFoundCompany,
+    companyLimitReason: candidate.companyLimitReason,
+    vipEligible: candidate.vipEligible,
+    authoritativePersonalBalance: Number(candidate.authoritativePersonalBalance),
+    authoritativePersonalBalanceMinor: Number(candidate.authoritativePersonalBalanceMinor),
+    foundingCost: Number(candidate.foundingCost),
+    foundingCostMinor: Number(candidate.foundingCostMinor),
+    canAfford: candidate.canAfford,
   };
 };

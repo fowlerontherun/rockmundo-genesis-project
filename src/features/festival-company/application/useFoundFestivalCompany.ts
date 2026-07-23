@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useFestivalFeatureFlags } from "../config/featureFlags";
 import { foundFestivalCompany } from "../data/festivalCompanyRepository";
+import { festivalCompanyCapabilitiesQueryKey, festivalCompanyFoundingEligibilityQueryKey, ownedFestivalCompaniesQueryKey } from "./useFestivalCompanyCapabilities";
+import { festivalCompanySetupQueryKey } from "./useFestivalCompanySetup";
 import { mapFestivalFoundingError, type FoundFestivalCompanyInput } from "../domain/festivalCompany";
 
 export const useFoundFestivalCompany = () => {
@@ -19,8 +21,12 @@ export const useFoundFestivalCompany = () => {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ownedFestivalCompaniesQueryKey });
+      queryClient.invalidateQueries({ queryKey: festivalCompanyFoundingEligibilityQueryKey });
+      queryClient.invalidateQueries({ queryKey: festivalCompanyCapabilitiesQueryKey });
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+      queryClient.invalidateQueries({ queryKey: festivalCompanySetupQueryKey(result.festivalCompanyId) });
       toast.success("Festival company founded", {
         description: "The founding fee was charged from personal cash. Company balance starts at $0.",
       });

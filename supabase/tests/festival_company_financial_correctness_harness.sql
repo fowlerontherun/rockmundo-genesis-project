@@ -2,7 +2,7 @@
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS test_festival_runtime;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_user(user_id uuid) RETURNS void LANGUAGE plpgsql AS $$
-BEGIN EXECUTE 'SET LOCAL ROLE authenticated'; PERFORM set_config('request.jwt.claim.sub', user_id::text, true); PERFORM set_config('request.jwt.claim.role', 'authenticated', true); END $$;
+BEGIN EXECUTE 'SET LOCAL ROLE authenticated'; PERFORM set_config('request.jwt.claim.sub', user_id::text, true); PERFORM set_config('request.jwt.claim.role', 'authenticated', true); PERFORM set_config('request.jwt.claims', jsonb_build_object('sub',user_id::text,'role','authenticated')::text, true); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_anon() RETURNS void LANGUAGE plpgsql AS $$
 BEGIN EXECUTE 'SET LOCAL ROLE anon'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'anon', true); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_service() RETURNS void LANGUAGE plpgsql AS $$
@@ -20,6 +20,7 @@ DECLARE
   res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
+  PERFORM set_config('app.allow_test_fixtures','true', true);
   INSERT INTO auth.users(id,email,role) VALUES (u,'festival-runtime@example.test','authenticated'), (other_user,'festival-runtime-other@example.test','authenticated');
   INSERT INTO public.profiles(id,user_id,username,display_name,cash,is_active,is_vip) VALUES (p,u,'festival_runtime','Festival Runtime',10000000,true,true), (p2,u,'festival_runtime_inactive','Inactive',123456,false,false), (other_profile,other_user,'festival_other','Other',9000000,true,true);
   INSERT INTO public.vip_subscriptions(user_id,status,subscription_type,starts_at,expires_at) VALUES (u,'active','test',now()-interval '1 day',now()+interval '30 days');
@@ -29,11 +30,14 @@ BEGIN
   UPDATE public.financial_accounts SET current_balance_minor=12345600 WHERE owner_type='player' AND owner_id=p2 AND is_primary;
   UPDATE public.game_config SET config_value = config_value || '{"new_festival_system_enabled":true,"festival_company_creation_enabled":true,"festival_company_management_enabled":true,"festival_configuration_enabled":false,"company_limit":3}'::jsonb WHERE config_key='festival_company_creation';
 
+  RAISE NOTICE '1..36 festival company runtime assertions';
   PERFORM test_festival_runtime.assert_true('capability rpc is total', public.festival_company_capabilities() IS NOT NULL AND (public.festival_company_capabilities()->>'companyLimit')::int=3);
   PERFORM test_festival_runtime.as_anon();
+  PERFORM test_festival_runtime.assert_raises('anonymous finance helper denied',format('SELECT public.finance_debit_player_personal_cash(%L,1,''festival_company_founding_fee'',''bad'',''bad-key'',''{}''::jsonb)', p), 'permission denied');
   PERFORM test_festival_runtime.assert_raises('anonymous caller denied','SELECT public.found_festival_company(''Anon Fest'',''Anon LLC'',NULL,''anon-key-0001'')','not_authenticated');
 
   PERFORM test_festival_runtime.as_user(u);
+  PERFORM test_festival_runtime.assert_raises('authenticated finance helper denied',format('SELECT public.finance_debit_player_personal_cash(%L,1,''festival_company_founding_fee'',''bad'',''bad-key'',''{}''::jsonb)', p), 'permission denied');
   before_requests := (SELECT count(*) FROM public.festival_company_founding_requests);
   before_tx := (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee');
   res := public.found_festival_company('Runtime Proof Fest','Runtime Proof LLC','proof','runtime-key-0001');
@@ -47,6 +51,7 @@ BEGIN
   PERFORM test_festival_runtime.assert_eq('one founder shareholder',(SELECT count(*) FROM public.company_shareholders WHERE company_id=company AND user_id=u),1);
   PERFORM test_festival_runtime.assert_eq('one founding request',(SELECT count(*) FROM public.festival_company_founding_requests)-before_requests,1);
   PERFORM test_festival_runtime.assert_eq('one founding financial event',(SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee')-before_tx,1);
+  PERFORM test_festival_runtime.assert_eq('two balanced ledger entries',(SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id=tx),2);
   PERFORM test_festival_runtime.assert_eq('no company operating expense',(SELECT count(*) FROM public.company_transactions WHERE company_id=company),0);
   PERFORM test_festival_runtime.assert_true('audit rows exist',(SELECT count(*) FROM public.festival_company_audit_log WHERE festival_company_id=fc)>=2);
   PERFORM test_festival_runtime.assert_eq('returned balance matches', (res->>'authoritativePersonalBalance')::numeric, 8000000);
@@ -55,6 +60,8 @@ BEGIN
   PERFORM test_festival_runtime.assert_true('retry idempotent same IDs',(retry->>'idempotent')::boolean AND (retry->>'companyId')::uuid=company AND (retry->>'festivalCompanyId')::uuid=fc);
   PERFORM test_festival_runtime.assert_eq('retry no balance change',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),800000000);
   PERFORM test_festival_runtime.assert_raises('changed payload conflict','SELECT public.found_festival_company(''Runtime Changed Fest'',''Runtime Proof LLC'',''proof'',''runtime-key-0001'')','idempotency_conflict');
+  PERFORM test_festival_runtime.assert_raises('duplicate slug','SELECT public.found_festival_company(''Runtime---Proof Fest'',''Slug Clash LLC'',NULL,''runtime-key-0003'')','festival_name_taken');
+  PERFORM test_festival_runtime.assert_raises('empty slug invalid','SELECT public.found_festival_company(''!!!'',''Bad Slug LLC'',NULL,''runtime-key-0004'')','invalid_festival_name');
   PERFORM test_festival_runtime.assert_raises('duplicate public name','SELECT public.found_festival_company(''Runtime Proof Fest'',''Another LLC'',NULL,''runtime-key-0002'')','festival_name_taken');
 
   PERFORM test_festival_runtime.as_service();
@@ -65,5 +72,13 @@ BEGIN
   PERFORM test_festival_runtime.assert_eq('rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
   PERFORM test_festival_runtime.assert_eq('rollback keeps companies',(SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),0);
   PERFORM test_festival_runtime.assert_eq('rollback keeps requests',(SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),0);
+  PERFORM set_config('app.festival_foundation_fail_after_extension','', true);
+  PERFORM set_config('app.festival_foundation_fail_after_debit','on', true);
+  PERFORM test_festival_runtime.assert_raises('post debit rollback','SELECT public.found_festival_company(''Post Debit Rollback Fest'',''Post Debit Rollback LLC'',NULL,''runtime-rollback-0002'')','festival_test_post_debit_failure');
+  PERFORM test_festival_runtime.assert_eq('post debit rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
+  PERFORM test_festival_runtime.assert_eq('post debit rollback keeps profile cash',(SELECT cash FROM public.profiles WHERE id=p),10000000);
+  PERFORM test_festival_runtime.assert_eq('post debit rollback no transaction',(SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
+  PERFORM test_festival_runtime.assert_eq('post debit rollback no ledger',(SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
+  RAISE NOTICE 'ok - festival company runtime scenarios completed';
 END $$;
 ROLLBACK;
