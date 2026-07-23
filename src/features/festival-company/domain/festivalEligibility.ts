@@ -1,4 +1,4 @@
-import { disabledFestivalCompanyCapabilities, type FestivalCompanyCapabilities } from "./festivalCapabilities";
+import { disabledFestivalCompanyCapabilities, parseFestivalCompanyCapabilities, type FestivalCompanyCapabilities } from "./festivalCapabilities";
 
 export interface FestivalCompanyFoundingEligibility extends FestivalCompanyCapabilities {
   ownedCompanyCount: number;
@@ -25,26 +25,27 @@ export const disabledFestivalCompanyEligibility: FestivalCompanyFoundingEligibil
   canAfford: false,
 };
 
-const booleanOrFalse = (value: unknown) => typeof value === "boolean" ? value : false;
-const numberOrDefault = (value: unknown, fallback: number) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const isFiniteNonNegative = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0;
+const isIntegerNonNegative = (value: unknown) => Number.isInteger(value) && Number(value) >= 0;
 
 export const parseFestivalCompanyEligibility = (value: unknown): FestivalCompanyFoundingEligibility => {
   if (!value || typeof value !== "object") return disabledFestivalCompanyEligibility;
   const candidate = value as Record<string, unknown>;
-  return {
-    newFestivalSystemEnabled: booleanOrFalse(candidate.newFestivalSystemEnabled),
-    festivalCompanyCreationEnabled: booleanOrFalse(candidate.festivalCompanyCreationEnabled),
-    festivalCompanyManagementEnabled: booleanOrFalse(candidate.festivalCompanyManagementEnabled),
-    festivalConfigurationEnabled: booleanOrFalse(candidate.festivalConfigurationEnabled),
-    companyLimit: numberOrDefault(candidate.companyLimit, 3),
-    ownedCompanyCount: numberOrDefault(candidate.ownedCompanyCount, 0),
-    canFoundCompany: booleanOrFalse(candidate.canFoundCompany),
-    companyLimitReason: typeof candidate.companyLimitReason === "string" ? candidate.companyLimitReason : "capabilities_unavailable",
-    vipEligible: booleanOrFalse(candidate.vipEligible),
-    authoritativePersonalBalance: numberOrDefault(candidate.authoritativePersonalBalance, 0),
-    authoritativePersonalBalanceMinor: numberOrDefault(candidate.authoritativePersonalBalanceMinor, 0),
-    foundingCost: numberOrDefault(candidate.foundingCost, 2_000_000),
-    foundingCostMinor: numberOrDefault(candidate.foundingCostMinor, 200_000_000),
-    canAfford: booleanOrFalse(candidate.canAfford),
-  };
+  const caps = parseFestivalCompanyCapabilities(candidate);
+  if (caps === disabledFestivalCompanyCapabilities
+    || !isIntegerNonNegative(candidate.ownedCompanyCount)
+    || typeof candidate.canFoundCompany !== "boolean"
+    || typeof candidate.companyLimitReason !== "string"
+    || candidate.companyLimitReason.trim().length === 0
+    || typeof candidate.vipEligible !== "boolean"
+    || !isFiniteNonNegative(candidate.authoritativePersonalBalance)
+    || !isIntegerNonNegative(candidate.authoritativePersonalBalanceMinor)
+    || !isFiniteNonNegative(candidate.foundingCost)
+    || !isIntegerNonNegative(candidate.foundingCostMinor)
+    || candidate.foundingCost !== 2_000_000
+    || candidate.foundingCostMinor !== 200_000_000
+    || typeof candidate.canAfford !== "boolean") {
+    return disabledFestivalCompanyEligibility;
+  }
+  return { ...caps, ownedCompanyCount: candidate.ownedCompanyCount, canFoundCompany: candidate.canFoundCompany, companyLimitReason: candidate.companyLimitReason, vipEligible: candidate.vipEligible, authoritativePersonalBalance: candidate.authoritativePersonalBalance, authoritativePersonalBalanceMinor: candidate.authoritativePersonalBalanceMinor, foundingCost: candidate.foundingCost, foundingCostMinor: candidate.foundingCostMinor, canAfford: candidate.canAfford };
 };

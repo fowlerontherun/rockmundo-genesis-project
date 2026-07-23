@@ -10,8 +10,8 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { styl
 export const FestivalCompanyCard = ({ festival }: { festival: OwnedFestivalCompanySummary }) => {
   const navigate = useNavigate();
   const needsSetup = !festival.setupCompleted || !festival.configurationComplete || !festival.firstEditionExists;
-  const actionLabel = !festival.managementEnabled ? "Management unavailable" : needsSetup ? "Continue setup" : "View festival company";
-  const actionPath = needsSetup ? `/companies/festivals/${festival.festivalCompanyId}/setup` : `/companies/festivals/${festival.festivalCompanyId}`;
+  const actionLabel = !festival.managementEnabled ? "Management unavailable" : needsSetup ? "Continue setup" : "View setup summary";
+  const actionPath = `/companies/festivals/${festival.festivalCompanyId}/setup`;
 
   return (
     <Card data-testid={`festival-company-${festival.festivalCompanyId}`}>

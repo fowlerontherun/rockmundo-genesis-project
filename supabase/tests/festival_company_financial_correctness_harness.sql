@@ -2,11 +2,14 @@
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS test_festival_runtime;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_user(user_id uuid) RETURNS void LANGUAGE plpgsql AS $$
-BEGIN EXECUTE 'SET LOCAL ROLE authenticated'; PERFORM set_config('request.jwt.claim.sub', user_id::text, true); PERFORM set_config('request.jwt.claim.role', 'authenticated', true); END $$;
+BEGIN EXECUTE 'SET LOCAL ROLE authenticated'; PERFORM set_config('request.jwt.claim.sub', user_id::text, true); PERFORM set_config('request.jwt.claim.role', 'authenticated', true); PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', user_id::text, 'role', 'authenticated')::text, true); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_anon() RETURNS void LANGUAGE plpgsql AS $$
-BEGIN EXECUTE 'SET LOCAL ROLE anon'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'anon', true); END $$;
+BEGIN EXECUTE 'SET LOCAL ROLE anon'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'anon', true); PERFORM set_config('request.jwt.claims', jsonb_build_object('role', 'anon')::text, true); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_service() RETURNS void LANGUAGE plpgsql AS $$
-BEGIN EXECUTE 'SET LOCAL ROLE service_role'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'service_role', true); END $$;
+BEGIN EXECUTE 'SET LOCAL ROLE service_role'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'service_role', true); PERFORM set_config('request.jwt.claims', jsonb_build_object('role', 'service_role')::text, true); END $$;
+CREATE OR REPLACE FUNCTION test_festival_runtime.assert_permission_denied(label text, statement text) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE actual text;
+BEGIN BEGIN EXECUTE statement; EXCEPTION WHEN insufficient_privilege THEN actual := SQLSTATE; WHEN OTHERS THEN actual := SQLERRM; END; IF actual IS DISTINCT FROM '42501' THEN RAISE EXCEPTION 'assertion failed: % expected permission denied, got %', label, actual; END IF; END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_true(label text, actual boolean) RETURNS void LANGUAGE plpgsql AS $$ BEGIN IF actual IS DISTINCT FROM true THEN RAISE EXCEPTION 'assertion failed: %', label; END IF; END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_eq(label text, actual numeric, expected numeric) RETURNS void LANGUAGE plpgsql AS $$ BEGIN IF actual IS DISTINCT FROM expected THEN RAISE EXCEPTION 'assertion failed: %, expected %, got %', label, expected, actual; END IF; END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_raises(label text, statement text, expected text) RETURNS void LANGUAGE plpgsql AS $$
@@ -31,9 +34,13 @@ BEGIN
 
   PERFORM test_festival_runtime.assert_true('capability rpc is total', public.festival_company_capabilities() IS NOT NULL AND (public.festival_company_capabilities()->>'companyLimit')::int=3);
   PERFORM test_festival_runtime.as_anon();
+  PERFORM test_festival_runtime.assert_permission_denied('anonymous helper denied','SELECT public.finance_debit_player_personal_cash('''||p||''',1,''festival_company_founding_fee'',''bad'',''bad'', ''{}''::jsonb)');
   PERFORM test_festival_runtime.assert_raises('anonymous caller denied','SELECT public.found_festival_company(''Anon Fest'',''Anon LLC'',NULL,''anon-key-0001'')','not_authenticated');
 
   PERFORM test_festival_runtime.as_user(u);
+  PERFORM test_festival_runtime.assert_true('caller profile is active fixture', public._caller_profile_id() = p);
+  PERFORM test_festival_runtime.assert_permission_denied('authenticated helper self denied','SELECT public.finance_debit_player_personal_cash('''||p||''',1,''festival_company_founding_fee'',''bad'',''bad'', ''{}''::jsonb)');
+  PERFORM test_festival_runtime.assert_permission_denied('authenticated helper other denied','SELECT public.finance_debit_player_personal_cash('''||other_profile||''',1,''festival_company_founding_fee'',''bad'',''bad'', ''{}''::jsonb)');
   before_requests := (SELECT count(*) FROM public.festival_company_founding_requests);
   before_tx := (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee');
   res := public.found_festival_company('Runtime Proof Fest','Runtime Proof LLC','proof','runtime-key-0001');
@@ -60,9 +67,11 @@ BEGIN
   PERFORM test_festival_runtime.as_service();
   UPDATE public.financial_accounts SET current_balance_minor=1000000000 WHERE owner_type='player' AND owner_id=p AND is_primary; UPDATE public.profiles SET cash=10000000 WHERE id=p;
   PERFORM test_festival_runtime.as_user(u);
-  PERFORM set_config('app.festival_foundation_fail_after_extension','on', true);
-  PERFORM test_festival_runtime.assert_raises('late rollback','SELECT public.found_festival_company(''Rollback Proof Fest'',''Rollback Proof LLC'',NULL,''runtime-rollback-0001'')','festival_test_late_failure');
+  PERFORM set_config('app.festival_foundation_fail_after_finance','on', true);
+  PERFORM test_festival_runtime.assert_raises('post-debit rollback','SELECT public.found_festival_company(''Rollback Proof Fest'',''Rollback Proof LLC'',NULL,''runtime-rollback-0001'')','festival_test_post_debit_failure');
   PERFORM test_festival_runtime.assert_eq('rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
+  PERFORM test_festival_runtime.assert_eq('rollback keeps financial tx',(SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee' AND idempotency_key='festival-company-founding:runtime-rollback-0001'),0);
+  PERFORM test_festival_runtime.assert_eq('rollback keeps ledger',(SELECT count(*) FROM public.financial_ledger_entries le JOIN public.financial_transactions ft ON ft.id=le.transaction_id WHERE ft.idempotency_key='festival-company-founding:runtime-rollback-0001'),0);
   PERFORM test_festival_runtime.assert_eq('rollback keeps companies',(SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),0);
   PERFORM test_festival_runtime.assert_eq('rollback keeps requests',(SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),0);
 END $$;
