@@ -96,6 +96,10 @@ export const useCreateCompany = () => {
     mutationFn: async (input: CreateCompanyInput & { profileId?: string }): Promise<Company> => {
       if (!userId) throw new Error("Not authenticated");
 
+      if (input.company_type === "festival") {
+        throw new Error("Festival companies must be founded through the secure VIP festival RPC.");
+      }
+
       // Get creation costs
       const costs = COMPANY_CREATION_COSTS[input.company_type];
       if (!costs) throw new Error("Invalid company type");

@@ -152,7 +152,7 @@ export const CreateCompanyDialog = ({
   );
 
   const playerCash = Number(profile?.cash ?? 0);
-  const costs = selectedType ? COMPANY_CREATION_COSTS[selectedType] : null;
+  const costs = selectedType && selectedType !== "festival" ? COMPANY_CREATION_COSTS[selectedType] : null;
   const canAfford = costs ? playerCash >= costs.creationCost : false;
 
   const onSubmit = async (data: FormData) => {
@@ -242,6 +242,7 @@ export const CreateCompanyDialog = ({
                     >
                       {availableTypes.map((type) => {
                         const info = COMPANY_TYPE_INFO[type];
+                        if (type === "festival") return null;
                         const typeCosts = COMPANY_CREATION_COSTS[type];
                         const affordable = playerCash >= typeCosts.creationCost;
                         return (

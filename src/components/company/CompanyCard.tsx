@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck, Wallet, Mic2 } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Users, DollarSign, MapPin, AlertTriangle, Truck, Wallet, Mic2, Tent } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,8 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
       return <Music {...iconProps} />;
     case 'recording_studio':
       return <Mic2 {...iconProps} />;
+    case 'festival':
+      return <Tent {...iconProps} />;
     default:
       return <Building2 {...iconProps} />;
   }

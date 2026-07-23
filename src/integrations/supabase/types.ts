@@ -41413,6 +41413,15 @@ export type Database = {
       }
     }
     Functions: {
+      found_festival_company: {
+        Args: {
+          p_public_name: string
+          p_company_name: string
+          p_description?: string | null
+          p_idempotency_key?: string | null
+        }
+        Returns: Json
+      }
       _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {

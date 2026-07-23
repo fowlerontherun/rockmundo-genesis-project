@@ -1,6 +1,6 @@
 // Company System Types
 
-export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio';
+export type CompanyType = 'holding' | 'label' | 'security' | 'factory' | 'logistics' | 'venue' | 'rehearsal' | 'recording_studio' | 'festival';
 
 // Company creation costs, starting balances, and weekly operating costs
 export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number; startingBalance: number; weeklyOperatingCosts: number }> = {
@@ -12,6 +12,7 @@ export const COMPANY_CREATION_COSTS: Record<CompanyType, { creationCost: number;
   venue: { creationCost: 750_000, startingBalance: 1_000_000, weeklyOperatingCosts: 7_000 },
   rehearsal: { creationCost: 200_000, startingBalance: 300_000, weeklyOperatingCosts: 2_000 },
   recording_studio: { creationCost: 400_000, startingBalance: 600_000, weeklyOperatingCosts: 5_000 },
+  festival: { creationCost: 2_000_000, startingBalance: 0, weeklyOperatingCosts: 0 },
 };
 
 // Corporate tax rates by company type
@@ -24,6 +25,7 @@ export const CORPORATE_TAX_RATES: Record<CompanyType, number> = {
   venue: 0.22,
   rehearsal: 0.15,
   recording_studio: 0.18,
+  festival: 0.22,
 };
 
 export type CompanyStatus = 'active' | 'suspended' | 'bankrupt' | 'dissolved';
@@ -189,6 +191,12 @@ export const COMPANY_TYPE_INFO: Record<CompanyType, { label: string; icon: strin
     icon: 'Mic2',
     description: 'Professional recording facilities for music production',
     color: 'text-rose-500',
+  },
+  festival: {
+    label: 'Festival Company',
+    icon: 'Tent',
+    description: 'Create and operate an annual music festival',
+    color: 'text-fuchsia-500',
   },
 };
 
