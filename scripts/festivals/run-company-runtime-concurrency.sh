@@ -6,14 +6,26 @@ if [[ -z "${SUPABASE_DB_URL:-}" ]]; then echo "SUPABASE_DB_URL is required after
 if [[ "${FESTIVAL_TEST_DATABASE_CONFIRMED:-}" != "true" ]]; then echo "Refusing to mutate database: set FESTIVAL_TEST_DATABASE_CONFIRMED=true for an isolated test database" >&2; exit 3; fi
 case "$SUPABASE_DB_URL" in *prod*|*production*|*amazonaws.com*|*supabase.co*) echo "Refusing to run festival runtime gate against a possible production database" >&2; exit 4;; esac
 
-run_id="frt-$(date +%s)-$RANDOM-$RANDOM"
+run_id="frt-$(python3 - <<'PYID'
+import uuid
+print(uuid.uuid4())
+PYID
+)"
 token="$(python3 - <<'PY'
 import secrets
 print(secrets.token_urlsafe(32))
 PY
 )"
-user_id="81280000-0000-0000-0000-000000000010"
-profile_id="81280000-0000-0000-0000-000000000110"
+user_id="$(python3 - <<'PYID'
+import uuid
+print(uuid.uuid4())
+PYID
+)"
+profile_id="$(python3 - <<'PYID'
+import uuid
+print(uuid.uuid4())
+PYID
+)"
 public_name="$run_id Concurrent Runtime Fest"
 company_name="$run_id Concurrent Runtime LLC"
 idempotency_key="$run_id-concurrent-key"
@@ -42,7 +54,7 @@ VALUES (:'profile_id', :'user_id', 'festival_' || replace(:'run_id','-','_'), :'
 INSERT INTO public.vip_subscriptions(user_id,status,subscription_type,starts_at,expires_at,metadata)
 VALUES (:'user_id','active','test',now()-interval '1 day',now()+interval '30 days',jsonb_build_object('festival_test_run_id',:'run_id'));
 SELECT public.get_or_create_primary_financial_account('player',:'profile_id','Concurrency player cash','USD');
-UPDATE public.financial_accounts SET current_balance_minor=1000000000, available_balance_minor=1000000000, metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('festival_test_run_id',:'run_id') WHERE owner_type='player' AND owner_id=:'profile_id' AND is_primary;
+UPDATE public.financial_accounts SET current_balance_minor=1000000000, reserved_balance_minor=0, metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('festival_test_run_id',:'run_id') WHERE owner_type='player' AND owner_id=:'profile_id' AND is_primary;
 UPDATE public.game_config SET config_value = config_value || '{"new_festival_system_enabled":true,"festival_company_creation_enabled":true,"festival_company_management_enabled":true,"company_limit":3}'::jsonb WHERE config_key='festival_company_creation';
 SQL
 
@@ -73,16 +85,19 @@ for _ in $(seq 1 200); do
 done
 [[ "${reached:-no}" == "yes" ]] || { echo "session one never reached trusted pause marker" >&2; exit 1; }
 ("${psql_base[@]}" -f "$workdir/call2.sql" >"$workdir/out2" 2>"$workdir/err2") & p2=$!
-sleep 0.1
 "${psql_base[@]}" -v run_id="$run_id" <<'SQL' >/dev/null
 SET ROLE service_role;
 UPDATE festival_test.runs SET second_started_at = now() WHERE run_id=:'run_id';
 SELECT festival_test.release_run(:'run_id');
 SQL
-wait "$p1" || { cat "$workdir/err1" >&2; exit 1; }
-wait "$p2" || { cat "$workdir/err2" >&2; exit 1; }
-[[ ! -s "$workdir/err1" ]] || { cat "$workdir/err1" >&2; exit 1; }
-[[ ! -s "$workdir/err2" ]] || { cat "$workdir/err2" >&2; exit 1; }
+wait "$p1" || { echo "session one failed" >&2; cat "$workdir/out1" >&2; cat "$workdir/err1" >&2; exit 1; }
+wait "$p2" || { echo "session two failed" >&2; cat "$workdir/out2" >&2; cat "$workdir/err2" >&2; exit 1; }
+for err in "$workdir/err1" "$workdir/err2"; do
+  if grep -Eiq '(^ERROR:|^FATAL:|^PANIC:)' "$err"; then
+    cat "$err" >&2
+    exit 1
+  fi
+done
 
 python3 - "$workdir/out1" "$workdir/out2" <<'PY'
 import json, re, sys
@@ -90,7 +105,9 @@ uuid=re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 rows=[]
 for path in sys.argv[1:]:
     lines=[l.strip() for l in open(path) if l.strip()]
-    if len(lines)!=1: raise SystemExit(f'{path} must contain exactly one JSON line, got {len(lines)}')
+    if len(lines)!=1:
+        print(open(path).read(), file=sys.stderr)
+        raise SystemExit(f'{path} must contain exactly one JSON line, got {len(lines)}')
     data=json.loads(lines[0]); rows.append(data)
     for key in ('companyId','festivalCompanyId','personalFinancialTransactionId'):
         if not uuid.match(str(data.get(key,''))): raise SystemExit(f'{path} missing uuid {key}')
