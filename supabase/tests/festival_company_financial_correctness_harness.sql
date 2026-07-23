@@ -7,20 +7,27 @@ CREATE OR REPLACE FUNCTION test_festival_runtime.as_anon() RETURNS void LANGUAGE
 BEGIN EXECUTE 'SET LOCAL ROLE anon'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'anon', true); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.as_service() RETURNS void LANGUAGE plpgsql AS $$
 BEGIN EXECUTE 'SET LOCAL ROLE service_role'; PERFORM set_config('request.jwt.claim.sub', '', true); PERFORM set_config('request.jwt.claim.role', 'service_role', true); END $$;
-CREATE OR REPLACE FUNCTION test_festival_runtime.assert_true(label text, actual boolean) RETURNS void LANGUAGE plpgsql AS $$ BEGIN IF actual IS DISTINCT FROM true THEN RAISE EXCEPTION 'assertion failed: %', label; END IF; END $$;
-CREATE OR REPLACE FUNCTION test_festival_runtime.assert_eq(label text, actual numeric, expected numeric) RETURNS void LANGUAGE plpgsql AS $$ BEGIN IF actual IS DISTINCT FROM expected THEN RAISE EXCEPTION 'assertion failed: %, expected %, got %', label, expected, actual; END IF; END $$;
+CREATE TEMP TABLE festival_runtime_assertions(label text PRIMARY KEY, passed boolean NOT NULL, detail text) ON COMMIT DROP;
+CREATE OR REPLACE FUNCTION test_festival_runtime.record_assertion(label text, passed boolean, detail text DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO festival_runtime_assertions VALUES (label, passed, detail);
+  IF passed IS DISTINCT FROM true THEN RAISE EXCEPTION 'assertion failed: % %', label, coalesce(detail,''); END IF;
+END $$;
+CREATE OR REPLACE FUNCTION test_festival_runtime.assert_true(label text, actual boolean) RETURNS void LANGUAGE plpgsql AS $$ BEGIN PERFORM test_festival_runtime.record_assertion(label, actual IS TRUE, 'expected true'); END $$;
+CREATE OR REPLACE FUNCTION test_festival_runtime.assert_eq(label text, actual numeric, expected numeric) RETURNS void LANGUAGE plpgsql AS $$ BEGIN PERFORM test_festival_runtime.record_assertion(label, actual IS NOT DISTINCT FROM expected, format('expected %s, got %s', expected, actual)); END $$;
 CREATE OR REPLACE FUNCTION test_festival_runtime.assert_raises(label text, statement text, expected text) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE actual text;
-BEGIN BEGIN EXECUTE statement; EXCEPTION WHEN OTHERS THEN actual := SQLERRM; END; IF actual IS NULL OR position(expected in actual)=0 THEN RAISE EXCEPTION 'assertion failed: % expected %, got %', label, expected, actual; END IF; END $$;
+BEGIN BEGIN EXECUTE statement; EXCEPTION WHEN OTHERS THEN actual := SQLERRM; END; PERFORM test_festival_runtime.record_assertion(label, actual IS NOT NULL AND position(expected in actual)>0, format('expected %s, got %s', expected, actual)); END $$;
 
 DO $$
 DECLARE
   u uuid := '81280000-0000-0000-0000-000000000001'; p uuid := '81280000-0000-0000-0000-000000000101'; p2 uuid := '81280000-0000-0000-0000-000000000102';
   other_user uuid := '81280000-0000-0000-0000-000000000002'; other_profile uuid := '81280000-0000-0000-0000-000000000202';
   res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint;
+  rollback_token text := 'trusted-runtime-rollback-token'; post_debit_token text := 'trusted-runtime-post-debit-token'; ran bigint; failures bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
-  PERFORM set_config('app.allow_test_fixtures','true', true);
+  PERFORM set_config('app.allow_test_fixtures','true', true); -- untrusted compatibility GUC: assertions below prove it is ignored without a trusted token.
   INSERT INTO auth.users(id,email,role) VALUES (u,'festival-runtime@example.test','authenticated'), (other_user,'festival-runtime-other@example.test','authenticated');
   INSERT INTO public.profiles(id,user_id,username,display_name,cash,is_active,is_vip) VALUES (p,u,'festival_runtime','Festival Runtime',10000000,true,true), (p2,u,'festival_runtime_inactive','Inactive',123456,false,false), (other_profile,other_user,'festival_other','Other',9000000,true,true);
   INSERT INTO public.vip_subscriptions(user_id,status,subscription_type,starts_at,expires_at) VALUES (u,'active','test',now()-interval '1 day',now()+interval '30 days');
@@ -30,7 +37,7 @@ BEGIN
   UPDATE public.financial_accounts SET current_balance_minor=12345600 WHERE owner_type='player' AND owner_id=p2 AND is_primary;
   UPDATE public.game_config SET config_value = config_value || '{"new_festival_system_enabled":true,"festival_company_creation_enabled":true,"festival_company_management_enabled":true,"festival_configuration_enabled":false,"company_limit":3}'::jsonb WHERE config_key='festival_company_creation';
 
-  RAISE NOTICE '1..36 festival company runtime assertions';
+  RAISE NOTICE 'festival company runtime assertions begin';
   PERFORM test_festival_runtime.assert_true('capability rpc is total', public.festival_company_capabilities() IS NOT NULL AND (public.festival_company_capabilities()->>'companyLimit')::int=3);
   PERFORM test_festival_runtime.as_anon();
   PERFORM test_festival_runtime.assert_raises('anonymous finance helper denied',format('SELECT public.finance_debit_player_personal_cash(%L,1,''festival_company_founding_fee'',''bad'',''bad-key'',''{}''::jsonb)', p), 'permission denied');
@@ -64,21 +71,37 @@ BEGIN
   PERFORM test_festival_runtime.assert_raises('empty slug invalid','SELECT public.found_festival_company(''!!!'',''Bad Slug LLC'',NULL,''runtime-key-0004'')','invalid_festival_name');
   PERFORM test_festival_runtime.assert_raises('duplicate public name','SELECT public.found_festival_company(''Runtime Proof Fest'',''Another LLC'',NULL,''runtime-key-0002'')','festival_name_taken');
 
-  PERFORM test_festival_runtime.as_service();
-  UPDATE public.financial_accounts SET current_balance_minor=1000000000 WHERE owner_type='player' AND owner_id=p AND is_primary; UPDATE public.profiles SET cash=10000000 WHERE id=p;
-  PERFORM test_festival_runtime.as_user(u);
   PERFORM set_config('app.festival_foundation_fail_after_extension','on', true);
+  PERFORM set_config('app.festival_foundation_fail_after_debit','on', true);
+  res := public.found_festival_company('Caller GUC Ignored Fest','Caller GUC Ignored LLC','untrusted app gucs must not activate hooks','runtime-guc-ignored-0001');
+  PERFORM test_festival_runtime.assert_true('caller-controlled gucs cannot trigger trusted hooks', (res->>'companyId') IS NOT NULL AND (res->>'idempotent')::boolean IS FALSE);
+  PERFORM set_config('app.festival_foundation_fail_after_extension','', true);
+  PERFORM set_config('app.festival_foundation_fail_after_debit','', true);
+
+  PERFORM test_festival_runtime.as_service();
+  SELECT festival_test.create_run('runtime-rollback-extension', rollback_token, 'rollback', false, true, false, interval '15 minutes');
+  SELECT festival_test.create_run('runtime-rollback-post-debit', post_debit_token, 'rollback', false, false, true, interval '15 minutes');
+  UPDATE public.financial_accounts SET current_balance_minor=1000000000, available_balance_minor=1000000000 WHERE owner_type='player' AND owner_id=p AND is_primary; UPDATE public.profiles SET cash=10000000 WHERE id=p;
+  PERFORM test_festival_runtime.as_user(u);
+  PERFORM set_config('app.festival_test_run_token', rollback_token, true);
   PERFORM test_festival_runtime.assert_raises('late rollback','SELECT public.found_festival_company(''Rollback Proof Fest'',''Rollback Proof LLC'',NULL,''runtime-rollback-0001'')','festival_test_late_failure');
   PERFORM test_festival_runtime.assert_eq('rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
   PERFORM test_festival_runtime.assert_eq('rollback keeps companies',(SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),0);
   PERFORM test_festival_runtime.assert_eq('rollback keeps requests',(SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),0);
-  PERFORM set_config('app.festival_foundation_fail_after_extension','', true);
-  PERFORM set_config('app.festival_foundation_fail_after_debit','on', true);
+  PERFORM set_config('app.festival_test_run_token', post_debit_token, true);
   PERFORM test_festival_runtime.assert_raises('post debit rollback','SELECT public.found_festival_company(''Post Debit Rollback Fest'',''Post Debit Rollback LLC'',NULL,''runtime-rollback-0002'')','festival_test_post_debit_failure');
   PERFORM test_festival_runtime.assert_eq('post debit rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
   PERFORM test_festival_runtime.assert_eq('post debit rollback keeps profile cash',(SELECT cash FROM public.profiles WHERE id=p),10000000);
   PERFORM test_festival_runtime.assert_eq('post debit rollback no transaction',(SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
   PERFORM test_festival_runtime.assert_eq('post debit rollback no ledger',(SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
-  RAISE NOTICE 'ok - festival company runtime scenarios completed';
+  PERFORM set_config('app.festival_test_run_token', '', true);
+  retry := public.found_festival_company('Post Debit Rollback Fest','Post Debit Rollback LLC',NULL,'runtime-rollback-0002');
+  PERFORM test_festival_runtime.assert_true('retry after rolled-back post-debit failure succeeds', (retry->>'companyId') IS NOT NULL AND (retry->>'idempotent')::boolean IS FALSE);
+
+  SELECT count(*), count(*) FILTER (WHERE NOT passed) INTO ran, failures FROM festival_runtime_assertions;
+  IF ran <> 34 OR failures <> 0 THEN
+    RAISE EXCEPTION 'festival runtime assertion accounting failed: expected 34, ran %, failed %', ran, failures;
+  END IF;
+  RAISE NOTICE 'ok - festival company runtime scenarios completed: % assertions', ran;
 END $$;
 ROLLBACK;
