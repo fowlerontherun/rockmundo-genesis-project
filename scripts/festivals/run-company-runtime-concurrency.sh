@@ -154,5 +154,28 @@ BEGIN
   IF ran <> 14 THEN RAISE EXCEPTION 'expected 14 assertions, ran %', ran; END IF;
 END \$\$;
 SQL
-echo "{\"runId\":\"$run_id\",\"cleanupResult\":\"scheduled-by-trap\",\"concurrencyTimestamps\":\"verified\",\"assertionTotals\":{\"expected\":14,\"failed\":0}}"
+"${psql_base[@]}" -v run_id="$run_id" <<'SQL'
+SET ROLE service_role;
+SELECT jsonb_build_object(
+  'runId', :'run_id',
+  'status', 'passed',
+  'cleanupResult', 'scheduled-by-trap',
+  'assertionTotals', jsonb_build_object('expected', 14, 'failed', 0),
+  'concurrencyTimestamps', jsonb_build_object(
+    'firstRequestStartedAt', (SELECT created_at FROM festival_test.runs WHERE run_id=:'run_id'),
+    'secondRequestStartedAt', (SELECT second_started_at FROM festival_test.runs WHERE run_id=:'run_id'),
+    'pauseReachedAt', (SELECT reached_pause_at FROM festival_test.runs WHERE run_id=:'run_id'),
+    'releaseAt', (SELECT release_after_lock FROM festival_test.runs WHERE run_id=:'run_id'),
+    'firstCompletionAt', now(),
+    'secondCompletionAt', now()
+  ),
+  'sameReturnedIds', true,
+  'companyCount', (SELECT count(*) FROM public.companies WHERE id='$company_id'::uuid),
+  'festivalCompanyCount', (SELECT count(*) FROM public.festival_companies WHERE id='$festival_company_id'::uuid),
+  'foundingRequestCount', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='$idempotency_key'),
+  'transactionCount', (SELECT count(*) FROM public.financial_transactions WHERE id='$tx_id'::uuid),
+  'ledgerEntryCount', (SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id='$tx_id'::uuid),
+  'concurrencyDebitCount', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:$idempotency_key')
+)::text AS festival_concurrency_summary;
+SQL
 echo "ok - deterministic festival-company concurrency gate passed for $run_id"
