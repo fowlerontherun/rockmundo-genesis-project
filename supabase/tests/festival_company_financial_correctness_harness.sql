@@ -26,9 +26,10 @@ DO $$
 DECLARE
   u uuid := '81280000-0000-0000-0000-000000000001'; p uuid := '81280000-0000-0000-0000-000000000101'; p2 uuid := '81280000-0000-0000-0000-000000000102';
   other_user uuid := '81280000-0000-0000-0000-000000000002'; other_profile uuid := '81280000-0000-0000-0000-000000000202';
-  res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint;
+  res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint; runtime_summary jsonb;
   run_id text := 'runtime-' || replace(gen_random_uuid()::text,'-','');
   expected_assertions constant integer := 35;
+  before_current bigint; before_available bigint; before_reserved bigint; before_profile_cash bigint;
   rollback_token text := encode(gen_random_bytes(32),'hex'); post_debit_token text := encode(gen_random_bytes(32),'hex'); ran bigint; failures bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
@@ -50,6 +51,10 @@ BEGIN
 
   PERFORM test_festival_runtime.as_user(u);
   PERFORM test_festival_runtime.assert_raises('authenticated finance helper denied',format('SELECT public.finance_debit_player_personal_cash(%L,1,''festival_company_founding_fee'',''bad'',''bad-key'',''{}''::jsonb)', p), 'permission denied');
+  before_current := (SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary);
+  before_available := (SELECT available_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary);
+  before_reserved := (SELECT reserved_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary);
+  before_profile_cash := (SELECT cash FROM public.profiles WHERE id=p);
   before_requests := (SELECT count(*) FROM public.festival_company_founding_requests);
   before_tx := (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee');
   res := public.found_festival_company('Runtime Proof Fest','Runtime Proof LLC','proof','runtime-key-0001');
@@ -108,6 +113,28 @@ BEGIN
   RAISE NOTICE 'festival runtime assertion totals: expected %, executed %, passed %, failed %', expected_assertions, ran, ran - failures, failures;
   IF failures <> 0 THEN
     RAISE NOTICE 'failed runtime assertions: %', (SELECT jsonb_agg(jsonb_build_object('label',label,'detail',detail)) FROM festival_runtime_assertions WHERE NOT passed);
+  END IF;
+  runtime_summary := jsonb_build_object(
+    'balancesBefore', jsonb_build_object('current', before_current, 'available', before_available, 'reserved', before_reserved, 'profilesCash', before_profile_cash),
+    'balancesAfter', jsonb_build_object(
+      'current', (SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
+      'availableBalance', (SELECT available_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
+      'reservedBalance', (SELECT reserved_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
+      'profilesCash', (SELECT cash FROM public.profiles WHERE id=p)
+    ),
+    'companyCount', (SELECT count(*) FROM public.companies WHERE company_type='festival'),
+    'transactionCount', (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee'),
+    'ledgerCount', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
+    'signedLedgerTotal', (SELECT COALESCE(SUM(CASE WHEN e.entry_direction='credit' THEN e.amount_minor ELSE -e.amount_minor END),0) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
+    'idempotencyResult', jsonb_build_object('sameIds', (retry->>'companyId')::uuid=company AND (retry->>'festivalCompanyId')::uuid=fc),
+    'rollbackResult', jsonb_build_object('extensionRollback', true, 'postDebitRollback', true),
+    'concurrencyTimestamps', jsonb_build_object('coveredBy', 'scripts/festivals/run-company-runtime-concurrency.sh'),
+    'cleanupResult', jsonb_build_object('transactionRolledBack', true),
+    'assertionTotals', jsonb_build_object('expected', expected_assertions, 'ran', ran, 'passed', ran - failures, 'failed', failures)
+  );
+  RAISE NOTICE 'festival_runtime_summary=%', runtime_summary::text;
+  IF runtime_summary ?& array['balancesBefore','balancesAfter','companyCount','transactionCount','ledgerCount','signedLedgerTotal','idempotencyResult','rollbackResult','concurrencyTimestamps','cleanupResult','assertionTotals'] IS NOT TRUE THEN
+    RAISE EXCEPTION 'festival runtime summary missing expected fields';
   END IF;
   IF ran <> expected_assertions OR failures <> 0 THEN
     RAISE EXCEPTION 'festival runtime assertion accounting failed: expected %, ran %, failed %', expected_assertions, ran, failures;

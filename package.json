@@ -37,7 +37,8 @@
     "seed:festival:london": "PGOPTIONS=\"-c app.allow_test_fixtures=true\" psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/seeds/festival_london_test.sql",
     "verify:supabase-rpcs": "node scripts/supabase/verify-required-rpcs.mjs",
     "test:festivals:hardening:db": "bash scripts/festivals/run-hardening-db-gate.sh",
-    "test:festivals:company-runtime": "bash scripts/festivals/run-company-runtime-gate.sh"
+    "test:festivals:company-runtime": "bash scripts/festivals/run-company-runtime-gate.sh",
+    "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
