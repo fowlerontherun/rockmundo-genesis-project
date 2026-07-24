@@ -28,7 +28,7 @@ DECLARE
   other_user uuid := '81280000-0000-0000-0000-000000000002'; other_profile uuid := '81280000-0000-0000-0000-000000000202';
   res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint;
   run_id text := 'runtime-' || replace(gen_random_uuid()::text,'-','');
-  expected_assertions constant integer := 34;
+  expected_assertions constant integer := 35;
   rollback_token text := encode(gen_random_bytes(32),'hex'); post_debit_token text := encode(gen_random_bytes(32),'hex'); ran bigint; failures bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
@@ -63,7 +63,8 @@ BEGIN
   PERFORM test_festival_runtime.assert_eq('one founder shareholder',(SELECT count(*) FROM public.company_shareholders WHERE company_id=company AND user_id=u),1);
   PERFORM test_festival_runtime.assert_eq('one founding request',(SELECT count(*) FROM public.festival_company_founding_requests)-before_requests,1);
   PERFORM test_festival_runtime.assert_eq('one founding financial event',(SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee')-before_tx,1);
-  PERFORM test_festival_runtime.assert_eq('two balanced ledger entries',(SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id=tx),2);
+  PERFORM test_festival_runtime.assert_eq('two ledger entries',(SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id=tx),2);
+  PERFORM test_festival_runtime.assert_eq('signed journal total zero',(SELECT COALESCE(SUM(CASE WHEN entry_direction='credit' THEN amount_minor ELSE -amount_minor END),0) FROM public.financial_ledger_entries WHERE transaction_id=tx),0);
   PERFORM test_festival_runtime.assert_eq('no company operating expense',(SELECT count(*) FROM public.company_transactions WHERE company_id=company),0);
   PERFORM test_festival_runtime.assert_true('audit rows exist',(SELECT count(*) FROM public.festival_company_audit_log WHERE festival_company_id=fc)>=2);
   PERFORM test_festival_runtime.assert_eq('returned balance matches', (res->>'authoritativePersonalBalance')::numeric, 8000000);
