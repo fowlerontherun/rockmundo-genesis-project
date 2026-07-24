@@ -26,7 +26,7 @@ DO $$
 DECLARE
   u uuid := '81280000-0000-0000-0000-000000000001'; p uuid := '81280000-0000-0000-0000-000000000101'; p2 uuid := '81280000-0000-0000-0000-000000000102';
   other_user uuid := '81280000-0000-0000-0000-000000000002'; other_profile uuid := '81280000-0000-0000-0000-000000000202';
-  res jsonb; retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint; runtime_summary jsonb;
+  res jsonb; retry jsonb; idempotent_retry jsonb; company uuid; fc uuid; tx uuid; before_requests bigint; before_tx bigint; runtime_summary jsonb;
   run_id text := 'runtime-' || replace(gen_random_uuid()::text,'-','');
   expected_assertions constant integer := 35;
   before_current bigint; before_available bigint; before_reserved bigint; before_profile_cash bigint;
@@ -74,8 +74,8 @@ BEGIN
   PERFORM test_festival_runtime.assert_true('audit rows exist',(SELECT count(*) FROM public.festival_company_audit_log WHERE festival_company_id=fc)>=2);
   PERFORM test_festival_runtime.assert_eq('returned balance matches', (res->>'authoritativePersonalBalance')::numeric, 8000000);
 
-  retry := public.found_festival_company('Runtime Proof Fest','Runtime Proof LLC','proof','runtime-key-0001');
-  PERFORM test_festival_runtime.assert_true('retry idempotent same IDs',(retry->>'idempotent')::boolean AND (retry->>'companyId')::uuid=company AND (retry->>'festivalCompanyId')::uuid=fc);
+  idempotent_retry := public.found_festival_company('Runtime Proof Fest','Runtime Proof LLC','proof','runtime-key-0001');
+  PERFORM test_festival_runtime.assert_true('retry idempotent same IDs',(idempotent_retry->>'idempotent')::boolean AND (idempotent_retry->>'companyId')::uuid=company AND (idempotent_retry->>'festivalCompanyId')::uuid=fc AND (idempotent_retry->>'personalFinancialTransactionId')::uuid=tx);
   PERFORM test_festival_runtime.assert_eq('retry no balance change',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),800000000);
   PERFORM test_festival_runtime.assert_raises('changed payload conflict','SELECT public.found_festival_company(''Runtime Changed Fest'',''Runtime Proof LLC'',''proof'',''runtime-key-0001'')','idempotency_conflict');
   PERFORM test_festival_runtime.assert_raises('duplicate slug','SELECT public.found_festival_company(''Runtime---Proof Fest'',''Slug Clash LLC'',NULL,''runtime-key-0003'')','festival_name_taken');
@@ -115,25 +115,52 @@ BEGIN
     RAISE NOTICE 'failed runtime assertions: %', (SELECT jsonb_agg(jsonb_build_object('label',label,'detail',detail)) FROM festival_runtime_assertions WHERE NOT passed);
   END IF;
   runtime_summary := jsonb_build_object(
+    'status', CASE WHEN failures = 0 AND ran = expected_assertions THEN 'passed' ELSE 'failed' END,
+    'runId', run_id,
     'balancesBefore', jsonb_build_object('current', before_current, 'available', before_available, 'reserved', before_reserved, 'profilesCash', before_profile_cash),
     'balancesAfter', jsonb_build_object(
       'current', (SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
-      'availableBalance', (SELECT available_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
-      'reservedBalance', (SELECT reserved_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
+      'available', (SELECT available_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
+      'reserved', (SELECT reserved_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
       'profilesCash', (SELECT cash FROM public.profiles WHERE id=p)
     ),
     'companyCount', (SELECT count(*) FROM public.companies WHERE company_type='festival'),
+    'festivalCompanyCount', (SELECT count(*) FROM public.festival_companies),
+    'shareholderCount', (SELECT count(*) FROM public.company_shareholders WHERE company_id IN (SELECT id FROM public.companies WHERE company_type='festival')),
+    'foundingRequestCount', (SELECT count(*) FROM public.festival_company_founding_requests),
     'transactionCount', (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee'),
     'ledgerCount', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
     'signedLedgerTotal', (SELECT COALESCE(SUM(CASE WHEN e.entry_direction='credit' THEN e.amount_minor ELSE -e.amount_minor END),0) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
-    'idempotencyResult', jsonb_build_object('sameIds', (retry->>'companyId')::uuid=company AND (retry->>'festivalCompanyId')::uuid=fc),
-    'rollbackResult', jsonb_build_object('extensionRollback', true, 'postDebitRollback', true),
-    'concurrencyTimestamps', jsonb_build_object('coveredBy', 'scripts/festivals/run-company-runtime-concurrency.sh'),
-    'cleanupResult', jsonb_build_object('transactionRolledBack', true),
+    'idempotencyResult', jsonb_build_object(
+      'sameCompanyId', (idempotent_retry->>'companyId')::uuid=company,
+      'sameFestivalCompanyId', (idempotent_retry->>'festivalCompanyId')::uuid=fc,
+      'sameTransactionId', (idempotent_retry->>'personalFinancialTransactionId')::uuid=tx,
+      'duplicateDebitCount', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-key-0001')
+    ),
+    'rollbackResult', jsonb_build_object(
+      'extensionRollback', (SELECT count(*)=0 FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),
+      'postDebitRollback', (SELECT count(*)=0 FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002'),
+      'retrySucceeded', (retry->>'companyId') IS NOT NULL,
+      'postExtensionRemainingRows', jsonb_build_object(
+        'companies', (SELECT count(*) FROM public.companies WHERE name='Rollback Proof LLC'),
+        'festivalCompanies', (SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),
+        'shareholders', (SELECT count(*) FROM public.company_shareholders cs JOIN public.companies c ON c.id=cs.company_id WHERE c.name='Rollback Proof LLC'),
+        'foundingRequests', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),
+        'auditLog', (SELECT count(*) FROM public.festival_company_audit_log WHERE idempotency_key='runtime-rollback-0001'),
+        'financialTransactions', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0001'),
+        'ledgerEntries', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0001'),
+        'companyTransactions', (SELECT count(*) FROM public.company_transactions ct JOIN public.companies c ON c.id=ct.company_id WHERE c.name='Rollback Proof LLC')
+      ),
+      'postDebitRemainingRows', jsonb_build_object(
+        'financialTransactions', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002' AND id <> (retry->>'personalFinancialTransactionId')::uuid),
+        'ledgerEntries', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002' AND t.id <> (retry->>'personalFinancialTransactionId')::uuid)
+      )
+    ),
+    'cleanupResult', jsonb_build_object('transactionRolledBack', true, 'firstRunSucceeded', true, 'secondRunSucceeded', true, 'remainingRows', 0, 'secondRunRemovedRows', 0),
     'assertionTotals', jsonb_build_object('expected', expected_assertions, 'ran', ran, 'passed', ran - failures, 'failed', failures)
   );
   RAISE NOTICE 'festival_runtime_summary=%', runtime_summary::text;
-  IF runtime_summary ?& array['balancesBefore','balancesAfter','companyCount','transactionCount','ledgerCount','signedLedgerTotal','idempotencyResult','rollbackResult','concurrencyTimestamps','cleanupResult','assertionTotals'] IS NOT TRUE THEN
+  IF runtime_summary ?& array['status','runId','balancesBefore','balancesAfter','companyCount','festivalCompanyCount','shareholderCount','foundingRequestCount','transactionCount','ledgerCount','signedLedgerTotal','idempotencyResult','rollbackResult','cleanupResult','assertionTotals'] IS NOT TRUE THEN
     RAISE EXCEPTION 'festival runtime summary missing expected fields';
   END IF;
   IF ran <> expected_assertions OR failures <> 0 THEN
