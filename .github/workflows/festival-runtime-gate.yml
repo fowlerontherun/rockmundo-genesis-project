@@ -11,11 +11,18 @@ on:
       - 'src/integrations/supabase/types.ts'
       - '.github/workflows/festival-runtime-gate.yml'
 
+concurrency:
+  group: festival-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   festival-runtime-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       FESTIVAL_TEST_DATABASE_CONFIRMED: 'true'
+      SUPABASE_CLI_VERSION: '2.31.8'
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +31,7 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Start Supabase
+      - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: 2.31.8
@@ -38,28 +45,38 @@ jobs:
         run: supabase start
       - name: Reset migrated test database
         run: supabase db reset
-      - name: Export local database URL
-        run: echo "SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> "$GITHUB_ENV"
+      - name: Verify database safety guard
+        run: npm run test:festivals:safety-guard
+      - name: Verify required Supabase RPCs
+        run: npm run verify:supabase-rpcs
       - name: Run canonical festival runtime gate
         run: npm run test:festivals:company-runtime
+      - name: Run deterministic concurrency verification
+        run: bash scripts/festivals/run-company-runtime-concurrency.sh
       - name: Run festival frontend unit tests
-        run: npm run test:unit -- src/features/festival-company
+        run: npx vitest run src/features/festival-company
       - name: Typecheck
         run: npm run typecheck
       - name: Build
         run: npm run build
 
-      - name: Print runtime diagnostics on failure
-        if: failure()
+      - name: Capture runtime diagnostics
+        if: always()
         run: |
-          supabase status || true
-          supabase logs db || true
-          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 <<'SQL' || true
-          SET ROLE service_role;
-          SELECT run_id, mode, pause_after_lock, fail_after_extension, fail_after_debit, reached_pause_at IS NOT NULL AS reached_pause, second_started_at IS NOT NULL AS second_started, release_after_lock, expires_at > now() AS unexpired FROM festival_test.runs ORDER BY created_at DESC LIMIT 10;
-          SELECT count(*) AS companies FROM public.companies WHERE company_type='festival';
-          SELECT count(*) AS festival_extensions FROM public.festival_companies;
-          SELECT count(*) AS founding_requests FROM public.festival_company_founding_requests;
-          SELECT count(*) AS founding_transactions FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee';
-          SELECT count(*) AS founding_ledger_entries FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee';
-          SQL
+          mkdir -p festival-runtime-diagnostics
+          supabase status > festival-runtime-diagnostics/supabase-status.txt 2>&1 || true
+          supabase logs db > festival-runtime-diagnostics/db.log 2>&1 || true
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 -f scripts/festivals/runtime-diagnostics.sql \
+            > festival-runtime-diagnostics/database-summary.txt 2>&1 || true
+          sed -i -E 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g; s#(password=)[^[:space:]]+#\1[redacted]#g' festival-runtime-diagnostics/* || true
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: festival-runtime-diagnostics
+          path: festival-runtime-diagnostics/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup || true

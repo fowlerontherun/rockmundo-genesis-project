@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/assert-safe-test-database.sh"
 
 if ! command -v psql >/dev/null; then echo "psql is required for concurrency verification" >&2; exit 127; fi
 if [[ -z "${SUPABASE_DB_URL:-}" ]]; then echo "SUPABASE_DB_URL is required after supabase start/db reset" >&2; exit 2; fi
-if [[ "${FESTIVAL_TEST_DATABASE_CONFIRMED:-}" != "true" ]]; then echo "Refusing to mutate database: set FESTIVAL_TEST_DATABASE_CONFIRMED=true for an isolated test database" >&2; exit 3; fi
-case "$SUPABASE_DB_URL" in *prod*|*production*|*amazonaws.com*|*supabase.co*) echo "Refusing to run festival runtime gate against a possible production database" >&2; exit 4;; esac
+festival_assert_safe_test_database "$SUPABASE_DB_URL"
 
 run_id="frt-$(python3 - <<'PYID'
 import uuid
@@ -140,7 +140,7 @@ BEGIN
   ('two audit rows', (SELECT count(*)=2 FROM public.festival_company_audit_log WHERE festival_company_id='$festival_company_id'::uuid AND idempotency_key='$idempotency_key')),
   ('one founding fee transaction', (SELECT count(*)=1 FROM public.financial_transactions WHERE id='$tx_id'::uuid AND idempotency_key='festival-company-founding:$idempotency_key' AND transaction_category='festival_company_founding_fee')),
   ('two ledger entries', (SELECT count(*)=2 FROM public.financial_ledger_entries WHERE transaction_id='$tx_id'::uuid)),
-  ('ledger balances to zero', (SELECT coalesce(sum(amount_minor),0)=0 FROM public.financial_ledger_entries WHERE transaction_id='$tx_id'::uuid)),
+  ('ledger balances to zero', (SELECT coalesce(sum(CASE WHEN entry_direction='credit' THEN amount_minor ELSE -amount_minor END),0)=0 FROM public.financial_ledger_entries WHERE transaction_id='$tx_id'::uuid)),
   ('zero company operating expenses', (SELECT count(*)=0 FROM public.company_transactions WHERE company_id='$company_id'::uuid)),
   ('company balance zero', (SELECT balance=0 FROM public.companies WHERE id='$company_id'::uuid)),
   ('wallet current balance 800000000', (SELECT current_balance_minor=800000000 FROM public.financial_accounts WHERE owner_type='player' AND owner_id='$profile_id'::uuid AND is_primary)),
@@ -154,4 +154,5 @@ BEGIN
   IF ran <> 14 THEN RAISE EXCEPTION 'expected 14 assertions, ran %', ran; END IF;
 END \$\$;
 SQL
+echo "{\"runId\":\"$run_id\",\"cleanupResult\":\"scheduled-by-trap\",\"concurrencyTimestamps\":\"verified\",\"assertionTotals\":{\"expected\":14,\"failed\":0}}"
 echo "ok - deterministic festival-company concurrency gate passed for $run_id"
