@@ -17,14 +17,22 @@ DECLARE
   v_related_entity_id uuid := NULLIF(p_metadata->>'festivalCompanyId','')::uuid;
 BEGIN
   IF p_amount_minor <= 0 THEN RAISE EXCEPTION 'amount must be positive'; END IF;
-  SELECT id INTO tx FROM public.financial_transactions WHERE idempotency_key = p_idempotency_key;
+  SELECT * INTO src FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p_profile_id AND is_primary;
+  IF NOT FOUND THEN RAISE EXCEPTION 'finance account not found'; END IF;
+
+  SELECT id INTO tx
+  FROM public.financial_transactions
+  WHERE idempotency_key = p_idempotency_key
+    AND transaction_category = p_category
+    AND source_account_id = src.id
+    AND related_entity_type IS NOT DISTINCT FROM CASE WHEN v_related_entity_id IS NULL THEN NULL ELSE 'festival_company' END
+    AND related_entity_id IS NOT DISTINCT FROM v_related_entity_id;
   IF tx IS NOT NULL THEN
-    SELECT * INTO src FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p_profile_id AND is_primary;
     UPDATE public.profiles SET cash = (src.current_balance_minor / 100.0), updated_at = now() WHERE id=p_profile_id;
     RETURN jsonb_build_object('transactionId', tx, 'availableBalanceMinor', src.available_balance_minor, 'currentBalanceMinor', src.current_balance_minor, 'projectedCash', (src.current_balance_minor / 100.0));
   END IF;
 
-  SELECT * INTO src FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p_profile_id AND is_primary FOR UPDATE;
+  SELECT * INTO src FROM public.financial_accounts WHERE id=src.id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'finance account not found'; END IF;
   dst := public.get_or_create_primary_financial_account('system', NULL, 'System operating account', src.default_currency_code);
   SELECT * INTO dst FROM public.financial_accounts WHERE id = dst.id FOR UPDATE;
