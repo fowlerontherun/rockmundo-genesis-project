@@ -242,19 +242,19 @@ export function CharacterDeathScreen({
           <Card className="bg-card/95">
             <CardHeader>
               <CardTitle className="text-lg">
-                {choice === "resurrect" ? "Review resurrection" : "Name your character"}
+                {choice === "resurrect" ? "Confirm revival" : "Name your character"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {choice === "resurrect" ? (
                 <div className="space-y-3 text-sm">
                   <p className="text-muted-foreground">
-                    {deadCharacter.character_name} will be restored with their fame,
-                    cash, skills, and relationships intact. Health and energy reset to 100.
+                    {deadCharacter.character_name} will wake up with their fame,
+                    cash, skills and relationships intact. Health and energy reset to 100.
                   </p>
                   <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
                     <p className="font-medium text-emerald-500">
-                      This will use 1 resurrection life. {livesRemaining - 1} will remain.
+                      No cost. Characters can be revived from a coma at any time.
                     </p>
                   </div>
                 </div>
