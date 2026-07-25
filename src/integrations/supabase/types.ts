@@ -44051,6 +44051,7 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      revive_character: { Args: { p_profile_id: string }; Returns: undefined }
       revoke_endorsement: {
         Args: { p_election_id: string; p_party_id: string }
         Returns: undefined

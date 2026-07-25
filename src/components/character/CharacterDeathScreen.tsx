@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Skull,
+  Moon,
   Baby,
   Sparkles,
   Loader2,
@@ -128,31 +128,31 @@ export function CharacterDeathScreen({
 
         {/* Step 1: Welcome / Memorial */}
         {step === "welcome" && (
-          <Card className="border-destructive/30 bg-card/95">
+          <Card className="border-primary/30 bg-card/95">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/20">
-                <Skull className="h-8 w-8 text-destructive" />
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+                <Moon className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl font-oswald text-destructive">
+              <CardTitle className="text-2xl font-oswald text-primary">
                 Welcome back to RockMundo
               </CardTitle>
               <p className="text-sm text-muted-foreground pt-2">
-                Your last character passed away {diedAgo}. Take a moment to reflect
-                before starting your next chapter.
+                Your last character fell into a coma {diedAgo}. Revive them to
+                pick up where you left off, or start a new chapter.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
-                <Avatar className="h-14 w-14 border-2 border-destructive/30">
+                <Avatar className="h-14 w-14 border-2 border-primary/30">
                   <AvatarImage src={deadCharacter.avatar_url || undefined} />
-                  <AvatarFallback className="bg-destructive/20 text-destructive font-bold text-lg">
+                  <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
                     {(deadCharacter.character_name || "?")[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold truncate">{deadCharacter.character_name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Cause: {deadCharacter.cause_of_death}
+                    Status: In a coma ({deadCharacter.cause_of_death})
                   </p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {deadCharacter.generation_number > 1 && (
@@ -160,8 +160,8 @@ export function CharacterDeathScreen({
                         Gen {deadCharacter.generation_number}
                       </Badge>
                     )}
-                    <Badge variant="outline" className="text-[10px]">
-                      {livesRemaining}/3 lives left
+                    <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-500">
+                      Revivable
                     </Badge>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export function CharacterDeathScreen({
               </div>
 
               <p className="text-xs text-center text-muted-foreground italic">
-                Immortalized in the Hall of Immortals.
+                Their story is on pause — you can wake them up any time.
               </p>
             </CardContent>
           </Card>
@@ -199,21 +199,19 @@ export function CharacterDeathScreen({
         {/* Step 2: Choose */}
         {step === "choose" && (
           <div className="grid gap-3">
-            {livesRemaining > 0 && (
-              <ChoiceCard
-                active={choice === "resurrect"}
-                onClick={() => setChoice("resurrect")}
-                icon={<HeartPulse className="h-5 w-5 text-emerald-500" />}
-                iconBg="bg-emerald-500/20"
-                title={`Resurrect ${deadCharacter.character_name}`}
-                description={
-                  <>
-                    Continue exactly where you left off. Uses{" "}
-                    <span className="font-medium text-emerald-500">1 life</span> ({livesRemaining} left).
-                  </>
-                }
-              />
-            )}
+            <ChoiceCard
+              active={choice === "resurrect"}
+              onClick={() => setChoice("resurrect")}
+              icon={<HeartPulse className="h-5 w-5 text-emerald-500" />}
+              iconBg="bg-emerald-500/20"
+              title={`Revive ${deadCharacter.character_name}`}
+              description={
+                <>
+                  Wake them from their coma with fame, cash, skills and
+                  relationships intact. <span className="font-medium text-emerald-500">Free and unlimited.</span>
+                </>
+              }
+            />
             <ChoiceCard
               active={choice === "child"}
               onClick={() => setChoice("child")}
@@ -224,7 +222,7 @@ export function CharacterDeathScreen({
                 <>
                   Inherit <span className="font-medium text-primary">10% of skills</span> ({skillCount}) and{" "}
                   <span className="font-medium text-primary">50% of cash</span> ($
-                  {inheritedCash.toLocaleString()}).
+                  {inheritedCash.toLocaleString()}). Original character stays in a coma.
                 </>
               }
             />
@@ -244,19 +242,19 @@ export function CharacterDeathScreen({
           <Card className="bg-card/95">
             <CardHeader>
               <CardTitle className="text-lg">
-                {choice === "resurrect" ? "Review resurrection" : "Name your character"}
+                {choice === "resurrect" ? "Confirm revival" : "Name your character"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {choice === "resurrect" ? (
                 <div className="space-y-3 text-sm">
                   <p className="text-muted-foreground">
-                    {deadCharacter.character_name} will be restored with their fame,
-                    cash, skills, and relationships intact. Health and energy reset to 100.
+                    {deadCharacter.character_name} will wake up with their fame,
+                    cash, skills and relationships intact. Health and energy reset to 100.
                   </p>
                   <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
                     <p className="font-medium text-emerald-500">
-                      This will use 1 resurrection life. {livesRemaining - 1} will remain.
+                      No cost. Characters can be revived from a coma at any time.
                     </p>
                   </div>
                 </div>
@@ -324,7 +322,7 @@ export function CharacterDeathScreen({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <SummaryRow label="Path">
-                {choice === "resurrect" && "Resurrect existing character"}
+                {choice === "resurrect" && "Revive from coma"}
                 {choice === "child" && "Play as child (Generation legacy)"}
                 {choice === "fresh" && "Fresh start"}
               </SummaryRow>
@@ -397,7 +395,7 @@ export function CharacterDeathScreen({
                   Working...
                 </>
               ) : choice === "resurrect" ? (
-                "Resurrect and continue"
+                "Revive and continue"
               ) : choice === "child" ? (
                 "Continue the legacy"
               ) : (
