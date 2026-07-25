@@ -11,11 +11,8 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_company_fi
 run_id=$(sed -nE 's/.*festival_runtime_summary=\{.*"runId": "([^"]+)".*/\1/p' "$runtime_log")
 [[ -n "$run_id" ]] || { echo "runtime run id was not emitted" >&2; exit 1; }
 cleanup_one=0; cleanup_two=0
-psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" \
-  -c "SET ROLE service_role; SELECT festival_test.cleanup_run(:'run_id');" >/dev/null || cleanup_one=$?
-psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" \
-  -c "SET ROLE service_role; SELECT festival_test.cleanup_run(:'run_id');" >/dev/null || cleanup_two=$?
-remaining=$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" <<'SQL' | tail -n 1
+count_remaining() {
+psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" <<'SQL' | tail -n 1
 SELECT
  (SELECT count(*) FROM auth.users WHERE id IN ('81280000-0000-0000-0000-000000000001','81280000-0000-0000-0000-000000000002'))+
  (SELECT count(*) FROM profiles WHERE id IN ('81280000-0000-0000-0000-000000000101','81280000-0000-0000-0000-000000000102','81280000-0000-0000-0000-000000000202'))+
@@ -29,11 +26,19 @@ SELECT
  (SELECT count(*) FROM financial_ledger_entries e JOIN financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key LIKE 'festival-company-founding:runtime-%')+
  (SELECT count(*) FROM company_transactions ct JOIN companies c ON c.id=ct.company_id WHERE c.name IN ('Runtime Proof LLC','Caller GUC Ignored LLC','Rollback Proof LLC','Post Debit Rollback LLC'))+
  (SELECT count(*) FROM company_shareholders cs JOIN companies c ON c.id=cs.company_id WHERE c.name IN ('Runtime Proof LLC','Caller GUC Ignored LLC','Rollback Proof LLC','Post Debit Rollback LLC'))+
- (SELECT count(*) FROM festival_test.runs WHERE run_id LIKE :'run_id'||'%');
+ (SELECT count(*) FROM festival_test.runs WHERE run_id=:'run_id');
 SQL
-)
-printf 'festival_runtime_cleanup={"firstRunSucceeded":%s,"secondRunSucceeded":%s,"remainingRows":%s,"secondRunRemovedRows":0}\n' \
-  "$([[ $cleanup_one -eq 0 ]] && echo true || echo false)" "$([[ $cleanup_two -eq 0 ]] && echo true || echo false)" "$remaining" | tee -a "$runtime_log"
+}
+before_cleanup=$(count_remaining)
+psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" \
+  -c "SET ROLE service_role; SELECT festival_test.cleanup_run(:'run_id');" >/dev/null || cleanup_one=$?
+after_first=$(count_remaining)
+psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v run_id="$run_id" \
+  -c "SET ROLE service_role; SELECT festival_test.cleanup_run(:'run_id');" >/dev/null || cleanup_two=$?
+remaining=$(count_remaining)
+printf 'festival_runtime_cleanup={"firstRunSucceeded":%s,"firstRunRemovedRows":%s,"secondRunSucceeded":%s,"secondRunRemovedRows":%s,"remainingRows":%s}\n' \
+  "$([[ $cleanup_one -eq 0 ]] && echo true || echo false)" "$((before_cleanup-after_first))" \
+  "$([[ $cleanup_two -eq 0 ]] && echo true || echo false)" "$((after_first-remaining))" "$remaining" | tee -a "$runtime_log"
 node scripts/festivals/validate-runtime-summary.mjs "$runtime_log" festival-runtime-diagnostics/runtime-summary.json
 bash scripts/festivals/run-company-runtime-concurrency.sh | tee festival-runtime-diagnostics/concurrency-summary.log
 node scripts/festivals/validate-concurrency-summary.mjs festival-runtime-diagnostics/concurrency-summary.json
