@@ -322,7 +322,7 @@ export function CharacterDeathScreen({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <SummaryRow label="Path">
-                {choice === "resurrect" && "Resurrect existing character"}
+                {choice === "resurrect" && "Revive from coma"}
                 {choice === "child" && "Play as child (Generation legacy)"}
                 {choice === "fresh" && "Fresh start"}
               </SummaryRow>
