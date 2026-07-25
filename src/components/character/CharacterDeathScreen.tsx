@@ -143,16 +143,16 @@ export function CharacterDeathScreen({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
-                <Avatar className="h-14 w-14 border-2 border-destructive/30">
+                <Avatar className="h-14 w-14 border-2 border-primary/30">
                   <AvatarImage src={deadCharacter.avatar_url || undefined} />
-                  <AvatarFallback className="bg-destructive/20 text-destructive font-bold text-lg">
+                  <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
                     {(deadCharacter.character_name || "?")[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold truncate">{deadCharacter.character_name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Cause: {deadCharacter.cause_of_death}
+                    Status: In a coma ({deadCharacter.cause_of_death})
                   </p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {deadCharacter.generation_number > 1 && (
@@ -160,8 +160,8 @@ export function CharacterDeathScreen({
                         Gen {deadCharacter.generation_number}
                       </Badge>
                     )}
-                    <Badge variant="outline" className="text-[10px]">
-                      {livesRemaining}/3 lives left
+                    <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-500">
+                      Revivable
                     </Badge>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export function CharacterDeathScreen({
               </div>
 
               <p className="text-xs text-center text-muted-foreground italic">
-                Immortalized in the Hall of Immortals.
+                Their story is on pause — you can wake them up any time.
               </p>
             </CardContent>
           </Card>
