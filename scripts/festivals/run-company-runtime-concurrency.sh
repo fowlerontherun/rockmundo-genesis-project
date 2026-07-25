@@ -72,7 +72,7 @@ SELECT public.found_festival_company(:'public_name', :'company_name', :'descript
 SQL
 
 run_request() {
-  local number="$1" request_token="$2" result="$diagnostics/concurrency-request-$number.json"
+  local number="$1" request_token="$2" started="$3" result="$diagnostics/concurrency-request-$number.json"
   local raw="$workdir/$number.out" err="$workdir/$number.err" completed status
   set +e
   timeout --signal=TERM --kill-after=5s 30s "${psql_base[@]}" \
@@ -80,23 +80,24 @@ run_request() {
     -v company_name="$company_name" -v description="$description" -v idempotency_key="$idempotency_key" \
     -f "$workdir/call.sql" >"$raw" 2>"$err"
   status=$?; set -e; completed="$(utc_now)"
-  python3 - "$raw" "$result" "$completed" "$status" <<'PY'
+  python3 - "$raw" "$result" "$started" "$completed" "$status" <<'PY'
 import json, pathlib, sys
-raw, target, completed, status = sys.argv[1:]
+raw, target, started, completed, status = sys.argv[1:]
 lines=[line.strip() for line in pathlib.Path(raw).read_text().splitlines() if line.strip().startswith('{')]
 if len(lines) != 1:
     payload={"malformedRpcOutput": True}
 else:
     try: payload=json.loads(lines[0])
     except json.JSONDecodeError: payload={"malformedRpcOutput": True}
+payload["startedAt"]=started
 payload["completedAt"]=completed
-payload["processExitStatus"]=int(status)
+payload["exitCode"]=int(status)
 pathlib.Path(target).write_text(json.dumps(payload, indent=2)+"\n")
 PY
   return "$status"
 }
 
-first_started="$(utc_now)"; run_request one "$token" & p1=$!; pids+=("$p1")
+first_started="$(utc_now)"; run_request one "$token" "$first_started" & p1=$!; pids+=("$p1")
 reached=no; pause_reached=""
 for _ in $(seq 1 200); do
   if ! kill -0 "$p1" 2>/dev/null; then break; fi
@@ -116,7 +117,7 @@ SQL
 done
 [[ "$reached" == yes ]] || { echo "first request never reached the trusted pause" >&2; exit 1; }
 
-second_started="$(utc_now)"; run_request two "ordinary-caller-controlled-token" & p2=$!; pids+=("$p2")
+second_started="$(utc_now)"; run_request two "ordinary-caller-controlled-token" "$second_started" & p2=$!; pids+=("$p2")
 "${psql_base[@]}" -v run_id="$run_id" <<'SQL' >/dev/null
 SET ROLE service_role;
 UPDATE festival_test.runs SET second_started_at=clock_timestamp() WHERE run_id=:'run_id';
@@ -139,7 +140,9 @@ readarray -t parsed < <(python3 - "$diagnostics/concurrency-request-one.json" "$
 import json, sys, uuid
 rows=[json.load(open(p)) for p in sys.argv[1:]]
 for path,row in zip(sys.argv[1:],rows):
-  if row.get('processExitStatus') != 0 or row.get('malformedRpcOutput'): raise SystemExit(f'invalid RPC result: {path}')
+  if row.get('exitCode') != 0 or row.get('malformedRpcOutput'): raise SystemExit(f'invalid RPC result: {path}')
+  for key in ('startedAt','completedAt'):
+    if not isinstance(row.get(key), str) or not row[key]: raise SystemExit(f'missing {key}: {path}')
   for key in ('companyId','festivalCompanyId','personalFinancialTransactionId'): uuid.UUID(row[key])
   if not isinstance(row.get('authoritativePersonalBalance'), (int,float)): raise SystemExit(f'missing balance: {path}')
 print(rows[0]['companyId']); print(rows[0]['festivalCompanyId']); print(rows[0]['personalFinancialTransactionId'])
@@ -160,6 +163,7 @@ SET ROLE service_role;
 SELECT jsonb_build_object(
  'companyCount',(SELECT count(*) FROM companies WHERE id=:'company_id'::uuid AND description LIKE :'run_id'||'%'),
  'festivalCompanyCount',(SELECT count(*) FROM festival_companies WHERE id=:'festival_company_id'::uuid AND company_id=:'company_id'::uuid),
+ 'shareholderCount',(SELECT count(*) FROM company_shareholders WHERE company_id=:'company_id'::uuid),
  'foundingRequestCount',(SELECT count(*) FROM festival_company_founding_requests WHERE idempotency_key=:'idempotency_key' AND status='succeeded'),
  'transactionCount',(SELECT count(*) FROM financial_transactions WHERE id=:'transaction_id'::uuid),
  'ledgerEntryCount',(SELECT count(*) FROM financial_ledger_entries WHERE transaction_id=:'transaction_id'::uuid),
@@ -197,13 +201,13 @@ python3 - "$diagnostics/concurrency-summary.json" "$run_id" "$first_started" "$p
 import json, pathlib, sys
 (out,run_id,*v)=sys.argv[1:]
 db=json.loads(v[11]); one=int(v[12]); two=int(v[13]); before=int(v[14]); after1=int(v[15]); after2=int(v[16])
-results={'sameCompanyId':v[6]=='true','sameFestivalCompanyId':v[7]=='true','sameTransactionId':v[8]=='true','originalSuccessCount':int(v[9]),'idempotentReplayCount':int(v[10])}
-checks=list(results.values())[:3]+[results['originalSuccessCount']==1,results['idempotentReplayCount']==1,
- db['companyCount']==1,db['festivalCompanyCount']==1,db['foundingRequestCount']==1,db['transactionCount']==1,
+responses={'sameCompanyId':v[6]=='true','sameFestivalCompanyId':v[7]=='true','sameTransactionId':v[8]=='true','originalSuccessCount':int(v[9]),'idempotentReplayCount':int(v[10])}
+checks=list(responses.values())[:3]+[responses['originalSuccessCount']==1,responses['idempotentReplayCount']==1,
+ db['companyCount']==1,db['festivalCompanyCount']==1,db['shareholderCount']==1,db['foundingRequestCount']==1,db['transactionCount']==1,
  db['ledgerEntryCount']==2,db['signedLedgerTotal']==0,db['debitCount']==1,one==0,two==0,after1==0,after2==0]
 summary={'status':'passed' if all(checks) else 'failed','runId':run_id,
  'timestamps':dict(zip(('firstRequestStartedAt','pauseReachedAt','secondRequestStartedAt','releaseRequestedAt','firstRequestCompletedAt','secondRequestCompletedAt'),v[:6])),
- 'results':results,'database':db,
+ 'responses':responses,'database':db,
  'cleanup':{'firstRunSucceeded':one==0,'firstRunRemovedRows':before-after1,'secondRunSucceeded':two==0,'secondRunRemovedRows':after1-after2,'remainingRows':after2},
  'assertions':{'total':len(checks),'passed':sum(checks),'failed':len(checks)-sum(checks)}}
 pathlib.Path(out).write_text(json.dumps(summary,indent=2)+'\n')
