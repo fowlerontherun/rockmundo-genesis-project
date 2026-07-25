@@ -21,9 +21,16 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm install --global npm@10.9.2
-      - run: npm ci
-      - run: npm run verify:dependencies
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Print frontend tool versions
+        run: |
+          node --version
+          npm --version
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
@@ -44,9 +51,16 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm install --global npm@10.9.2
-      - run: npm ci
-      - run: npm run verify:dependencies
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Print frontend tool versions
+        run: |
+          node --version
+          npm --version
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - run: npx playwright install --with-deps chromium
       - run: npm run test:gig-experience:e2e
       - run: npm run test:gig-experience:a11y
@@ -74,7 +88,14 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.31.8
-      - run: npm install --global npm@10.9.2
-      - run: npm ci
-      - run: npm run verify:dependencies
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Print frontend tool versions
+        run: |
+          node --version
+          npm --version
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - run: npm run test:gig-experience:db
