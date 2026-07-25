@@ -13,10 +13,7 @@ on:
       - 'vitest.setup.ts'
       - 'vitest.config.*'
       - 'vite.config.*'
-      - 'local-packages/jsdom/**'
-      - 'local-packages/testing-library-react/**'
-      - 'local-packages/testing-library-user-event/**'
-      - 'local-packages/testing-library-jest-dom/**'
+      - 'local-packages/**'
       - 'package.json'
       - 'package-lock.json'
       - '.npmrc'
@@ -43,26 +40,26 @@ jobs:
           cache: npm
       - name: Use repository npm version
         run: npm install --global npm@10.9.2
-      - name: Install dependencies
-        run: npm ci
-      - name: Verify dependency tree
-        run: npm run verify:dependencies
       - name: Print frontend tool versions
         run: |
           node --version
           npm --version
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - name: Lint
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
       - name: Run full unit tests
         run: npm run test:unit
-      - name: Run festival frontend unit tests
-        run: npx vitest run src/features/festival-company
       - name: Run smoke test suite
         run: npm run test:smoke
       - name: Verify the DOM environment
         run: npx vitest run src/testing/__tests__/vitestDomEnvironment.test.tsx
+      - name: Run festival frontend unit tests
+        run: npx vitest run src/features/festival-company
       - name: Build
         run: npm run build
       - name: Install pinned Supabase CLI
