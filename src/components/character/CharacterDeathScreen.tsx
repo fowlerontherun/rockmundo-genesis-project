@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Skull,
+  Moon,
   Baby,
   Sparkles,
   Loader2,
