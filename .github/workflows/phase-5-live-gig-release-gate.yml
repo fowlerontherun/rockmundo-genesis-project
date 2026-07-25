@@ -21,7 +21,7 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
@@ -42,7 +42,7 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:gig-experience:e2e
       - run: npm run test:gig-experience:a11y
@@ -70,5 +70,5 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.31.8
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm run test:gig-experience:db

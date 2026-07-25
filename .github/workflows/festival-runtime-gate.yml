@@ -18,6 +18,8 @@ on:
       - 'local-packages/testing-library-jest-dom/**'
       - 'package.json'
       - 'package-lock.json'
+      - '.npmrc'
+      - '.nvmrc'
       - '.github/workflows/festival-runtime-gate.yml'
 
 concurrency:
@@ -40,6 +42,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -70,8 +74,10 @@ jobs:
         run: npm run test:festivals:company-runtime
       - name: Run festival frontend unit tests
         run: npx vitest run src/features/festival-company
-      - name: Run DOM smoke tests
+      - name: Run smoke test suite
         run: npm run test:smoke
+      - name: Verify the DOM environment
+        run: npx vitest run src/testing/__tests__/vitestDomEnvironment.test.tsx
       - name: Build
         run: npm run build
 
