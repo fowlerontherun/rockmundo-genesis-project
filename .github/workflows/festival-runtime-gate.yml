@@ -66,8 +66,12 @@ jobs:
         run: npm run verify:supabase-rpcs
       - name: Run canonical festival runtime gate
         run: npm run test:festivals:company-runtime
+      - name: Prove canonical festival runtime gate is rerunnable
+        run: npm run test:festivals:company-runtime
       - name: Run festival frontend unit tests
         run: npx vitest run src/features/festival-company
+      - name: Run DOM smoke tests
+        run: npm run test:smoke
       - name: Build
         run: npm run build
 

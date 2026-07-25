@@ -30,6 +30,7 @@ DECLARE
   run_id text := 'runtime-' || replace(gen_random_uuid()::text,'-','');
   expected_assertions constant integer := 35;
   before_current bigint; before_available bigint; before_reserved bigint; before_profile_cash bigint;
+  extension_balance_restored boolean; extension_cash_restored boolean; post_debit_balance_restored boolean; post_debit_cash_restored boolean;
   rollback_token text := encode(gen_random_bytes(32),'hex'); post_debit_token text := encode(gen_random_bytes(32),'hex'); ran bigint; failures bigint;
 BEGIN
   PERFORM test_festival_runtime.as_service();
@@ -98,6 +99,7 @@ BEGIN
   PERFORM test_festival_runtime.assert_raises('late rollback','SELECT public.found_festival_company(''Rollback Proof Fest'',''Rollback Proof LLC'',NULL,''runtime-rollback-0001'')','festival_test_late_failure');
   PERFORM test_festival_runtime.assert_eq('rollback keeps wallet',(SELECT current_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),1000000000);
   PERFORM test_festival_runtime.assert_eq('rollback keeps companies',(SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),0);
+  extension_balance_restored := (SELECT current_balance_minor=1000000000 FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary); extension_cash_restored := (SELECT cash=10000000 FROM public.profiles WHERE id=p);
   PERFORM test_festival_runtime.assert_eq('rollback keeps requests',(SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),0);
   PERFORM set_config('app.festival_test_run_token', post_debit_token, true);
   PERFORM test_festival_runtime.assert_raises('post debit rollback','SELECT public.found_festival_company(''Post Debit Rollback Fest'',''Post Debit Rollback LLC'',NULL,''runtime-rollback-0002'')','festival_test_post_debit_failure');
@@ -105,6 +107,7 @@ BEGIN
   PERFORM test_festival_runtime.assert_eq('post debit rollback keeps profile cash',(SELECT cash FROM public.profiles WHERE id=p),10000000);
   PERFORM test_festival_runtime.assert_eq('post debit rollback no transaction',(SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
   PERFORM test_festival_runtime.assert_eq('post debit rollback no ledger',(SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002'),0);
+  post_debit_balance_restored := (SELECT current_balance_minor=1000000000 FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary); post_debit_cash_restored := (SELECT cash=10000000 FROM public.profiles WHERE id=p);
   PERFORM set_config('app.festival_test_run_token', '', true);
   retry := public.found_festival_company('Post Debit Rollback Fest','Post Debit Rollback LLC',NULL,'runtime-rollback-0002');
   PERFORM test_festival_runtime.assert_true('retry after rolled-back post-debit failure succeeds', (retry->>'companyId') IS NOT NULL AND (retry->>'idempotent')::boolean IS FALSE);
@@ -124,13 +127,15 @@ BEGIN
       'reserved', (SELECT reserved_balance_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p AND is_primary),
       'profilesCash', (SELECT cash FROM public.profiles WHERE id=p)
     ),
-    'companyCount', (SELECT count(*) FROM public.companies WHERE company_type='festival'),
-    'festivalCompanyCount', (SELECT count(*) FROM public.festival_companies),
-    'shareholderCount', (SELECT count(*) FROM public.company_shareholders WHERE company_id IN (SELECT id FROM public.companies WHERE company_type='festival')),
-    'foundingRequestCount', (SELECT count(*) FROM public.festival_company_founding_requests),
-    'transactionCount', (SELECT count(*) FROM public.financial_transactions WHERE transaction_category='festival_company_founding_fee'),
-    'ledgerCount', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
-    'signedLedgerTotal', (SELECT COALESCE(SUM(CASE WHEN e.entry_direction='credit' THEN e.amount_minor ELSE -e.amount_minor END),0) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.transaction_category='festival_company_founding_fee'),
+    'runtimeCounts', jsonb_build_object(
+      'successfulCompanyCount', (SELECT count(*) FROM public.companies WHERE id IN (company,(res->>'companyId')::uuid,(retry->>'companyId')::uuid)),
+      'successfulFestivalCompanyCount', (SELECT count(*) FROM public.festival_companies WHERE id IN (fc,(res->>'festivalCompanyId')::uuid,(retry->>'festivalCompanyId')::uuid)),
+      'successfulFoundingRequestCount', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key IN ('runtime-key-0001','runtime-guc-ignored-0001','runtime-rollback-0002')),
+      'successfulRuntimeTransactionCount', (SELECT count(*) FROM public.financial_transactions WHERE id IN (tx,(res->>'personalFinancialTransactionId')::uuid,(retry->>'personalFinancialTransactionId')::uuid)),
+      'successfulRuntimeLedgerEntryCount', (SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id IN (tx,(res->>'personalFinancialTransactionId')::uuid,(retry->>'personalFinancialTransactionId')::uuid)),
+      'primaryFoundingTransactionCount', (SELECT count(*) FROM public.financial_transactions WHERE id=tx),
+      'signedLedgerTotal', (SELECT COALESCE(SUM(CASE WHEN entry_direction='credit' THEN amount_minor ELSE -amount_minor END),0) FROM public.financial_ledger_entries WHERE transaction_id IN (tx,(res->>'personalFinancialTransactionId')::uuid,(retry->>'personalFinancialTransactionId')::uuid))
+    ),
     'idempotencyResult', jsonb_build_object(
       'sameCompanyId', (idempotent_retry->>'companyId')::uuid=company,
       'sameFestivalCompanyId', (idempotent_retry->>'festivalCompanyId')::uuid=fc,
@@ -138,29 +143,40 @@ BEGIN
       'duplicateDebitCount', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-key-0001')
     ),
     'rollbackResult', jsonb_build_object(
-      'extensionRollback', (SELECT count(*)=0 FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),
-      'postDebitRollback', (SELECT count(*)=0 FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002'),
-      'retrySucceeded', (retry->>'companyId') IS NOT NULL,
-      'postExtensionRemainingRows', jsonb_build_object(
-        'companies', (SELECT count(*) FROM public.companies WHERE name='Rollback Proof LLC'),
-        'festivalCompanies', (SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),
-        'shareholders', (SELECT count(*) FROM public.company_shareholders cs JOIN public.companies c ON c.id=cs.company_id WHERE c.name='Rollback Proof LLC'),
-        'foundingRequests', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),
-        'auditLog', (SELECT count(*) FROM public.festival_company_audit_log WHERE idempotency_key='runtime-rollback-0001'),
-        'financialTransactions', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0001'),
-        'ledgerEntries', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0001'),
-        'companyTransactions', (SELECT count(*) FROM public.company_transactions ct JOIN public.companies c ON c.id=ct.company_id WHERE c.name='Rollback Proof LLC')
+      'postExtension', jsonb_build_object(
+        'failureObserved', (SELECT passed FROM festival_runtime_assertions WHERE label='late rollback'),
+        'companyRows', (SELECT count(*) FROM public.companies WHERE name='Rollback Proof LLC'),
+        'festivalCompanyRows', (SELECT count(*) FROM public.festival_companies WHERE public_name='Rollback Proof Fest'),
+        'shareholderRows', (SELECT count(*) FROM public.company_shareholders cs JOIN public.companies c ON c.id=cs.company_id WHERE c.name='Rollback Proof LLC'),
+        'foundingRequestRows', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0001'),
+        'auditRows', (SELECT count(*) FROM public.festival_company_audit_log WHERE idempotency_key='runtime-rollback-0001'),
+        'transactionRows', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0001'),
+        'ledgerRows', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0001'),
+        'companyTransactionRows', (SELECT count(*) FROM public.company_transactions ct JOIN public.companies c ON c.id=ct.company_id WHERE c.name='Rollback Proof LLC'),
+        'balanceRestored', extension_balance_restored,
+        'profilesCashRestored', extension_cash_restored
       ),
-      'postDebitRemainingRows', jsonb_build_object(
-        'financialTransactions', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002' AND id <> (retry->>'personalFinancialTransactionId')::uuid),
-        'ledgerEntries', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002' AND t.id <> (retry->>'personalFinancialTransactionId')::uuid)
+      'postDebit', jsonb_build_object(
+        'failureObserved', (SELECT passed FROM festival_runtime_assertions WHERE label='post debit rollback'),
+        'companyRows', (SELECT count(*) FROM public.companies WHERE name='Post Debit Rollback LLC' AND id<>(retry->>'companyId')::uuid),
+        'festivalCompanyRows', (SELECT count(*) FROM public.festival_companies WHERE public_name='Post Debit Rollback Fest' AND id<>(retry->>'festivalCompanyId')::uuid),
+        'shareholderRows', (SELECT count(*) FROM public.company_shareholders WHERE company_id<>(retry->>'companyId')::uuid AND company_id IN (SELECT id FROM public.companies WHERE name='Post Debit Rollback LLC')),
+        'foundingRequestRows', (SELECT count(*) FROM public.festival_company_founding_requests WHERE idempotency_key='runtime-rollback-0002' AND result->>'companyId'<>(retry->>'companyId')),
+        'auditRows', (SELECT count(*) FROM public.festival_company_audit_log WHERE idempotency_key='runtime-rollback-0002' AND festival_company_id<>(retry->>'festivalCompanyId')::uuid),
+        'transactionRows', (SELECT count(*) FROM public.financial_transactions WHERE idempotency_key='festival-company-founding:runtime-rollback-0002' AND id<>(retry->>'personalFinancialTransactionId')::uuid),
+        'ledgerRows', (SELECT count(*) FROM public.financial_ledger_entries e JOIN public.financial_transactions t ON t.id=e.transaction_id WHERE t.idempotency_key='festival-company-founding:runtime-rollback-0002' AND t.id<>(retry->>'personalFinancialTransactionId')::uuid),
+        'companyTransactionRows', (SELECT count(*) FROM public.company_transactions WHERE company_id<>(retry->>'companyId')::uuid AND company_id IN (SELECT id FROM public.companies WHERE name='Post Debit Rollback LLC')),
+        'balanceRestored', post_debit_balance_restored,
+        'profilesCashRestored', post_debit_cash_restored,
+        'retrySucceeded', (retry->>'companyId') IS NOT NULL,
+        'retryTransactionRows', (SELECT count(*) FROM public.financial_transactions WHERE id=(retry->>'personalFinancialTransactionId')::uuid),
+        'retryLedgerRows', (SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id=(retry->>'personalFinancialTransactionId')::uuid)
       )
     ),
-    'cleanupResult', jsonb_build_object('transactionRolledBack', true, 'firstRunSucceeded', true, 'secondRunSucceeded', true, 'remainingRows', 0, 'secondRunRemovedRows', 0),
     'assertionTotals', jsonb_build_object('expected', expected_assertions, 'ran', ran, 'passed', ran - failures, 'failed', failures)
   );
   RAISE NOTICE 'festival_runtime_summary=%', runtime_summary::text;
-  IF runtime_summary ?& array['status','runId','balancesBefore','balancesAfter','companyCount','festivalCompanyCount','shareholderCount','foundingRequestCount','transactionCount','ledgerCount','signedLedgerTotal','idempotencyResult','rollbackResult','cleanupResult','assertionTotals'] IS NOT TRUE THEN
+  IF runtime_summary ?& array['status','runId','balancesBefore','balancesAfter','runtimeCounts','idempotencyResult','rollbackResult','assertionTotals'] IS NOT TRUE THEN
     RAISE EXCEPTION 'festival runtime summary missing expected fields';
   END IF;
   IF ran <> expected_assertions OR failures <> 0 THEN
