@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.605",
+    date: "2026-07-25",
+    changes: [
+      { type: 'feature', description: "Removed permadeath — characters now fall into a COMA instead of dying. Comatose characters keep their fame, cash, skills, relationships and band memberships intact, and can be revived at any time from the returning-player screen. Revives are free and unlimited (no more 3-lives cap)." },
+      { type: 'improvement', description: "Returning-player wizard rebranded: 'Welcome back — your character fell into a coma' with a moon icon in place of the skull, a green Revivable badge, and a new 'Revive from coma' path that restores health and energy to 100/100 (previously 50/50)." },
+      { type: 'improvement', description: "Updated the resurrect_character RPC: dropped the resurrection_lives requirement, clears rest_required_until, restores full vitals, and now also removes any Hall of Immortals memorial entry so revived characters are no longer listed as gone. Added a revive_character alias for the new naming." },
+      { type: 'fix', description: "Restored Big Fowler: cleared the coma flag, restored full health, and reactivated the character. Also removed the empty auto-created slot 6 that had suppressed the returning-player wizard." },
+    ],
+  },
+  {
     version: "1.1.604",
     date: "2026-07-23",
     changes: [
