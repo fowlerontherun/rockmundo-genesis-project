@@ -1,0 +1,23 @@
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+const [,, inputPath, outputPath = 'festival-runtime-diagnostics/runtime-summary.json'] = process.argv;
+if (!inputPath) throw new Error('usage: validate-runtime-summary.mjs <psql-output> [output-json]');
+const text = readFileSync(inputPath, 'utf8');
+const matches = [...text.matchAll(/festival_runtime_summary=({.*})/g)].map((m) => m[1]);
+if (matches.length !== 1) throw new Error(`expected exactly one festival_runtime_summary line, got ${matches.length}`);
+let summary;
+try { summary = JSON.parse(matches[0]); } catch (err) { throw new Error(`festival runtime summary is not valid JSON: ${err.message}`); }
+const required = ['status','runId','assertionTotals','balancesBefore','balancesAfter','companyCount','festivalCompanyCount','shareholderCount','foundingRequestCount','transactionCount','ledgerCount','signedLedgerTotal','idempotencyResult','rollbackResult','cleanupResult'];
+for (const key of required) if (!(key in summary)) throw new Error(`runtime summary missing ${key}`);
+if (summary.status !== 'passed') throw new Error(`runtime status must be passed, got ${summary.status}`);
+if (!summary.assertionTotals || summary.assertionTotals.ran <= 0) throw new Error('runtime assertion total must be non-zero');
+if (summary.assertionTotals.failed !== 0) throw new Error(`runtime failed assertions must be zero, got ${summary.assertionTotals.failed}`);
+if (summary.signedLedgerTotal !== 0) throw new Error(`signed ledger total must be zero, got ${summary.signedLedgerTotal}`);
+if (summary.transactionCount !== 3) throw new Error(`expected 3 founding transactions, got ${summary.transactionCount}`);
+if (summary.ledgerCount !== 6) throw new Error(`expected 6 founding ledger entries, got ${summary.ledgerCount}`);
+if (!summary.idempotencyResult?.sameCompanyId || !summary.idempotencyResult?.sameFestivalCompanyId || !summary.idempotencyResult?.sameTransactionId) throw new Error('idempotency did not return the same persisted ids');
+if (summary.idempotencyResult?.duplicateDebitCount !== 1) throw new Error(`expected one debit transaction after idempotent replay, got ${summary.idempotencyResult?.duplicateDebitCount}`);
+if (!summary.rollbackResult?.extensionRollback || !summary.rollbackResult?.postDebitRollback || !summary.rollbackResult?.retrySucceeded) throw new Error('rollback evidence did not pass');
+if (!summary.cleanupResult?.firstRunSucceeded || !summary.cleanupResult?.secondRunSucceeded || summary.cleanupResult?.remainingRows !== 0 || summary.cleanupResult?.secondRunRemovedRows !== 0) throw new Error('cleanup evidence did not pass');
+mkdirSync(outputPath.split('/').slice(0, -1).join('/') || '.', { recursive: true });
+writeFileSync(outputPath, `${JSON.stringify(summary, null, 2)}\n`);
+console.log(`validated festival runtime summary: ${outputPath}`);
