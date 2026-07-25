@@ -128,17 +128,17 @@ export function CharacterDeathScreen({
 
         {/* Step 1: Welcome / Memorial */}
         {step === "welcome" && (
-          <Card className="border-destructive/30 bg-card/95">
+          <Card className="border-primary/30 bg-card/95">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/20">
-                <Skull className="h-8 w-8 text-destructive" />
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+                <Moon className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl font-oswald text-destructive">
+              <CardTitle className="text-2xl font-oswald text-primary">
                 Welcome back to RockMundo
               </CardTitle>
               <p className="text-sm text-muted-foreground pt-2">
-                Your last character passed away {diedAgo}. Take a moment to reflect
-                before starting your next chapter.
+                Your last character fell into a coma {diedAgo}. Revive them to
+                pick up where you left off, or start a new chapter.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
