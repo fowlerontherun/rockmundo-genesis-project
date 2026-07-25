@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: package-lock.json
       - uses: supabase/setup-cli@v1
         with:
           version: 2.31.8
@@ -29,8 +30,10 @@ jobs:
         run: |
           node --version
           npm --version
-      - run: npm ci
-      - run: npm run verify:dependencies
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
       - run: supabase db start
       - run: supabase db reset
       - run: supabase db lint
