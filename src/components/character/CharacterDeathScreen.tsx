@@ -395,7 +395,7 @@ export function CharacterDeathScreen({
                   Working...
                 </>
               ) : choice === "resurrect" ? (
-                "Resurrect and continue"
+                "Revive and continue"
               ) : choice === "child" ? (
                 "Continue the legacy"
               ) : (
