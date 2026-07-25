@@ -199,21 +199,19 @@ export function CharacterDeathScreen({
         {/* Step 2: Choose */}
         {step === "choose" && (
           <div className="grid gap-3">
-            {livesRemaining > 0 && (
-              <ChoiceCard
-                active={choice === "resurrect"}
-                onClick={() => setChoice("resurrect")}
-                icon={<HeartPulse className="h-5 w-5 text-emerald-500" />}
-                iconBg="bg-emerald-500/20"
-                title={`Resurrect ${deadCharacter.character_name}`}
-                description={
-                  <>
-                    Continue exactly where you left off. Uses{" "}
-                    <span className="font-medium text-emerald-500">1 life</span> ({livesRemaining} left).
-                  </>
-                }
-              />
-            )}
+            <ChoiceCard
+              active={choice === "resurrect"}
+              onClick={() => setChoice("resurrect")}
+              icon={<HeartPulse className="h-5 w-5 text-emerald-500" />}
+              iconBg="bg-emerald-500/20"
+              title={`Revive ${deadCharacter.character_name}`}
+              description={
+                <>
+                  Wake them from their coma with fame, cash, skills and
+                  relationships intact. <span className="font-medium text-emerald-500">Free and unlimited.</span>
+                </>
+              }
+            />
             <ChoiceCard
               active={choice === "child"}
               onClick={() => setChoice("child")}
@@ -224,7 +222,7 @@ export function CharacterDeathScreen({
                 <>
                   Inherit <span className="font-medium text-primary">10% of skills</span> ({skillCount}) and{" "}
                   <span className="font-medium text-primary">50% of cash</span> ($
-                  {inheritedCash.toLocaleString()}).
+                  {inheritedCash.toLocaleString()}). Original character stays in a coma.
                 </>
               }
             />
