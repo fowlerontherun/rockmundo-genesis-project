@@ -76,3 +76,15 @@ Local cleanup is normally automatic inside scripts and the workflow. To force cl
 ```bash
 supabase stop --no-backup
 ```
+
+## Supported JavaScript toolchain and dependency integrity
+
+Development and CI use Node.js 20 (see `.nvmrc` and `package.json`); npm 10 or
+11 may consume the committed lockfile-v3 graph. Install with plain `npm ci`—the
+repository does not use `--force` or `--legacy-peer-deps`. Run
+`npm run verify:dependencies` after installation to reject invalid peer trees.
+
+The React 18 renderer uses `@react-three/fiber` 8 and Drei 9. The unused
+`@react-three/postprocessing` 3 dependency was removed because version 3
+requires Fiber 9 and React 19; its unused `postprocessing` peer was removed as
+well. This avoids accepting a knowingly invalid peer graph.

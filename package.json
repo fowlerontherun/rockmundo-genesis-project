@@ -38,7 +38,8 @@
     "verify:supabase-rpcs": "node scripts/supabase/verify-required-rpcs.mjs",
     "test:festivals:hardening:db": "bash scripts/festivals/run-hardening-db-gate.sh",
     "test:festivals:company-runtime": "bash scripts/festivals/run-company-runtime-gate.sh",
-    "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs"
+    "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
+    "verify:dependencies": "npm ls --all"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -74,7 +75,6 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
-    "@react-three/postprocessing": "^3.0.4",
     "@readyplayerme/react-avatar-creator": "^0.5.0",
     "@supabase/supabase-js": "^2.57.4",
     "@tanstack/react-query": "^5.83.0",
@@ -94,7 +94,6 @@
     "mapbox-gl": "^3.15.0",
     "next-themes": "^0.3.0",
     "peerjs": "^1.5.5",
-    "postprocessing": "^6.38.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -111,7 +110,9 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "file:./local-packages/testing-library-jest-dom",
     "@testing-library/react": "file:./local-packages/testing-library-react",
@@ -132,8 +133,10 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^2.1.4",
-    "@playwright/test": "^1.49.1",
-    "@axe-core/playwright": "^4.10.2"
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x || 11.x"
   }
 }
