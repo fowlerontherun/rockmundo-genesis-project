@@ -48,8 +48,12 @@ if (typeof window !== "undefined") {
 }
 
 const testWindow = typeof window === "undefined" ? undefined : window;
-defineMissing(globalThis as typeof globalThis & { ResizeObserver?: unknown }, "ResizeObserver", testWindow?.ResizeObserver);
-defineMissing(globalThis as typeof globalThis & { IntersectionObserver?: unknown }, "IntersectionObserver", testWindow?.IntersectionObserver);
+if (testWindow?.ResizeObserver) {
+  defineMissing(globalThis as typeof globalThis & { ResizeObserver?: unknown }, "ResizeObserver", testWindow.ResizeObserver);
+}
+if (testWindow?.IntersectionObserver) {
+  defineMissing(globalThis as typeof globalThis & { IntersectionObserver?: unknown }, "IntersectionObserver", testWindow.IntersectionObserver);
+}
 if (typeof Element !== "undefined") defineMissing(Element.prototype, "scrollIntoView", vi.fn());
 if (typeof HTMLElement !== "undefined") defineMissing(HTMLElement.prototype, "scrollTo", vi.fn());
 if (typeof HTMLCanvasElement !== "undefined") defineMissing(HTMLCanvasElement.prototype, "getContext", vi.fn(() => null));

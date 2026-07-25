@@ -8,6 +8,7 @@ on:
       - 'supabase/tests/**'
       - 'scripts/festivals/**'
       - 'src/features/festival-company/**'
+      - 'src/testing/**'
       - 'src/integrations/supabase/types.ts'
       - 'vitest.setup.ts'
       - 'vitest.config.*'
@@ -40,38 +41,22 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
       - name: Install dependencies
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
-      - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.31.8
-      - name: Print tool versions
+      - name: Print frontend tool versions
         run: |
           node --version
           npm --version
-          supabase --version
-          psql --version
-      - name: Start local Supabase stack
-        run: supabase start
-      - name: Reset migrated test database
-        run: supabase db reset
-      - name: Verify database safety guard
-        run: npm run test:festivals:safety-guard
       - name: Lint
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
       - name: Run full unit tests
         run: npm run test:unit
-      - name: Verify required Supabase RPCs
-        run: npm run verify:supabase-rpcs
-      - name: Run canonical festival runtime gate
-        run: npm run test:festivals:company-runtime
-      - name: Prove canonical festival runtime gate is rerunnable
-        run: npm run test:festivals:company-runtime
       - name: Run festival frontend unit tests
         run: npx vitest run src/features/festival-company
       - name: Run smoke test suite
@@ -80,6 +65,26 @@ jobs:
         run: npx vitest run src/testing/__tests__/vitestDomEnvironment.test.tsx
       - name: Build
         run: npm run build
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.31.8
+      - name: Print database tool versions
+        run: |
+          supabase --version
+          psql --version
+      - name: Start local Supabase stack
+        run: supabase start
+      - name: Reset migrated test database
+        run: supabase db reset
+      - name: Verify required Supabase RPCs
+        run: npm run verify:supabase-rpcs
+      - name: Verify database safety guard
+        run: npm run test:festivals:safety-guard
+      - name: Run canonical festival runtime gate
+        run: npm run test:festivals:company-runtime
+      - name: Prove canonical festival runtime gate is rerunnable
+        run: npm run test:festivals:company-runtime
 
       - name: Capture runtime diagnostics
         if: always()
