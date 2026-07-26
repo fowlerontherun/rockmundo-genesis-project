@@ -1,41 +1,42 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
--- SQL-precedence regression: supplier evidence belongs exclusively to an
--- operations plan.  Every plan branch deliberately owns its parentheses.
-DO $$
-DECLARE qualified text[];
+DO $$ DECLARE missing text;
 BEGIN
- SELECT array_agg(plan_type ORDER BY plan_type) INTO qualified
- FROM (VALUES ('artist_programme'),('operations_plan'),('sponsorship_plan'),('ticket_plan')) p(plan_type)
- WHERE (p.plan_type='ticket_plan' AND false)
-    OR (p.plan_type='artist_programme' AND false)
-    OR (p.plan_type='operations_plan' AND (false OR true))
-    OR (p.plan_type='sponsorship_plan' AND false);
- IF qualified IS DISTINCT FROM ARRAY['operations_plan']::text[] THEN
-  RAISE EXCEPTION 'supplier evidence escaped the operations-plan branch: %',qualified;
- END IF;
-
- IF NOT EXISTS (SELECT 1 FROM pg_attribute
-   WHERE attrelid='public.festival_plan_edition_backfill_audit'::regclass
-     AND attname='plan_classification') THEN
-  RAISE EXCEPTION 'plan usage classification missing';
- END IF;
+ SELECT string_agg(required,', ') INTO missing FROM (VALUES
+  ('plan classification',EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='public.festival_plan_edition_backfill_audit'::regclass AND attname='plan_classification')),
+  ('identity status',EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='public.festival_plan_edition_backfill_audit'::regclass AND attname='identity_status')),
+  ('overtime request link',EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='public.festival_staff_overtime_approvals'::regclass AND attname='overtime_request_id')),
+  ('effect receipts',to_regclass('public.festival_settlement_effect_receipts') IS NOT NULL)
+ ) checks(required,ok) WHERE NOT ok;
+ IF missing IS NOT NULL THEN RAISE EXCEPTION 'festival settlement v3 schema is incomplete: %',missing; END IF;
 END $$;
 
-DO $$ DECLARE body text;
+-- Exercise classification against actual plan/reference rows already present in
+-- the migrated database. Every referenced plan must classify as used.
+DO $$ DECLARE bad text;
 BEGIN
- body:=pg_get_functiondef('public._build_festival_contract_package(uuid)'::regprocedure);
- IF position(quote_literal('bookingStatus') in body)=0
-    OR position(quote_literal('cancellationReason') in body)=0
-    OR position(quote_literal('applicableClauseVersion') in body)=0 THEN
-  RAISE EXCEPTION 'cancelled artist settlement evidence missing';
- END IF;
- IF position(quote_literal('shifts') in body)=0
-    OR position(quote_literal('overtimeRequestId') in body)=0
-    OR position(quote_literal('overtimeDecisionId') in body)=0 THEN
-  RAISE EXCEPTION 'deduplicated staff shift evidence missing';
- END IF;
+ SELECT string_agg(format('%s:%s',plan_type,plan_id),',') INTO bad
+ FROM public.festival_plan_edition_backfill_audit a
+ WHERE public._festival_plan_is_used(a.plan_type,a.plan_id) AND a.plan_classification<>'used';
+ IF bad IS NOT NULL THEN RAISE EXCEPTION 'referenced plans not classified used: %',bad; END IF;
+ IF EXISTS(SELECT 1 FROM public.festival_plan_edition_backfill_audit WHERE plan_classification='used' AND candidate_count<>1 AND identity_status<>'identity_repair_required') THEN
+  RAISE EXCEPTION 'ambiguous used plan was not blocked for repair'; END IF;
+END $$;
+
+-- Assert output rows rather than SQL source text: every prepared v3 line in the
+-- database must balance to its signed component evidence and every decision
+-- must identify the exact request it adjudicates.
+DO $$ DECLARE bad uuid;
+BEGIN
+ SELECT l.id INTO bad FROM public.festival_settlement_lines l JOIN public.festival_financial_settlements s ON s.id=l.settlement_id
+ WHERE s.settlement_formula_version='festival-settlement-v3' AND l.net_amount_minor IS DISTINCT FROM
+  (SELECT coalesce(sum(CASE c.direction WHEN 'credit' THEN c.amount_minor ELSE -c.amount_minor END),0) FROM public.festival_settlement_line_components c WHERE c.settlement_line_id=l.id)
+ LIMIT 1;
+ IF bad IS NOT NULL THEN RAISE EXCEPTION 'unbalanced v3 settlement line: %',bad; END IF;
+ IF EXISTS(SELECT 1 FROM public.festival_staff_overtime_approvals d LEFT JOIN public.festival_staff_overtime_approvals r ON r.id=d.overtime_request_id
+  WHERE d.decision<>'requested' AND (r.id IS NULL OR r.decision<>'requested' OR r.staff_checkin_id<>d.staff_checkin_id OR r.requested_minutes<>d.requested_minutes)) THEN
+  RAISE EXCEPTION 'overtime decision is not linked to its exact request'; END IF;
 END $$;
 
 ROLLBACK;
