@@ -82,6 +82,19 @@ for (const name of requiredRpcs.slice(-17, -2).map((rpc) => rpc.name)) {
   if (/festival_operations_action_not_implemented|not\s+implemented/i.test(body)) missing.push(`public.${name} still contains a bounded placeholder`);
 }
 
+const sponsorshipCompletion = readFileSync(join(migrationDir, '20291217171000_complete_festival_sponsorship_workflows.sql'), 'utf8');
+const sponsorshipActions = requiredRpcs.slice(-16).map((rpc) => rpc.name);
+for (const name of sponsorshipActions) {
+  const definitions = [...sponsorshipCompletion.matchAll(new RegExp(`CREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\s+public\\.${name}\\b([\\s\\S]*?)(?=CREATE\\s+OR\\s+REPLACE\\s+FUNCTION|REVOKE\\s+ALL|$)`, 'gi'))];
+  const body = definitions.at(-1)?.[1] ?? '';
+  if (!body) missing.push(`public.${name} has no Phase 6B action-specific implementation`);
+  if (/bounded\s+(?:action|placeholder)|unsupported\s+action|not\s+implemented/i.test(body)) missing.push(`public.${name} still contains a sponsorship placeholder`);
+  if (/_festival_sponsorship_action\s*\(/i.test(body)) missing.push(`public.${name} still delegates to the unrestricted Phase 6A dispatcher`);
+}
+if (/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\._festival_sponsorship_action/i.test(sponsorshipCompletion)) {
+  missing.push('Phase 6B must not reintroduce the unrestricted sponsorship action dispatcher');
+}
+
 if (missing.length > 0) {
   console.error('Required Supabase RPC contract verification failed:');
   for (const item of missing) console.error(`- ${item}`);
