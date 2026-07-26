@@ -231,3 +231,27 @@ At launch, planned releases become time-derived sale phases and each public prod
 Issued tickets appear through `get_my_festival_tickets`; there is no resale, unrestricted transfer or scanning. Owner summaries keep actual gross receipts, fees, tax liability and net Festival receipts separate from forecasts, sponsorship receivables, cash and profit. Sold out is derived from admission inventory. Pausing preserves sales/tickets/inventory; closing does not start runtime or settle finance. Pre-event cancellation retains snapshots and sales, cancels the calendar/countdown, queues targeted communications and creates pending refund obligations without falsely marking sales refunded.
 
 All launch/write tables have RLS enabled and direct grants revoked. Public RPCs return public projections only; buyers read only their wallet/sales; owner reads and every management action re-check Festival authority. Optimistic versions, row locks, unique projection keys and idempotency records protect concurrency and rollback. Migration sequence continues only with `20291217190000_festival_launch_and_ticket_sales.sql`. The inherited `jsdom` registry E403 may block dependency installation; static migration/RPC checks and committed SQL/frontend tests remain independently verifiable.
+
+## Phase 8A — live Festival runtime foundation
+
+Phase 8A introduces an explicit, server-authoritative lifecycle: `created → pre_event → site_setup → ready_to_open → gates_open/live → final_performance_complete → public_closed → site_clearance → runtime_complete`, with bounded `paused`, `emergency_hold`, `cancelled`, and `failed` states. There is no generic client status mutation. Each transition is a named RPC with authority, optimistic version, UUID idempotency receipt, payload hash, event, and audit boundaries.
+
+Runtime preparation is opt-in and locks a launched, non-cancelled launch. It reads the immutable launch snapshot and immutable published edition/stage/timetable projections; mutable planning records are never the runtime source. Server-only HMAC/digest seeds are derived for the runtime, days, stages, performances, attendance, operations, and future incidents. Engine and formula versions are persisted with immutable performance input/results so balancing changes cannot rewrite history.
+
+The runtime uses typed relational records rather than a mutable JSON aggregate. Runtime jobs cover setup, gates, stages, performances, changeovers, public closure, clearance, completion, and summary refresh. The service-only `process_due_festival_runtime_jobs` claims due work with `FOR UPDATE SKIP LOCKED`; recovery releases stale claims, repairs safe stage projections, writes a recovery snapshot, and never resolves completed performances again.
+
+`performance/festivalGigAdapter.ts` is a thin dependency-injected adapter over the canonical gig engine: it validates canonical input, invokes that engine exactly once with the stored server seed, and attaches Festival-only modifiers. Phase 8A stores preliminary technical, setlist, artist, crowd-response, attendance-estimate, and delay metrics only. It deliberately grants no XP, fame, rewards, payment, payroll, supplier payment, settlement, or permanent reputation.
+
+Artist and required band attendance, assigned staff shifts, and contracted supplier arrivals are checked independently. Safety-critical staff and essential suppliers are hard gate blockers; warnings cannot override them. Admission locks the runtime and daily attendance row, accepts only valid admission products for the active date, deduplicates per ticket/day and idempotency key, preserves future dates on multi-day tickets, and cannot exceed capacity.
+
+Emergency hold stops new starts, can pause admissions, pauses unsafe jobs, records private reasons, and publishes only the safe message “The Festival schedule is temporarily paused.” Resume revalidates critical coverage. Runtime events split public and private payloads; the public live RPC exposes only gates, current day, safe attendance band, stage/performance state, delays/cancellations, and safe messages. Owner, assigned-stage manager, artist, staff, and supplier reads are scoped separately.
+
+All runtime tables have RLS enabled and browser writes revoked. Authenticated users act only through explicit security-definer RPCs; job processing is service-role/admin only. Migration ordering is Phase 7B `20291217190000` followed by Phase 8A `20291217200000`; applying Phase 8A creates schema only and never backfills a runtime.
+
+Roadmap:
+
+- Phase 7B: Launch and ticket sales — complete
+- Phase 8A: Live Festival runtime foundation — this PR
+- Phase 8B: Crowds, incidents and operational outcomes
+- Phase 9A: Financial settlement and payments
+- Phase 9B: Results, reputation, awards and annual history

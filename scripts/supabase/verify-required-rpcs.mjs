@@ -52,6 +52,7 @@ const requiredRpcs = [
   { name: 'purchase_festival_tickets', arguments: [{ name: 'p_festival_launch_id', type: 'uuid' }, { name: 'p_ticket_product_id', type: 'uuid' }, { name: 'p_quantity', type: 'integer' }, { name: 'p_idempotency_key', type: 'uuid' }] },
   { name: 'issue_festival_complimentary_tickets', arguments: [] }, { name: 'cancel_launched_festival', arguments: [] },
   ...['get_festival_launch_plan','get_public_festival','get_public_festival_directory','get_public_festival_timetable','get_public_festival_ticket_products','get_festival_ticket_sales_summary','get_my_festival_tickets'].map((name) => ({ name, arguments: [] })),
+  ...['get_festival_runtime','get_festival_runtime_owner_dashboard','get_festival_runtime_stage_dashboard','get_my_festival_artist_runtime','get_my_festival_staff_runtime','get_my_festival_supplier_runtime','get_public_festival_live_status','get_festival_runtime_event_log','prepare_festival_runtime','start_festival_site_setup','check_in_festival_artist','check_in_festival_band_member','check_in_festival_staff','check_out_festival_staff','check_in_festival_supplier','check_out_festival_supplier','mark_festival_ready_to_open','open_festival_gates','admit_festival_ticket','mark_festival_stage_ready','start_festival_performance','record_festival_performance_delay','resolve_festival_performance','cancel_runtime_festival_performance','pause_festival_runtime','resume_festival_runtime','place_festival_emergency_hold','clear_festival_emergency_hold','close_festival_gates','complete_festival_public_close','complete_festival_site_clearance','complete_festival_runtime','recover_festival_runtime','process_due_festival_runtime_jobs'].map((name) => ({ name, arguments: [] })),
 ];
 
 const migrationDir = join(root, 'supabase', 'migrations');
@@ -114,6 +115,15 @@ if (/status\s*=\s*coalesce\s*\(\s*p_payload/i.test(timetableMigration)) missing.
 if (/p_plan\s*->\s*'(?:readiness|conflicts|risk|staffCoverage)'/i.test(timetableMigration)) missing.push('Phase 7A accepts client-authoritative derived readiness data');
 const timetableFrontend = readFileSync(join(root, 'src/features/festival-company/data/festivalCompanyRepository.ts'), 'utf8').match(/Phase 7A timetable boundary[\s\S]*/)?.[0] ?? '';
 if (/\.from\s*\(\s*["']festival_(?:timetable|stage_slots|readiness|schedule_conflicts)/i.test(timetableFrontend)) missing.push('Phase 7A frontend directly writes private timetable tables');
+
+const runtimeMigration = readFileSync(join(migrationDir, '20291217200000_live_festival_runtime_foundation.sql'), 'utf8');
+if (/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.(?:transition|dispatch)_festival_runtime/i.test(runtimeMigration)) missing.push('Phase 8A exposes a generic runtime transition or dispatcher');
+if (/p_(?:seed|performance_result|engine_result)\b/i.test(runtimeMigration)) missing.push('Phase 8A accepts a browser seed or client-authoritative result');
+if (/GRANT\s+(?:INSERT|UPDATE|DELETE|ALL).*festival_runtime_.*authenticated/is.test(runtimeMigration)) missing.push('Phase 8A grants direct runtime table writes to browser roles');
+if (/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.process_due_festival_runtime_jobs[^;]*authenticated/is.test(runtimeMigration)) missing.push('Normal clients can invoke the runtime job processor');
+for (const table of ['sessions','days','stages','performances','artist_checkins','band_member_attendance','staff_checkins','supplier_checkins','gate_sessions','ticket_admissions','attendance','jobs','events','snapshots','requests','audit']) {
+  if (!new RegExp(`festival_runtime_${table}[^;]*ENABLE ROW LEVEL SECURITY`, 'is').test(runtimeMigration) && !runtimeMigration.includes(`ARRAY['festival_runtime_sessions'`)) missing.push(`festival_runtime_${table} does not enable RLS`);
+}
 
 if (missing.length > 0) {
   console.error('Required Supabase RPC contract verification failed:');

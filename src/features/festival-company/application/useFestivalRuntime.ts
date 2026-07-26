@@ -1,0 +1,13 @@
+import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query";
+import { festivalRuntimeRepository,type FestivalRuntimeAction } from "../data/festivalRuntimeRepository";
+const key=(id:string)=>["festival-runtime",id] as const;
+export const useFestivalRuntime=(id:string)=>useQuery({queryKey:key(id),queryFn:()=>festivalRuntimeRepository.get(id),enabled:Boolean(id)});
+export const useFestivalRuntimeOwnerDashboard=(id:string)=>useQuery({queryKey:[...key(id),"owner"],queryFn:()=>festivalRuntimeRepository.ownerDashboard(id),enabled:Boolean(id)});
+export const useFestivalRuntimeStageDashboard=(id:string)=>useQuery({queryKey:["festival-runtime-stage",id],queryFn:()=>festivalRuntimeRepository.stageDashboard(id),enabled:Boolean(id)});
+export const useMyFestivalArtistRuntime=()=>useQuery({queryKey:["festival-runtime","artist","me"],queryFn:festivalRuntimeRepository.myArtist});
+export const useMyFestivalStaffRuntime=()=>useQuery({queryKey:["festival-runtime","staff","me"],queryFn:festivalRuntimeRepository.myStaff});
+export const useMyFestivalSupplierRuntime=()=>useQuery({queryKey:["festival-runtime","supplier","me"],queryFn:festivalRuntimeRepository.mySupplier});
+export const usePublicFestivalLiveStatus=(slug:string)=>useQuery({queryKey:["festival-public-live",slug],queryFn:()=>festivalRuntimeRepository.publicLive(slug),enabled:Boolean(slug),refetchInterval:15_000});
+export const useFestivalRuntimeEventLog=(id:string)=>useQuery({queryKey:[...key(id),"events"],queryFn:()=>festivalRuntimeRepository.eventLog(id),enabled:Boolean(id)});
+export const usePrepareFestivalRuntime=()=>{const q=useQueryClient();return useMutation({mutationFn:(x:{launchId:string;version:number;idempotencyKey:string})=>festivalRuntimeRepository.prepare(x.launchId,x.version,x.idempotencyKey),onSuccess:r=>q.invalidateQueries({queryKey:key(r.id)})})};
+export const useFestivalRuntimeAction=()=>{const q=useQueryClient();return useMutation({mutationFn:(x:{name:FestivalRuntimeAction;args:Record<string,unknown>;runtimeId?:string})=>festivalRuntimeRepository.action(x.name,x.args),onSuccess:(_,x)=>x.runtimeId&&q.invalidateQueries({queryKey:key(x.runtimeId)})})};

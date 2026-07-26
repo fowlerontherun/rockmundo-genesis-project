@@ -510,3 +510,21 @@ Roadmap:
 - Phase 9: Settlement, outcomes and history
 
 The only Phase 7B migration is `20291217190000_festival_launch_and_ticket_sales.sql`. It is additive, performs no launch/backfill/money movement, preserves all planning data, and fails migration on incompatible references. The known dependency-install environment may return `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`; that blocks Node-dependent execution but not migration/RPC static verification.
+
+## Phase 8A: authoritative live runtime
+
+The live runtime is an opt-in aggregate rooted at `festival_runtime_sessions`, created only by `prepare_festival_runtime` from a locked, valid Phase 7B launch and its immutable launch snapshot. Runtime creation expands the published launch into typed days, stages, performances, gate sessions, attendance ledgers and jobs. Existing Festivals receive no implicit runtime. The migration is forward-only, additive, and ordered as `20291217200000_live_festival_runtime_foundation.sql` immediately after Phase 7B.
+
+Lifecycle transitions are explicit RPCs rather than a dispatcher. Normal flow is pre-event, site setup, readiness, gates/live operation, public close, site clearance, then runtime completion. Pause and emergency hold are recoverable safety states. Critical staff, supplier, site, stage, power, accessibility and admission-system readiness are server-owned blockers; public warnings never override a blocker.
+
+Determinism is server controlled. Runtime preparation generates a secret-derived root seed and stable domain-separated day, stage, performance, attendance, operations and future-incident seeds. Formula and engine versions accompany input/result snapshots. A Festival adapter validates and delegates to the canonical gig engine exactly once, then adds bounded Festival context (scale, stage/soundcheck/changeover quality, expectation, estimated audience and delay pressure). This phase records preliminary results but performs no payments, XP, fame, rewards, settlement, or permanent outcomes.
+
+Check-ins bind artists to their own performance, band attendance to individual members (ordinary members cannot bind the band), staff to assigned non-overlapping shifts, and suppliers to active contracts and delivery windows. Ticket admission is capacity-locked and date-specific. A full-Festival or date-range ticket is deduplicated only for the current runtime day and remains valid on later eligible days; add-ons never admit.
+
+Jobs are observable, retryable rows with unique dedupe keys. The trusted worker uses `FOR UPDATE SKIP LOCKED`; completed work cannot complete twice. Recovery releases stale claims, reconciles safe stage projections, writes an append-only recovery snapshot and audit record, and never changes seeds, duplicates admissions/events, re-runs a completed performance, or creates money actions.
+
+Runtime events carry separate public and private payloads and feed the existing realtime/outbox boundary. Public live data is deliberately coarse: gate status, current day, performances, stage status, delays/cancellations, safe messages, and one of `quiet`, `building`, `busy`, `very_busy`, `near_capacity`, or `full`. Exact attendance, staffing, suppliers, and incident details remain private. Owner dashboards see the aggregate; stage managers only assigned stages; artists, staff, and suppliers see their own work.
+
+Every table enables RLS and revokes browser mutation. Named action RPCs enforce role/ownership, expected versions, UUID idempotency, material hashes, append-only events/audit and canonical receipts. Only service role or admins can run `process_due_festival_runtime_jobs`.
+
+Roadmap: Phase 7B launch/ticket sales is complete; Phase 8A is this runtime foundation; Phase 8B adds crowds/incidents/operational outcomes; Phase 9A adds financial settlement/payments; Phase 9B adds results/reputation/awards/history.
