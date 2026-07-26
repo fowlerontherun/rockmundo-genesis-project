@@ -1,0 +1,13 @@
+import { supabase } from "@/integrations/supabase/client";
+import { parseFestivalPublicLiveStatus,parseFestivalRuntimeSession,type FestivalPublicLiveStatus,type FestivalRuntimeSession } from "../domain/festivalRuntime";
+type RpcArgs=Record<string,unknown>; type RpcResult={data:unknown;error:{message?:string}|null};
+const rpc=async(name:string,args:RpcArgs={}):Promise<unknown>=>{const {data,error}=await (supabase.rpc as unknown as (n:string,a?:RpcArgs)=>Promise<RpcResult>)(name,args);if(error)throw mapFestivalRuntimeError(error.message);return data};
+export const mapFestivalRuntimeError=(message="festival_runtime_failed")=>new Error(message.includes("stale")?"festival_runtime_stale":message.includes("forbidden")?"festival_runtime_forbidden":message.includes("blocked")?"festival_runtime_blocked":message);
+export const festivalRuntimeRepository={
+ get:async(id:string)=>rpc("get_festival_runtime",{p_runtime_session_id:id}), ownerDashboard:async(id:string)=>rpc("get_festival_runtime_owner_dashboard",{p_runtime_session_id:id}), stageDashboard:async(id:string)=>rpc("get_festival_runtime_stage_dashboard",{p_runtime_stage_id:id}),
+ myArtist:async()=>rpc("get_my_festival_artist_runtime"),myStaff:async()=>rpc("get_my_festival_staff_runtime"),mySupplier:async()=>rpc("get_my_festival_supplier_runtime"),eventLog:async(id:string,after?:string)=>rpc("get_festival_runtime_event_log",{p_runtime_session_id:id,p_after:after??null}),
+ publicLive:async(slug:string):Promise<FestivalPublicLiveStatus>=>parseFestivalPublicLiveStatus(await rpc("get_public_festival_live_status",{p_public_slug:slug})),
+ prepare:async(launchId:string,version:number,key:string):Promise<FestivalRuntimeSession>=>parseFestivalRuntimeSession(await rpc("prepare_festival_runtime",{p_festival_launch_id:launchId,p_expected_launch_version:version,p_idempotency_key:key})),
+ action:async(name:FestivalRuntimeAction,args:RpcArgs)=>rpc(name,args),
+};
+export type FestivalRuntimeAction="start_festival_site_setup"|"check_in_festival_artist"|"check_in_festival_band_member"|"check_in_festival_staff"|"check_out_festival_staff"|"check_in_festival_supplier"|"check_out_festival_supplier"|"mark_festival_ready_to_open"|"open_festival_gates"|"admit_festival_ticket"|"mark_festival_stage_ready"|"start_festival_performance"|"record_festival_performance_delay"|"resolve_festival_performance"|"cancel_runtime_festival_performance"|"pause_festival_runtime"|"resume_festival_runtime"|"place_festival_emergency_hold"|"clear_festival_emergency_hold"|"close_festival_gates"|"complete_festival_public_close"|"complete_festival_site_clearance"|"complete_festival_runtime"|"recover_festival_runtime";

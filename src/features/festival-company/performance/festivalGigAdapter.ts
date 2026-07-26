@@ -1,0 +1,6 @@
+/** Thin, dependency-injected boundary to the canonical gig engine. */
+export interface FestivalGigModifiers { festivalScale:number; stageQuality:number; soundcheckQuality:number; changeoverQuality:number; headlinerExpectation:number; estimatedAudience:number; delayPressure:number }
+export interface FestivalPerformanceEngineInput { seed:string; canonicalInput:Readonly<Record<string,unknown>>; modifiers:Readonly<FestivalGigModifiers> }
+export interface CanonicalGigEngine<Result> { version:string; validate(input:Readonly<Record<string,unknown>>):void; simulate(input:Readonly<Record<string,unknown>>,seed:string):Result }
+export interface FestivalPerformanceResult<Result> { engineVersion:string; adapterVersion:"festival-gig-adapter-v1"; canonicalResult:Result; modifiers:Readonly<FestivalGigModifiers> }
+export function runFestivalPerformance<Result>(engine:CanonicalGigEngine<Result>,input:FestivalPerformanceEngineInput):FestivalPerformanceResult<Result>{engine.validate(input.canonicalInput);const canonicalResult=engine.simulate(input.canonicalInput,input.seed);return Object.freeze({engineVersion:engine.version,adapterVersion:"festival-gig-adapter-v1",canonicalResult,modifiers:Object.freeze({...input.modifiers})});}
