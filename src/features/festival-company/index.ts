@@ -20,3 +20,7 @@ export * from "./domain/festivalTicketForecast";
 export * from "./domain/festivalTicketValidation";
 export * from "./domain/festivalSitePlanValidation";
 export * from "./application/useFestivalSitePlan";
+
+export * from "./domain/festivalOperationsPlan";
+export * from "./application/useFestivalOperations";
+export * from "./ui/FestivalOperationsPlanner";

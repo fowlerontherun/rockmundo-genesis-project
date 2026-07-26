@@ -372,3 +372,23 @@ Roadmap:
 - Phase 6: Sponsorship
 - Phase 7: Readiness and launch
 - Phase 8: Live simulation and settlement
+
+## Phase 5 operational planning
+
+`20291217160000_festival_staffing_and_suppliers.sql` is the exact next migration after Phase 4B in the frozen 2029 Festival sequence. It is safe for fresh installs and forward-only existing environments. The migration models the operations plan, catalogue-derived departments, server-generated staffing and supplier requirements, vacancies, canonical-profile applications, one-identity assignments, shifts, canonical-company/NPC quotes, contracts, allocations, idempotency receipts and audit events.
+
+Safety-critical security, medical, fire, crowd, gate and accessibility coverage is never client-waivable. Operational budgets and quality/coverage scores are server-derived. Player workers and companies have a higher skill-dependent quality ceiling and social potential, while bounded city/market-sensitive NPC pools remain fallback. Contract acceptance creates encumbrances in the existing Festival commitment ledger, never payments or expenses; forecast ticket revenue remains isolated.
+
+Transitions are explicit RPCs rather than unrestricted status writes. Festival owners/admins manage the plan, applicants control their own applications, and only authorised canonical company representatives bind supplier quotes. Payload hashes, expected versions and transactional audit/communication records make retries safe. Completion validates Phase 4, coverage, shifts, qualifications, essential power/sanitation/medical/security/accessibility contracts, budgets, currency and commitment integrity before `ready_for_sponsorship`.
+
+### Roadmap
+
+- Phase 1: Identity, location, scale and dates — complete
+- Phase 2: Site and stage planning — complete
+- Phase 3: Ticketing and capacity allocation — complete
+- Phase 4A: Artist programme and planning — complete
+- Phase 4B: Artist workflows and bookings — complete
+- Phase 5: Staffing and suppliers — this PR
+- Phase 6: Sponsorship
+- Phase 7: Final readiness and launch
+- Phase 8: Live simulation and settlement

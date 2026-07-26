@@ -133,3 +133,17 @@ Acceptance locks the programme, rechecks deadline and commitment capacity, accep
 RLS/access matrix: anonymous and unrelated profiles have no RPC access; managers see company planning data; artists see only their represented identities; ordinary band members cannot bind the band; service/admin paths are still constrained by action-specific validation. Mail and notification outbox rows are unique per receipt, recipient, channel and event, so retries cannot duplicate delivery.
 
 The inherited npm registry/dependency installation blocker remains external to this feature; dependency-independent migration, RPC and static checks should still run.
+
+## Phase 5 — staffing, suppliers, and operational planning
+
+Phase 5 follows `20291217151000_complete_festival_artist_workflows.sql` as the single allow-listed `20291217160000_festival_staffing_and_suppliers.sql` continuation of the retained 2029 sequence. Fresh installs apply it after Phase 4B; deployed databases apply it forward-only without rewriting prior migrations.
+
+The operations plan inherits the artist programme currency and unlocks only at `ready_for_operations`. Server generation derives departments, safety-critical staffing (security, crowd management, medical, fire safety, gates and accessibility), shift windows, and supplier demand from canonical configuration, site, stage, ticket and booking data. Browser-provided counts, quality, reliability and currency are not authoritative.
+
+Vacancies and applications reference canonical player profiles; assignments select exactly one profile, NPC labour-pool identity, or canonical company. Player quality remains skill-dependent and can exceed NPC ceilings, but participation alone never makes an unqualified worker safe. Shifts enforce the assignment and Festival window. Supplier quotes select exactly one canonical player company or NPC supplier; server-derived quality/reliability and finite refresh selections prevent self-reported or infinite perfect supply.
+
+Accepted staff and supplier work extends `festival_financial_commitments`: integer minor-unit encumbrances remain separate from artist commitments, ticket forecasts, actual cash and realised expense. No payroll, supplier payment, XP, ticket sale, announcement, delivery simulation or settlement occurs.
+
+All tables deny direct browser writes. Explicit RPCs apply owner/admin/applicant/company authority, expected versions, scoped payload-hash idempotency, audit events and communication deduplication. Completion is server-blocked by budget, currency, schedule, skill, safety coverage and essential contracts, and only advances to `ready_for_sponsorship`.
+
+The inherited npm registry `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` may prevent dependency installation; dependency-independent migration and static verification must continue and blocked commands must not be reported as passing.

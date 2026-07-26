@@ -1,0 +1,22 @@
+export const FESTIVAL_OPERATIONS_ERROR = "malformed_festival_operations_result";
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const object=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==="object"&&!Array.isArray(value);
+const integer=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0;
+const strings=(value:unknown)=>Array.isArray(value);
+const statuses=["not_started","requirements_generated","recruitment_open","procurement_open","contracts_in_progress","coverage_in_progress","ready_for_sponsorship"] as const;
+export type FestivalOperationsStatus=typeof statuses[number];
+export interface FestivalOperationsPlan {id:string;currencyCode:string;staffBudgetMinor:number;supplierBudgetMinor:number;contingencyBudgetMinor:number;staffingMode:"npc_only"|"player_preferred"|"mixed";procurementMode:"npc_only"|"player_company_preferred"|"mixed";status:FestivalOperationsStatus;planningVersion:number}
+export interface FestivalOperationsIssue {code:string;severity:"warning"|"error";section:string;entityId:string|null;blocking:boolean;messageKey:string;metadata:Record<string,unknown>}
+export interface OperationsBudgetSummary {staffBudgetMinor:number;supplierBudgetMinor:number;contingencyMinor:number;staffCommitmentsMinor:number;supplierCommitmentsMinor:number;artistCommitmentsMinor:number}
+export interface OperationsQualityScores {staffingCoverageBasisPoints:number;supplierCoverageBasisPoints:number;safetyReadinessScore:number;productionReadinessScore:number;guestExperienceScore:number;artistExperienceScore:number;overallOperationsScore:number}
+export interface FestivalOperationsResult {festivalCompanyId:string;operationsPlan:FestivalOperationsPlan|null;departments:Record<string,unknown>[];staffingRequirements:Record<string,unknown>[];vacancies:Record<string,unknown>[];applications:Record<string,unknown>[];assignments:Record<string,unknown>[];shifts:Record<string,unknown>[];supplierRequirements:Record<string,unknown>[];quotes:Record<string,unknown>[];contracts:Record<string,unknown>[];budgetSummary:OperationsBudgetSummary;qualityScores:OperationsQualityScores;issues:FestivalOperationsIssue[];readiness:boolean;canWrite:boolean;planningVersion:number;updatedAt:string|null}
+export interface FestivalOperationsDraft {staffBudgetMinor:number;supplierBudgetMinor:number;contingencyBudgetMinor:number;staffingMode:FestivalOperationsPlan["staffingMode"];procurementMode:FestivalOperationsPlan["procurementMode"]}
+function fail():never{throw new Error(FESTIVAL_OPERATIONS_ERROR)}
+export function parseFestivalOperationsResult(value:unknown):FestivalOperationsResult {
+ if(!object(value)||typeof value.festivalCompanyId!=="string"||!UUID.test(value.festivalCompanyId)||!strings(value.departments)||!strings(value.staffingRequirements)||!strings(value.vacancies)||!strings(value.applications)||!strings(value.assignments)||!strings(value.shifts)||!strings(value.supplierRequirements)||!strings(value.quotes)||!strings(value.contracts)||!object(value.budgetSummary)||!object(value.qualityScores)||!Array.isArray(value.issues)||typeof value.readiness!=="boolean"||typeof value.canWrite!=="boolean"||!integer(value.planningVersion))fail();
+ const money=["staffBudgetMinor","supplierBudgetMinor","contingencyMinor","staffCommitmentsMinor","supplierCommitmentsMinor","artistCommitmentsMinor"]; if(!money.every(k=>integer(value.budgetSummary[k])))fail();
+ const scores=["staffingCoverageBasisPoints","supplierCoverageBasisPoints","safetyReadinessScore","productionReadinessScore","guestExperienceScore","artistExperienceScore","overallOperationsScore"]; if(!scores.every(k=>integer(value.qualityScores[k])))fail();
+ if(value.operationsPlan!==null){if(!object(value.operationsPlan)||typeof value.operationsPlan.id!=="string"||!UUID.test(value.operationsPlan.id)||typeof value.operationsPlan.currencyCode!=="string"||!/^[A-Z]{3}$/.test(value.operationsPlan.currencyCode)||!statuses.includes(String(value.operationsPlan.status) as FestivalOperationsStatus)||!integer(value.operationsPlan.planningVersion)||!["npc_only","player_preferred","mixed"].includes(String(value.operationsPlan.staffingMode))||!["npc_only","player_company_preferred","mixed"].includes(String(value.operationsPlan.procurementMode)))fail();}
+ return value as unknown as FestivalOperationsResult;
+}
+export const formatFestivalMoney=(minor:number,currency:string)=>new Intl.NumberFormat(currency==="GBP"?"en-GB":undefined,{style:"currency",currency}).format(minor/100);
