@@ -1,17 +1,4 @@
 import type { FestivalLegacyFilter, FestivalResult } from "./types";
-
-export const matchesFestivalLegacyFilter = (result: FestivalResult, filter: FestivalLegacyFilter) =>
-  (!filter.year || result.editionYear === filter.year) &&
-  (!filter.country || result.country === filter.country) &&
-  (!filter.city || result.city === filter.city) &&
-  (!filter.festivalType || result.festivalType === filter.festivalType) &&
-  (!filter.genre || result.genres.includes(filter.genre));
-
-export const summariseFestivalResults = (results: FestivalResult[]) => ({
-  editions: results.length,
-  attendance: results.reduce((sum, item) => sum + item.attendance, 0),
-  revenueMinor: results.reduce((sum, item) => sum + item.revenueMinor, 0),
-  profitLossMinor: results.reduce((sum, item) => sum + item.profitLossMinor, 0),
-  averageRating: results.length ? results.reduce((sum, item) => sum + item.overallRating, 0) / results.length : 0,
-  sellOuts: results.filter((item) => item.soldOut).length,
-});
+export const matchesFestivalLegacyFilter=(r:FestivalResult,f:FestivalLegacyFilter)=>(!f.year||r.editionYear===f.year)&&(!f.country||r.country===f.country)&&(!f.city||r.city===f.city)&&(!f.festivalType||r.festivalType===f.festivalType)&&(!f.genre||r.genres.includes(f.genre));
+export const summariseFestivalResults=(results:FestivalResult[])=>({editions:results.length,attendance:results.reduce((s,r)=>s+r.attendance,0),moneyByCurrency:Object.values(results.reduce<Record<string,{currencyCode:string;revenueMinor:string;profitLossMinor:string}>>((all,r)=>{const prior=all[r.currencyCode]??{currencyCode:r.currencyCode,revenueMinor:"0",profitLossMinor:"0"};all[r.currencyCode]={...prior,revenueMinor:(BigInt(prior.revenueMinor)+BigInt(r.revenueMinor)).toString(),profitLossMinor:(BigInt(prior.profitLossMinor)+BigInt(r.profitLossMinor)).toString()};return all},{})),averageRating:results.length?results.reduce((s,r)=>s+r.overallRating,0)/results.length:0,sellOuts:results.filter(r=>r.soldOut).length});
+export const formatMinorMoney=(minor:string,currencyCode:string)=>new Intl.NumberFormat("en-GB",{style:"currency",currency:currencyCode,minimumFractionDigits:2}).format(BigInt(minor)/100n)+`.`+(BigInt(minor)<0n?-BigInt(minor):BigInt(minor)).toString().padStart(2,"0").slice(-2);
