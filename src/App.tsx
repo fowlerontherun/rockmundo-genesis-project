@@ -710,6 +710,7 @@ function App() {
                     <Route path="festivals/marketplace" element={<LegacyFestivalGate area="Festival marketplace"><FestivalMarketplace /></LegacyFestivalGate>} />
                     <Route path="festivals/directory" element={<LegacyFestivalGate area="Festival directory"><FestivalDirectory /></LegacyFestivalGate>} />
                     <Route path="festivals/results" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/results/:resultId" element={<FestivalLegacyPage />} />
                     <Route path="festivals/history" element={<FestivalLegacyPage />} />
                     <Route path="festivals/awards" element={<FestivalLegacyPage />} />
                     <Route path="festivals/hall-of-fame" element={<FestivalLegacyPage />} />
