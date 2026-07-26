@@ -4,6 +4,7 @@ import type { FestivalCompanySetupState } from "../domain/festivalSetup";
 import { disabledFestivalCompanyCapabilities, type FestivalCompanyCapabilities } from "../domain/festivalCapabilities";
 import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility, type FestivalCompanyFoundingEligibility } from "../domain/festivalEligibility";
 import { parseFestivalConfiguration, type FestivalConfiguration, type FestivalConfigurationDraft } from "../domain/festivalConfiguration";
+import { normalizeFestivalConfigurationError } from "../domain/festivalConfigurationErrors";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value: unknown) => typeof value === "string" && UUID_RE.test(value);
@@ -154,13 +155,13 @@ export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanyS
 export const getFestivalConfiguration = async (festivalCompanyId: string): Promise<FestivalConfiguration> => {
   if (!isUuid(festivalCompanyId)) throw new Error("festival_company_not_found");
   const { data, error } = await supabase.rpc("get_festival_configuration", { p_festival_company_id: festivalCompanyId });
-  if (error) throw new Error(error.message);
+  if (error) throw normalizeFestivalConfigurationError(error);
   return parseFestivalConfiguration(data);
 };
 
 export const saveFestivalConfiguration = async (input: { festivalCompanyId: string; expectedVersion: number; configuration: FestivalConfigurationDraft; idempotencyKey: string }): Promise<FestivalConfiguration> => {
   if (!isUuid(input.festivalCompanyId) || !isUuid(input.idempotencyKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 0) throw new Error("festival_configuration_invalid");
   const { data, error } = await supabase.rpc("save_festival_configuration", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_configuration: input.configuration, p_idempotency_key: input.idempotencyKey });
-  if (error) throw new Error(error.message);
+  if (error) throw normalizeFestivalConfigurationError(error);
   return parseFestivalConfiguration(data);
 };
