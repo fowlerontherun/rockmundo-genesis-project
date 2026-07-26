@@ -189,3 +189,33 @@ RLS remains fail-closed: managers see their Festival, company representatives se
 Roadmap: Phase 1 identity/location/scale/dates — complete; Phase 2 site/stages — complete; Phase 3 ticketing/capacity — complete; Phase 4A programme/planning — complete; Phase 4B artist workflows/bookings — complete; Phase 5A operations schema/planning — complete; Phase 5B staffing/supplier workflows — complete; Phase 6A sponsorship schema/planning — complete; **Phase 6B sponsorship negotiation/contracts — this PR**; Phase 7 final timetable/readiness/launch; Phase 8 live simulation/settlement.
 
 Known dependency blocker: `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`. It does not block migration, RPC-verifier, shell syntax or diff checks and the lockfile must not be edited as a workaround.
+
+## Phase 7A — timetable and final readiness
+
+Phase 7A continues the retained future-dated sequence with
+`20291217180000_festival_timetable_and_readiness.sql`. It unlocks only from the Phase 6
+`ready_for_final_readiness` state and remains private. The typed aggregate separates days,
+stage operating windows and slots, artist allocations, soundchecks, server-derived
+changeovers, stage-manager coverage, operational items, supplier deliveries, sponsor
+activation plans, conflicts, readiness checks and append-only snapshots.
+
+The canonical city/site timezone controls UTC instants. Stage defaults remain configurable
+(regular 40–50 minute sets on hourly boundaries, a 22:00 headline target, 60–90 minute
+headlines, and remaining time for changeover); site/venue curfew is authoritative. Artist
+allocation revalidates confirmed bookings, required members, travel and canonical activity
+availability without disclosing private activity details. Stage managers can view/manage only
+the assigned stage and cannot change contracts, budgets, other stages, readiness or launch.
+
+Staff coverage is evaluated across actual operational/public windows, including safety roles,
+breaks, qualifications and location. Supplier and sponsor schedules remain `planned`.
+Deterministic conflict, financial-readiness and game-world risk results are server-owned:
+forecast ticket revenue and sponsorship receivables are never treated as cash. Completion
+requires zero blockers, optimistic version agreement and an idempotency key, then writes an
+immutable snapshot and reaches only `ready_for_launch_preparation`. It does not publish,
+open sales, fulfil branding, simulate an event or transfer money. RLS denies direct table
+mutation; RPCs expose owner/admin authority and safe role-specific views only.
+
+Roadmap: Phases 1, 2, 3, 4A, 4B, 5A, 5B, 6A and 6B are complete; Phase 7A is this change.
+Phase 7B is launch/public ticket sales, Phase 8 is live simulation, and Phase 9 is settlement,
+outcomes and history. The inherited npm registry may intermittently return `E403` for Vitest;
+this is an environment blocker, not permission to edit the lockfile or bypass verification.
