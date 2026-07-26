@@ -147,3 +147,15 @@ Accepted staff and supplier work extends `festival_financial_commitments`: integ
 All tables deny direct browser writes. Explicit RPCs apply owner/admin/applicant/company authority, expected versions, scoped payload-hash idempotency, audit events and communication deduplication. Completion is server-blocked by budget, currency, schedule, skill, safety coverage and essential contracts, and only advances to `ready_for_sponsorship`.
 
 The inherited npm registry `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` may prevent dependency installation; dependency-independent migration and static verification must continue and blocked commands must not be reported as passing.
+
+## Phase 5B staffing and supplier workflows
+
+Phase 5B completes the server-authoritative workflow boundary introduced by Phase 5A. Vacancies move from publication through player application, withdrawal, manager review and hiring; hiring (including bounded NPC fallback) creates an assignment and one planning commitment in the same transaction. Shifts are append-only, version checked, bounded by the assignment, and reject overlaps. Cancellation retains applications, assignments and shifts while releasing future coverage and the commitment.
+
+Supplier requirements are published as safe opportunities. Only an active company owner, CEO or manager can bind a player company. Quotes move through submitted, under review, declined/withdrawn and accepted states. Acceptance creates the contract, allocation and commitment atomically; it does not transfer cash. NPC quotes use a deterministic daily seed, a 24-hour cooldown and a five-requirement bound. Accepted quotes are never refreshed away.
+
+Every action resolves the authenticated profile on the server, checks optimistic versions, hashes its canonical payload and stores an actor/action/target receipt. Audit and mail/notification outbox rows are unique per request. Direct table writes remain revoked from `PUBLIC`, `anon` and `authenticated`; applicants see only safe marketplace data and their workflow result, while company representatives never see competitor pricing.
+
+`ready_for_sponsorship` requires committed, qualified assignments with shifts, accepted safety supplier contracts and matching active financial commitments. Published vacancies, applications and unaccepted quotes never count as coverage. Ticket, sponsorship and merchandise forecasts are not cash and are not included in these budget checks. Payment, realised expense, launch, XP and settlement remain later-phase work.
+
+Migration sequence: `20291217160000_festival_staffing_and_suppliers.sql` (Phase 5A schema) then `20291217161000_complete_festival_staffing_supplier_workflows.sql` (Phase 5B actions). The inherited install issue is `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`; dependency-independent verification must continue when it occurs.

@@ -392,3 +392,15 @@ Transitions are explicit RPCs rather than unrestricted status writes. Festival o
 - Phase 6: Sponsorship
 - Phase 7: Final readiness and launch
 - Phase 8: Live simulation and settlement
+
+### Phase 5B — staffing and supplier workflows
+
+The Phase 5A records are now driven by dedicated transactional RPCs rather than generic status mutation. Staff lifecycle: publish vacancy → submit/withdraw application → review/shortlist/reject → hire player or bounded NPC → assign non-overlapping shifts → cancel before live work. Supplier lifecycle: publish requirement → discover opportunity → authorised company or deterministic NPC quote → review/decline/withdraw → accept into contract/allocation/commitment → cancel before delivery. Acceptance communications explicitly state that settlement occurs later.
+
+Authority is derived from the authenticated profile. Festival managers operate only their Festival; applicants operate their own applications; active company owners, CEOs and managers may bind their company; ordinary employees and unrelated players may not. RPCs are `SECURITY DEFINER` with an empty search path, direct writes are revoked, idempotency receipts hash payloads, optimistic versions reject stale transitions, and request-scoped audit/outbox uniqueness prevents retry duplication.
+
+Readiness is evidence based: qualified committed assignments, required shifts, safety contracts, allocations and exactly matching active commitments must exist within canonical-currency staff/supplier budgets plus contingency. Marketplace interest is never coverage, forecasts are never cash, and no Phase 5 action pays staff/suppliers, posts realised expense, opens sales, launches the Festival or awards delivery rewards.
+
+Roadmap: Phase 1 identity/location/scale/dates — complete; Phase 2 site/stages — complete; Phase 3 ticketing/capacity — complete; Phase 4A programme/planning — complete; Phase 4B artist workflows/bookings — complete; Phase 5A operations schema/planning — complete; **Phase 5B staffing/supplier workflows — this PR**; Phase 6 sponsorship/commercial partnerships; Phase 7 final readiness/launch; Phase 8 live simulation/settlement.
+
+The forward-only completion migration is `20291217161000_complete_festival_staffing_supplier_workflows.sql`. Fresh installs apply it after Phase 5A; deployed environments retain existing drafts and partially populated records. The known dependency blocker remains `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` and does not prevent dependency-independent checks.
