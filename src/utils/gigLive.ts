@@ -2,6 +2,7 @@ import { calculateCrewEffectiveness, calculateEquipmentReliability, type CrewAss
 import { calculateReadinessPerformanceModifier, type ReadinessResult } from './gigReadiness';
 import { SOUNDCHECK_TYPES, type ProductionQualityResult, type SoundcheckType } from './gigStageProduction';
 import { summarizePreshowPerformanceModifiers, type PreshowConsequence } from './gigPreshow';
+import { calculateCanonicalSongScore, deterministicGigRandom } from '@/domain/gig-simulation';
 
 export type LiveGigStatus = 'scheduled' | 'preshow' | 'ready_to_start' | 'live' | 'paused_for_decision' | 'resolving' | 'completed' | 'cancelled' | 'failed';
 export type LiveSegmentType = 'intro' | 'song' | 'transition' | 'crowd_interaction' | 'incident' | 'decision' | 'encore_break' | 'encore_song' | 'outro';
@@ -28,8 +29,7 @@ export const DEFAULT_LIVE_GIG_CONFIG = { initialCrowdEnergy: 52, initialFanSatis
 
 const clamp = (n: number, min = 0, max = 100) => Math.max(min, Math.min(max, n));
 const signedClamp = (n: number, max: number) => Math.max(-max, Math.min(max, n));
-const hash = (seed: string) => Array.from(seed).reduce((h, ch) => Math.imul(31, h) + ch.charCodeAt(0) | 0, 2166136261) >>> 0;
-export const deterministicRandom = (seed: string) => (hash(seed) % 10000) / 10000;
+export const deterministicRandom = deterministicGigRandom;
 const ratingFor = (score: number): LiveSongRating => score < 25 ? 'disaster' : score < 40 ? 'poor' : score < 58 ? 'average' : score < 72 ? 'good' : score < 86 ? 'great' : 'outstanding';
 
 /** A bounded, auditable modifier inside the canonical engine (not a second score). */
@@ -104,15 +104,14 @@ export function resolveLiveSong(ctx: GigLiveContext, session: LiveGigSessionStat
   const crowdLift = signedClamp((session.crowdEnergy - 55) * 0.08, 4);
   const momentumLift = signedClamp(session.momentum * 0.18, 4);
   const venueFit = ((ctx.venueAcoustics ?? 55) - 55) * 0.07 + ((ctx.genreAffinity ?? 55) - 55) * 0.06;
-  const boundedRandom = (deterministicRandom(`${seed}:${item.id}:song`) - 0.5) * 8;
   const familiarity = song.familiarity ?? song.rehearsalLevel ?? 45;
   const technicalScore = clamp((song.quality ?? 55) * 0.24 + familiarity * 0.2 + (ctx.performerSkill ?? 55) * 0.17 + reliability.quality * 0.12 + crewAvg * 0.08 + (ctx.venueAcoustics ?? 55) * 0.08 + sound.soundBenefit * 0.11 - staminaPenalty + preshow.soundQualityModifier * 45);
   const performanceScore = clamp(ctx.readiness.score * 0.22 + (ctx.bandChemistry ?? 55) * 0.14 + (ctx.stagePresence ?? ctx.performerSkill ?? 55) * 0.16 + (song.popularity ?? 45) * 0.11 + (ctx.productionQuality?.score ?? 55) * 0.09 + session.bandStamina * 0.08 + 50 * 0.08 + positionMod.modifier + crowdLift + momentumLift + preshow.performanceModifier * 100);
   const audienceResponse = clamp(performanceScore * 0.45 + technicalScore * 0.28 + (song.popularity ?? 45) * 0.17 + session.crowdEnergy * 0.10 + venueFit);
   const festivalEffects = calculateFestivalLiveModifier(ctx.festival);
   const festivalModifier = signedClamp(festivalEffects.reduce((sum, effect) => sum + effect.modifier, 0), 18);
-  const baseScore = clamp(technicalScore * 0.38 + performanceScore * 0.39 + audienceResponse * 0.23 + boundedRandom);
-  const score = Math.round(clamp(baseScore + festivalModifier));
+  const canonicalScore = calculateCanonicalSongScore({ technicalScore, performanceScore, audienceResponse, seed, songId: item.id, festivalModifier });
+  const { baseScore, variance: boundedRandom, score } = canonicalScore;
   const intensity = clamp(((song.tempo ?? 110) - 70) / 90 * 100) / 100;
   const staminaCost = Math.round(clamp(DEFAULT_LIVE_GIG_CONFIG.staminaCostBase + (song.durationSeconds ?? 210) / 90 + (song.difficulty ?? 50) / 22 + intensity * 3 - ((song.tags ?? []).some(t => /ballad|slow/i.test(t)) ? 2 : 0), 1, 18));
   const energyChange = Math.round(signedClamp((audienceResponse - 55) * 0.18 + positionMod.modifier * 0.35 - DEFAULT_LIVE_GIG_CONFIG.energyDecayPerSegment, 16));
