@@ -2,7 +2,7 @@ import { calculateCrewEffectiveness, calculateEquipmentReliability, type CrewAss
 import { calculateReadinessPerformanceModifier, type ReadinessResult } from './gigReadiness';
 import { SOUNDCHECK_TYPES, type ProductionQualityResult, type SoundcheckType } from './gigStageProduction';
 import { summarizePreshowPerformanceModifiers, type PreshowConsequence } from './gigPreshow';
-import { calculateCanonicalSongScore, deterministicGigRandom } from '@/domain/gig-simulation';
+import { calculateCanonicalSongOutcome, deterministicGigRandom, type CanonicalSongCalculationInput } from '@/domain/gig-simulation';
 
 export type LiveGigStatus = 'scheduled' | 'preshow' | 'ready_to_start' | 'live' | 'paused_for_decision' | 'resolving' | 'completed' | 'cancelled' | 'failed';
 export type LiveSegmentType = 'intro' | 'song' | 'transition' | 'crowd_interaction' | 'incident' | 'decision' | 'encore_break' | 'encore_song' | 'outro';
@@ -18,7 +18,7 @@ export interface GigLiveSegment { id?: string; segmentIndex: number; segmentType
 export interface LiveGigSessionState { gigId: string; bandId: string; status: LiveGigStatus; startedAt: string; expectedEndAt?: string; currentSegmentIndex: number; currentSongItemId?: string | null; crowdEnergy: number; fanSatisfaction: number; performanceQuality: number; bandStamina: number; momentum: number; incidentRisk: number; simulationVersion: number; lastProcessedAt?: string; }
 export interface FestivalLiveContext { stageQuality: number; soundAndLighting: number; technicalReadiness: number; rehearsal: number; crewEffectiveness: number; weather: number; delayMinutes: number; crowdMood: number; crowdDensity: number; equipmentCondition: number; billingPosition: number; headlinerExpectation: number; incidentDisruption: number; setLengthMinutes: number; }
 export interface GigLiveContext { gigId: string; bandId: string; scheduledAt: string | Date; status?: string | null; slotDurationSeconds?: number | null; capacity?: number | null; ticketsSold?: number | null; venueAcoustics?: number | null; venueQuality?: number | null; genreAffinity?: number | null; ticketPrice?: number | null; curfewAt?: string | Date | null; performerSkill?: number | null; stagePresence?: number | null; bandChemistry?: number | null; healthScore?: number | null; fatigueScore?: number | null; readiness: ReadinessResult; crew?: CrewAssignmentInput[]; equipment?: EquipmentLoadoutInput[]; productionQuality?: ProductionQualityResult | null; soundcheckType?: SoundcheckType; preShowConsequences?: PreshowConsequence[]; setlist: LiveSetlistItem[]; festival?: Readonly<FestivalLiveContext>; }
-export interface LiveBreakdownItem { key: string; label: string; modifier: number; explanation: string; }
+export interface LiveBreakdownItem { key: string; label: string; modifier: number; explanation: string; inputValue?: number; targetCanonicalField?: keyof CanonicalSongCalculationInput | 'finalScore'; application?: 'intermediate' | 'final'; }
 export interface LiveSongResult { score: number; rating: LiveSongRating; technicalScore: number; performanceScore: number; audienceResponse: number; energyChange: number; satisfactionChange: number; staminaCost: number; momentumChange: number; incidents: string[]; highlights: string[]; breakdown: LiveBreakdownItem[]; }
 export interface LiveIncident { incidentType: string; category: LiveIncidentCategory; severity: LiveIncidentSeverity; title: string; decisionType?: string; generationSnapshot: Record<string, unknown>; resultSnapshot: Record<string, unknown>; }
 export interface TacticalDecisionOption { key: string; label: string; consequence: { crowdEnergy?: number; fanSatisfaction?: number; momentum?: number; bandStamina?: number; incidentRisk?: number; durationSeconds?: number }; safeFallback?: boolean; }
@@ -32,28 +32,52 @@ const signedClamp = (n: number, max: number) => Math.max(-max, Math.min(max, n))
 export const deterministicRandom = deterministicGigRandom;
 const ratingFor = (score: number): LiveSongRating => score < 25 ? 'disaster' : score < 40 ? 'poor' : score < 58 ? 'average' : score < 72 ? 'good' : score < 86 ? 'great' : 'outstanding';
 
-/** A bounded, auditable modifier inside the canonical engine (not a second score). */
-export function calculateFestivalLiveModifier(context?: Readonly<FestivalLiveContext>): LiveBreakdownItem[] {
-  if (!context) return [];
+/**
+ * Single-application map for Festival evidence. Factors mapped to a canonical
+ * input MUST NOT also occur in `finalModifier`; disruption-only factors are
+ * applied after the canonical intermediate scores.
+ */
+export const FESTIVAL_FACTOR_TARGETS = {
+  stageQuality: 'stageEffect', soundAndLighting: 'production', technicalReadiness: 'readinessScore',
+  rehearsal: 'rehearsalLevel', crewEffectiveness: 'crewEffectiveness', equipmentCondition: 'equipmentReliability',
+  crowdMood: 'crowdState', crowdDensity: 'crowdState', billingPosition: 'setlistPosition',
+  headlinerExpectation: 'setlistPosition', setLengthMinutes: 'stamina', weather: 'finalScore',
+  delayMinutes: 'finalScore', incidentDisruption: 'finalScore',
+} as const satisfies Record<keyof FestivalLiveContext, keyof CanonicalSongCalculationInput | 'finalScore'>;
+
+export function mapFestivalFactors(context?: Readonly<FestivalLiveContext>) {
+  if (!context) return { canonical: {}, finalModifier: 0, breakdown: [] as LiveBreakdownItem[] };
   const centered = (value: number, weight: number) => (clamp(value) - 50) * weight;
-  const effects: Array<[string, string, number]> = [
-    ['stage_quality', 'Stage quality', centered(context.stageQuality, .055)],
-    ['sound_lighting', 'Sound and lighting', centered(context.soundAndLighting, .06)],
-    ['technical_readiness', 'Technical readiness', centered(context.technicalReadiness, .05)],
-    ['rehearsal', 'Festival rehearsal', centered(context.rehearsal, .045)],
-    ['crew', 'Festival crew', centered(context.crewEffectiveness, .04)],
-    ['weather', 'Weather', centered(context.weather, .045)],
-    ['crowd_mood', 'Crowd mood', centered(context.crowdMood, .055)],
-    ['crowd_density', 'Crowd density', centered(context.crowdDensity, .035)],
-    ['equipment', 'Equipment condition', centered(context.equipmentCondition, .045)],
-    ['billing', 'Billing position', centered(context.billingPosition, .025)],
-    ['headliner', 'Headliner expectation', -Math.max(0, context.headlinerExpectation - 65) * .035],
-    ['delay', 'Delay', -Math.min(60, Math.max(0, context.delayMinutes)) * .055],
-    ['incidents', 'Incident disruption', -clamp(context.incidentDisruption) * .045],
-    ['set_length', 'Set length', -Math.abs(Math.max(10, context.setLengthMinutes) - 60) * .018],
+  const crowdState = clamp(context.crowdMood * .65 + context.crowdDensity * .35);
+  const setlistPosition = clamp(context.billingPosition - Math.max(0, context.headlinerExpectation - 65) * .25);
+  const stamina = clamp(50 - Math.abs(Math.max(10, context.setLengthMinutes) - 60) * .35);
+  const canonical: Partial<CanonicalSongCalculationInput> = { stageEffect: context.stageQuality, production: context.soundAndLighting,
+    readinessScore: context.technicalReadiness, rehearsalLevel: context.rehearsal, crewEffectiveness: context.crewEffectiveness,
+    equipmentReliability: context.equipmentCondition, crowdState, setlistPosition, stamina };
+  const effects: Array<[keyof FestivalLiveContext, string, number, number]> = [
+    ['stageQuality', 'Stage quality', centered(context.stageQuality, .055), context.stageQuality],
+    ['soundAndLighting', 'Sound and lighting', centered(context.soundAndLighting, .06), context.soundAndLighting],
+    ['technicalReadiness', 'Technical readiness', centered(context.technicalReadiness, .05), context.technicalReadiness],
+    ['rehearsal', 'Festival rehearsal', centered(context.rehearsal, .045), context.rehearsal],
+    ['crewEffectiveness', 'Festival crew', centered(context.crewEffectiveness, .04), context.crewEffectiveness],
+    ['crowdMood', 'Crowd mood', centered(context.crowdMood, .055), context.crowdMood],
+    ['crowdDensity', 'Crowd density', centered(context.crowdDensity, .035), context.crowdDensity],
+    ['equipmentCondition', 'Equipment condition', centered(context.equipmentCondition, .045), context.equipmentCondition],
+    ['billingPosition', 'Billing position', centered(context.billingPosition, .025), context.billingPosition],
+    ['headlinerExpectation', 'Headliner expectation', -Math.max(0, context.headlinerExpectation - 65) * .035, context.headlinerExpectation],
+    ['setLengthMinutes', 'Set length', -Math.abs(Math.max(10, context.setLengthMinutes) - 60) * .018, context.setLengthMinutes],
+    ['weather', 'Weather', centered(context.weather, .045), context.weather],
+    ['delayMinutes', 'Delay', -Math.min(60, Math.max(0, context.delayMinutes)) * .055, context.delayMinutes],
+    ['incidentDisruption', 'Incident disruption', -clamp(context.incidentDisruption) * .045, context.incidentDisruption],
   ];
-  return effects.map(([key, label, modifier]) => ({ key: `festival_${key}`, label, modifier: Number(modifier.toFixed(3)), explanation: `${label} is supplied by the immutable Festival runtime evidence.` }));
+  const breakdown = effects.map(([key, label, modifier, inputValue]) => ({ key: `festival_${key}`, label, inputValue,
+    targetCanonicalField: FESTIVAL_FACTOR_TARGETS[key], application: FESTIVAL_FACTOR_TARGETS[key] === 'finalScore' ? 'final' as const : 'intermediate' as const,
+    modifier: Number(modifier.toFixed(3)), explanation: `${label} is supplied by immutable Festival evidence and applied once to ${FESTIVAL_FACTOR_TARGETS[key]}.` }));
+  const finalModifier = signedClamp(breakdown.filter(effect => effect.application === 'final').reduce((sum, effect) => sum + effect.modifier, 0), 18);
+  return { canonical, finalModifier, breakdown };
 }
+
+export const calculateFestivalLiveModifier = (context?: Readonly<FestivalLiveContext>) => mapFestivalFactors(context).breakdown;
 
 export function canStartLiveGig(ctx: GigLiveContext, now = new Date()) {
   const status = ctx.status ?? 'scheduled';
@@ -100,25 +124,28 @@ export function resolveLiveSong(ctx: GigLiveContext, session: LiveGigSessionStat
   const preshow = summarizePreshowPerformanceModifiers(ctx.preShowConsequences ?? []);
   const song = item.song, total = ctx.setlist.length, previous = ctx.setlist.find(s => s.position === item.position - 1);
   const positionMod = setlistPositionModifier(item, total, previous);
-  const staminaPenalty = Math.max(0, 55 - session.bandStamina) * 0.28;
-  const crowdLift = signedClamp((session.crowdEnergy - 55) * 0.08, 4);
-  const momentumLift = signedClamp(session.momentum * 0.18, 4);
-  const venueFit = ((ctx.venueAcoustics ?? 55) - 55) * 0.07 + ((ctx.genreAffinity ?? 55) - 55) * 0.06;
   const familiarity = song.familiarity ?? song.rehearsalLevel ?? 45;
-  const technicalScore = clamp((song.quality ?? 55) * 0.24 + familiarity * 0.2 + (ctx.performerSkill ?? 55) * 0.17 + reliability.quality * 0.12 + crewAvg * 0.08 + (ctx.venueAcoustics ?? 55) * 0.08 + sound.soundBenefit * 0.11 - staminaPenalty + preshow.soundQualityModifier * 45);
-  const performanceScore = clamp(ctx.readiness.score * 0.22 + (ctx.bandChemistry ?? 55) * 0.14 + (ctx.stagePresence ?? ctx.performerSkill ?? 55) * 0.16 + (song.popularity ?? 45) * 0.11 + (ctx.productionQuality?.score ?? 55) * 0.09 + session.bandStamina * 0.08 + 50 * 0.08 + positionMod.modifier + crowdLift + momentumLift + preshow.performanceModifier * 100);
-  const audienceResponse = clamp(performanceScore * 0.45 + technicalScore * 0.28 + (song.popularity ?? 45) * 0.17 + session.crowdEnergy * 0.10 + venueFit);
-  const festivalEffects = calculateFestivalLiveModifier(ctx.festival);
-  const festivalModifier = signedClamp(festivalEffects.reduce((sum, effect) => sum + effect.modifier, 0), 18);
-  const canonicalScore = calculateCanonicalSongScore({ technicalScore, performanceScore, audienceResponse, seed, songId: item.id, festivalModifier });
-  const { baseScore, variance: boundedRandom, score } = canonicalScore;
+  const festival = mapFestivalFactors(ctx.festival);
+  const canonicalInput: CanonicalSongCalculationInput = { quality: song.quality ?? 55, popularity: song.popularity ?? 45,
+    familiarity, rehearsalLevel: song.rehearsalLevel ?? familiarity, performerSkill: ctx.performerSkill ?? 55,
+    stagePresence: ctx.stagePresence ?? ctx.performerSkill ?? 55, readinessScore: ctx.readiness.score,
+    equipmentReliability: reliability.quality, crewEffectiveness: crewAvg, venueEffect: clamp((ctx.venueAcoustics ?? 55) + ((ctx.genreAffinity ?? 55) - 55) * .5),
+    stageEffect: 50, production: clamp((ctx.productionQuality?.score ?? 55) + sound.soundBenefit + preshow.soundQualityModifier * 20),
+    setlistPosition: clamp(50 + positionMod.modifier * 4), stamina: session.bandStamina,
+    momentum: clamp(50 + session.momentum * 3), crowdState: session.crowdEnergy,
+    seed, songId: item.id, festivalModifier: festival.finalModifier };
+  for (const [field, mappedValue] of Object.entries(festival.canonical) as [keyof CanonicalSongCalculationInput, number][]) {
+    if (typeof canonicalInput[field] === 'number') (canonicalInput[field] as number) = clamp((canonicalInput[field] as number) + mappedValue - 50);
+  }
+  const canonicalScore = calculateCanonicalSongOutcome(canonicalInput);
+  const { baseScore, variance: boundedRandom, score, technicalScore, performanceScore, audienceResponse } = canonicalScore;
   const intensity = clamp(((song.tempo ?? 110) - 70) / 90 * 100) / 100;
   const staminaCost = Math.round(clamp(DEFAULT_LIVE_GIG_CONFIG.staminaCostBase + (song.durationSeconds ?? 210) / 90 + (song.difficulty ?? 50) / 22 + intensity * 3 - ((song.tags ?? []).some(t => /ballad|slow/i.test(t)) ? 2 : 0), 1, 18));
   const energyChange = Math.round(signedClamp((audienceResponse - 55) * 0.18 + positionMod.modifier * 0.35 - DEFAULT_LIVE_GIG_CONFIG.energyDecayPerSegment, 16));
   const satisfactionChange = Math.round(signedClamp((score - 58) * 0.12 + (technicalScore - 55) * 0.06 + (item.isEncore ? 3 : 0), 12));
   const momentumChange = Math.round(signedClamp((score - 55) * 0.11 + positionMod.modifier * 0.2, 8));
   const highlights = score >= 82 ? [`${song.title} became a standout live moment.`] : audienceResponse >= 78 ? [`The crowd lifted ${song.title}.`] : [];
-  return { score, rating: ratingFor(score), technicalScore: Math.round(technicalScore), performanceScore: Math.round(performanceScore), audienceResponse: Math.round(audienceResponse), energyChange, satisfactionChange, staminaCost, momentumChange, incidents: [], highlights, breakdown: [ { key: 'base_score', label: 'Canonical base score', modifier: Number(baseScore.toFixed(3)), explanation: 'Score before optional Festival effects.' }, { key: 'readiness', label: 'Final readiness', modifier: Math.round(calculateReadinessPerformanceModifier(ctx.readiness.score) * 100), explanation: `Readiness score ${ctx.readiness.score} anchors the performance.` }, { key: 'familiarity', label: 'Song familiarity', modifier: Math.round(familiarity - 55), explanation: 'Saved setlist familiarity/rehearsal affects accuracy.' }, { key: 'equipment_crew', label: 'Equipment and crew', modifier: Math.round((reliability.score + crewAvg) / 2 - 55), explanation: 'Loadout reliability and crew effectiveness reduce mistakes.' }, { key: 'sound_production', label: 'Soundcheck and production', modifier: Math.round(sound.soundBenefit * 0.6 + ((ctx.productionQuality?.score ?? 55) - 55) * 0.12), explanation: 'Soundcheck and production quality shape technical/audience response.' }, { key: 'position', label: 'Setlist position', modifier: Math.round(positionMod.modifier), explanation: positionMod.notes.join(' ') || 'Neutral setlist position.' }, { key: 'live_state', label: 'Crowd, stamina and momentum', modifier: Math.round(crowdLift + momentumLift - staminaPenalty), explanation: 'Current live state modestly influences this song.' }, { key: 'bounded_randomness', label: 'Bounded live variance', modifier: Math.round(boundedRandom), explanation: 'Deterministic per-song variance prevents refresh rerolls.' }, ...festivalEffects ] };
+  return { score, rating: ratingFor(score), technicalScore: Math.round(technicalScore), performanceScore: Math.round(performanceScore), audienceResponse: Math.round(audienceResponse), energyChange, satisfactionChange, staminaCost, momentumChange, incidents: [], highlights, breakdown: [ { key: 'base_score', label: 'Canonical base score', modifier: Number(baseScore.toFixed(3)), explanation: 'Score before disruption-only Festival effects.' }, { key: 'readiness', label: 'Final readiness', modifier: Math.round(calculateReadinessPerformanceModifier(ctx.readiness.score) * 100), explanation: `Readiness score ${ctx.readiness.score} anchors the performance.` }, { key: 'familiarity', label: 'Song familiarity', modifier: Math.round(familiarity - 55), explanation: 'Saved setlist familiarity/rehearsal affects accuracy.' }, { key: 'equipment_crew', label: 'Equipment and crew', modifier: Math.round((reliability.score + crewAvg) / 2 - 55), explanation: 'Loadout reliability and crew effectiveness reduce mistakes.' }, { key: 'sound_production', label: 'Soundcheck and production', modifier: Math.round(sound.soundBenefit * 0.6 + ((ctx.productionQuality?.score ?? 55) - 55) * 0.12), explanation: 'Soundcheck and production quality shape technical/audience response.' }, { key: 'position', label: 'Setlist position', modifier: Math.round(positionMod.modifier), explanation: positionMod.notes.join(' ') || 'Neutral setlist position.' }, { key: 'bounded_randomness', label: 'Bounded live variance', modifier: Math.round(boundedRandom), explanation: 'Deterministic per-song variance prevents refresh rerolls.' }, ...festival.breakdown ] };
 }
 
 export function applySongResultToSession(session: LiveGigSessionState, result: LiveSongResult, item: LiveSetlistItem): LiveGigSessionState {
