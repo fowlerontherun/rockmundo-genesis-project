@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { parseFestivalPublicLiveStatus,parseFestivalRuntimeCrowd,parseFestivalRuntimeIncident,parseFestivalRuntimeList,parseFestivalRuntimeSession,parseFestivalRuntimeWeather,parseFestivalStageCrowd,parseFestivalVendorSales,type FestivalPublicLiveStatus,type FestivalRuntimeCrowd,type FestivalRuntimeIncident,type FestivalRuntimeSession,type FestivalRuntimeWeather,type FestivalStageCrowd,type FestivalVendorSales } from "../domain/festivalRuntime";
+import { parseFestivalPerformanceSimulationJob,parseFestivalPublicLiveStatus,parseFestivalRuntimeCrowd,parseFestivalRuntimeIncident,parseFestivalRuntimeList,parseFestivalRuntimeSession,parseFestivalRuntimeWeather,parseFestivalStageCrowd,parseFestivalVendorSales,type FestivalPerformanceSimulationJob,type FestivalPublicLiveStatus,type FestivalRuntimeCrowd,type FestivalRuntimeIncident,type FestivalRuntimeSession,type FestivalRuntimeWeather,type FestivalStageCrowd,type FestivalVendorSales } from "../domain/festivalRuntime";
 type RpcArgs=Record<string,unknown>; type RpcResult={data:unknown;error:{message?:string}|null};
 const rpc=async(name:string,args:RpcArgs={}):Promise<unknown>=>{const {data,error}=await (supabase.rpc as unknown as (n:string,a?:RpcArgs)=>Promise<RpcResult>)(name,args);if(error)throw mapFestivalRuntimeError(error.message);return data};
 export const mapFestivalRuntimeError=(message="festival_runtime_failed")=>new Error(message.includes("stale")?"festival_runtime_stale":message.includes("forbidden")?"festival_runtime_forbidden":message.includes("blocked")?"festival_runtime_blocked":message);
@@ -12,6 +12,7 @@ export const festivalRuntimeRepository={
  vendorSales:async(id:string):Promise<FestivalVendorSales[]>=>parseFestivalRuntimeList(await rpc("get_festival_vendor_sales",{p_runtime_session_id:id}),parseFestivalVendorSales),
  sponsorActivations:async(id:string)=>rpc("get_festival_sponsor_activation_runtime",{p_runtime_session_id:id}),
  operationalOutcomes:async(id:string)=>rpc("get_festival_operational_outcomes",{p_runtime_session_id:id}),
+ simulationJobs:async(id:string):Promise<FestivalPerformanceSimulationJob[]>=>parseFestivalRuntimeList(await rpc("get_festival_performance_simulation_jobs",{p_runtime_session_id:id}),parseFestivalPerformanceSimulationJob),
  publicExperience:async(slug:string)=>rpc("get_public_festival_live_experience",{p_public_slug:slug}),
  prepare:async(launchId:string,version:number,key:string):Promise<FestivalRuntimeSession>=>parseFestivalRuntimeSession(await rpc("prepare_festival_runtime",{p_festival_launch_id:launchId,p_expected_launch_version:version,p_idempotency_key:key})),
  action:async(name:FestivalRuntimeAction,args:RpcArgs)=>rpc(name,args),

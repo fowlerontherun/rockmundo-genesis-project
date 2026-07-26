@@ -68,3 +68,166 @@ CREATE TRIGGER festival_performance_crowd_outcome AFTER UPDATE OF status ON publ
 -- Condition-based incident detection: deterministic thresholds, never free random chance.
 CREATE FUNCTION public._evaluate_festival_runtime_incidents(p_runtime_session_id uuid,p_runtime_day_id uuid) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE c record;n integer:=0;w public.festival_runtime_weather%ROWTYPE;r public.festival_runtime_sessions%ROWTYPE;BEGIN SELECT * INTO r FROM public.festival_runtime_sessions WHERE id=p_runtime_session_id;SELECT * INTO w FROM public.festival_runtime_weather WHERE runtime_day_id=p_runtime_day_id;FOR c IN SELECT * FROM public.festival_runtime_stage_crowds WHERE runtime_day_id=p_runtime_day_id LOOP IF c.safety_pressure>=92 THEN INSERT INTO public.festival_runtime_incidents(runtime_session_id,runtime_day_id,runtime_stage_id,category,incident_type,severity,seed,trigger,required_response,public_safe_summary,private_operational_details,dedupe_key)VALUES(r.id,p_runtime_day_id,c.runtime_stage_id,'crowd','capacity_pressure',CASE WHEN c.safety_pressure>=100 THEN 'major' ELSE 'moderate' END,encode(digest(r.incident_seed||':crowd:'||c.runtime_stage_id,'sha256'),'hex'),'stage safety pressure threshold','security and crowd management response','Access to a stage is temporarily being managed.','Crowd pressure threshold exceeded; review ingress, egress and coverage.','crowd-pressure:'||p_runtime_day_id||':'||c.runtime_stage_id) ON CONFLICT DO NOTHING;IF FOUND THEN n:=n+1;END IF;END IF;END LOOP;IF w.weather_state IN('storm','heavy_rain','high_wind') AND w.operational_impact>=65 THEN INSERT INTO public.festival_runtime_incidents(runtime_session_id,runtime_day_id,category,incident_type,severity,seed,trigger,required_response,public_safe_summary,private_operational_details,dedupe_key)VALUES(r.id,p_runtime_day_id,'weather','severe_weather_hold',CASE WHEN w.weather_state='storm' THEN 'major' ELSE 'moderate' END,w.seed,'weather operational impact threshold','weather contingency assessment','Some Festival activity may be delayed due to weather.','Apply the published weather contingency and assess outdoor stages.','weather:'||p_runtime_day_id) ON CONFLICT DO NOTHING;IF FOUND THEN n:=n+1;END IF;END IF;RETURN n;END$$;
 REVOKE ALL ON FUNCTION public._seed_festival_runtime_operations(),public._festival_performance_crowd_outcome(),public._evaluate_festival_runtime_incidents(uuid,uuid) FROM PUBLIC,anon,authenticated;
+-- Phase 8A/8B correctness patch: server simulation jobs, immutable evidence, and exact crowds.
+CREATE TABLE public.festival_performance_simulation_jobs (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ runtime_session_id uuid NOT NULL REFERENCES public.festival_runtime_sessions(id),
+ runtime_day_id uuid NOT NULL REFERENCES public.festival_runtime_days(id),
+ runtime_stage_id uuid NOT NULL REFERENCES public.festival_runtime_stages(id),
+ runtime_performance_id uuid NOT NULL UNIQUE REFERENCES public.festival_runtime_performances(id),
+ status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed','exhausted')),
+ attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0), max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts > 0),
+ seed text NOT NULL, engine_version text NOT NULL, input_digest text NOT NULL, output_digest text,
+ locked_at timestamptz, locked_by text, next_attempt_at timestamptz NOT NULL DEFAULT now(), last_error text,
+ created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz,
+ CHECK ((status = 'completed') = (completed_at IS NOT NULL AND output_digest IS NOT NULL))
+);
+CREATE INDEX festival_performance_jobs_claim_idx ON public.festival_performance_simulation_jobs(next_attempt_at,created_at) WHERE status IN ('pending','failed');
+
+CREATE TABLE public.festival_performance_simulation_results (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(), runtime_performance_id uuid NOT NULL UNIQUE REFERENCES public.festival_runtime_performances(id),
+ canonical_gig_result_id uuid, engine_version text NOT NULL, seed text NOT NULL, input_digest text NOT NULL, output_digest text NOT NULL UNIQUE,
+ base_performance_score numeric NOT NULL CHECK(base_performance_score BETWEEN 0 AND 100), festival_modifiers jsonb NOT NULL,
+ final_score numeric NOT NULL CHECK(final_score BETWEEN 0 AND 100), technical_score numeric NOT NULL CHECK(technical_score BETWEEN 0 AND 100),
+ crowd_response jsonb NOT NULL, attendance integer NOT NULL CHECK(attendance >= 0), delay_impact numeric NOT NULL,
+ weather_impact numeric NOT NULL, incident_impact numeric NOT NULL, setlist_item_outcomes jsonb NOT NULL DEFAULT '[]',
+ stage_actions jsonb NOT NULL DEFAULT '[]', generated_highlights jsonb NOT NULL DEFAULT '[]', created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.festival_crowd_recalculation_requests (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(), runtime_session_id uuid NOT NULL REFERENCES public.festival_runtime_sessions(id),
+ runtime_day_id uuid NOT NULL REFERENCES public.festival_runtime_days(id), idempotency_key uuid NOT NULL,
+ input_digest text NOT NULL, output_digest text, status text NOT NULL DEFAULT 'processing' CHECK(status IN('processing','completed','failed')),
+ result jsonb, sample_time timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz,
+ UNIQUE(runtime_session_id,runtime_day_id,idempotency_key), CHECK(status <> 'completed' OR (result IS NOT NULL AND output_digest IS NOT NULL AND completed_at IS NOT NULL))
+);
+
+ALTER TABLE public.festival_performance_simulation_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.festival_performance_simulation_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.festival_crowd_recalculation_requests ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.festival_performance_simulation_jobs,public.festival_performance_simulation_results,public.festival_crowd_recalculation_requests FROM anon,authenticated;
+
+CREATE FUNCTION public._festival_assert_runtime_chain(p_session uuid,p_day uuid DEFAULT NULL,p_stage uuid DEFAULT NULL,p_performance uuid DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM public.festival_runtime_sessions r JOIN public.festival_launches l ON l.id=r.festival_launch_id JOIN public.festival_companies c ON c.id=l.festival_company_id WHERE r.id=p_session) THEN RAISE EXCEPTION 'festival_runtime_chain_session'; END IF;
+ IF p_day IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.festival_runtime_days d WHERE d.id=p_day AND d.runtime_session_id=p_session) THEN RAISE EXCEPTION 'festival_runtime_chain_day'; END IF;
+ IF p_stage IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.festival_runtime_stages s WHERE s.id=p_stage AND s.runtime_session_id=p_session) THEN RAISE EXCEPTION 'festival_runtime_chain_stage'; END IF;
+ IF p_performance IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.festival_runtime_performances p WHERE p.id=p_performance AND p.runtime_session_id=p_session AND (p_day IS NULL OR p.runtime_day_id=p_day) AND (p_stage IS NULL OR p.runtime_stage_id=p_stage)) THEN RAISE EXCEPTION 'festival_runtime_chain_performance'; END IF;
+END$$;
+
+CREATE FUNCTION public._festival_immutable_result() RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$BEGIN RAISE EXCEPTION 'festival_performance_result_immutable'; END$$;
+CREATE TRIGGER festival_performance_result_immutable BEFORE UPDATE OR DELETE ON public.festival_performance_simulation_results FOR EACH ROW EXECUTE FUNCTION public._festival_immutable_result();
+CREATE FUNCTION public._festival_immutable_snapshot() RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$BEGIN RAISE EXCEPTION 'festival_runtime_snapshot_immutable'; END$$;
+CREATE TRIGGER festival_runtime_outcome_snapshot_immutable BEFORE UPDATE OR DELETE ON public.festival_runtime_outcome_snapshots FOR EACH ROW EXECUTE FUNCTION public._festival_immutable_snapshot();
+
+-- Service-role worker primitives. SKIP LOCKED permits multiple workers without duplicate claims.
+CREATE FUNCTION public.claim_festival_performance_simulation_job(p_worker text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE j public.festival_performance_simulation_jobs%ROWTYPE;
+BEGIN
+ SELECT * INTO j FROM public.festival_performance_simulation_jobs WHERE status IN('pending','failed') AND attempts<max_attempts AND next_attempt_at<=now() ORDER BY next_attempt_at,id FOR UPDATE SKIP LOCKED LIMIT 1;
+ IF j.id IS NULL THEN RETURN NULL; END IF;
+ UPDATE public.festival_performance_simulation_jobs SET status='processing',attempts=attempts+1,locked_at=now(),locked_by=p_worker WHERE id=j.id RETURNING * INTO j;
+ RETURN to_jsonb(j);
+END$$;
+REVOKE ALL ON FUNCTION public.claim_festival_performance_simulation_job(text) FROM PUBLIC,anon,authenticated;
+
+CREATE FUNCTION public.complete_festival_performance_simulation_job(p_job uuid,p_worker text,p_input_digest text,p_output jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE j public.festival_performance_simulation_jobs%ROWTYPE; d text; r public.festival_performance_simulation_results%ROWTYPE;
+BEGIN
+ SELECT * INTO j FROM public.festival_performance_simulation_jobs WHERE id=p_job FOR UPDATE;
+ IF j.id IS NULL OR j.status<>'processing' OR j.locked_by IS DISTINCT FROM p_worker THEN RAISE EXCEPTION 'festival_simulation_job_not_claimed'; END IF;
+ IF j.input_digest<>p_input_digest THEN RAISE EXCEPTION 'festival_simulation_input_digest_mismatch'; END IF;
+ d:=encode(digest(p_output::text,'sha256'),'hex');
+ INSERT INTO public.festival_performance_simulation_results(runtime_performance_id,canonical_gig_result_id,engine_version,seed,input_digest,output_digest,base_performance_score,festival_modifiers,final_score,technical_score,crowd_response,attendance,delay_impact,weather_impact,incident_impact,setlist_item_outcomes,stage_actions,generated_highlights)
+ VALUES(j.runtime_performance_id,(p_output->>'canonicalGigResultId')::uuid,j.engine_version,j.seed,j.input_digest,d,(p_output->>'basePerformanceScore')::numeric,p_output->'festivalModifiers',(p_output->>'finalScore')::numeric,(p_output->>'technicalScore')::numeric,p_output->'crowdResponse',(p_output->>'attendance')::integer,(p_output->>'delayImpact')::numeric,(p_output->>'weatherImpact')::numeric,(p_output->>'incidentImpact')::numeric,coalesce(p_output->'setlistItemOutcomes','[]'),coalesce(p_output->'stageActions','[]'),coalesce(p_output->'generatedHighlights','[]'))
+ ON CONFLICT(runtime_performance_id) DO NOTHING RETURNING * INTO r;
+ IF r.id IS NULL THEN SELECT * INTO r FROM public.festival_performance_simulation_results WHERE runtime_performance_id=j.runtime_performance_id; IF r.input_digest<>j.input_digest OR r.output_digest<>d THEN RAISE EXCEPTION 'festival_simulation_result_conflict'; END IF; END IF;
+ UPDATE public.festival_runtime_performances SET engine_result_snapshot=p_output,performance_score=r.final_score,technical_score=r.technical_score,crowd_response=r.crowd_response::text,estimated_audience=r.attendance,status='completed',actual_end=coalesce(actual_end,now()),version=version+1 WHERE id=j.runtime_performance_id AND engine_result_snapshot IS NULL;
+ UPDATE public.festival_performance_simulation_jobs SET status='completed',output_digest=d,completed_at=now(),locked_at=NULL,locked_by=NULL WHERE id=j.id;
+ RETURN to_jsonb(r);
+END$$;
+REVOKE ALL ON FUNCTION public.complete_festival_performance_simulation_job(uuid,text,text,jsonb) FROM PUBLIC,anon,authenticated;
+
+CREATE FUNCTION public.get_festival_performance_simulation_jobs(p_runtime_session_id uuid) RETURNS SETOF public.festival_performance_simulation_jobs LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF NOT public._festival_runtime_owner(p_runtime_session_id,public._festival_runtime_actor()) THEN RAISE EXCEPTION 'festival_runtime_forbidden'; END IF;
+ RETURN QUERY SELECT j.* FROM public.festival_performance_simulation_jobs j WHERE j.runtime_session_id=p_runtime_session_id ORDER BY j.created_at,j.id;
+END$$;
+
+CREATE OR REPLACE FUNCTION public.resolve_festival_performance(p_runtime_performance_id uuid,p_expected_version integer,p_idempotency_key uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE p public.festival_runtime_performances%ROWTYPE; j public.festival_performance_simulation_jobs%ROWTYPE; digest_input text;
+BEGIN
+ SELECT * INTO p FROM public.festival_runtime_performances WHERE id=p_runtime_performance_id FOR UPDATE;
+ IF p.id IS NULL THEN RAISE EXCEPTION 'festival_runtime_chain_performance'; END IF;
+ PERFORM public._festival_assert_runtime_chain(p.runtime_session_id,p.runtime_day_id,p.runtime_stage_id,p.id);
+ IF NOT public._festival_runtime_owner(p.runtime_session_id,public._festival_runtime_actor()) THEN RAISE EXCEPTION 'festival_runtime_forbidden'; END IF;
+ IF p.version<>p_expected_version THEN RAISE EXCEPTION 'festival_runtime_stale'; END IF;
+ IF p.status='completed' THEN RETURN to_jsonb(p); END IF;
+ IF p.status<>'live' OR p.engine_input_snapshot IS NULL THEN RAISE EXCEPTION 'festival_performance_resolution_invalid'; END IF;
+ digest_input:=encode(digest(p.engine_input_snapshot::text,'sha256'),'hex');
+ INSERT INTO public.festival_performance_simulation_jobs(runtime_session_id,runtime_day_id,runtime_stage_id,runtime_performance_id,seed,engine_version,input_digest)
+ VALUES(p.runtime_session_id,p.runtime_day_id,p.runtime_stage_id,p.id,p.performance_seed,p.engine_version,digest_input) ON CONFLICT(runtime_performance_id) DO NOTHING RETURNING * INTO j;
+ IF j.id IS NULL THEN SELECT * INTO j FROM public.festival_performance_simulation_jobs WHERE runtime_performance_id=p.id; IF j.input_digest<>digest_input THEN RAISE EXCEPTION 'festival_simulation_input_digest_mismatch'; END IF; END IF;
+ RETURN jsonb_build_object('runtimePerformanceId',p.id,'simulationJobId',j.id,'simulationStatus',j.status,'idempotencyKey',p_idempotency_key);
+END$$;
+
+CREATE OR REPLACE FUNCTION public.recalculate_festival_crowds(p_runtime_session_id uuid,p_runtime_day_id uuid,p_expected_version integer,p_idempotency_key uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE r public.festival_runtime_sessions%ROWTYPE; req public.festival_crowd_recalculation_requests%ROWTYPE; onsite integer; total_weight numeric; remaining integer; allocated integer; row_count integer; c record; old_count integer; target integer; result jsonb; input_digest text; output_digest text; sample_at timestamptz:=clock_timestamp();
+BEGIN
+ SELECT * INTO r FROM public.festival_runtime_sessions WHERE id=p_runtime_session_id FOR UPDATE;
+ IF r.id IS NULL THEN RAISE EXCEPTION 'festival_runtime_chain_session'; END IF;
+ PERFORM public._festival_assert_runtime_chain(r.id,p_runtime_day_id,NULL,NULL);
+ IF NOT public._festival_runtime_owner(r.id,public._festival_runtime_actor()) THEN RAISE EXCEPTION 'festival_runtime_forbidden'; END IF;
+ IF r.version<>p_expected_version THEN RAISE EXCEPTION 'festival_runtime_stale'; END IF;
+ IF r.status IN('runtime_complete','cancelled','failed') OR r.completed_at IS NOT NULL THEN RAISE EXCEPTION 'festival_crowd_runtime_finalised'; END IF;
+ SELECT a.onsite_count INTO onsite FROM public.festival_runtime_attendance a WHERE a.runtime_session_id=r.id AND a.runtime_day_id=p_runtime_day_id FOR UPDATE;
+ IF onsite IS NULL OR onsite<0 THEN RAISE EXCEPTION 'festival_crowd_attendance_invalid'; END IF;
+ input_digest:=encode(digest(jsonb_build_object('session',r.id,'day',p_runtime_day_id,'runtimeVersion',r.version,'onsite',onsite,'stages',(SELECT jsonb_agg(jsonb_build_array(s.id,s.status,s.capacity,p.id,p.status,p.delay_minutes) ORDER BY s.id) FROM public.festival_runtime_stages s LEFT JOIN public.festival_runtime_performances p ON p.runtime_stage_id=s.id AND p.runtime_day_id=p_runtime_day_id AND p.status IN('live','starting','ready','delayed') WHERE s.runtime_session_id=r.id),'weather',(SELECT jsonb_agg(to_jsonb(w) ORDER BY w.id) FROM public.festival_runtime_weather w WHERE w.runtime_session_id=r.id AND w.runtime_day_id=p_runtime_day_id))::text,'sha256'),'hex');
+ INSERT INTO public.festival_crowd_recalculation_requests(runtime_session_id,runtime_day_id,idempotency_key,input_digest,sample_time) VALUES(r.id,p_runtime_day_id,p_idempotency_key,input_digest,sample_at) ON CONFLICT DO NOTHING;
+ SELECT * INTO req FROM public.festival_crowd_recalculation_requests WHERE runtime_session_id=r.id AND runtime_day_id=p_runtime_day_id AND idempotency_key=p_idempotency_key FOR UPDATE;
+ IF req.input_digest<>input_digest THEN RAISE EXCEPTION 'festival_crowd_idempotency_conflict'; END IF;
+ IF req.status='completed' THEN RETURN req.result||jsonb_build_object('idempotent',true); END IF;
+ CREATE TEMP TABLE _festival_alloc(stage_id uuid PRIMARY KEY,performance_id uuid,capacity integer,weight numeric,exact_share numeric,floor_share integer,remainder numeric) ON COMMIT DROP;
+ INSERT INTO _festival_alloc(stage_id,performance_id,capacity,weight,exact_share,floor_share,remainder)
+ SELECT s.id,p.id,s.capacity,CASE WHEN s.status IN('closed','failed') OR p.id IS NULL OR p.status='cancelled' THEN 0 ELSE greatest(1,50+(get_byte(decode(substr(md5(s.stage_seed||p.id::text),1,2),'hex'),0)%51)+CASE WHEN p.status='live' THEN 35 ELSE 0 END-least(p.delay_minutes,30)) END,0,0,0
+ FROM public.festival_runtime_stages s LEFT JOIN LATERAL(SELECT x.* FROM public.festival_runtime_performances x WHERE x.runtime_session_id=r.id AND x.runtime_day_id=p_runtime_day_id AND x.runtime_stage_id=s.id AND x.status IN('live','starting','ready','delayed') ORDER BY x.scheduled_start,x.id LIMIT 1)p ON true WHERE s.runtime_session_id=r.id;
+ SELECT coalesce(sum(weight),0) INTO total_weight FROM _festival_alloc;
+ UPDATE _festival_alloc SET exact_share=CASE WHEN total_weight=0 THEN 0 ELSE onsite*weight/total_weight END;
+ UPDATE _festival_alloc SET floor_share=least(capacity,floor(exact_share)::integer),remainder=exact_share-floor(exact_share);
+ SELECT onsite-coalesce(sum(floor_share),0) INTO remaining FROM _festival_alloc;
+ WHILE remaining>0 LOOP
+  UPDATE _festival_alloc SET floor_share=floor_share+1,remainder=remainder-1 WHERE stage_id=(SELECT stage_id FROM _festival_alloc WHERE weight>0 AND floor_share<capacity ORDER BY remainder DESC,stage_id LIMIT 1);
+  GET DIAGNOSTICS row_count=ROW_COUNT; IF row_count=0 THEN EXIT; END IF; remaining:=remaining-1;
+ END LOOP;
+ allocated:=onsite-remaining;
+ FOR c IN SELECT * FROM _festival_alloc ORDER BY stage_id LOOP
+  SELECT current_crowd INTO old_count FROM public.festival_runtime_stage_crowds WHERE runtime_day_id=p_runtime_day_id AND runtime_stage_id=c.stage_id; old_count:=coalesce(old_count,0); target:=c.floor_share;
+  INSERT INTO public.festival_runtime_stage_crowds(runtime_session_id,runtime_day_id,runtime_stage_id,runtime_performance_id,current_crowd,stage_capacity,crowd_share,arrivals,departures,queue_size,safety_pressure,peak_audience,audience_total,sample_count,seed,formula_version,last_calculated_at)
+  VALUES(r.id,p_runtime_day_id,c.stage_id,c.performance_id,target,c.capacity,CASE WHEN onsite=0 THEN 0 ELSE target::numeric/onsite END,greatest(target-old_count,0),greatest(old_count-target,0),0,CASE WHEN c.capacity=0 THEN 0 ELSE least(100,round(target::numeric/c.capacity*100)) END,target,target,1,encode(digest(r.runtime_seed||':crowd:'||p_runtime_day_id||':'||c.stage_id,'sha256'),'hex'),'festival-crowd-largest-remainder-v2',sample_at)
+  ON CONFLICT(runtime_day_id,runtime_stage_id) DO UPDATE SET runtime_performance_id=excluded.runtime_performance_id,current_crowd=excluded.current_crowd,crowd_share=excluded.crowd_share,arrivals=excluded.arrivals,departures=excluded.departures,safety_pressure=excluded.safety_pressure,peak_audience=greatest(public.festival_runtime_stage_crowds.peak_audience,excluded.current_crowd),audience_total=public.festival_runtime_stage_crowds.audience_total+excluded.current_crowd,sample_count=public.festival_runtime_stage_crowds.sample_count+1,formula_version=excluded.formula_version,last_calculated_at=excluded.last_calculated_at,version=public.festival_runtime_stage_crowds.version+1;
+  INSERT INTO public.festival_runtime_crowd_movements(runtime_session_id,runtime_day_id,to_stage_id,arrivals,departures,reason,calculation_key) VALUES(r.id,p_runtime_day_id,c.stage_id,greatest(target-old_count,0),greatest(old_count-target,0),'largest_remainder',req.id||':'||c.stage_id) ON CONFLICT DO NOTHING;
+ END LOOP;
+ INSERT INTO public.festival_runtime_crowds(runtime_session_id,runtime_day_id,admitted_count,allocated_count,unallocated_count,seed,formula_version,last_calculated_at) VALUES(r.id,p_runtime_day_id,onsite,allocated,remaining,encode(digest(r.runtime_seed||':crowd:'||p_runtime_day_id,'sha256'),'hex'),'festival-crowd-largest-remainder-v2',sample_at) ON CONFLICT(runtime_day_id) DO UPDATE SET admitted_count=excluded.admitted_count,allocated_count=excluded.allocated_count,unallocated_count=excluded.unallocated_count,formula_version=excluded.formula_version,last_calculated_at=excluded.last_calculated_at,version=public.festival_runtime_crowds.version+1;
+ result:=jsonb_build_object('runtimeSessionId',r.id,'runtimeDayId',p_runtime_day_id,'allocated',allocated,'unallocated',remaining,'onsite',onsite,'sampleTime',sample_at,'formulaVersion','festival-crowd-largest-remainder-v2','idempotencyKey',p_idempotency_key,'idempotent',false);
+ output_digest:=encode(digest(result::text,'sha256'),'hex'); UPDATE public.festival_crowd_recalculation_requests SET status='completed',result=result,output_digest=output_digest,completed_at=now() WHERE id=req.id;
+ RETURN result;
+END$$;
+
+CREATE OR REPLACE FUNCTION public.finalise_festival_runtime_outcomes(p_runtime_session_id uuid,p_expected_version integer,p_idempotency_key uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE r public.festival_runtime_sessions%ROWTYPE; snapshot jsonb; content_digest text; existing public.festival_runtime_outcome_snapshots%ROWTYPE;
+BEGIN
+ SELECT * INTO r FROM public.festival_runtime_sessions WHERE id=p_runtime_session_id FOR UPDATE;
+ IF r.id IS NULL THEN RAISE EXCEPTION 'festival_runtime_chain_session'; END IF; PERFORM public._festival_assert_runtime_chain(r.id,NULL,NULL,NULL);
+ IF NOT public._festival_runtime_owner(r.id,public._festival_runtime_actor()) THEN RAISE EXCEPTION 'festival_runtime_forbidden'; END IF;
+ SELECT * INTO existing FROM public.festival_runtime_outcome_snapshots WHERE runtime_session_id=r.id; IF existing.id IS NOT NULL THEN RETURN jsonb_build_object('readyForSettlement',true,'outcomeDigest',existing.content_digest,'idempotent',true); END IF;
+ IF r.version<>p_expected_version THEN RAISE EXCEPTION 'festival_runtime_stale'; END IF;
+ IF r.status NOT IN('public_closed','site_clearance') OR r.gates_open OR EXISTS(SELECT 1 FROM public.festival_performance_simulation_jobs WHERE runtime_session_id=r.id AND status<>'completed') OR EXISTS(SELECT 1 FROM public.festival_runtime_performances p WHERE p.runtime_session_id=r.id AND p.status NOT IN('completed','cancelled','abandoned','failed')) OR EXISTS(SELECT 1 FROM public.festival_runtime_incidents WHERE runtime_session_id=r.id AND severity IN('major','critical') AND status NOT IN('resolved','handed_over')) OR EXISTS(SELECT 1 FROM public.festival_runtime_vendor_sales WHERE runtime_session_id=r.id AND status='open') OR EXISTS(SELECT 1 FROM public.festival_runtime_sponsor_activations WHERE runtime_session_id=r.id AND status IN('planned','ready','active')) OR EXISTS(SELECT 1 FROM public.festival_runtime_attendance a LEFT JOIN public.festival_runtime_crowds c ON c.runtime_day_id=a.runtime_day_id WHERE a.runtime_session_id=r.id AND coalesce(c.allocated_count,0)+coalesce(c.unallocated_count,0)<>a.onsite_count) THEN RAISE EXCEPTION 'festival_runtime_outcomes_blocked'; END IF;
+ snapshot:=jsonb_build_object('performances',(SELECT jsonb_agg(to_jsonb(x) ORDER BY x.runtime_performance_id) FROM public.festival_performance_simulation_results x JOIN public.festival_runtime_performances p ON p.id=x.runtime_performance_id WHERE p.runtime_session_id=r.id),'crowds',(SELECT jsonb_agg(to_jsonb(x) ORDER BY x.runtime_day_id,x.runtime_stage_id) FROM public.festival_runtime_stage_crowds x WHERE x.runtime_session_id=r.id),'attendance',(SELECT jsonb_agg(to_jsonb(x) ORDER BY x.runtime_day_id) FROM public.festival_runtime_attendance x WHERE x.runtime_session_id=r.id),'sourceDigests',jsonb_build_object('performanceInputs',(SELECT jsonb_agg(input_digest ORDER BY runtime_performance_id) FROM public.festival_performance_simulation_jobs WHERE runtime_session_id=r.id),'crowdInputs',(SELECT jsonb_agg(input_digest ORDER BY runtime_day_id,created_at) FROM public.festival_crowd_recalculation_requests WHERE runtime_session_id=r.id AND status='completed')));
+ content_digest:=encode(digest(snapshot::text,'sha256'),'hex'); INSERT INTO public.festival_runtime_outcome_snapshots(runtime_session_id,snapshot,engine_version,formula_versions,content_digest) VALUES(r.id,snapshot,r.engine_version,jsonb_build_object('runtime',r.formula_version,'crowd','festival-crowd-largest-remainder-v2'),content_digest);
+ UPDATE public.festival_runtime_sessions SET status='runtime_complete',ready_for_settlement=true,completed_at=now(),gates_open=false,version=version+1,updated_at=now() WHERE id=r.id;
+ RETURN jsonb_build_object('readyForSettlement',true,'outcomeDigest',content_digest,'idempotencyKey',p_idempotency_key,'idempotent',false);
+END$$;
+
+GRANT EXECUTE ON FUNCTION public._festival_assert_runtime_chain(uuid,uuid,uuid,uuid),public.get_festival_performance_simulation_jobs(uuid),public.recalculate_festival_crowds(uuid,uuid,integer,uuid),public.resolve_festival_performance(uuid,integer,uuid),public.finalise_festival_runtime_outcomes(uuid,integer,uuid) TO authenticated;
