@@ -10,6 +10,7 @@ runtime_log="festival-runtime-diagnostics/runtime-gate.psql.log"
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_company_financial_correctness_harness.sql 2>&1 | tee "$runtime_log"
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlement_v3_regression_harness.sql 2>&1 | tee -a "$runtime_log"
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlement_v4_semantic_harness.sql 2>&1 | tee -a "$runtime_log"
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlement_v5_native_harness.sql 2>&1 | tee -a "$runtime_log"
 run_id=$(sed -nE 's/.*festival_runtime_summary=\{.*"runId": "([^"]+)".*/\1/p' "$runtime_log")
 [[ -n "$run_id" ]] || { echo "runtime run id was not emitted" >&2; exit 1; }
 cleanup_one=0; cleanup_two=0
