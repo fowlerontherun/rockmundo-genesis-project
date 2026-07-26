@@ -21,6 +21,18 @@ const requiredRpcs = [
     'cancel_festival_artist_booking', 'get_my_festival_artist_opportunities',
     'search_festival_artist_candidates',
   ].map((name) => ({ name, arguments: [] })),
+  ...[
+    'publish_festival_staff_vacancy', 'apply_for_festival_staff_vacancy',
+    'withdraw_festival_staff_application', 'review_festival_staff_application',
+    'hire_festival_staff_applicant', 'hire_festival_npc_staff',
+    'assign_festival_staff_shift', 'cancel_festival_staff_assignment',
+    'publish_festival_supplier_requirement', 'submit_festival_supplier_quote',
+    'withdraw_festival_supplier_quote', 'review_festival_supplier_quote',
+    'accept_festival_supplier_quote', 'cancel_festival_supplier_contract',
+    'refresh_festival_npc_supplier_quotes',
+  ].map((name) => ({ name, arguments: [{ name: 'p_payload', type: 'jsonb' }, { name: 'p_idempotency_key', type: 'uuid' }] })),
+  { name: 'get_available_festival_staff_vacancies', arguments: [{ name: 'p_filters', type: 'jsonb' }] },
+  { name: 'get_available_festival_supplier_opportunities', arguments: [{ name: 'p_filters', type: 'jsonb' }] },
 ];
 
 const migrationDir = join(root, 'supabase', 'migrations');
@@ -55,6 +67,13 @@ for (const rpc of requiredRpcs) {
     const renderedArgs = args.map((arg) => `${arg.name} ${arg.type}`).join(', ');
     missing.push(`public.${rpc.name}(${renderedArgs}) is absent from Supabase migrations`);
   }
+}
+
+const completion = readFileSync(join(migrationDir, '20291217161000_complete_festival_staffing_supplier_workflows.sql'), 'utf8');
+for (const name of requiredRpcs.slice(-17, -2).map((rpc) => rpc.name)) {
+  const definitions = [...completion.matchAll(new RegExp(`CREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\s+public\\.${name}\\b([\\s\\S]*?)(?=CREATE\\s+OR\\s+REPLACE\\s+FUNCTION|$)`, 'gi'))];
+  const body = definitions.at(-1)?.[1] ?? '';
+  if (/festival_operations_action_not_implemented|not\s+implemented/i.test(body)) missing.push(`public.${name} still contains a bounded placeholder`);
 }
 
 if (missing.length > 0) {
