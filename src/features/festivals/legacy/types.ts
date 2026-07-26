@@ -7,8 +7,8 @@ export type FestivalResult = {
   weatherSummary:unknown; incidentSummary:Record<string,number>; performanceCount:number; largestPerformanceCrowd:number;
   performanceHighlights:unknown[]; sponsorSummary:unknown; merchandiseSummary:unknown; foodDrinkSummary:unknown; headliners:unknown[]; posterUrl?:string; publishedAt:string;
 };
-export type FestivalAward={id:string;seasonYear:number;category:string;winnerType:string;winnerId:string;winnerName:string;festivalResultId:string;score:number;citation:string};
-export type FestivalRecord={id:string;category:string;holderName:string;festivalResultId:string;value:number;unit:string;achievedYear:number;evidence:unknown};
+export type FestivalAward={id:string;seasonYear:number;category:string;winnerType:string;winnerId:string|null;winnerName:string;festivalResultId:string|null;score:number;citation:string};
+export type FestivalRecord={id:string;category:string;holderName:string;festivalResultId:string;valueText:string;valueType:"attendance"|"minor_money"|"seconds"|"rating"|"editions"|"performances"|"units";currencyCode:string|null;unit:string;achievedYear:number;evidence:unknown};
 export type FestivalResultPage={items:FestivalResult[];limit:number;offset:number};
 export type FestivalResultDetail=FestivalResult&{review:Record<string,unknown>;lineUp:unknown[];timetable:unknown[];awards:FestivalAward[];recordsHeld:FestivalRecord[];publicationStories:unknown[]};
 export type CurrencyTotal={currencyCode:string;revenueMinor:MoneyMinor;profitLossMinor:MoneyMinor};

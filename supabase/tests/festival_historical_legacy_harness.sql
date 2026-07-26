@@ -11,6 +11,16 @@ DO $$BEGIN
  IF has_table_privilege('authenticated','public.festival_results','DELETE') THEN RAISE EXCEPTION 'authenticated archive deletion permitted'; END IF;
  IF NOT has_function_privilege('anon','public.get_festival_results(integer,text,text,text,text,integer,integer)','EXECUTE') THEN RAISE EXCEPTION 'public results unavailable'; END IF;
  IF to_regprocedure('public.process_festival_legacy_generation_jobs(integer,text)') IS NULL THEN RAISE EXCEPTION 'generation worker missing'; END IF;
+ IF to_regprocedure('public.process_festival_reputation_changes(integer,text)') IS NULL THEN RAISE EXCEPTION 'reputation worker missing'; END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_constraint c
+   WHERE c.conrelid='public.festival_legacy_generation_jobs'::regclass
+     AND c.contype='u'
+     AND (SELECT array_agg(a.attname ORDER BY k.ordinality)
+          FROM unnest(c.conkey) WITH ORDINALITY k(attnum,ordinality)
+          JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)
+       = ARRAY['festival_settlement_id','job_type']::name[]
+ ) THEN RAISE EXCEPTION 'generation job conflict arbiter missing'; END IF;
  IF has_function_privilege('authenticated','public.process_festival_legacy_generation_jobs(integer,text)','EXECUTE') THEN RAISE EXCEPTION 'browser can process generation jobs'; END IF;
  IF has_function_privilege('authenticated','public.generate_festival_result(uuid)','EXECUTE') THEN RAISE EXCEPTION 'browser can generate results'; END IF;
  IF (SELECT count(*) FROM unnest(ARRAY['highest_attendance','fastest_sell_out','largest_profit','biggest_loss','highest_rated_festival','longest_running_festival','most_performances','most_merchandise_sold','largest_single_performance_crowd']) c WHERE position(quote_literal(c) in pg_get_functiondef('public.refresh_festival_world_records(uuid)'::regprocedure))>0) <> 9 THEN RAISE EXCEPTION 'not all record categories implemented'; END IF;
