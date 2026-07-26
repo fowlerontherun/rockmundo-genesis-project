@@ -45,6 +45,13 @@ const requiredRpcs = [
   ...['assign_festival_artist_to_slot','move_festival_artist_slot','remove_festival_artist_from_slot','lock_festival_stage_slot','unlock_festival_stage_slot','schedule_festival_artist_soundcheck','assign_festival_stage_manager','remove_festival_stage_manager','schedule_festival_operational_item','move_festival_operational_item','cancel_festival_operational_item','schedule_festival_supplier_delivery','move_festival_supplier_delivery','cancel_festival_supplier_delivery','schedule_festival_sponsor_activation','move_festival_sponsor_activation','cancel_festival_sponsor_activation'].map((name) => ({ name, arguments: [{ name: 'p_payload', type: 'jsonb' }, { name: 'p_idempotency_key', type: 'uuid' }] })),
   { name: 'recalculate_festival_readiness', arguments: [{ name: 'p_festival_company_id', type: 'uuid' }, { name: 'p_expected_version', type: 'integer' }, { name: 'p_idempotency_key', type: 'uuid' }] },
   { name: 'complete_festival_timetable_plan', arguments: [{ name: 'p_festival_company_id', type: 'uuid' }, { name: 'p_expected_version', type: 'integer' }, { name: 'p_idempotency_key', type: 'uuid' }] },
+  { name: 'begin_festival_launch_review', arguments: [{ name: 'p_festival_company_id', type: 'uuid' }, { name: 'p_expected_version', type: 'integer' }, { name: 'p_idempotency_key', type: 'uuid' }] },
+  { name: 'save_festival_public_profile', arguments: [] }, { name: 'launch_festival', arguments: [] },
+  { name: 'open_festival_ticket_sales', arguments: [] }, { name: 'pause_festival_ticket_sales', arguments: [] },
+  { name: 'resume_festival_ticket_sales', arguments: [] }, { name: 'close_festival_ticket_sales', arguments: [] },
+  { name: 'purchase_festival_tickets', arguments: [{ name: 'p_festival_launch_id', type: 'uuid' }, { name: 'p_ticket_product_id', type: 'uuid' }, { name: 'p_quantity', type: 'integer' }, { name: 'p_idempotency_key', type: 'uuid' }] },
+  { name: 'issue_festival_complimentary_tickets', arguments: [] }, { name: 'cancel_launched_festival', arguments: [] },
+  ...['get_festival_launch_plan','get_public_festival','get_public_festival_directory','get_public_festival_timetable','get_public_festival_ticket_products','get_festival_ticket_sales_summary','get_my_festival_tickets'].map((name) => ({ name, arguments: [] })),
 ];
 
 const migrationDir = join(root, 'supabase', 'migrations');
