@@ -1,0 +1,6 @@
+import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import {getFestivalArtistProgramme,saveFestivalArtistProgramme} from "../data/festivalCompanyRepository";
+import type {FestivalApplicationWindow,FestivalArtistProgramme} from "../domain/festivalArtistProgramme";
+export const festivalArtistProgrammeQueryKey=(id?:string)=>["festival-artist-programme",id] as const;
+export const useFestivalArtistProgramme=(id?:string,enabled=true)=>useQuery({queryKey:festivalArtistProgrammeQueryKey(id),enabled:enabled&&Boolean(id),retry:false,queryFn:()=>getFestivalArtistProgramme(id!)});
+export const useSaveFestivalArtistProgramme=()=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;expectedVersion:number;programme:FestivalArtistProgramme;applicationWindows:FestivalApplicationWindow[];idempotencyKey:string;complete?:boolean})=>saveFestivalArtistProgramme(input),onSuccess:data=>{client.setQueryData(festivalArtistProgrammeQueryKey(data.festivalCompanyId),data);void Promise.all([["festival-company-setup"],["owned-festival-companies"],["festival-ticket-plan",data.festivalCompanyId],["festival-opportunities"]].map(queryKey=>client.invalidateQueries({queryKey})));}})};

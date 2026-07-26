@@ -14,6 +14,8 @@ export { FestivalCompanyCard } from "./ui/FestivalCompanyCard";
 
 export * from "./domain/festivalSitePlan";
 export * from "./domain/festivalTicketPlan";
+export * from "./domain/festivalArtistProgramme";
+export * from "./application/useFestivalArtistProgramme";
 export * from "./domain/festivalTicketForecast";
 export * from "./domain/festivalTicketValidation";
 export * from "./domain/festivalSitePlanValidation";
