@@ -340,3 +340,13 @@ The migration is intentionally `20291217130000_festival_site_and_stage_planning.
 Facility figures (toilets, medical and water points, security, bars, vendors, accessible viewing, backstage, parking and transport) are planning estimates based on capacity and stage count. Supplier, staffing, finance, contract, booking, ticketing and artist records remain outside Phase 2.
 
 Roadmap: Phase 1 identity/location/scale/dates is complete; Phase 2 site/stages is this change; Phase 3 ticketing; Phase 4 artist applications/bookings; Phase 5 staffing/suppliers; Phase 6 sponsorship; Phase 7 readiness/launch; Phase 8 live simulation/settlement. The inherited npm registry/lockfile installation issue remains an environment limitation and does not relax SQL/static verification.
+
+## Phase 3: ticket planning boundary
+
+Festival ticket planning is intentionally isolated from transactional sales. `festival_ticket_plans` owns canonical currency, tax/fee assumptions, purchase limits, deterministic demand assumptions, readiness and versioning. Products distinguish admission, upgrade and add-on classes; only admission products expand over their canonical single-day/date-range/full-Festival dates and consume the Phase 2 `usable_capacity`. Daily allocation rows include reserved operational and complimentary capacity in oversell checks. Planned release phases may overlap only for distinct eligibility groups; phases without distinct eligibility are sequential, ordered deterministically, and their per-product total cannot exceed product capacity.
+
+All money uses integer minor units and all rates use basis points. Server forecasts derive maximum face-value revenue, expected sales/gross receipts, customer/company fees, tax, refunds, net receipts and daily utilisation. They are planning forecasts—not earned revenue—and create no ledger, payment, purchase, issued-ticket, public-sale, announcement or scheduled-job record.
+
+The RPC boundary resolves currency from the configured home-city country, expands product dates, reads site capacity and Phase 2 status server-side, and returns structured issues. Owner/admin access, fail-closed RLS, optimistic version predicates, normalised idempotency hashing and audit rows follow Phases 1–2. Completion alone advances the plan to `ready_for_artist_planning`.
+
+Migration ordering remains forward-only: the retained historical sequence is followed by the exact Phase 2 `20291217130000_festival_site_and_stage_planning.sql` and Phase 3 `20291217140000_festival_ticketing_and_capacity_planning.sql` names. Lexical ordering protects fresh installs, while deployed databases apply only unseen migrations. The verifier allow-lists these exact continuations, not a broader future range.

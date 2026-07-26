@@ -13,5 +13,8 @@ export type { OwnedFestivalCompanySummary } from "./data/festivalCompanyReposito
 export { FestivalCompanyCard } from "./ui/FestivalCompanyCard";
 
 export * from "./domain/festivalSitePlan";
+export * from "./domain/festivalTicketPlan";
+export * from "./domain/festivalTicketForecast";
+export * from "./domain/festivalTicketValidation";
 export * from "./domain/festivalSitePlanValidation";
 export * from "./application/useFestivalSitePlan";

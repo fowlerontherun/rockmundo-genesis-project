@@ -57,15 +57,40 @@ Planning limits live on the admin-rebalanceable `festival_scale_catalogue`: loca
 
 ## Migration ordering
 
-Phase 2 uses `20291217130000_festival_site_and_stage_planning.sql`, immediately after the retained anomalous `20291217122000_festival_configuration_wizard.sql`. This is a narrowly bounded continuation: fresh installs create Phase 1 first, while shared environments apply only the new forward migration. The timestamp verifier permits that exact filename only and continues to reject arbitrary future migrations. The older 2026 corrective migration is documentation only and is not a Phase 1 dependency.
+Phase 2 uses `20291217130000_festival_site_and_stage_planning.sql`, immediately after the retained anomalous `20291217122000_festival_configuration_wizard.sql`. This is a narrowly bounded continuation: fresh installs create Phase 1 first, while shared environments apply only the new forward migration. The timestamp verifier permits the exact Phase 2 and Phase 3 continuation filenames only and continues to reject arbitrary future migrations. The older 2026 corrective migration is documentation only and is not a Phase 1 dependency.
 
 Dependency installation may still fail because of the inherited npm registry/lockfile mismatch. Do not edit the lockfile or create shims; run dependency-independent migration and script checks regardless.
 
 ## Roadmap
 
 1. Identity, location, scale and dates — complete
-2. Site and stage planning — this PR
-3. Ticketing and capacity allocation
+2. Site and stage planning — complete
+3. Ticketing and capacity allocation — this PR
+4. Artist applications and bookings
+5. Staffing and suppliers
+6. Sponsorship
+7. Readiness and launch
+8. Live simulation and settlement
+
+## Phase 3 — ticketing and capacity allocation
+
+Phase 3 is a **planning model**, separate from future issued tickets and purchases. It stores a ticket plan, editable admission/upgrade/add-on products, planned release phases, daily allocations, deterministic forecasts, idempotency requests, and append-only audit events. Admission products support single-day, date-range, and full-Festival access; the server expands their date effects. Add-ons use `non_admission` and never consume attendance capacity.
+
+The authoritative daily rule is `admission allocation + reserved operational capacity + complimentary capacity <= Phase 2 usable site capacity`. Browser totals, readiness, currency, tax, fees, and forecasts are ignored. Prices and forecast values are integer minor units; basis points provide fixed-point tax, fee, sell-through, refund, complimentary-use, and no-show assumptions. Forecasts are labelled not earned and never post to the finance ledger.
+
+`get_festival_ticket_plan` and `save_festival_ticket_plan` are owner/admin-only security-definer RPCs. Tables have RLS enabled and direct `PUBLIC`, `anon`, and `authenticated` access revoked. Saves use an atomic planning version, normalised payload hash, caller/company-scoped idempotency key, and one audit event. Completion is possible only after Phase 2 is `ready_for_ticketing`, when blocking validation is clear, and produces `ready_for_artist_planning`; it does not open sales.
+
+### Deliberate migration sequence
+
+The retained Phase 1 migration established an already-deployed future-dated sequence. Fresh installs order the exact continuations lexically: `20291217130000_festival_site_and_stage_planning.sql`, then `20291217140000_festival_ticketing_and_capacity_planning.sql`. Already-deployed environments safely apply only the latter migration forward; no historical filename is renamed. The timestamp verifier permits these two exact names only and continues to reject arbitrary future migrations.
+
+The inherited npm registry/dependency installation blocker remains external to Festival Phase 3. A failed `npm ci` must be reported verbatim; dependency-independent migration, shell, JavaScript and diff checks must continue.
+
+### Roadmap
+
+1. Identity, location, scale and dates — complete
+2. Site and stage planning — complete
+3. Ticketing and capacity allocation — this PR
 4. Artist applications and bookings
 5. Staffing and suppliers
 6. Sponsorship

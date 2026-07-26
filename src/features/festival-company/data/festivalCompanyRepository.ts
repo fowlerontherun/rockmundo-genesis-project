@@ -6,6 +6,7 @@ import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility, ty
 import { parseFestivalConfiguration, type FestivalConfiguration, type FestivalConfigurationDraft } from "../domain/festivalConfiguration";
 import { normalizeFestivalConfigurationError } from "../domain/festivalConfigurationErrors";
 import { parseFestivalSitePlanResult, type FestivalSitePlanDraft, type FestivalSitePlanResult } from "../domain/festivalSitePlan";
+import { parseFestivalTicketPlanResult, type FestivalTicketPlanDraft, type FestivalTicketPlanResult } from "../domain/festivalTicketPlan";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value: unknown) => typeof value === "string" && UUID_RE.test(value);
@@ -182,3 +183,8 @@ export const saveFestivalSitePlan = async (input: { festivalCompanyId: string; e
   if (error) throw normalizeSiteError(error);
   return parseFestivalSitePlanResult(data);
 };
+
+const ticketErrors = ["festival_ticket_plan_forbidden","festival_site_plan_incomplete","festival_ticket_plan_invalid","festival_ticket_product_invalid","festival_ticket_capacity_invalid","festival_ticket_daily_capacity_exceeded","festival_ticket_release_invalid","festival_ticket_release_allocation_exceeded","festival_ticket_plan_incomplete","festival_ticket_plan_stale","festival_ticket_plan_idempotency_conflict"];
+const normalizeTicketError=(error:{message?:string})=>new Error(ticketErrors.find(code=>error.message?.includes(code))??"festival_ticket_plan_unavailable");
+export async function getFestivalTicketPlan(festivalCompanyId:string):Promise<FestivalTicketPlanResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_ticket_plan_not_found");const {data,error}=await supabase.rpc("get_festival_ticket_plan",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
+export async function saveFestivalTicketPlan(input:{festivalCompanyId:string;expectedVersion:number;draft:FestivalTicketPlanDraft;idempotencyKey:string;complete?:boolean}):Promise<FestivalTicketPlanResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_ticket_plan_invalid");const {data,error}=await supabase.rpc("save_festival_ticket_plan",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_ticket_plan:input.draft.ticketPlan,p_products:input.draft.products,p_release_phases:input.draft.releasePhases,p_capacity_allocations:input.draft.capacityAllocations,p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
