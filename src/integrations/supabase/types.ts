@@ -3552,6 +3552,199 @@ export type Database = {
         }
         Relationships: []
       }
+      botb_entries: {
+        Row: {
+          band_id: string
+          cash_awarded: number
+          created_at: string
+          event_id: string
+          fame_gained: number
+          fans_gained: number
+          id: string
+          is_winner: boolean
+          overall_rating: number | null
+          placement: number | null
+          profile_id: string | null
+          song_1_id: string | null
+          song_2_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          band_id: string
+          cash_awarded?: number
+          created_at?: string
+          event_id: string
+          fame_gained?: number
+          fans_gained?: number
+          id?: string
+          is_winner?: boolean
+          overall_rating?: number | null
+          placement?: number | null
+          profile_id?: string | null
+          song_1_id?: string | null
+          song_2_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          band_id?: string
+          cash_awarded?: number
+          created_at?: string
+          event_id?: string
+          fame_gained?: number
+          fans_gained?: number
+          id?: string
+          is_winner?: boolean
+          overall_rating?: number | null
+          placement?: number | null
+          profile_id?: string | null
+          song_1_id?: string | null
+          song_2_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "botb_entries_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "botb_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_1_id_fkey"
+            columns: ["song_1_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_entries_song_2_id_fkey"
+            columns: ["song_2_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      botb_events: {
+        Row: {
+          city_id: string
+          created_at: string
+          id: string
+          max_entries: number
+          resolved_at: string | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+          winner_band_id: string | null
+          winner_rating: number | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          id?: string
+          max_entries?: number
+          resolved_at?: string | null
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+          winner_band_id?: string | null
+          winner_rating?: number | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          id?: string
+          max_entries?: number
+          resolved_at?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          winner_band_id?: string | null
+          winner_rating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "botb_events_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "botb_events_winner_band_id_fkey"
+            columns: ["winner_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bug_reports: {
         Row: {
           admin_notes: string | null
@@ -42041,6 +42234,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      botb_check_eligibility: {
+        Args: { p_band_id: string; p_event_id: string }
+        Returns: Json
+      }
       calculate_bail_amount: {
         Args: { p_imprisonment_id: string }
         Returns: number
@@ -42943,6 +43140,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      enter_battle_of_the_bands: {
+        Args: {
+          p_band_id: string
+          p_event_id: string
+          p_profile_id: string
+          p_song_1_id: string
+          p_song_2_id: string
+        }
+        Returns: Json
+      }
       evaluate_wellness_gate: {
         Args: { _activity_type: string; _profile_id: string }
         Returns: {
@@ -43254,6 +43461,10 @@ export type Database = {
       }
       festival_validate_terms: { Args: { p_terms: Json }; Returns: Json }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      generate_botb_events: {
+        Args: { p_horizon_events?: number }
+        Returns: number
+      }
       generate_child_school_milestones: {
         Args: { p_child_id: string }
         Returns: number
@@ -43898,6 +44109,7 @@ export type Database = {
         Returns: Json
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
+      resolve_botb_event: { Args: { p_event_id: string }; Returns: Json }
       resolve_company_demand: {
         Args: { target_date?: string }
         Returns: number
@@ -44057,6 +44269,7 @@ export type Database = {
         Returns: undefined
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
+      run_botb_cycle: { Args: never; Returns: Json }
       save_festival_setlist_draft: {
         Args: {
           p_contract_id: string
