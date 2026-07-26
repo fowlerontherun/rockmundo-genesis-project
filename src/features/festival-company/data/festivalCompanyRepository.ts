@@ -5,6 +5,7 @@ import { disabledFestivalCompanyCapabilities, type FestivalCompanyCapabilities }
 import { disabledFestivalCompanyEligibility, parseFestivalCompanyEligibility, type FestivalCompanyFoundingEligibility } from "../domain/festivalEligibility";
 import { parseFestivalConfiguration, type FestivalConfiguration, type FestivalConfigurationDraft } from "../domain/festivalConfiguration";
 import { normalizeFestivalConfigurationError } from "../domain/festivalConfigurationErrors";
+import { parseFestivalSitePlanResult, type FestivalSitePlanDraft, type FestivalSitePlanResult } from "../domain/festivalSitePlan";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value: unknown) => typeof value === "string" && UUID_RE.test(value);
@@ -164,4 +165,20 @@ export const saveFestivalConfiguration = async (input: { festivalCompanyId: stri
   const { data, error } = await supabase.rpc("save_festival_configuration", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_configuration: input.configuration, p_idempotency_key: input.idempotencyKey });
   if (error) throw normalizeFestivalConfigurationError(error);
   return parseFestivalConfiguration(data);
+};
+
+
+const siteErrors: Record<string, string> = { festival_site_plan_forbidden: "festival_site_plan_forbidden", festival_configuration_incomplete: "festival_configuration_incomplete", festival_site_invalid: "festival_site_invalid", festival_venue_invalid: "festival_venue_invalid", festival_city_mismatch: "festival_city_mismatch", festival_capacity_invalid: "festival_capacity_invalid", festival_stage_invalid: "festival_stage_invalid", festival_stage_limit_exceeded: "festival_stage_limit_exceeded", festival_site_plan_stale: "festival_site_plan_stale", festival_site_plan_idempotency_conflict: "festival_site_plan_idempotency_conflict" };
+const normalizeSiteError = (error: { message?: string }) => new Error(Object.entries(siteErrors).find(([key]) => error.message?.includes(key))?.[1] ?? "festival_site_plan_unavailable");
+export const getFestivalSitePlan = async (festivalCompanyId: string): Promise<FestivalSitePlanResult> => {
+  if (!isUuid(festivalCompanyId)) throw new Error("festival_site_plan_not_found");
+  const { data, error } = await supabase.rpc("get_festival_site_plan", { p_festival_company_id: festivalCompanyId });
+  if (error) throw normalizeSiteError(error);
+  return parseFestivalSitePlanResult(data);
+};
+export const saveFestivalSitePlan = async (input: { festivalCompanyId: string; expectedVersion: number; draft: FestivalSitePlanDraft; idempotencyKey: string; complete?: boolean }): Promise<FestivalSitePlanResult> => {
+  if (!isUuid(input.festivalCompanyId) || !isUuid(input.idempotencyKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 0) throw new Error("festival_site_invalid");
+  const { data, error } = await supabase.rpc("save_festival_site_plan", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_site_plan: input.draft.sitePlan, p_stages: input.draft.stages, p_idempotency_key: input.idempotencyKey, p_complete: input.complete ?? false });
+  if (error) throw normalizeSiteError(error);
+  return parseFestivalSitePlanResult(data);
 };

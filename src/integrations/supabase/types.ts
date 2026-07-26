@@ -41614,6 +41614,8 @@ export type Database = {
         Args: { p_festival_company_id: string; p_expected_version: number; p_configuration: Json; p_idempotency_key: string }
         Returns: Json
       }
+      get_festival_site_plan: { Args: { p_festival_company_id: string }; Returns: Json }
+      save_festival_site_plan: { Args: { p_festival_company_id: string; p_expected_version: number; p_site_plan: Json; p_stages: Json; p_idempotency_key: string; p_complete?: boolean }; Returns: Json }
       _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {
