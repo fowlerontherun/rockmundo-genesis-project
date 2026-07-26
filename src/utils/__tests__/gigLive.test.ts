@@ -38,6 +38,18 @@ describe('gig live simulation', () => {
     expect(strong.score).toBeGreaterThan(weak.score);
   });
 
+  it('applies Festival evidence in the canonical score while preserving normal gigs', () => {
+    const session = buildInitialLiveSession(ctx, new Date('2026-07-11T12:00:00Z'));
+    const normal = resolveLiveSong(ctx, session, ctx.setlist[0], 1, 'festival-seed');
+    const normalAgain = resolveLiveSong({ ...ctx }, session, ctx.setlist[0], 1, 'festival-seed');
+    const excellentFestival = resolveLiveSong({ ...ctx, festival: { stageQuality: 100, soundAndLighting: 100, technicalReadiness: 100, rehearsal: 100, crewEffectiveness: 100, weather: 100, delayMinutes: 0, crowdMood: 100, crowdDensity: 100, equipmentCondition: 100, billingPosition: 100, headlinerExpectation: 50, incidentDisruption: 0, setLengthMinutes: 60 } }, session, ctx.setlist[0], 1, 'festival-seed');
+    const disruptedFestival = resolveLiveSong({ ...ctx, festival: { stageQuality: 10, soundAndLighting: 10, technicalReadiness: 10, rehearsal: 10, crewEffectiveness: 10, weather: 5, delayMinutes: 60, crowdMood: 10, crowdDensity: 10, equipmentCondition: 10, billingPosition: 10, headlinerExpectation: 100, incidentDisruption: 100, setLengthMinutes: 120 } }, session, ctx.setlist[0], 1, 'festival-seed');
+    expect(normalAgain).toEqual(normal);
+    expect(excellentFestival.score).toBeGreaterThan(disruptedFestival.score);
+    expect(excellentFestival.breakdown.some(item => item.key === 'festival_stage_quality')).toBe(true);
+    expect(normal.breakdown.some(item => item.key.startsWith('festival_'))).toBe(false);
+  });
+
   it('supports tactical decisions, automatic fallbacks, encore checks and immutable completed segments', () => {
     const session = buildInitialLiveSession(ctx, new Date('2026-07-11T12:00:00Z'));
     const incident = maybeGenerateLiveIncident({ ...ctx, equipment: [{ equipmentRole: 'amplifier', quality: 20, condition: 20, isSpare: false }] }, { ...session, bandStamina: 20 }, { ...buildLiveTimeline(ctx)[1], segmentIndex: 1 }, 'likely-incident') ?? { incidentType: 'equipment_fault', category: 'equipment' as const, severity: 'moderate' as const, title: 'Equipment fault', decisionType: 'equipment_response', generationSnapshot: {}, resultSnapshot: {} };
