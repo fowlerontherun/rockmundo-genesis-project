@@ -14,9 +14,9 @@ BEGIN
   END LOOP;
 
   body:=pg_get_functiondef('public._build_festival_contract_package(uuid)'::regprocedure);
-  IF position('runtime_session_id=p_runtime_session_id' in body)=0
-     OR position('festival_company_id=fc' in body)=0 THEN
-    RAISE EXCEPTION 'contract package is not runtime and festival isolated';
+  IF position('festivalEditionId' in body)=0 OR position('acceptedClauses' in body)=0
+     OR position('to_jsonb(a)' in body)>0 THEN
+    RAISE EXCEPTION 'contract package is not explicitly edition isolated';
   END IF;
 
   body:=pg_get_functiondef('public.decide_festival_overtime(uuid,integer,text,uuid)'::regprocedure);
@@ -36,8 +36,8 @@ BEGIN
 
   body:=pg_get_functiondef('public._populate_festival_payable_components(uuid)'::regprocedure);
   FOREACH k IN ARRAY ARRAY['contracted_regular_pay','approved_overtime','lateness_deduction',
-   'appearance_guarantee','revenue_share','cancellation_payment','deposit','quality','sla_breach',
-   'fixed_fee','exposure_target','category_conflict','sponsor_refund'] LOOP
+   'appearanceGuarantee','revenueShare','cancellationPayment','depositAlreadyPaid','quality','slaBreach',
+   'fixedFee','exposureTarget','categoryConflict','sponsorRefund'] LOOP
     IF position(quote_literal(k) in body)=0 THEN RAISE EXCEPTION 'payable component missing: %',k; END IF;
   END LOOP;
 
