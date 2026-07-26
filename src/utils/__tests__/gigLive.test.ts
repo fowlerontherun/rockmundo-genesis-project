@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySongResultToSession, buildInitialLiveSession, buildLiveTimeline, buildTacticalDecision, canApplyLiveSetlistChange, canStartLiveGig, evaluateEncore, finalizeLiveGig, maybeGenerateLiveIncident, resolveLiveSong, type GigLiveContext } from '../gigLive';
+import { applySongResultToSession, buildInitialLiveSession, buildLiveTimeline, buildTacticalDecision, canApplyLiveSetlistChange, canStartLiveGig, evaluateEncore, FESTIVAL_FACTOR_TARGETS, finalizeLiveGig, mapFestivalFactors, maybeGenerateLiveIncident, resolveLiveSong, type GigLiveContext } from '../gigLive';
 import { calculateGigReadiness } from '../gigReadiness';
 
 const readiness = calculateGigReadiness({ setlistSongs: [{ id: 'song-1', durationSeconds: 180, rehearsalLevel: 85 }, { id: 'song-2', durationSeconds: 210, rehearsalLevel: 90 }], bandChemistry: 78, fatigueScore: 80, healthScore: 82, assignedPerformers: 4, requiredPerformers: 4 });
@@ -48,6 +48,20 @@ describe('gig live simulation', () => {
     expect(excellentFestival.score).toBeGreaterThan(disruptedFestival.score);
     expect(excellentFestival.breakdown.some(item => item.key === 'festival_stage_quality')).toBe(true);
     expect(normal.breakdown.some(item => item.key.startsWith('festival_'))).toBe(false);
+  });
+
+  it('keeps neutral Festival evidence at parity and audits every factor once', () => {
+    const session = buildInitialLiveSession(ctx, new Date('2026-07-11T12:00:00Z'));
+    const neutral = { stageQuality: 50, soundAndLighting: 50, technicalReadiness: 50, rehearsal: 50,
+      crewEffectiveness: 50, weather: 50, delayMinutes: 0, crowdMood: 50, crowdDensity: 50,
+      equipmentCondition: 50, billingPosition: 50, headlinerExpectation: 50, incidentDisruption: 0, setLengthMinutes: 60 };
+    expect(resolveLiveSong({ ...ctx, festival: neutral }, session, ctx.setlist[0], 1, 'parity').score)
+      .toBe(resolveLiveSong(ctx, session, ctx.setlist[0], 1, 'parity').score);
+    const mapping = mapFestivalFactors(neutral);
+    expect(mapping.finalModifier).toBe(0);
+    expect(mapping.breakdown).toHaveLength(Object.keys(FESTIVAL_FACTOR_TARGETS).length);
+    expect(new Set(mapping.breakdown.map(item => item.key)).size).toBe(mapping.breakdown.length);
+    expect(mapping.breakdown.every(item => item.inputValue !== undefined && item.targetCanonicalField && item.application)).toBe(true);
   });
 
   it('supports tactical decisions, automatic fallbacks, encore checks and immutable completed segments', () => {
