@@ -122,6 +122,7 @@ const FestivalMarketplace = lazyWithRetry(() => import("./pages/FestivalMarketpl
 const FestivalDirectory = lazyWithRetry(() => import("./pages/FestivalDirectory"));
 const FestivalBookingCalendar = lazyWithRetry(() => import("./pages/FestivalBookingCalendar"));
 const FestivalSessionPage = lazyWithRetry(() => import("./pages/festivals/FestivalSessionPage"));
+const FestivalLegacyPage = lazyWithRetry(() => import("./pages/festivals/FestivalLegacyPage"));
 const FestivalRunWizard = lazyWithRetry(() => import("./pages/FestivalRunWizard"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
@@ -708,6 +709,12 @@ function App() {
                     <Route path="festivals" element={<LegacyFestivalGate area="Festival browser"><FestivalBrowser /></LegacyFestivalGate>} />
                     <Route path="festivals/marketplace" element={<LegacyFestivalGate area="Festival marketplace"><FestivalMarketplace /></LegacyFestivalGate>} />
                     <Route path="festivals/directory" element={<LegacyFestivalGate area="Festival directory"><FestivalDirectory /></LegacyFestivalGate>} />
+                    <Route path="festivals/results" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/history" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/awards" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/hall-of-fame" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/records" element={<FestivalLegacyPage />} />
+                    <Route path="festivals/statistics" element={<FestivalLegacyPage />} />
                     <Route path="festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
                     <Route path="festivals/simulation" element={<LegacyFestivalGate area="Festival simulation"><FestivalsNew /></LegacyFestivalGate>} />
                     <Route path="festivals/perform/:participationId" element={<LegacyFestivalGate area="Festival performance"><FestivalPerformance /></LegacyFestivalGate>} />
