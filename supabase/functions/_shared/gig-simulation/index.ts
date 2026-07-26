@@ -1,5 +1,5 @@
 import type { CanonicalSong, FestivalSimulationInput } from "./types.ts";
-import { calculateCanonicalSongScore } from "../../../../src/domain/gig-simulation/index.ts";
+import { calculateCanonicalSongOutcome } from "../../../../src/domain/gig-simulation/index.ts";
 
 export * from "./types.ts";
 export const CANONICAL_ENGINE_VERSION = "canonical-gig-v1";
@@ -14,20 +14,22 @@ const finite = (value: unknown, code: string) => {
 
 function scoreSong(input: FestivalSimulationInput, song: CanonicalSong) {
   const canonical = input.canonicalGigInput;
-  const technicalScore = clamp(song.quality * .28 + song.familiarity * .2 +
-    song.rehearsalLevel * .17 + canonical.performerSkill * .2 + input.festivalModifiers.technicalReadiness * .15);
-  const performanceScore = clamp(song.popularity * .35 + canonical.stagePresence * .35 + canonical.readinessScore * .3);
-  const audienceResponse = clamp(performanceScore * .55 + technicalScore * .3 + song.popularity * .15);
   const m = input.festivalModifiers;
   const festivalEffect = (m.stageQuality - 50) * .04 + (m.soundAndLighting - 50) * .05 +
     (m.crewEffectiveness - 50) * .03 + (m.weather - 50) * .03 +
     (m.crowdMood - 50) * .04 + (m.equipmentCondition - 50) * .04 -
     Math.min(60, Math.max(0, m.delayMinutes)) * .055 - clamp(m.incidentDisruption) * .045;
-  const { score, baseScore } = calculateCanonicalSongScore({ technicalScore, performanceScore, audienceResponse, seed: input.seed, songId: song.id, festivalModifier: festivalEffect });
+  const outcome = calculateCanonicalSongOutcome({ ...song, performerSkill: canonical.performerSkill,
+    stagePresence: canonical.stagePresence, readinessScore: canonical.readinessScore, seed: input.seed,
+    songId: song.id, equipmentReliability: m.equipmentCondition, crewEffectiveness: m.crewEffectiveness,
+    venueEffect: m.stageQuality, stageEffect: m.soundAndLighting, production: m.technicalReadiness,
+    setlistPosition: m.billingPosition, stamina: Math.max(0, 100 - song.position * 3),
+    momentum: m.crowdMood, crowdState: m.crowdMood, festivalModifier: festivalEffect });
+  const { score, baseScore, technicalScore } = outcome;
   return {
     setlistItemId: song.id, songId: song.id, title: song.title,
     score, baseScore: Number(baseScore.toFixed(3)), technicalScore: Number(technicalScore.toFixed(3)),
-    highlights: score >= 82 ? [`${song.title} became a standout live moment.`] : [],
+    canonical: outcome, highlights: score >= 82 ? [`${song.title} became a standout live moment.`] : [],
   };
 }
 
