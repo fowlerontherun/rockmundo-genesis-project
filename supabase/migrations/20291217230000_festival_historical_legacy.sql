@@ -6,8 +6,10 @@ CREATE TABLE public.festival_legacy_generation_jobs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   festival_settlement_id uuid NOT NULL REFERENCES public.festival_financial_settlements(id),
   job_type text NOT NULL DEFAULT 'generate_result' CHECK (job_type = 'generate_result'),
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed','exhausted')),
   attempts integer NOT NULL DEFAULT 0,
+  max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts > 0),
+  dead_lettered boolean NOT NULL DEFAULT false,
   result_id uuid,
   next_attempt_at timestamptz NOT NULL DEFAULT now(),
   locked_at timestamptz,
@@ -87,12 +89,29 @@ CREATE TABLE public.festival_reputation_changes (
   subject_id uuid,
   change numeric NOT NULL,
   resulting_reputation numeric,
-  projection_status text NOT NULL DEFAULT 'pending' CHECK (projection_status IN ('pending','applied','failed','unsupported')),
+  projection_status text NOT NULL DEFAULT 'pending' CHECK (projection_status IN ('pending','processing','applied','failed','unsupported','exhausted')),
   canonical_receipt_id uuid,
   factors jsonb NOT NULL,
   formula_version text NOT NULL DEFAULT 'festival-reputation-v2',
   applied_at timestamptz,
+  attempts integer NOT NULL DEFAULT 0,
+  max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts > 0),
+  next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  locked_at timestamptz,
+  locked_by text,
+  last_error text,
   UNIQUE (festival_result_id, subject_type, subject_key)
+);
+
+-- Idempotency ledger for the canonical reputation boundary.  A change can have
+-- only one receipt, so replaying a worker can never apply it twice.
+CREATE TABLE public.festival_reputation_receipts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reputation_change_id uuid NOT NULL UNIQUE REFERENCES public.festival_reputation_changes(id),
+  subject_type text NOT NULL,
+  subject_id uuid NOT NULL,
+  resulting_reputation numeric NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE public.festival_awards (
@@ -134,9 +153,13 @@ CREATE TABLE public.festival_legacy_publications (
   headline text NOT NULL,
   summary text NOT NULL,
   payload jsonb NOT NULL,
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','published','failed')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','published','failed','unsupported','exhausted')),
   canonical_publication_id uuid,
   attempts integer NOT NULL DEFAULT 0,
+  max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts > 0),
+  dead_lettered boolean NOT NULL DEFAULT false,
+  locked_at timestamptz,
+  locked_by text,
   last_error text,
   next_attempt_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -183,12 +206,6 @@ BEGIN
   SELECT * INTO r FROM public.festival_results WHERE festival_settlement_id = s.id;
   IF FOUND THEN RETURN r.id; END IF;
 
-  INSERT INTO public.festival_legacy_generation_jobs(festival_settlement_id,dedupe_key,status,attempts)
-  VALUES (s.id,'festival-legacy:'||s.id,'processing',1)
-  ON CONFLICT (festival_settlement_id) DO UPDATE
-    SET status = 'processing', attempts = public.festival_legacy_generation_jobs.attempts + 1
-    WHERE public.festival_legacy_generation_jobs.status <> 'completed';
-
   SELECT * INTO fs FROM public.festival_settlement_snapshots
     WHERE id = s.final_snapshot_id AND settlement_id = s.id AND snapshot_type = 'final';
   SELECT * INTO o FROM public.festival_runtime_outcome_snapshots WHERE runtime_session_id = s.runtime_session_id;
@@ -203,7 +220,7 @@ BEGIN
     RAISE EXCEPTION 'festival_result_source_digest_invalid';
   END IF;
   IF jsonb_typeof(o.snapshot) <> 'object'
-     OR NOT (o.snapshot ?& ARRAY['attendance','performances','crowds','weather','incidents','staffOutcomes','supplierOutcomes','sponsorActivations','vendorSales'])
+     OR NOT (o.snapshot ?& ARRAY['attendance','performances','crowds','weather'])
      OR jsonb_typeof(o.snapshot->'attendance') <> 'array'
      OR jsonb_typeof(o.snapshot->'performances') <> 'array' THEN
     RAISE EXCEPTION 'festival_result_snapshot_malformed';
@@ -213,6 +230,14 @@ BEGIN
     RAISE EXCEPTION 'festival_result_public_edition_missing';
   END IF;
   snap := o.snapshot;
+  -- Participation evidence is optional.  Preserve absence explicitly and use the
+  -- neutral score (50), never a fabricated positive outcome.
+  snap := snap || jsonb_build_object(
+    'incidents',coalesce(snap->'incidents','[]'::jsonb),
+    'staffOutcomes',coalesce(snap->'staffOutcomes','[]'::jsonb),
+    'supplierOutcomes',coalesce(snap->'supplierOutcomes','[]'::jsonb),
+    'sponsorActivations',coalesce(snap->'sponsorActivations','[]'::jsonb),
+    'vendorSales',coalesce(snap->'vendorSales','[]'::jsonb));
   SELECT coalesce(sum((x->>'admitted_count')::integer),0), coalesce(max((x->>'onsite_count')::integer),0), coalesce(max((x->>'capacity')::integer),0)
     INTO attendance,peak,capacity FROM jsonb_array_elements(snap->'attendance') x;
   IF capacity <= 0 OR attendance < 0 OR peak < 0 THEN RAISE EXCEPTION 'festival_result_attendance_invalid'; END IF;
@@ -221,7 +246,8 @@ BEGIN
          avg((x->>'performance_score')::numeric) FILTER (WHERE x->>'status' = 'completed'),
          avg((x->>'technical_score')::numeric) FILTER (WHERE x->>'status' = 'completed')
     INTO perf_count,largest_crowd,line_up,stage_score FROM jsonb_array_elements(snap->'performances') x;
-  IF perf_count = 0 OR line_up IS NULL OR stage_score IS NULL THEN RAISE EXCEPTION 'festival_result_performance_evidence_missing'; END IF;
+  IF perf_count = 0 AND nullif(snap->>'noPerformanceReason','') IS NULL THEN RAISE EXCEPTION 'festival_result_performance_evidence_missing'; END IF;
+  line_up := coalesce(line_up,50); stage_score := coalesce(stage_score,50);
   SELECT coalesce(avg((x->>'satisfaction')::numeric), avg((x->>'density')::numeric)) INTO crowd
     FROM jsonb_array_elements(snap->'crowds') x;
   IF crowd IS NULL THEN RAISE EXCEPTION 'festival_result_crowd_evidence_missing'; END IF;
@@ -235,9 +261,8 @@ BEGIN
     FROM jsonb_array_elements(snap->'vendorSales') x WHERE x->>'category' IN ('food','soft_drinks','alcohol_where_game_rules_allow');
   SELECT avg((x->>'delivery_quality')::numeric), coalesce(jsonb_agg(x),'[]') INTO value_score,sponsors FROM jsonb_array_elements(snap->'sponsorActivations') x;
   SELECT avg(CASE WHEN (x->>'opening_stock')::int > 0 THEN 100.0*(x->>'units_sold')::int/(x->>'opening_stock')::int END) INTO food_score FROM jsonb_array_elements(snap->'vendorSales') x WHERE x->>'category' IN ('food','soft_drinks','alcohol_where_game_rules_allow');
-  IF organisation IS NULL OR facilities_score IS NULL OR value_score IS NULL OR food_score IS NULL THEN
-    RAISE EXCEPTION 'festival_legacy_required_evidence_missing';
-  END IF;
+  organisation:=coalesce(organisation,50); facilities_score:=coalesce(facilities_score,50);
+  value_score:=coalesce(value_score,50); food_score:=coalesce(food_score,50);
   weather := snap->'weather';
   SELECT coalesce(jsonb_object_agg(severity,n),'{}') INTO incidents FROM (SELECT x->>'severity' severity,count(*) n FROM jsonb_array_elements(snap->'incidents') x GROUP BY 1) q;
   performances := (SELECT jsonb_agg(x ORDER BY (x->>'performance_score')::numeric DESC, x->>'id') FROM jsonb_array_elements(snap->'performances') x WHERE x->>'status'='completed');
@@ -288,7 +313,6 @@ BEGIN
     SELECT r.id,c,NULL,'festival-result:'||r.id||':'||c,ed.name||' publishes its final Festival result',attendance||' fans attended; see the verified archive.',jsonb_build_object('route','/festivals/results/'||r.id,'festivalResultId',r.id,'festivalEditionId',ed.id,'public',true)
     FROM unnest(ARRAY['world_pulse','rockmundo_fm','twaater','player_news','band_news','company_news']) c ON CONFLICT DO NOTHING;
   END IF;
-  UPDATE public.festival_legacy_generation_jobs SET status='completed',result_id=r.id,completed_at=now(),locked_at=NULL,locked_by=NULL,last_error=NULL WHERE festival_settlement_id=s.id;
   RETURN r.id;
 END $$;
 
@@ -361,26 +385,67 @@ BEGIN
   GET DIAGNOSTICS n=ROW_COUNT; RETURN n;
 END $$;
 
+CREATE FUNCTION public.process_festival_reputation_changes(p_limit integer DEFAULT 25,p_worker_id text DEFAULT NULL) RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE c public.festival_reputation_changes%ROWTYPE; receipt uuid; resulting numeric; n integer:=0; new_attempt integer;
+BEGIN
+  IF auth.role()<>'service_role' AND NOT coalesce(public.has_role(auth.uid(),'admin'::public.app_role),false) THEN RAISE EXCEPTION 'festival_reputation_forbidden'; END IF;
+  UPDATE public.festival_reputation_changes SET projection_status='failed',locked_at=NULL,locked_by=NULL,last_error='festival_reputation_stale_lease'
+    WHERE projection_status='processing' AND locked_at < now()-interval '15 minutes';
+  FOR c IN SELECT * FROM public.festival_reputation_changes WHERE projection_status IN('pending','failed') AND attempts<max_attempts AND next_attempt_at<=now() ORDER BY id FOR UPDATE SKIP LOCKED LIMIT least(greatest(p_limit,1),100) LOOP
+    new_attempt:=c.attempts+1;
+    UPDATE public.festival_reputation_changes SET projection_status='processing',attempts=new_attempt,locked_at=now(),locked_by=coalesce(nullif(p_worker_id,''),current_user),last_error=NULL WHERE id=c.id;
+    BEGIN
+      IF c.subject_id IS NULL OR c.subject_type NOT IN ('festival_company','festival_brand','artist','band','sponsor','staff','supplier','venue','host_city') THEN
+        UPDATE public.festival_reputation_changes SET projection_status='unsupported',last_error='festival_reputation_subject_unsupported',locked_at=NULL,locked_by=NULL WHERE id=c.id;
+        CONTINUE;
+      END IF;
+      -- The receipt is the canonical, append-only projection boundary.  Target
+      -- systems consume it rather than this worker guessing at unrelated tables.
+      resulting:=public._festival_score(50+c.change);
+      INSERT INTO public.festival_reputation_receipts(reputation_change_id,subject_type,subject_id,resulting_reputation)
+      VALUES(c.id,c.subject_type,c.subject_id,resulting)
+      ON CONFLICT(reputation_change_id) DO UPDATE SET reputation_change_id=excluded.reputation_change_id
+      RETURNING id,resulting_reputation INTO receipt,resulting;
+      UPDATE public.festival_reputation_changes SET projection_status='applied',canonical_receipt_id=receipt,resulting_reputation=resulting,applied_at=now(),locked_at=NULL,locked_by=NULL WHERE id=c.id;
+      n:=n+1;
+    EXCEPTION WHEN others THEN
+      UPDATE public.festival_reputation_changes SET projection_status=CASE WHEN new_attempt>=max_attempts THEN 'exhausted' ELSE 'failed' END,last_error=left(SQLSTATE||':'||SQLERRM,500),next_attempt_at=now()+least(interval '1 hour',interval '1 minute'*power(2,least(new_attempt,6))),locked_at=NULL,locked_by=NULL WHERE id=c.id;
+    END;
+  END LOOP;
+  RETURN n;
+END $$;
+
 CREATE FUNCTION public.process_festival_legacy_publications(p_limit integer DEFAULT 25) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE p public.festival_legacy_publications%ROWTYPE; canonical uuid; n integer:=0;
+DECLARE p public.festival_legacy_publications%ROWTYPE; canonical uuid; n integer:=0; new_attempt integer; worker text:=current_user;
 BEGIN
   IF auth.role()<>'service_role' AND NOT coalesce(public.has_role(auth.uid(),'admin'::public.app_role),false) THEN RAISE EXCEPTION 'festival_publication_forbidden'; END IF;
-  FOR p IN SELECT * FROM public.festival_legacy_publications WHERE status IN('pending','failed') AND next_attempt_at <= now() ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT least(greatest(p_limit,1),100) LOOP
+  UPDATE public.festival_legacy_publications SET status='failed',locked_at=NULL,locked_by=NULL,
+    last_error='festival_publication_stale_lease' WHERE status='processing' AND locked_at < now()-interval '15 minutes';
+  FOR p IN SELECT * FROM public.festival_legacy_publications WHERE status IN('pending','failed') AND attempts < max_attempts AND next_attempt_at <= now() ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT least(greatest(p_limit,1),100) LOOP
+    new_attempt:=p.attempts+1;
     BEGIN
-      UPDATE public.festival_legacy_publications SET status='processing' WHERE id=p.id;
-      canonical:=gen_random_uuid();
-      IF p.channel IN ('world_pulse','twaater','player_news','band_news') THEN
+      UPDATE public.festival_legacy_publications SET status='processing',attempts=new_attempt,locked_at=now(),locked_by=worker,last_error=NULL WHERE id=p.id;
+      canonical:=NULL;
+      IF p.channel='world_pulse' THEN
+        canonical:=p.id;
         INSERT INTO public.festival_launch_events(id,festival_launch_id,event_type,recipient_profile_id,channel,dedupe_key,payload)
         SELECT canonical,r.festival_launch_id,'festival_result_published',p.recipient_id,CASE WHEN p.channel='twaater' THEN 'twaater' ELSE 'world_pulse' END,p.dedupe_key,p.payload||jsonb_build_object('headline',p.headline,'summary',p.summary) FROM public.festival_results r WHERE r.id=p.festival_result_id ON CONFLICT(dedupe_key) DO UPDATE SET dedupe_key=excluded.dedupe_key RETURNING id INTO canonical;
       ELSIF p.channel='rockmundo_fm' THEN
-        INSERT INTO public.radio_content(id,content_type,title,script,category,brand_name,humor_style,play_weight,is_active) VALUES(canonical,'advert',p.headline,p.summary,'festival_result','RockMundo FM','deadpan',1,true);
+        canonical:=p.id;
+        INSERT INTO public.radio_content(id,content_type,title,script,category,brand_name,humor_style,play_weight,is_active) VALUES(canonical,'advert',p.headline,p.summary,'festival_result','RockMundo FM','deadpan',1,true) ON CONFLICT(id) DO UPDATE SET id=excluded.id RETURNING id INTO canonical;
       ELSIF p.channel='company_news' THEN
+        canonical:=p.id;
         INSERT INTO public.company_news_events(id,company_id,event_type,headline,body,payload)
-        SELECT canonical,fc.company_id,'festival_result',p.headline,p.summary,p.payload FROM public.festival_results r JOIN public.festival_companies fc ON fc.id=r.festival_company_id WHERE r.id=p.festival_result_id;
+        SELECT canonical,fc.company_id,'festival_result',p.headline,p.summary,p.payload FROM public.festival_results r JOIN public.festival_companies fc ON fc.id=r.festival_company_id WHERE r.id=p.festival_result_id ON CONFLICT(id) DO UPDATE SET id=excluded.id RETURNING id INTO canonical;
       END IF;
-      UPDATE public.festival_legacy_publications SET status='published',canonical_publication_id=canonical,published_at=now(),attempts=attempts+1,last_error=NULL WHERE id=p.id; n:=n+1;
-    EXCEPTION WHEN others THEN UPDATE public.festival_legacy_publications SET status='failed',attempts=attempts+1,last_error=left(SQLERRM,500),next_attempt_at=now()+least(interval '1 hour',interval '1 minute'*power(2,least(attempts,6))) WHERE id=p.id; END;
+      IF canonical IS NULL THEN
+        UPDATE public.festival_legacy_publications SET status='unsupported',last_error='festival_publication_channel_unsupported',locked_at=NULL,locked_by=NULL WHERE id=p.id;
+      ELSE
+        UPDATE public.festival_legacy_publications SET status='published',canonical_publication_id=canonical,published_at=now(),locked_at=NULL,locked_by=NULL,last_error=NULL WHERE id=p.id; n:=n+1;
+      END IF;
+    EXCEPTION WHEN others THEN UPDATE public.festival_legacy_publications SET status=CASE WHEN new_attempt>=max_attempts THEN 'exhausted' ELSE 'failed' END,dead_lettered=(new_attempt>=max_attempts),last_error=left(SQLSTATE||':'||SQLERRM,500),next_attempt_at=now()+least(interval '1 hour',interval '1 minute'*power(2,least(new_attempt,6))),locked_at=NULL,locked_by=NULL WHERE id=p.id; END;
   END LOOP; RETURN n;
 END $$;
 
@@ -388,17 +453,20 @@ END $$;
 -- failed projection is retried independently and can never roll back settlement.
 CREATE FUNCTION public.process_festival_legacy_generation_jobs(p_limit integer DEFAULT 25, p_worker_id text DEFAULT NULL) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE j public.festival_legacy_generation_jobs%ROWTYPE; n integer := 0; generated uuid;
+DECLARE j public.festival_legacy_generation_jobs%ROWTYPE; n integer := 0; generated uuid; new_attempt integer;
 BEGIN
   IF auth.role()<>'service_role' AND NOT coalesce(public.has_role(auth.uid(),'admin'::public.app_role),false) THEN
     RAISE EXCEPTION 'festival_legacy_generation_forbidden';
   END IF;
+  UPDATE public.festival_legacy_generation_jobs SET status='failed',locked_at=NULL,locked_by=NULL,
+    last_error='festival_generation_stale_lease' WHERE status='processing' AND locked_at < now()-interval '15 minutes';
   FOR j IN SELECT * FROM public.festival_legacy_generation_jobs
-    WHERE status IN ('pending','failed') AND next_attempt_at <= now()
+    WHERE status IN ('pending','failed') AND attempts < max_attempts AND next_attempt_at <= now()
     ORDER BY next_attempt_at,created_at,id FOR UPDATE SKIP LOCKED
     LIMIT least(greatest(p_limit,1),100)
   LOOP
-    UPDATE public.festival_legacy_generation_jobs SET status='processing',attempts=attempts+1,
+    new_attempt:=j.attempts+1;
+    UPDATE public.festival_legacy_generation_jobs SET status='processing',attempts=new_attempt,
       locked_at=now(),locked_by=coalesce(nullif(p_worker_id,''),current_user),last_error=NULL WHERE id=j.id;
     BEGIN
       generated := public.generate_festival_result(j.festival_settlement_id);
@@ -406,8 +474,9 @@ BEGIN
         completed_at=now(),locked_at=NULL,locked_by=NULL WHERE id=j.id;
       n := n + 1;
     EXCEPTION WHEN others THEN
-      UPDATE public.festival_legacy_generation_jobs SET status='failed',last_error=left(SQLSTATE||':'||SQLERRM,500),
-        next_attempt_at=now()+least(interval '1 hour',interval '1 minute'*power(2,least(attempts,6))),locked_at=NULL,locked_by=NULL WHERE id=j.id;
+      UPDATE public.festival_legacy_generation_jobs SET status=CASE WHEN new_attempt>=max_attempts THEN 'exhausted' ELSE 'failed' END,
+        dead_lettered=(new_attempt>=max_attempts),last_error=left(SQLSTATE||':'||SQLERRM,500),
+        next_attempt_at=now()+least(interval '1 hour',interval '1 minute'*power(2,least(new_attempt,6))),locked_at=NULL,locked_by=NULL WHERE id=j.id;
     END;
   END LOOP;
   RETURN n;
@@ -420,9 +489,9 @@ CREATE FUNCTION public.get_festival_results(p_year integer DEFAULT NULL,p_countr
 SELECT jsonb_build_object('items',coalesce(jsonb_agg(public._festival_result_json(q) ORDER BY q.edition_year DESC,q.festival_name,q.id),'[]'),'limit',least(greatest(p_limit,1),100),'offset',greatest(p_offset,0)) FROM (SELECT r FROM public.festival_results r WHERE (p_year IS NULL OR r.edition_year=p_year) AND (p_country IS NULL OR r.country=p_country) AND (p_city IS NULL OR r.city=p_city) AND (p_festival_type IS NULL OR r.festival_type=p_festival_type) AND (p_genre IS NULL OR p_genre=ANY(r.genres)) ORDER BY r.edition_year DESC,r.festival_name,r.id LIMIT least(greatest(p_limit,1),100) OFFSET greatest(p_offset,0)) x(q) $$;
 CREATE FUNCTION public.get_festival_history(p_year integer DEFAULT NULL,p_country text DEFAULT NULL,p_city text DEFAULT NULL,p_festival_type text DEFAULT NULL,p_genre text DEFAULT NULL,p_limit integer DEFAULT 24,p_offset integer DEFAULT 0) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT public.get_festival_results(p_year,p_country,p_city,p_festival_type,p_genre,p_limit,p_offset) $$;
 CREATE FUNCTION public.get_festival_result_detail(p_result_id uuid) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
-SELECT public._festival_result_json(r)||jsonb_build_object('review',(SELECT to_jsonb(v)-'id'-'festival_result_id' FROM public.festival_reviews v WHERE v.festival_result_id=r.id),'lineUp',r.performance_highlights,'timetable',r.timetable,'awards',coalesce((SELECT jsonb_agg(to_jsonb(a)-'evidence') FROM public.festival_awards a WHERE a.festival_result_id=r.id),'[]'),'recordsHeld',coalesce((SELECT jsonb_agg(to_jsonb(w)) FROM public.festival_world_records w WHERE w.festival_result_id=r.id),'[]'),'publicationStories',coalesce((SELECT jsonb_agg(jsonb_build_object('channel',p.channel,'headline',p.headline,'summary',p.summary,'status',p.status,'publishedAt',p.published_at)) FROM public.festival_legacy_publications p WHERE p.festival_result_id=r.id AND p.status='published'),'[]')) FROM public.festival_results r WHERE r.id=p_result_id $$;
+SELECT public._festival_result_json(r)||jsonb_build_object('review',(SELECT to_jsonb(v)-'id'-'festival_result_id' FROM public.festival_reviews v WHERE v.festival_result_id=r.id),'lineUp',r.performance_highlights,'timetable',r.timetable,'awards',coalesce((SELECT jsonb_agg(to_jsonb(a)-'evidence') FROM public.festival_awards a WHERE a.festival_result_id=r.id),'[]'),'recordsHeld',coalesce((SELECT jsonb_agg(jsonb_build_object('id',w.id,'category',w.category,'holderName',w.holder_name,'festivalResultId',w.festival_result_id,'valueText',w.value::text,'valueType',CASE w.category WHEN 'highest_attendance' THEN 'attendance' WHEN 'fastest_sell_out' THEN 'seconds' WHEN 'largest_profit' THEN 'minor_money' WHEN 'biggest_loss' THEN 'minor_money' WHEN 'highest_rated_festival' THEN 'rating' WHEN 'longest_running_festival' THEN 'editions' WHEN 'most_performances' THEN 'performances' WHEN 'most_merchandise_sold' THEN 'units' ELSE 'attendance' END,'currencyCode',CASE WHEN w.category IN('largest_profit','biggest_loss') THEN r.currency_code END,'unit',w.unit,'achievedYear',w.achieved_year,'evidence',w.evidence)) FROM public.festival_world_records w WHERE w.festival_result_id=r.id),'[]'),'publicationStories',coalesce((SELECT jsonb_agg(jsonb_build_object('channel',p.channel,'headline',p.headline,'summary',p.summary,'status',p.status,'publishedAt',p.published_at)) FROM public.festival_legacy_publications p WHERE p.festival_result_id=r.id AND p.status='published'),'[]')) FROM public.festival_results r WHERE r.id=p_result_id $$;
 CREATE FUNCTION public.get_festival_awards(p_year integer DEFAULT NULL) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'seasonYear',season_year,'category',category,'winnerType',winner_type,'winnerId',winner_id,'winnerName',winner_name,'festivalResultId',festival_result_id,'score',score,'citation',citation) ORDER BY season_year DESC,category),'[]') FROM public.festival_awards WHERE p_year IS NULL OR season_year=p_year $$;
-CREATE FUNCTION public.get_festival_records() RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'category',category,'holderName',holder_name,'festivalResultId',festival_result_id,'value',value,'unit',unit,'achievedYear',achieved_year,'evidence',evidence) ORDER BY category),'[]') FROM public.festival_world_records $$;
+CREATE FUNCTION public.get_festival_records() RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$ SELECT coalesce(jsonb_agg(jsonb_build_object('id',w.id,'category',w.category,'holderName',w.holder_name,'festivalResultId',w.festival_result_id,'valueText',w.value::text,'valueType',CASE w.category WHEN 'highest_attendance' THEN 'attendance' WHEN 'fastest_sell_out' THEN 'seconds' WHEN 'largest_profit' THEN 'minor_money' WHEN 'biggest_loss' THEN 'minor_money' WHEN 'highest_rated_festival' THEN 'rating' WHEN 'longest_running_festival' THEN 'editions' WHEN 'most_performances' THEN 'performances' WHEN 'most_merchandise_sold' THEN 'units' ELSE 'attendance' END,'currencyCode',CASE WHEN w.category IN('largest_profit','biggest_loss') THEN r.currency_code END,'unit',w.unit,'achievedYear',w.achieved_year,'evidence',w.evidence) ORDER BY category),'[]') FROM public.festival_world_records w JOIN public.festival_results r ON r.id=w.festival_result_id $$;
 CREATE FUNCTION public.get_festival_statistics(p_year integer DEFAULT NULL,p_country text DEFAULT NULL,p_city text DEFAULT NULL,p_festival_type text DEFAULT NULL,p_genre text DEFAULT NULL,p_group_by text DEFAULT 'festival') RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
 WITH f AS (SELECT r.*,v.overall_rating FROM public.festival_results r JOIN public.festival_reviews v ON v.festival_result_id=r.id WHERE (p_year IS NULL OR edition_year=p_year) AND (p_country IS NULL OR country=p_country) AND (p_city IS NULL OR city=p_city) AND (p_festival_type IS NULL OR festival_type=p_festival_type) AND (p_genre IS NULL OR p_genre=ANY(genres))), g AS (SELECT CASE p_group_by WHEN 'company' THEN festival_company_id::text WHEN 'city' THEN city WHEN 'country' THEN country WHEN 'year' THEN edition_year::text WHEN 'type' THEN festival_type WHEN 'genre' THEN genre.name ELSE festival_name END label,f.* FROM f CROSS JOIN LATERAL unnest(CASE WHEN p_group_by='genre' THEN f.genres ELSE ARRAY[NULL]::text[] END) genre(name))
 SELECT jsonb_build_object(
@@ -435,21 +504,21 @@ WITH ranked AS (SELECT r.*,v.overall_rating,(v.overall_rating*0.45+least(100,r.a
 SELECT coalesce(jsonb_agg(public._festival_result_json(r)||jsonb_build_object('legacyScore',round(legacy_score,2),'formulaVersion','festival-hall-of-fame-v2','rank',rank) ORDER BY rank),'[]') FROM (SELECT ranked.*,row_number() OVER(ORDER BY legacy_score DESC,edition_year ASC,id) rank FROM ranked) r $$;
 
 CREATE FUNCTION public._queue_festival_result_after_settlement() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-BEGIN IF new.status='settled' AND new.final_snapshot_id IS NOT NULL AND (old.status,new.final_snapshot_id) IS DISTINCT FROM (new.status,old.final_snapshot_id) THEN INSERT INTO public.festival_legacy_generation_jobs(festival_settlement_id,dedupe_key) VALUES(new.id,'festival-legacy:'||new.id) ON CONFLICT DO NOTHING; END IF; RETURN new; END $$;
+BEGIN IF new.status='settled' AND new.final_snapshot_id IS NOT NULL AND (old.status,new.final_snapshot_id) IS DISTINCT FROM (new.status,old.final_snapshot_id) THEN INSERT INTO public.festival_legacy_generation_jobs(festival_settlement_id,job_type,dedupe_key,status) VALUES(new.id,'generate_result','festival-legacy:'||new.id,'pending') ON CONFLICT (festival_settlement_id,job_type) DO NOTHING; END IF; RETURN new; END $$;
 CREATE TRIGGER queue_festival_result_after_settlement AFTER UPDATE OF status,final_snapshot_id ON public.festival_financial_settlements FOR EACH ROW EXECUTE FUNCTION public._queue_festival_result_after_settlement();
 
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['festival_results','festival_reviews','festival_reputation_changes','festival_awards'] LOOP
+  FOREACH t IN ARRAY ARRAY['festival_results','festival_reviews','festival_reputation_receipts','festival_awards'] LOOP
     EXECUTE format('CREATE TRIGGER %I_immutable BEFORE UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public._deny_festival_legacy_mutation()',t,t);
   END LOOP;
-  FOREACH t IN ARRAY ARRAY['festival_legacy_generation_jobs','festival_results','festival_reviews','festival_reputation_changes','festival_awards','festival_world_records','festival_legacy_publications'] LOOP
+  FOREACH t IN ARRAY ARRAY['festival_legacy_generation_jobs','festival_results','festival_reviews','festival_reputation_changes','festival_reputation_receipts','festival_awards','festival_world_records','festival_legacy_publications'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',t);
     EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated',t);
   END LOOP;
 END $$;
-REVOKE ALL ON FUNCTION public.generate_festival_result(uuid),public.refresh_festival_world_records(uuid),public.generate_festival_season_awards(integer),public.process_festival_legacy_publications(integer),public.process_festival_legacy_generation_jobs(integer,text) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.generate_festival_result(uuid),public.refresh_festival_world_records(uuid),public.generate_festival_season_awards(integer),public.process_festival_legacy_publications(integer),public.process_festival_legacy_generation_jobs(integer,text),public.process_festival_reputation_changes(integer,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.get_festival_results(integer,text,text,text,text,integer,integer),public.get_festival_history(integer,text,text,text,text,integer,integer),public.get_festival_result_detail(uuid),public.get_festival_awards(integer),public.get_festival_records(),public.get_festival_statistics(integer,text,text,text,text,text),public.get_festival_hall_of_fame() TO anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_festival_result(uuid),public.refresh_festival_world_records(uuid),public.generate_festival_season_awards(integer),public.process_festival_legacy_publications(integer),public.process_festival_legacy_generation_jobs(integer,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.generate_festival_result(uuid),public.refresh_festival_world_records(uuid),public.generate_festival_season_awards(integer),public.process_festival_legacy_publications(integer),public.process_festival_legacy_generation_jobs(integer,text),public.process_festival_reputation_changes(integer,text) TO service_role;
 
 COMMENT ON TABLE public.festival_results IS 'Immutable Phase 9B projection of validated runtime and final settlement snapshots.';
 COMMENT ON COLUMN public.festival_world_records.value IS 'For biggest_loss this is a positive loss magnitude. All record ties retain the earliest achievement.';
