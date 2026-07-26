@@ -41606,6 +41606,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_festival_configuration: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      save_festival_configuration: {
+        Args: { p_festival_company_id: string; p_expected_version: number; p_configuration: Json; p_idempotency_key: string }
+        Returns: Json
+      }
       _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {
