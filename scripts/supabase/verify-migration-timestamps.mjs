@@ -17,6 +17,7 @@ const festivalPhase7LaunchContinuation = "20291217190000_festival_launch_and_tic
 const festivalPhase8RuntimeContinuation = "20291217200000_live_festival_runtime_foundation.sql";
 const festivalPhase8OperationsContinuation = "20291217210000_festival_crowds_incidents_and_operations.sql";
 const festivalPhase9SettlementContinuation = "20291217220000_festival_financial_settlement.sql";
+const festivalPhase9LegacyContinuation = "20291217230000_festival_historical_legacy.sql";
 const legacySequenceNames = new Set(["085_jam_sessions_core.sql", "086_band_member_locks.sql", "087_bands_add_chemistry_cohesion.sql"]);
 const today = new Date();
 const reasonableFuture = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 2, 23, 59, 59));
@@ -29,7 +30,7 @@ for (const filename of readdirSync(migrationDirectory).filter((name) => name.end
     failures.push(`${filename}: expected YYYYMMDDHHMMSS_description.sql`); continue;
   }
   const stamp = match[1];
-  if (filename === festivalPhase2Continuation || filename === festivalPhase3Continuation || filename === festivalPhase4Continuation || filename === festivalPhase4WorkflowContinuation || filename === festivalPhase5Continuation || filename === festivalPhase5WorkflowContinuation || filename === festivalPhase6Continuation || filename === festivalPhase6WorkflowContinuation || filename === festivalPhase7Continuation || filename === festivalPhase7LaunchContinuation || filename === festivalPhase8RuntimeContinuation || filename === festivalPhase8OperationsContinuation || filename === festivalPhase9SettlementContinuation) { exceptions.push(filename); continue; }
+  if (filename === festivalPhase2Continuation || filename === festivalPhase3Continuation || filename === festivalPhase4Continuation || filename === festivalPhase4WorkflowContinuation || filename === festivalPhase5Continuation || filename === festivalPhase5WorkflowContinuation || filename === festivalPhase6Continuation || filename === festivalPhase6WorkflowContinuation || filename === festivalPhase7Continuation || filename === festivalPhase7LaunchContinuation || filename === festivalPhase8RuntimeContinuation || filename === festivalPhase8OperationsContinuation || filename === festivalPhase9SettlementContinuation || filename === festivalPhase9LegacyContinuation) { exceptions.push(filename); continue; }
   const todayStamp = `${today.getUTCFullYear()}${String(today.getUTCMonth() + 1).padStart(2, "0")}${String(today.getUTCDate()).padStart(2, "0")}235959`;
   // Freeze every inherited future sequence through the known anomaly. This includes
   // several historical invalid calendar-day names; accepting the exact bounded

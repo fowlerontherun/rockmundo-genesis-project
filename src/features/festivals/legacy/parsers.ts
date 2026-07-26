@@ -1,0 +1,17 @@
+import { z } from "zod";
+
+const uuid=z.string().uuid();
+const score=z.number().finite().min(0).max(100);
+const minor=z.string().regex(/^-?\d+$/);
+const currency=z.string().regex(/^[A-Z]{3}$/);
+const nonNegative=z.number().int().nonnegative();
+const unknownObject=z.record(z.unknown());
+export const festivalAwardSchema=z.object({id:uuid,seasonYear:z.number().int(),category:z.string().min(1),winnerType:z.enum(["festival","artist","band","performance","sponsor"]),winnerId:uuid,winnerName:z.string().min(1),festivalResultId:uuid,score,citation:z.string()}).strict();
+export const festivalRecordSchema=z.object({id:uuid,category:z.enum(["highest_attendance","fastest_sell_out","largest_profit","biggest_loss","highest_rated_festival","longest_running_festival","most_performances","most_merchandise_sold","largest_single_performance_crowd"]),holderName:z.string().min(1),festivalResultId:uuid,value:z.number().finite(),unit:z.string().min(1),achievedYear:z.number().int(),evidence:z.unknown()}).strict();
+export const festivalResultSchema=z.object({id:uuid,festivalEditionId:uuid,festivalCompanyId:uuid.optional(),festivalName:z.string().min(1),editionYear:z.number().int(),country:z.string().min(1),city:z.string().min(1),festivalType:z.string().min(1),genres:z.array(z.string()),attendance:nonNegative,peakAttendance:nonNegative,siteCapacity:z.number().int().positive(),sellOutPercentage:score,fastestSellOutSeconds:nonNegative.nullish().transform(v=>v??undefined),revenueMinor:minor,profitLossMinor:minor,currencyCode:currency,soldOut:z.boolean(),crowdSatisfaction:score,overallRating:score,weatherSummary:z.unknown(),incidentSummary:z.record(z.number().int().nonnegative()),performanceCount:nonNegative,largestPerformanceCrowd:nonNegative,performanceHighlights:z.array(z.unknown()),sponsorSummary:z.unknown(),merchandiseSummary:z.unknown(),foodDrinkSummary:z.unknown(),headliners:z.array(z.unknown()),posterUrl:z.string().url().nullish().transform(v=>v??undefined),publishedAt:z.string().datetime({offset:true})}).passthrough();
+export const festivalResultPageSchema=z.object({items:z.array(festivalResultSchema),limit:z.number().int().min(1).max(100),offset:nonNegative}).strict();
+export const festivalResultDetailSchema=festivalResultSchema.extend({review:unknownObject,lineUp:z.array(z.unknown()),timetable:z.array(z.unknown()),awards:z.array(festivalAwardSchema),recordsHeld:z.array(festivalRecordSchema),publicationStories:z.array(z.unknown())});
+const currencyTotal=z.object({currencyCode:currency,revenueMinor:minor,profitLossMinor:minor}).strict();
+export const festivalStatisticsSchema=z.object({editions:nonNegative,attendance:nonNegative,averageRating:score,sellOuts:nonNegative,moneyByCurrency:z.array(currencyTotal),groups:z.array(z.object({label:z.string(),editions:nonNegative,attendance:nonNegative,averageRating:score,moneyByCurrency:z.array(currencyTotal)}).strict())}).strict();
+export const festivalHallOfFameSchema=z.array(festivalResultSchema.extend({rank:z.number().int().positive(),legacyScore:score,formulaVersion:z.string().min(1)}));
+export const parseLegacyPayload=<T>(schema:z.ZodType<T>,payload:unknown):T=>{const parsed=schema.safeParse(payload);if(!parsed.success) throw new Error("festival_legacy_malformed_response");return parsed.data;};
