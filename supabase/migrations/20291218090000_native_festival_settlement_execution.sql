@@ -12,6 +12,8 @@ CREATE TABLE public.festival_plan_edition_backfill_audit (
   resolved_edition_id uuid,
   candidate_count integer NOT NULL,
   resolution_evidence jsonb NOT NULL,
+  plan_classification text NOT NULL DEFAULT 'used' CHECK(plan_classification IN('used','unused_draft','archived')),
+  requires_owner_repair boolean NOT NULL DEFAULT false,
   resolved_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY(plan_type,plan_id)
 );
@@ -51,13 +53,14 @@ WITH plans AS (
         SELECT 1 FROM public.festival_artist_bookings b
         JOIN public.festival_runtime_performances rp ON rp.artist_booking_id=b.id
         WHERE b.festival_artist_programme_id=p.plan_id AND rp.runtime_session_id=r.id))
-    OR (p.plan_type='operations_plan' AND EXISTS(
-        SELECT 1 FROM public.festival_staff_shifts sh
-        JOIN public.festival_runtime_staff_checkins ck ON ck.staff_shift_id=sh.id
-        WHERE sh.festival_operations_plan_id=p.plan_id AND ck.runtime_session_id=r.id)
+    OR (p.plan_type='operations_plan' AND (
+        EXISTS(SELECT 1 FROM public.festival_staff_shifts sh
+          JOIN public.festival_runtime_staff_checkins ck ON ck.staff_shift_id=sh.id
+          WHERE sh.festival_operations_plan_id=p.plan_id AND ck.runtime_session_id=r.id)
         OR EXISTS(SELECT 1 FROM public.festival_supplier_contracts sc
-        JOIN public.festival_runtime_supplier_checkins ck ON ck.supplier_contract_id=sc.id
-        WHERE sc.festival_operations_plan_id=p.plan_id AND ck.runtime_session_id=r.id))
+          JOIN public.festival_runtime_supplier_checkins ck ON ck.supplier_contract_id=sc.id
+          WHERE sc.festival_operations_plan_id=p.plan_id AND ck.runtime_session_id=r.id)
+       ))
     OR (p.plan_type='sponsorship_plan' AND EXISTS(
         SELECT 1 FROM public.festival_sponsor_contracts sc
         JOIN public.festival_sponsor_deliverables d ON d.sponsor_contract_id=sc.id
@@ -79,17 +82,21 @@ WITH plans AS (
  GROUP BY p.t,p.id,p.festival_company_id,p.festival_edition_id
 )
 INSERT INTO public.festival_plan_edition_backfill_audit(plan_type,plan_id,festival_company_id,
- previous_edition_id,resolved_edition_id,candidate_count,resolution_evidence)
+ previous_edition_id,resolved_edition_id,candidate_count,resolution_evidence,plan_classification,requires_owner_repair)
 SELECT t,id,festival_company_id,festival_edition_id,
- CASE WHEN candidate_count=1 THEN resolved_edition_id END,candidate_count,evidence FROM resolved
+ CASE WHEN candidate_count=1 THEN resolved_edition_id ELSE festival_edition_id END,candidate_count,evidence,
+ CASE WHEN candidate_count>0 THEN 'used' ELSE 'unused_draft' END,
+ candidate_count=0 AND festival_edition_id IS NULL FROM resolved
 ON CONFLICT(plan_type,plan_id) DO UPDATE SET
  previous_edition_id=excluded.previous_edition_id,resolved_edition_id=excluded.resolved_edition_id,
- candidate_count=excluded.candidate_count,resolution_evidence=excluded.resolution_evidence,resolved_at=now();
+ candidate_count=excluded.candidate_count,resolution_evidence=excluded.resolution_evidence,
+ plan_classification=excluded.plan_classification,requires_owner_repair=excluded.requires_owner_repair,resolved_at=now();
 
 DO $$ DECLARE diagnostic text; BEGIN
  SELECT string_agg(format('%s=%s company=%s candidates=%s evidence=%s',plan_type,plan_id,
    festival_company_id,candidate_count,resolution_evidence),E'\n' ORDER BY plan_type,plan_id)
- INTO diagnostic FROM public.festival_plan_edition_backfill_audit WHERE candidate_count<>1;
+ INTO diagnostic FROM public.festival_plan_edition_backfill_audit
+ WHERE plan_classification='used' AND candidate_count<>1;
  IF diagnostic IS NOT NULL THEN
   RAISE EXCEPTION 'festival plan edition backfill requires exactly one candidate:%',E'\n'||diagnostic
    USING HINT='Add an exact launch/runtime/published-product historical link; never resolve by company alone.';
@@ -165,22 +172,42 @@ BEGIN
    'thresholdFormulas',coalesce(b.contract_terms->'thresholds','[]'),'ticketRevenueBasisPoints',coalesce((b.contract_terms->>'ticketRevenueShareBasisPoints')::int,0),
    'merchandiseRevenueBasisPoints',b.merch_revenue_share_basis_points,'travelRule',jsonb_build_object('fixedMinor',b.travel_support_minor),
    'accommodationRule',jsonb_build_object('fixedMinor',b.accommodation_support_minor),'cancellationClause',coalesce(b.contract_terms->'cancellation','{}'),
-   'noShowClause',coalesce(b.contract_terms->'noShow','{}'),'payee',jsonb_build_object('type',b.artist_type,'profileId',b.artist_profile_id,'bandId',b.band_id)) ORDER BY b.id)
+   'noShowClause',coalesce(b.contract_terms->'noShow','{}'),'forceMajeureClause',coalesce(b.contract_terms->'forceMajeure','{}'),
+   'bookingStatus',b.status,'cancellationReason',to_jsonb(b)->'cancellation_reason','cancellingParty',to_jsonb(b)->'cancelling_party',
+   'cancelledAt',to_jsonb(b)->'cancelled_at','applicableClauseVersion',b.version,'payee',jsonb_build_object('type',b.artist_type,'profileId',b.artist_profile_id,'bandId',b.band_id)) ORDER BY b.id)
    FROM public.festival_artist_bookings b JOIN public.festival_artist_programmes p ON p.id=b.festival_artist_programme_id
-   WHERE p.festival_edition_id=edition AND p.festival_company_id=company AND b.status NOT IN('cancelled','festival_cancelled')),'[]'),
+   WHERE p.festival_edition_id=edition AND p.festival_company_id=company
+     AND (b.status NOT IN('cancelled','festival_cancelled') OR b.contract_terms ?| ARRAY['cancellation','noShow','forceMajeure']))),'[]'),
   'staffContracts',coalesce((SELECT jsonb_agg(jsonb_build_object(
-   'contractId',a.id,'contractSource','festival_staff_assignments','acceptedVersion',a.assignment_version,
+   'contractId',a.id,'assignmentIdentity',a.id,'contractSource','festival_staff_assignments','acceptedVersion',a.assignment_version,
    'festivalId',festival,'festivalEditionId',edition,'festivalLaunchId',launch,'currency',a.currency_code,
-   'agreedBasePayMinor',a.agreed_pay_minor,'contractedMinutes',greatest(0,(extract(epoch FROM(sh.ends_at-sh.starts_at))/60)::int-sh.break_minutes),
-   'hourlyRateMinor',coalesce((to_jsonb(a)->>'hourly_rate_minor')::bigint,(a.agreed_pay_minor*60/nullif((extract(epoch FROM(sh.ends_at-sh.starts_at))/60)::int-sh.break_minutes,0))),
-   'overtimeRateMinor',nullif(to_jsonb(a)->>'overtime_rate_minor','')::bigint,'overtimeMultiplierBasisPoints',coalesce((to_jsonb(a)->>'overtime_multiplier_basis_points')::int,10000),
+   'agreedBasePayMinor',a.agreed_pay_minor,
+   'hourlyRateMinor',nullif(to_jsonb(a)->>'hourly_rate_minor','')::bigint,
+   'overtimeRateMinor',nullif(to_jsonb(a)->>'overtime_rate_minor','')::bigint,
+   'overtimeMultiplierBasisPoints',coalesce((to_jsonb(a)->>'overtime_multiplier_basis_points')::int,10000),
    'guaranteedMinimumMinor',coalesce((to_jsonb(a)->>'guaranteed_minimum_minor')::bigint,0),
    'latenessRule',coalesce(to_jsonb(a)->'lateness_rule','{}'),'earlyDepartureRule',coalesce(to_jsonb(a)->'early_departure_rule','{}'),
-   'bonuses',coalesce(to_jsonb(a)->'bonuses','[]'),'payee',jsonb_build_object('profileId',a.profile_id,'companyId',a.company_id)) ORDER BY a.id)
-   FROM public.festival_staff_assignments a JOIN public.festival_staff_shifts sh ON sh.staff_assignment_id=a.id
-   JOIN public.festival_operations_plans p ON p.id=sh.festival_operations_plan_id
-   JOIN public.festival_runtime_staff_checkins ck ON ck.staff_shift_id=sh.id AND ck.runtime_session_id=rid
-   WHERE p.festival_edition_id=edition AND p.festival_company_id=company),'[]'),
+   'bonuses',coalesce(to_jsonb(a)->'bonuses','[]'),'payee',jsonb_build_object('profileId',a.profile_id,'companyId',a.company_id),
+   'shifts',(SELECT jsonb_agg(jsonb_build_object('shiftId',sh.id,
+      'contractedMinutes',greatest(0,(extract(epoch FROM(sh.ends_at-sh.starts_at))/60)::int-sh.break_minutes),
+      'role',coalesce(to_jsonb(sh)->>'role',to_jsonb(a)->>'role_type'),'checkInId',ck.id,
+      'effectiveWorkedMinutes',coalesce(ed.effective_worked_minutes,
+        greatest(0,(extract(epoch FROM(ck.checked_out_at-ck.checked_in_at))/60)::int)),
+      'overtimeRequestId',oreq.id,'overtimeDecisionId',odec.id) ORDER BY sh.id)
+    FROM public.festival_staff_shifts sh
+    JOIN public.festival_runtime_staff_checkins ck ON ck.staff_shift_id=sh.id AND ck.runtime_session_id=rid
+    LEFT JOIN LATERAL (SELECT d.effective_worked_minutes FROM public.festival_staff_shift_evidence_decisions d
+      WHERE d.staff_checkin_id=ck.id AND NOT EXISTS(SELECT 1 FROM public.festival_staff_shift_evidence_decisions n WHERE n.supersedes_decision_id=d.id)
+      ORDER BY d.decision_at DESC,d.id DESC LIMIT 1) ed ON true
+    LEFT JOIN LATERAL (SELECT q.id FROM public.festival_staff_overtime_approvals q WHERE q.staff_checkin_id=ck.id AND q.decision='requested'
+      ORDER BY q.decision_at DESC,q.id DESC LIMIT 1) oreq ON true
+    LEFT JOIN LATERAL (SELECT q.id FROM public.festival_staff_overtime_approvals q WHERE q.staff_checkin_id=ck.id AND q.effective AND q.decision IN('approved','rejected')
+      ORDER BY q.decision_at DESC,q.id DESC LIMIT 1) odec ON true
+    WHERE sh.staff_assignment_id=a.id AND sh.festival_operations_plan_id=p.id)) ORDER BY a.id)
+   FROM public.festival_staff_assignments a JOIN public.festival_operations_plans p ON p.id=a.festival_operations_plan_id
+   WHERE p.festival_edition_id=edition AND p.festival_company_id=company
+     AND EXISTS(SELECT 1 FROM public.festival_staff_shifts sh JOIN public.festival_runtime_staff_checkins ck ON ck.staff_shift_id=sh.id
+       WHERE sh.staff_assignment_id=a.id AND ck.runtime_session_id=rid)),'[]'),
   'supplierContracts',coalesce((SELECT jsonb_agg(jsonb_build_object('contractId',c.id,'contractSource','festival_supplier_contracts',
    'acceptedVersion',c.contract_version,'festivalId',festival,'festivalEditionId',edition,'festivalLaunchId',launch,'currency',c.currency_code,
    'fees',coalesce(c.terms_snapshot->'fees','[]'),'bonuses',coalesce(c.terms_snapshot->'bonuses','[]'),'penalties',coalesce(c.terms_snapshot->'penalties','[]'),
@@ -336,7 +363,7 @@ BEGIN
   'bandSplitBasis',pkg->'bandSplitAgreements','formulaVersions',jsonb_build_object('settlement','festival-settlement-v3'),
   'perCurrencyTotals',(SELECT coalesce(jsonb_object_agg(currency_code,total),'{}') FROM (SELECT currency_code,sum(net_amount_minor) total FROM public.festival_settlement_lines WHERE settlement_id=s.id GROUP BY currency_code) z));
  INSERT INTO public.festival_settlement_snapshots(settlement_id,snapshot_type,runtime_outcome_snapshot_id,snapshot,content_digest,formula_versions)
- VALUES(s.id,'review',o.id,review,encode(digest(review::text,'sha256'),'hex'),jsonb_build_object('settlement','festival-settlement-v3')) RETURNING id INTO review_id;
+ VALUES(s.id,'review',o.id,review,public.festival_json_content_digest(review,ARRAY[]::text[]),jsonb_build_object('settlement','festival-settlement-v3')) RETURNING id INTO review_id;
  UPDATE public.festival_financial_settlements SET status='calculated',calculation_digest=s.calculation_digest,review_snapshot_id=review_id,updated_at=now()
   WHERE id=s.id RETURNING * INTO s;
  result:=public._festival_settlement_json(s)||jsonb_build_object('runtimeDigest',o.content_digest,'contractDigest',contract_digest,
@@ -394,7 +421,7 @@ BEGIN
    WHERE l.settlement_id=s.id AND t.tax_amount_minor<>round(t.taxable_base_minor*t.rate_basis_points/10000.0))
  THEN RAISE EXCEPTION 'festival_settlement_tax_sum_mismatch'; END IF;
  IF review_digest IS NULL OR EXISTS(SELECT 1 FROM public.festival_settlement_snapshots x WHERE x.id=s.review_snapshot_id
-   AND x.content_digest IS DISTINCT FROM encode(digest(x.snapshot::text,'sha256'),'hex'))
+   AND x.content_digest IS DISTINCT FROM public.festival_json_content_digest(x.snapshot,ARRAY[]::text[]))
  THEN RAISE EXCEPTION 'festival_settlement_review_snapshot_mismatch'; END IF;
 END $$;
 
