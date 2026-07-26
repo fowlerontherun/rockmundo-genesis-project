@@ -39,3 +39,7 @@ export * from "./data/festivalRuntimeRepository";
 export * from "./application/useFestivalRuntime";
 export * from "./performance/festivalGigAdapter";
 export * from "./ui/FestivalRuntimeViews";
+export * from "./domain/festivalSettlement";
+export * from "./data/festivalSettlementRepository";
+export * from "./application/useFestivalSettlement";
+export * from "./ui/FestivalSettlementView";
