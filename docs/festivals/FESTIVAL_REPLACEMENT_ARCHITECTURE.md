@@ -350,3 +350,9 @@ All money uses integer minor units and all rates use basis points. Server foreca
 The RPC boundary resolves currency from the configured home-city country, expands product dates, reads site capacity and Phase 2 status server-side, and returns structured issues. Owner/admin access, fail-closed RLS, optimistic version predicates, normalised idempotency hashing and audit rows follow Phases 1–2. Completion alone advances the plan to `ready_for_artist_planning`.
 
 Migration ordering remains forward-only: the retained historical sequence is followed by the exact Phase 2 `20291217130000_festival_site_and_stage_planning.sql` and Phase 3 `20291217140000_festival_ticketing_and_capacity_planning.sql` names. Lexical ordering protects fresh installs, while deployed databases apply only unseen migrations. The verifier allow-lists these exact continuations, not a broader future range.
+
+## Phase 4: artist programme boundary
+
+Artist planning is an RPC-only aggregate downstream of the completed ticket plan. Application windows, authorised applications, invitations, versioned offers/revisions, bookings, encumbrance-only commitments, idempotency receipts and safe audit events are separate records. Artist identity always references canonical profiles, bands, or trusted NPC identifiers. Availability includes required band members; travel and stage compatibility are advisory summaries except definite unavailability, foreign stages/dates, currency mismatch and budget overflow, which block acceptance. Accepted bookings are provisional scheduling inputs only: Phase 4 neither creates timetable rows nor pays or announces artists.
+
+The exact migration sequence is `20291217122000` (retained Phase 1), `20291217130000` (site), `20291217140000` (ticketing), then `20291217150000_festival_artist_applications_and_bookings.sql`. This additive ordering is safe for fresh and previously migrated environments and remains isolated by the timestamp verifier.

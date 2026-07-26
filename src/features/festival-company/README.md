@@ -96,3 +96,28 @@ The inherited npm registry/dependency installation blocker remains external to F
 6. Sponsorship
 7. Readiness and launch
 8. Live simulation and settlement
+
+## Phase 4 — artist applications, negotiation and bookings
+
+Phase 4 unlocks only after the ticket plan reaches `ready_for_artist_planning`. The artist programme uses the ticket plan currency, one or more explicitly activated application windows, separate applications and invitations, versioned offers with append-only revisions, and one confirmed booking per accepted offer. Player solo identities are canonical profiles; bands remain canonical `bands` rows and contractual actions require the existing leader/founder/manager/officer authority; NPC participation is restricted to trusted server/admin actions. No shadow artist records are created.
+
+Offers use integer minor units and basis points. Acceptance encumbers fee, travel and accommodation in `festival_financial_commitments`; it never changes cash and forecast ticket receipts are never available funds. Availability summaries incorporate canonical artist and required-member activities, while deterministic suitability reports genre, audience, budget, stage and travel risks without claiming guaranteed outcomes. Provisional dates/stages are preferences, not timetable reservations.
+
+Every action has a narrow state transition, optimistic version and actor/target/action-scoped idempotency receipt. Identical retries return the receipt; changed payloads conflict. Audit rows contain only safe changed-field names, not private messages. All Phase 4 tables fail closed and browser table mutation is revoked. Artist-facing reads are limited to the represented artist; managers see only their company programme.
+
+The completion review calculates player/NPC counts and budget shares. Player artists earn the stronger community/relationship planning value, while NPCs retain predictable fallback and genre-coverage value. If local player supply cannot meet a target, the server reports a warning rather than creating an impossible requirement. Completion produces `ready_for_operations` only; staffing and supplier work remains Phase 5.
+
+### Phase 4 migration ordering
+
+`20291217150000_festival_artist_applications_and_bookings.sql` is the sole allowed continuation after Phase 3. Fresh installs create Phases 1–4 lexically; existing environments apply only this additive migration. It does not rename historical files or mutate issued tickets/cash. The isolated future-dated sequence exists solely because the retained Phase 1 timestamp was already shared, and the verifier permits this exact filename while rejecting arbitrary future migrations.
+
+### Roadmap
+
+1. Identity, location, scale and dates — complete
+2. Site and stage planning — complete
+3. Ticketing and capacity allocation — complete
+4. Artist applications and bookings — this PR
+5. Staffing and suppliers
+6. Sponsorship
+7. Readiness and launch
+8. Live simulation and settlement
