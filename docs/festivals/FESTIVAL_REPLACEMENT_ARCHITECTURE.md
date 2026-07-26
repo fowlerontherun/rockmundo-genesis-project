@@ -528,3 +528,13 @@ Runtime events carry separate public and private payloads and feed the existing 
 Every table enables RLS and revokes browser mutation. Named action RPCs enforce role/ownership, expected versions, UUID idempotency, material hashes, append-only events/audit and canonical receipts. Only service role or admins can run `process_due_festival_runtime_jobs`.
 
 Roadmap: Phase 7B launch/ticket sales is complete; Phase 8A is this runtime foundation; Phase 8B adds crowds/incidents/operational outcomes; Phase 9A adds financial settlement/payments; Phase 9B adds results/reputation/awards/history.
+
+## Phase 9A: financial settlement and participant payments
+
+Phase 9A is the only transition from immutable live outcomes to accounting. `ready_for_settlement → settlement_review → settling → settled|partially_settled`; a partial aggregate may return to settling, and a settled result may be disputed. Only bounded RPCs perform these transitions.
+
+The review snapshot pins the runtime digest/version and actual source IDs. Actual revenues are paid tickets/retained booking fees, posted vendor sales, Festival/artist merchandise and collectible cash sponsorship. Actual costs are accepted artist terms, checked shift time, delivered supplier outcomes, refunds, inventory, fees and jurisdictional tax liabilities. Forecasts never enter settlement. Cash, accrued receivables/payables, in-kind value and taxes are separate totals.
+
+Payments reuse canonical accounts and paired ledger entries. The order is refunds, tax accruals, player wages, player suppliers, artist fees and NPC expenses; existing legal priority supersedes it. Each source/type and each canonical receipt is unique. Line processing makes successful transfers durable, retains failures, and supports exact retry without replay. Refund status changes only after its canonical transaction completes. Sponsorship in-kind value is non-cash, while player sponsors pay from company accounts and NPC value uses system handling. Artist merchandise runtime postings are the exactly-once source for commission, cost/tax and royalty liabilities.
+
+Settlement tables deny direct authenticated writes under RLS. Owners/admins see the aggregate; artists, staff, supplier owners and sponsor owners receive only caller-filtered statements. Profit stays in the Festival company, losses remain company losses, and tax liabilities await the canonical tax cycle. `20291217220000_festival_financial_settlement.sql` is additive, fresh-install safe and inert on deployment. Awards, XP, permanent reputation, reviews and annual history remain Phase 9B.
