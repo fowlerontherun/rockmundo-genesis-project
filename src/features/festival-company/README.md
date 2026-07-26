@@ -47,3 +47,27 @@ A stale-version response preserves local work and offers explicit **Reload lates
 Completion is server-derived and requires valid identity, city, active scale and dates. It changes the setup to `ready_for_planning`, remains editable, and creates one audit event per non-idempotent canonical change. Changed fields are determined on the server; stale/invalid attempts and idempotent retries do not create successful audit events. Completion does not announce a festival or create an edition, site, venue, stage, ticket or artist booking.
 
 Dependency installation remains subject to the inherited npm registry/lockfile issue recorded by the release checks; a failed `npm ci` must be reported rather than worked around by hand-editing a lockfile. Phase 2 (festival site, venue and stage planning) remains intentionally deferred until this hardening work lands.
+# Phase 2: site and stage planning
+
+Phase 1 (identity, home city, scale and inclusive dates) is complete. Phase 2 adds an RPC-only `festival_site_plans` aggregate with child `festival_stages`; it is available only after configuration reaches `ready_for_planning`. An existing site references the canonical `venues` row and derives its name/city/capacity constraint. Temporary, open-land and mixed sites remain provisional planning records and never create, book or charge a venue.
+
+Planning limits live on the admin-rebalanceable `festival_scale_catalogue`: local 1/1,000; small 1–2/5,000; medium 2–4/20,000; large 3–6/50,000; major 4–10/120,000. Exactly one main stage is required for completion. Each stage must fit the usable site capacity and site hours. Stage capacities need not sum to site capacity because crowds move; the server returns concentration metrics and warnings instead. Accessibility, toilets, medical, security, bars, food, water, backstage, parking and transport values are estimates—not contracts.
+
+`save_festival_site_plan` owns validation, readiness, recommendations and completion. It uses an atomic version check and caller/company/key-scoped SHA-256 idempotency receipts. Identical retries return the recorded canonical result; changed payloads conflict. Each successful logical save writes one audit row. Receipts should be retained for the client retry window and purged after 90 days. Tables have RLS and no browser table privileges; owner/admin access is resolved server-side.
+
+## Migration ordering
+
+Phase 2 uses `20291217130000_festival_site_and_stage_planning.sql`, immediately after the retained anomalous `20291217122000_festival_configuration_wizard.sql`. This is a narrowly bounded continuation: fresh installs create Phase 1 first, while shared environments apply only the new forward migration. The timestamp verifier permits that exact filename only and continues to reject arbitrary future migrations. The older 2026 corrective migration is documentation only and is not a Phase 1 dependency.
+
+Dependency installation may still fail because of the inherited npm registry/lockfile mismatch. Do not edit the lockfile or create shims; run dependency-independent migration and script checks regardless.
+
+## Roadmap
+
+1. Identity, location, scale and dates — complete
+2. Site and stage planning — this PR
+3. Ticketing and capacity allocation
+4. Artist applications and bookings
+5. Staffing and suppliers
+6. Sponsorship
+7. Readiness and launch
+8. Live simulation and settlement
