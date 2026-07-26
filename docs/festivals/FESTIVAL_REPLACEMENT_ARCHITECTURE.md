@@ -445,3 +445,17 @@ RLS is enabled and table writes are revoked; action-specific security-definer RP
 * Phase 8: Live Festival simulation and settlement
 
 The inherited dependency installation blocker is `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`; dependency-independent migration, RPC, shell, syntax and diff checks must still run.
+
+## Phase 6B: sponsorship negotiation and contract workflows
+
+The forward-only `20291217171000_complete_festival_sponsorship_workflows.sql` migration completes Phase 6A without rewriting deployed objects. Dedicated RPCs replace the partial generic dispatcher at the public boundary. Each action resolves the authenticated actor, Festival or company authority, fixed transition, expected version, canonical plan/package/currency, inventory and exclusivity rules, then records a payload-hashed request and audit event. Equal retries return their canonical receipt; changed reuse conflicts.
+
+The lifecycle is application window → safe opportunity → company application or manager invitation/direct prospect → review → draft proposal → sent proposal → sponsor counter/Festival revision → acceptance or decline/withdrawal. Applications and invitations are non-binding and allocate no inventory. Revisions are ordered snapshots and sent/accepted terms are retained. NPC prospect refresh is bounded, deterministic per daily window and cooldown protected. Safe affordability categories replace exposure of company balances.
+
+Acceptance is a single transaction locking the plan, proposal, revision and inventory. It revalidates the counterparty and commercial terms, creates one contract, contracts inventory, creates planned branding and deliverables, separate planned cash/in-kind receivables, and one reserved player-company commitment. These are planning records: no company/Festival cash transfer, tax posting, revenue recognition, branding activation or fulfilment occurs. In-kind operational coverage must match category, quality, quantity and timing; supplier replacement requires explicit confirmation and is rolled back with cancellation.
+
+Cancellation retains the contract/history and releases inventory, planned placements/deliverables/receivables/commitments and operational coverage. Readiness counts only intact contracts and validates targets, minimum cash, in-kind share, currency, allocations, exclusivity and record integrity. It advances only to `ready_for_final_readiness`.
+
+Access remains RPC-only with fail-closed RLS: Festival managers control their plan, authorised company representatives bind only their company, ordinary employees are read-only, NPC/admin actions require trusted authority, and competitor records/private scoring stay hidden. Mail is used for contractual events, notifications for workflow events, and request-scoped outbox/audit keys prevent duplicates. Routes point to Festival setup or the canonical company opportunity surface.
+
+Roadmap: Phase 1 complete; Phase 2 complete; Phase 3 complete; Phase 4A complete; Phase 4B complete; Phase 5A complete; Phase 5B complete; Phase 6A complete; **Phase 6B — this PR**; Phase 7 final timetable/readiness/launch; Phase 8 live simulation/settlement. The inherited `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` install blocker remains an environment limitation, not a feature failure.
