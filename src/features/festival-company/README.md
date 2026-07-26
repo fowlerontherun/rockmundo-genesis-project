@@ -255,3 +255,11 @@ Roadmap:
 - Phase 8B: Crowds, incidents and operational outcomes
 - Phase 9A: Financial settlement and payments
 - Phase 9B: Results, reputation, awards and annual history
+
+## Phase 8B — crowds, incidents and live operations
+
+Phase 8B adds server-authoritative, deterministic stage crowd distribution, mood, game-world weather, condition-driven incidents, preliminary staff and supplier outcomes, sponsor activations and runtime vendor sessions. Stage capacity and stock conservation are database invariants. Seeds and formula versions are persisted, runtime job work remains service-only, and explicit manager actions use optimistic versions and idempotency keys.
+
+The public experience exposes crowd bands, safe weather, stage state, availability, visible sponsor delivery and privacy-safe incident summaries. Exact operational detail, medical/security context and staff failures remain behind owner or assigned-stage authority. Vendor money is integer minor units and uses an exactly-once posting boundary; tax and artist-merch royalty liabilities are only recorded for Phase 9.
+
+Finalisation requires closed gates and site, terminal performances, resolved or handed-over incidents, final sponsor/vendor/shift states and supplier outcomes. It writes one immutable digest-backed outcome snapshot and marks the runtime `ready_for_settlement`; it does not pay artists, staff or suppliers, settle tax, award XP, or change permanent reputation.
