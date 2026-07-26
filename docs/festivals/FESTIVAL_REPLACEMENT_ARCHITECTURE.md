@@ -459,3 +459,27 @@ Cancellation retains the contract/history and releases inventory, planned placem
 Access remains RPC-only with fail-closed RLS: Festival managers control their plan, authorised company representatives bind only their company, ordinary employees are read-only, NPC/admin actions require trusted authority, and competitor records/private scoring stay hidden. Mail is used for contractual events, notifications for workflow events, and request-scoped outbox/audit keys prevent duplicates. Routes point to Festival setup or the canonical company opportunity surface.
 
 Roadmap: Phase 1 complete; Phase 2 complete; Phase 3 complete; Phase 4A complete; Phase 4B complete; Phase 5A complete; Phase 5B complete; Phase 6A complete; **Phase 6B — this PR**; Phase 7 final timetable/readiness/launch; Phase 8 live simulation/settlement. The inherited `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` install blocker remains an environment limitation, not a feature failure.
+
+## Phase 7A: timetable and readiness planning
+
+The private timetable is a typed aggregate rather than a generic calendar: inclusive Festival
+days own stage operating windows; typed stage slots own allocations, soundchecks and derived
+changeovers. Separate schedules cover stage managers, operational dependencies, supplier
+load-in/load-out and contracted sponsor activations. Locked slots survive deterministic server
+generation. Canonical activity availability remains the authority for artists, required band
+members and confirmed session players; only safe conflict summaries cross the Festival boundary.
+
+Server recalculation derives time-based staff coverage, structured cross-system conflicts,
+game-world weather contingencies, risk bands and readiness checks. Financial readiness keeps
+actual cash, reserved commitments, planned sponsorship receivables and forecast ticket income
+separate in the Festival currency. A safety blocker cannot be offset by a high score.
+
+Owner/admin RPC authority, expected versions and idempotency requests protect every mutation.
+Assigned managers are constrained to their stage and explicit scopes; artists, staff, suppliers
+and sponsors see only their own relevant calls/windows, while unrelated and anonymous users see
+no pre-launch plan. Direct grants are revoked. Completion appends an exact formula-versioned
+snapshot and stops at `ready_for_launch_preparation`; Phase 7B owns publication and sales.
+
+The retained forward-only migration order is `20291217170000` (6A), `20291217171000` (6B), then
+`20291217180000_festival_timetable_and_readiness.sql` (7A). Fresh installs apply it in order;
+upgrades preserve all Phase 1–6 drafts and fail explicitly when prerequisites are absent.
