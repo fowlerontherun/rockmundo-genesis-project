@@ -31,3 +31,6 @@ export * from "./ui/FestivalSponsorshipPlanner";
 export * from "./domain/festivalTimetablePlan";
 export * from "./application/useFestivalTimetable";
 export * from "./ui/FestivalTimetablePlanner";
+export * from "./domain/festivalLaunch";
+export * from "./application/useFestivalLaunch";
+export * from "./ui/FestivalLaunchManager";

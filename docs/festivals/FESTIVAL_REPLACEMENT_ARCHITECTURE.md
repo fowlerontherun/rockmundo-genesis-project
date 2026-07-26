@@ -483,3 +483,30 @@ snapshot and stops at `ready_for_launch_preparation`; Phase 7B owns publication 
 The retained forward-only migration order is `20291217170000` (6A), `20291217171000` (6B), then
 `20291217180000_festival_timetable_and_readiness.sql` (7A). Fresh installs apply it in order;
 upgrades preserve all Phase 1–6 drafts and fail explicitly when prerequisites are absent.
+
+## Phase 7B: Festival launch and public ticket sales
+
+Phase 7B is the publication and pre-event commerce boundary. It adds final launch review, immutable launch snapshots, safe public edition/stage/line-up/timetable/sponsor/ticket projections, the canonical `/world/festivals` directory and slug page, a server-time countdown, city-calendar registration, communications outbox events, and capacity-safe ticket purchasing. Launch remains private until every projection and integration succeeds in the same database transaction.
+
+The ticket path converts Phase 3 plans to real time-derived sale phases and row-locked inventory. Authoritative totals use integer minor units and versioned fee/tax formulae at purchase time—not forecasts or browser calculations. Canonical finance moves value directly from the player owner account to the Festival company's financial account and writes its double-entry ledger exactly once. Completed sales issue opaque-reference tickets to the existing player-facing ticket area; upgrades and add-ons never grant admission, and add-ons do not affect attendance sell-out.
+
+Pause/resume/close are explicit versioned RPCs. Complimentary tickets consume reserved allocation with no finance entry. Cancellation preserves planning and immutable history, cancels its public calendar/countdown state, notifies affected parties, and records pending refund obligations; it never marks money refunded before a later refund processor succeeds. Public policies and SECURITY DEFINER reads expose projections only, while all direct launch, inventory, sale and issuance writes are revoked.
+
+Roadmap:
+
+- Phase 1: Identity, location, scale and dates — complete
+- Phase 2: Site and stage planning — complete
+- Phase 3: Ticketing and capacity planning — complete
+- Phase 4A: Artist programme and planning — complete
+- Phase 4B: Artist workflows and bookings — complete
+- Phase 5A: Operations planning — complete
+- Phase 5B: Staffing and supplier workflows — complete
+- Phase 6A: Sponsorship planning — complete
+- Phase 6B: Sponsorship workflows — complete
+- Phase 7A: Timetable and readiness planning — complete
+- Phase 7B: Festival launch and public ticket sales — this PR
+- Phase 8A: Live Festival runtime foundation
+- Phase 8B: Live performances, crowds and incidents
+- Phase 9: Settlement, outcomes and history
+
+The only Phase 7B migration is `20291217190000_festival_launch_and_ticket_sales.sql`. It is additive, performs no launch/backfill/money movement, preserves all planning data, and fails migration on incompatible references. The known dependency-install environment may return `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`; that blocks Node-dependent execution but not migration/RPC static verification.
