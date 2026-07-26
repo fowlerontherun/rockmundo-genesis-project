@@ -213,3 +213,29 @@ export const counterFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("c
 export const respondToFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("respond_to_festival_artist_offer",i);
 export const withdrawFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("withdraw_festival_artist_offer",i);
 export const cancelFestivalArtistBooking=(i:Record<string,unknown>)=>rpcAction("cancel_festival_artist_booking",i);
+
+// Phase 5 RPC boundary: all operational writes are transactional server actions.
+import {parseFestivalOperationsResult,type FestivalOperationsDraft,type FestivalOperationsResult} from "../domain/festivalOperationsPlan";
+type UntypedRpc=(name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:{message?:string}|null}>;
+const operationsRpc=supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+const operationsErrors=["festival_operations_forbidden","festival_operations_prerequisite_incomplete","festival_operations_plan_stale","festival_operations_currency_mismatch","festival_operations_idempotency_conflict","festival_staff_application_stale","festival_staff_assignment_stale","festival_supplier_quote_stale","festival_supplier_contract_stale","festival_security_coverage_insufficient","festival_supplier_requirement_uncovered","festival_operations_action_invalid"];
+const normalizeOperationsError=(error:{message?:string})=>new Error(operationsErrors.find(code=>error.message?.includes(code))??"festival_operations_unavailable");
+export async function getFestivalOperationsPlan(festivalCompanyId:string):Promise<FestivalOperationsResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_operations_forbidden");const {data,error}=await operationsRpc("get_festival_operations_plan",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeOperationsError(error);return parseFestivalOperationsResult(data)}
+export async function saveFestivalOperationsPlan(input:{festivalCompanyId:string;expectedVersion:number;plan:FestivalOperationsDraft;idempotencyKey:string;complete?:boolean}):Promise<FestivalOperationsResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isSafeInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_operations_plan_invalid");const {data,error}=await operationsRpc("save_festival_operations_plan",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_plan:input.plan,p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeOperationsError(error);return parseFestivalOperationsResult(data)}
+export async function festivalOperationsAction(action:string,payload:Record<string,unknown>,idempotencyKey:string):Promise<unknown>{if(!isUuid(idempotencyKey)||!operationsActionNames.has(action))throw new Error("festival_operations_action_invalid");const {data,error}=await operationsRpc(action,{p_payload:payload,p_idempotency_key:idempotencyKey});if(error)throw normalizeOperationsError(error);return data}
+const operationsActionNames=new Set(["publish_festival_staff_vacancy","apply_for_festival_staff_vacancy","withdraw_festival_staff_application","review_festival_staff_application","hire_festival_staff_applicant","hire_festival_npc_staff","assign_festival_staff_shift","cancel_festival_staff_assignment","publish_festival_supplier_requirement","submit_festival_supplier_quote","withdraw_festival_supplier_quote","review_festival_supplier_quote","accept_festival_supplier_quote","cancel_festival_supplier_contract","refresh_festival_npc_supplier_quotes"]);
+export const publishFestivalStaffVacancy=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("publish_festival_staff_vacancy",p,k);
+export const applyForFestivalStaffVacancy=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("apply_for_festival_staff_vacancy",p,k);
+export const withdrawFestivalStaffApplication=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("withdraw_festival_staff_application",p,k);
+export const reviewFestivalStaffApplication=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("review_festival_staff_application",p,k);
+export const hireFestivalStaffApplicant=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("hire_festival_staff_applicant",p,k);
+export const hireFestivalNpcStaff=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("hire_festival_npc_staff",p,k);
+export const assignFestivalStaffShift=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("assign_festival_staff_shift",p,k);
+export const cancelFestivalStaffAssignment=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("cancel_festival_staff_assignment",p,k);
+export const publishFestivalSupplierRequirement=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("publish_festival_supplier_requirement",p,k);
+export const submitFestivalSupplierQuote=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("submit_festival_supplier_quote",p,k);
+export const withdrawFestivalSupplierQuote=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("withdraw_festival_supplier_quote",p,k);
+export const reviewFestivalSupplierQuote=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("review_festival_supplier_quote",p,k);
+export const acceptFestivalSupplierQuote=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("accept_festival_supplier_quote",p,k);
+export const cancelFestivalSupplierContract=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("cancel_festival_supplier_contract",p,k);
+export const refreshFestivalNpcSupplierQuotes=(p:Record<string,unknown>,k:string)=>festivalOperationsAction("refresh_festival_npc_supplier_quotes",p,k);

@@ -1,0 +1,7 @@
+import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import {getFestivalOperationsPlan,saveFestivalOperationsPlan,festivalOperationsAction} from "../data/festivalCompanyRepository";
+import type {FestivalOperationsDraft} from "../domain/festivalOperationsPlan";
+export const festivalOperationsQueryKey=(id?:string)=>["festival-operations",id] as const;
+export const useFestivalOperationsPlan=(id?:string,enabled=true)=>useQuery({queryKey:festivalOperationsQueryKey(id),enabled:enabled&&Boolean(id),retry:false,queryFn:()=>getFestivalOperationsPlan(id!)});
+export const useSaveFestivalOperationsPlan=()=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;expectedVersion:number;plan:FestivalOperationsDraft;idempotencyKey:string;complete?:boolean})=>saveFestivalOperationsPlan(input),onSuccess:data=>{client.setQueryData(festivalOperationsQueryKey(data.festivalCompanyId),data);void Promise.all([["festival-jobs"],["company-procurement"],["notifications"],["mail"]].map(queryKey=>client.invalidateQueries({queryKey})));}})};
+export const useFestivalOperationsAction=(action:string)=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;payload:Record<string,unknown>;idempotencyKey:string})=>festivalOperationsAction(action,input.payload,input.idempotencyKey),onSuccess:(_,input)=>void client.invalidateQueries({queryKey:festivalOperationsQueryKey(input.festivalCompanyId)})})};
