@@ -12,6 +12,15 @@ const requiredRpcs = [
     arguments: [{ name: 'p_identifier', type: 'uuid' }],
     references: ['FESTIVAL_OWNER_BOOTSTRAP_RPC'],
   },
+  ...[
+    'submit_festival_artist_application', 'withdraw_festival_artist_application',
+    'review_festival_artist_application', 'send_festival_artist_invitation',
+    'respond_to_festival_artist_invitation', 'create_festival_artist_offer',
+    'send_festival_artist_offer', 'counter_festival_artist_offer',
+    'respond_to_festival_artist_offer', 'withdraw_festival_artist_offer',
+    'cancel_festival_artist_booking', 'get_my_festival_artist_opportunities',
+    'search_festival_artist_candidates',
+  ].map((name) => ({ name, arguments: [] })),
 ];
 
 const migrationDir = join(root, 'supabase', 'migrations');

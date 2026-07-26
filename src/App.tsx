@@ -186,6 +186,7 @@ const CreateCharacter = lazyWithRetry(() => import("./pages/CreateCharacter"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
 const FestivalCompanySetupPage = lazyWithRetry(() => import("./features/festival-company/ui/FestivalCompanySetupPage"));
+const FestivalArtistOpportunitiesPage = lazyWithRetry(() => import("./features/festival-company/ui/FestivalArtistOpportunitiesPage"));
 const WorldCompanies = lazyWithRetry(() => import("./pages/WorldCompanies"));
 const CompanyDetail = lazyWithRetry(() => import("./pages/CompanyDetail"));
 const SecurityFirmManagement = lazyWithRetry(() => import("./pages/SecurityFirmManagement"));
@@ -697,6 +698,7 @@ function App() {
                     <Route path="career/history" element={<PreserveQueryRedirect to="/legacy" />} />
                     <Route path="my-companies" element={<MyCompanies />} />
                     <Route path="companies/festivals/:festivalCompanyId/setup" element={<FestivalCompanySetupPage />} />
+                    <Route path="festival-opportunities" element={<FestivalArtistOpportunitiesPage />} />
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
                     <Route path="festivals" element={<LegacyFestivalGate area="Festival browser"><FestivalBrowser /></LegacyFestivalGate>} />

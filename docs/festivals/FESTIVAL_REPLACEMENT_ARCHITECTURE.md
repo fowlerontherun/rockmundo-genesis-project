@@ -356,3 +356,19 @@ Migration ordering remains forward-only: the retained historical sequence is fol
 Artist planning is an RPC-only aggregate downstream of the completed ticket plan. Application windows, authorised applications, invitations, versioned offers/revisions, bookings, encumbrance-only commitments, idempotency receipts and safe audit events are separate records. Artist identity always references canonical profiles, bands, or trusted NPC identifiers. Availability includes required band members; travel and stage compatibility are advisory summaries except definite unavailability, foreign stages/dates, currency mismatch and budget overflow, which block acceptance. Accepted bookings are provisional scheduling inputs only: Phase 4 neither creates timetable rows nor pays or announces artists.
 
 The exact migration sequence is `20291217122000` (retained Phase 1), `20291217130000` (site), `20291217140000` (ticketing), then `20291217150000_festival_artist_applications_and_bookings.sql`. This additive ordering is safe for fresh and previously migrated environments and remains isolated by the timestamp verifier.
+
+### Phase 4B: artist interaction and booking workflows
+
+The Phase 4A planning schema is completed by the forward-only `20291217151000_complete_festival_artist_workflows.sql` migration. It supplies action-specific application, invitation, revisioned-offer, acceptance and cancellation RPCs plus safe artist-opportunity and manager candidate-search reads. Each transition is authenticated, authority checked, version checked, deterministic-payload idempotent, audited and communicated exactly once. Acceptance is one database transaction: it locks/revalidates budget, marks the selected revision and offer accepted, creates one provisional booking and one financial encumbrance, and updates linked application/invitation state. No cash, ticket forecast, final slot, settlement or public announcement is created.
+
+Roadmap:
+
+- Phase 1: Identity, location, scale and dates — complete
+- Phase 2: Site and stage planning — complete
+- Phase 3: Ticketing and capacity allocation — complete
+- Phase 4A: Artist programme schema and planning — complete
+- Phase 4B: Artist interaction and booking workflows — this PR
+- Phase 5: Staffing and suppliers
+- Phase 6: Sponsorship
+- Phase 7: Readiness and launch
+- Phase 8: Live simulation and settlement

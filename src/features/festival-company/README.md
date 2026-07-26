@@ -121,3 +121,15 @@ The completion review calculates player/NPC counts and budget shares. Player art
 6. Sponsorship
 7. Readiness and launch
 8. Live simulation and settlement
+
+## Phase 4B — artist interaction workflows
+
+Phase 4B adds a forward-only `20291217151000_complete_festival_artist_workflows.sql` boundary. Applications move explicitly through submitted, review, shortlist, offer-pending, rejection or withdrawal. Invitations are sent and answered as interested/declined; they never create bookings. Offers begin as drafts, retain immutable ordered revisions, and are sent, countered, declined, withdrawn or accepted with optimistic versions.
+
+Every mutation resolves the authenticated profile and uses a receipt scoped to actor, action, target and UUID key. Equal retries return the stored canonical result; changed payloads fail. Completed receipts may be cleaned after 90 days only after audit/communication retention. Festival owners/admins manage the programme. Solo profiles act for themselves; active band leaders, founders, co-leaders and managers act for the band. Ordinary/former members are read-only and NPC actions remain manager-only.
+
+Acceptance locks the programme, rechecks deadline and commitment capacity, accepts one revision, creates one provisional `awaiting_schedule` booking and one `committed` encumbrance, then updates linked records and communications in the same transaction. It never changes cash, records income, pays an artist, sells tickets or creates a timetable slot. Cancellation preserves the offer/booking, releases the commitment, and produces an audit record. Artist opportunity and manager candidate-search RPCs disclose only authority-safe summaries; direct table access remains revoked and communications link to the registered `/festival-opportunities` route.
+
+RLS/access matrix: anonymous and unrelated profiles have no RPC access; managers see company planning data; artists see only their represented identities; ordinary band members cannot bind the band; service/admin paths are still constrained by action-specific validation. Mail and notification outbox rows are unique per receipt, recipient, channel and event, so retries cannot duplicate delivery.
+
+The inherited npm registry/dependency installation blocker remains external to this feature; dependency-independent migration, RPC and static checks should still run.
