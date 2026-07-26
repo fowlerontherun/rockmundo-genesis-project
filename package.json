@@ -39,7 +39,8 @@
     "test:festivals:hardening:db": "bash scripts/festivals/run-hardening-db-gate.sh",
     "test:festivals:company-runtime": "bash scripts/festivals/run-company-runtime-gate.sh",
     "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
-    "verify:dependencies": "npm ls --all"
+    "verify:dependencies": "npm ls --all",
+    "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

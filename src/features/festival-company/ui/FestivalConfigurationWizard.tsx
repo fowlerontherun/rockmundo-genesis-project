@@ -1,29 +1,603 @@
-import { useEffect, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any -- compact typed step boundaries are validated by the shared domain validator */
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useFestivalConfiguration, useSaveFestivalConfiguration } from "../application/useFestivalConfiguration";
-import { inclusiveDuration, type FestivalConfigurationDraft, type FestivalScale } from "../domain/festivalConfiguration";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  useFestivalConfiguration,
+  useSaveFestivalConfiguration,
+} from "../application/useFestivalConfiguration";
+import {
+  FestivalConfigurationError,
+  festivalConfigurationErrorMessage,
+} from "../domain/festivalConfigurationErrors";
+import {
+  maximumReachableStep,
+  validateFestivalDraft,
+  type FieldValidation,
+} from "../domain/festivalConfigurationValidation";
+import type { FestivalConfigurationDraft } from "../domain/festivalConfiguration";
+import { FestivalWizardProgress } from "./FestivalWizardProgress";
+import { FestivalSaveStatus } from "./FestivalSaveStatus";
+import { FestivalConflictAlert } from "./FestivalConflictAlert";
+import { useFestivalConfigurationDraft } from "./useFestivalConfigurationDraft";
 
-const steps = ["Identity", "Location & scale", "Dates", "Review"];
-export function FestivalConfigurationWizard({ festivalCompanyId }: { festivalCompanyId: string }) {
- const query=useFestivalConfiguration(festivalCompanyId); const save=useSaveFestivalConfiguration(); const [draft,setDraft]=useState<FestivalConfigurationDraft|null>(null); const [dirty,setDirty]=useState(false); const [conflict,setConflict]=useState(false);
- useEffect(()=>{if(query.data&&!draft)setDraft({publicName:query.data.publicName,shortName:query.data.shortName,tagline:query.data.tagline,description:query.data.description,homeCityId:query.data.homeCity?.id??null,festivalScale:query.data.festivalScale,plannedStartDate:query.data.plannedStartDate,plannedEndDate:query.data.plannedEndDate,currentStep:query.data.currentStep,complete:query.data.setupStatus==="ready_for_planning"})},[query.data,draft]);
- useEffect(()=>{const fn=(e:BeforeUnloadEvent)=>{if(dirty)e.preventDefault()};addEventListener("beforeunload",fn);return()=>removeEventListener("beforeunload",fn)},[dirty]);
- if(query.isLoading)return <p role="status">Loading configuration…</p>; if(query.isError||!query.data||!draft)return <Alert variant="destructive"><AlertDescription>Festival configuration could not be loaded. Check that you own this company and try again.</AlertDescription></Alert>;
- const patch=(p:Partial<FestivalConfigurationDraft>)=>{setDraft({...draft,...p});setDirty(true)}; const duration=inclusiveDuration(draft.plannedStartDate,draft.plannedEndDate); const selectedScale=query.data.scales.find(s=>s.key===draft.festivalScale);
- const validIdentity=draft.publicName.trim().length>=3&&draft.publicName.trim().length<=80&&draft.shortName.trim().length<=24&&draft.tagline.length<=120&&draft.description.length<=1000;
- const validLocation=!!draft.homeCityId&&!!draft.festivalScale; const validDates=!!duration&&!!selectedScale&&duration<=selectedScale.maximumDurationDays; const persist=(next?:number,complete=false)=>{setConflict(false);save.mutate({festivalCompanyId,expectedVersion:query.data.configurationVersion,configuration:{...draft,currentStep:next??draft.currentStep,complete},idempotencyKey:crypto.randomUUID()},{onSuccess:()=>{setDirty(false);setDraft({...draft,currentStep:next??draft.currentStep,complete})},onError:e=>setConflict(e.message.includes("festival_configuration_stale"))})};
- return <section className="space-y-6" aria-labelledby="wizard-title"><div><h2 id="wizard-title" className="text-xl font-semibold">Festival configuration</h2><p>Build the public identity and initial schedule. This draft does not announce or launch your festival.</p></div>
- <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Setup progress">{steps.map((s,i)=><li key={s}><Button className="w-full min-h-11 whitespace-normal" variant={draft.currentStep===i+1?"default":"outline"} aria-current={draft.currentStep===i+1?"step":undefined} onClick={()=>patch({currentStep:i+1})}>{i+1}. {s}</Button></li>)}</ol>
- <div aria-live="polite">{save.isPending?"Saving…":conflict?"A newer version exists.":dirty?"Unsaved changes":"Saved"}</div>
- {conflict&&<Alert variant="destructive"><AlertDescription>Your draft was preserved. Reload the latest saved version before retrying. <Button variant="link" onClick={()=>location.reload()}>Reload latest</Button></AlertDescription></Alert>}
- {draft.currentStep===1&&<div className="space-y-4"><p>This public identity is separate from the legal Festival Company name.</p><Field label="Public festival name" id="public-name" value={draft.publicName} max={80} onChange={v=>patch({publicName:v})}/><Field label="Short name" id="short-name" value={draft.shortName} max={24} onChange={v=>patch({shortName:v})}/><Field label="Tagline" id="tagline" value={draft.tagline} max={120} onChange={v=>patch({tagline:v})}/><div><Label htmlFor="description">Description</Label><Textarea id="description" maxLength={1000} value={draft.description} onChange={e=>patch({description:e.target.value})}/><small>{draft.description.length}/1000</small></div>{!validIdentity&&<p role="alert">Use 3–80 characters for the public name and remain within each displayed limit.</p>}</div>}
- {draft.currentStep===2&&<div className="space-y-4"><div><Label htmlFor="city">Home city</Label><select id="city" className="w-full min-h-11 rounded border bg-background p-2" value={draft.homeCityId??""} onChange={e=>patch({homeCityId:e.target.value||null})}><option value="">Search or choose a city</option>{query.data.cities.map(c=><option key={c.id} value={c.id}>{c.name}, {c.country}</option>)}</select></div><fieldset><legend className="font-medium">Initial scale</legend><div className="grid gap-3 sm:grid-cols-2">{query.data.scales.map(s=><label key={s.key} className="min-h-11 cursor-pointer rounded border p-4"><input type="radio" name="scale" checked={draft.festivalScale===s.key} onChange={()=>patch({festivalScale:s.key as FestivalScale})}/> <strong>{s.displayName}</strong><span className="block">{s.description} {s.minimumCapacity.toLocaleString()}–{s.maximumCapacity.toLocaleString()} daily capacity · up to {s.maximumDurationDays} days · {s.complexity} complexity.</span></label>)}</div></fieldset></div>}
- {draft.currentStep===3&&<div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="start">Start date</Label><Input id="start" type="date" value={draft.plannedStartDate??""} onChange={e=>patch({plannedStartDate:e.target.value||null})}/></div><div><Label htmlFor="end">End date</Label><Input id="end" type="date" value={draft.plannedEndDate??""} onChange={e=>patch({plannedEndDate:e.target.value||null})}/></div><p>Calculated inclusive duration: {duration??"Choose valid dates"} day(s). The server validates game date and scale limits.</p><p>Outdoor-season choices may affect weather risks and costs in later planning.</p></div>}
- {draft.currentStep===4&&<div className="space-y-3"><h3 className="font-semibold">Review draft</h3><dl className="grid grid-cols-[minmax(8rem,1fr)_2fr] gap-2 break-words"><dt>Public name</dt><dd>{draft.publicName}</dd><dt>Festival Company</dt><dd>{query.data.legalCompanyName}</dd><dt>Home city</dt><dd>{query.data.cities.find(c=>c.id===draft.homeCityId)?.name??"Incomplete"}</dd><dt>Scale</dt><dd>{selectedScale?.displayName??"Incomplete"}</dd><dt>Dates</dt><dd>{draft.plannedStartDate??"Incomplete"} – {draft.plannedEndDate??"Incomplete"}</dd><dt>Duration</dt><dd>{duration??"Incomplete"} days</dd><dt>Status</dt><dd>{query.data.setupStatus.replaceAll("_"," ")}</dd></dl><p>Initial setup complete enables later planning for stages, tickets, artists, staffing and suppliers. It does not launch the festival.</p></div>}
- <div className="sticky bottom-0 flex flex-wrap gap-2 border-t bg-background py-3"><Button variant="outline" disabled={draft.currentStep===1||save.isPending} onClick={()=>patch({currentStep:draft.currentStep-1})}>Back</Button><Button variant="secondary" disabled={!validIdentity||save.isPending} onClick={()=>persist()}>Save draft</Button>{draft.currentStep<4?<Button disabled={save.isPending||(draft.currentStep===1&&!validIdentity)||(draft.currentStep===2&&!validLocation)||(draft.currentStep===3&&!validDates)} onClick={()=>persist(draft.currentStep+1)}>Save and continue</Button>:<Button disabled={save.isPending||!validIdentity||!validLocation||!validDates} onClick={()=>persist(4,true)}>Complete initial setup</Button>}</div></section>
+export function FestivalConfigurationWizard({
+  festivalCompanyId,
+}: {
+  festivalCompanyId: string;
+}) {
+  const query = useFestivalConfiguration(festivalCompanyId);
+  const save = useSaveFestivalConfiguration();
+  const { draft, setDraft, dirty, version, acceptCanonical } =
+    useFestivalConfigurationDraft(query.data);
+  const [conflict, setConflict] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(
+    null,
+  );
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<{ payload: string; key: string } | null>(null);
+  useEffect(() => {
+    const unload = (event: BeforeUnloadEvent) => {
+      if (dirty) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", unload);
+    return () => window.removeEventListener("beforeunload", unload);
+  }, [dirty]);
+  useEffect(() => {
+    const click = (event: MouseEvent) => {
+      const anchor = (event.target as Element | null)?.closest(
+        "a[href]",
+      ) as HTMLAnchorElement | null;
+      if (
+        !dirty ||
+        !anchor ||
+        anchor.target ||
+        anchor.origin !== location.origin
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingNavigation(anchor.href);
+    };
+    document.addEventListener("click", click, true);
+    return () => document.removeEventListener("click", click, true);
+  }, [dirty]);
+  if (query.isLoading) return <p role="status">Loading configuration…</p>;
+  if (query.isError || !query.data || !draft)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Festival configuration could not be loaded. Check that you own this
+          company and try again.
+        </AlertDescription>
+      </Alert>
+    );
+
+  const validation = validateFestivalDraft(
+    draft,
+    query.data.cities,
+    query.data.scales,
+  );
+  const maximumStep = maximumReachableStep(validation);
+  const selectedScale = query.data.scales.find(
+    (scale) => scale.key === draft.festivalScale,
+  );
+  const canWrite = query.data.canWrite;
+  const patch = (values: Partial<FestivalConfigurationDraft>) =>
+    setDraft({ ...draft, ...values });
+  const showErrors = (valid: boolean) => {
+    if (valid) return false;
+    setAttempted(true);
+    queueMicrotask(() => summaryRef.current?.focus());
+    return true;
+  };
+  const persist = (nextStep = draft.currentStep, complete = false) => {
+    if (!canWrite || save.isPending) return;
+    const stepValid =
+      draft.currentStep === 1
+        ? validation.identityValid
+        : draft.currentStep === 2
+          ? validation.locationValid
+          : draft.currentStep === 3
+            ? validation.datesValid
+            : validation.allValid;
+    if (showErrors(stepValid && (!complete || validation.allValid))) return;
+    const configuration = { ...draft, currentStep: nextStep, complete };
+    const payload = JSON.stringify(configuration);
+    if (!requestRef.current || requestRef.current.payload !== payload)
+      requestRef.current = { payload, key: crypto.randomUUID() };
+    setConflict(false);
+    setSaveFailed(false);
+    save.mutate(
+      {
+        festivalCompanyId,
+        expectedVersion: version.current,
+        configuration,
+        idempotencyKey: requestRef.current.key,
+      },
+      {
+        onSuccess: (canonical) => {
+          acceptCanonical(canonical);
+          setSavedAt(canonical.updatedAt ?? new Date().toISOString());
+          setConflict(false);
+          setSaveFailed(false);
+          setAttempted(false);
+          requestRef.current = null;
+        },
+        onError: (error) => {
+          if (
+            error instanceof FestivalConfigurationError &&
+            error.code === "festival_configuration_stale"
+          )
+            setConflict(true);
+          else setSaveFailed(true);
+        },
+      },
+    );
+  };
+  const reloadLatest = async () => {
+    const result = await query.refetch();
+    if (result.data) {
+      acceptCanonical(result.data);
+      setConflict(false);
+      setSaveFailed(false);
+      requestRef.current = null;
+    }
+  };
+  const errors = Object.values(validation.fields).filter(
+    (field) => !field.valid,
+  );
+  return (
+    <section className="space-y-6" aria-labelledby="wizard-title">
+      <div>
+        <h2 id="wizard-title" className="text-xl font-semibold">
+          Festival configuration
+        </h2>
+        <p>
+          Build the public identity and initial schedule. This draft does not
+          announce or launch your festival.
+        </p>
+      </div>
+      {!canWrite && (
+        <Alert>
+          <AlertDescription>
+            This configuration is read-only. You can review every section, but
+            only an authorised owner or administrator can save changes.
+          </AlertDescription>
+        </Alert>
+      )}
+      <FestivalWizardProgress
+        currentStep={draft.currentStep}
+        maximumStep={canWrite ? maximumStep : 4}
+        onSelect={(currentStep) => patch({ currentStep })}
+      />
+      <FestivalSaveStatus
+        pending={save.isPending}
+        conflict={conflict}
+        dirty={dirty}
+        failed={saveFailed}
+        readOnly={!canWrite}
+        savedAt={savedAt}
+      />
+      {conflict && (
+        <FestivalConflictAlert
+          loading={query.isFetching}
+          onReload={reloadLatest}
+          onKeep={() => setConflict(false)}
+        />
+      )}
+      {saveFailed && (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>
+            {festivalConfigurationErrorMessage(save.error)}
+          </AlertDescription>
+        </Alert>
+      )}
+      {attempted && errors.length > 0 && (
+        <div
+          ref={summaryRef}
+          tabIndex={-1}
+          role="alert"
+          className="rounded border border-destructive p-4"
+        >
+          <h3 className="font-semibold">Check the following fields</h3>
+          <ul className="list-disc pl-5">
+            {errors.map((item) => (
+              <li key={item.code}>{item.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {draft.currentStep === 1 && (
+        <IdentityStep
+          draft={draft}
+          disabled={!canWrite}
+          attempted={attempted}
+          validation={validation.fields}
+          patch={patch}
+        />
+      )}
+      {draft.currentStep === 2 && (
+        <LocationStep
+          draft={draft}
+          disabled={!canWrite}
+          attempted={attempted}
+          configuration={query.data}
+          validation={validation.fields}
+          patch={patch}
+        />
+      )}
+      {draft.currentStep === 3 && (
+        <ScheduleStep
+          draft={draft}
+          disabled={!canWrite}
+          attempted={attempted}
+          duration={validation.durationDays}
+          maximum={selectedScale?.maximumDurationDays}
+          validation={validation.fields}
+          patch={patch}
+        />
+      )}
+      {draft.currentStep === 4 && (
+        <ReviewStep
+          draft={draft}
+          legalName={query.data.legalCompanyName}
+          city={
+            query.data.cities.find((city) => city.id === draft.homeCityId)?.name
+          }
+          scale={selectedScale?.displayName}
+          duration={validation.durationDays}
+          status={query.data.setupStatus}
+        />
+      )}
+      {canWrite && (
+        <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={draft.currentStep === 1 || save.isPending}
+            onClick={() => patch({ currentStep: draft.currentStep - 1 })}
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={save.isPending || !dirty}
+            onClick={() => persist()}
+          >
+            Save draft
+          </Button>
+          {draft.currentStep < 4 ? (
+            <Button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => persist(draft.currentStep + 1)}
+            >
+              Save and continue
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => persist(4, true)}
+            >
+              Complete initial setup
+            </Button>
+          )}
+        </div>
+      )}
+      <AlertDialog
+        open={Boolean(pendingNavigation)}
+        onOpenChange={(open) => {
+          if (!open) setPendingNavigation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              You have unsaved festival changes.
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Discard these changes and leave this page?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay and continue editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingNavigation) location.assign(pendingNavigation);
+              }}
+            >
+              Discard changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
 }
-function Field({label,id,value,max,onChange}:{label:string;id:string;value:string;max:number;onChange:(v:string)=>void}){return <div><Label htmlFor={id}>{label}</Label><Input id={id} value={value} maxLength={max} aria-describedby={`${id}-count`} onChange={e=>onChange(e.target.value)}/><small id={`${id}-count`}>{value.length}/{max}</small></div>}
+
+function ErrorText({
+  id,
+  state,
+  show,
+}: {
+  id: string;
+  state: FieldValidation;
+  show: boolean;
+}) {
+  return show && !state.valid ? (
+    <p id={id} className="text-sm text-destructive">
+      {state.message}
+    </p>
+  ) : null;
+}
+function TextField({
+  label,
+  id,
+  value,
+  max,
+  disabled,
+  validation,
+  show,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  max: number;
+  disabled: boolean;
+  validation: FieldValidation;
+  show: boolean;
+  onChange: (value: string) => void;
+}) {
+  const errorId = `${id}-error`;
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        maxLength={max}
+        disabled={disabled}
+        aria-invalid={show && !validation.valid}
+        aria-describedby={`${id}-count${show && !validation.valid ? ` ${errorId}` : ""}`}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <small id={`${id}-count`}>
+        {value.length}/{max}
+      </small>
+      <ErrorText id={errorId} state={validation} show={show} />
+    </div>
+  );
+}
+function IdentityStep({ draft, disabled, attempted, validation, patch }: any) {
+  return (
+    <div className="space-y-4">
+      <p>
+        This public identity is separate from the legal Festival Company name.
+      </p>
+      <TextField
+        label="Public festival name"
+        id="public-name"
+        value={draft.publicName}
+        max={80}
+        disabled={disabled}
+        validation={validation.publicName}
+        show={attempted}
+        onChange={(publicName) => patch({ publicName })}
+      />
+      <TextField
+        label="Short name"
+        id="short-name"
+        value={draft.shortName}
+        max={24}
+        disabled={disabled}
+        validation={validation.shortName}
+        show={attempted}
+        onChange={(shortName) => patch({ shortName })}
+      />
+      <TextField
+        label="Tagline"
+        id="tagline"
+        value={draft.tagline}
+        max={120}
+        disabled={disabled}
+        validation={validation.tagline}
+        show={attempted}
+        onChange={(tagline) => patch({ tagline })}
+      />
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          maxLength={1000}
+          disabled={disabled}
+          value={draft.description}
+          aria-invalid={attempted && !validation.description.valid}
+          aria-describedby="description-count description-error"
+          onChange={(event) => patch({ description: event.target.value })}
+        />
+        <small id="description-count">{draft.description.length}/1000</small>
+        <ErrorText
+          id="description-error"
+          state={validation.description}
+          show={attempted}
+        />
+      </div>
+    </div>
+  );
+}
+function LocationStep({
+  draft,
+  disabled,
+  attempted,
+  configuration,
+  validation,
+  patch,
+}: any) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="city">Home city</Label>
+        <select
+          id="city"
+          disabled={disabled}
+          aria-invalid={attempted && !validation.homeCityId.valid}
+          aria-describedby="city-error"
+          className="min-h-11 w-full rounded border bg-background p-2"
+          value={draft.homeCityId ?? ""}
+          onChange={(event) =>
+            patch({ homeCityId: event.target.value || null })
+          }
+        >
+          <option value="">Choose a city</option>
+          {configuration.cities.map((city: any) => (
+            <option key={city.id} value={city.id}>
+              {city.name}, {city.country}
+            </option>
+          ))}
+        </select>
+        <ErrorText
+          id="city-error"
+          state={validation.homeCityId}
+          show={attempted}
+        />
+      </div>
+      <fieldset disabled={disabled} aria-describedby="scale-error">
+        <legend className="font-medium">Initial scale</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {configuration.scales.map((scale: any) => (
+            <label key={scale.key} className="min-h-11 rounded border p-4">
+              <input
+                type="radio"
+                name="scale"
+                checked={draft.festivalScale === scale.key}
+                onChange={() => patch({ festivalScale: scale.key })}
+              />{" "}
+              <strong>{scale.displayName}</strong>
+              <span className="block">
+                {scale.description} {scale.minimumCapacity.toLocaleString()}–
+                {scale.maximumCapacity.toLocaleString()} daily capacity · up to{" "}
+                {scale.maximumDurationDays} days · {scale.complexity}{" "}
+                complexity.
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <ErrorText
+        id="scale-error"
+        state={validation.festivalScale}
+        show={attempted}
+      />
+    </div>
+  );
+}
+function ScheduleStep({
+  draft,
+  disabled,
+  attempted,
+  duration,
+  maximum,
+  validation,
+  patch,
+}: any) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <Label htmlFor="start">Start date</Label>
+        <Input
+          id="start"
+          type="date"
+          disabled={disabled}
+          value={draft.plannedStartDate ?? ""}
+          aria-invalid={attempted && !validation.plannedStartDate.valid}
+          aria-describedby="start-error"
+          onChange={(event) =>
+            patch({ plannedStartDate: event.target.value || null })
+          }
+        />
+        <ErrorText
+          id="start-error"
+          state={validation.plannedStartDate}
+          show={attempted}
+        />
+      </div>
+      <div>
+        <Label htmlFor="end">End date</Label>
+        <Input
+          id="end"
+          type="date"
+          disabled={disabled}
+          value={draft.plannedEndDate ?? ""}
+          aria-invalid={attempted && !validation.plannedEndDate.valid}
+          aria-describedby="end-error"
+          onChange={(event) =>
+            patch({ plannedEndDate: event.target.value || null })
+          }
+        />
+        <ErrorText
+          id="end-error"
+          state={validation.plannedEndDate}
+          show={attempted}
+        />
+      </div>
+      <p className="sm:col-span-2">
+        Calculated inclusive duration: {duration ?? "Choose valid dates"} day(s)
+        {maximum ? `; maximum ${maximum} for this scale` : ""}. The server
+        remains authoritative.
+      </p>
+    </div>
+  );
+}
+function ReviewStep({ draft, legalName, city, scale, duration, status }: any) {
+  return (
+    <div className="space-y-3">
+      <h3 className="font-semibold">Review draft</h3>
+      <dl className="grid grid-cols-[minmax(7rem,1fr)_2fr] gap-2 break-words">
+        <dt>Public name</dt>
+        <dd>{draft.publicName}</dd>
+        <dt>Festival Company</dt>
+        <dd>{legalName}</dd>
+        <dt>Home city</dt>
+        <dd>{city ?? "Incomplete"}</dd>
+        <dt>Scale</dt>
+        <dd>{scale ?? "Incomplete"}</dd>
+        <dt>Dates</dt>
+        <dd>
+          {draft.plannedStartDate ?? "Incomplete"} –{" "}
+          {draft.plannedEndDate ?? "Incomplete"}
+        </dd>
+        <dt>Duration</dt>
+        <dd>{duration ?? "Incomplete"} days</dd>
+        <dt>Status</dt>
+        <dd>{status.replaceAll("_", " ")}</dd>
+      </dl>
+      <p>
+        Completion only enables later planning. It does not announce the
+        festival or create editions, stages, tickets or bookings.
+      </p>
+    </div>
+  );
+}
