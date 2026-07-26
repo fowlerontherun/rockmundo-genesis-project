@@ -7,6 +7,7 @@ import { mapFestivalSetupError } from "../domain/festivalSetup";
 import { useFestivalCompanySetup } from "../application/useFestivalCompanySetup";
 import { FestivalSetupSummary } from "./FestivalSetupSummary";
 import { FestivalSetupState } from "./FestivalSetupState";
+import { FestivalConfigurationWizard } from "./FestivalConfigurationWizard";
 
 const FestivalCompanySetupPage = () => {
   const { festivalCompanyId } = useParams();
@@ -39,11 +40,7 @@ const FestivalCompanySetupPage = () => {
     return <FMPageScaffold title={setup.publicName} subtitle="Festival configuration is paused." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Configuration unavailable" message="The setup shell is readable, but configuration submission is disabled by server rollout settings." /></FMPageScaffold>;
   }
 
-  if (setup.setupCompleted) {
-    return <FMPageScaffold title={setup.publicName} subtitle="Setup already completed." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Setup complete" message="The full configuration console will be extended in the next festival PR." /></FMPageScaffold>;
-  }
-
-  return <FMPageScaffold title={setup.publicName} subtitle="Festival company setup foundation" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Configuration wizard coming next" message="Secure setup loading is in place. Month, location, vibe, site type, duration and first edition creation remain non-goals for this PR." /></FMPageScaffold>;
+  return <FMPageScaffold title={setup.publicName} subtitle="Festival identity and scheduling" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} /></FMPageScaffold>;
 };
 
 export default FestivalCompanySetupPage;
