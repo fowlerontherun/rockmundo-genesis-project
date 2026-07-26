@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateCanonicalSongScore, deterministicGigRandom } from './index';
+import { calculateCanonicalSongOutcome, calculateCanonicalSongScore, deterministicGigRandom } from './index';
 
 describe('canonical gig simulation core', () => {
   it('is deterministic and keeps Festival context optional', () => {
@@ -15,5 +15,15 @@ describe('canonical gig simulation core', () => {
     const festival = calculateCanonicalSongScore({ ...input, festivalModifier: 500 });
     expect(festival.baseScore).toBe(base.baseScore);
     expect(festival.score - base.score).toBeLessThanOrEqual(18);
+  });
+
+  it('calculates every canonical dimension deterministically and confines Festival influence', () => {
+    const input = { quality: 70, popularity: 60, familiarity: 80, rehearsalLevel: 75, performerSkill: 70,
+      stagePresence: 75, readinessScore: 80, seed: 'fixture', songId: 'song-1' };
+    const normal = calculateCanonicalSongOutcome(input);
+    const festival = calculateCanonicalSongOutcome({ ...input, festivalModifier: 12 });
+    expect(festival).toMatchObject({ technicalScore: normal.technicalScore, performanceScore: normal.performanceScore,
+      audienceResponse: normal.audienceResponse, baseScore: normal.baseScore, documentedModifier: 12 });
+    expect(calculateCanonicalSongOutcome(input)).toEqual(normal);
   });
 });

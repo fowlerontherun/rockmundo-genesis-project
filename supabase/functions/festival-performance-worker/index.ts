@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { simulateFestivalPerformance, type FestivalJobSnapshot } from "./simulation.ts";
+import { isTrustedFestivalWorkerRequest } from "./auth.ts";
 
 const headers = { "content-type": "application/json" };
 const transient = (error: unknown) => /timeout|network|fetch|temporar|connection/i.test(String(error));
 
 Deno.serve(async request => {
-  if (request.headers.get("x-worker-secret") !== Deno.env.get("FESTIVAL_WORKER_SECRET")) return new Response("Forbidden", { status: 403 });
+  if (!isTrustedFestivalWorkerRequest(request, Deno.env.get("FESTIVAL_WORKER_SECRET"))) return new Response("Forbidden", { status: 403 });
   const client = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   const worker = `festival-worker:${crypto.randomUUID()}`;
   const { data: recovered = 0 } = await client.rpc("recover_stale_festival_performance_simulation_jobs", { p_lease_seconds: 300 });

@@ -18,3 +18,15 @@ worker recovers five-minute stale leases before claiming work. Operators use
 `requeue_festival_performance_simulation_job(...)` RPC when evidence supports a
 retry. Alert when the last invocation is older than three minutes, any invocation
 fails, exhausted count is non-zero, or the oldest queued job exceeds five minutes.
+
+## Deployment verification
+
+The scheduler and worker use one authentication contract: `x-worker-secret`.
+After setting `app.festival_worker_url`, enabling
+`app.enable_festival_worker_schedule`, and adding the Vault secret named
+`festival_performance_worker_secret`, call
+`verify_festival_performance_worker_schedule()`. A deployment is valid only when
+the active schedule, URL, Vault secret, and a successful authenticated invocation
+are all observed. `valid: false` before the first successful invocation is
+intentional; inspect `lastFailure`, `oldestPendingJob`, and `exhaustedJobs` rather
+than treating configuration alone as proof that the worker is reachable.
