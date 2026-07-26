@@ -24,3 +24,6 @@ export * from "./application/useFestivalSitePlan";
 export * from "./domain/festivalOperationsPlan";
 export * from "./application/useFestivalOperations";
 export * from "./ui/FestivalOperationsPlanner";
+export * from "./domain/festivalSponsorship";
+export * from "./application/useFestivalSponsorship";
+export * from "./ui/FestivalSponsorshipPlanner";

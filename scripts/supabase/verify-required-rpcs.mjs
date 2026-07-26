@@ -33,6 +33,12 @@ const requiredRpcs = [
   ].map((name) => ({ name, arguments: [{ name: 'p_payload', type: 'jsonb' }, { name: 'p_idempotency_key', type: 'uuid' }] })),
   { name: 'get_available_festival_staff_vacancies', arguments: [{ name: 'p_filters', type: 'jsonb' }] },
   { name: 'get_available_festival_supplier_opportunities', arguments: [{ name: 'p_filters', type: 'jsonb' }] },
+  { name: 'get_festival_sponsorship_plan', arguments: [{ name: 'p_festival_company_id', type: 'uuid' }] },
+  { name: 'save_festival_sponsorship_plan', arguments: [{ name: 'p_festival_company_id', type: 'uuid' }, { name: 'p_expected_version', type: 'integer' }, { name: 'p_plan', type: 'jsonb' }, { name: 'p_packages', type: 'jsonb' }, { name: 'p_inventory', type: 'jsonb' }, { name: 'p_idempotency_key', type: 'uuid' }, { name: 'p_complete', type: 'boolean' }] },
+  { name: 'get_available_festival_sponsorship_opportunities', arguments: [{ name: 'p_filters', type: 'jsonb' }] },
+  ...[
+    'open_festival_sponsor_applications','close_festival_sponsor_applications','submit_festival_sponsor_application','withdraw_festival_sponsor_application','review_festival_sponsor_application','send_festival_sponsor_invitation','respond_to_festival_sponsor_invitation','create_festival_sponsor_proposal','send_festival_sponsor_proposal','counter_festival_sponsor_proposal','respond_to_festival_sponsor_proposal','withdraw_festival_sponsor_proposal','cancel_festival_sponsor_contract','refresh_festival_npc_sponsor_prospects','search_festival_sponsor_prospects',
+  ].map((name) => ({ name, arguments: [{ name: 'p_payload', type: 'jsonb' }, { name: 'p_idempotency_key', type: 'uuid' }] })),
 ];
 
 const migrationDir = join(root, 'supabase', 'migrations');

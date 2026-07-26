@@ -404,3 +404,44 @@ Readiness is evidence based: qualified committed assignments, required shifts, s
 Roadmap: Phase 1 identity/location/scale/dates — complete; Phase 2 site/stages — complete; Phase 3 ticketing/capacity — complete; Phase 4A programme/planning — complete; Phase 4B artist workflows/bookings — complete; Phase 5A operations schema/planning — complete; **Phase 5B staffing/supplier workflows — this PR**; Phase 6 sponsorship/commercial partnerships; Phase 7 final readiness/launch; Phase 8 live simulation/settlement.
 
 The forward-only completion migration is `20291217161000_complete_festival_staffing_supplier_workflows.sql`. Fresh installs apply it after Phase 5A; deployed environments retain existing drafts and partially populated records. The known dependency blocker remains `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom` and does not prevent dependency-independent checks.
+
+## Phase 6: sponsorship and commercial partnerships (this PR)
+
+Phase 6 follows `20291217161000_complete_festival_staffing_supplier_workflows.sql` with the sole verifier exception `20291217170000_festival_sponsorship_and_partnerships.sql`. Fresh installs apply it after operations; already deployed environments receive additive, forward-only objects. Previous migrations are immutable and compatibility rollback uses a later corrective migration.
+
+### Commercial domain and lifecycle
+
+* A Festival sponsorship plan inherits operations currency and cannot start until operations is `ready_for_sponsorship`.
+* Catalogue categories drive scale, sponsor limits, exclusivity, contribution, reputation, inventory and industry policy. Inventory is derived from stages, tickets, site facilities, attendance, duration and media capabilities; packages allocate inventory through a junction rather than opaque JSON.
+* Prospects have exactly one canonical player-company, NPC or admin identity. Server-derived, deterministic audience/genre/Festival/reputation/capacity/community/relationship/risk scoring favours genuine player relationships without weakening reputation, quality or affordability requirements. Bounded NPC pools and cooldowns prevent refresh farming.
+* Applications and invitations are non-binding. Proposals use explicit transitions and immutable append-only revisions. Acceptance atomically rechecks authority, affordability, currency, deadlines, package capacity, inventory and exclusivity before creating exactly one contract, allocations, placements, planned deliverables, audit/outbox communications and matching financial records.
+* Cash and in-kind values remain separate. Festival receivables are planned—not received cash or realised revenue. A player company receives a matching reserved outgoing commercial commitment, without deduction. In-kind supplier coverage requires explicit selection and safe transactional cancellation/reduction; supplier contracts are never silently replaced.
+* Naming rights, site/stage/product-category and date-limited industry exclusivity are server constraints at send and acceptance. Feedback exposes game-friendly reason codes, not hidden weights.
+
+### Access matrix
+
+| Actor | Public opportunities | Own sponsor records | Festival plan | Binding action |
+|---|---:|---:|---:|---:|
+| Anonymous | No private access | No | No | No |
+| Unrelated player | Public fields only | No | No | No |
+| Authorised player-company representative | Yes | Yes | No | Own company only |
+| Festival owner/commercial manager | Yes | As counterparty | Yes | Festival side |
+| Ordinary employee | Yes | Read only where canonical role permits | No | No |
+| Admin | Yes | Yes | Yes | Explicit trusted path |
+
+RLS is enabled and table writes are revoked; action-specific security-definer RPCs rederive identity and authority. Idempotency scopes actor/action/Festival/target and hashes payloads. Optimistic versions prevent stale plan, application, invitation, proposal, contract or inventory decisions. Communications use mail for contracts, notifications for status and an outbox/audit uniqueness boundary.
+
+### Roadmap
+
+* Phase 1: Identity, location, scale and dates — complete
+* Phase 2: Site and stage planning — complete
+* Phase 3: Ticketing and capacity allocation — complete
+* Phase 4A: Artist programme and planning — complete
+* Phase 4B: Artist workflows and bookings — complete
+* Phase 5A: Operations schema and planning — complete
+* Phase 5B: Staffing and supplier workflows — complete
+* Phase 6: Sponsorship and commercial partnerships — this PR
+* Phase 7: Final readiness, scheduling and launch
+* Phase 8: Live Festival simulation and settlement
+
+The inherited dependency installation blocker is `E403 403 Forbidden - GET https://registry.npmjs.org/jsdom`; dependency-independent migration, RPC, shell, syntax and diff checks must still run.

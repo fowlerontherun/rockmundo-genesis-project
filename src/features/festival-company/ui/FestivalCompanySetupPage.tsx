@@ -12,6 +12,7 @@ import { FestivalSitePlanner } from "./FestivalSitePlanner";
 import { FestivalTicketPlanner } from "./FestivalTicketPlanner";
 import { FestivalArtistPlanner } from "./FestivalArtistPlanner";
 import { FestivalOperationsPlanner } from "./FestivalOperationsPlanner";
+import { FestivalSponsorshipPlanner } from "./FestivalSponsorshipPlanner";
 
 const FestivalCompanySetupPage = () => {
   const { festivalCompanyId } = useParams();
@@ -44,7 +45,7 @@ const FestivalCompanySetupPage = () => {
     return <FMPageScaffold title={setup.publicName} subtitle="Festival configuration is paused." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Configuration unavailable" message="The setup shell is readable, but configuration submission is disabled by server rollout settings." /></FMPageScaffold>;
   }
 
-  return <FMPageScaffold title={setup.publicName} subtitle="Festival identity, site, stage and ticket planning" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} /><FestivalSitePlanner festivalCompanyId={festivalCompanyId} /><FestivalTicketPlanner festivalCompanyId={festivalCompanyId} /><FestivalArtistPlanner festivalCompanyId={festivalCompanyId} /><FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} /></FMPageScaffold>;
+  return <FMPageScaffold title={setup.publicName} subtitle="Festival planning and commercial partnerships" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} /><FestivalSitePlanner festivalCompanyId={festivalCompanyId} /><FestivalTicketPlanner festivalCompanyId={festivalCompanyId} /><FestivalArtistPlanner festivalCompanyId={festivalCompanyId} /><FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} /><FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} /></FMPageScaffold>;
 };
 
 export default FestivalCompanySetupPage;
