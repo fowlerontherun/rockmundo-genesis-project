@@ -10,6 +10,7 @@ BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public.'||t)) THEN RAISE EXCEPTION 'RLS disabled for %',t; END IF;
  END LOOP;
  IF has_table_privilege('anon','public.festival_artist_offers','INSERT') OR has_table_privilege('authenticated','public.festival_artist_bookings','UPDATE') THEN RAISE EXCEPTION 'direct artist planning mutation leaked'; END IF;
+ IF to_regprocedure('public.submit_festival_artist_application(uuid,uuid,text,uuid,uuid,date[],text[],bigint,bigint,integer,integer,text,uuid)') IS NULL OR to_regprocedure('public.respond_to_festival_artist_offer(uuid,integer,text,uuid)') IS NULL OR to_regprocedure('public.cancel_festival_artist_booking(uuid,integer,uuid)') IS NULL THEN RAISE EXCEPTION 'Phase 4B action RPC boundary missing'; END IF;
  IF to_regprocedure('public.get_festival_artist_programme(uuid)') IS NULL OR to_regprocedure('public.save_festival_artist_programme(uuid,integer,jsonb,jsonb,uuid,boolean)') IS NULL THEN RAISE EXCEPTION 'Phase 4 RPC boundary missing'; END IF;
  IF EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.festival_artist_offer_revisions'::regclass AND NOT tgisinternal) THEN NULL; END IF;
 END $$;

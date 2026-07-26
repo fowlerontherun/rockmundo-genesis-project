@@ -8,6 +8,7 @@ import { normalizeFestivalConfigurationError } from "../domain/festivalConfigura
 import { parseFestivalSitePlanResult, type FestivalSitePlanDraft, type FestivalSitePlanResult } from "../domain/festivalSitePlan";
 import { parseFestivalTicketPlanResult, type FestivalTicketPlanDraft, type FestivalTicketPlanResult } from "../domain/festivalTicketPlan";
 import { parseFestivalArtistProgrammeResult, type FestivalApplicationWindow, type FestivalArtistProgramme, type FestivalArtistProgrammeResult } from "../domain/festivalArtistProgramme";
+import {parseFestivalArtistActionResult,parseFestivalArtistCandidates,parseFestivalArtistOpportunities,type FestivalArtistActionResult} from "../domain/festivalArtistWorkflows";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value: unknown) => typeof value === "string" && UUID_RE.test(value);
@@ -194,3 +195,21 @@ const artistErrors=["festival_artist_programme_forbidden","festival_ticket_plan_
 const normalizeArtistError=(error:{message?:string})=>new Error(artistErrors.find(code=>error.message?.includes(code))??"festival_artist_programme_unavailable");
 export async function getFestivalArtistProgramme(festivalCompanyId:string):Promise<FestivalArtistProgrammeResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_artist_programme_unavailable");const {data,error}=await supabase.rpc("get_festival_artist_programme",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
 export async function saveFestivalArtistProgramme(input:{festivalCompanyId:string;expectedVersion:number;programme:FestivalArtistProgramme;applicationWindows:FestivalApplicationWindow[];idempotencyKey:string;complete?:boolean}):Promise<FestivalArtistProgrammeResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_artist_programme_invalid");const {data,error}=await supabase.rpc("save_festival_artist_programme",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_programme:input.programme,p_application_windows:input.applicationWindows,p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
+
+// Phase 4B uses action RPCs exclusively: contractual rows are never mutated from the browser.
+const actionErrorCodes=["festival_artist_action_forbidden","festival_artist_applications_closed","festival_artist_application_window_invalid","festival_artist_not_eligible","festival_artist_application_duplicate","festival_artist_already_booked","festival_artist_application_forbidden","festival_artist_invitation_duplicate","festival_artist_invitation_invalid_transition","festival_artist_application_invalid_transition","festival_artist_offer_invalid_transition","festival_artist_booking_invalid_transition","festival_artist_offer_budget_exceeded","festival_artist_offer_stale","festival_artist_idempotency_conflict"];
+const actionError=(error:{message?:string})=>new Error(actionErrorCodes.find(x=>error.message?.includes(x))??"festival_artist_action_unavailable");
+const rpcAction=async(name:string,args:Record<string,unknown>):Promise<FestivalArtistActionResult>=>{const {data,error}=await supabase.rpc(name as never,args as never);if(error)throw actionError(error);return parseFestivalArtistActionResult(data)};
+export async function getMyFestivalArtistOpportunities(){const {data,error}=await supabase.rpc("get_my_festival_artist_opportunities");if(error)throw actionError(error);return parseFestivalArtistOpportunities(data)}
+export async function searchFestivalArtistCandidates(input:{festivalCompanyId:string;query?:string;artistType?:string;genres?:string[];minimumFame?:number;maximumFame?:number;limit?:number;offset?:number}){if(!isUuid(input.festivalCompanyId))throw new Error("festival_artist_action_forbidden");const {data,error}=await supabase.rpc("search_festival_artist_candidates",{p_festival_company_id:input.festivalCompanyId,p_query:input.query??null,p_artist_type:input.artistType??null,p_genres:input.genres??[],p_minimum_fame:input.minimumFame??null,p_maximum_fame:input.maximumFame??null,p_limit:input.limit??25,p_offset:input.offset??0});if(error)throw actionError(error);return parseFestivalArtistCandidates(data)}
+export const submitFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("submit_festival_artist_application",i);
+export const withdrawFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("withdraw_festival_artist_application",i);
+export const reviewFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("review_festival_artist_application",i);
+export const sendFestivalArtistInvitation=(i:Record<string,unknown>)=>rpcAction("send_festival_artist_invitation",i);
+export const respondToFestivalArtistInvitation=(i:Record<string,unknown>)=>rpcAction("respond_to_festival_artist_invitation",i);
+export const createFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("create_festival_artist_offer",i);
+export const sendFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("send_festival_artist_offer",i);
+export const counterFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("counter_festival_artist_offer",i);
+export const respondToFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("respond_to_festival_artist_offer",i);
+export const withdrawFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("withdraw_festival_artist_offer",i);
+export const cancelFestivalArtistBooking=(i:Record<string,unknown>)=>rpcAction("cancel_festival_artist_booking",i);
