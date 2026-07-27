@@ -621,6 +621,7 @@ function App() {
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="open-mic" element={<OpenMicNights />} />
+                    <Route path="battle-of-the-bands" element={<BattleOfTheBands />} />
                     <Route path="open-mic/perform/:performanceId" element={<PerformOpenMic />} />
                     <Route path="major-events" element={<MajorEvents />} />
                     <Route path="major-events/perform/:performanceId" element={<PerformMajorEvent />} />
