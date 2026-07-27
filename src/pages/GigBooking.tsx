@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users } from 'lucide-react';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -23,10 +23,10 @@ import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
-import { formatDistanceToNow, differenceInDays, startOfDay, endOfDay } from 'date-fns';
-import { predictTotalTicketSales } from '@/utils/ticketSalesSimulation';
-import { buildDateInTimezone } from '@/utils/timezoneUtils';
+import { formatDistanceToNow } from 'date-fns';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
+import { getGigBookingPlayerError, type GigBookingErrorLike } from '@/utils/gigBookingErrors';
+import { formatMerchCurrency } from '@/lib/api/merch';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -59,6 +59,7 @@ const GigBooking = () => {
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [isBooking, setIsBooking] = useState(false);
+  const bookingInFlight = useRef(false);
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
   const [venueCooldowns, setVenueCooldowns] = useState<Map<string, VenueCooldownResult>>(new Map());
   
@@ -340,12 +341,16 @@ const GigBooking = () => {
     selectedSlot,
     attendanceForecast,
     estimatedRevenue,
+    ticketOperatorId,
     riderId,
-    venuePayout,
   }: GigBookingSubmission) => {
     if (!band || !bookingVenue) return;
 
+    if (bookingInFlight.current) return;
+    bookingInFlight.current = true;
     setIsBooking(true);
+    const requestId = crypto.randomUUID();
+    let failedStage = 'early_validation';
 
     try {
       const { getSlotById } = await import('@/utils/gigSlots');
@@ -383,163 +388,25 @@ const GigBooking = () => {
 
       // Combine date with slot start time in the VENUE's timezone
       // so "8 PM" means 8 PM in Nashville, not 8 PM in the user's browser
-      const venueCity = (bookingVenue as VenueWithCity).cities;
-      const venueTimezone = venueCity?.timezone;
-      
-      const [hours, minutes] = slot.startTime.split(':');
-      let scheduledDateTime: Date;
-      
-      if (venueTimezone) {
-        // Interpret the selected date+time as being in the venue's timezone
-        scheduledDateTime = buildDateInTimezone(
-          selectedDate,
-          parseInt(hours),
-          parseInt(minutes),
-          venueTimezone
-        );
-      } else {
-        // Fallback: use local browser time if no timezone available
-        scheduledDateTime = new Date(selectedDate);
-        scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      }
-
-      // Check for double-booking: ensure band doesn't have another gig at the same date/time
-      const { data: conflictingGig } = await supabase
-        .from('gigs')
-        .select('id, time_slot, venues(name)')
-        .eq('band_id', band.id)
-        .eq('time_slot', selectedSlot)
-        .in('status', ['scheduled', 'in_progress'])
-        .gte('scheduled_date', startOfDay(selectedDate).toISOString())
-        .lt('scheduled_date', endOfDay(selectedDate).toISOString())
-        .maybeSingle();
-
-      if (conflictingGig) {
-        const venueName = (conflictingGig.venues as any)?.name || 'another venue';
-        toast({
-          title: 'Scheduling Conflict',
-          description: `Your band already has a gig at ${venueName} during this time slot on this date.`,
-          variant: 'destructive'
-        });
-        setIsBooking(false);
-        return;
-      }
-
-      // Calculate adjusted estimates with slot multiplier
-      const venueCapacity = bookingVenue.capacity ?? attendanceForecast.realistic;
-      const estimatedAttendance = Math.min(venueCapacity, attendanceForecast.realistic);
-      
-      // Calculate booking fee (10% of estimated revenue, min $50)
-      const bookingFee = Math.max(50, Math.round(estimatedRevenue * 0.10));
-      
-      // Check if band can afford the booking fee
-      const { data: bandData } = await supabase
-        .from('bands')
-        .select('band_balance')
-        .eq('id', band.id)
-        .single();
-      
-      if (!bandData || (bandData.band_balance || 0) < bookingFee) {
-        toast({
-          title: 'Insufficient funds',
-          description: `You need $${bookingFee} to book this gig. Current balance: $${bandData?.band_balance || 0}`,
-          variant: 'destructive'
-        });
-        setIsBooking(false);
-        return;
-      }
-      
-      // Deduct booking fee from band balance
-      await supabase
-        .from('bands')
-        .update({ band_balance: (bandData.band_balance || 0) - bookingFee })
-        .eq('id', band.id);
-
-      // Calculate days booked in advance
-      const daysBooked = differenceInDays(scheduledDateTime, new Date());
-      
-      // Calculate predicted ticket sales
-      const predictedTickets = predictTotalTicketSales({
-        bandFame: band.fame || 0,
-        bandTotalFans: band.total_fans || 0,
-        venueCapacity: venueCapacity,
-        daysUntilGig: daysBooked,
-        daysBooked: daysBooked,
-        ticketPrice: ticketPrice
+      failedStage = 'atomic_rpc';
+      const localDate = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+      const { data, error } = await supabase.rpc('book_gig', {
+        p_band_id: band.id, p_venue_id: bookingVenue.id, p_setlist_id: setlistId,
+        p_local_date: localDate, p_slot: selectedSlot, p_ticket_price: ticketPrice,
+        p_request_id: requestId, p_rider_id: riderId || undefined,
+        p_ticket_operator_id: ticketOperatorId || undefined,
       });
+      if (error) throw error;
+      const result = data as { gig?: GigRow; booking_fee?: number; scheduled_start?: string } | null;
+      if (!result?.gig) throw { code: 'INVALID_RPC_RESPONSE', message: 'book_gig returned no gig' };
+      const scheduledDateTime = new Date(result.scheduled_start || result.gig.scheduled_date);
+      const bookingFee = result.booking_fee ?? result.gig.booking_fee ?? 0;
 
-      const { data: newGig, error } = await supabase.from('gigs').insert({
-        band_id: band.id,
-        venue_id: bookingVenue.id,
-        scheduled_date: scheduledDateTime.toISOString(),
-        status: 'scheduled',
-        show_type: bookingVenue.venue_type ?? 'concert',
-        payment: venuePayout || 0, // Venue payment based on fame/fans/venue size
-        booking_fee: bookingFee,
-        setlist_id: setlistId,
-        ticket_price: ticketPrice,
-        time_slot: selectedSlot,
-        slot_start_time: slot.startTime,
-        slot_end_time: slot.endTime,
-        slot_attendance_multiplier: slot.attendanceMultiplier,
-        estimated_attendance: estimatedAttendance,
-        estimated_revenue: estimatedRevenue,
-        attendance: 0,
-        fan_gain: 0,
-        predicted_tickets: predictedTickets,
-        tickets_sold: 0,
-        last_ticket_update: new Date().toISOString(),
-        rider_id: riderId || null,
-      }).select().single();
-
-      if (error) {
-        throw error;
-      }
-
-      // Create scheduled activity for ALL band members (blocks everyone during performance)
-      let gigEndTime: Date;
-      if (venueTimezone) {
-        gigEndTime = buildDateInTimezone(
-          selectedDate,
-          parseInt(slot.endTime.split(':')[0]),
-          parseInt(slot.endTime.split(':')[1]),
-          venueTimezone
-        );
-      } else {
-        gigEndTime = new Date(scheduledDateTime);
-        const [endHours, endMinutes] = slot.endTime.split(':');
-        gigEndTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
-      }
-
-      const venueCityName = venueCity?.name;
-
-      // Import and use band-wide scheduling
-      const { createBandScheduledActivities } = await import('@/utils/bandActivityScheduling');
-      
-      await createBandScheduledActivities({
-        bandId: band.id,
-        activityType: 'gig',
-        scheduledStart: scheduledDateTime,
-        scheduledEnd: gigEndTime,
-        title: `Gig at ${bookingVenue.name}`,
-        location: bookingVenue.name,
-        linkedGigId: newGig.id,
-        metadata: {
-          venueId: bookingVenue.id,
-          slotId: selectedSlot,
-          venue_timezone: venueTimezone,
-          venue_city_name: venueCityName,
-        },
-      });
-
-      toast({
-        title: 'Gig booked!',
-        description: `${slot.name} at ${bookingVenue.name} on ${scheduledDateTime.toLocaleString()}.`,
-      });
-
-      await addActivity(
+      // The activity feed is informational. The required member schedule blocks were
+      // already created transactionally by book_gig, so feed failure cannot orphan a gig.
+      void addActivity(
         'gig_booking',
-        `Booked ${slot.name} at ${bookingVenue.name} for ${band.name} (booking fee: $${bookingFee})`,
+        `Booked ${slot.name} at ${bookingVenue.name} for ${band.name} (booking fee: ${formatMerchCurrency(bookingFee)})`,
         bookingFee,
         {
           venue_id: bookingVenue.id,
@@ -548,22 +415,35 @@ const GigBooking = () => {
           time_slot: selectedSlot,
           attendance_forecast: attendanceForecast as any
         },
-      );
+      ).catch((activityError) => {
+        if (import.meta.env.DEV) console.warn('Gig booked but activity feed logging failed', { requestId, activityError });
+      });
 
-      await loadUpcomingGigs(band.id);
-      await updateBandLockout(band.id);
+      failedStage = 'post_booking_refresh';
+      await Promise.all([loadUpcomingGigs(band.id), updateBandLockout(band.id), updateVenueCooldowns(band.id, venues)]);
+      const refreshedBand = await resolveBand();
+      if (refreshedBand) setBand(refreshedBand);
+      toast({
+        title: 'Gig booked!',
+        description: `${slot.name} at ${bookingVenue.name} on ${scheduledDateTime.toLocaleString()}.`,
+      });
       setBookingVenue(null);
     } catch (error) {
-      console.error('Error booking gig:', error);
+      const supabaseError = error as GigBookingErrorLike;
+      if (import.meta.env.DEV) console.error('Gig booking failed', {
+        stage: failedStage, code: supabaseError.code, message: supabaseError.message,
+        details: supabaseError.details, hint: supabaseError.hint, requestId,
+      });
+      const playerError = getGigBookingPlayerError(supabaseError);
       toast({
-        title: 'Booking failed',
-        description: 'We could not schedule that gig. Please try again later.',
+        ...playerError,
         variant: 'destructive',
       });
     } finally {
+      bookingInFlight.current = false;
       setIsBooking(false);
     }
-  }, [band, bookingVenue, toast, addActivity, loadUpcomingGigs, updateBandLockout]);
+  }, [band, bookingVenue, toast, addActivity, loadUpcomingGigs, updateBandLockout, updateVenueCooldowns, venues, resolveBand]);
 
   const getGigStatusConfig = useCallback((status: string) => {
     switch (status) {
