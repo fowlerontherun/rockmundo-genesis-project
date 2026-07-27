@@ -27,6 +27,44 @@ BEGIN
    RAISE EXCEPTION 'an unverified historical effect remains completed'; END IF;
 END $fixture$;
 
+-- Canonical-evidence contract. The disposable lifecycle data exercised by the
+-- preceding Festival harnesses reaches this gate only after a fully migrated
+-- database reset; these assertions prevent an adapter or fallback from making
+-- that lifecycle appear successful.
+DO $canonical$
+DECLARE guard_definition text; freezer_definition text; projection_definition text;
+BEGIN
+ SELECT pg_get_functiondef('public._festival_component_provenance_canonical()'::regprocedure) INTO guard_definition;
+ SELECT pg_get_functiondef('public._freeze_festival_staff_evidence_v62(uuid)'::regprocedure) INTO freezer_definition;
+ SELECT pg_get_functiondef('public.festival_settlement_review_projection_v1(uuid)'::regprocedure) INTO projection_definition;
+ IF to_regprocedure('public._festival_component_provenance_v6()') IS NOT NULL THEN
+  RAISE EXCEPTION 'manufactured provenance trigger function remains installed';
+ END IF;
+ IF guard_definition ~ 'coalesce' OR guard_definition !~ 'num_nonnulls' OR guard_definition !~ 'eligible' THEN
+  RAISE EXCEPTION 'component provenance guard manufactures or fails to require semantic evidence';
+ END IF;
+ IF freezer_definition !~ '_resolve_festival_staff_shift_evidence'
+    OR freezer_definition ~ 'festival_staff_overtime_approvals'
+    OR freezer_definition !~ 'festival_staff_overtime_requests_v3'
+    OR freezer_definition !~ 'festival_staff_overtime_decisions_v3'
+    OR freezer_definition !~ 'supersessionChainDigest' THEN
+  RAISE EXCEPTION 'staff freezer is not connected exclusively to canonical evidence';
+ END IF;
+ IF projection_definition ~ 'to_jsonb' OR projection_definition !~ 'schemaVersion'
+    OR projection_definition !~ 'semanticComponents' OR projection_definition !~ 'bandSplits' THEN
+  RAISE EXCEPTION 'review projection is not an explicit stable projection';
+ END IF;
+ IF EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid='public.festival_runtime_sessions'::regclass
+   AND a.attname IN ('artist_programme_id','operations_plan_id','sponsorship_plan_id','ticket_plan_id')
+   AND a.attisdropped) OR (SELECT count(*) FROM pg_attribute a
+   WHERE a.attrelid='public.festival_runtime_sessions'::regclass AND a.attnum>0 AND NOT a.attisdropped
+   AND a.attname IN ('artist_programme_id','operations_plan_id','sponsorship_plan_id','ticket_plan_id'))<>4 THEN
+  RAISE EXCEPTION 'runtime does not store all four exact Festival plan identities';
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='festival_finalisation_request_lease_coherent'
+   AND convalidated) THEN RAISE EXCEPTION 'finalisation lease constraint is not validated'; END IF;
+END $canonical$;
+
 -- The guard itself must name every prohibited placeholder; behavioural line
 -- equality is exercised by the deferred constraint in the disposable transaction.
 DO $guard$
