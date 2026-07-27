@@ -17659,7 +17659,6 @@ export type Database = {
           attendance: number | null
           band_id: string
           booking_fee: number | null
-          booking_request_id: string | null
           completed_at: string | null
           created_at: string | null
           crowd_engagement: number | null
@@ -17679,7 +17678,6 @@ export type Database = {
           promoter_id: string | null
           rider_id: string | null
           scheduled_date: string
-          scheduled_end: string | null
           setlist_duration_minutes: number | null
           setlist_id: string | null
           setlist_quality_score: number | null
@@ -17702,7 +17700,6 @@ export type Database = {
           attendance?: number | null
           band_id: string
           booking_fee?: number | null
-          booking_request_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -17722,7 +17719,6 @@ export type Database = {
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date: string
-          scheduled_end?: string | null
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
           setlist_quality_score?: number | null
@@ -17745,7 +17741,6 @@ export type Database = {
           attendance?: number | null
           band_id?: string
           booking_fee?: number | null
-          booking_request_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -17765,7 +17760,6 @@ export type Database = {
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date?: string
-          scheduled_end?: string | null
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
           setlist_quality_score?: number | null
@@ -43001,24 +42995,6 @@ export type Database = {
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
-      book_gig: {
-        Args: {
-          p_band_id: string
-          p_local_date: string
-          p_request_id: string
-          p_rider_id?: string
-          p_setlist_id: string
-          p_slot: string
-          p_ticket_operator_id?: string
-          p_ticket_price: number
-          p_venue_id: string
-        }
-        Returns: Json
-      }
-      can_manage_band_gigs: {
-        Args: { p_band_id: string; p_user_id?: string }
-        Returns: boolean
-      }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decline_festival_offer: {
         Args: {
