@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.606",
+    date: "2026-07-26",
+    changes: [
+      { type: 'feature', description: "New Battle of the Bands system at /battle-of-the-bands (Live hub tile): every city hosts a battle every 2 weeks, up to 20 bands per battle. Bands enter with 2 written songs; bands that have released an album are ineligible, and the reigning champion must sit out the next battle in that city." },
+      { type: 'feature', description: "Server-authoritative scoring and prizes: new botb_events / botb_entries tables plus generate_botb_events, botb_check_eligibility, enter_battle_of_the_bands, resolve_botb_event and run_botb_cycle RPCs. The winning band earns $5,000, +150 fame and +250 fans (city fans included), and every active member gets 6 attribute points and 1,000 XP." },
+      { type: 'feature', description: "Full battle history: every entered band, its two songs, rating and placement are kept permanently, with an Upcoming / My Battles / Past Winners UI and a line-up + results dialog per battle." },
+      { type: 'feature', description: "Two new achievements — 'Battle Victor' (win any battle) and 'Battle Circuit Champion' (win a battle in every city) — awarded automatically to the winning band's members." },
+    ],
+  },
+  {
     version: "1.1.605",
     date: "2026-07-25",
     changes: [

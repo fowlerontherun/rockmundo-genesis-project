@@ -304,6 +304,7 @@ const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./components/jam-sessions/JamSessionsEnhanced"));
 const Rehearsals = lazyWithRetry(() => import("./pages/Rehearsals"));
 const OpenMicNights = lazyWithRetry(() => import("./pages/OpenMicNights"));
+const BattleOfTheBands = lazyWithRetry(() => import("./pages/BattleOfTheBands"));
 const PerformOpenMic = lazyWithRetry(() => import("./pages/PerformOpenMic"));
 const MajorEvents = lazyWithRetry(() => import("./pages/MajorEvents"));
 const PerformMajorEvent = lazyWithRetry(() => import("./pages/PerformMajorEvent"));
@@ -620,6 +621,7 @@ function App() {
                     <Route path="jam-sessions" element={<JamSessions />} />
                     <Route path="rehearsals" element={<Rehearsals />} />
                     <Route path="open-mic" element={<OpenMicNights />} />
+                    <Route path="battle-of-the-bands" element={<BattleOfTheBands />} />
                     <Route path="open-mic/perform/:performanceId" element={<PerformOpenMic />} />
                     <Route path="major-events" element={<MajorEvents />} />
                     <Route path="major-events/perform/:performanceId" element={<PerformMajorEvent />} />
