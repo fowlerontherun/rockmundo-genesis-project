@@ -40,7 +40,9 @@ DO $recovery$
 DECLARE runtime uuid; launch uuid; snap uuid; op uuid; blocked boolean:=false;
 BEGIN
  SELECT id INTO runtime FROM public.festival_runtime_sessions ORDER BY created_at LIMIT 1;
- IF runtime IS NULL THEN RETURN; END IF;
+ IF runtime IS NULL THEN
+  RAISE EXCEPTION 'recovery fixture requires its disposable runtime bootstrap; refusing to report a false pass';
+ END IF;
  INSERT INTO public.festival_lifecycle_operations(runtime_session_id,operation,idempotency_key,request_digest,status,lease_owner,lease_expires_at,attempt_count)
  VALUES(runtime,'settlement_preparation',gen_random_uuid(),'fixture-crash','processing',gen_random_uuid(),now()-interval '1 minute',1) RETURNING id INTO op;
  BEGIN
