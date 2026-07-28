@@ -125,9 +125,16 @@ export function MediaSubmissionDialog({
         ...(linkedReleaseId ? { linked_release_id: linkedReleaseId } : {}),
       };
 
-      const { error } = await supabase
-        .from(config.table as "newspaper_submissions" | "magazine_submissions" | "podcast_submissions" | "website_submissions")
-        .insert(submission as never);
+      const { error } = mediaType === "podcast"
+        ? await supabase.rpc("submit_podcast_appearance", {
+            p_band_id: bandId,
+            p_podcast_id: mediaItem.id,
+            p_episode_topic: selectedType,
+            p_linked_release_id: linkedReleaseId || undefined,
+          })
+        : await supabase
+            .from(config.table as "newspaper_submissions" | "magazine_submissions" | "website_submissions")
+            .insert(submission as never);
 
       if (error) {
         if (error.code === "23505") {

@@ -14,8 +14,15 @@ BEGIN
  IF position('session_user' IN definition)=0 OR position('current_user' IN definition)>0 THEN
   RAISE EXCEPTION 'SECURITY DEFINER identity can still grant worker authority'; END IF;
  definition:=pg_get_functiondef('public._festival_physical_lifecycle_state(uuid,uuid)'::regprocedure);
- IF position('festival_lifecycle_state_unknown' IN definition)=0 OR position('ELSE p_from' IN definition)>0 THEN RAISE EXCEPTION 'unknown lifecycle states do not fail closed'; END IF;
+ IF position('festival_lifecycle_state_unknown' IN definition)=0 OR position('ELSE p_from' IN definition)>0
+    OR position('physical_state=null' IN definition)=0 THEN RAISE EXCEPTION 'unknown lifecycle states do not fail closed'; END IF;
  IF has_function_privilege('authenticated','public._claim_festival_lifecycle_operation(uuid,uuid,text,uuid,text,uuid,interval)','EXECUTE') THEN RAISE EXCEPTION 'authenticated role can invoke private claim helper'; END IF;
+ IF has_function_privilege('authenticated','public._complete_festival_lifecycle_operation(uuid,uuid,integer,jsonb)','EXECUTE')
+    OR has_function_privilege('authenticated','public._fail_festival_lifecycle_operation(uuid,uuid,integer,jsonb)','EXECUTE') THEN
+  RAISE EXCEPTION 'authenticated role can bypass private lease fencing'; END IF;
+ definition:=pg_get_functiondef('public._complete_festival_lifecycle_operation(uuid,uuid,integer,jsonb)'::regprocedure);
+ IF position('lease_generation' IN definition)=0 OR position('session_user' IN definition)>0 THEN
+  RAISE EXCEPTION 'completion helper is not generation fenced or rejects authorised wrappers'; END IF;
  definition:=pg_get_triggerdef((SELECT oid FROM pg_trigger WHERE tgname='festival_payment_terminal_state' AND NOT tgisinternal));
  IF position('INSERT OR UPDATE OF status' IN definition)=0 THEN RAISE EXCEPTION 'terminal trigger does not cover inserts'; END IF;
  definition:=pg_get_functiondef('public._festival_payment_terminal_guard()'::regprocedure);

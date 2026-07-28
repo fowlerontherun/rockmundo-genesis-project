@@ -38,6 +38,7 @@ export default function BandLiveHub() {
             { icon: Calendar, labelKey: "Book Gigs", path: "/gig-booking", imagePrompt: "A booking calendar with venue offers, dates, and contract slips" },
             { icon: Mic, labelKey: "My Gigs", path: "/gigs", imagePrompt: "A packed concert venue with a band performing, colorful stage lights" },
             { icon: Mic, labelKey: "nav.openMic", path: "/open-mic", imagePrompt: "An intimate open mic night at a cozy bar with a single microphone, warm lighting" },
+            { icon: Trophy, labelKey: "Battle of the Bands", path: "/battle-of-the-bands", imagePrompt: "Two emerging bands facing off on a concert stage beneath a championship trophy" },
             { icon: Music, labelKey: "nav.jamSessions", path: "/jam-sessions", imagePrompt: "Musicians jamming together in a garage with guitars and amplifiers" },
             { icon: Music, labelKey: "nav.busking", path: "/busking", imagePrompt: "A street musician busking on a busy city corner with a guitar case open" },
             { icon: Wrench, labelKey: "nav.stageEquipment", path: "/stage-equipment", imagePrompt: "Amplifiers, speakers, microphone stands, and cables on a stage" },
