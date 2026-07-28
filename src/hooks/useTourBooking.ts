@@ -12,6 +12,9 @@ export interface TourBookingData {
   setlistId: string;
   travelMode: 'auto' | 'manual' | 'tour_bus';
   tourBusCost?: number;
+  ticketPrice?: number;
+  ticketOperatorId?: string;
+  riderId?: string;
   venues: Array<{
     venueId: string;
     cityId: string;
@@ -20,50 +23,63 @@ export interface TourBookingData {
   }>;
 }
 
+type TourBookingError = {
+  message?: string;
+  details?: string;
+};
+
+function getTourBookingError(error: TourBookingError): string {
+  const message = error.message ?? '';
+  const errors: Record<string, string> = {
+    tour_booking_dates_invalid: 'Choose a valid future tour date range.',
+    tour_booking_stops_invalid: 'Add at least one complete tour stop.',
+    tour_booking_duplicate_stop: 'The tour contains the same venue, date and slot more than once.',
+    tour_booking_stop_outside_dates: 'Every gig must fall within the tour start and end dates.',
+    tour_booking_forbidden: 'You do not have permission to book gigs for this band.',
+    gig_booking_band_conflict: 'A band member already has another activity or gig at that time.',
+    gig_booking_venue_conflict: 'One of the venues is already booked for that time.',
+    gig_booking_venue_cooldown: 'The band has played one of these venues too recently.',
+    gig_booking_past_date: 'One of the selected gig dates is in the past.',
+    gig_booking_setlist_invalid: 'The selected setlist is not eligible or does not fit the chosen slot.',
+    gig_booking_operator_required: 'Select a ticket operator for tours using venues with 200 or more capacity.',
+    gig_booking_insufficient_funds: 'The band cannot afford the total booking fees for this tour.',
+    gig_booking_band_lockout: 'The band is currently unavailable for another booking.',
+  };
+
+  const key = Object.keys(errors).find((candidate) => message.includes(candidate));
+  return key ? errors[key] : 'The tour could not be booked. No partial tour was created; review the dates, venues and band schedule and try again.';
+}
+
 export function useTourBooking() {
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const calculateTourCosts = async (tourData: TourBookingData) => {
-    // Calculate travel costs between cities
-    const { data: routes } = await supabase
+    const { data: routes, error } = await supabase
       .from('city_transport_routes')
       .select('*');
 
+    if (error) throw error;
+
     let travelCosts = 0;
-    let accommodationCosts = 0;
 
     if (tourData.travelMode === 'tour_bus') {
-      const tourDays = Math.ceil(
-        (new Date(tourData.endDate).getTime() - new Date(tourData.startDate).getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const milliseconds = new Date(tourData.endDate).getTime() - new Date(tourData.startDate).getTime();
+      const tourDays = Math.max(1, Math.ceil(milliseconds / (1000 * 60 * 60 * 24)) + 1);
       travelCosts = (tourData.tourBusCost || 500) * tourDays;
     } else if (tourData.travelMode === 'auto') {
-      // Calculate auto-booked travel costs
-      for (let i = 0; i < tourData.venues.length - 1; i++) {
+      for (let i = 0; i < tourData.venues.length - 1; i += 1) {
         const fromCity = tourData.venues[i].cityId;
         const toCity = tourData.venues[i + 1].cityId;
-
-        const route = routes?.find(
-          (r) => r.from_city_id === fromCity && r.to_city_id === toCity
-        );
-
-        if (route) {
-          travelCosts += route.base_cost;
-        } else {
-          // Estimate if no direct route
-          travelCosts += 200;
-        }
+        const route = routes?.find((item) => item.from_city_id === fromCity && item.to_city_id === toCity);
+        travelCosts += route?.base_cost ?? 200;
       }
     }
 
-    // Estimate accommodation (assuming stays between gigs)
-    const nightsNeeded = tourData.venues.length - 1;
-    accommodationCosts = nightsNeeded * 100; // Average $100 per night
-
-    // Crew costs (assuming 3 crew members)
-    const crewCosts = tourData.venues.length * 3 * 150; // $150 per crew per gig
+    const nightsNeeded = Math.max(0, tourData.venues.length - 1);
+    const accommodationCosts = nightsNeeded * 100;
+    const crewCosts = tourData.venues.length * 3 * 150;
 
     return {
       travelCosts,
@@ -75,93 +91,63 @@ export function useTourBooking() {
 
   const createTour = useMutation({
     mutationFn: async (tourData: TourBookingData) => {
-      const costs = await calculateTourCosts(tourData);
+      if (!profileId) throw new Error('No active profile');
+      if (!tourData.name.trim()) throw new Error('Tour name is required');
+      if (!tourData.setlistId) throw new Error('A setlist is required');
+      if (tourData.venues.length === 0) throw new Error('At least one venue is required');
 
-      if (!profileId) throw new Error("No active profile");
+      const start = new Date(`${tourData.startDate}T00:00:00`);
+      const end = new Date(`${tourData.endDate}T00:00:00`);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+        throw new Error('tour_booking_dates_invalid');
+      }
 
-      // Wellness gate: a touring artist must be fit enough to hit the road.
-      await assertWellnessAllows(profileId, "travel");
-      await assertWellnessAllows(profileId, "gig");
+      await assertWellnessAllows(profileId, 'travel');
+      await assertWellnessAllows(profileId, 'gig');
 
-      // Create the tour with correct column names
-      const { data: tour, error: tourError } = await supabase
-        .from('tours')
-        .insert({
-          user_id: profileId,
-          band_id: tourData.artistId,
-          name: tourData.name,
-          start_date: tourData.startDate,
-          end_date: tourData.endDate,
-          status: 'active',
-        })
-        .select()
-        .single();
-
-      if (tourError) throw tourError;
-
-      // Create gigs for each venue
-      for (const venue of tourData.venues) {
-        const { error: gigError } = await supabase.from('gigs').insert({
-          band_id: tourData.artistId,
+      const requestId = crypto.randomUUID();
+      const { data, error } = await (supabase.rpc as any)('book_tour', {
+        p_band_id: tourData.artistId,
+        p_name: tourData.name.trim(),
+        p_start_date: tourData.startDate,
+        p_end_date: tourData.endDate,
+        p_setlist_id: tourData.setlistId,
+        p_ticket_price: tourData.ticketPrice ?? 20,
+        p_stops: tourData.venues.map((venue) => ({
           venue_id: venue.venueId,
-          scheduled_date: venue.date,
-          time_slot: venue.timeSlot,
-          setlist_id: tourData.setlistId,
-          status: 'scheduled',
-        });
+          city_id: venue.cityId,
+          date: venue.date,
+          slot: venue.timeSlot,
+        })),
+        p_request_id: requestId,
+        p_ticket_operator_id: tourData.ticketOperatorId || null,
+        p_rider_id: tourData.riderId || null,
+        p_travel_mode: tourData.travelMode,
+      });
 
-        if (gigError) throw gigError;
-      }
+      if (error) throw error;
+      const result = data as { tour?: { id: string }; gig_ids?: string[] } | null;
+      if (!result?.tour?.id) throw new Error('The booking service returned an invalid tour response.');
 
-      // Create travel legs if auto mode (using generic insert)
-      if (tourData.travelMode === 'auto') {
-        for (let i = 0; i < tourData.venues.length - 1; i++) {
-          const from = tourData.venues[i];
-          const to = tourData.venues[i + 1];
-
-          // Find cheapest route
-          const { data: routes } = await supabase
-            .from('city_transport_routes')
-            .select('*')
-            .eq('from_city_id', from.cityId)
-            .eq('to_city_id', to.cityId)
-            .order('base_cost', { ascending: true })
-            .limit(1);
-
-          const route = routes?.[0];
-
-          if (route) {
-            // Will work once migration is applied
-            try {
-              await supabase.rpc('execute_sql' as any, {
-                sql: `INSERT INTO tour_travel_legs (tour_id, from_city_id, to_city_id, travel_mode, departure_time, arrival_time, cost, booked_by_system) 
-                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                params: [tour.id, from.cityId, to.cityId, route.transport_type, from.date, to.date, route.base_cost, true]
-              });
-            } catch (error) {
-              // Silently fail if table doesn't exist yet
-              console.log('Tour travel legs table not yet created');
-            }
-          }
-        }
-      }
-
-      return tour;
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      const gigCount = result.gig_ids?.length ?? 0;
       toast({
-        title: "Tour Created!",
-        description: "Your tour has been successfully booked with all venues and travel.",
+        title: 'Tour created!',
+        description: `${gigCount} gig${gigCount === 1 ? '' : 's'} booked successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ['tours'] });
+      queryClient.invalidateQueries({ queryKey: ['tour-gigs'] });
       queryClient.invalidateQueries({ queryKey: ['gigs'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
     },
-    onError: (error) => {
+    onError: (error: TourBookingError) => {
       console.error('Error creating tour:', error);
       toast({
-        title: "Tour Creation Failed",
-        description: "There was an error booking your tour. Please try again.",
-        variant: "destructive",
+        title: 'Tour creation failed',
+        description: getTourBookingError(error),
+        variant: 'destructive',
       });
     },
   });
@@ -178,15 +164,9 @@ export function useTourDetails(tourId: string | null) {
     queryKey: ['tour-details', tourId],
     queryFn: async () => {
       if (!tourId) return null;
-
-      const { data: tour, error } = await supabase
-        .from('tours')
-        .select('*')
-        .eq('id', tourId)
-        .single();
-
+      const { data, error } = await supabase.from('tours').select('*').eq('id', tourId).single();
       if (error) throw error;
-      return tour;
+      return data;
     },
     enabled: !!tourId,
   });
