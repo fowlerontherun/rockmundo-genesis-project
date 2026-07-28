@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
-import { listTours, createTour, updateTour, deleteTour } from "@/lib/api/tours";
-import type { CreateTourInput, UpdateTourInput } from "@/lib/api/tours";
+import { listTours, updateTour } from "@/lib/api/tours";
+import type { UpdateTourInput } from "@/lib/api/tours";
 
 export const useTours = (bandId?: string) => {
   const { toast } = useToast();
@@ -48,24 +48,6 @@ export const useTours = (bandId?: string) => {
     },
   });
 
-  const createTourMutation = useMutation({
-    mutationFn: (input: CreateTourInput) => createTour(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
-      toast({
-        title: "Tour created",
-        description: "Your tour has been created successfully!",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create tour",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const updateTourMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateTourInput }) =>
       updateTour(id, input),
@@ -76,15 +58,19 @@ export const useTours = (bandId?: string) => {
         description: "Tour details have been updated.",
       });
     },
-  });
+    onError: (error: Error) => {
+      const description = error.message.includes("tour_update_forbidden")
+        ? "You do not have permission to update this tour."
+        : error.message.includes("tour_update_status_locked")
+          ? "Completed and cancelled tours cannot be edited."
+          : error.message.includes("tour_update_name_invalid")
+            ? "Enter a tour name between 1 and 120 characters."
+            : "The tour could not be updated.";
 
-  const deleteTourMutation = useMutation({
-    mutationFn: (id: string) => deleteTour(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
       toast({
-        title: "Tour deleted",
-        description: "The tour has been removed.",
+        title: "Failed to update tour",
+        description,
+        variant: "destructive",
       });
     },
   });
@@ -140,9 +126,7 @@ export const useTours = (bandId?: string) => {
     venues,
     toursLoading,
     gigsLoading,
-    createTour: createTourMutation,
     updateTour: updateTourMutation,
-    deleteTour: deleteTourMutation,
     cancelTour: cancelTourMutation,
   };
 };
