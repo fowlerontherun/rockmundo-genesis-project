@@ -11,6 +11,8 @@ import { CompanyTaxOverview } from "@/components/company/CompanyTaxOverview";
 import { CreateCompanyDialog } from "@/components/company/CreateCompanyDialog";
 import { FestivalCompanyCard, FestivalCompanyEligibilityCard, useOwnedFestivalCompanies } from "@/features/festival-company";
 import { useCompanies, useCompanyFinancialSummary } from "@/hooks/useCompanies";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useAllCompanyTaxRecords } from "@/hooks/useCompanyFinance";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -26,8 +28,16 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const CompanyDashboardContent = () => {
-  const { data: companies, isLoading: companiesLoading } = useCompanies();
+export const CompanyDashboardContent = () => {
+  const { loading: authLoading } = useAuth();
+  const { isLoading: profileLoading } = useActiveProfile();
+  const {
+    data: companies,
+    isLoading: companiesLoading,
+    isError: companiesError,
+    error,
+    refetch,
+  } = useCompanies();
   const { data: financialSummary, isLoading: summaryLoading } = useCompanyFinancialSummary();
   const { data: festivalCompanies = [] } = useOwnedFestivalCompanies();
   const companyIds = companies?.map(c => c.id) || [];
@@ -42,7 +52,7 @@ const CompanyDashboardContent = () => {
   );
   const overdueTaxCount = pendingTaxes.filter(t => t.status === 'overdue').length;
 
-  if (companiesLoading) {
+  if (authLoading || profileLoading || companiesLoading) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
@@ -51,6 +61,25 @@ const CompanyDashboardContent = () => {
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (companiesError) {
+    return (
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Companies could not be loaded
+          </CardTitle>
+          <CardDescription>
+            {error instanceof Error ? error.message : "Something went wrong while loading your companies."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => void refetch()}>Retry</Button>
+        </CardContent>
+      </Card>
     );
   }
 
