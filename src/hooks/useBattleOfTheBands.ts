@@ -216,6 +216,7 @@ function cleanError(message: string): string {
   if (message.includes("BOTB_NOT_BAND_MEMBER")) return "You must be a member of this band";
   if (message.includes("BOTB_SONG_NOT_OWNED")) return "Those songs don't belong to your band";
   if (message.includes("BOTB_INVALID_SONGS")) return "Pick two different songs";
+  if (message.includes("BOTB_INVALID_PROFILE")) return "Select your active character before entering";
   if (message.includes("BOTB_UNAUTHENTICATED")) return "You must be signed in";
   return message;
 }
