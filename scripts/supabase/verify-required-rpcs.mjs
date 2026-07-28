@@ -7,6 +7,12 @@ const requiredRpcs = [
     name: 'get_banking_dashboard',
     arguments: [],
   },
+  { name: 'open_my_bank_account', arguments: [{ name: 'p_account_type', type: 'public.bank_account_type' }, { name: 'p_nickname', type: 'text' }, { name: 'p_initial_amount_minor', type: 'bigint' }, { name: 'p_term_months', type: 'integer' }, { name: 'p_currency_code', type: 'char' }, { name: 'p_idempotency_key', type: 'text' }] },
+  ...['deposit_my_wallet_to_bank', 'withdraw_my_bank_to_wallet'].map((name) => ({ name, arguments: [{ name: 'p_bank_account_id', type: 'uuid' }, { name: 'p_amount_minor', type: 'bigint' }, { name: 'p_idempotency_key', type: 'text' }] })),
+  { name: 'transfer_between_my_bank_accounts', arguments: [{ name: 'p_source_bank_account_id', type: 'uuid' }, { name: 'p_destination_bank_account_id', type: 'uuid' }, { name: 'p_amount_minor', type: 'bigint' }, { name: 'p_idempotency_key', type: 'text' }] },
+  { name: 'get_my_band_funding_sources', arguments: [{ name: 'p_band_id', type: 'uuid' }] },
+  { name: 'preview_my_band_funding', arguments: [{ name: 'p_band_id', type: 'uuid' }, { name: 'p_source_kind', type: 'text' }, { name: 'p_source_account_id', type: 'uuid' }, { name: 'p_amount_minor', type: 'bigint' }] },
+  { name: 'fund_my_band', arguments: [{ name: 'p_band_id', type: 'uuid' }, { name: 'p_source_kind', type: 'text' }, { name: 'p_source_account_id', type: 'uuid' }, { name: 'p_amount_minor', type: 'bigint' }, { name: 'p_note', type: 'text' }, { name: 'p_idempotency_key', type: 'text' }] },
   {
     name: 'festival_owner_management_bootstrap',
     arguments: [{ name: 'p_identifier', type: 'uuid' }],

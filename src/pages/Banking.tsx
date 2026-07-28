@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, CalendarClock, Landmark, Loader2, PiggyBank, Plus, Target, TrendingUp, WalletCards, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Users } from "lucide-react";
+import { CalendarClock, Landmark, Loader2, PiggyBank, Plus, Target, TrendingUp, WalletCards, ArrowUpRight, ArrowDownLeft, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { fetchBankingDashboard, formatCurrencyMinor } from "@/services/banking/b
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { AddMoneyToBand } from "@/components/bands/AddMoneyToBand";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Something went wrong.";
@@ -117,7 +118,7 @@ export default function Banking() {
           </TabsContent>
 
           <TabsContent value="band">
-            <BandDepositPanel accounts={accounts} onDone={invalidate} />
+            <AddMoneyToBand onComplete={invalidate} />
           </TabsContent>
         </Tabs>
       </div>
@@ -167,9 +168,9 @@ function OpenAccountDialog({ onDone }: { onDone: () => void }) {
   const [term, setTerm] = useState("6");
   const mut = useMutation({
     mutationFn: async () => {
-      const { data, error } = await (supabase as any).rpc("create_bank_account", {
-        p_account_type: type, p_nickname: nickname || null, p_initial_deposit_cents: toCents(initial),
-        p_term_months: type === "fixed_deposit" ? Number(term) : null,
+      const { data, error } = await (supabase as any).rpc("open_my_bank_account", {
+        p_account_type: type, p_nickname: nickname || null, p_initial_amount_minor: toCents(initial),
+        p_term_months: type === "fixed_deposit" ? Number(term) : null, p_currency_code: "USD", p_idempotency_key: crypto.randomUUID(),
       });
       if (error) throw new Error(error.message); return data;
     },
@@ -218,8 +219,8 @@ function AmountRpcDialog({ trigger, title, description, rpc, extraArgs = {}, onD
   const [amount, setAmount] = useState("");
   const mut = useMutation({
     mutationFn: async () => {
-      const args: any = { p_amount_cents: toCents(amount), ...extraArgs };
-      if (accountId) args.p_account_id = accountId;
+      const args: any = { p_amount_minor: toCents(amount), p_idempotency_key: crypto.randomUUID(), ...extraArgs };
+      if (accountId) args.p_bank_account_id = accountId;
       const { data, error } = await (supabase as any).rpc(rpc, args);
       if (error) throw new Error(error.message); return data;
     },
@@ -242,14 +243,14 @@ function DepositDialog({ account, onDone }: { account: any; onDone: () => void }
   return <AmountRpcDialog
     trigger={<Button size="sm" variant="outline"><ArrowDownLeft className="mr-1 h-4 w-4" />Deposit</Button>}
     title="Deposit from wallet" description="Move cash from your wallet into this account."
-    rpc="bank_deposit_from_cash" accountId={account.id} currency={account.currencyCode} onDone={onDone}
+    rpc="deposit_my_wallet_to_bank" accountId={account.id} currency={account.currencyCode} onDone={onDone}
   />;
 }
 function WithdrawDialog({ account, onDone }: { account: any; onDone: () => void }) {
   return <AmountRpcDialog
     trigger={<Button size="sm" variant="outline"><ArrowUpRight className="mr-1 h-4 w-4" />Withdraw</Button>}
     title="Withdraw to wallet" description="Move money from this account into your wallet."
-    rpc="bank_withdraw_to_cash" accountId={account.id} currency={account.currencyCode} onDone={onDone}
+    rpc="withdraw_my_bank_to_wallet" accountId={account.id} currency={account.currencyCode} onDone={onDone}
   />;
 }
 
@@ -259,7 +260,7 @@ function TransferDialog({ fromAccount, accounts, onDone }: { fromAccount: any; a
   const [amount, setAmount] = useState("");
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any).rpc("bank_transfer", { p_from_account: fromAccount.id, p_to_account: to, p_amount_cents: toCents(amount) });
+      const { error } = await (supabase as any).rpc("transfer_between_my_bank_accounts", { p_source_bank_account_id: fromAccount.id, p_destination_bank_account_id: to, p_amount_minor: toCents(amount), p_idempotency_key: crypto.randomUUID() });
       if (error) throw new Error(error.message);
     },
     onSuccess: () => { toast.success("Transfer complete"); onDone(); setOpen(false); setAmount(""); },
@@ -351,68 +352,6 @@ function GoalCard({ goal, accounts, onDone }: { goal: any; accounts: any[]; onDo
             <DialogFooter><Button onClick={() => mut.mutate()} disabled={mut.isPending || !amount || !fromAcct}>{mut.isPending ? "Working…" : "Confirm"}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BandDepositPanel({ accounts, onDone }: { accounts: any[]; onDone: () => void }) {
-  const { data: myBands = [] } = useQuery({
-    queryKey: ["my-bands-for-deposit"],
-    queryFn: async () => {
-      const { data: profile } = await supabase.auth.getUser();
-      if (!profile.user) return [];
-      const { data: pRow } = await supabase.from("profiles").select("id").eq("user_id", profile.user.id).maybeSingle();
-      if (!pRow) return [];
-      const { data, error } = await supabase.from("band_members").select("band_id, bands(id, name, band_balance)").eq("profile_id", pRow.id);
-      if (error) return [];
-      return (data ?? []).map((r: any) => r.bands).filter(Boolean);
-    },
-  });
-
-  const [bandId, setBandId] = useState<string>("");
-  const [fromAcct, setFromAcct] = useState<string>(accounts[0]?.id ?? "");
-  const [amount, setAmount] = useState("");
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      const { error } = await (supabase as any).rpc("deposit_to_band_treasury", { p_band_id: bandId, p_from_account: fromAcct, p_amount_cents: toCents(amount) });
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => { toast.success("Deposit sent to band treasury"); onDone(); setAmount(""); },
-    onError: (e) => toast.error(errMsg(e)),
-  });
-
-  return (
-    <Card>
-      <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Deposit into a band's treasury</CardTitle><CardDescription>Move personal savings into a band you are a member of. Fixed deposits can't be used until they mature.</CardDescription></CardHeader>
-      <CardContent className="space-y-4">
-        {myBands.length === 0 ? (
-          <p className="text-sm text-muted-foreground">You aren't a member of any band yet.</p>
-        ) : accounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Open a bank account first to make a deposit.</p>
-        ) : (
-          <>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div><Label>Band</Label>
-                <Select value={bandId} onValueChange={setBandId}>
-                  <SelectTrigger><SelectValue placeholder="Select band" /></SelectTrigger>
-                  <SelectContent>{myBands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name} · ${b.band_balance ?? 0}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>From account</Label>
-                <Select value={fromAcct} onValueChange={setFromAcct}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.nickname || a.providerName} · {formatCurrencyMinor({ amountMinor: a.balanceMinor, currencyCode: a.currencyCode })}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Amount ($)</Label><Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
-            </div>
-            <Button onClick={() => mut.mutate()} disabled={!bandId || !fromAcct || !amount || mut.isPending}>
-              {mut.isPending ? "Sending…" : "Deposit to band"}
-            </Button>
-          </>
-        )}
       </CardContent>
     </Card>
   );
