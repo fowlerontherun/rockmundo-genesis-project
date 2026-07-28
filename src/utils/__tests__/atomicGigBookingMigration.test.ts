@@ -73,3 +73,17 @@ describe('gig booking band fame hotfix', () => {
     expect(hotfixSql).toContain('GRANT EXECUTE ON FUNCTION public.book_gig');
   });
 });
+
+describe('gig ticket prediction trigger hotfix', () => {
+  const triggerHotfixSql = readFileSync('supabase/migrations/20260728123000_fix_gig_ticket_prediction_fame.sql', 'utf8');
+
+  it('repairs the before-insert prediction helper used by gig creation', () => {
+    expect(triggerHotfixSql).toContain('CREATE OR REPLACE FUNCTION public.calculate_predicted_tickets');
+    expect(triggerHotfixSql).toContain('COALESCE(global_fame, 0)');
+    expect(triggerHotfixSql).not.toMatch(/COALESCE\(fame,/);
+  });
+
+  it('keeps the trigger helper executable by the booking roles', () => {
+    expect(triggerHotfixSql).toContain('TO authenticated, service_role');
+  });
+});
