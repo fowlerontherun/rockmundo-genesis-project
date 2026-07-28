@@ -148,3 +148,26 @@ describe('gig lineup trigger membership alignment', () => {
     expect(lineupSql).toContain("NOTIFY pgrst, 'reload schema'");
   });
 });
+
+describe('final-order gig performer INSERT trigger repair', () => {
+  const triggerRepairSql = readFileSync(
+    'supabase/migrations/20291218235000_repair_gig_performer_insert_trigger.sql',
+    'utf8',
+  );
+
+  it('removes optional row fields from the validator that runs during booking', () => {
+    const validator = triggerRepairSql.slice(
+      triggerRepairSql.indexOf('CREATE OR REPLACE FUNCTION public.validate_gig_performer'),
+      triggerRepairSql.indexOf('CREATE OR REPLACE FUNCTION public.seed_gig_performers'),
+    );
+    expect(validator).not.toContain('NEW.updated_at');
+    expect(validator).not.toContain('NEW.performed_at');
+    expect(validator).toContain('public.active_band_performing_members(NEW.band_id)');
+  });
+
+  it('runs after the 2029 overwrite and verifies the installed definitions', () => {
+    expect(triggerRepairSql).toContain('CREATE OR REPLACE FUNCTION public.seed_gig_performers');
+    expect(triggerRepairSql).toContain("pg_get_functiondef('public.validate_gig_performer()'::regprocedure)");
+    expect(triggerRepairSql).toContain("NOTIFY pgrst, 'reload schema'");
+  });
+});
