@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
@@ -15,18 +16,10 @@ export interface TourBookingData {
   ticketPrice?: number;
   ticketOperatorId?: string;
   riderId?: string;
-  venues: Array<{
-    venueId: string;
-    cityId: string;
-    date: string;
-    timeSlot: string;
-  }>;
+  venues: Array<{ venueId: string; cityId: string; date: string; timeSlot: string }>;
 }
 
-type TourBookingError = {
-  message?: string;
-  details?: string;
-};
+type TourBookingError = { message?: string; details?: string };
 
 function getTourBookingError(error: TourBookingError): string {
   const message = error.message ?? '';
@@ -45,7 +38,6 @@ function getTourBookingError(error: TourBookingError): string {
     gig_booking_insufficient_funds: 'The band cannot afford the total booking fees for this tour.',
     gig_booking_band_lockout: 'The band is currently unavailable for another booking.',
   };
-
   const key = Object.keys(errors).find((candidate) => message.includes(candidate));
   return key ? errors[key] : 'The tour could not be booked. No partial tour was created; review the dates, venues and band schedule and try again.';
 }
@@ -55,15 +47,11 @@ export function useTourBooking() {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const calculateTourCosts = async (tourData: TourBookingData) => {
-    const { data: routes, error } = await supabase
-      .from('city_transport_routes')
-      .select('*');
-
+  const calculateTourCosts = useCallback(async (tourData: TourBookingData) => {
+    const { data: routes, error } = await supabase.from('city_transport_routes').select('*');
     if (error) throw error;
 
     let travelCosts = 0;
-
     if (tourData.travelMode === 'tour_bus') {
       const milliseconds = new Date(tourData.endDate).getTime() - new Date(tourData.startDate).getTime();
       const tourDays = Math.max(1, Math.ceil(milliseconds / (1000 * 60 * 60 * 24)) + 1);
@@ -80,14 +68,8 @@ export function useTourBooking() {
     const nightsNeeded = Math.max(0, tourData.venues.length - 1);
     const accommodationCosts = nightsNeeded * 100;
     const crewCosts = tourData.venues.length * 3 * 150;
-
-    return {
-      travelCosts,
-      accommodationCosts,
-      crewCosts,
-      totalCosts: travelCosts + accommodationCosts + crewCosts,
-    };
-  };
+    return { travelCosts, accommodationCosts, crewCosts, totalCosts: travelCosts + accommodationCosts + crewCosts };
+  }, []);
 
   const createTour = useMutation({
     mutationFn: async (tourData: TourBookingData) => {
@@ -98,14 +80,11 @@ export function useTourBooking() {
 
       const start = new Date(`${tourData.startDate}T00:00:00`);
       const end = new Date(`${tourData.endDate}T00:00:00`);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
-        throw new Error('tour_booking_dates_invalid');
-      }
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) throw new Error('tour_booking_dates_invalid');
 
       await assertWellnessAllows(profileId, 'travel');
       await assertWellnessAllows(profileId, 'gig');
 
-      const requestId = crypto.randomUUID();
       const { data, error } = await (supabase.rpc as any)('book_tour', {
         p_band_id: tourData.artistId,
         p_name: tourData.name.trim(),
@@ -113,13 +92,8 @@ export function useTourBooking() {
         p_end_date: tourData.endDate,
         p_setlist_id: tourData.setlistId,
         p_ticket_price: tourData.ticketPrice ?? 20,
-        p_stops: tourData.venues.map((venue) => ({
-          venue_id: venue.venueId,
-          city_id: venue.cityId,
-          date: venue.date,
-          slot: venue.timeSlot,
-        })),
-        p_request_id: requestId,
+        p_stops: tourData.venues.map((venue) => ({ venue_id: venue.venueId, city_id: venue.cityId, date: venue.date, slot: venue.timeSlot })),
+        p_request_id: crypto.randomUUID(),
         p_ticket_operator_id: tourData.ticketOperatorId || null,
         p_rider_id: tourData.riderId || null,
         p_travel_mode: tourData.travelMode,
@@ -128,15 +102,11 @@ export function useTourBooking() {
       if (error) throw error;
       const result = data as { tour?: { id: string }; gig_ids?: string[] } | null;
       if (!result?.tour?.id) throw new Error('The booking service returned an invalid tour response.');
-
       return result;
     },
     onSuccess: (result) => {
       const gigCount = result.gig_ids?.length ?? 0;
-      toast({
-        title: 'Tour created!',
-        description: `${gigCount} gig${gigCount === 1 ? '' : 's'} booked successfully.`,
-      });
+      toast({ title: 'Tour created!', description: `${gigCount} gig${gigCount === 1 ? '' : 's'} booked successfully.` });
       queryClient.invalidateQueries({ queryKey: ['tours'] });
       queryClient.invalidateQueries({ queryKey: ['tour-gigs'] });
       queryClient.invalidateQueries({ queryKey: ['gigs'] });
@@ -144,19 +114,11 @@ export function useTourBooking() {
     },
     onError: (error: TourBookingError) => {
       console.error('Error creating tour:', error);
-      toast({
-        title: 'Tour creation failed',
-        description: getTourBookingError(error),
-        variant: 'destructive',
-      });
+      toast({ title: 'Tour creation failed', description: getTourBookingError(error), variant: 'destructive' });
     },
   });
 
-  return {
-    createTour: createTour.mutate,
-    isCreating: createTour.isPending,
-    calculateTourCosts,
-  };
+  return { createTour: createTour.mutate, isCreating: createTour.isPending, calculateTourCosts };
 }
 
 export function useTourDetails(tourId: string | null) {
