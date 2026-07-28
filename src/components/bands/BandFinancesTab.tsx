@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { AddMoneyToBand } from "@/components/bands/AddMoneyToBand";
 import {
   DollarSign,
   TrendingUp,
@@ -826,133 +827,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <HandCoins className="h-4 w-4" /> Add Money to Band
-            </CardTitle>
-            <CardDescription>
-              Move personal funds into the {treasuryCurrency} band treasury with
-              explicit confirmation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Personal account</Label>
-              <Select
-                value={selectedAccountId}
-                onValueChange={setSelectedAccountId}
-                disabled={
-                  accountsLoading ||
-                  personalAccounts.length === 0 ||
-                  dashboardStatus === "permission_denied" ||
-                  dashboardStatus === "profile_missing" ||
-                  dashboardStatus === "band_missing" ||
-                  dashboardStatus === "not_band_member"
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      accountsLoading
-                        ? "Loading your personal accounts…"
-                        : "Choose a personal account"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {personalAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex flex-col text-left">
-                        <span>
-                          {account.displayName} {account.maskedAccountNumber}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {account.providerName} ·{" "}
-                          {formatCurrency(
-                            account.availableBalanceMinor / 100,
-                            account.currencyCode,
-                          )}{" "}
-                          available
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {accountsLoading && (
-                <p className="text-xs text-muted-foreground">
-                  Loading your personal accounts…
-                </p>
-              )}
-              {accountError && (
-                <p className="text-xs text-destructive">
-                  Unable to load accounts: {accountError}
-                </p>
-              )}
-              {!accountsLoading &&
-                !accountError &&
-                personalAccounts.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No eligible personal account found. Open or fund a personal
-                    bank account before contributing to the band.{" "}
-                    {accountStatus === "currency_mismatch"
-                      ? "Only matching-currency accounts are eligible."
-                      : null}{" "}
-                    <a className="underline" href="/finance/banking">
-                      Go to personal banking
-                    </a>
-                    .
-                  </p>
-                )}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Amount</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={contributionAmount}
-                  onChange={(e) => setContributionAmount(e.target.value)}
-                  placeholder="50.00"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Optional note</Label>
-                <Input
-                  value={contributionNote}
-                  onChange={(e) => setContributionNote(e.target.value)}
-                  placeholder="New rehearsal fund"
-                />
-              </div>
-            </div>
-            <Alert>
-              <AlertTitle>Contribution warning</AlertTitle>
-              <AlertDescription>
-                This contribution is not automatically repayable and does not
-                grant additional band ownership or voting rights.
-              </AlertDescription>
-            </Alert>
-            <Button
-              onClick={startContributionPreview}
-              disabled={
-                previewingContribution ||
-                contributing ||
-                accountsLoading ||
-                !selectedAccountId ||
-                dashboardStatus === "permission_denied" ||
-                dashboardStatus === "profile_missing" ||
-                dashboardStatus === "band_missing" ||
-                dashboardStatus === "not_band_member"
-              }
-            >
-              {previewingContribution
-                ? "Preparing preview…"
-                : "Preview contribution"}
-            </Button>
-          </CardContent>
-        </Card>
+        <AddMoneyToBand bandId={bandId} onComplete={() => { void fetchTreasuryDashboard(); void fetchFinances(); }} />
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Member Contributions</CardTitle>
