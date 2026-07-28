@@ -730,7 +730,7 @@ function App() {
                     <Route path="festivals/records" element={<FestivalLegacyPage />} />
                     <Route path="festivals/statistics" element={<FestivalLegacyPage />} />
                     <Route path="festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
-                    <Route path="festivals/simulation" element={<LegacyFestivalGate area="Festival simulation"><FestivalsNew /></LegacyFestivalGate>} />
+                    <Route path="festivals/simulation" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
                     <Route path="festivals/perform/:participationId" element={<LegacyFestivalGate area="Festival performance"><FestivalPerformance /></LegacyFestivalGate>} />
                     <Route path="festivals/:festivalId/manage" element={<LegacyFestivalRedirect target="overview" />} />
                     <Route path="festivals/:festivalId/manage/editions/:editionId" element={<LegacyFestivalRedirect target="overview" />} />
