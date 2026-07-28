@@ -18,8 +18,7 @@ export const useCompanies = () => {
         .select(`
           *,
           headquarters_city:cities!headquarters_city_id(id, name, country),
-          parent_company:companies!parent_company_id(id, name),
-          festival_companies(id)
+          parent_company:companies!parent_company_id(id, name)
         `)
         .eq("owner_id", userId)
         .order("created_at", { ascending: false });
@@ -29,10 +28,26 @@ export const useCompanies = () => {
         throw error;
       }
 
-      return (data || []).map((company: any) => ({
+      const companies = (data || []) as Company[];
+      if (companies.length === 0) return companies;
+
+      const { data: festivalCompanies, error: festivalError } = await supabase
+        .from("festival_companies")
+        .select("id, company_id")
+        .in("company_id", companies.map((company) => company.id));
+
+      if (festivalError) {
+        console.error("Error fetching festival company extensions:", festivalError);
+      }
+
+      const festivalIdByCompany = new Map(
+        (festivalCompanies || []).map((festival) => [festival.company_id, festival.id]),
+      );
+
+      return companies.map((company) => ({
         ...company,
-        festival_company_id: Array.isArray(company.festival_companies) ? company.festival_companies[0]?.id ?? null : null,
-      })) as Company[];
+        festival_company_id: festivalIdByCompany.get(company.id) ?? null,
+      }));
     },
     enabled: !!userId,
   });
@@ -49,8 +64,7 @@ export const useCompany = (companyId: string | undefined) => {
         .select(`
           *,
           headquarters_city:cities!headquarters_city_id(id, name, country),
-          parent_company:companies!parent_company_id(id, name),
-          festival_companies(id)
+          parent_company:companies!parent_company_id(id, name)
         `)
         .eq("id", companyId)
         .maybeSingle();
@@ -60,7 +74,22 @@ export const useCompany = (companyId: string | undefined) => {
         throw error;
       }
 
-      return data as Company | null;
+      if (!data) return null;
+
+      const { data: festivalCompany, error: festivalError } = await supabase
+        .from("festival_companies")
+        .select("id")
+        .eq("company_id", data.id)
+        .maybeSingle();
+
+      if (festivalError) {
+        console.error("Error fetching festival company extension:", festivalError);
+      }
+
+      return {
+        ...(data as Company),
+        festival_company_id: festivalCompany?.id ?? null,
+      };
     },
     enabled: !!companyId,
   });
