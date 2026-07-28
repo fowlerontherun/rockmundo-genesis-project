@@ -8,6 +8,8 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const walk = dir => fs.existsSync(path.join(root, dir)) ? fs.readdirSync(path.join(root, dir), { recursive: true, withFileTypes: true })
   .filter(entry => entry.isFile()).map(entry => path.relative(root, path.join(entry.parentPath, entry.name)).replaceAll("\\", "/")) : [];
 const app = read("src/App.tsx");
+const routeRegistrySource = read("src/features/festivals/routes.ts");
+const festivalPatterns = Object.fromEntries([...routeRegistrySource.matchAll(/^\s{2}(\w+): "([^"]+)",$/gm)].map(m => [m[1], m[2]]));
 const sourceRoots = ["src/pages", "src/components", "src/hooks", "src/features/festivals", "src/features/festival-company", "src/services", "src/lib", "src/utils", "src/config"];
 const tsFiles = sourceRoots.flatMap(walk).filter(file => /\.(ts|tsx)$/.test(file));
 const sqlFiles = [...walk("supabase/migrations"), ...walk("supabase/tests")].filter(file => file.endsWith(".sql"));
@@ -15,14 +17,22 @@ const allFiles = [...tsFiles, ...sqlFiles, ...walk("supabase/functions"), ...wal
 const contents = new Map(allFiles.map(file => [file, read(file)]));
 const festivalFiles = tsFiles.filter(file => /festival/i.test(file) || /festival/i.test(contents.get(file)));
 
-const semantics = param => ({ festivalCompanyId: "festival_company_id", companyId: "festival_company_id", editionId: "annual_edition_id", festivalSlug: "festival_slug", participationId: "participation_id", sessionId: "performance_session_id", launchId: "launch_id", resultId: "legacy_festival_id", festivalId: "legacy_festival_id" })[param] || "unknown";
-const routeRows = [...app.matchAll(/<Route\s+path="([^"]*festival[^"]*)"\s+element=\{([^\n]+)\}/gi)].map((match, index) => {
-  const route = `/${match[1].replace(/^\//, "")}`;
-  const component = match[2].match(/<([A-Z][A-Za-z0-9]*)/)?.[1] || "unknown";
+const semantics = param => ({ festivalCompanyId: "festival_company_id", festivalCompanyIdentifier: "festival_company_slug_or_id", editionIdentifier: "annual_edition_id_or_year", companyId: "company_id", editionId: "annual_edition_id", festivalSlug: "festival_slug", participationId: "participation_id", sessionId: "performance_session_id", launchId: "launch_id", resultId: "legacy_festival_id", festivalId: "legacy_festival_id" })[param] || "unknown";
+const normalise = route => route.replace(/:[^/]+/g, ":parameter").replace(/\/$/, "");
+const routeMatches = [...app.matchAll(/<Route\s+path=(?:"([^"]*festival[^"]*)"|\{festivalRoutePatterns\.(\w+)\})\s+element=\{([^\n]+)/gi)]
+  .map(match => ({ raw: match[0], path: match[1] || festivalPatterns[match[2]], element: match[3], index: match.index }));
+const activePatterns = new Map();
+for (const item of routeMatches) {
+  const key = normalise(`/${item.path.replace(/^\//, "")}`);
+  if (activePatterns.has(key)) throw new Error(`Duplicate semantic Festival route: ${activePatterns.get(key)} and ${item.path}`);
+  activePatterns.set(key, item.path);
+}
+const routeRows = routeMatches.sort((a,b)=>a.index-b.index).map((match, index) => {
+  const route = `/${match.path.replace(/^\//, "")}`;
+  const component = match.element.match(/<([A-Z][A-Za-z0-9]*)/)?.[1] || "unknown";
   const params = [...route.matchAll(/:([A-Za-z0-9_]+)/g)].map(item => ({ parameter: item[1], meaning: semantics(item[1]) }));
-  const duplicate = [...app.matchAll(new RegExp(`<Route\\s+path="${match[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`, "g"))].length > 1;
-  const legacy = /Legacy|FestivalDetail|FestivalBrowser|FestivalMarketplace|FestivalDirectory|FestivalPerformance|FestivalOwnerConsole|FestivalRunWizard|FestivalBookingCalendar/.test(match[2]);
-  return { route, component, intendedActor: route.startsWith("/admin") ? "administrator" : /manage|run/.test(route) ? "festival owner" : "player/public", identifierSemantics: params, dataSource: legacy ? "legacy festivals/event tables or compatibility services" : "festival-company repositories/RPCs", writeApis: /manage|run|perform/.test(route) ? ["see frontendWrites"] : [], featureFlag: /LegacyFestivalGate/.test(match[2]) ? "legacyFestivalRoutesEnabled" : null, navigationEntryPoints: [], emptyState: "component-owned", errorState: params.length ? "must return a typed domain error" : "component-owned", canonicalReplacement: legacy ? "/world/festivals or /companies/festivals/:festivalCompanyId/setup" : null, disposition: duplicate ? "replace" : legacy ? "redirect_temporarily" : "keep", sourceOrder: index + 1, duplicate };
+  const legacy = /Legacy|FestivalDetail|FestivalMarketplace|FestivalDirectory|FestivalPerformance/.test(match.element);
+  return { route, component, intendedActor: route.startsWith("/admin") ? "administrator" : /manage|run|festival-company/.test(route) ? "festival owner" : "player/public", identifierSemantics: params, dataSource: legacy ? "legacy compatibility read or canonical resolver" : "festival-company repositories/RPCs", writeApis: [], featureFlag: /LegacyFestivalGate/.test(match.element) ? "legacyFestivalReadEnabled" : null, navigationEntryPoints: [], emptyState: "component-owned", errorState: params.length ? "typed domain state" : "component-owned", canonicalReplacement: legacy ? "/world/festivals" : null, disposition: legacy ? "redirect_temporarily" : "keep", sourceOrder: index + 1, duplicate: false };
 });
 
 const importersOf = target => tsFiles.filter(file => contents.get(file)?.includes(target.replace(/^.*\//, "").replace(/\.(tsx?|jsx?)$/, "")) && file !== target);

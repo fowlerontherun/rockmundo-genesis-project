@@ -65,7 +65,7 @@ export const isFoundFestivalCompanyRpcResult = (value: unknown): value is FoundF
   const candidate = value as Record<string, unknown>;
   return isUuid(candidate.companyId) && isUuid(candidate.festivalCompanyId) && isUuid(candidate.personalFinancialTransactionId)
     && isFiniteNonNegative(candidate.personalCash)
-    && Number(candidate.foundingCost) === 2_000_000
+    && isFiniteNonNegative(candidate.foundingCost)
     && typeof candidate.idempotent === "boolean";
 };
 

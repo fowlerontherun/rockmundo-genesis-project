@@ -6,6 +6,7 @@ import { foundFestivalCompany } from "../data/festivalCompanyRepository";
 import { festivalCompanyCapabilitiesQueryKey, festivalCompanyFoundingEligibilityQueryKey, ownedFestivalCompaniesQueryKey } from "./useFestivalCompanyCapabilities";
 import { festivalCompanySetupQueryKey } from "./useFestivalCompanySetup";
 import { mapFestivalFoundingError, type FoundFestivalCompanyInput } from "../domain/festivalCompany";
+import { festivalRoutes } from "@/features/festivals/routes";
 
 export const useFoundFestivalCompany = () => {
   const flags = useFestivalFeatureFlags();
@@ -30,7 +31,7 @@ export const useFoundFestivalCompany = () => {
       toast.success("Festival company founded", {
         description: "The founding fee was charged from personal cash. Company balance starts at $0.",
       });
-      navigate(`/companies/festivals/${result.festivalCompanyId}/setup`);
+      navigate(festivalRoutes.company(result.festivalCompanyId));
     },
     onError: (error: Error) => {
       toast.error("Could not found festival company", {

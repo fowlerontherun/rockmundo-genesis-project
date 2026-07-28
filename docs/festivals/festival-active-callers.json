@@ -3,45 +3,8 @@
   "generatedBy": "scripts/festivals/certify-active-system.mjs",
   "routes": [
     {
-      "route": "/world/festivals",
-      "component": "LegacyFestivalGate",
-      "intendedActor": "player/public",
-      "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
-      "navigationEntryPoints": [],
-      "emptyState": "component-owned",
-      "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
-      "disposition": "replace",
-      "sourceOrder": 1,
-      "duplicate": true
-    },
-    {
-      "route": "/world/festivals/:festivalId",
-      "component": "LegacyFestivalGate",
-      "intendedActor": "player/public",
-      "identifierSemantics": [
-        {
-          "parameter": "festivalId",
-          "meaning": "legacy_festival_id"
-        }
-      ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
-      "navigationEntryPoints": [],
-      "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
-      "disposition": "redirect_temporarily",
-      "sourceOrder": 2,
-      "duplicate": false
-    },
-    {
       "route": "/companies/festivals/:festivalCompanyId/setup",
-      "component": "FestivalCompanySetupPage",
+      "component": "LegacyFestivalSetupRedirect",
       "intendedActor": "player/public",
       "identifierSemantics": [
         {
@@ -49,15 +12,15 @@
           "meaning": "festival_company_id"
         }
       ],
-      "dataSource": "festival-company repositories/RPCs",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": null,
-      "disposition": "keep",
-      "sourceOrder": 3,
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
+      "disposition": "redirect_temporarily",
+      "sourceOrder": 1,
       "duplicate": false
     },
     {
@@ -73,7 +36,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 4,
+      "sourceOrder": 2,
       "duplicate": false
     },
     {
@@ -81,25 +44,25 @@
       "component": "PublicFestivalDirectory",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
-      "disposition": "replace",
-      "sourceOrder": 5,
-      "duplicate": true
+      "canonicalReplacement": "/world/festivals",
+      "disposition": "redirect_temporarily",
+      "sourceOrder": 3,
+      "duplicate": false
     },
     {
-      "route": "/world/festivals/:festivalSlug",
+      "route": "/world/festivals/:festivalCompanyIdentifier",
       "component": "PublicFestivalPage",
       "intendedActor": "player/public",
       "identifierSemantics": [
         {
-          "parameter": "festivalSlug",
-          "meaning": "festival_slug"
+          "parameter": "festivalCompanyIdentifier",
+          "meaning": "festival_company_slug_or_id"
         }
       ],
       "dataSource": "festival-company repositories/RPCs",
@@ -107,26 +70,134 @@
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 4,
+      "duplicate": false
+    },
+    {
+      "route": "/world/festivals/:festivalCompanyIdentifier/editions/:editionIdentifier",
+      "component": "PublicFestivalEditionPage",
+      "intendedActor": "player/public",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyIdentifier",
+          "meaning": "festival_company_slug_or_id"
+        },
+        {
+          "parameter": "editionIdentifier",
+          "meaning": "annual_edition_id_or_year"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 5,
+      "duplicate": false
+    },
+    {
+      "route": "/festival-company/new",
+      "component": "FestivalFoundingPage",
+      "intendedActor": "festival owner",
+      "identifierSemantics": [],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
       "sourceOrder": 6,
       "duplicate": false
     },
     {
+      "route": "/festival-company/:festivalCompanyId",
+      "component": "FestivalCompanyHome",
+      "intendedActor": "festival owner",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 7,
+      "duplicate": false
+    },
+    {
+      "route": "/festival-company/:festivalCompanyId/editions",
+      "component": "FestivalCompanyHome",
+      "intendedActor": "festival owner",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 8,
+      "duplicate": false
+    },
+    {
+      "route": "/festival-company/:festivalCompanyId/editions/:editionId",
+      "component": "FestivalEditionShell",
+      "intendedActor": "festival owner",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        },
+        {
+          "parameter": "editionId",
+          "meaning": "annual_edition_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 9,
+      "duplicate": false
+    },
+    {
       "route": "/festivals",
-      "component": "LegacyFestivalGate",
+      "component": "PreserveQueryRedirect",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "festival-company repositories/RPCs",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
-      "disposition": "redirect_temporarily",
-      "sourceOrder": 7,
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 10,
       "duplicate": false
     },
     {
@@ -134,15 +205,15 @@
       "component": "LegacyFestivalGate",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 8,
+      "sourceOrder": 11,
       "duplicate": false
     },
     {
@@ -150,15 +221,15 @@
       "component": "LegacyFestivalGate",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 9,
+      "sourceOrder": 12,
       "duplicate": false
     },
     {
@@ -166,15 +237,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 10,
+      "sourceOrder": 13,
       "duplicate": false
     },
     {
@@ -187,15 +258,15 @@
           "meaning": "legacy_festival_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 11,
+      "sourceOrder": 14,
       "duplicate": false
     },
     {
@@ -203,15 +274,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 12,
+      "sourceOrder": 15,
       "duplicate": false
     },
     {
@@ -219,15 +290,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 13,
+      "sourceOrder": 16,
       "duplicate": false
     },
     {
@@ -235,15 +306,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 14,
+      "sourceOrder": 17,
       "duplicate": false
     },
     {
@@ -251,15 +322,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 15,
+      "sourceOrder": 18,
       "duplicate": false
     },
     {
@@ -267,15 +338,15 @@
       "component": "FestivalLegacyPage",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
       "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 16,
+      "sourceOrder": 19,
       "duplicate": false
     },
     {
@@ -288,15 +359,15 @@
           "meaning": "legacy_festival_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 17,
+      "sourceOrder": 20,
       "duplicate": false
     },
     {
@@ -304,15 +375,15 @@
       "component": "LegacyFestivalGate",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 18,
+      "sourceOrder": 21,
       "duplicate": false
     },
     {
@@ -325,22 +396,20 @@
           "meaning": "participation_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [
-        "see frontendWrites"
-      ],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "dataSource": "legacy compatibility read or canonical resolver",
+      "writeApis": [],
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 19,
+      "sourceOrder": 22,
       "duplicate": false
     },
     {
       "route": "/festivals/:festivalId/manage",
-      "component": "LegacyFestivalGate",
+      "component": "LegacyFestivalRedirect",
       "intendedActor": "festival owner",
       "identifierSemantics": [
         {
@@ -348,22 +417,20 @@
           "meaning": "legacy_festival_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [
-        "see frontendWrites"
-      ],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "dataSource": "legacy compatibility read or canonical resolver",
+      "writeApis": [],
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 20,
+      "sourceOrder": 23,
       "duplicate": false
     },
     {
       "route": "/festivals/:festivalId/manage/editions/:editionId",
-      "component": "LegacyFestivalGate",
+      "component": "LegacyFestivalRedirect",
       "intendedActor": "festival owner",
       "identifierSemantics": [
         {
@@ -375,17 +442,15 @@
           "meaning": "annual_edition_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [
-        "see frontendWrites"
-      ],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "dataSource": "legacy compatibility read or canonical resolver",
+      "writeApis": [],
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 21,
+      "sourceOrder": 24,
       "duplicate": false
     },
     {
@@ -398,20 +463,20 @@
           "meaning": "performance_session_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": "legacyFestivalReadEnabled",
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 22,
+      "sourceOrder": 25,
       "duplicate": false
     },
     {
       "route": "/festivals/:festivalId/calendar",
-      "component": "LegacyFestivalGate",
+      "component": "LegacyFestivalRedirect",
       "intendedActor": "player/public",
       "identifierSemantics": [
         {
@@ -419,20 +484,20 @@
           "meaning": "legacy_festival_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
+      "dataSource": "legacy compatibility read or canonical resolver",
       "writeApis": [],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 23,
+      "sourceOrder": 26,
       "duplicate": false
     },
     {
       "route": "/festivals/:festivalId/run",
-      "component": "LegacyFestivalGate",
+      "component": "LegacyFestivalRedirect",
       "intendedActor": "festival owner",
       "identifierSemantics": [
         {
@@ -440,17 +505,36 @@
           "meaning": "legacy_festival_id"
         }
       ],
-      "dataSource": "legacy festivals/event tables or compatibility services",
-      "writeApis": [
-        "see frontendWrites"
-      ],
-      "featureFlag": "legacyFestivalRoutesEnabled",
+      "dataSource": "legacy compatibility read or canonical resolver",
+      "writeApis": [],
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
-      "errorState": "must return a typed domain error",
-      "canonicalReplacement": "/world/festivals or /companies/festivals/:festivalCompanyId/setup",
+      "errorState": "typed domain state",
+      "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 24,
+      "sourceOrder": 27,
+      "duplicate": false
+    },
+    {
+      "route": "/company/:companyId",
+      "component": "CompanyDetail",
+      "intendedActor": "player/public",
+      "identifierSemantics": [
+        {
+          "parameter": "companyId",
+          "meaning": "company_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 28,
       "duplicate": false
     },
     {
@@ -466,7 +550,53 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 25,
+      "sourceOrder": 29,
+      "duplicate": false
+    },
+    {
+      "route": "/admin/festivals/:festivalCompanyId",
+      "component": "FestivalsAdminPage",
+      "intendedActor": "administrator",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 30,
+      "duplicate": false
+    },
+    {
+      "route": "/admin/festivals/:festivalCompanyId/editions/:editionId",
+      "component": "FestivalsAdminPage",
+      "intendedActor": "administrator",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        },
+        {
+          "parameter": "editionId",
+          "meaning": "annual_edition_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 31,
       "duplicate": false
     },
     {
@@ -482,7 +612,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 26,
+      "sourceOrder": 32,
       "duplicate": false
     },
     {
@@ -498,7 +628,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 27,
+      "sourceOrder": 33,
       "duplicate": false
     },
     {
@@ -514,7 +644,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 28,
+      "sourceOrder": 34,
       "duplicate": false
     }
   ],
@@ -2228,6 +2358,78 @@
       "writes": []
     },
     {
+      "file": "src/features/festivals/resolver.ts",
+      "kind": "module",
+      "importers": [
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/Cities.tsx",
+        "src/pages/admin/ExperienceRewards.tsx",
+        "src/pages/admin/Mentors.tsx",
+        "src/pages/admin/YoutubeVideos.tsx",
+        "src/pages/talent/discovery.tsx",
+        "src/components/company/CreateCompanyDialog.tsx",
+        "src/components/social/ParticipantStatusList.test.tsx",
+        "src/components/social/ParticipantStatusList.tsx",
+        "src/hooks/useParticipationDetails.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/routes.ts",
+      "kind": "module",
+      "importers": [
+        "src/pages/BusinessOverview.tsx",
+        "src/pages/City.tsx",
+        "src/pages/FestivalDetail.tsx",
+        "src/pages/SkillsPage.tsx",
+        "src/pages/StageEquipmentSystemPlan.tsx",
+        "src/pages/TouringSystem.tsx",
+        "src/pages/UnderworldNew.tsx",
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/Travel.tsx",
+        "src/components/city/CityTransportSection.tsx",
+        "src/components/company/CompanyCard.test.tsx",
+        "src/components/dashboard/GettingStartedPanel.test.ts",
+        "src/components/hub/HubLayout.test.tsx",
+        "src/components/songwriting/SongwritingScheduleDialog.test.tsx",
+        "src/components/tour/TourCreationWizard.tsx",
+        "src/components/travel/DestinationCard.tsx",
+        "src/components/travel/TransportComparison.tsx",
+        "src/components/travel/TravelBookingDialog.tsx",
+        "src/components/ui/Breadcrumbs.tsx",
+        "src/hooks/useTourBooking.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/booking/__tests__/mode.test.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/__tests__/inventoryRegistry.test.ts",
+        "src/features/festival-company/application/useFoundFestivalCompany.ts",
+        "src/features/festival-company/ui/FestivalLaunchManager.tsx",
+        "src/features/festival-company/ui/FestivalRebuildingScreen.tsx",
+        "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
+        "src/lib/notificationModels.test.ts",
+        "src/lib/songwritingResilientLoader.test.ts",
+        "src/lib/__tests__/navigationProductivity.test.ts",
+        "src/utils/dynamicTravel.ts",
+        "src/utils/gameCalendar.ts",
+        "src/utils/skillsProgressionDashboard.ts",
+        "src/utils/travelSystem.ts",
+        "src/utils/weatherSystem.ts",
+        "src/config/__tests__/fmNavigation.band.test.ts",
+        "src/config/__tests__/fmNavigation.business-career.test.ts",
+        "src/config/__tests__/fmNavigation.music.test.ts",
+        "src/config/__tests__/fmNavigation.social.test.ts",
+        "src/config/__tests__/fmNavigation.world.test.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
       "file": "src/features/festivals/service.ts",
       "kind": "module",
       "importers": [
@@ -2318,6 +2520,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -3786,6 +3989,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -4200,12 +4404,14 @@
         "src/hooks/useFestivalSlotApplications.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/lifecycle.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/__tests__/lifecycle.test.ts",
         "src/features/festivals/admin/creationValidation.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -5494,6 +5700,7 @@
         "src/hooks/useTwaats.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -5648,12 +5855,14 @@
         "src/hooks/useMerchFactory.ts",
         "src/hooks/useSecurityFirm.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
         "src/features/festivals/settlement/service.ts",
         "src/features/festivals/settlement/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.test.ts",
@@ -7726,6 +7935,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -9322,6 +9532,7 @@
         "src/hooks/useTwaats.ts",
         "src/features/festivals/booking/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -10628,6 +10839,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -12026,6 +12238,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -13092,6 +13305,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -14172,6 +14386,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -14571,6 +14786,15 @@
         "src/config/fmNavigation.ts"
       ],
       "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+      "kind": "module",
+      "importers": [],
+      "status": "unused_or_dynamic",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
       "writes": []
@@ -15246,6 +15470,7 @@
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/service.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx"
       ],
       "status": "legacy_active_or_cross_domain",
@@ -16077,6 +16302,7 @@
       "file": "src/features/festival-company/data/festivalCompanyRepository.ts",
       "kind": "module",
       "importers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyParsers.test.ts",
@@ -16230,7 +16456,10 @@
       "importers": [
         "src/pages/MyCompanies.tsx",
         "src/hooks/useCompanies.ts",
+        "src/features/festivals/resolver.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/legacy/parsers.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/__tests__/festivalArtistProgramme.test.ts",
         "src/features/festival-company/__tests__/festivalArtistWorkflows.test.ts",
@@ -16282,7 +16511,8 @@
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
-        "src/features/festival-company/ui/FestivalTimetablePlanner.tsx"
+        "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
+        "src/features/festival-company/ui/PublicFestivalPage.tsx"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -16589,6 +16819,7 @@
       "importers": [
         "src/pages/MyCompanies.test.tsx",
         "src/pages/MyCompanies.tsx",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festival-company/index.ts"
       ],
       "status": "canonical_active",
@@ -16966,6 +17197,7 @@
         "src/hooks/useLabelBusiness.ts",
         "src/hooks/useRehearsalBooking.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/mappers.ts",
@@ -16973,6 +17205,7 @@
         "src/features/festivals/admin/queryKeys.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
@@ -17009,6 +17242,7 @@
         "src/utils/gigPostConsequences.ts",
         "src/utils/gigPreshow.ts",
         "src/utils/momentHighlightsGenerator.ts",
+        "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigLive.test.ts",
         "src/config/fmNavigation.ts",
         "src/config/hubNavigation.ts",
@@ -17070,6 +17304,7 @@
         "src/hooks/useRehearsalBooking.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/legacyResolver.ts",
+        "src/features/festivals/resolver.ts",
         "src/features/festivals/service.ts",
         "src/features/festivals/types.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
@@ -17084,6 +17319,7 @@
         "src/features/festivals/legacy/parsers.ts",
         "src/features/festivals/legacy/service.ts",
         "src/features/festivals/legacy/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalWarnings.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
         "src/features/festivals/admin/components/FestivalLegacyRecordsManagement.tsx",
@@ -35086,6 +35322,42 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_public_legacy_bridges",
+      "migration": "supabase/migrations/20291218230000_canonical_festival_route_resolvers.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "resolve_public_festival_identifier",
+      "migration": "supabase/migrations/20291218230000_canonical_festival_route_resolvers.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "resolve_owner_festival_identifier",
+      "migration": "supabase/migrations/20291218230000_canonical_festival_route_resolvers.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -41269,6 +41541,32 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "resolve_owner_festival_identifier",
+      "typescriptCallers": [
+        "src/features/festivals/resolver.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218230000_canonical_festival_route_resolvers.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "resolve_public_festival_identifier",
+      "typescriptCallers": [
+        "src/features/festivals/resolver.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218230000_canonical_festival_route_resolvers.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "respond_to_festival_artist_invitation",
       "typescriptCallers": [
         "src/features/festival-company/data/festivalCompanyRepository.ts"
@@ -42336,7 +42634,6 @@
     {
       "concept": "public festival directory",
       "paths": [
-        "LegacyFestivalGate",
         "PublicFestivalDirectory"
       ],
       "delegated": false,
@@ -44110,6 +44407,82 @@
       "category": "remove_after_route_migration"
     },
     {
+      "candidate": "src/features/festivals/resolver.ts",
+      "currentCallers": [
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/Cities.tsx",
+        "src/pages/admin/ExperienceRewards.tsx",
+        "src/pages/admin/Mentors.tsx",
+        "src/pages/admin/YoutubeVideos.tsx",
+        "src/pages/talent/discovery.tsx",
+        "src/components/company/CreateCompanyDialog.tsx",
+        "src/components/social/ParticipantStatusList.test.tsx",
+        "src/components/social/ParticipantStatusList.tsx",
+        "src/hooks/useParticipationDetails.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/routes.ts",
+      "currentCallers": [
+        "src/pages/BusinessOverview.tsx",
+        "src/pages/City.tsx",
+        "src/pages/FestivalDetail.tsx",
+        "src/pages/SkillsPage.tsx",
+        "src/pages/StageEquipmentSystemPlan.tsx",
+        "src/pages/TouringSystem.tsx",
+        "src/pages/UnderworldNew.tsx",
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/Travel.tsx",
+        "src/components/city/CityTransportSection.tsx",
+        "src/components/company/CompanyCard.test.tsx",
+        "src/components/dashboard/GettingStartedPanel.test.ts",
+        "src/components/hub/HubLayout.test.tsx",
+        "src/components/songwriting/SongwritingScheduleDialog.test.tsx",
+        "src/components/tour/TourCreationWizard.tsx",
+        "src/components/travel/DestinationCard.tsx",
+        "src/components/travel/TransportComparison.tsx",
+        "src/components/travel/TravelBookingDialog.tsx",
+        "src/components/ui/Breadcrumbs.tsx",
+        "src/hooks/useTourBooking.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/booking/__tests__/mode.test.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/__tests__/inventoryRegistry.test.ts",
+        "src/features/festival-company/application/useFoundFestivalCompany.ts",
+        "src/features/festival-company/ui/FestivalLaunchManager.tsx",
+        "src/features/festival-company/ui/FestivalRebuildingScreen.tsx",
+        "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
+        "src/lib/notificationModels.test.ts",
+        "src/lib/songwritingResilientLoader.test.ts",
+        "src/lib/__tests__/navigationProductivity.test.ts",
+        "src/utils/dynamicTravel.ts",
+        "src/utils/gameCalendar.ts",
+        "src/utils/skillsProgressionDashboard.ts",
+        "src/utils/travelSystem.ts",
+        "src/utils/weatherSystem.ts",
+        "src/config/__tests__/fmNavigation.band.test.ts",
+        "src/config/__tests__/fmNavigation.business-career.test.ts",
+        "src/config/__tests__/fmNavigation.music.test.ts",
+        "src/config/__tests__/fmNavigation.social.test.ts",
+        "src/config/__tests__/fmNavigation.world.test.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
       "candidate": "src/features/festivals/service.ts",
       "currentCallers": [
         "src/pages/BandProfile.tsx",
@@ -44199,6 +44572,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -45678,6 +46052,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -46096,12 +46471,14 @@
         "src/hooks/useFestivalSlotApplications.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/lifecycle.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/__tests__/lifecycle.test.ts",
         "src/features/festivals/admin/creationValidation.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -47377,6 +47754,7 @@
         "src/hooks/useTwaats.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -47533,12 +47911,14 @@
         "src/hooks/useMerchFactory.ts",
         "src/hooks/useSecurityFirm.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
         "src/features/festivals/settlement/service.ts",
         "src/features/festivals/settlement/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.test.ts",
@@ -49594,6 +49974,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -51194,6 +51575,7 @@
         "src/hooks/useTwaats.ts",
         "src/features/festivals/booking/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -52512,6 +52894,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -53918,6 +54301,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -54992,6 +55376,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -56082,6 +56467,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
@@ -56472,6 +56858,17 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
@@ -57257,6 +57654,7 @@
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/service.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx"
       ],
       "replacement": "festival-company domain",
@@ -57908,6 +58306,7 @@
         "src/hooks/useLabelBusiness.ts",
         "src/hooks/useRehearsalBooking.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/routes.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/mappers.ts",
@@ -57915,6 +58314,7 @@
         "src/features/festivals/admin/queryKeys.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
@@ -57951,6 +58351,7 @@
         "src/utils/gigPostConsequences.ts",
         "src/utils/gigPreshow.ts",
         "src/utils/momentHighlightsGenerator.ts",
+        "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigLive.test.ts",
         "src/config/fmNavigation.ts",
         "src/config/hubNavigation.ts",
@@ -58014,6 +58415,7 @@
         "src/hooks/useRehearsalBooking.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/legacyResolver.ts",
+        "src/features/festivals/resolver.ts",
         "src/features/festivals/service.ts",
         "src/features/festivals/types.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
@@ -58028,6 +58430,7 @@
         "src/features/festivals/legacy/parsers.ts",
         "src/features/festivals/legacy/service.ts",
         "src/features/festivals/legacy/types.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalWarnings.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
         "src/features/festivals/admin/components/FestivalLegacyRecordsManagement.tsx",

@@ -75,3 +75,9 @@ The `retirement` array in the JSON is the manifest. It records candidate file, c
 * `npm run test:festivals:full-lifecycle` runs the sequential SQL lifecycle against a safe disposable database.
 * `npm run test:festivals:recovery` exercises the existing real recovery worker harness.
 * `npm run test:festivals:certification` composes all gates and never skips missing fixtures.
+
+## Canonical route certification
+
+The active route registry is `src/features/festivals/routes.ts`. Certification normalises parameter names (for example, `:id` and `:festivalId`) and treats duplicates as a hard failure. Every canonical registry entry must be mounted once, route parameters must have declared domain semantics, removed discovery navigation must stay absent, and compatibility owner redirects must call the canonical resolver.
+
+Canonical components are `PublicFestivalDirectory`, `PublicFestivalPage`, `PublicFestivalEditionPage`, `FestivalFoundingPage`, `FestivalCompanyHome`, and the shared `FestivalEditionShell`. Historical legacy detail reads are retained as read-only compatibility; legacy browser writes are disabled by default. Removal of the old browser, run wizard, standalone booking calendar and duplicate discovery UI requires redirect telemetry review and confirmation that no historical record still depends on it. Data-bearing tables are outside source-retirement scope.

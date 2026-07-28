@@ -20,6 +20,8 @@ import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
 import { LegacyFestivalGate } from "./features/festival-company";
+import { festivalRoutePatterns, festivalRoutes } from "./features/festivals/routes";
+import { FestivalFoundingPage, FestivalCompanyHome, FestivalEditionShell, FestivalEditionWorkspace, PublicFestivalEditionPage, LegacyFestivalRedirect, LegacyFestivalSetupRedirect } from "./features/festivals/ui/CanonicalFestivalRoutes";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -113,17 +115,12 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 // StreamingNew removed in v1.1.194 — consolidated into StreamingPlatforms
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
-const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
-const FestivalBrowser = lazyWithRetry(() => import("./pages/FestivalBrowser"));
 const FestivalPerformance = lazyWithRetry(() => import("./pages/FestivalPerformance"));
 const FestivalDetail = lazyWithRetry(() => import("./pages/FestivalDetail"));
-const FestivalOwnerConsole = lazyWithRetry(() => import("./pages/FestivalOwnerConsole"));
 const FestivalMarketplace = lazyWithRetry(() => import("./pages/FestivalMarketplace"));
 const FestivalDirectory = lazyWithRetry(() => import("./pages/FestivalDirectory"));
-const FestivalBookingCalendar = lazyWithRetry(() => import("./pages/FestivalBookingCalendar"));
 const FestivalSessionPage = lazyWithRetry(() => import("./pages/festivals/FestivalSessionPage"));
 const FestivalLegacyPage = lazyWithRetry(() => import("./pages/festivals/FestivalLegacyPage"));
-const FestivalRunWizard = lazyWithRetry(() => import("./pages/FestivalRunWizard"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
@@ -186,7 +183,7 @@ const SlotPurchaseSuccess = lazyWithRetry(() => import("./pages/SlotPurchaseSucc
 const CreateCharacter = lazyWithRetry(() => import("./pages/CreateCharacter"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const MyCompanies = lazyWithRetry(() => import("./pages/MyCompanies"));
-const FestivalCompanySetupPage = lazyWithRetry(() => import("./features/festival-company/ui/FestivalCompanySetupPage"));
+
 const FestivalArtistOpportunitiesPage = lazyWithRetry(() => import("./features/festival-company/ui/FestivalArtistOpportunitiesPage"));
 const PublicFestivalDirectory = lazyWithRetry(() => import("./features/festival-company/ui/PublicFestivalDirectory"));
 const PublicFestivalPage = lazyWithRetry(() => import("./features/festival-company/ui/PublicFestivalPage"));
@@ -657,8 +654,6 @@ function App() {
                     <Route path="world/studios" element={<PreserveQueryRedirect to="/recording-studio" />} />
                     <Route path="world/companies" element={<PreserveQueryRedirect to="/world-companies" />} />
                     <Route path="world/events" element={<PreserveQueryRedirect to="/major-events" />} />
-                    <Route path="world/festivals" element={<LegacyFestivalGate area="World festival directory"><PreserveQueryRedirect to="/festivals" /></LegacyFestivalGate>} />
-                    <Route path="world/festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
                     <Route path="world/pulse" element={<PreserveQueryRedirect to="/world-pulse" />} />
                     <Route path="world/leaderboards" element={<PreserveQueryRedirect to="/band-rankings" />} />
                     <Route path="cities" element={<WorldEnvironment />} />
@@ -702,13 +697,28 @@ function App() {
                     <Route path="career/discography" element={<PreserveQueryRedirect to="/release-manager" />} />
                     <Route path="career/history" element={<PreserveQueryRedirect to="/legacy" />} />
                     <Route path="my-companies" element={<MyCompanies />} />
-                    <Route path="companies/festivals/:festivalCompanyId/setup" element={<FestivalCompanySetupPage />} />
+                    <Route path="companies/festivals/:festivalCompanyId/setup" element={<LegacyFestivalSetupRedirect />} />
                     <Route path="festival-opportunities" element={<FestivalArtistOpportunitiesPage />} />
-                    <Route path="world/festivals" element={<PublicFestivalDirectory />} />
-                    <Route path="world/festivals/:festivalSlug" element={<PublicFestivalPage />} />
+                    <Route path={festivalRoutePatterns.publicDirectory} element={<PublicFestivalDirectory />} />
+                    <Route path={festivalRoutePatterns.publicCompany} element={<PublicFestivalPage />} />
+                    <Route path={festivalRoutePatterns.publicEdition} element={<PublicFestivalEditionPage />} />
+                    <Route path={festivalRoutePatterns.foundCompany} element={<FestivalFoundingPage />} />
+                    <Route path={festivalRoutePatterns.company} element={<FestivalCompanyHome />} />
+                    <Route path={festivalRoutePatterns.editions} element={<FestivalCompanyHome />} />
+                    <Route path={festivalRoutePatterns.edition} element={<FestivalEditionShell />}>
+                      <Route index element={<FestivalEditionWorkspace section="overview" />} />
+                      <Route path={festivalRoutePatterns.schedule.split("/").at(-1)} element={<FestivalEditionWorkspace section="schedule" />} />
+                      <Route path={festivalRoutePatterns.applications.split("/").at(-1)} element={<FestivalEditionWorkspace section="applications" />} />
+                      <Route path={festivalRoutePatterns.contracts.split("/").at(-1)} element={<FestivalEditionWorkspace section="contracts" />} />
+                      <Route path={festivalRoutePatterns.operations.split("/").at(-1)} element={<FestivalEditionWorkspace section="operations" />} />
+                      <Route path={festivalRoutePatterns.finance.split("/").at(-1)} element={<FestivalEditionWorkspace section="finance" />} />
+                      <Route path={festivalRoutePatterns.live.split("/").at(-1)} element={<FestivalEditionWorkspace section="live" />} />
+                      <Route path={festivalRoutePatterns.settlement.split("/").at(-1)} element={<FestivalEditionWorkspace section="settlement" />} />
+                      <Route path={festivalRoutePatterns.history.split("/").at(-1)} element={<FestivalEditionWorkspace section="history" />} />
+                    </Route>
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
-                    <Route path="festivals" element={<LegacyFestivalGate area="Festival browser"><FestivalBrowser /></LegacyFestivalGate>} />
+                    <Route path="festivals" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
                     <Route path="festivals/marketplace" element={<LegacyFestivalGate area="Festival marketplace"><FestivalMarketplace /></LegacyFestivalGate>} />
                     <Route path="festivals/directory" element={<LegacyFestivalGate area="Festival directory"><FestivalDirectory /></LegacyFestivalGate>} />
                     <Route path="festivals/results" element={<FestivalLegacyPage />} />
@@ -721,11 +731,11 @@ function App() {
                     <Route path="festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
                     <Route path="festivals/simulation" element={<LegacyFestivalGate area="Festival simulation"><FestivalsNew /></LegacyFestivalGate>} />
                     <Route path="festivals/perform/:participationId" element={<LegacyFestivalGate area="Festival performance"><FestivalPerformance /></LegacyFestivalGate>} />
-                    <Route path="festivals/:festivalId/manage" element={<LegacyFestivalGate area="Festival owner console"><FestivalOwnerConsole /></LegacyFestivalGate>} />
-                    <Route path="festivals/:festivalId/manage/editions/:editionId" element={<LegacyFestivalGate area="Festival owner console"><FestivalOwnerConsole /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/manage" element={<LegacyFestivalRedirect target="overview" />} />
+                    <Route path="festivals/:festivalId/manage/editions/:editionId" element={<LegacyFestivalRedirect target="overview" />} />
                     <Route path="festivals/sessions/:sessionId" element={<LegacyFestivalGate area="Festival live session"><FestivalSessionPage /></LegacyFestivalGate>} />
-                    <Route path="festivals/:festivalId/calendar" element={<LegacyFestivalGate area="Festival calendar"><FestivalBookingCalendar /></LegacyFestivalGate>} />
-                    <Route path="festivals/:festivalId/run" element={<LegacyFestivalGate area="Festival run wizard"><FestivalRunWizard /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId/calendar" element={<LegacyFestivalRedirect target="schedule" />} />
+                    <Route path="festivals/:festivalId/run" element={<LegacyFestivalRedirect target="operations" />} />
                     <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="bands/finder" element={<BandFinder />} />
@@ -803,7 +813,7 @@ function App() {
                     <Route path="labels/:labelId/manage" element={<LabelManagement />} />
                     <Route path="world-companies" element={<WorldCompanies />} />
                     <Route path="companies/directory" element={<WorldCompanies />} />
-                    <Route path="company/:companyId" element={<CompanyDetail />} />
+                    <Route path={festivalRoutePatterns.genericCompany} element={<CompanyDetail />} />
                     <Route path="security-firm/:companyId" element={<SecurityFirmManagement />} />
                     <Route path="merch-factory/:companyId" element={<MerchFactoryManagement />} />
                     <Route path="logistics-company/:companyId" element={<LogisticsCompanyManagement />} />
@@ -873,7 +883,9 @@ function App() {
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/music-videos" element={<MusicVideosAdmin />} />
-                    <Route path="admin/festivals" element={<FestivalsAdminPage />} />
+                    <Route path={festivalRoutePatterns.admin} element={<FestivalsAdminPage />} />
+                    <Route path={festivalRoutePatterns.adminCompany} element={<FestivalsAdminPage />} />
+                    <Route path={festivalRoutePatterns.adminEdition} element={<FestivalsAdminPage />} />
                     <Route path="admin/festival" element={<Navigate to="/admin/festivals" replace />} />
                     <Route path="admin/festival-admin" element={<Navigate to="/admin/festivals" replace />} />
                     <Route path="admin/city-festivals" element={<Navigate to="/admin/festivals" replace />} />
