@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.607",
+    date: "2026-07-28",
+    changes: [
+      { type: 'fix', description: "Booking a gig no longer fails: the book_gig booking engine was missing from the database entirely, so every gig booking returned a 'function not found' error. It has been rebuilt with full validation (band, venue, slot, date, setlist, rider, funds), atomic fee charging, gig creation, member schedule blocking and idempotent retries." },
+      { type: 'fix', description: "Booking a tour no longer fails: tour, tour venue and tour travel leg access rules only recognised the account ID, but tours are created by the active character, so every tour insert was rejected. Ownership checks now accept the current character." },
+      { type: 'improvement', description: "Gig management permissions now correctly recognise band leaders stored as character IDs as well as active band members." },
+    ],
+  },
+  {
+
     version: "1.1.606",
     date: "2026-07-26",
     changes: [
