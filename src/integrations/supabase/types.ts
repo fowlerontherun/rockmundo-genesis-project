@@ -17659,6 +17659,7 @@ export type Database = {
           attendance: number | null
           band_id: string
           booking_fee: number | null
+          booking_request_id: string | null
           completed_at: string | null
           created_at: string | null
           crowd_engagement: number | null
@@ -17678,6 +17679,7 @@ export type Database = {
           promoter_id: string | null
           rider_id: string | null
           scheduled_date: string
+          scheduled_end: string | null
           setlist_duration_minutes: number | null
           setlist_id: string | null
           setlist_quality_score: number | null
@@ -17700,6 +17702,7 @@ export type Database = {
           attendance?: number | null
           band_id: string
           booking_fee?: number | null
+          booking_request_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -17719,6 +17722,7 @@ export type Database = {
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date: string
+          scheduled_end?: string | null
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
           setlist_quality_score?: number | null
@@ -17741,6 +17745,7 @@ export type Database = {
           attendance?: number | null
           band_id?: string
           booking_fee?: number | null
+          booking_request_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
@@ -17760,6 +17765,7 @@ export type Database = {
           promoter_id?: string | null
           rider_id?: string | null
           scheduled_date?: string
+          scheduled_end?: string | null
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
           setlist_quality_score?: number | null
@@ -42234,6 +42240,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      book_gig: {
+        Args: {
+          p_band_id: string
+          p_local_date: string
+          p_request_id: string
+          p_rider_id?: string
+          p_setlist_id: string
+          p_slot: string
+          p_ticket_operator_id?: string
+          p_ticket_price: number
+          p_venue_id: string
+        }
+        Returns: Json
+      }
       botb_check_eligibility: {
         Args: { p_band_id: string; p_event_id: string }
         Returns: Json
@@ -42382,6 +42402,10 @@ export type Database = {
       }
       can_apply_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
+        Returns: boolean
+      }
+      can_manage_band_gigs: {
+        Args: { p_band_id: string; p_user_id?: string }
         Returns: boolean
       }
       can_manage_festival_booking: {
@@ -43750,6 +43774,7 @@ export type Database = {
         }
       }
       is_active_band_member: { Args: { p_band_id: string }; Returns: boolean }
+      is_caller_identity: { Args: { p_id: string }; Returns: boolean }
       is_company_owner: { Args: { _company_id: string }; Returns: boolean }
       is_current_band_member: {
         Args: { p_band_id: string; p_profile_id?: string }
