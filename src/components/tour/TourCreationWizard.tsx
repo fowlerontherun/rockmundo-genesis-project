@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Music, DollarSign, Bus, Plane, Waypoints } from "lucide-react";
+import { Bus, MapPin, Plane, Waypoints } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useTourBooking, type TourBookingData } from "@/hooks/useTourBooking";
+import { useTourBooking } from "@/hooks/useTourBooking";
 import { TourBudgetCalculator } from "./TourBudgetCalculator";
+import { TicketOperatorSelector } from "@/components/gig/TicketOperatorSelector";
 
 interface TourCreationWizardProps {
   isOpen: boolean;
@@ -18,6 +19,18 @@ interface TourCreationWizardProps {
   bandId: string;
   bandName: string;
 }
+
+type SelectedVenue = {
+  venueId: string;
+  venueName: string;
+  capacity: number;
+  cityId: string;
+  cityName: string;
+  date: string;
+  timeSlot: string;
+};
+
+const today = new Date().toISOString().slice(0, 10);
 
 export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCreationWizardProps) => {
   const [step, setStep] = useState(1);
@@ -27,70 +40,85 @@ export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCr
   const [setlistId, setSetlistId] = useState("");
   const [travelMode, setTravelMode] = useState<'auto' | 'manual' | 'tour_bus'>('auto');
   const [tourBusCost, setTourBusCost] = useState(500);
-  const [selectedVenues, setSelectedVenues] = useState<Array<{
-    venueId: string;
-    venueName: string;
-    cityId: string;
-    cityName: string;
-    date: string;
-    timeSlot: string;
-  }>>([]);
-  const [budgetEstimate, setBudgetEstimate] = useState({
-    travelCosts: 0,
-    accommodationCosts: 0,
-    crewCosts: 0,
-    estimatedRevenue: 0,
-  });
+  const [ticketPrice, setTicketPrice] = useState(20);
+  const [ticketOperatorId, setTicketOperatorId] = useState<string | null>(null);
+  const [selectedVenues, setSelectedVenues] = useState<SelectedVenue[]>([]);
+  const [budgetEstimate, setBudgetEstimate] = useState({ travelCosts: 0, accommodationCosts: 0, crewCosts: 0, estimatedRevenue: 0 });
 
   const { createTour, isCreating, calculateTourCosts } = useTourBooking();
 
-  const { data: setlists } = useQuery({
+  const { data: setlists = [] } = useQuery({
     queryKey: ['setlists', bandId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('setlists')
-        .select('*')
-        .eq('band_id', bandId);
-      return data || [];
+      const { data, error } = await supabase.from('setlists').select('*').eq('band_id', bandId);
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
-  const { data: venues } = useQuery({
+  const eligibleSetlists = useMemo(() => setlists.filter((setlist) => (setlist.song_count ?? 0) >= 6), [setlists]);
+
+  const { data: venues = [] } = useQuery({
     queryKey: ['venues-with-cities'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('venues')
-        .select('*, cities(id, name)')
-        .order('prestige_level');
-      return data || [];
+      const { data, error } = await supabase.from('venues').select('*, cities(id, name)').order('prestige_level');
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
+  const operatorRequired = selectedVenues.some((venue) => venue.capacity >= 200);
+  const stopDatesValid = selectedVenues.every((venue) => venue.date && venue.date >= startDate && venue.date <= endDate);
+  const duplicateStops = new Set(selectedVenues.map((venue) => `${venue.venueId}:${venue.date}:${venue.timeSlot}`)).size !== selectedVenues.length;
+
   useEffect(() => {
-    // Recalculate budget when venues or travel mode changes
-    if (selectedVenues.length > 0) {
-      calculateTourCosts({
-        name: tourName,
-        artistId: bandId,
-        startDate,
-        endDate,
-        setlistId,
-        travelMode,
-        tourBusCost,
-        venues: selectedVenues.map(v => ({
-          venueId: v.venueId,
-          cityId: v.cityId,
-          date: v.date,
-          timeSlot: v.timeSlot,
-        })),
-      }).then(costs => {
-        setBudgetEstimate({
-          ...costs,
-          estimatedRevenue: selectedVenues.length * 2000, // Rough estimate
-        });
-      });
-    }
-  }, [selectedVenues, travelMode, tourBusCost, bandId, startDate, endDate, setlistId, tourName, calculateTourCosts]);
+    if (!selectedVenues.length || !startDate || !endDate) return;
+    void calculateTourCosts({
+      name: tourName,
+      artistId: bandId,
+      startDate,
+      endDate,
+      setlistId,
+      travelMode,
+      tourBusCost,
+      ticketPrice,
+      ticketOperatorId: ticketOperatorId ?? undefined,
+      venues: selectedVenues,
+    }).then((costs) => setBudgetEstimate({
+      ...costs,
+      estimatedRevenue: selectedVenues.reduce((total, venue) => total + Math.min(venue.capacity, 100) * ticketPrice, 0),
+    }));
+  }, [selectedVenues, travelMode, tourBusCost, bandId, startDate, endDate, setlistId, tourName, ticketPrice, ticketOperatorId]);
+
+  const resetAndClose = () => {
+    onClose();
+    setStep(1);
+    setTourName("");
+    setStartDate("");
+    setEndDate("");
+    setSetlistId("");
+    setSelectedVenues([]);
+    setTicketOperatorId(null);
+    setTicketPrice(20);
+  };
+
+  const addVenue = (venue: any) => {
+    if (!venue || selectedVenues.some((item) => item.venueId === venue.id)) return;
+    const city = venue.cities as { id?: string; name?: string } | null;
+    setSelectedVenues((current) => [...current, {
+      venueId: venue.id,
+      venueName: venue.name,
+      capacity: venue.capacity ?? 0,
+      cityId: city?.id ?? '',
+      cityName: city?.name ?? 'Unknown',
+      date: startDate,
+      timeSlot: 'headline',
+    }]);
+  };
+
+  const updateStop = (venueId: string, field: 'date' | 'timeSlot', value: string) => {
+    setSelectedVenues((current) => current.map((venue) => venue.venueId === venueId ? { ...venue, [field]: value } : venue));
+  };
 
   const handleSubmit = () => {
     createTour({
@@ -101,288 +129,66 @@ export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCr
       setlistId,
       travelMode,
       tourBusCost,
-      venues: selectedVenues.map(v => ({
-        venueId: v.venueId,
-        cityId: v.cityId,
-        date: v.date,
-        timeSlot: v.timeSlot,
-      })),
-    }, {
-      onSuccess: () => {
-        onClose();
-        setStep(1);
-        // Reset form
-        setTourName("");
-        setStartDate("");
-        setEndDate("");
-        setSetlistId("");
-        setSelectedVenues([]);
-      },
-    });
+      ticketPrice,
+      ticketOperatorId: ticketOperatorId ?? undefined,
+      venues: selectedVenues,
+    }, { onSuccess: resetAndClose });
   };
 
-  const addVenue = (venue: any) => {
-    if (!venue || selectedVenues.find(v => v.venueId === venue.id)) return;
-
-    const cities: any = venue.cities;
-    setSelectedVenues([...selectedVenues, {
-      venueId: venue.id,
-      venueName: venue.name,
-      cityId: cities?.id || '',
-      cityName: cities?.name || 'Unknown',
-      date: startDate,
-      timeSlot: 'headline',
-    }]);
-  };
-
-  const removeVenue = (venueId: string) => {
-    setSelectedVenues(selectedVenues.filter(v => v.venueId !== venueId));
-  };
+  const nextDisabled =
+    (step === 1 && (!tourName.trim() || !startDate || !endDate || endDate < startDate || startDate < today || !setlistId)) ||
+    (step === 2 && (!selectedVenues.length || !stopDatesValid || duplicateStops)) ||
+    (step === 4 && (isCreating || ticketPrice <= 0 || (operatorRequired && !ticketOperatorId)));
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Tour - {bandName}</DialogTitle>
-        </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && resetAndClose()}>
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogHeader><DialogTitle>Create New Tour - {bandName}</DialogTitle></DialogHeader>
 
         <div className="space-y-6">
-          {/* Progress Indicator */}
-          <div className="flex items-center justify-between mb-6">
-            {[1, 2, 3, 4].map((s) => (
-              <div key={s} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                  step >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
-                  {s}
-                </div>
-                {s < 4 && <div className={`w-12 h-0.5 ${step > s ? 'bg-primary' : 'bg-muted'}`} />}
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            {[1, 2, 3, 4].map((value) => <div key={value} className={`flex h-8 w-8 items-center justify-center rounded-full font-semibold ${step >= value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{value}</div>)}
           </div>
 
-          {/* Step 1: Basic Info */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div>
-                <Label>Tour Name</Label>
-                <Input
-                  value={tourName}
-                  onChange={(e) => setTourName(e.target.value)}
-                  placeholder="e.g., Summer Tour 2025"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Setlist</Label>
-                <Select value={setlistId} onValueChange={setSetlistId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a setlist" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {setlists?.map(sl => (
-                      <SelectItem key={sl.id} value={sl.id}>
-                        {sl.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {step === 1 && <div className="space-y-4">
+            <div><Label>Tour Name</Label><Input value={tourName} onChange={(event) => setTourName(event.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Start Date</Label><Input type="date" min={today} value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
+              <div><Label>End Date</Label><Input type="date" min={startDate || today} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div>
             </div>
-          )}
+            <div><Label>Setlist</Label><Select value={setlistId} onValueChange={setSetlistId}><SelectTrigger><SelectValue placeholder="Choose an eligible setlist" /></SelectTrigger><SelectContent>{eligibleSetlists.map((setlist) => <SelectItem key={setlist.id} value={setlist.id}>{setlist.name}</SelectItem>)}</SelectContent></Select></div>
+            {!eligibleSetlists.length && <p className="text-sm text-destructive">Create a setlist containing at least six songs before booking a tour.</p>}
+          </div>}
 
-          {/* Step 2: Select Venues */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div>
-                <Label>Selected Venues ({selectedVenues.length})</Label>
-                <div className="space-y-2 mt-2">
-                  {selectedVenues.map((v) => (
-                    <Card key={v.venueId}>
-                      <CardContent className="flex items-center justify-between p-3">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <div>
-                            <p className="font-semibold text-sm">{v.venueName}</p>
-                            <p className="text-xs text-muted-foreground">{v.cityName}</p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeVenue(v.venueId)}
-                        >
-                          Remove
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label>Available Venues</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2 max-h-[300px] overflow-y-auto">
-                  {venues?.map((venue) => (
-                    <Card
-                      key={venue.id}
-                      className="cursor-pointer hover:bg-accent transition-colors"
-                      onClick={() => addVenue(venue)}
-                    >
-                      <CardContent className="p-3">
-                        <p className="font-semibold text-sm">{venue.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(venue.cities as any)?.name || 'Unknown'}
-                        </p>
-                        <Badge variant="outline" className="mt-1">
-                          {venue.capacity} capacity
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+          {step === 2 && <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tour Stops ({selectedVenues.length})</Label>
+              {selectedVenues.map((venue) => <Card key={venue.venueId}><CardContent className="grid gap-3 p-3 md:grid-cols-[1fr_160px_150px_auto] md:items-end">
+                <div><p className="font-semibold">{venue.venueName}</p><p className="text-xs text-muted-foreground">{venue.cityName} · {venue.capacity} capacity</p></div>
+                <div><Label>Date</Label><Input type="date" min={startDate} max={endDate} value={venue.date} onChange={(event) => updateStop(venue.venueId, 'date', event.target.value)} /></div>
+                <div><Label>Slot</Label><Select value={venue.timeSlot} onValueChange={(value) => updateStop(venue.venueId, 'timeSlot', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="kids">Kids</SelectItem><SelectItem value="opening">Opening</SelectItem><SelectItem value="support">Support</SelectItem><SelectItem value="headline">Headline</SelectItem></SelectContent></Select></div>
+                <Button variant="ghost" onClick={() => setSelectedVenues((current) => current.filter((item) => item.venueId !== venue.venueId))}>Remove</Button>
+              </CardContent></Card>)}
             </div>
-          )}
+            {duplicateStops && <p className="text-sm text-destructive">Duplicate venue/date/slot combinations are not allowed.</p>}
+            <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto">{venues.map((venue) => <Card key={venue.id} className="cursor-pointer hover:bg-accent" onClick={() => addVenue(venue)}><CardContent className="p-3"><p className="font-semibold">{venue.name}</p><p className="text-xs text-muted-foreground">{(venue.cities as any)?.name ?? 'Unknown'}</p><Badge variant="outline" className="mt-1">{venue.capacity} capacity</Badge></CardContent></Card>)}</div>
+          </div>}
 
-          {/* Step 3: Travel Options */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <Label>Travel Mode</Label>
-              <div className="grid grid-cols-3 gap-3">
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    travelMode === 'auto' ? 'border-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setTravelMode('auto')}
-                >
-                  <CardContent className="p-4 text-center">
-                    <Plane className="h-8 w-8 mx-auto mb-2" />
-                    <p className="font-semibold">Auto-Book</p>
-                    <p className="text-xs text-muted-foreground">
-                      System finds cheapest routes
-                    </p>
-                  </CardContent>
-                </Card>
+          {step === 3 && <div className="grid grid-cols-3 gap-3">
+            {([{ id: 'auto', icon: Plane, label: 'Auto-Book' }, { id: 'tour_bus', icon: Bus, label: 'Tour Bus' }, { id: 'manual', icon: Waypoints, label: 'Manual' }] as const).map(({ id, icon: Icon, label }) => <Card key={id} className={`cursor-pointer ${travelMode === id ? 'border-primary bg-primary/5' : ''}`} onClick={() => setTravelMode(id)}><CardContent className="p-4 text-center"><Icon className="mx-auto mb-2 h-8 w-8" /><p className="font-semibold">{label}</p></CardContent></Card>)}
+            {travelMode === 'tour_bus' && <div className="col-span-3"><Label>Daily Tour Bus Cost</Label><Input type="number" min={1} value={tourBusCost} onChange={(event) => setTourBusCost(Number(event.target.value) || 500)} /></div>}
+          </div>}
 
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    travelMode === 'tour_bus' ? 'border-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setTravelMode('tour_bus')}
-                >
-                  <CardContent className="p-4 text-center">
-                    <Bus className="h-8 w-8 mx-auto mb-2" />
-                    <p className="font-semibold">Tour Bus</p>
-                    <p className="text-xs text-muted-foreground">
-                      Fixed daily cost
-                    </p>
-                  </CardContent>
-                </Card>
+          {step === 4 && <div className="space-y-4">
+            <div><Label>Ticket Price</Label><Input type="number" min={1} value={ticketPrice} onChange={(event) => setTicketPrice(Number(event.target.value) || 0)} /></div>
+            {operatorRequired && <TicketOperatorSelector venueCapacity={Math.max(...selectedVenues.map((venue) => venue.capacity))} selectedOperatorId={ticketOperatorId} onSelectOperator={setTicketOperatorId} />}
+            <TourBudgetCalculator travelCosts={budgetEstimate.travelCosts} accommodationCosts={budgetEstimate.accommodationCosts} crewCosts={budgetEstimate.crewCosts} estimatedRevenue={budgetEstimate.estimatedRevenue} numberOfGigs={selectedVenues.length} />
+            <Card><CardContent className="space-y-2 p-4 text-sm"><div className="flex justify-between"><span>Tour</span><strong>{tourName}</strong></div><div className="flex justify-between"><span>Dates</span><strong>{startDate} to {endDate}</strong></div><div className="flex justify-between"><span>Stops</span><strong>{selectedVenues.length}</strong></div></CardContent></Card>
+          </div>}
 
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    travelMode === 'manual' ? 'border-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setTravelMode('manual')}
-                >
-                  <CardContent className="p-4 text-center">
-                    <Waypoints className="h-8 w-8 mx-auto mb-2" />
-                    <p className="font-semibold">Manual</p>
-                    <p className="text-xs text-muted-foreground">
-                      Book travel yourself
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {travelMode === 'tour_bus' && (
-                <div>
-                  <Label>Daily Tour Bus Cost</Label>
-                  <Input
-                    type="number"
-                    value={tourBusCost}
-                    onChange={(e) => setTourBusCost(parseInt(e.target.value) || 500)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 4: Budget Review */}
-          {step === 4 && (
-            <div className="space-y-4">
-              <TourBudgetCalculator
-                travelCosts={budgetEstimate.travelCosts}
-                accommodationCosts={budgetEstimate.accommodationCosts}
-                crewCosts={budgetEstimate.crewCosts}
-                estimatedRevenue={budgetEstimate.estimatedRevenue}
-                numberOfGigs={selectedVenues.length}
-              />
-
-              <Card>
-                <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Tour Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tour Name:</span>
-                      <span className="font-medium">{tourName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span className="font-medium">
-                        {startDate} to {endDate}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Venues:</span>
-                      <span className="font-medium">{selectedVenues.length} stops</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Travel Mode:</span>
-                      <Badge variant="outline">{travelMode}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => step > 1 ? setStep(step - 1) : onClose()}
-            >
-              {step === 1 ? 'Cancel' : 'Back'}
-            </Button>
-            <Button
-              onClick={() => step < 4 ? setStep(step + 1) : handleSubmit()}
-              disabled={
-                (step === 1 && (!tourName || !startDate || !endDate || !setlistId)) ||
-                (step === 2 && selectedVenues.length === 0) ||
-                (step === 4 && isCreating)
-              }
-            >
-              {step === 4 ? (isCreating ? 'Creating...' : 'Create Tour') : 'Next'}
-            </Button>
+          <div className="flex justify-between border-t pt-4">
+            <Button variant="outline" onClick={() => step > 1 ? setStep(step - 1) : resetAndClose()}>{step === 1 ? 'Cancel' : 'Back'}</Button>
+            <Button onClick={() => step < 4 ? setStep(step + 1) : handleSubmit()} disabled={nextDisabled}>{step === 4 ? (isCreating ? 'Creating...' : 'Create Tour') : 'Next'}</Button>
           </div>
         </div>
       </DialogContent>
