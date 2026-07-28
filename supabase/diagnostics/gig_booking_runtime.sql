@@ -13,12 +13,24 @@ END $$;
 
 SELECT current_database() AS database_name, current_user AS inspected_by, now() AS inspected_at;
 
+-- These versions each have two files in git.  A bare version match is not proof
+-- that the gig payload ran: the Supabase ledger can record only one migration for
+-- a version, and production may instead have recorded the podcast payload.
 SELECT required.version,
+       required.expected_gig_migration,
        EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations sm
-               WHERE sm.version = required.version) AS installed,
+               WHERE sm.version = required.version) AS version_recorded,
        (SELECT sm.name FROM supabase_migrations.schema_migrations sm
-        WHERE sm.version = required.version LIMIT 1) AS recorded_name
-FROM (VALUES ('20260728140000'), ('20260728150000')) AS required(version)
+        WHERE sm.version = required.version LIMIT 1) AS recorded_name,
+       EXISTS (
+         SELECT 1 FROM supabase_migrations.schema_migrations sm
+         WHERE sm.version = required.version
+           AND sm.name = required.expected_gig_migration
+       ) AS gig_payload_recorded
+FROM (VALUES
+  ('20260728140000', 'audit_gig_booking_runtime'),
+  ('20260728150000', 'align_gig_lineup_trigger_members')
+) AS required(version, expected_gig_migration)
 ORDER BY required.version;
 
 -- A version row cannot distinguish same-version files. The definitions below are
@@ -30,7 +42,8 @@ JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
   AND p.proname IN (
     'book_gig', 'active_band_performing_members', 'seed_gig_performers',
-    'check_gig_member_schedule_conflicts', 'calculate_predicted_tickets'
+    'check_gig_member_schedule_conflicts', 'calculate_predicted_tickets',
+    'validate_gig_performer', 'seed_gig_performers_on_insert'
   )
 ORDER BY p.proname, p.oid::regprocedure::text;
 
@@ -80,7 +93,7 @@ WITH referenced(table_name, column_name, referenced_by) AS (VALUES
  ('player_scheduled_activities','linked_gig_id','book_gig'), ('player_scheduled_activities','metadata','book_gig'),
  ('gig_performers','gig_id','seed_gig_performers'), ('gig_performers','band_id','seed_gig_performers'),
  ('gig_performers','profile_id','seed_gig_performers'), ('gig_performers','role_or_instrument','seed_gig_performers'),
- ('gig_performers','lineup_status','seed_gig_performers'), ('gig_performers','selected_at','seed_gig_performers')
+ ('gig_performers','lineup_status','seed_gig_performers'), ('gig_performers','selected_at','seed_gig_performers/validate_gig_performer')
 )
 SELECT r.* FROM referenced r
 LEFT JOIN information_schema.columns c ON c.table_schema='public'

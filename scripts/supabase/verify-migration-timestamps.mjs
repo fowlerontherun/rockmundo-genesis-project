@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const migrationDirectory = join(process.cwd(), "supabase", "migrations");
@@ -32,7 +32,16 @@ const today = new Date();
 const reasonableFuture = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 2, 23, 59, 59));
 const failures = [];
 const exceptions = [];
-for (const filename of readdirSync(migrationDirectory).filter((name) => name.endsWith(".sql"))) {
+const migrationFiles = readdirSync(migrationDirectory).filter((name) => name.endsWith(".sql"));
+const filesByTimestamp = new Map();
+const documentedDuplicateTimestamps = new Map(
+  Object.entries(JSON.parse(readFileSync(
+    join(process.cwd(), "scripts", "supabase", "migration-timestamp-collisions.json"),
+    "utf8",
+  ))).map(([stamp, filenames]) => [stamp, new Set(filenames)]),
+);
+
+for (const filename of migrationFiles) {
   const match = filename.match(filenamePattern);
   if (!match) {
     if (legacySequenceNames.has(filename)) { exceptions.push(filename); continue; }
@@ -55,6 +64,24 @@ for (const filename of readdirSync(migrationDirectory).filter((name) => name.end
     // are rejected. The anomaly and forward-only strategy are documented in the README.
     failures.push(`${filename}: timestamp is unreasonably beyond the current date (maximum two-day clock skew)`);
   }
+  const timestampFiles = filesByTimestamp.get(stamp) ?? [];
+  timestampFiles.push(filename);
+  filesByTimestamp.set(stamp, timestampFiles);
+}
+
+// Supabase identifies migrations by timestamp, not by the complete filename.
+// Preserve the exact already-deployed collision sets so history is never
+// rewritten, but reject every new collision or addition to a frozen set.
+for (const [stamp, filenames] of filesByTimestamp) {
+  if (filenames.length < 2) continue;
+  const allowed = documentedDuplicateTimestamps.get(stamp);
+  const actual = new Set(filenames);
+  const isExactDocumentedSet = allowed
+    && actual.size === allowed.size
+    && [...actual].every((filename) => allowed.has(filename));
+  if (!isExactDocumentedSet) {
+    failures.push(`${stamp}: duplicate migration timestamp used by ${filenames.sort().join(", ")}`);
+  }
 }
 if (failures.length) { console.error("Supabase migration timestamp verification failed:\n" + failures.map((item) => `- ${item}`).join("\n")); process.exit(1); }
-console.log(`Verified migration filename timestamps. ${exceptions.length} documented legacy 2029 migration(s) were allowed; new future-dated migrations are prohibited.`);
+console.log(`Verified migration filename timestamps. ${exceptions.length} documented legacy 2029 migration(s) and ${documentedDuplicateTimestamps.size} frozen timestamp collision(s) were allowed; new future-dated or duplicate migrations are prohibited.`);

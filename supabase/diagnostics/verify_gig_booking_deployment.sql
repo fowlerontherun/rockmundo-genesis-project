@@ -17,5 +17,13 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20260728160000') THEN
     RAISE EXCEPTION 'verification failed: repair migration 20260728160000 is not installed';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20291218235000') THEN
+    RAISE EXCEPTION 'verification failed: repair migration 20291218235000 is not installed';
+  END IF;
+  v_definition := pg_get_functiondef('public.validate_gig_performer()'::regprocedure);
+  IF position('new.updated_at' IN lower(v_definition)) > 0
+     OR position('new.performed_at' IN lower(v_definition)) > 0 THEN
+    RAISE EXCEPTION 'verification failed: gig performer INSERT validator retains an absent optional column';
+  END IF;
 END $$;
 SELECT 'gig booking deployment verified' AS result;
