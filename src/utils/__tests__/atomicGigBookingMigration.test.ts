@@ -87,3 +87,19 @@ describe('gig ticket prediction trigger hotfix', () => {
     expect(triggerHotfixSql).toContain('TO authenticated, service_role');
   });
 });
+
+
+describe('legacy current-travel gig booking blocker', () => {
+  const travelHotfixSql = readFileSync('supabase/migrations/20260728130000_replace_legacy_gig_travel_trigger.sql', 'utf8');
+
+  it('replaces the current-travel trigger with a scheduled interval check', () => {
+    expect(travelHotfixSql).toContain('DROP TRIGGER IF EXISTS prevent_gig_booking_while_traveling ON public.gigs');
+    expect(travelHotfixSql).toContain('CREATE TRIGGER check_gig_member_schedule_conflicts');
+    expect(travelHotfixSql).toContain('a.scheduled_start < v_end');
+    expect(travelHotfixSql).toContain('a.scheduled_end > NEW.scheduled_date');
+  });
+
+  it('returns the existing player-facing conflict code', () => {
+    expect(travelHotfixSql).toContain("RAISE EXCEPTION 'gig_booking_band_conflict'");
+  });
+});

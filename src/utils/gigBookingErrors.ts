@@ -18,6 +18,7 @@ const messages: Array<[string, string, string]> = [
   ['gig_booking_operator_required', 'Ticket operator required', 'Choose an available ticket operator for this venue.'],
   ['gig_booking_request_conflict', 'Duplicate request', 'This booking request was already used with different details. Please reopen the dialog.'],
   ['gig_booking_profile_missing', 'Account setup incomplete', 'Your active player profile could not be resolved. Please reload and try again.'],
+  ['Cannot perform this action while traveling', 'Travel in progress', 'You cannot make this booking while your character is currently travelling. Try again after arrival.'],
 ];
 
 export function getGigBookingPlayerError(error: GigBookingErrorLike) {
@@ -31,8 +32,9 @@ export function getGigBookingPlayerError(error: GigBookingErrorLike) {
       description: 'The gig-booking database update is not installed yet. Please contact an administrator.',
     };
   }
+  const reference = error.code && /^[A-Z0-9]{4,10}$/.test(error.code) ? ` Reference: ${error.code}.` : '';
   return {
     title: 'Booking failed',
-    description: 'We could not schedule that gig. No booking fee was charged. Please try again later.',
+    description: `We could not schedule that gig. No booking fee was charged.${reference} Please try again later.`,
   };
 }

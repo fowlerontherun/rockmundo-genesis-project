@@ -20,4 +20,17 @@ describe('getGigBookingPlayerError', () => {
   it('identifies a missing RPC migration', () => {
     expect(getGigBookingPlayerError({ code: 'PGRST202' }).title).toBe('Booking service unavailable');
   });
+
+  it('explains the legacy current-travel rejection', () => {
+    expect(getGigBookingPlayerError({ message: 'Cannot perform this action while traveling' })).toEqual({
+      title: 'Travel in progress',
+      description: 'You cannot make this booking while your character is currently travelling. Try again after arrival.',
+    });
+  });
+
+  it('includes a safe database reference for an unknown failure', () => {
+    const result = getGigBookingPlayerError({ code: '23502', message: 'internal database text' });
+    expect(result.description).toContain('Reference: 23502.');
+    expect(result.description).not.toContain('internal database text');
+  });
 });
