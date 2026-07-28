@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
-import { listTours, updateTour } from "@/lib/api/tours";
+import { listTours, rescheduleTour, updateTour } from "@/lib/api/tours";
 import type { UpdateTourInput } from "@/lib/api/tours";
 
 export const useTours = (bandId?: string) => {
@@ -48,6 +48,17 @@ export const useTours = (bandId?: string) => {
     },
   });
 
+  const invalidateTourSchedule = () => {
+    queryClient.invalidateQueries({ queryKey: ["tours"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });
+    queryClient.invalidateQueries({ queryKey: ["gigs"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-venues"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-travel-legs"] });
+    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+    queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
+  };
+
   const updateTourMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateTourInput }) =>
       updateTour(id, input),
@@ -75,6 +86,39 @@ export const useTours = (bandId?: string) => {
     },
   });
 
+  const rescheduleTourMutation = useMutation({
+    mutationFn: ({ id, newStartDate, requestId }: { id: string; newStartDate: string; requestId?: string }) =>
+      rescheduleTour(id, newStartDate, requestId),
+    onSuccess: (result) => {
+      invalidateTourSchedule();
+      toast({
+        title: result.already_rescheduled ? "Tour already rescheduled" : "Tour rescheduled",
+        description: result.already_rescheduled
+          ? "This rescheduling request had already been applied."
+          : `${result.gigs_moved ?? 0} gigs and ${result.travel_legs_moved ?? 0} travel legs were moved together.`,
+      });
+    },
+    onError: (error: Error) => {
+      const description = error.message.includes("tour_reschedule_forbidden")
+        ? "You do not have permission to reschedule this tour."
+        : error.message.includes("tour_reschedule_state_invalid") || error.message.includes("tour_reschedule_started")
+          ? "Only tours that have not started can be rescheduled."
+          : error.message.includes("tour_reschedule_past_date")
+            ? "The new tour start date cannot be in the past."
+            : error.message.includes("tour_reschedule_band_conflict")
+              ? "The band already has another booking during the proposed dates."
+              : error.message.includes("tour_reschedule_venue_conflict")
+                ? "A venue is unavailable during the proposed dates."
+                : "The tour could not be rescheduled. No dates were changed.";
+
+      toast({
+        title: "Failed to reschedule tour",
+        description,
+        variant: "destructive",
+      });
+    },
+  });
+
   const cancelTourMutation = useMutation({
     mutationFn: async (tourId: string) => {
       const { data, error } = await (supabase.rpc as any)("cancel_tour", {
@@ -90,10 +134,7 @@ export const useTours = (bandId?: string) => {
       };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
-      queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });
-      queryClient.invalidateQueries({ queryKey: ["gigs"] });
-      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      invalidateTourSchedule();
       queryClient.invalidateQueries({ queryKey: ["band-for-tour"] });
 
       const refundAmount = Number(result.refund_amount ?? 0);
@@ -127,6 +168,7 @@ export const useTours = (bandId?: string) => {
     toursLoading,
     gigsLoading,
     updateTour: updateTourMutation,
+    rescheduleTour: rescheduleTourMutation,
     cancelTour: cancelTourMutation,
   };
 };

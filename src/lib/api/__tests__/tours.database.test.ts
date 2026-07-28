@@ -4,7 +4,7 @@ vi.stubEnv("VITE_SUPABASE_URL", "https://example.supabase.co");
 vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "test-key");
 
 const { supabase } = await import("@/integrations/supabase/client");
-const { getTour, listTours, updateTour } = await import("@/lib/api/tours");
+const { getTour, listTours, rescheduleTour, updateTour } = await import("@/lib/api/tours");
 
 const fromMock = vi.fn();
 const rpcMock = vi.fn();
@@ -53,6 +53,30 @@ describe("tour database service", () => {
     expect(rpcMock).toHaveBeenCalledWith("update_tour_metadata", {
       p_tour_id: "tour-2",
       p_name: "Beta Run Deluxe",
+    });
+    expect(fromMock).not.toHaveBeenCalledWith("tours");
+  });
+
+  it("reschedules the complete tour through one idempotent RPC", async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        tour: { id: "tour-2", start_date: "2026-09-01" },
+        already_rescheduled: false,
+        gigs_moved: 4,
+        travel_legs_moved: 3,
+      },
+      error: null,
+    });
+
+    await expect(rescheduleTour("tour-2", "2026-09-01", "request-1")).resolves.toMatchObject({
+      gigs_moved: 4,
+      travel_legs_moved: 3,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith("reschedule_tour", {
+      p_tour_id: "tour-2",
+      p_new_start_date: "2026-09-01",
+      p_request_id: "request-1",
     });
     expect(fromMock).not.toHaveBeenCalledWith("tours");
   });
