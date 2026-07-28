@@ -133,3 +133,18 @@ describe('fully audited gig booking runtime repair', () => {
     expect(runtimeSql).toContain("NOTIFY pgrst, 'reload schema'");
   });
 });
+
+describe('gig lineup trigger membership alignment', () => {
+  const lineupSql = readFileSync('supabase/migrations/20260728150000_align_gig_lineup_trigger_members.sql', 'utf8');
+
+  it('uses the canonical performing-member helper instead of duplicating membership fields', () => {
+    expect(lineupSql).toContain('public.active_band_performing_members(v_gig.band_id)');
+    expect(lineupSql).not.toContain('bm.member_status');
+    expect(lineupSql).not.toContain('bm.is_touring_member');
+  });
+
+  it('keeps the existing INSERT trigger helper idempotent and refreshes PostgREST', () => {
+    expect(lineupSql).toContain('ON CONFLICT ON CONSTRAINT gig_performers_unique DO NOTHING');
+    expect(lineupSql).toContain("NOTIFY pgrst, 'reload schema'");
+  });
+});
