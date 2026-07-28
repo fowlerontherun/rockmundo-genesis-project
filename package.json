@@ -39,6 +39,10 @@
     "test:festivals:hardening:db": "bash scripts/festivals/run-hardening-db-gate.sh",
     "test:festivals:company-runtime": "bash scripts/festivals/run-company-runtime-gate.sh",
     "test:festivals:recovery": "bash scripts/festivals/run-lifecycle-recovery-db-gate.sh",
+    "test:festivals:active-callers": "node scripts/festivals/certify-active-system.mjs --check",
+    "test:festivals:routes": "node --test scripts/festivals/festival-routes.test.mjs",
+    "test:festivals:full-lifecycle": "bash scripts/festivals/run-full-lifecycle-db-gate.sh",
+    "test:festivals:certification": "bash scripts/festivals/run-certification-gate.sh",
     "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
     "verify:dependencies": "npm ls --all",
     "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs"
