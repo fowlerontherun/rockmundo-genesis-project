@@ -18,7 +18,9 @@ BEGIN
     ('gigs','booking_request_id'), ('gigs','ticket_operator_id'),
     ('player_scheduled_activities','linked_gig_id'), ('player_scheduled_activities','profile_id'),
     ('player_scheduled_activities','user_id'), ('player_scheduled_activities','scheduled_start'),
-    ('player_scheduled_activities','scheduled_end')),
+    ('player_scheduled_activities','scheduled_end'),
+    ('gig_performers','gig_id'), ('gig_performers','band_id'), ('gig_performers','profile_id'),
+    ('gig_performers','role_or_instrument'), ('gig_performers','lineup_status'), ('gig_performers','selected_at')),
   absent AS (
     SELECT r.* FROM required r LEFT JOIN information_schema.columns c
       ON c.table_schema='public' AND c.table_name=r.table_name AND c.column_name=r.column_name
@@ -32,6 +34,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='public.gigs'::regclass AND NOT tgisinternal) THEN
     RAISE EXCEPTION 'production-like schema has no gig triggers';
+  END IF;
+  IF position('active_band_performing_members' IN pg_get_functiondef('public.seed_gig_performers(uuid)'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'gig INSERT lineup trigger bypasses canonical performing members';
   END IF;
 END $$;
 
@@ -90,6 +95,9 @@ BEGIN
   IF after_balance <> before_balance-fee THEN RAISE EXCEPTION 'balance was not deducted exactly once'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.player_scheduled_activities WHERE linked_gig_id=gig_id) THEN
     RAISE EXCEPTION 'active member activities were not created';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.gig_performers WHERE gig_id=gig_id AND profile_id=actor_profile_id) THEN
+    RAISE EXCEPTION 'gig INSERT lineup trigger did not include the row-less leader';
   END IF;
 
   retry_result := public.book_gig(v_band_id,v_venue_id,v_setlist_id,current_date+30,'headline',10,request_id,NULL,NULL);
