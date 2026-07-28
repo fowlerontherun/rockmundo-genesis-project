@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseFestivalSitePlanResult,
   sitePlanToDraft,
+  type FestivalSitePlan,
 } from "../domain/festivalSitePlan";
 import {
   slugifyStage,
@@ -30,7 +31,7 @@ const stage = {
   standardSlotMinutes: 45,
   status: "planned",
 };
-const sitePlan = {
+const sitePlan: FestivalSitePlan = {
   id: null,
   siteSource: "temporary_site",
   existingVenueId: null,

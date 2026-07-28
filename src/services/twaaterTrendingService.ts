@@ -88,7 +88,8 @@ export const extractTrendingTopics = (twaats: TrendingTwaatRow[]): TrendingTopic
   const hashtagCounts = new Map<string, number>();
 
   twaats.forEach((twaat) => {
-    const hashtags = twaat.body?.match(/#[a-zA-Z0-9_]+/g) || [];
+    const body = typeof twaat.body === "string" ? twaat.body : "";
+    const hashtags: string[] = body.match(/#[a-zA-Z0-9_]+/g) ?? [];
     hashtags.forEach((tag) => {
       const normalized = tag.toLowerCase();
       hashtagCounts.set(normalized, (hashtagCounts.get(normalized) || 0) + 1);

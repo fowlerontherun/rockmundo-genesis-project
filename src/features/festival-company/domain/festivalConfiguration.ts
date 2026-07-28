@@ -163,11 +163,11 @@ export function parseFestivalConfiguration(
     !Array.isArray(value.scales) ||
     !Array.isArray(value.cities)
   )
-    malformed();
+    return malformed();
   const scales = value.scales.map(parseScale);
   const cities = value.cities.map(parseCity);
   if (scales.some((entry) => !entry) || cities.some((entry) => !entry))
-    malformed();
+    return malformed();
   const homeCity = value.homeCity === null ? null : parseCity(value.homeCity);
   const festivalScale = value.festivalScale;
   const start = value.plannedStartDate;
@@ -191,7 +191,7 @@ export function parseFestivalConfiguration(
       (typeof updatedAt === "string" && validTimestamp(updatedAt))
     )
   )
-    malformed();
+    return malformed();
   const calculated = inclusiveDuration(
     start as string | null,
     end as string | null,
@@ -206,7 +206,7 @@ export function parseFestivalConfiguration(
     (homeCity &&
       !(cities as FestivalCity[]).some((entry) => entry.id === homeCity.id))
   )
-    malformed();
+    return malformed();
   const status = value.setupStatus as FestivalConfigurationStatus;
   if (
     (status === "schedule_complete" ||
@@ -214,7 +214,7 @@ export function parseFestivalConfiguration(
       status === "ready_for_planning") &&
     calculated === null
   )
-    malformed();
+    return malformed();
   if (
     status === "ready_for_planning" &&
     (value.publicName.trim().length < 3 ||
@@ -222,7 +222,7 @@ export function parseFestivalConfiguration(
       !festivalScale ||
       calculated === null)
   )
-    malformed();
+    return malformed();
   return {
     festivalCompanyId: value.festivalCompanyId,
     legalCompanyName: value.legalCompanyName,
