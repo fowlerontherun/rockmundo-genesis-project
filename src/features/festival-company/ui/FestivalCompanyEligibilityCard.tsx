@@ -10,9 +10,7 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { useFestivalFeatureFlags } from "../config/featureFlags";
 import { useFoundFestivalCompany } from "../application/useFoundFestivalCompany";
 import { useFestivalCompanyFoundingEligibility } from "../application/useFestivalCompanyCapabilities";
-import { FESTIVAL_FOUNDING_COST } from "../domain/festivalCompany";
-
-const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+const formatCurrency = (amount: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(amount);
 const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export const FestivalCompanyEligibilityCard = () => {
@@ -63,11 +61,11 @@ export const FestivalCompanyEligibilityCard = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border p-3"><div className="text-sm text-muted-foreground">Founding cost</div><div className="font-semibold">{formatCurrency(FESTIVAL_FOUNDING_COST)}</div></div>
+          <div className="rounded-lg border p-3"><div className="text-sm text-muted-foreground">Founding cost</div><div className="font-semibold">{eligibility ? formatCurrency(eligibility.foundingCost) : "Loading…"}</div></div>
           <div className="rounded-lg border p-3"><div className="text-sm text-muted-foreground">Company balance</div><div className="font-semibold">{formatCurrency(0)}</div></div>
           <div className="rounded-lg border p-3"><div className="text-sm text-muted-foreground">Personal cash</div><div className="font-semibold">{formatCurrency(personalCash)}</div></div>
         </div>
-        <p className="text-sm text-muted-foreground flex gap-2"><DollarSign className="h-4 w-4 shrink-0" /> The $2,000,000 is a founding/setup expense charged from personal cash. It does not become company capital; owner funding transfers arrive in a later PR.</p>
+        <p className="text-sm text-muted-foreground flex gap-2"><DollarSign className="h-4 w-4 shrink-0" /> The server-configured founding fee is charged from personal cash and does not become company capital.</p>
         {capabilitiesLoading && <p className="text-sm text-muted-foreground">Checking server festival creation capabilities...</p>}
         {!localCreationEnabled && <p className="text-sm text-amber-600">Festival creation is disabled by the local emergency UI flag.</p>}
         {!capabilitiesLoading && !serverSystemEnabled && <p className="text-sm text-amber-600">The replacement festival system is disabled on the server.</p>}

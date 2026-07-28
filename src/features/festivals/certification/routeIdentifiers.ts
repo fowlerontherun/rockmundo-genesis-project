@@ -4,6 +4,7 @@ export const FESTIVAL_ROUTE_ERRORS = {
   legacy: "FESTIVAL_IDENTIFIER_LEGACY_ONLY",
   ambiguous: "FESTIVAL_IDENTIFIER_AMBIGUOUS",
   denied: "FESTIVAL_EDITION_ACCESS_DENIED",
+  mismatch: "FESTIVAL_EDITION_COMPANY_MISMATCH",
 } as const;
 
 export type FestivalIdentifierKind =

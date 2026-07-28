@@ -14,6 +14,8 @@
 
 export interface FestivalFeatureFlags {
   legacyFestivalSystemEnabled: boolean;
+  legacyFestivalReadEnabled: boolean;
+  legacyFestivalWriteEnabled: boolean;
   newFestivalSystemEnabled: boolean;
   festivalCreationEnabled: boolean;
   festivalApplicationsEnabled: boolean;
@@ -40,6 +42,10 @@ export const resolveFestivalFeatureFlags = (
   legacyFestivalSystemEnabled:
     overrides.legacyFestivalSystemEnabled ??
     bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM"), true),
+  legacyFestivalReadEnabled:
+    overrides.legacyFestivalReadEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_READ"), true),
+  legacyFestivalWriteEnabled:
+    overrides.legacyFestivalWriteEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_WRITE"), false),
   newFestivalSystemEnabled:
     overrides.newFestivalSystemEnabled ??
     bool(readEnv("VITE_FEATURE_NEW_FESTIVAL_SYSTEM"), false),
