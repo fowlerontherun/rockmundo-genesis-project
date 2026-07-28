@@ -234,6 +234,7 @@ export const FM_MODULES: FMModule[] = [
           { label: "Book Gigs", path: "/gig-booking", icon: Calendar },
           { label: "My Gigs", path: "/band/gigs", icon: Mic2 },
           { label: "Open Mic", path: "/open-mic", icon: Mic },
+          { label: "Battle of the Bands", path: "/battle-of-the-bands", icon: Trophy },
           { label: "Jam Sessions", path: "/jam-sessions", icon: Music },
           { label: "Busking", path: "/busking", icon: Music },
           { label: "Stage Setup", path: "/stage-setup", icon: Guitar },

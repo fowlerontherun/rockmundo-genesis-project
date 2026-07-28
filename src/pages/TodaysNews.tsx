@@ -30,6 +30,7 @@ import { EarningsNews } from "@/components/news/EarningsNews";
 import { ElectionCoverage } from "@/components/news/ElectionCoverage";
 import { ParliamentDigest } from "@/components/news/ParliamentDigest";
 import { PartyPowerRankings } from "@/components/news/PartyPowerRankings";
+import { BattleOfTheBandsNews } from "@/components/news/BattleOfTheBandsNews";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
@@ -108,6 +109,7 @@ export default function TodaysNewsPage() {
           <SectionDivider title="Entertainment" />
 
           <TopTracksNews />
+          <BattleOfTheBandsNews />
           <LastNightGigs />
           <OtherBandsGigOutcomes />
           <InterviewNews />
