@@ -57,3 +57,19 @@ describe('atomic gig booking database contract', () => {
     expect(sql.indexOf('INSERT INTO public.player_scheduled_activities')).toBeLessThan(sql.lastIndexOf('RETURN jsonb_build_object'));
   });
 });
+
+describe('gig booking band fame hotfix', () => {
+  const hotfixSql = readFileSync('supabase/migrations/20260728120000_fix_gig_booking_band_fame.sql', 'utf8');
+
+  it('uses the actual bands fame column in the booking forecast', () => {
+    expect(hotfixSql).toContain('v_band.global_fame');
+    expect(hotfixSql).not.toContain('v_band.fame');
+  });
+
+  it('replaces the complete atomic booking function and preserves its grant', () => {
+    expect(hotfixSql).toContain('CREATE OR REPLACE FUNCTION public.book_gig');
+    expect(hotfixSql).toContain("UPDATE public.bands SET band_balance = band_balance - v_booking_fee");
+    expect(hotfixSql).toContain('INSERT INTO public.player_scheduled_activities');
+    expect(hotfixSql).toContain('GRANT EXECUTE ON FUNCTION public.book_gig');
+  });
+});
