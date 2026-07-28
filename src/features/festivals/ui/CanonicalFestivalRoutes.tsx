@@ -6,6 +6,7 @@ import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from 
 import { festivalRoutes } from "../routes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFestivalCompanySetup } from "@/features/festival-company/data/festivalCompanyRepository";
+import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/FestivalUpgradeWorkspace";
 
 export function FestivalFoundingPage() { return <main className="mx-auto max-w-3xl space-y-5 p-6"><h1 className="text-3xl font-bold">Found a Festival company</h1><p>Start an annual Festival brand. Eligibility, limits, authority, funds and price are verified by the server.</p><FestivalCompanyEligibilityCard /></main>; }
 
@@ -15,8 +16,9 @@ export function FestivalCompanyHome() {
   if (query.isLoading) return <main className="p-6" role="status">Loading Festival company…</main>;
   if (query.error || !query.data) return <RouteState title="Festival company unavailable" body="The company was not found or you do not have management permission." />;
   const f = query.data;
-  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Configuration blocks the next edition."}</p><div className="flex gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link><Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link></div></main>;
+  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Configuration blocks the next edition."}</p><div className="flex flex-wrap gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link><Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link><Link className="underline" to={festivalRoutes.upgrades(f.festivalCompanyId)}>Upgrades and licences</Link></div></main>;
 }
+export function FestivalUpgradesPage(){const {festivalCompanyId}=useParams();return <FestivalUpgradeWorkspace festivalCompanyId={festivalCompanyId!}/>;}
 const Summary=({title,value}:{title:string;value:string})=><Card><CardHeader><CardTitle className="text-sm">{title}</CardTitle></CardHeader><CardContent>{value}</CardContent></Card>;
 
 export const editionNavigation = ["overview", "schedule", "applications", "contracts", "operations", "finance", "live", "settlement", "history"] as const;

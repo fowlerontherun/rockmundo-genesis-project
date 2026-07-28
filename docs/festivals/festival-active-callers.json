@@ -139,6 +139,27 @@
       "duplicate": false
     },
     {
+      "route": "/festival-company/:festivalCompanyId/upgrades",
+      "component": "FestivalUpgradesPage",
+      "intendedActor": "festival owner",
+      "identifierSemantics": [
+        {
+          "parameter": "festivalCompanyId",
+          "meaning": "festival_company_id"
+        }
+      ],
+      "dataSource": "festival-company repositories/RPCs",
+      "writeApis": [],
+      "featureFlag": null,
+      "navigationEntryPoints": [],
+      "emptyState": "component-owned",
+      "errorState": "typed domain state",
+      "canonicalReplacement": null,
+      "disposition": "keep",
+      "sourceOrder": 8,
+      "duplicate": false
+    },
+    {
       "route": "/festival-company/:festivalCompanyId/editions",
       "component": "FestivalCompanyHome",
       "intendedActor": "festival owner",
@@ -156,7 +177,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 8,
+      "sourceOrder": 9,
       "duplicate": false
     },
     {
@@ -181,7 +202,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 9,
+      "sourceOrder": 10,
       "duplicate": false
     },
     {
@@ -197,7 +218,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 10,
+      "sourceOrder": 11,
       "duplicate": false
     },
     {
@@ -213,7 +234,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 11,
+      "sourceOrder": 12,
       "duplicate": false
     },
     {
@@ -229,7 +250,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 12,
+      "sourceOrder": 13,
       "duplicate": false
     },
     {
@@ -245,7 +266,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 13,
+      "sourceOrder": 14,
       "duplicate": false
     },
     {
@@ -266,7 +287,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 14,
+      "sourceOrder": 15,
       "duplicate": false
     },
     {
@@ -282,7 +303,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 15,
+      "sourceOrder": 16,
       "duplicate": false
     },
     {
@@ -298,7 +319,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 16,
+      "sourceOrder": 17,
       "duplicate": false
     },
     {
@@ -314,7 +335,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 17,
+      "sourceOrder": 18,
       "duplicate": false
     },
     {
@@ -330,7 +351,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 18,
+      "sourceOrder": 19,
       "duplicate": false
     },
     {
@@ -346,7 +367,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 19,
+      "sourceOrder": 20,
       "duplicate": false
     },
     {
@@ -367,7 +388,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 20,
+      "sourceOrder": 21,
       "duplicate": false
     },
     {
@@ -383,7 +404,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 21,
+      "sourceOrder": 22,
       "duplicate": false
     },
     {
@@ -404,7 +425,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 22,
+      "sourceOrder": 23,
       "duplicate": false
     },
     {
@@ -425,7 +446,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 23,
+      "sourceOrder": 24,
       "duplicate": false
     },
     {
@@ -450,7 +471,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 24,
+      "sourceOrder": 25,
       "duplicate": false
     },
     {
@@ -471,7 +492,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 25,
+      "sourceOrder": 26,
       "duplicate": false
     },
     {
@@ -492,7 +513,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 26,
+      "sourceOrder": 27,
       "duplicate": false
     },
     {
@@ -513,7 +534,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": "/world/festivals",
       "disposition": "redirect_temporarily",
-      "sourceOrder": 27,
+      "sourceOrder": 28,
       "duplicate": false
     },
     {
@@ -534,7 +555,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 28,
+      "sourceOrder": 29,
       "duplicate": false
     },
     {
@@ -550,7 +571,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 29,
+      "sourceOrder": 30,
       "duplicate": false
     },
     {
@@ -571,7 +592,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 30,
+      "sourceOrder": 31,
       "duplicate": false
     },
     {
@@ -596,7 +617,7 @@
       "errorState": "typed domain state",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 31,
+      "sourceOrder": 32,
       "duplicate": false
     },
     {
@@ -612,7 +633,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 32,
+      "sourceOrder": 33,
       "duplicate": false
     },
     {
@@ -628,7 +649,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 33,
+      "sourceOrder": 34,
       "duplicate": false
     },
     {
@@ -644,7 +665,7 @@
       "errorState": "component-owned",
       "canonicalReplacement": null,
       "disposition": "keep",
-      "sourceOrder": 34,
+      "sourceOrder": 35,
       "duplicate": false
     }
   ],
@@ -2410,6 +2431,7 @@
         "src/features/festival-company/ui/FestivalLaunchManager.tsx",
         "src/features/festival-company/ui/FestivalRebuildingScreen.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/notificationModels.test.ts",
         "src/lib/songwritingResilientLoader.test.ts",
         "src/lib/__tests__/navigationProductivity.test.ts",
@@ -2865,6 +2887,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -4326,6 +4351,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -5755,6 +5783,7 @@
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/performance.tsx",
         "src/utils/gearModifiers.ts",
         "src/utils/songQuality.ts",
@@ -6879,6 +6908,8 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
         "src/services/banking/bankingPhase75.ts",
         "src/services/banking/bankingService.ts",
         "src/services/banking/mortgagePhase8B.ts",
@@ -7574,6 +7605,7 @@
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/services/banking/mortgagePhase8B.test.ts",
         "src/services/banking/mortgagePhase8B.ts",
         "src/lib/careerLongevity.ts",
@@ -8272,6 +8304,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -9587,6 +9622,7 @@
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/performance.tsx",
         "src/utils/gearModifiers.ts",
         "src/utils/songQuality.ts",
@@ -11176,6 +11212,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -14739,6 +14778,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -16512,7 +16554,10 @@
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
-        "src/features/festival-company/ui/PublicFestivalPage.tsx"
+        "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.ts"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -17051,6 +17096,386 @@
       "kind": "module",
       "importers": [
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx"
+      ],
+      "status": "canonical_active",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+      ],
+      "status": "canonical_active",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festival-company/upgrades/repository.ts",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/certification/routeIdentifiers.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/application/useFestivalArtistWorkflows.ts",
+        "src/features/festival-company/application/useFestivalLaunch.ts",
+        "src/features/festival-company/application/useFestivalTimetable.ts",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx"
+      ],
+      "status": "canonical_active",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festival-company/upgrades/types.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festival-company/upgrades/types.ts",
+      "kind": "module",
+      "importers": [
+        "src/pages/Busking.tsx",
+        "src/pages/CityElection.tsx",
+        "src/pages/CompanyDetail.tsx",
+        "src/pages/CountryCharts.tsx",
+        "src/pages/Employment.tsx",
+        "src/pages/GigBooking.tsx",
+        "src/pages/Housing.tsx",
+        "src/pages/InventoryManager.tsx",
+        "src/pages/JamSessions.tsx",
+        "src/pages/LogisticsCompanyManagement.tsx",
+        "src/pages/MayorDashboard.tsx",
+        "src/pages/Merchandise.tsx",
+        "src/pages/MyCharacterEdit.tsx",
+        "src/pages/MyCompanies.tsx",
+        "src/pages/MyGear.tsx",
+        "src/pages/PerformGig.tsx",
+        "src/pages/PoliticalParty.tsx",
+        "src/pages/Radio.tsx",
+        "src/pages/RadioStations.tsx",
+        "src/pages/RecordLabel.tsx",
+        "src/pages/Relationships.tsx",
+        "src/pages/SecurityFirmManagement.tsx",
+        "src/pages/StageEquipmentSystem.tsx",
+        "src/pages/StageEquipmentSystemPlan.tsx",
+        "src/pages/VenueManagement.tsx",
+        "src/pages/VersionHistory.tsx",
+        "src/pages/WorldCompanies.tsx",
+        "src/pages/WorldParliament.tsx",
+        "src/pages/admin/CityTreasuryAdmin.tsx",
+        "src/pages/admin/CompanyAdmin.tsx",
+        "src/pages/admin/FestivalsAdmin.tsx",
+        "src/pages/admin/GearItemsAdmin.tsx",
+        "src/pages/admin/GigViewerDemo.tsx",
+        "src/pages/admin/LabelsAdmin.tsx",
+        "src/pages/admin/RehearsalRooms.tsx",
+        "src/pages/admin/SkillBooks.tsx",
+        "src/pages/admin/StageEquipmentCatalog.tsx",
+        "src/pages/admin/Venues.tsx",
+        "src/pages/admin/mentors.helpers.ts",
+        "src/pages/admin/skillBooks.helpers.ts",
+        "src/pages/admin/universities.helpers.ts",
+        "src/pages/admin/youtubeVideos.helpers.ts",
+        "src/pages/casino/Blackjack.tsx",
+        "src/pages/casino/Roulette.tsx",
+        "src/pages/casino/Slots.tsx",
+        "src/pages/culture/learning.tsx",
+        "src/pages/events/builder.tsx",
+        "src/pages/festivals/FestivalLegacyPage.tsx",
+        "src/pages/media/MagazinesBrowser.tsx",
+        "src/pages/media/NewspapersBrowser.tsx",
+        "src/pages/media/PodcastsBrowser.tsx",
+        "src/pages/media/RadioBrowser.tsx",
+        "src/pages/media/TVShowsBrowser.tsx",
+        "src/pages/music/charts.tsx",
+        "src/pages/talent/discovery.tsx",
+        "src/pages/events/narratives/[storyId].tsx",
+        "src/pages/bands/[bandId]/governance/detail.tsx",
+        "src/components/HowToPlayDialog.tsx",
+        "src/components/SkillTree.tsx",
+        "src/components/admin/SkillDefinitionsManager.tsx",
+        "src/components/analytics/PlayerAnalytics.tsx",
+        "src/components/attributes/AttributePanel.tsx",
+        "src/components/avatar-designer/ClothingSelector.tsx",
+        "src/components/band/BandOverview.tsx",
+        "src/components/band/GigHistoryTab.tsx",
+        "src/components/band/InviteFriendToBand.tsx",
+        "src/components/bands/BandFinancesTab.tsx",
+        "src/components/bands/BandRehearsalsTab.tsx",
+        "src/components/bands/BandRosterTab.tsx",
+        "src/components/casino/CasinoCard.tsx",
+        "src/components/casino/SlotReel.tsx",
+        "src/components/character/CharacterIdentityCard.tsx",
+        "src/components/city/CandidateCard.tsx",
+        "src/components/city/CandidateRegistrationDialog.tsx",
+        "src/components/city/CityLawsDisplay.tsx",
+        "src/components/city/ElectionBanner.tsx",
+        "src/components/city/MayorPoliticsSidebar.tsx",
+        "src/components/city/MayorProjectsTab.tsx",
+        "src/components/city/MayorPromiseTracker.tsx",
+        "src/components/company/CloseSubsidiaryDialog.tsx",
+        "src/components/company/CompanyCard.test.tsx",
+        "src/components/company/CompanyCard.tsx",
+        "src/components/company/CompanySettingsDialog.tsx",
+        "src/components/company/CompanySynergies.tsx",
+        "src/components/company/CreateCompanyDialog.tsx",
+        "src/components/company/SubsidiaryTree.tsx",
+        "src/components/company/TransferLabelDialog.tsx",
+        "src/components/company-advanced/CompanyGoalsManager.tsx",
+        "src/components/company-advanced/CompanyNotificationsCenter.tsx",
+        "src/components/company-advanced/CompanySynergiesCard.tsx",
+        "src/components/culture/LanguageCourseProgressTracker.tsx",
+        "src/components/culture/LanguageExchangeProgramTracker.tsx",
+        "src/components/dashboard/SkillsAttributesTab.tsx",
+        "src/components/dikcok/DikCokCreateVideoForm.tsx",
+        "src/components/elections/CampaignSpendDialog.tsx",
+        "src/components/elections/CampaignTrail.tsx",
+        "src/components/elections/PartyEndorsementPanel.tsx",
+        "src/components/events/EventAnalytics.tsx",
+        "src/components/events/EventLineupPlanner.tsx",
+        "src/components/events/EventPricingStrategy.tsx",
+        "src/components/events/EventSponsorManager.tsx",
+        "src/components/events/TicketTierManager.tsx",
+        "src/components/finance/SponsorshipTypesPanel.tsx",
+        "src/components/gig/GigBookingDialog.tsx",
+        "src/components/gig/GigOutcomeReport.test.tsx",
+        "src/components/gig/GigOutcomeReport.tsx",
+        "src/components/gig/RealtimeGigViewer.tsx",
+        "src/components/hub/FeaturedTile.tsx",
+        "src/components/hub/MagazineTile.tsx",
+        "src/components/hub/StatsSidebar.tsx",
+        "src/components/hub/TileGrid.tsx",
+        "src/components/hub/TileImage.tsx",
+        "src/components/hub/index.ts",
+        "src/components/label-business/DistributionDealsManager.tsx",
+        "src/components/label-business/LabelFinancialOverview.tsx",
+        "src/components/label-business/LabelStaffManager.tsx",
+        "src/components/labels/CreateLabelDialog.tsx",
+        "src/components/labels/CreateLabelReleaseDialog.tsx",
+        "src/components/labels/CreatePromotionDialog.tsx",
+        "src/components/labels/DealTypeEffects.tsx",
+        "src/components/labels/LabelDirectory.tsx",
+        "src/components/labels/MyContractsList.tsx",
+        "src/components/labels/MyContractsTab.tsx",
+        "src/components/labels/ReleasePipelineTab.tsx",
+        "src/components/labels/RequestContractDialog.tsx",
+        "src/components/labels/RoyaltyStatementsTab.tsx",
+        "src/components/labels/contractNotifications.ts",
+        "src/components/labels/types.ts",
+        "src/components/logistics-business/LogisticsCompanyCard.tsx",
+        "src/components/logistics-business/LogisticsContractsManager.tsx",
+        "src/components/logistics-business/LogisticsDriversManager.tsx",
+        "src/components/logistics-business/LogisticsFleetManager.tsx",
+        "src/components/logistics-business/LogisticsUpgradesManager.tsx",
+        "src/components/media/MediaSubmissionDialog.tsx",
+        "src/components/merch-factory/CreateFactoryDialog.tsx",
+        "src/components/merch-factory/FactoryCard.tsx",
+        "src/components/merch-factory/FactoryWorkerRoster.tsx",
+        "src/components/merch-factory/ProductCatalogManager.tsx",
+        "src/components/music-video/MusicVideoReleaseTab.tsx",
+        "src/components/music-video/MusicVideoSummaryCard.tsx",
+        "src/components/news/ParliamentDigest.tsx",
+        "src/components/onboarding/OriginCard.tsx",
+        "src/components/onboarding/TraitBadge.tsx",
+        "src/components/parliament/MotionsList.tsx",
+        "src/components/parliament/ProposeMotionDialog.tsx",
+        "src/components/parties/ColourPicker.tsx",
+        "src/components/parties/JoinPartyDialog.tsx",
+        "src/components/parties/PartyCreateWizard.tsx",
+        "src/components/parties/PartyTreasuryTab.tsx",
+        "src/components/performance/BuskingTab.tsx",
+        "src/components/performance/GigPerformanceTab.tsx",
+        "src/components/performance/JamSessionsTab.tsx",
+        "src/components/performance/RehearsalBookingDialog.tsx",
+        "src/components/performance/RehearsalsTab.tsx",
+        "src/components/pr/MediaContactTable.tsx",
+        "src/components/pr/OutreachPipeline.tsx",
+        "src/components/pr/PRConsultantPanel.tsx",
+        "src/components/pr/PressReleaseForm.tsx",
+        "src/components/pr/PressReleaseList.tsx",
+        "src/components/pr/SentimentWidget.tsx",
+        "src/components/radio/RadioStationFilters.tsx",
+        "src/components/recording-studio-business/RecordingStudioCard.tsx",
+        "src/components/recording-studio-business/RecordingStudioEquipmentManager.tsx",
+        "src/components/recording-studio-business/RecordingStudioStaffManager.tsx",
+        "src/components/recording-studio-business/RecordingStudioUpgradesManager.tsx",
+        "src/components/rehearsal-studio-business/RehearsalStudioCard.tsx",
+        "src/components/rehearsal-studio-business/RehearsalStudioEquipmentManager.tsx",
+        "src/components/rehearsal-studio-business/RehearsalStudioStaffManager.tsx",
+        "src/components/rehearsal-studio-business/RehearsalStudioUpgradesManager.tsx",
+        "src/components/releases/AddPhysicalFormatDialog.tsx",
+        "src/components/releases/MyReleasesTab.tsx",
+        "src/components/releases/ReleaseAnalyticsDialog.tsx",
+        "src/components/releases/ReleaseTypeSelector.tsx",
+        "src/components/reputation/ReputationAxisBar.tsx",
+        "src/components/reputation/ReputationCard.tsx",
+        "src/components/reputation/ReputationEventsList.tsx",
+        "src/components/reputation/ReputationSummary.tsx",
+        "src/components/security/ContractsList.tsx",
+        "src/components/security/GuardRoster.tsx",
+        "src/components/security/SecurityFirmCard.tsx",
+        "src/components/social/BandChemistryDashboard.tsx",
+        "src/components/social/CharacterRelationshipProfile.tsx",
+        "src/components/social/EmotionalStatePanel.tsx",
+        "src/components/social/RelationshipBadge.tsx",
+        "src/components/social/RomanticProgressionPanel.tsx",
+        "src/components/social/SocialDramaFeed.tsx",
+        "src/components/statistics/FinancialStats.tsx",
+        "src/components/venue-business/VenueBookingsManager.tsx",
+        "src/components/venue-business/VenueStaffManager.tsx",
+        "src/components/venue-business/VenueUpgradesManager.tsx",
+        "src/components/wellness/AilmentsPanel.tsx",
+        "src/components/gig/outcome/LessonsPanel.tsx",
+        "src/components/gig/outcome/reportUtils.ts",
+        "src/components/labels/management/ContractDesignerDialog.tsx",
+        "src/components/labels/management/LabelContractsTab.tsx",
+        "src/components/labels/management/LabelStaffTab.tsx",
+        "src/components/onboarding/steps/BackstoryStep.tsx",
+        "src/components/onboarding/steps/TraitsStep.tsx",
+        "src/hooks/SkillSystemContext.ts",
+        "src/hooks/SkillSystemProvider.tsx",
+        "src/hooks/useBandChemistryEngine.ts",
+        "src/hooks/useCasino.ts",
+        "src/hooks/useCharacterIdentity.ts",
+        "src/hooks/useCharacterRelationships.ts",
+        "src/hooks/useCityElections.ts",
+        "src/hooks/useCityLaws.ts",
+        "src/hooks/useCityProjects.ts",
+        "src/hooks/useCollaborationInvites.ts",
+        "src/hooks/useCompanies.ts",
+        "src/hooks/useCompanyAdvanced.ts",
+        "src/hooks/useCompanyLabels.ts",
+        "src/hooks/useCompanyQualityModifiers.ts",
+        "src/hooks/useCountryCharts.ts",
+        "src/hooks/useDikCokForYouFeed.ts",
+        "src/hooks/useDikCokVideoTypes.ts",
+        "src/hooks/useDikCokVideos.ts",
+        "src/hooks/useElectionCampaign.ts",
+        "src/hooks/useEmotionalEngine.ts",
+        "src/hooks/useGameActivityLog.ts",
+        "src/hooks/useGameData.tsx",
+        "src/hooks/useHousing.ts",
+        "src/hooks/useInterviewSession.ts",
+        "src/hooks/useLabelBusiness.ts",
+        "src/hooks/useLogisticsBusiness.ts",
+        "src/hooks/useMayorDashboard.ts",
+        "src/hooks/useMayorPolitics.ts",
+        "src/hooks/useMayorPromiseReport.ts",
+        "src/hooks/useMerchCollaborations.ts",
+        "src/hooks/useMerchFactory.ts",
+        "src/hooks/useNPCRelationships.ts",
+        "src/hooks/useParliament.ts",
+        "src/hooks/useParties.ts",
+        "src/hooks/usePlayerAttributesQuery.ts",
+        "src/hooks/usePlayerEquipment.ts",
+        "src/hooks/useRecordingStudioBusiness.ts",
+        "src/hooks/useRehearsalStudioBusiness.ts",
+        "src/hooks/useReputation.ts",
+        "src/hooks/useRomanceSystem.ts",
+        "src/hooks/useSecurityFirm.ts",
+        "src/hooks/useSkillBooks.ts",
+        "src/hooks/useSkillSystem.tsx",
+        "src/hooks/useSocialDramaGenerator.ts",
+        "src/hooks/useTwaaterAccount.ts",
+        "src/hooks/useTwaats.ts",
+        "src/hooks/useUnderworldInventory.ts",
+        "src/hooks/useVenueBusiness.ts",
+        "src/hooks/useWellnessGate.ts",
+        "src/features/festivals/legacyResolver.ts",
+        "src/features/festivals/service.ts",
+        "src/features/festivals/types.ts",
+        "src/features/festivals/admin/creationValidation.ts",
+        "src/features/festivals/admin/hooks.ts",
+        "src/features/festivals/admin/mappers.ts",
+        "src/features/festivals/admin/permissions.ts",
+        "src/features/festivals/admin/service.ts",
+        "src/features/festivals/booking/applications.ts",
+        "src/features/festivals/booking/contracts.ts",
+        "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/booking/offers.ts",
+        "src/features/festivals/booking/projections.ts",
+        "src/features/festivals/booking/setlists.ts",
+        "src/features/festivals/booking/useResolvedFestivalEdition.ts",
+        "src/features/festivals/legacy/model.ts",
+        "src/features/festivals/legacy/service.ts",
+        "src/features/festivals/outcomes/service.ts",
+        "src/features/festivals/performance/service.ts",
+        "src/features/festivals/settlement/mappers.ts",
+        "src/features/festivals/settlement/permissions.ts",
+        "src/features/festivals/settlement/service.ts",
+        "src/features/festivals/settlement/types.ts",
+        "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
+        "src/features/festivals/admin/components/FestivalLifecycleControls.tsx",
+        "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
+        "src/features/festivals/booking/__tests__/projections.test.ts",
+        "src/features/festivals/legacy/__tests__/model.test.ts",
+        "src/features/festivals/settlement/components/SettlementFinanceSummary.tsx",
+        "src/features/festivals/settlement/components/SettlementProgress.tsx",
+        "src/features/festivals/settlement/components/SettlementReadinessPanel.tsx",
+        "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
+        "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
+        "src/features/festival-company/config/featureFlags.ts",
+        "src/features/festival-company/data/festivalCompanyRepository.ts",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
+        "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
+        "src/services/profileService.ts",
+        "src/lib/bandContributions.test.ts",
+        "src/lib/musicVideoMetrics.ts",
+        "src/lib/supabase-types.ts",
+        "src/lib/tourTypes.ts",
+        "src/lib/type-helpers.ts",
+        "src/lib/api/analytics.ts",
+        "src/lib/api/career.ts",
+        "src/lib/api/charts.ts",
+        "src/lib/api/feed.ts",
+        "src/lib/api/labels.ts",
+        "src/lib/api/merch.ts",
+        "src/lib/api/players.ts",
+        "src/lib/api/roleplaying.ts",
+        "src/lib/api/talent.ts",
+        "src/lib/api/tours.ts",
+        "src/lib/api/wellnessActivities.ts",
+        "src/lib/casino/blackjack.ts",
+        "src/lib/casino/roulette.ts",
+        "src/lib/casino/slots.ts",
+        "src/lib/casino/types.ts",
+        "src/lib/minigames/index.ts",
+        "src/lib/minigames/lyricScramble.ts",
+        "src/lib/minigames/rhythmChallenge.ts",
+        "src/lib/minigames/soundcheckMix.ts",
+        "src/lib/minigames/stagePracticeTypes.ts",
+        "src/lib/narratives/index.ts",
+        "src/lib/narratives/state.ts",
+        "src/lib/narratives/stories.ts",
+        "src/lib/services/advisor.ts",
+        "src/lib/workflows/contracts.ts",
+        "src/utils/addictionSystem.ts",
+        "src/utils/attributeProgression.ts",
+        "src/utils/cityProjectEffects.ts",
+        "src/utils/clothingQuality.ts",
+        "src/utils/djPerformance.ts",
+        "src/utils/equipmentDegradation.ts",
+        "src/utils/healthSystem.ts",
+        "src/utils/mayorLawEffects.ts",
+        "src/utils/modelingOfferGenerator.ts",
+        "src/utils/progressionClient.ts",
+        "src/utils/skillDefinitions.ts",
+        "src/utils/skillGearPerformance.ts",
+        "src/utils/skillLevels.ts",
+        "src/config/fmNavigation.ts"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -35358,6 +35783,348 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_catalogue_versions",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_categories",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_levels",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_prerequisites",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_licence_tiers",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_company_licences",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_company_upgrades",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_purchase_operations",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_effect_snapshots",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_upkeep_obligations",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_upgrade_snapshots",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_audit",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_upgrade_legacy_migrations",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_upgrade_actor",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_upgrade_authorised",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_effective_level",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_upgrade_category_json",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_company_upgrades",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_upgrade_catalogue",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_licence_progress",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_upgrade_purchase_preview",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "purchase_festival_company_upgrade",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "activate_completed_festival_upgrades",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "process_festival_upgrade_upkeep",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "snapshot_festival_edition_upgrades",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "view",
+      "name": "festival_upgrade_financial_reconciliation",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_reject_published_festival_catalogue_mutation",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "immutable_published_festival_levels",
+      "migration": "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -35811,6 +36578,17 @@
       "sqlCallers": [
         "supabase/migrations/20291218180000_festival_lifecycle_recovery.sql",
         "supabase/migrations/20291218190000_operationalise_festival_lifecycle_recovery.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_effective_level",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -36811,6 +37589,39 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_festival_upgrade_actor",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_upgrade_authorised",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_upgrade_category_json",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_festival_worker_trusted",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -36956,6 +37767,17 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_reject_published_festival_catalogue_mutation",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_resolve_festival_staff_shift_evidence",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -37040,6 +37862,17 @@
       "workerCallers": [],
       "testCallers": [],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "activate_completed_festival_upgrades",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -39740,6 +40573,19 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "get_festival_company_upgrades",
+      "typescriptCallers": [
+        "src/features/festival-company/upgrades/repository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "get_festival_configuration",
       "typescriptCallers": [
         "src/features/festival-company/data/festivalCompanyRepository.ts"
@@ -39819,6 +40665,17 @@
       "workerCallers": [],
       "testCallers": [],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_licence_progress",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -40134,6 +40991,30 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291217180000_festival_timetable_and_readiness.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_upgrade_catalogue",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_upgrade_purchase_preview",
+      "typescriptCallers": [
+        "src/features/festival-company/upgrades/repository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -41015,6 +41896,17 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "process_festival_upgrade_upkeep",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "public_festival_edition_schedule",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -41127,6 +42019,19 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20260714153039_5a0a512d-9ab5-452b-9daa-bdb5e13990f4.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "purchase_festival_company_upgrade",
+      "typescriptCallers": [
+        "src/features/festival-company/upgrades/repository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -42106,6 +43011,17 @@
       "workerCallers": [],
       "testCallers": [],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "snapshot_festival_edition_upgrades",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -44460,6 +45376,7 @@
         "src/features/festival-company/ui/FestivalLaunchManager.tsx",
         "src/features/festival-company/ui/FestivalRebuildingScreen.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/notificationModels.test.ts",
         "src/lib/songwritingResilientLoader.test.ts",
         "src/lib/__tests__/navigationProductivity.test.ts",
@@ -44910,6 +45827,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -46391,6 +47311,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -47809,6 +48732,7 @@
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/performance.tsx",
         "src/utils/gearModifiers.ts",
         "src/utils/songQuality.ts",
@@ -48930,6 +49854,8 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
         "src/services/banking/bankingPhase75.ts",
         "src/services/banking/bankingService.ts",
         "src/services/banking/mortgagePhase8B.ts",
@@ -49614,6 +50540,7 @@
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/services/banking/mortgagePhase8B.test.ts",
         "src/services/banking/mortgagePhase8B.ts",
         "src/lib/careerLongevity.ts",
@@ -50313,6 +51240,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -51630,6 +52560,7 @@
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/lib/performance.tsx",
         "src/utils/gearModifiers.ts",
         "src/utils/songQuality.ts",
@@ -53233,6 +54164,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -56805,6 +57739,9 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/repository.ts",
+        "src/features/festival-company/upgrades/types.test.ts",
         "src/services/profileService.ts",
         "src/lib/bandContributions.test.ts",
         "src/lib/musicVideoMetrics.ts",
@@ -58159,6 +59096,17 @@
     },
     {
       "candidate": "src/features/festival-company/ui/PublicFestivalPage.tsx",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
+      "candidate": "src/features/festival-company/upgrades/types.test.ts",
       "currentCallers": [],
       "replacement": null,
       "dataMigrationRequirement": "none for source file; preserve data tables",
