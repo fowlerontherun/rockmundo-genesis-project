@@ -57,3 +57,49 @@ describe('atomic gig booking database contract', () => {
     expect(sql.indexOf('INSERT INTO public.player_scheduled_activities')).toBeLessThan(sql.lastIndexOf('RETURN jsonb_build_object'));
   });
 });
+
+describe('gig booking band fame hotfix', () => {
+  const hotfixSql = readFileSync('supabase/migrations/20260728120000_fix_gig_booking_band_fame.sql', 'utf8');
+
+  it('uses the actual bands fame column in the booking forecast', () => {
+    expect(hotfixSql).toContain('v_band.global_fame');
+    expect(hotfixSql).not.toContain('v_band.fame');
+  });
+
+  it('replaces the complete atomic booking function and preserves its grant', () => {
+    expect(hotfixSql).toContain('CREATE OR REPLACE FUNCTION public.book_gig');
+    expect(hotfixSql).toContain("UPDATE public.bands SET band_balance = band_balance - v_booking_fee");
+    expect(hotfixSql).toContain('INSERT INTO public.player_scheduled_activities');
+    expect(hotfixSql).toContain('GRANT EXECUTE ON FUNCTION public.book_gig');
+  });
+});
+
+describe('gig ticket prediction trigger hotfix', () => {
+  const triggerHotfixSql = readFileSync('supabase/migrations/20260728123000_fix_gig_ticket_prediction_fame.sql', 'utf8');
+
+  it('repairs the before-insert prediction helper used by gig creation', () => {
+    expect(triggerHotfixSql).toContain('CREATE OR REPLACE FUNCTION public.calculate_predicted_tickets');
+    expect(triggerHotfixSql).toContain('COALESCE(global_fame, 0)');
+    expect(triggerHotfixSql).not.toMatch(/COALESCE\(fame,/);
+  });
+
+  it('keeps the trigger helper executable by the booking roles', () => {
+    expect(triggerHotfixSql).toContain('TO authenticated, service_role');
+  });
+});
+
+
+describe('legacy current-travel gig booking blocker', () => {
+  const travelHotfixSql = readFileSync('supabase/migrations/20260728130000_replace_legacy_gig_travel_trigger.sql', 'utf8');
+
+  it('replaces the current-travel trigger with a scheduled interval check', () => {
+    expect(travelHotfixSql).toContain('DROP TRIGGER IF EXISTS prevent_gig_booking_while_traveling ON public.gigs');
+    expect(travelHotfixSql).toContain('CREATE TRIGGER check_gig_member_schedule_conflicts');
+    expect(travelHotfixSql).toContain('a.scheduled_start < v_end');
+    expect(travelHotfixSql).toContain('a.scheduled_end > NEW.scheduled_date');
+  });
+
+  it('returns the existing player-facing conflict code', () => {
+    expect(travelHotfixSql).toContain("RAISE EXCEPTION 'gig_booking_band_conflict'");
+  });
+});
