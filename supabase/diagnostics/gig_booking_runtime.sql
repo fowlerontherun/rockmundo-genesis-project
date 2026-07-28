@@ -42,7 +42,8 @@ JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
   AND p.proname IN (
     'book_gig', 'active_band_performing_members', 'seed_gig_performers',
-    'check_gig_member_schedule_conflicts', 'calculate_predicted_tickets'
+    'check_gig_member_schedule_conflicts', 'calculate_predicted_tickets',
+    'validate_gig_performer', 'seed_gig_performers_on_insert'
   )
 ORDER BY p.proname, p.oid::regprocedure::text;
 
@@ -92,7 +93,7 @@ WITH referenced(table_name, column_name, referenced_by) AS (VALUES
  ('player_scheduled_activities','linked_gig_id','book_gig'), ('player_scheduled_activities','metadata','book_gig'),
  ('gig_performers','gig_id','seed_gig_performers'), ('gig_performers','band_id','seed_gig_performers'),
  ('gig_performers','profile_id','seed_gig_performers'), ('gig_performers','role_or_instrument','seed_gig_performers'),
- ('gig_performers','lineup_status','seed_gig_performers'), ('gig_performers','selected_at','seed_gig_performers')
+ ('gig_performers','lineup_status','seed_gig_performers'), ('gig_performers','selected_at','seed_gig_performers/validate_gig_performer')
 )
 SELECT r.* FROM referenced r
 LEFT JOIN information_schema.columns c ON c.table_schema='public'
