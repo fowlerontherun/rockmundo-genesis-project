@@ -13,12 +13,24 @@ END $$;
 
 SELECT current_database() AS database_name, current_user AS inspected_by, now() AS inspected_at;
 
+-- These versions each have two files in git.  A bare version match is not proof
+-- that the gig payload ran: the Supabase ledger can record only one migration for
+-- a version, and production may instead have recorded the podcast payload.
 SELECT required.version,
+       required.expected_gig_migration,
        EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations sm
-               WHERE sm.version = required.version) AS installed,
+               WHERE sm.version = required.version) AS version_recorded,
        (SELECT sm.name FROM supabase_migrations.schema_migrations sm
-        WHERE sm.version = required.version LIMIT 1) AS recorded_name
-FROM (VALUES ('20260728140000'), ('20260728150000')) AS required(version)
+        WHERE sm.version = required.version LIMIT 1) AS recorded_name,
+       EXISTS (
+         SELECT 1 FROM supabase_migrations.schema_migrations sm
+         WHERE sm.version = required.version
+           AND sm.name = required.expected_gig_migration
+       ) AS gig_payload_recorded
+FROM (VALUES
+  ('20260728140000', 'audit_gig_booking_runtime'),
+  ('20260728150000', 'align_gig_lineup_trigger_members')
+) AS required(version, expected_gig_migration)
 ORDER BY required.version;
 
 -- A version row cannot distinguish same-version files. The definitions below are
