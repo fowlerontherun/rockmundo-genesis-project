@@ -430,10 +430,19 @@ const GigBooking = () => {
       setBookingVenue(null);
     } catch (error) {
       const supabaseError = error as GigBookingErrorLike;
-      if (import.meta.env.DEV) console.error('Gig booking failed', {
-        stage: failedStage, code: supabaseError.code, message: supabaseError.message,
-        details: supabaseError.details, hint: supabaseError.hint, requestId,
-      });
+      if (import.meta.env.DEV) {
+        console.groupCollapsed('Gig booking database failure');
+        console.error({
+          context: 'book_gig',
+          stage: failedStage,
+          code: supabaseError.code,
+          message: supabaseError.message,
+          details: supabaseError.details,
+          hint: supabaseError.hint,
+          requestId,
+        });
+        console.groupEnd();
+      }
       const playerError = getGigBookingPlayerError(supabaseError);
       toast({
         ...playerError,

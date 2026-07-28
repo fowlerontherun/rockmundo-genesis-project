@@ -42273,6 +42273,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      active_band_performing_members: {
+        Args: { p_band_id: string }
+        Returns: { profile_id: string }[]
+      }
       book_gig: {
         Args: {
           p_band_id: string
