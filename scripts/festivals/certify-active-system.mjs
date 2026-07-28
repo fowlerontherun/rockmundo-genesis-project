@@ -2,12 +2,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { findUndefinedFestivalRouteComponents } from "./route-component-certification.mjs";
 
 const root = process.cwd();
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const walk = dir => fs.existsSync(path.join(root, dir)) ? fs.readdirSync(path.join(root, dir), { recursive: true, withFileTypes: true })
   .filter(entry => entry.isFile()).map(entry => path.relative(root, path.join(entry.parentPath, entry.name)).replaceAll("\\", "/")) : [];
 const app = read("src/App.tsx");
+const undefinedFestivalRouteComponents = findUndefinedFestivalRouteComponents(app);
+if (undefinedFestivalRouteComponents.length) {
+  throw new Error(`Undefined Festival route component(s): ${undefinedFestivalRouteComponents.join(", ")}`);
+}
 const routeRegistrySource = read("src/features/festivals/routes.ts");
 const festivalPatterns = Object.fromEntries([...routeRegistrySource.matchAll(/^\s{2}(\w+): "([^"]+)",$/gm)].map(m => [m[1], m[2]]));
 const sourceRoots = ["src/pages", "src/components", "src/hooks", "src/features/festivals", "src/features/festival-company", "src/services", "src/lib", "src/utils", "src/config"];

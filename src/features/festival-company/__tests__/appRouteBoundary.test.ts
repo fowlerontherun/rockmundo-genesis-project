@@ -4,19 +4,11 @@ import { readFileSync } from "node:fs";
 const appSource = readFileSync("src/App.tsx", "utf8");
 
 const legacyFestivalRoutes = [
-  "world/festivals",
-  "world/festivals/:festivalId",
-  "festivals",
   "festivals/marketplace",
   "festivals/directory",
   "festivals/:festivalId",
-  "festivals/simulation",
   "festivals/perform/:participationId",
-  "festivals/:festivalId/manage",
-  "festivals/:festivalId/manage/editions/:editionId",
   "festivals/sessions/:sessionId",
-  "festivals/:festivalId/calendar",
-  "festivals/:festivalId/run",
 ];
 
 describe("legacy festival route boundary", () => {
@@ -29,8 +21,15 @@ describe("legacy festival route boundary", () => {
     }
   });
 
+  it("redirects retired discovery routes without mounting a legacy writer", () => {
+    expect(appSource).toContain(
+      'path="festivals/simulation" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />}',
+    );
+    expect(appSource).not.toMatch(/festivals\/simulation[^\n]+<FestivalsNew/);
+  });
+
   it("leaves the admin diagnostic route reachable while aliases redirect to it", () => {
-    expect(appSource).toContain('path="admin/festivals" element={<FestivalsAdminPage />}');
+    expect(appSource).toContain('path={festivalRoutePatterns.admin} element={<FestivalsAdminPage />}');
     expect(appSource).toContain('path="admin/festival" element={<Navigate to="/admin/festivals" replace />}');
     expect(appSource).toContain('path="admin/festival-admin" element={<Navigate to="/admin/festivals" replace />}');
     expect(appSource).toContain('path="admin/city-festivals" element={<Navigate to="/admin/festivals" replace />}');

@@ -3,6 +3,8 @@ set -euo pipefail
 
 npm run test:festivals:active-callers
 npm run test:festivals:routes
+npm run test:festivals:route-components
+npm run test:festivals:app-routes
 npm run test:festivals:safety-guard
 
 if [[ -z "${SUPABASE_DB_URL:-}" ]]; then

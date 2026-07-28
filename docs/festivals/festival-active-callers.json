@@ -393,17 +393,17 @@
     },
     {
       "route": "/festivals/simulation",
-      "component": "LegacyFestivalGate",
+      "component": "PreserveQueryRedirect",
       "intendedActor": "player/public",
       "identifierSemantics": [],
-      "dataSource": "legacy compatibility read or canonical resolver",
+      "dataSource": "festival-company repositories/RPCs",
       "writeApis": [],
-      "featureFlag": "legacyFestivalReadEnabled",
+      "featureFlag": null,
       "navigationEntryPoints": [],
       "emptyState": "component-owned",
       "errorState": "component-owned",
-      "canonicalReplacement": "/world/festivals",
-      "disposition": "redirect_temporarily",
+      "canonicalReplacement": null,
+      "disposition": "keep",
       "sourceOrder": 22,
       "duplicate": false
     },
@@ -1055,7 +1055,8 @@
       "file": "src/pages/FestivalsNew.tsx",
       "kind": "page",
       "importers": [
-        "src/pages/VersionHistory.tsx"
+        "src/pages/VersionHistory.tsx",
+        "src/features/festival-company/__tests__/appRouteBoundary.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -2425,6 +2426,7 @@
         "src/hooks/useTourBooking.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/booking/__tests__/mode.test.ts",
+        "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
         "src/features/festival-company/__tests__/inventoryRegistry.test.ts",
         "src/features/festival-company/application/useFoundFestivalCompany.ts",
@@ -43958,7 +43960,8 @@
     {
       "candidate": "src/pages/FestivalsNew.tsx",
       "currentCallers": [
-        "src/pages/VersionHistory.tsx"
+        "src/pages/VersionHistory.tsx",
+        "src/features/festival-company/__tests__/appRouteBoundary.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -45370,6 +45373,7 @@
         "src/hooks/useTourBooking.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/booking/__tests__/mode.test.ts",
+        "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
         "src/features/festival-company/__tests__/inventoryRegistry.test.ts",
         "src/features/festival-company/application/useFoundFestivalCompany.ts",
