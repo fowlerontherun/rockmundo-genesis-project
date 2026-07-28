@@ -44570,6 +44570,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_podcast_appearance: {
+        Args: {
+          p_band_id: string
+          p_episode_topic: string
+          p_linked_release_id?: string
+          p_podcast_id: string
+        }
+        Returns: string
+      }
       submit_festival_setlist:
         | {
             Args: { p_setlist_id: string }
