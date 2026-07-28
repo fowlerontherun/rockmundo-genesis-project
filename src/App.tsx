@@ -21,7 +21,7 @@ import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
 import { LegacyFestivalGate } from "./features/festival-company";
 import { festivalRoutePatterns, festivalRoutes } from "./features/festivals/routes";
-import { FestivalFoundingPage, FestivalCompanyHome, FestivalEditionShell, FestivalEditionWorkspace, PublicFestivalEditionPage, LegacyFestivalRedirect, LegacyFestivalSetupRedirect } from "./features/festivals/ui/CanonicalFestivalRoutes";
+import { FestivalFoundingPage, FestivalCompanyHome, FestivalEditionShell, FestivalEditionWorkspace, FestivalUpgradesPage, PublicFestivalEditionPage, LegacyFestivalRedirect, LegacyFestivalSetupRedirect } from "./features/festivals/ui/CanonicalFestivalRoutes";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -704,6 +704,7 @@ function App() {
                     <Route path={festivalRoutePatterns.publicEdition} element={<PublicFestivalEditionPage />} />
                     <Route path={festivalRoutePatterns.foundCompany} element={<FestivalFoundingPage />} />
                     <Route path={festivalRoutePatterns.company} element={<FestivalCompanyHome />} />
+                    <Route path={festivalRoutePatterns.upgrades} element={<FestivalUpgradesPage />} />
                     <Route path={festivalRoutePatterns.editions} element={<FestivalCompanyHome />} />
                     <Route path={festivalRoutePatterns.edition} element={<FestivalEditionShell />}>
                       <Route index element={<FestivalEditionWorkspace section="overview" />} />

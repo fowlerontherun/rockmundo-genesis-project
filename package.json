@@ -46,7 +46,8 @@
     "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
     "verify:dependencies": "npm ls --all",
     "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs",
-    "test:gig-booking:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/gig_booking_runtime_harness.sql'"
+    "test:gig-booking:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/gig_booking_runtime_harness.sql'",
+    "test:festivals:upgrades": "node --test scripts/festivals/festival-upgrade-catalogue.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
