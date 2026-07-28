@@ -98,7 +98,7 @@ export const updateTour = async (
 
   const { data, error } = await supabase
     .from("tours")
-    .update(payload)
+    .update(payload as never)
     .eq("id", id)
     .select()
     .single();
