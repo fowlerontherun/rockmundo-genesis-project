@@ -31,7 +31,7 @@ const isNonNegativeInteger = (value: unknown) => Number.isInteger(Number(value))
 export const parseFestivalCompanyEligibility = (value: unknown): FestivalCompanyFoundingEligibility => {
   if (!value || typeof value !== "object") return disabledFestivalCompanyEligibility;
   const candidate = value as Record<string, unknown>;
-  const valid = typeof candidate.newFestivalSystemEnabled === "boolean"
+  if (!(typeof candidate.newFestivalSystemEnabled === "boolean"
     && typeof candidate.festivalCompanyCreationEnabled === "boolean"
     && typeof candidate.festivalCompanyManagementEnabled === "boolean"
     && typeof candidate.festivalConfigurationEnabled === "boolean"
@@ -44,8 +44,7 @@ export const parseFestivalCompanyEligibility = (value: unknown): FestivalCompany
     && isNonNegativeInteger(candidate.authoritativePersonalBalanceMinor)
     && isFiniteNonNegative(candidate.foundingCost)
     && isNonNegativeInteger(candidate.foundingCostMinor)
-    && typeof candidate.canAfford === "boolean";
-  if (!valid) return disabledFestivalCompanyEligibility;
+    && typeof candidate.canAfford === "boolean")) return disabledFestivalCompanyEligibility;
   return {
     newFestivalSystemEnabled: candidate.newFestivalSystemEnabled,
     festivalCompanyCreationEnabled: candidate.festivalCompanyCreationEnabled,

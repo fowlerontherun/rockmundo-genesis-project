@@ -182,8 +182,8 @@ export function parseFestivalStage(v: unknown): FestivalStage {
     !integer(v.standardSlotMinutes, 10) ||
     !(v.status === "planned" || v.status === "ready")
   )
-    fail();
-  if ((v.accessibleViewingCapacity as number) > (v.capacity as number)) fail();
+    return fail();
+  if ((v.accessibleViewingCapacity as number) > (v.capacity as number)) return fail();
   return v as unknown as FestivalStage;
 }
 export function parseFestivalVenueOption(v: unknown): FestivalVenueOption {
@@ -203,7 +203,7 @@ export function parseFestivalVenueOption(v: unknown): FestivalVenueOption {
     typeof v.festivalCompatible !== "boolean" ||
     !["available", "unknown", "unavailable"].includes(String(v.availability))
   )
-    fail();
+    return fail();
   return v as unknown as FestivalVenueOption;
 }
 const numericObject = (v: unknown, keys: string[]) =>
@@ -228,7 +228,7 @@ export function parseFestivalSitePlanResult(
       (str(v.updatedAt) && !Number.isNaN(Date.parse(v.updatedAt)))
     )
   )
-    fail();
+    return fail();
   const venues = v.venueOptions.map(parseFestivalVenueOption),
     stages = v.stages.map(parseFestivalStage);
   if (
@@ -236,7 +236,7 @@ export function parseFestivalSitePlanResult(
       .size !== stages.length ||
     new Set(stages.map((s) => s.slug)).size !== stages.length
   )
-    fail();
+    return fail();
   const p = v.sitePlan;
   if (
     p !== null &&
@@ -261,7 +261,7 @@ export function parseFestivalSitePlanResult(
       !TIME.test(p.dailyCloseTime) ||
       !festivalSitePlanStatuses.includes(p.status as FestivalSitePlanStatus))
   )
-    fail();
+    return fail();
   const facilityKeys = [
     "toiletsRequired",
     "medicalPointsRequired",
@@ -297,7 +297,7 @@ export function parseFestivalSitePlanResult(
     typeof v.scaleLimits.requiresAccessibilityPlan !== "boolean" ||
     !numericObject(v.capacityMetrics, metricKeys)
   )
-    fail();
+    return fail();
   if (
     !v.issues.every(
       (i) =>
@@ -310,7 +310,7 @@ export function parseFestivalSitePlanResult(
         typeof i.blocking === "boolean",
     )
   )
-    fail();
+    return fail();
   return {
     ...v,
     venueOptions: venues,
