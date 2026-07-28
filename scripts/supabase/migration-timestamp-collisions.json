@@ -1,0 +1,156 @@
+{
+  "20250916150000": [
+    "20250916150000_create_notifications_table.sql",
+    "20250916150000_create_record_labels_table.sql",
+    "20250916150000_create_streaming_campaigns_table.sql",
+    "20250916150000_create_weekly_stats_view.sql",
+    "20250916150000_update_song_production_pipeline.sql"
+  ],
+  "20250916153000": [
+    "20250916153000_add_contract_recoupment_fields.sql",
+    "20250916153000_add_social_metrics_to_profiles.sql",
+    "20250916153000_create_competitions_tables.sql",
+    "20250916153000_create_jam_sessions_table.sql",
+    "20250916153000_create_leaderboards_view.sql",
+    "20250916153000_create_schedule_events_table.sql",
+    "20250916153000_create_streaming_stats_table.sql",
+    "20250916153000_song_stream_growth_job.sql"
+  ],
+  "20250917090000": [
+    "20250917090000_add_promotion_campaigns_table.sql",
+    "20250917090000_create_label_system.sql",
+    "20250917090000_create_leaderboard_tables.sql"
+  ],
+  "20260201020000": [
+    "20260201020000_add_travel_time_and_rest_days_to_tour_venues.sql",
+    "20260201020000_create_chat_participants_table.sql",
+    "20260201020000_create_equipment_upgrades_table.sql",
+    "20260201020000_create_fan_campaigns_table.sql",
+    "20260201020000_extend_gig_performances_with_results.sql",
+    "20260201020000_schedule_event_reminder_job.sql"
+  ],
+  "20260202090000": [
+    "20260202090000_create_fan_messages_table.sql",
+    "20260202090000_update_social_posts_with_media_and_schedule.sql"
+  ],
+  "20260301090000": [
+    "20260301090000_manage_game_event_status.sql",
+    "20260301090000_restrict_profile_select.sql"
+  ],
+  "20260316093000": [
+    "20260316093000_behavior_settings_per_character.sql",
+    "20260316093000_fix_promotional_campaigns_rls.sql"
+  ],
+  "20260710120000": [
+    "20260710120000_add_profile_privacy_settings.sql",
+    "20260710120000_beta_admin_support_tools.sql",
+    "20260710120000_complete_company_recruitment_lifecycle.sql"
+  ],
+  "20260712120000": [
+    "20260712120000_expand_wellness_foundation.sql",
+    "20260712120000_gig_audience_participation.sql",
+    "20260712120000_gig_live_outcome_breakdown.sql",
+    "20260712120000_recording_outcome_breakdown.sql",
+    "20260712120000_songwriting_outcome_calculator.sql",
+    "20260712120000_tour_operations_multi_gig_management.sql",
+    "20260712120000_wellness_accommodation_travel_recovery.sql",
+    "20260712120000_wellness_professionals.sql"
+  ],
+  "20260712143000": [
+    "20260712143000_wellness_lifestyle_habits.sql",
+    "20260712143000_wellness_time_away_longevity.sql"
+  ],
+  "20260713090000": [
+    "20260713090000_band_progression_goals.sql",
+    "20260713090000_create_balance_management_registry.sql",
+    "20260713090000_player_progression_analytics.sql"
+  ],
+  "20260713120000": [
+    "20260713120000_player_profiles_social_identity.sql",
+    "20260713120000_progression_achievements_canonical.sql",
+    "20260713120000_repair_songwriting_optional_columns.sql"
+  ],
+  "20260713130000": [
+    "20260713130000_band_relationship_progression.sql",
+    "20260713130000_fix_skill_xp_spending.sql",
+    "20260713130000_player_discovery_search_matchmaking.sql"
+  ],
+  "20260713193000": [
+    "20260713193000_band_roles_permissions_responsibilities.sql",
+    "20260713193000_private_messaging_conversations.sql"
+  ],
+  "20260717120000": [
+    "20260717120000_admin_festival_creation_phase1.sql",
+    "20260717120000_finance_phase2_player_band_management.sql"
+  ],
+  "20260717153000": [
+    "20260717153000_finance_phase3_company_operations.sql",
+    "20260717153000_harden_festival_creation_phase1_forward.sql"
+  ],
+  "20260720120000": [
+    "20260720120000_finance_phase8b4_mortgage_band_funding.sql",
+    "20260720120000_repair_london_fixture_operations_projection.sql"
+  ],
+  "20260721120000": [
+    "20260721120000_deploy_festival_owner_management_bootstrap.sql",
+    "20260721120000_repair_banking_dashboard_rpc.sql"
+  ],
+  "20260728120000": [
+    "20260728120000_default_media_submission_user_id.sql",
+    "20260728120000_fix_gig_booking_band_fame.sql",
+    "20260728120000_reconcile_player_cash_finance.sql"
+  ],
+  "20260728130000": [
+    "20260728130000_fix_media_submission_profile_membership_rls.sql",
+    "20260728130000_replace_legacy_gig_travel_trigger.sql"
+  ],
+  "20260728140000": [
+    "20260728140000_audit_gig_booking_runtime.sql",
+    "20260728140000_fix_podcast_submission_membership_check.sql"
+  ],
+  "20260728150000": [
+    "20260728150000_align_gig_lineup_trigger_members.sql",
+    "20260728150000_submit_podcast_appearance_rpc.sql"
+  ],
+  "20260921100000": [
+    "20260921100000_add_sales_metrics_to_global_charts.sql",
+    "20260921100000_add_show_type_to_gigs_and_tour_venues.sql"
+  ],
+  "20260922100000": [
+    "20260922100000_add_duration_and_energy_to_schedule_events.sql",
+    "20260922100000_update_player_skills_baseline.sql"
+  ],
+  "20260922110000": [
+    "20260922110000_create_attribute_tables.sql",
+    "20260922110000_split_player_skills_attributes.sql"
+  ],
+  "20260923110000": [
+    "20260923110000_normalize_skills.sql",
+    "20260923110000_normalize_skills_down.sql"
+  ],
+  "20261025100000": [
+    "20261025100000_add_extended_skill_definitions.sql",
+    "20261025100000_add_extended_skill_definitions_down.sql"
+  ],
+  "20261031120000": [
+    "20261031120000_create_profile_progression_tables.sql",
+    "20261031120000_replace_daily_conversion_with_weekly_bonus.sql"
+  ],
+  "20270602100000": [
+    "20270602100000_create_education_band_sessions.sql",
+    "20270602100000_create_education_youtube_tables.sql"
+  ],
+  "20270615120000": [
+    "20270615120000_expand_youtube_skills.sql",
+    "20270615120000_handle_new_user_username_retry.sql"
+  ],
+  "20290602130000": [
+    "20290602130000_expand_equipment_categories_and_currency.sql",
+    "20290602130000_extend_personal_loadouts_with_slots.sql",
+    "20290602130000_seed_more_achievements_and_unlock_xp.sql"
+  ],
+  "20290702010000": [
+    "20290702010000_create_community_feed_tables.sql",
+    "20290702010000_extend_label_financials.sql"
+  ]
+}
