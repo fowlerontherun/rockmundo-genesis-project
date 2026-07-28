@@ -7,6 +7,14 @@ export interface UpdateTourInput {
   name: TourRecord["name"];
 }
 
+export interface RescheduleTourResult {
+  tour: TourRecord;
+  already_rescheduled?: boolean;
+  shift_days?: number;
+  gigs_moved?: number;
+  travel_legs_moved?: number;
+}
+
 export const listTours = async (bandId?: string): Promise<TourRecord[]> => {
   let query = supabase.from("tours").select("*").order("start_date", { ascending: true });
 
@@ -55,4 +63,26 @@ export const updateTour = async (
   }
 
   return data as TourRecord;
+};
+
+export const rescheduleTour = async (
+  id: string,
+  newStartDate: string,
+  requestId: string = crypto.randomUUID()
+): Promise<RescheduleTourResult> => {
+  const { data, error } = await (supabase.rpc as any)("reschedule_tour", {
+    p_tour_id: id,
+    p_new_start_date: newStartDate,
+    p_request_id: requestId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.tour) {
+    throw new Error("Unable to locate tour for rescheduling");
+  }
+
+  return data as RescheduleTourResult;
 };
