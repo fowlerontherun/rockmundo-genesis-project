@@ -103,7 +103,7 @@ export function MediaSubmissionDialog({
   bandId,
   bandFame,
 }: MediaSubmissionDialogProps) {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const config = mediaConfig[mediaType];
   const Icon = config.icon;
@@ -114,9 +114,10 @@ export function MediaSubmissionDialog({
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!profileId || !bandId) throw new Error("Not authenticated");
+      if (!profileId || !userId || !bandId) throw new Error("Not authenticated");
       
       const submission: Record<string, unknown> = {
+        ...(mediaType !== "website" ? { user_id: userId } : {}),
         band_id: bandId,
         [config.idField]: mediaItem.id,
         [config.typeField]: selectedType,
@@ -148,7 +149,7 @@ export function MediaSubmissionDialog({
             const hypeBoost = Math.floor(8 + Math.random() * 13); // +8 to +20
             await supabase
               .from("releases")
-              .update({ hype_score: ((rel as any).hype_score || 0) + hypeBoost } as any)
+              .update({ hype_score: (rel.hype_score || 0) + hypeBoost })
               .eq("id", linkedReleaseId);
           }
         } catch (e) {
