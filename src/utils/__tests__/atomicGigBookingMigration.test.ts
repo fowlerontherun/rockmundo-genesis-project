@@ -103,3 +103,33 @@ describe('legacy current-travel gig booking blocker', () => {
     expect(travelHotfixSql).toContain("RAISE EXCEPTION 'gig_booking_band_conflict'");
   });
 });
+
+describe('fully audited gig booking runtime repair', () => {
+  const runtimeSql = readFileSync('supabase/migrations/20260728140000_audit_gig_booking_runtime.sql', 'utf8');
+
+  it('removes the confirmed unused song duration dependency', () => {
+    const rpc = runtimeSql.slice(runtimeSql.indexOf('CREATE OR REPLACE FUNCTION public.book_gig'));
+    expect(rpc).not.toContain('song.duration_seconds');
+    expect(rpc).not.toContain('v_setlist_seconds');
+    expect(rpc).toContain('INTO v_song_count');
+  });
+
+  it('uses one canonical performing-member helper for booking and its gig trigger', () => {
+    expect(runtimeSql.match(/active_band_performing_members\(/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(runtimeSql).toContain("COALESCE(bm.member_status, 'active') = 'active'");
+    expect(runtimeSql).toContain("COALESCE(bm.is_touring_member, false) = false");
+    expect(runtimeSql).toContain('leader_profile.user_id = b.leader_id');
+  });
+
+  it('annotates unexpected errors with a named stage while preserving SQLSTATE', () => {
+    for (const stage of ['resolve_actor', 'idempotency_check', 'load_band', 'load_venue', 'validate_slot',
+      'validate_setlist', 'validate_rider', 'conflict_check', 'calculate_finances', 'debit_balance',
+      'insert_gig', 'create_member_activities']) expect(runtimeSql).toContain(`'${stage}'`);
+    expect(runtimeSql).toContain('v_error_state = RETURNED_SQLSTATE');
+    expect(runtimeSql).toContain('ERRCODE = v_error_state');
+  });
+
+  it('reloads the PostgREST schema cache', () => {
+    expect(runtimeSql).toContain("NOTIFY pgrst, 'reload schema'");
+  });
+});
