@@ -31,7 +31,7 @@ export const useCompanies = () => {
       const companies = (data || []) as Company[];
       if (companies.length === 0) return companies;
 
-      const { data: festivalCompanies, error: festivalError } = await supabase
+      const { data: festivalCompanies, error: festivalError } = await (supabase as any)
         .from("festival_companies")
         .select("id, company_id")
         .in("company_id", companies.map((company) => company.id));
@@ -41,7 +41,7 @@ export const useCompanies = () => {
       }
 
       const festivalIdByCompany = new Map(
-        (festivalCompanies || []).map((festival) => [festival.company_id, festival.id]),
+        (festivalCompanies || []).map((festival: { company_id: string; id: string }) => [festival.company_id, festival.id]),
       );
 
       return companies.map((company) => ({
@@ -76,7 +76,7 @@ export const useCompany = (companyId: string | undefined) => {
 
       if (!data) return null;
 
-      const { data: festivalCompany, error: festivalError } = await supabase
+      const { data: festivalCompany, error: festivalError } = await (supabase as any)
         .from("festival_companies")
         .select("id")
         .eq("company_id", data.id)
