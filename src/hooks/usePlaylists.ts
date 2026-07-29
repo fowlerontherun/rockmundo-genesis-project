@@ -203,7 +203,7 @@ export const usePlaylists = (profileId?: string) => {
           user_id: profileId,
           profile_id: profileId,
           submission_status: "pending",
-        })
+        } as any)
         .select("id")
         .single();
 

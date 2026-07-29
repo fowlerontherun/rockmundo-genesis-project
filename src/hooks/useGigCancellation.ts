@@ -81,10 +81,10 @@ export function useGigCancellation() {
       // Update gig status to cancelled
       const { error: gigError } = await supabase
         .from('gigs')
-        .update({ 
+        .update({
           status: 'cancelled',
-          cancelled_at: new Date().toISOString()
-        })
+          cancelled_at: new Date().toISOString(),
+        } as any)
         .eq('id', details.gigId);
 
       if (gigError) throw gigError;

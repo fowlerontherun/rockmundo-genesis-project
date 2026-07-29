@@ -41,7 +41,7 @@ interface FoundFestivalCompanyRpcResult {
 export const foundFestivalCompany = async (
   input: FoundFestivalCompanyInput,
 ): Promise<FoundFestivalCompanyResult> => {
-  const { data, error } = await supabase.rpc("found_festival_company", {
+  const { data, error } = await (supabase as any).rpc("found_festival_company", {
     p_company_name: input.companyName,
     p_public_name: input.publicName,
     p_description: input.description || null,
@@ -84,7 +84,7 @@ export const isFestivalSetupState = (value: unknown): value is FestivalCompanySe
 };
 
 export const getFestivalCompanySetup = async (festivalCompanyId: string): Promise<FestivalCompanySetupState> => {
-  const { data, error } = await supabase.rpc("get_festival_company_setup", {
+  const { data, error } = await (supabase as any).rpc("get_festival_company_setup", {
     p_festival_company_id: festivalCompanyId,
   });
 
@@ -116,13 +116,13 @@ export const isCapabilityObject = (value: unknown): value is FestivalCompanyCapa
 };
 
 export const getFestivalCompanyCapabilities = async (): Promise<FestivalCompanyCapabilities> => {
-  const { data, error } = await supabase.rpc("festival_company_capabilities");
+  const { data, error } = await (supabase as any).rpc("festival_company_capabilities");
   if (error || !isCapabilityObject(data)) return disabledFestivalCompanyCapabilities;
   return { ...data, companyLimit: Number(data.companyLimit) };
 };
 
 export const getFestivalCompanyFoundingEligibility = async (): Promise<FestivalCompanyFoundingEligibility> => {
-  const { data, error } = await supabase.rpc("get_festival_company_founding_eligibility");
+  const { data, error } = await (supabase as any).rpc("get_festival_company_founding_eligibility");
   if (error) return disabledFestivalCompanyEligibility;
   return parseFestivalCompanyEligibility(data);
 };
@@ -156,7 +156,7 @@ export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFes
 };
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {
-  const { data, error } = await supabase.rpc("get_owned_festival_companies");
+  const { data, error } = await (supabase as any).rpc("get_owned_festival_companies");
   if (error || !Array.isArray(data)) return [];
   if (!data.every(isOwnedFestivalCompanySummary)) return [];
   return data.map((company) => ({
@@ -171,14 +171,14 @@ export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanyS
 
 export const getFestivalConfiguration = async (festivalCompanyId: string): Promise<FestivalConfiguration> => {
   if (!isUuid(festivalCompanyId)) throw new Error("festival_company_not_found");
-  const { data, error } = await supabase.rpc("get_festival_configuration", { p_festival_company_id: festivalCompanyId });
+  const { data, error } = await (supabase as any).rpc("get_festival_configuration", { p_festival_company_id: festivalCompanyId });
   if (error) throw normalizeFestivalConfigurationError(error);
   return parseFestivalConfiguration(data);
 };
 
 export const saveFestivalConfiguration = async (input: { festivalCompanyId: string; expectedVersion: number; configuration: FestivalConfigurationDraft; idempotencyKey: string }): Promise<FestivalConfiguration> => {
   if (!isUuid(input.festivalCompanyId) || !isUuid(input.idempotencyKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 0) throw new Error("festival_configuration_invalid");
-  const { data, error } = await supabase.rpc("save_festival_configuration", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_configuration: toJson(input.configuration), p_idempotency_key: input.idempotencyKey });
+  const { data, error } = await (supabase as any).rpc("save_festival_configuration", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_configuration: toJson(input.configuration), p_idempotency_key: input.idempotencyKey });
   if (error) throw normalizeFestivalConfigurationError(error);
   return parseFestivalConfiguration(data);
 };
@@ -188,34 +188,34 @@ const siteErrors: Record<string, string> = { festival_site_plan_forbidden: "fest
 const normalizeSiteError = (error: { message?: string }) => new Error(Object.entries(siteErrors).find(([key]) => error.message?.includes(key))?.[1] ?? "festival_site_plan_unavailable");
 export const getFestivalSitePlan = async (festivalCompanyId: string): Promise<FestivalSitePlanResult> => {
   if (!isUuid(festivalCompanyId)) throw new Error("festival_site_plan_not_found");
-  const { data, error } = await supabase.rpc("get_festival_site_plan", { p_festival_company_id: festivalCompanyId });
+  const { data, error } = await (supabase as any).rpc("get_festival_site_plan", { p_festival_company_id: festivalCompanyId });
   if (error) throw normalizeSiteError(error);
   return parseFestivalSitePlanResult(data);
 };
 export const saveFestivalSitePlan = async (input: { festivalCompanyId: string; expectedVersion: number; draft: FestivalSitePlanDraft; idempotencyKey: string; complete?: boolean }): Promise<FestivalSitePlanResult> => {
   if (!isUuid(input.festivalCompanyId) || !isUuid(input.idempotencyKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 0) throw new Error("festival_site_invalid");
-  const { data, error } = await supabase.rpc("save_festival_site_plan", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_site_plan: toJson(input.draft.sitePlan), p_stages: toJson(input.draft.stages), p_idempotency_key: input.idempotencyKey, p_complete: input.complete ?? false });
+  const { data, error } = await (supabase as any).rpc("save_festival_site_plan", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_site_plan: toJson(input.draft.sitePlan), p_stages: toJson(input.draft.stages), p_idempotency_key: input.idempotencyKey, p_complete: input.complete ?? false });
   if (error) throw normalizeSiteError(error);
   return parseFestivalSitePlanResult(data);
 };
 
 const ticketErrors = ["festival_ticket_plan_forbidden","festival_site_plan_incomplete","festival_ticket_plan_invalid","festival_ticket_product_invalid","festival_ticket_capacity_invalid","festival_ticket_daily_capacity_exceeded","festival_ticket_release_invalid","festival_ticket_release_allocation_exceeded","festival_ticket_plan_incomplete","festival_ticket_plan_stale","festival_ticket_plan_idempotency_conflict"];
 const normalizeTicketError=(error:{message?:string})=>new Error(ticketErrors.find(code=>error.message?.includes(code))??"festival_ticket_plan_unavailable");
-export async function getFestivalTicketPlan(festivalCompanyId:string):Promise<FestivalTicketPlanResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_ticket_plan_not_found");const {data,error}=await supabase.rpc("get_festival_ticket_plan",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
-export async function saveFestivalTicketPlan(input:{festivalCompanyId:string;expectedVersion:number;draft:FestivalTicketPlanDraft;idempotencyKey:string;complete?:boolean}):Promise<FestivalTicketPlanResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_ticket_plan_invalid");const {data,error}=await supabase.rpc("save_festival_ticket_plan",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_ticket_plan:toJson(input.draft.ticketPlan),p_products:toJson(input.draft.products),p_release_phases:toJson(input.draft.releasePhases),p_capacity_allocations:toJson(input.draft.capacityAllocations),p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
+export async function getFestivalTicketPlan(festivalCompanyId:string):Promise<FestivalTicketPlanResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_ticket_plan_not_found");const {data,error}=await (supabase as any).rpc("get_festival_ticket_plan",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
+export async function saveFestivalTicketPlan(input:{festivalCompanyId:string;expectedVersion:number;draft:FestivalTicketPlanDraft;idempotencyKey:string;complete?:boolean}):Promise<FestivalTicketPlanResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_ticket_plan_invalid");const {data,error}=await (supabase as any).rpc("save_festival_ticket_plan",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_ticket_plan:toJson(input.draft.ticketPlan),p_products:toJson(input.draft.products),p_release_phases:toJson(input.draft.releasePhases),p_capacity_allocations:toJson(input.draft.capacityAllocations),p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeTicketError(error);return parseFestivalTicketPlanResult(data);}
 
 const artistErrors=["festival_artist_programme_forbidden","festival_ticket_plan_incomplete","festival_artist_programme_invalid","festival_artist_application_invalid","festival_artist_application_duplicate","festival_artist_application_closed","festival_artist_invitation_invalid","festival_artist_offer_invalid","festival_artist_offer_budget_exceeded","festival_artist_offer_stale","festival_artist_unavailable","festival_artist_stage_unsuitable","festival_artist_idempotency_conflict","festival_artist_action_forbidden","festival_artist_programme_stale"];
 const normalizeArtistError=(error:{message?:string})=>new Error(artistErrors.find(code=>error.message?.includes(code))??"festival_artist_programme_unavailable");
-export async function getFestivalArtistProgramme(festivalCompanyId:string):Promise<FestivalArtistProgrammeResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_artist_programme_unavailable");const {data,error}=await supabase.rpc("get_festival_artist_programme",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
-export async function saveFestivalArtistProgramme(input:{festivalCompanyId:string;expectedVersion:number;programme:FestivalArtistProgramme;applicationWindows:FestivalApplicationWindow[];idempotencyKey:string;complete?:boolean}):Promise<FestivalArtistProgrammeResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_artist_programme_invalid");const {data,error}=await supabase.rpc("save_festival_artist_programme",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_programme:toJson(input.programme),p_application_windows:toJson(input.applicationWindows),p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
+export async function getFestivalArtistProgramme(festivalCompanyId:string):Promise<FestivalArtistProgrammeResult>{if(!isUuid(festivalCompanyId))throw new Error("festival_artist_programme_unavailable");const {data,error}=await (supabase as any).rpc("get_festival_artist_programme",{p_festival_company_id:festivalCompanyId});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
+export async function saveFestivalArtistProgramme(input:{festivalCompanyId:string;expectedVersion:number;programme:FestivalArtistProgramme;applicationWindows:FestivalApplicationWindow[];idempotencyKey:string;complete?:boolean}):Promise<FestivalArtistProgrammeResult>{if(!isUuid(input.festivalCompanyId)||!isUuid(input.idempotencyKey)||!Number.isInteger(input.expectedVersion)||input.expectedVersion<0)throw new Error("festival_artist_programme_invalid");const {data,error}=await (supabase as any).rpc("save_festival_artist_programme",{p_festival_company_id:input.festivalCompanyId,p_expected_version:input.expectedVersion,p_programme:toJson(input.programme),p_application_windows:toJson(input.applicationWindows),p_idempotency_key:input.idempotencyKey,p_complete:input.complete??false});if(error)throw normalizeArtistError(error);return parseFestivalArtistProgrammeResult(data);}
 
 // Phase 4B uses action RPCs exclusively: contractual rows are never mutated from the browser.
 const actionErrorCodes=["festival_artist_action_forbidden","festival_artist_applications_closed","festival_artist_application_window_invalid","festival_artist_not_eligible","festival_artist_application_duplicate","festival_artist_already_booked","festival_artist_application_forbidden","festival_artist_invitation_duplicate","festival_artist_invitation_invalid_transition","festival_artist_application_invalid_transition","festival_artist_offer_invalid_transition","festival_artist_booking_invalid_transition","festival_artist_offer_budget_exceeded","festival_artist_offer_stale","festival_artist_idempotency_conflict"];
 const actionError=(error:{message?:string})=>new Error(actionErrorCodes.find(x=>error.message?.includes(x))??"festival_artist_action_unavailable");
 const artistRpc=supabase.rpc.bind(supabase) as unknown as UntypedRpc;
 const rpcAction=async(name:string,args:Record<string,unknown>):Promise<FestivalArtistActionResult>=>{const {data,error}=await artistRpc(name,args);if(error)throw actionError(error);return parseFestivalArtistActionResult(data)};
-export async function getMyFestivalArtistOpportunities(){const {data,error}=await supabase.rpc("get_my_festival_artist_opportunities");if(error)throw actionError(error);return parseFestivalArtistOpportunities(data)}
-export async function searchFestivalArtistCandidates(input:{festivalCompanyId:string;query?:string;artistType?:string;genres?:string[];minimumFame?:number;maximumFame?:number;limit?:number;offset?:number}){if(!isUuid(input.festivalCompanyId))throw new Error("festival_artist_action_forbidden");const {data,error}=await supabase.rpc("search_festival_artist_candidates",{p_festival_company_id:input.festivalCompanyId,p_query:input.query??null,p_artist_type:input.artistType??null,p_genres:input.genres??[],p_minimum_fame:input.minimumFame??null,p_maximum_fame:input.maximumFame??null,p_limit:input.limit??25,p_offset:input.offset??0});if(error)throw actionError(error);return parseFestivalArtistCandidates(data)}
+export async function getMyFestivalArtistOpportunities(){const {data,error}=await (supabase as any).rpc("get_my_festival_artist_opportunities");if(error)throw actionError(error);return parseFestivalArtistOpportunities(data)}
+export async function searchFestivalArtistCandidates(input:{festivalCompanyId:string;query?:string;artistType?:string;genres?:string[];minimumFame?:number;maximumFame?:number;limit?:number;offset?:number}){if(!isUuid(input.festivalCompanyId))throw new Error("festival_artist_action_forbidden");const {data,error}=await (supabase as any).rpc("search_festival_artist_candidates",{p_festival_company_id:input.festivalCompanyId,p_query:input.query??null,p_artist_type:input.artistType??null,p_genres:input.genres??[],p_minimum_fame:input.minimumFame??null,p_maximum_fame:input.maximumFame??null,p_limit:input.limit??25,p_offset:input.offset??0});if(error)throw actionError(error);return parseFestivalArtistCandidates(data)}
 export const submitFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("submit_festival_artist_application",i);
 export const withdrawFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("withdraw_festival_artist_application",i);
 export const reviewFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("review_festival_artist_application",i);

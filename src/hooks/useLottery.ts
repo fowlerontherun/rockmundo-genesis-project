@@ -212,7 +212,7 @@ export function useClaimPrize() {
           if (ticket.prize_fame > 0) updates.fame = (currentProfile.fame || 0) + ticket.prize_fame;
           await supabase
             .from("profiles")
-            .update(updates)
+            .update(updates as any)
             .eq("id", currentProfile.id);
         }
       }

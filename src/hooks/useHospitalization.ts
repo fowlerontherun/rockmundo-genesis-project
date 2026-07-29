@@ -162,7 +162,7 @@ export function useHospitalization() {
         .update({
           status: "discharged",
           actual_discharge_at: now.toISOString(),
-        })
+        } as any)
         .eq("id", activeHospitalization.id);
 
       const { data: profile } = await supabase

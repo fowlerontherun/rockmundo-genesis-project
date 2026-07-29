@@ -452,7 +452,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_breakdown: readiness as any,
         crew_equipment_breakdown: { ...prepOutcomeModifiers, preshow: preshowOutcomeModifiers } as any,
         equipment_failures: [ ...(prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] : []), ...preshowOutcomeModifiers.flags.map((flag) => ({ type: flag, severity: 'minor', explanation: 'Pre-show incident consequence carried into performance.' })) ] as any,
-      })
+      } as any)
       .eq('id', existingOutcome.id)
       .select()
       .single();
@@ -497,7 +497,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
         readiness_breakdown: readiness as any,
         crew_equipment_breakdown: { ...prepOutcomeModifiers, preshow: preshowOutcomeModifiers } as any,
         equipment_failures: [ ...(prepOutcomeModifiers.failureRisk > 65 ? [{ type: 'setup_reliability_warning', severity: 'minor', explanation: 'High preparation failure risk increased disruption chance.' }] : []), ...preshowOutcomeModifiers.flags.map((flag) => ({ type: flag, severity: 'minor', explanation: 'Pre-show incident consequence carried into performance.' })) ] as any,
-      })
+      } as any)
       .select()
       .single();
 

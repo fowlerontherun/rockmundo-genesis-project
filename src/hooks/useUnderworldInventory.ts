@@ -103,7 +103,7 @@ export const useUnderworldInventory = () => {
         if (Object.keys(updates).length > 0) {
           const { error: updateError } = await supabase
             .from("profiles")
-            .update(updates)
+            .update(updates as any)
             .eq("id", profileId);
 
           if (updateError) throw updateError;

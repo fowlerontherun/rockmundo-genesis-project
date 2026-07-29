@@ -28,7 +28,7 @@ export const useCompanies = () => {
         throw error;
       }
 
-      const companies = (data || []) as Company[];
+      const companies = (data || []) as unknown as Company[];
       if (companies.length === 0) return companies;
 
       const { data: festivalCompanies, error: festivalError } = await (supabase as any)
@@ -87,8 +87,8 @@ export const useCompany = (companyId: string | undefined) => {
       }
 
       return {
-        ...(data as Company),
-        festival_company_id: festivalCompany?.id ?? null,
+        ...(data as unknown as Company),
+        festival_company_id: (festivalCompany as { id?: string } | null)?.id ?? null,
       };
     },
     enabled: !!companyId,
@@ -233,7 +233,7 @@ export const useUpdateCompany = () => {
     mutationFn: async ({ id, ...updates }: Partial<Company> & { id: string }): Promise<Company> => {
       const { data, error } = await supabase
         .from("companies")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();

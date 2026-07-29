@@ -158,7 +158,7 @@ export const useUpdateSetlist = () => {
     }) => {
       const { data, error } = await supabase
         .from("setlists")
-        .update(updates)
+        .update(updates as any)
         .eq("id", setlistId)
         .select()
         .single();
