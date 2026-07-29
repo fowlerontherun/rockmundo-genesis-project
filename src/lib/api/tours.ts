@@ -3,46 +3,17 @@ import type { Tables } from "@/lib/supabase-types";
 
 export type TourRecord = Tables<"tours">;
 
-export interface CreateTourInput {
-  name: TourRecord["name"];
-  bandId: TourRecord["band_id"];
-  startDate: TourRecord["start_date"];
-  endDate: TourRecord["end_date"];
-  userId: TourRecord["user_id"];
-}
-
 export interface UpdateTourInput {
-  name?: TourRecord["name"];
-  bandId?: TourRecord["band_id"];
-  startDate?: TourRecord["start_date"];
-  endDate?: TourRecord["end_date"];
+  name: TourRecord["name"];
 }
 
-const toDbPayload = (input: Partial<CreateTourInput & UpdateTourInput>): Record<string, any> => {
-  const payload: Record<string, any> = {};
-
-  if (input.name !== undefined) {
-    payload.name = input.name;
-  }
-
-  if (input.bandId !== undefined) {
-    payload.band_id = input.bandId;
-  }
-
-  if ((input as CreateTourInput).userId !== undefined) {
-    payload.user_id = (input as CreateTourInput).userId;
-  }
-
-  if (input.startDate !== undefined) {
-    payload.start_date = input.startDate;
-  }
-
-  if (input.endDate !== undefined) {
-    payload.end_date = input.endDate;
-  }
-
-  return payload;
-};
+export interface RescheduleTourResult {
+  tour: TourRecord;
+  already_rescheduled?: boolean;
+  shift_days?: number;
+  gigs_moved?: number;
+  travel_legs_moved?: number;
+}
 
 export const listTours = async (bandId?: string): Promise<TourRecord[]> => {
   let query = supabase.from("tours").select("*").order("start_date", { ascending: true });
@@ -74,34 +45,14 @@ export const getTour = async (id: string): Promise<TourRecord | null> => {
   return data ?? null;
 };
 
-export const createTour = async (input: CreateTourInput): Promise<TourRecord> => {
-  const payload = toDbPayload(input);
-
-  const { data, error } = await (supabase as any)
-    .from("tours")
-    .insert([payload])
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as TourRecord;
-};
-
 export const updateTour = async (
   id: string,
   input: UpdateTourInput
 ): Promise<TourRecord> => {
-  const payload = toDbPayload(input);
-
-  const { data, error } = await supabase
-    .from("tours")
-    .update(payload as never)
-    .eq("id", id)
-    .select()
-    .single();
+  const { data, error } = await (supabase.rpc as any)("update_tour_metadata", {
+    p_tour_id: id,
+    p_name: input.name,
+  });
 
   if (error) {
     throw error;
@@ -114,10 +65,24 @@ export const updateTour = async (
   return data as TourRecord;
 };
 
-export const deleteTour = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("tours").delete().eq("id", id);
+export const rescheduleTour = async (
+  id: string,
+  newStartDate: string,
+  requestId: string = crypto.randomUUID()
+): Promise<RescheduleTourResult> => {
+  const { data, error } = await (supabase.rpc as any)("reschedule_tour", {
+    p_tour_id: id,
+    p_new_start_date: newStartDate,
+    p_request_id: requestId,
+  });
 
   if (error) {
     throw error;
   }
+
+  if (!data?.tour) {
+    throw new Error("Unable to locate tour for rescheduling");
+  }
+
+  return data as RescheduleTourResult;
 };

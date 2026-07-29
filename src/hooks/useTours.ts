@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
-import { listTours, createTour, updateTour, deleteTour } from "@/lib/api/tours";
-import type { CreateTourInput, UpdateTourInput } from "@/lib/api/tours";
+import { listTours, rescheduleTour, updateTour } from "@/lib/api/tours";
+import type { UpdateTourInput } from "@/lib/api/tours";
 
 export const useTours = (bandId?: string) => {
   const { toast } = useToast();
@@ -17,7 +17,7 @@ export const useTours = (bandId?: string) => {
     queryKey: ["tour-gigs", bandId],
     queryFn: async () => {
       if (!bandId) return [];
-      
+
       const { data, error } = await supabase
         .from("gigs")
         .select(`
@@ -48,23 +48,16 @@ export const useTours = (bandId?: string) => {
     },
   });
 
-  const createTourMutation = useMutation({
-    mutationFn: (input: CreateTourInput) => createTour(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
-      toast({
-        title: "Tour created",
-        description: "Your tour has been created successfully!",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create tour",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const invalidateTourSchedule = () => {
+    queryClient.invalidateQueries({ queryKey: ["tours"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });
+    queryClient.invalidateQueries({ queryKey: ["gigs"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-venues"] });
+    queryClient.invalidateQueries({ queryKey: ["tour-travel-legs"] });
+    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+    queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
+  };
 
   const updateTourMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateTourInput }) =>
@@ -76,121 +69,94 @@ export const useTours = (bandId?: string) => {
         description: "Tour details have been updated.",
       });
     },
+    onError: (error: Error) => {
+      const description = error.message.includes("tour_update_forbidden")
+        ? "You do not have permission to update this tour."
+        : error.message.includes("tour_update_status_locked")
+          ? "Completed and cancelled tours cannot be edited."
+          : error.message.includes("tour_update_name_invalid")
+            ? "Enter a tour name between 1 and 120 characters."
+            : "The tour could not be updated.";
+
+      toast({
+        title: "Failed to update tour",
+        description,
+        variant: "destructive",
+      });
+    },
   });
 
-  const deleteTourMutation = useMutation({
-    mutationFn: (id: string) => deleteTour(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
+  const rescheduleTourMutation = useMutation({
+    mutationFn: ({ id, newStartDate, requestId }: { id: string; newStartDate: string; requestId?: string }) =>
+      rescheduleTour(id, newStartDate, requestId),
+    onSuccess: (result) => {
+      invalidateTourSchedule();
       toast({
-        title: "Tour deleted",
-        description: "The tour has been removed.",
+        title: result.already_rescheduled ? "Tour already rescheduled" : "Tour rescheduled",
+        description: result.already_rescheduled
+          ? "This rescheduling request had already been applied."
+          : `${result.gigs_moved ?? 0} gigs and ${result.travel_legs_moved ?? 0} travel legs were moved together.`,
+      });
+    },
+    onError: (error: Error) => {
+      const description = error.message.includes("tour_reschedule_forbidden")
+        ? "You do not have permission to reschedule this tour."
+        : error.message.includes("tour_reschedule_state_invalid") || error.message.includes("tour_reschedule_started")
+          ? "Only tours that have not started can be rescheduled."
+          : error.message.includes("tour_reschedule_past_date")
+            ? "The new tour start date cannot be in the past."
+            : error.message.includes("tour_reschedule_band_conflict")
+              ? "The band already has another booking during the proposed dates."
+              : error.message.includes("tour_reschedule_venue_conflict")
+                ? "A venue is unavailable during the proposed dates."
+                : "The tour could not be rescheduled. No dates were changed.";
+
+      toast({
+        title: "Failed to reschedule tour",
+        description,
+        variant: "destructive",
       });
     },
   });
 
   const cancelTourMutation = useMutation({
     mutationFn: async (tourId: string) => {
-      // Fetch tour details
-      const { data: tour, error: fetchError } = await supabase
-        .from("tours")
-        .select("*, bands!tours_band_id_fkey(band_balance)")
-        .eq("id", tourId)
-        .single();
+      const { data, error } = await (supabase.rpc as any)("cancel_tour", {
+        p_tour_id: tourId,
+      });
 
-      if (fetchError || !tour) throw new Error("Tour not found");
-
-      // Check if same-day cancellation for full refund
-      const createdAt = new Date(tour.created_at);
-      const now = new Date();
-      const isSameDay = createdAt.toDateString() === now.toDateString();
-      const refundAmount = isSameDay ? (tour.total_upfront_cost || 0) : 0;
-
-      // Delete associated gigs
-      await supabase
-        .from("gigs")
-        .delete()
-        .eq("tour_id", tourId);
-
-      // Delete associated tour venues
-      await supabase
-        .from("tour_venues")
-        .delete()
-        .eq("tour_id", tourId);
-
-      // Delete associated travel legs
-      await supabase
-        .from("tour_travel_legs")
-        .delete()
-        .eq("tour_id", tourId);
-
-      // Refund band if same-day
-      if (refundAmount > 0 && tour.band_id) {
-        const currentBalance = tour.bands?.band_balance || 0;
-        await supabase
-          .from("bands")
-          .update({ band_balance: currentBalance + refundAmount })
-          .eq("id", tour.band_id);
-      }
-
-      // Delete the tour
-      const { error: deleteError } = await supabase
-        .from("tours")
-        .delete()
-        .eq("id", tourId);
-
-      if (deleteError) throw deleteError;
-
-      return { refundAmount, isSameDay };
+      if (error) throw error;
+      return data as {
+        tour_id: string;
+        already_cancelled?: boolean;
+        same_day?: boolean;
+        refund_amount?: number;
+      };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
-      queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });
+      invalidateTourSchedule();
       queryClient.invalidateQueries({ queryKey: ["band-for-tour"] });
+
+      const refundAmount = Number(result.refund_amount ?? 0);
       toast({
-        title: "Tour cancelled",
-        description: result.refundAmount > 0 
-          ? `Full refund of $${result.refundAmount.toLocaleString()} applied (same-day cancellation).`
-          : "Tour has been cancelled. No refund available after booking day.",
+        title: result.already_cancelled ? "Tour already cancelled" : "Tour cancelled",
+        description: refundAmount > 0
+          ? `Full refund of £${refundAmount.toLocaleString("en-GB")} applied (same-day cancellation).`
+          : "Tour has been cancelled. No refund is available after the booking day.",
       });
     },
     onError: (error: Error) => {
+      console.error("Failed to cancel tour:", error);
+      const description = error.message.includes("tour_cancel_forbidden")
+        ? "You do not have permission to cancel this tour."
+        : error.message.includes("tour_cancel_not_found")
+          ? "This tour no longer exists."
+          : "The tour could not be cancelled. No partial cancellation or refund was applied.";
+
       toast({
         title: "Failed to cancel tour",
-        description: error.message,
+        description,
         variant: "destructive",
-      });
-    },
-  });
-
-  const addGigToTour = useMutation({
-    mutationFn: async (params: {
-      tourId: string;
-      venueId: string;
-      bandId: string;
-      scheduledDate: string;
-      setlistId?: string;
-    }) => {
-      const { data, error } = await supabase
-        .from("gigs")
-        .insert({
-          band_id: params.bandId,
-          venue_id: params.venueId,
-          scheduled_date: params.scheduledDate,
-          setlist_id: params.setlistId,
-          status: "scheduled",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });
-      toast({
-        title: "Gig added",
-        description: "Gig has been added to the tour.",
       });
     },
   });
@@ -201,10 +167,8 @@ export const useTours = (bandId?: string) => {
     venues,
     toursLoading,
     gigsLoading,
-    createTour: createTourMutation,
     updateTour: updateTourMutation,
-    deleteTour: deleteTourMutation,
+    rescheduleTour: rescheduleTourMutation,
     cancelTour: cancelTourMutation,
-    addGigToTour,
   };
 };
