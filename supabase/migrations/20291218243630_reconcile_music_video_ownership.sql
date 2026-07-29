@@ -1,20 +1,5 @@
--- Create music_videos table
-CREATE TABLE IF NOT EXISTS public.music_videos (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
-  budget DECIMAL NOT NULL DEFAULT 0,
-  production_quality INTEGER NOT NULL DEFAULT 0 CHECK (production_quality >= 0 AND production_quality <= 100),
-  director_id UUID,
-  status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'production', 'released')),
-  release_date TIMESTAMPTZ,
-  views_count BIGINT NOT NULL DEFAULT 0,
-  earnings DECIMAL NOT NULL DEFAULT 0,
-  hype_score INTEGER NOT NULL DEFAULT 0 CHECK (hype_score >= 0 AND hype_score <= 100),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- Reconcile music-video ownership policies for databases where the historical
+-- migration referenced the removed songs.user_id column.
 
 ALTER TABLE public.music_videos ENABLE ROW LEVEL SECURITY;
 
@@ -38,8 +23,7 @@ CREATE POLICY "Users can create music videos for their own songs"
         AND (
           s.artist_id = auth.uid()
           OR EXISTS (
-            SELECT 1
-            FROM public.band_members bm
+            SELECT 1 FROM public.band_members bm
             WHERE bm.band_id = s.band_id
               AND bm.user_id = auth.uid()
           )
@@ -60,8 +44,7 @@ CREATE POLICY "Users can update their own music videos"
         AND (
           s.artist_id = auth.uid()
           OR EXISTS (
-            SELECT 1
-            FROM public.band_members bm
+            SELECT 1 FROM public.band_members bm
             WHERE bm.band_id = s.band_id
               AND bm.user_id = auth.uid()
           )
@@ -76,8 +59,7 @@ CREATE POLICY "Users can update their own music videos"
         AND (
           s.artist_id = auth.uid()
           OR EXISTS (
-            SELECT 1
-            FROM public.band_members bm
+            SELECT 1 FROM public.band_members bm
             WHERE bm.band_id = s.band_id
               AND bm.user_id = auth.uid()
           )
@@ -98,23 +80,13 @@ CREATE POLICY "Users can delete their own music videos"
         AND (
           s.artist_id = auth.uid()
           OR EXISTS (
-            SELECT 1
-            FROM public.band_members bm
+            SELECT 1 FROM public.band_members bm
             WHERE bm.band_id = s.band_id
               AND bm.user_id = auth.uid()
           )
         )
     )
   );
-
-CREATE INDEX IF NOT EXISTS idx_music_videos_song_id
-  ON public.music_videos (song_id);
-CREATE INDEX IF NOT EXISTS idx_music_videos_status
-  ON public.music_videos (status);
-CREATE INDEX IF NOT EXISTS idx_music_videos_hype_score
-  ON public.music_videos (hype_score DESC);
-CREATE INDEX IF NOT EXISTS idx_music_videos_release_date
-  ON public.music_videos (release_date DESC);
 
 DROP TRIGGER IF EXISTS update_music_videos_updated_at
   ON public.music_videos;
