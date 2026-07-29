@@ -5,12 +5,7 @@ CREATE TABLE IF NOT EXISTS public.profile_activity_statuses (
   status text NOT NULL,
   started_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   duration_minutes integer,
-  ends_at timestamptz GENERATED ALWAYS AS (
-    CASE
-      WHEN duration_minutes IS NULL THEN NULL
-      ELSE started_at + make_interval(mins => duration_minutes)
-    END
-  ) STORED,
+  ends_at timestamptz,
   song_id uuid REFERENCES public.songs(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
@@ -38,6 +33,25 @@ CREATE TRIGGER profile_activity_statuses_set_updated_at
   BEFORE UPDATE ON public.profile_activity_statuses
   FOR EACH ROW
   EXECUTE FUNCTION public.set_profile_activity_status_updated_at();
+
+CREATE OR REPLACE FUNCTION public.sync_profile_activity_status_ends_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.ends_at = CASE
+    WHEN NEW.duration_minutes IS NULL THEN NULL
+    ELSE NEW.started_at + make_interval(mins => NEW.duration_minutes)
+  END;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS profile_activity_statuses_sync_ends_at
+  ON public.profile_activity_statuses;
+
+CREATE TRIGGER profile_activity_statuses_sync_ends_at
+  BEFORE INSERT OR UPDATE ON public.profile_activity_statuses
+  FOR EACH ROW
+  EXECUTE FUNCTION public.sync_profile_activity_status_ends_at();
 
 ALTER TABLE public.profile_activity_statuses ENABLE ROW LEVEL SECURITY;
 
@@ -74,9 +88,22 @@ CREATE POLICY "Profiles manage their own activity status"
 ALTER TABLE public.activity_feed
   ADD COLUMN IF NOT EXISTS status text,
   ADD COLUMN IF NOT EXISTS duration_minutes integer,
-  ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL,
-  ADD CONSTRAINT IF NOT EXISTS activity_feed_duration_check
-    CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'activity_feed_duration_check'
+      AND conrelid = 'public.activity_feed'::regclass
+  ) THEN
+    ALTER TABLE public.activity_feed
+      ADD CONSTRAINT activity_feed_duration_check
+      CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  END IF;
+END
+$$;
 
 -- Expand songwriting projects with the gameplay fields used by the app
 ALTER TABLE public.songwriting_projects
