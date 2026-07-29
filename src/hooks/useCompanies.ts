@@ -134,11 +134,9 @@ export const useCreateCompany = () => {
         throw new Error("Festival companies must be founded through the secure VIP festival RPC.");
       }
 
-      // Get creation costs
       const costs = COMPANY_CREATION_COSTS[input.company_type];
       if (!costs) throw new Error("Invalid company type");
 
-      // Verify player has enough funds if profileId provided
       if (input.profileId) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -151,7 +149,6 @@ export const useCreateCompany = () => {
           throw new Error(`Insufficient funds. Need $${costs.creationCost.toLocaleString()} to create this company.`);
         }
 
-        // Deduct creation cost from player
         const { error: deductError } = await supabase
           .from("profiles")
           .update({ cash: Number(profile.cash) - costs.creationCost })
@@ -160,7 +157,6 @@ export const useCreateCompany = () => {
         if (deductError) throw deductError;
       }
 
-      // Create company with starting balance and operating costs
       const { data, error } = await supabase
         .from("companies")
         .insert({
@@ -178,14 +174,13 @@ export const useCreateCompany = () => {
 
       if (error) {
         console.error("Error creating company:", error);
-        // If company creation failed and we deducted funds, try to refund
         if (input.profileId) {
           const { data: currentProfile } = await supabase
             .from("profiles")
             .select("cash")
             .eq("id", input.profileId)
             .single();
-          
+
           if (currentProfile) {
             await supabase
               .from("profiles")
@@ -196,7 +191,6 @@ export const useCreateCompany = () => {
         throw error;
       }
 
-      // Record the investment transaction
       await supabase.from("company_transactions").insert({
         company_id: data.id,
         transaction_type: "investment",
@@ -204,7 +198,6 @@ export const useCreateCompany = () => {
         description: "Initial capital investment",
       });
 
-      // Initialize share ownership for founder
       await supabase.from("company_shareholders" as any).insert({
         company_id: data.id,
         user_id: userId,
@@ -289,7 +282,6 @@ export const useCompanyFinancialSummary = () => {
         };
       }
 
-      // Get all companies owned by user
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
         .select("id, balance, weekly_operating_costs, company_type")
@@ -300,8 +292,6 @@ export const useCompanyFinancialSummary = () => {
       const companyIds = (companies || []).map(c => c.id);
       const totalBalance = (companies || []).reduce((sum, c) => sum + Number(c.balance), 0);
 
-      // Aggregate workforce across all subsidiary staff tables
-      // (factory workers, security guards, venue/rehearsal/recording/label/club staff, logistics drivers).
       let employeeCount = 0;
       if (companyIds.length > 0) {
         const { data: workforce, error: workforceError } = await (supabase as any)
@@ -316,10 +306,8 @@ export const useCompanyFinancialSummary = () => {
         }
       }
 
-      // Count subsidiaries (non-holding companies)
       const subsidiaryCount = (companies || []).filter(c => c.company_type !== 'holding').length;
 
-      // Calculate actual monthly income & expenses from last 30 days of transactions
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
 
@@ -344,7 +332,6 @@ export const useCompanyFinancialSummary = () => {
         );
       }
 
-      // Get pending taxes
       let pendingTaxes = 0;
       if (companyIds.length > 0) {
         const { data: taxRecords } = await supabase
@@ -358,9 +345,8 @@ export const useCompanyFinancialSummary = () => {
         );
       }
 
-      // Calculate effective tax rate
-      const effectiveTaxRate = monthlyIncome > 0 
-        ? pendingTaxes / monthlyIncome 
+      const effectiveTaxRate = monthlyIncome > 0
+        ? pendingTaxes / monthlyIncome
         : 0;
 
       return {
@@ -384,18 +370,17 @@ export const useCloseSubsidiary = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      companyId, 
+    mutationFn: async ({
+      companyId,
       profileId: inputProfileId,
-      transferBalance = true 
-    }: { 
-      companyId: string; 
+      transferBalance = true
+    }: {
+      companyId: string;
       profileId?: string;
       transferBalance?: boolean;
     }): Promise<void> => {
       if (!userId) throw new Error("Not authenticated");
 
-      // Get company details
       const { data: company, error: companyError } = await supabase
         .from("companies")
         .select("id, name, balance, company_type, parent_company_id, owner_id")
@@ -406,7 +391,6 @@ export const useCloseSubsidiary = () => {
       if (company.owner_id !== userId) throw new Error("You don't own this company");
       if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
 
-      // Check for active contracts/obligations
       const { count: contractCount } = await supabase
         .from("artist_label_contracts")
         .select("id", { count: "exact", head: true })
@@ -417,7 +401,6 @@ export const useCloseSubsidiary = () => {
         throw new Error("Cannot close company with active artist contracts");
       }
 
-      // Transfer remaining balance to player if requested
       if (transferBalance && Number(company.balance) > 0 && inputProfileId) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -431,7 +414,6 @@ export const useCloseSubsidiary = () => {
             .update({ cash: Number(profile.cash) + Number(company.balance) })
             .eq("id", inputProfileId);
 
-          // Record the withdrawal transaction
           await supabase.from("company_transactions").insert({
             company_id: companyId,
             transaction_type: "transfer_out",
@@ -441,7 +423,6 @@ export const useCloseSubsidiary = () => {
         }
       }
 
-      // Delete related records based on company type
       if (company.company_type === 'security') {
         await supabase.from("security_firms").delete().eq("company_id", companyId);
       } else if (company.company_type === 'factory') {
@@ -450,16 +431,10 @@ export const useCloseSubsidiary = () => {
         await supabase.from("logistics_companies").delete().eq("company_id", companyId);
       }
 
-      // Delete company settings
       await supabase.from("company_settings").delete().eq("company_id", companyId);
-      
-      // Delete company transactions
       await supabase.from("company_transactions").delete().eq("company_id", companyId);
-      
-      // Delete tax records
       await supabase.from("company_tax_records").delete().eq("company_id", companyId);
 
-      // Finally delete the company
       const { error: deleteError } = await supabase
         .from("companies")
         .delete()
