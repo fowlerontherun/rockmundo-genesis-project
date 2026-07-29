@@ -7,6 +7,9 @@ const read = (file: string) => fs.readFileSync(path.resolve(file), "utf8");
 const categoryMigration = read(
   "supabase/migrations/20291218242500_add_charity_donation_transaction_category.sql",
 );
+const movementMigration = read(
+  "supabase/migrations/20291218242550_repair_financial_move_currency_entries.sql",
+);
 const migration = read(
   "supabase/migrations/20291218242600_atomic_charity_donations.sql",
 );
@@ -19,6 +22,16 @@ describe("atomic character charity donations", () => {
     expect(migration).toContain("public._move_financial_account_money(");
     expect(migration).toContain("'charity_donation'");
     expect(migration).toContain("'charity_clearing'");
+  });
+
+  it("repairs the canonical movement primitive for required currency columns", () => {
+    expect(movementMigration).toContain("transaction_currency char(3)");
+    expect(movementMigration).toContain("source_currency_code");
+    expect(movementMigration).toContain("destination_currency_code");
+    expect(movementMigration).toContain("INSERT INTO public.financial_ledger_entries");
+    expect(movementMigration).toContain("currency_code");
+    expect(movementMigration).toContain("pg_advisory_xact_lock");
+    expect(movementMigration).toContain("idempotency_key_conflict");
   });
 
   it("derives authority, wallet and currency on the server", () => {
