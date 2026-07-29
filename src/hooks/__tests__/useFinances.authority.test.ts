@@ -48,7 +48,7 @@ describe("canonical Financial Command Center UI", () => {
     expect(summarySource).toContain("Band treasuries excluded");
     expect(personalSource).toContain("Band treasuries and foreign currencies are excluded");
     expect(bandSource).toContain("fictional personal share");
-    expect(bandSource).not.toContain("playerShare")
+    expect(bandSource).not.toContain("playerShare");
   });
 
   it("uses en-GB formatting and the active currency rather than USD", () => {
