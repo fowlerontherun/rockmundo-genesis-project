@@ -1,8 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import { deductCompanyExpense } from "@/lib/api/companyExpenseDeductions";
 
 /**
- * Deducts an amount from a company's balance and records a transaction.
- * Throws if insufficient funds.
+ * Deducts an amount from a company's balance through the authoritative,
+ * transactional company-expense boundary.
  */
 export async function deductCompanyBalance({
   companyId,
@@ -15,40 +16,12 @@ export async function deductCompanyBalance({
   description: string;
   category: string;
 }) {
-  // Fetch current balance
-  const { data: company, error: fetchError } = await supabase
-    .from("companies")
-    .select("balance")
-    .eq("id", companyId)
-    .single();
-
-  if (fetchError) throw new Error(`Failed to fetch company: ${fetchError.message}`);
-  if (!company) throw new Error("Company not found");
-
-  if ((company.balance || 0) < amount) {
-    throw new Error(`Insufficient funds. Need $${amount.toLocaleString()} but only have $${(company.balance || 0).toLocaleString()}`);
-  }
-
-  // Deduct balance
-  const { error: updateError } = await supabase
-    .from("companies")
-    .update({ balance: (company.balance || 0) - amount })
-    .eq("id", companyId);
-
-  if (updateError) throw new Error(`Failed to update balance: ${updateError.message}`);
-
-  // Record transaction
-  const { error: txError } = await supabase
-    .from("company_transactions")
-    .insert({
-      company_id: companyId,
-      transaction_type: "expense",
-      amount: -amount,
-      description,
-      category,
-    });
-
-  if (txError) console.error("Failed to record transaction:", txError);
+  return deductCompanyExpense({
+    companyId,
+    amount,
+    description,
+    category,
+  });
 }
 
 /** Look up company_id from a security_firms row */
