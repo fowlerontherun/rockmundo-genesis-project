@@ -1,0 +1,53 @@
+name: PR1388 one-shot authority migration
+
+on:
+  push:
+    branches:
+      - fix/enforce-tour-manager-authority
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/enforce-tour-manager-authority
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apply Tour Manager authority migration
+        run: node scripts/migrate-tour-manager-authority.mjs src/pages/TourManager.tsx
+      - name: Patch festival company typing boundary
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'src/hooks/useCompanies.ts';
+          let source = fs.readFileSync(path, 'utf8');
+          source = source.replace(
+            'const { data: festivalCompanies, error: festivalError } = await supabase\n        .from("festival_companies")',
+            'const { data: festivalCompanies, error: festivalError } = await (supabase as any)\n        .from("festival_companies")'
+          );
+          source = source.replace(
+            '(festivalCompanies || []).map((festival) => [festival.company_id, festival.id])',
+            '(festivalCompanies || []).map((festival: { company_id: string; id: string }) => [festival.company_id, festival.id])'
+          );
+          source = source.replace(
+            'const { data: festivalCompany, error: festivalError } = await supabase\n        .from("festival_companies")',
+            'const { data: festivalCompany, error: festivalError } = await (supabase as any)\n        .from("festival_companies")'
+          );
+          fs.writeFileSync(path, source);
+          NODE
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/pr1388-one-shot-fix.yml
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/TourManager.tsx src/hooks/useCompanies.ts .github/workflows/pr1388-one-shot-fix.yml
+          git commit -m "fix: apply final Tour Manager authority migration"
+          git push origin HEAD:fix/enforce-tour-manager-authority
