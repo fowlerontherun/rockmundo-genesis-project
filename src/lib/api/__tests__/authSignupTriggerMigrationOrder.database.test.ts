@@ -13,6 +13,7 @@ const compatibilityMigration = read(
 const duplicateMigrations = [
   "supabase/migrations/20250916085517_f5f55449-6b35-4479-93e8-09fa35807472.sql",
   "supabase/migrations/20250916085540_6d17ec9d-9a9c-44be-864d-5972c41adae1.sql",
+  "supabase/migrations/20250916085610_b5ae9f69-4eaa-4c54-b70f-6956d77b3f46.sql",
 ].map(read);
 const finalReconciliation = read(
   "supabase/migrations/20291218243000_reconcile_auth_signup_trigger.sql",
