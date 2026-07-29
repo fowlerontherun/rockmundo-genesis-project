@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.609",
+    date: "2026-07-29",
+    changes: [
+      { type: 'fix', description: "Booking a tour failed with a 'tours_travel_mode_check' error. The database only accepted three travel options while the tour wizard offers bus, train, plane and ship as well — all of the wizard's travel options are now accepted." },
+      { type: 'improvement', description: "Fixed a build error in the companies data layer caused by an untyped festival company lookup." },
+    ],
+  },
+  {
     version: "1.1.608",
     date: "2026-07-29",
     changes: [
