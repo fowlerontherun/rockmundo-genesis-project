@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useCompanyShareholders, useDistributeAnnualProfit } from "@/hooks/useCompanyShares";
 import {
   useCompanyShareOffers,
@@ -12,12 +13,17 @@ import {
 } from "@/hooks/useCompanyShareOffers";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 
 interface CompanySharesPanelProps {
   companyId: string;
   isMajorityOwner: boolean;
 }
+
+type ShareRecipientProfile = {
+  id: string;
+  display_name: string | null;
+  username: string | null;
+};
 
 const formatGBP = (amount: number) =>
   new Intl.NumberFormat("en-GB", {
@@ -26,6 +32,11 @@ const formatGBP = (amount: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+
+const publicName = (profile: {
+  display_name?: string | null;
+  username?: string | null;
+} | null | undefined) => profile?.display_name || profile?.username || "Unknown player";
 
 export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanySharesPanelProps) {
   const { profileId } = useActiveProfile();
@@ -42,16 +53,20 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["share-recipient-profiles", recipientQuery],
-    queryFn: async () => {
-      if (!recipientQuery || recipientQuery.length < 2) return [];
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, stage_name, username")
-        .or(`stage_name.ilike.%${recipientQuery}%,username.ilike.%${recipientQuery}%`)
+    queryFn: async (): Promise<ShareRecipientProfile[]> => {
+      const query = recipientQuery.trim().replace(/[,%()]/g, " ");
+      if (query.length < 2) return [];
+
+      const { data, error } = await supabase
+        .from("public_profiles")
+        .select("id, display_name, username")
+        .or(`display_name.ilike.%${query}%,username.ilike.%${query}%`)
         .limit(8);
-      return data || [];
+
+      if (error) throw error;
+      return (data || []) as ShareRecipientProfile[];
     },
-    enabled: recipientQuery.length >= 2,
+    enabled: recipientQuery.trim().length >= 2,
   });
 
   const totalShares = useMemo(
@@ -83,8 +98,7 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
                       {offer.shares.toLocaleString("en-GB")} shares for {formatGBP(offer.total_price)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Offered by {offer.issuerProfile?.stage_name || offer.issuerProfile?.username || "Company owner"}
-                      {" · "}{formatGBP(offer.price_per_share)} per share
+                      Offered by {publicName(offer.issuerProfile)} · {formatGBP(offer.price_per_share)} per share
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Expires {new Date(offer.expires_at).toLocaleString("en-GB")}
@@ -115,9 +129,7 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
       <Card>
         <CardHeader>
           <CardTitle>Shareholders</CardTitle>
-          <CardDescription>
-            Ownership is determined by who owns the most shares.
-          </CardDescription>
+          <CardDescription>Ownership is determined by who owns the most shares.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {shareholders.map((holder) => {
@@ -125,7 +137,7 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
             return (
               <div key={holder.id} className="flex items-center justify-between rounded border p-3">
                 <div>
-                  <p className="font-medium">{holder.profile?.stage_name || holder.profile?.username || "Unknown player"}</p>
+                  <p className="font-medium">{publicName(holder.profile)}</p>
                   <p className="text-xs text-muted-foreground">{holder.shares} shares</p>
                 </div>
                 <p className="text-sm font-semibold">{percentage.toFixed(1)}%</p>
@@ -149,17 +161,24 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
             <>
               <div>
                 <Label>Find player</Label>
-                <Input value={recipientQuery} onChange={(event) => setRecipientQuery(event.target.value)} placeholder="Search by stage name or username" />
+                <Input
+                  value={recipientQuery}
+                  onChange={(event) => {
+                    setRecipientQuery(event.target.value);
+                    setRecipientId("");
+                  }}
+                  placeholder="Search by display name or username"
+                />
                 {profiles.length > 0 && (
                   <div className="mt-2 space-y-1 rounded border p-2">
-                    {profiles.map((profile: any) => (
+                    {profiles.map((profile) => (
                       <button
                         key={profile.id}
                         className={`w-full rounded px-2 py-1 text-left text-sm hover:bg-accent ${recipientId === profile.id ? "bg-accent" : ""}`}
                         onClick={() => setRecipientId(profile.id)}
                         type="button"
                       >
-                        {profile.stage_name || profile.username}
+                        {publicName(profile)}
                       </button>
                     ))}
                   </div>
