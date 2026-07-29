@@ -30,6 +30,12 @@ type SelectedVenue = {
   timeSlot: string;
 };
 
+type SetlistWithSongs = {
+  id: string;
+  name: string;
+  setlist_songs?: Array<{ count: number }>;
+};
+
 const today = new Date().toISOString().slice(0, 10);
 
 export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCreationWizardProps) => {
@@ -49,14 +55,17 @@ export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCr
 
   const { data: setlists = [] } = useQuery({
     queryKey: ['setlists', bandId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('setlists').select('*').eq('band_id', bandId);
+    queryFn: async (): Promise<SetlistWithSongs[]> => {
+      const { data, error } = await supabase.from('setlists').select('id, name, setlist_songs(count)').eq('band_id', bandId);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as SetlistWithSongs[];
     },
   });
 
-  const eligibleSetlists = useMemo(() => setlists.filter((setlist) => (setlist.song_count ?? 0) >= 6), [setlists]);
+  const eligibleSetlists = useMemo(
+    () => setlists.filter((setlist) => (setlist.setlist_songs?.[0]?.count ?? 0) >= 6),
+    [setlists],
+  );
 
   const { data: venues = [] } = useQuery({
     queryKey: ['venues-with-cities'],
