@@ -8,6 +8,12 @@ import {
   type CompanyShareOfferStatus,
 } from "@/lib/api/companyShareOffers";
 
+type ShareOfferPublicProfile = {
+  id: string;
+  display_name: string | null;
+  username: string | null;
+};
+
 export interface CompanyShareOffer {
   id: string;
   company_id: string;
@@ -19,7 +25,7 @@ export interface CompanyShareOffer {
   status: CompanyShareOfferStatus;
   expires_at: string;
   created_at: string;
-  issuerProfile?: { id: string; stage_name: string | null; username: string | null } | null;
+  issuerProfile?: ShareOfferPublicProfile | null;
 }
 
 const invalidateShareData = (
@@ -94,12 +100,13 @@ export const useCompanyShareOffers = (
 
       const issuerProfileIds = [...new Set(rows.map((offer) => offer.issuer_profile_id))];
       const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, stage_name, username")
+        .from("public_profiles")
+        .select("id, display_name, username")
         .in("id", issuerProfileIds);
 
       if (profileError) throw profileError;
-      const profileById = new Map((profiles || []).map((profile) => [profile.id, profile]));
+      const publicProfiles = (profiles || []) as ShareOfferPublicProfile[];
+      const profileById = new Map(publicProfiles.map((profile) => [profile.id, profile]));
 
       return rows.map((offer) => ({
         ...offer,
