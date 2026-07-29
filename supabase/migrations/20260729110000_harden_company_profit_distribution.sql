@@ -31,8 +31,8 @@ BEGIN
   END IF;
 
   SELECT * INTO v_company
-  FROM public.companies
-  WHERE id = p_company_id
+  FROM public.companies c
+  WHERE c.id = p_company_id
   FOR UPDATE;
 
   IF NOT FOUND THEN
@@ -57,10 +57,10 @@ BEGIN
     ) / 360
   ) + 1;
 
-  SELECT distributed_profit INTO v_existing_profit
-  FROM public.company_profit_distributions
-  WHERE company_id = p_company_id
-    AND game_year = v_game_year
+  SELECT d.distributed_profit INTO v_existing_profit
+  FROM public.company_profit_distributions d
+  WHERE d.company_id = p_company_id
+    AND d.game_year = v_game_year
   FOR UPDATE;
 
   IF FOUND THEN
@@ -72,10 +72,10 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT distributed_at INTO v_latest_distributed_at
-  FROM public.company_profit_distributions
-  WHERE company_id = p_company_id
-  ORDER BY distributed_at DESC
+  SELECT d.distributed_at INTO v_latest_distributed_at
+  FROM public.company_profit_distributions d
+  WHERE d.company_id = p_company_id
+  ORDER BY d.distributed_at DESC
   LIMIT 1;
 
   SELECT coalesce(sum(t.amount), 0) INTO v_profit
@@ -96,13 +96,13 @@ BEGIN
   END IF;
 
   PERFORM 1
-  FROM public.company_shareholders
-  WHERE company_id = p_company_id
+  FROM public.company_shareholders sh
+  WHERE sh.company_id = p_company_id
   FOR UPDATE;
 
-  SELECT coalesce(sum(shares), 0) INTO v_total_shares
-  FROM public.company_shareholders
-  WHERE company_id = p_company_id;
+  SELECT coalesce(sum(sh.shares), 0) INTO v_total_shares
+  FROM public.company_shareholders sh
+  WHERE sh.company_id = p_company_id;
 
   IF v_total_shares <= 0 THEN
     RAISE EXCEPTION 'no_valid_company_shareholders' USING ERRCODE = 'P0001';
@@ -156,38 +156,41 @@ BEGIN
       WHERE sh.company_id = p_company_id
     ), base_allocations AS (
       SELECT
-        user_id,
-        shares,
-        profile_id,
-        floor(exact_payout) AS base_payout,
-        exact_payout - floor(exact_payout) AS fractional_remainder
+        shareholder_profiles.user_id,
+        shareholder_profiles.shares,
+        shareholder_profiles.profile_id,
+        floor(shareholder_profiles.exact_payout) AS base_payout,
+        shareholder_profiles.exact_payout - floor(shareholder_profiles.exact_payout) AS fractional_remainder
       FROM shareholder_profiles
     ), ranked_allocations AS (
       SELECT
         base_allocations.*,
-        sum(base_payout) OVER () AS base_total,
+        sum(base_allocations.base_payout) OVER () AS base_total,
         row_number() OVER (
-          ORDER BY fractional_remainder DESC, shares DESC, user_id
+          ORDER BY base_allocations.fractional_remainder DESC,
+                   base_allocations.shares DESC,
+                   base_allocations.user_id
         ) AS remainder_rank
       FROM base_allocations
     )
     SELECT
-      user_id,
-      profile_id,
-      base_payout + CASE
-        WHEN remainder_rank <= (v_distributable_profit - base_total)::integer THEN 1
+      ranked_allocations.user_id,
+      ranked_allocations.profile_id,
+      ranked_allocations.base_payout + CASE
+        WHEN ranked_allocations.remainder_rank <=
+             (v_distributable_profit - ranked_allocations.base_total)::integer THEN 1
         ELSE 0
       END AS payout
     FROM ranked_allocations
-    ORDER BY user_id
+    ORDER BY ranked_allocations.user_id
   LOOP
     IF v_payout.payout <= 0 THEN
       CONTINUE;
     END IF;
 
     PERFORM 1
-    FROM public.profiles
-    WHERE id = v_payout.profile_id
+    FROM public.profiles p
+    WHERE p.id = v_payout.profile_id
     FOR UPDATE;
 
     SELECT public.finance_transfer(
@@ -210,10 +213,10 @@ BEGIN
       )
     ) INTO v_financial_transaction_id;
 
-    UPDATE public.profiles
-    SET cash = coalesce(cash, 0) + v_payout.payout,
+    UPDATE public.profiles p
+    SET cash = coalesce(p.cash, 0) + v_payout.payout,
         updated_at = now()
-    WHERE id = v_payout.profile_id;
+    WHERE p.id = v_payout.profile_id;
 
     v_paid_total := v_paid_total + v_payout.payout;
   END LOOP;
@@ -222,10 +225,10 @@ BEGIN
     RAISE EXCEPTION 'company_profit_allocation_mismatch' USING ERRCODE = 'P0001';
   END IF;
 
-  UPDATE public.companies
-  SET balance = balance - v_paid_total,
+  UPDATE public.companies c
+  SET balance = c.balance - v_paid_total,
       updated_at = now()
-  WHERE id = p_company_id;
+  WHERE c.id = p_company_id;
 
   INSERT INTO public.company_transactions(
     company_id,
@@ -245,10 +248,10 @@ BEGIN
     'company_profit_distribution'
   );
 
-  UPDATE public.company_profit_distributions
+  UPDATE public.company_profit_distributions d
   SET distributed_profit = v_paid_total,
       distributed_at = now()
-  WHERE id = v_distribution_id;
+  WHERE d.id = v_distribution_id;
 
   RETURN QUERY SELECT v_paid_total, v_game_year;
 END;
