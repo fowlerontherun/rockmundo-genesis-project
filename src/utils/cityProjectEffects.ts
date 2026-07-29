@@ -25,7 +25,7 @@ export async function applyProjectCompletionEffects(project: CityProject): Promi
       if (effects.population) updates.population = (city.population ?? 0) + effects.population;
 
       if (Object.keys(updates).length > 0) {
-        await supabase.from("cities").update(updates).eq("id", project.city_id);
+        await supabase.from("cities").update(updates as any).eq("id", project.city_id);
       }
     }
 

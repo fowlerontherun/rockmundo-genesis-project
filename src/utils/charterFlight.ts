@@ -34,12 +34,12 @@ export async function bookCharterFlight(
   // Start transaction - deduct cash
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ 
+    .update({
       cash: currentBalance - CHARTER_FLIGHT_COST,
       current_city_id: destinationCityId,
       travel_status: 'arrived',
-      arrival_time: arrivalTime.toISOString()
-    })
+      arrival_time: arrivalTime.toISOString(),
+    } as any)
     .eq("id", profileId);
 
   if (updateError) {
