@@ -88,9 +88,22 @@ CREATE POLICY "Profiles manage their own activity status"
 ALTER TABLE public.activity_feed
   ADD COLUMN IF NOT EXISTS status text,
   ADD COLUMN IF NOT EXISTS duration_minutes integer,
-  ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL,
-  ADD CONSTRAINT IF NOT EXISTS activity_feed_duration_check
-    CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'activity_feed_duration_check'
+      AND conrelid = 'public.activity_feed'::regclass
+  ) THEN
+    ALTER TABLE public.activity_feed
+      ADD CONSTRAINT activity_feed_duration_check
+      CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  END IF;
+END
+$$;
 
 -- Expand songwriting projects with the gameplay fields used by the app
 ALTER TABLE public.songwriting_projects
