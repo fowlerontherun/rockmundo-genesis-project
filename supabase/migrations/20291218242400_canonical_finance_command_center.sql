@@ -13,7 +13,7 @@ SET search_path = public
 AS $$
 DECLARE
   actor_user_id uuid := auth.uid();
-  profile_id uuid := public.current_active_player_profile_id();
+  active_profile_id uuid := public.current_active_player_profile_id();
   row_limit integer := LEAST(GREATEST(COALESCE(p_transaction_limit, 100), 1), 250);
   banking_dashboard jsonb;
   primary_currency char(3) := 'GBP';
@@ -38,14 +38,14 @@ BEGIN
     RAISE EXCEPTION 'authentication_required' USING ERRCODE = '28000';
   END IF;
 
-  IF profile_id IS NULL THEN
+  IF active_profile_id IS NULL THEN
     RAISE EXCEPTION 'active_profile_required' USING ERRCODE = 'P0001';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1
     FROM public.profiles profile
-    WHERE profile.id = profile_id
+    WHERE profile.id = active_profile_id
       AND profile.user_id = actor_user_id
   ) THEN
     RAISE EXCEPTION 'active_profile_not_owned' USING ERRCODE = '42501';
@@ -57,22 +57,24 @@ BEGIN
     'GBP'
   )::char(3);
 
-  SELECT COALESCE(account.current_balance_minor, 0)
-  INTO wallet_minor
-  FROM public.financial_accounts account
-  WHERE account.owner_type = 'player'
-    AND account.owner_id = profile_id
-    AND account.is_primary
-    AND account.account_status <> 'archived'
-    AND COALESCE(account.currency_code, account.default_currency_code) = primary_currency
-  ORDER BY account.created_at, account.id
-  LIMIT 1;
+  SELECT COALESCE((
+    SELECT account.current_balance_minor
+    FROM public.financial_accounts account
+    WHERE account.owner_type = 'player'
+      AND account.owner_id = active_profile_id
+      AND account.is_primary
+      AND account.account_status <> 'archived'
+      AND COALESCE(account.currency_code, account.default_currency_code) = primary_currency
+    ORDER BY account.created_at, account.id
+    LIMIT 1
+  ), 0)
+  INTO wallet_minor;
 
   SELECT COALESCE(SUM(account.current_balance_minor), 0)
   INTO personal_accounts_minor
   FROM public.financial_accounts account
   WHERE account.owner_type = 'player'
-    AND account.owner_id = profile_id
+    AND account.owner_id = active_profile_id
     AND account.account_status <> 'archived'
     AND COALESCE(account.currency_code, account.default_currency_code) = primary_currency;
 
@@ -90,12 +92,11 @@ BEGIN
         'purchasedAt', investment.purchased_at,
         'notes', investment.notes,
         'currencyCode', primary_currency
-      )
-      ORDER BY investment.purchased_at DESC, investment.id
+      ) ORDER BY investment.purchased_at DESC, investment.id
     ), '[]'::jsonb)
   INTO total_invested_minor, investment_value_minor, investments_json
   FROM public.player_investments investment
-  WHERE investment.profile_id = profile_id;
+  WHERE investment.profile_id = active_profile_id;
 
   SELECT
     COALESCE(SUM(contract.outstanding_principal_minor + contract.accrued_interest_minor), 0),
@@ -112,15 +113,13 @@ BEGIN
         'nextPaymentDate', contract.next_payment_date,
         'maturityDate', contract.maturity_date,
         'purpose', contract.purpose
-      )
-      ORDER BY contract.next_payment_date NULLS LAST, contract.created_at DESC
+      ) ORDER BY contract.next_payment_date NULLS LAST, contract.created_at DESC
     ), '[]'::jsonb)
   INTO total_loans_minor, loans_json
   FROM public.loan_contracts contract
-  LEFT JOIN public.banking_providers provider
-    ON provider.id = contract.provider_id
+  LEFT JOIN public.banking_providers provider ON provider.id = contract.provider_id
   WHERE contract.borrower_type = 'player'
-    AND contract.borrower_id = profile_id
+    AND contract.borrower_id = active_profile_id
     AND contract.currency_code = primary_currency
     AND contract.status NOT IN ('paid_off', 'written_off', 'cancelled');
 
@@ -128,20 +127,10 @@ BEGIN
     SELECT account.id
     FROM public.financial_accounts account
     WHERE account.owner_type = 'player'
-      AND account.owner_id = profile_id
+      AND account.owner_id = active_profile_id
   ), classified AS (
     SELECT
-      transaction.id,
-      transaction.created_at,
-      transaction.description,
-      transaction.transaction_category,
-      transaction.currency_code,
       transaction.net_amount_minor,
-      transaction.source_account_id,
-      transaction.destination_account_id,
-      transaction.related_entity_type,
-      transaction.related_entity_id,
-      transaction.metadata,
       CASE
         WHEN transaction.source_account_id IN (SELECT id FROM owned_accounts)
           AND transaction.destination_account_id IN (SELECT id FROM owned_accounts)
@@ -157,15 +146,11 @@ BEGIN
           AND transaction.destination_account_id IN (SELECT id FROM owned_accounts)
           THEN false
         WHEN transaction.transaction_category::text IN (
-          'starting_funds',
-          'administrative_adjustment',
-          'loan_disbursement',
-          'loan_refinance_settlement'
+          'starting_funds', 'administrative_adjustment',
+          'loan_disbursement', 'loan_refinance_settlement'
         ) THEN false
         WHEN COALESCE(transaction.metadata->>'classification', '') IN (
-          'transfer',
-          'internal_savings_transfer',
-          'wallet_reconciliation'
+          'transfer', 'internal_savings_transfer', 'wallet_reconciliation'
         ) THEN false
         ELSE true
       END AS is_external_cash_flow
@@ -187,7 +172,7 @@ BEGIN
     SELECT account.id
     FROM public.financial_accounts account
     WHERE account.owner_type = 'player'
-      AND account.owner_id = profile_id
+      AND account.owner_id = active_profile_id
   ), classified AS (
     SELECT
       transaction.*,
@@ -206,15 +191,11 @@ BEGIN
           AND transaction.destination_account_id IN (SELECT id FROM owned_accounts)
           THEN false
         WHEN transaction.transaction_category::text IN (
-          'starting_funds',
-          'administrative_adjustment',
-          'loan_disbursement',
-          'loan_refinance_settlement'
+          'starting_funds', 'administrative_adjustment',
+          'loan_disbursement', 'loan_refinance_settlement'
         ) THEN false
         WHEN COALESCE(transaction.metadata->>'classification', '') IN (
-          'transfer',
-          'internal_savings_transfer',
-          'wallet_reconciliation'
+          'transfer', 'internal_savings_transfer', 'wallet_reconciliation'
         ) THEN false
         ELSE true
       END AS is_external_cash_flow
@@ -243,8 +224,7 @@ BEGIN
       'relatedEntityType', item.related_entity_type,
       'relatedEntityId', item.related_entity_id,
       'externalCashFlow', item.is_external_cash_flow
-    )
-    ORDER BY item.created_at DESC, item.id DESC
+    ) ORDER BY item.created_at DESC, item.id DESC
   ), '[]'::jsonb)
   INTO transactions_json
   FROM classified item;
@@ -259,33 +239,33 @@ BEGIN
     SELECT account.id
     FROM public.financial_accounts account
     WHERE account.owner_type = 'player'
-      AND account.owner_id = profile_id
+      AND account.owner_id = active_profile_id
   ), external_transactions AS (
     SELECT
       transaction.created_at,
       transaction.net_amount_minor,
       CASE
         WHEN transaction.destination_account_id IN (SELECT id FROM owned_accounts)
-          AND transaction.source_account_id NOT IN (SELECT id FROM owned_accounts)
-          THEN 'income'
+          AND NOT EXISTS (
+            SELECT 1 FROM owned_accounts owned
+            WHERE owned.id = transaction.source_account_id
+          ) THEN 'income'
         WHEN transaction.source_account_id IN (SELECT id FROM owned_accounts)
-          AND transaction.destination_account_id NOT IN (SELECT id FROM owned_accounts)
-          THEN 'expense'
+          AND NOT EXISTS (
+            SELECT 1 FROM owned_accounts owned
+            WHERE owned.id = transaction.destination_account_id
+          ) THEN 'expense'
         ELSE 'other'
       END AS direction
     FROM public.financial_transactions transaction
     WHERE transaction.status = 'completed'
       AND transaction.currency_code = primary_currency
       AND transaction.transaction_category::text NOT IN (
-        'starting_funds',
-        'administrative_adjustment',
-        'loan_disbursement',
-        'loan_refinance_settlement'
+        'starting_funds', 'administrative_adjustment',
+        'loan_disbursement', 'loan_refinance_settlement'
       )
       AND COALESCE(transaction.metadata->>'classification', '') NOT IN (
-        'transfer',
-        'internal_savings_transfer',
-        'wallet_reconciliation'
+        'transfer', 'internal_savings_transfer', 'wallet_reconciliation'
       )
       AND (
         transaction.source_account_id IN (SELECT id FROM owned_accounts)
@@ -310,8 +290,7 @@ BEGIN
         'incomeMinor', income_minor,
         'expensesMinor', expenses_minor,
         'currencyCode', primary_currency
-      )
-      ORDER BY month_start
+      ) ORDER BY month_start
     ), '[]'::jsonb),
     COALESCE(round(avg(income_minor))::bigint, 0),
     COALESCE(round(avg(expenses_minor))::bigint, 0)
@@ -322,7 +301,7 @@ BEGIN
     SELECT account.id
     FROM public.financial_accounts account
     WHERE account.owner_type = 'player'
-      AND account.owner_id = profile_id
+      AND account.owner_id = active_profile_id
   ), source_totals AS (
     SELECT
       initcap(replace(transaction.transaction_category::text, '_', ' ')) AS source,
@@ -331,17 +310,16 @@ BEGIN
     WHERE transaction.status = 'completed'
       AND transaction.currency_code = primary_currency
       AND transaction.destination_account_id IN (SELECT id FROM owned_accounts)
-      AND transaction.source_account_id NOT IN (SELECT id FROM owned_accounts)
+      AND NOT EXISTS (
+        SELECT 1 FROM owned_accounts owned
+        WHERE owned.id = transaction.source_account_id
+      )
       AND transaction.transaction_category::text NOT IN (
-        'starting_funds',
-        'administrative_adjustment',
-        'loan_disbursement',
-        'loan_refinance_settlement'
+        'starting_funds', 'administrative_adjustment',
+        'loan_disbursement', 'loan_refinance_settlement'
       )
       AND COALESCE(transaction.metadata->>'classification', '') NOT IN (
-        'transfer',
-        'internal_savings_transfer',
-        'wallet_reconciliation'
+        'transfer', 'internal_savings_transfer', 'wallet_reconciliation'
       )
     GROUP BY transaction.transaction_category
   )
@@ -354,8 +332,7 @@ BEGIN
       'currencyCode', grouped.currency_code,
       'balanceMinor', grouped.balance_minor,
       'availableBalanceMinor', grouped.available_minor
-    )
-    ORDER BY grouped.currency_code
+    ) ORDER BY grouped.currency_code
   ), '[]'::jsonb)
   INTO other_currency_balances_json
   FROM (
@@ -365,7 +342,7 @@ BEGIN
       SUM(account.available_balance_minor)::bigint AS available_minor
     FROM public.financial_accounts account
     WHERE account.owner_type = 'player'
-      AND account.owner_id = profile_id
+      AND account.owner_id = active_profile_id
       AND account.account_status <> 'archived'
       AND COALESCE(account.currency_code, account.default_currency_code) <> primary_currency
     GROUP BY COALESCE(account.currency_code, account.default_currency_code)
@@ -377,8 +354,7 @@ BEGIN
       'name', band_row.name,
       'memberCount', band_row.member_count,
       'treasuries', band_row.treasuries
-    )
-    ORDER BY band_row.name, band_row.id
+    ) ORDER BY band_row.name, band_row.id
   ), '[]'::jsonb)
   INTO bands_json
   FROM (
@@ -387,9 +363,9 @@ BEGIN
       band.name,
       (
         SELECT COUNT(*)::integer
-        FROM public.band_members member_count
-        WHERE member_count.band_id = band.id
-          AND COALESCE(member_count.member_status, 'active') = 'active'
+        FROM public.band_members counted_member
+        WHERE counted_member.band_id = band.id
+          AND COALESCE(counted_member.member_status, 'active') = 'active'
       ) AS member_count,
       COALESCE((
         SELECT jsonb_agg(
@@ -398,8 +374,7 @@ BEGIN
             'currencyCode', COALESCE(treasury.currency_code, treasury.default_currency_code),
             'balanceMinor', treasury.current_balance_minor,
             'availableBalanceMinor', treasury.available_balance_minor
-          )
-          ORDER BY COALESCE(treasury.currency_code, treasury.default_currency_code), treasury.created_at
+          ) ORDER BY COALESCE(treasury.currency_code, treasury.default_currency_code), treasury.created_at
         )
         FROM public.financial_accounts treasury
         WHERE treasury.owner_type = 'band'
@@ -408,15 +383,14 @@ BEGIN
           AND treasury.metadata->>'account_role' = 'band_treasury'
       ), '[]'::jsonb) AS treasuries
     FROM public.band_members membership
-    JOIN public.bands band
-      ON band.id = membership.band_id
-    WHERE membership.profile_id = profile_id
+    JOIN public.bands band ON band.id = membership.band_id
+    WHERE membership.profile_id = active_profile_id
       AND COALESCE(membership.member_status, 'active') = 'active'
   ) band_row;
 
   RETURN jsonb_build_object(
     'status', 'ok',
-    'profileId', profile_id,
+    'profileId', active_profile_id,
     'currencyCode', primary_currency,
     'banking', banking_dashboard,
     'summary', jsonb_build_object(
