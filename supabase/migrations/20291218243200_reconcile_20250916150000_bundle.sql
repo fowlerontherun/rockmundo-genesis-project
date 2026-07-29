@@ -1,8 +1,6 @@
--- Consolidated owner for the historical 20250916150000 migration version.
--- Supabase identifies migrations by the 14-digit timestamp, so the former
--- five-file collision could never be applied to a fresh database reliably.
+-- Forward reconciliation for databases where only one file from the historical
+-- 20250916150000 collision was recorded by Supabase.
 
--- Realtime user notifications.
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -38,7 +36,6 @@ CREATE POLICY "Users can update their notifications"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Centrally managed record labels.
 CREATE TABLE IF NOT EXISTS public.record_labels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
@@ -131,7 +128,6 @@ VALUES
   )
 ON CONFLICT (name) DO NOTHING;
 
--- Player-owned streaming promotion campaigns.
 CREATE TABLE IF NOT EXISTS public.streaming_campaigns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -196,13 +192,11 @@ CREATE TRIGGER update_streaming_campaigns_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_streaming_campaigns_updated_at();
 
--- Song production compatibility fields. The canonical song owner remains artist_id.
 ALTER TABLE public.songs
   ADD COLUMN IF NOT EXISTS mix_quality INTEGER,
   ADD COLUMN IF NOT EXISTS master_quality INTEGER,
   ADD COLUMN IF NOT EXISTS production_cost INTEGER DEFAULT 0;
 
--- The former weekly_stats view was not consumed by the application and mixed
--- auth user IDs with band IDs while referencing the removed songs.user_id field.
--- It is intentionally not recreated here.
+-- No application consumer exists for the legacy view, and its historical
+-- definition mixed auth user IDs with band IDs while relying on songs.user_id.
 DROP VIEW IF EXISTS public.weekly_stats;

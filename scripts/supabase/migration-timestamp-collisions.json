@@ -1,11 +1,4 @@
 {
-  "20250916150000": [
-    "20250916150000_create_notifications_table.sql",
-    "20250916150000_create_record_labels_table.sql",
-    "20250916150000_create_streaming_campaigns_table.sql",
-    "20250916150000_create_weekly_stats_view.sql",
-    "20250916150000_update_song_production_pipeline.sql"
-  ],
   "20250916153000": [
     "20250916153000_add_contract_recoupment_fields.sql",
     "20250916153000_add_social_metrics_to_profiles.sql",
