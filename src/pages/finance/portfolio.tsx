@@ -39,32 +39,25 @@ const PortfolioPage = () => {
           fetchMonthlyLedger(DEMO_CHARACTER_ID, LEDGER_MONTHS),
         ]);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setTransactions(txn);
         setPositions(investmentPositions);
         setLedger(ledgerData);
         setPerformance(calculatePortfolioPerformance(investmentPositions));
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     void loadData();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
   const { monthlyIncome, monthlyExpenses } = useMemo(() => {
-    if (!ledger.length) {
-      return { monthlyIncome: 0, monthlyExpenses: 0 };
-    }
+    if (!ledger.length) return { monthlyIncome: 0, monthlyExpenses: 0 };
 
     const totalIncome = ledger.reduce((sum, item) => sum + item.income, 0);
     const totalExpenses = ledger.reduce((sum, item) => sum + item.expenses, 0);
@@ -77,7 +70,10 @@ const PortfolioPage = () => {
   }, [ledger]);
 
   const cashReserve = useMemo(
-    () => positions.filter((position) => position.category === "Cash").reduce((sum, position) => sum + position.currentValue, 0),
+    () =>
+      positions
+        .filter((position) => position.category === "Cash")
+        .reduce((sum, position) => sum + position.currentValue, 0),
     [positions],
   );
 
@@ -97,8 +93,6 @@ const PortfolioPage = () => {
       icon={Briefcase}
       backTo="/hub/career-business"
     >
-
-
       <PortfolioSummary
         netWorth={summary.totalCurrentValue}
         invested={summary.totalInvested}
@@ -110,7 +104,7 @@ const PortfolioPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <IncomeExpenseChart data={ledger} />
+          <IncomeExpenseChart data={ledger} currencyCode="GBP" />
         </div>
         <InvestmentAllocation positions={positions} />
       </div>
@@ -130,4 +124,3 @@ const PortfolioPage = () => {
 };
 
 export default PortfolioPage;
-
