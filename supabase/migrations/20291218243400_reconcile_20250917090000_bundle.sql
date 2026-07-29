@@ -1,6 +1,6 @@
--- Consolidated owner for the three historical 20250917090000 migrations.
+-- Forward reconciliation for the three historical 20250917090000 migrations.
 -- Supabase records migrations by their 14-digit version, so all label,
--- promotion, and seasonal leaderboard responsibilities live in this file.
+-- promotion, and seasonal leaderboard responsibilities are replayed idempotently.
 
 set check_function_bodies = off;
 create extension if not exists "uuid-ossp";
