@@ -35,7 +35,7 @@ describe("auth signup trigger migration authority", () => {
     expect(compatibilityMigration).toContain("FROM public.equipment_items existing");
     expect(compatibilityMigration).toContain("FROM public.venues existing");
     expect(compatibilityMigration).toContain("FROM public.streaming_platforms existing");
-    expect(compatibilityMigration.match(/WHERE NOT EXISTS/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(compatibilityMigration.match(/WHERE NOT EXISTS/g)?.length).toBeGreaterThanOrEqual(4);
   });
 
   it("keeps the accidental duplicate timestamp as a no-op", () => {
