@@ -4,8 +4,12 @@ import { describe, expect, it } from "vitest";
 
 const read = (file: string) => fs.readFileSync(path.resolve(file), "utf8");
 
-const activityTableMigrations = [
+const deferredPreBaseMigration = read(
   "supabase/migrations/20241010120000_enable_busking_core.sql",
+);
+
+const activityTableMigrations = [
+  "supabase/migrations/20251006052802_4b82ad0e-e2a8-49b5-a82f-9cca1bc0d525.sql",
   "supabase/migrations/20270606100000_add_profile_activity_statuses.sql",
   "supabase/migrations/20270630153000_expand_songwriting_and_activity_schema.sql",
 ].map(read);
@@ -17,10 +21,26 @@ const compatibilityMigration = read(
 const gameDataSource = read("src/hooks/useGameData.tsx");
 
 describe("profile activity end-time authority", () => {
+  it("keeps the pre-base 2024 migration dependency-free", () => {
+    const lowerMigration = deferredPreBaseMigration.toLowerCase();
+    expect(lowerMigration).toContain("explicit no-op");
+    expect(lowerMigration).not.toContain("create table if not exists public.profile_activity_statuses");
+    expect(lowerMigration).not.toContain("create table if not exists public.jam_sessions");
+    expect(lowerMigration).not.toContain("create table if not exists public.busking_sessions");
+  });
+
+  it("creates activity statuses only after the base schema", () => {
+    expect(activityTableMigrations[0]).toContain(
+      "CREATE TABLE IF NOT EXISTS public.profile_activity_statuses",
+    );
+    expect(activityTableMigrations[0]).toContain("REFERENCES public.profiles(id)");
+    expect(activityTableMigrations[0]).toContain("REFERENCES public.songs(id)");
+    expect(activityTableMigrations[0]).toContain("ALTER TABLE public.activity_feed");
+  });
+
   it("does not use a non-immutable generated timestamptz expression", () => {
     for (const migration of activityTableMigrations) {
       expect(migration).toContain("ends_at timestamptz");
-      expect(migration).not.toContain("GENERATED ALWAYS AS");
       expect(migration.toLowerCase()).not.toContain("generated always as");
     }
   });
