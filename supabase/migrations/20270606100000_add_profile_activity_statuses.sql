@@ -61,12 +61,16 @@ CREATE TRIGGER profile_activity_statuses_sync_ends_at
 -- Enable row level security and policies
 ALTER TABLE public.profile_activity_statuses ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Profile activity statuses are viewable by everyone"
+DROP POLICY IF EXISTS "Profile activity statuses are viewable by everyone"
+  ON public.profile_activity_statuses;
+CREATE POLICY "Profile activity statuses are viewable by everyone"
   ON public.profile_activity_statuses
   FOR SELECT
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Profiles manage their own activity status"
+DROP POLICY IF EXISTS "Profiles manage their own activity status"
+  ON public.profile_activity_statuses;
+CREATE POLICY "Profiles manage their own activity status"
   ON public.profile_activity_statuses
   FOR ALL
   USING (
@@ -91,8 +95,19 @@ ALTER TABLE public.activity_feed
   ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL;
 
 -- Maintain data quality on new duration column
-ALTER TABLE public.activity_feed
-  ADD CONSTRAINT IF NOT EXISTS activity_feed_duration_check
-  CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'activity_feed_duration_check'
+      AND conrelid = 'public.activity_feed'::regclass
+  ) THEN
+    ALTER TABLE public.activity_feed
+      ADD CONSTRAINT activity_feed_duration_check
+      CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  END IF;
+END
+$$;
 
 NOTIFY pgrst, 'reload schema';
