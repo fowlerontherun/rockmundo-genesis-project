@@ -17,10 +17,29 @@ CREATE TABLE IF NOT EXISTS public.profile_activity_statuses (
     CHECK (duration_minutes IS NULL OR duration_minutes >= 0)
 );
 
+-- A preceding compatibility migration may already have created the table with a
+-- smaller shape. Add every timer-specific field explicitly before indexes,
+-- constraints and triggers reference it.
 ALTER TABLE public.profile_activity_statuses
   ADD COLUMN IF NOT EXISTS duration_minutes integer,
   ADD COLUMN IF NOT EXISTS ends_at timestamptz,
+  ADD COLUMN IF NOT EXISTS song_id uuid REFERENCES public.songs(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS metadata jsonb;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'profile_activity_statuses_duration_check'
+      AND conrelid = 'public.profile_activity_statuses'::regclass
+  ) THEN
+    ALTER TABLE public.profile_activity_statuses
+      ADD CONSTRAINT profile_activity_statuses_duration_check
+      CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  END IF;
+END
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS profile_activity_statuses_profile_id_key
   ON public.profile_activity_statuses (profile_id);
@@ -120,7 +139,7 @@ END
 $$;
 
 -- Keep the existing jam-session compatibility column idempotent. The table is
--- created by 20250916153000_create_jam_sessions_table.sql.
+-- created by the consolidated 20250916153000 migration.
 ALTER TABLE public.jam_sessions
   ADD COLUMN IF NOT EXISTS participant_ids uuid[] DEFAULT '{}';
 

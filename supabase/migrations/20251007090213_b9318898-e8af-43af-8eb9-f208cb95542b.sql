@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.universities (
   UNIQUE(name, city)
 );
 
--- Create university_courses table
+-- Create university_courses table with its class schedule fields.
 CREATE TABLE IF NOT EXISTS public.university_courses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   university_id UUID REFERENCES public.universities(id) ON DELETE CASCADE NOT NULL,
@@ -26,14 +26,28 @@ CREATE TABLE IF NOT EXISTS public.university_courses (
   xp_per_day_max INTEGER DEFAULT 3 CHECK (xp_per_day_max >= xp_per_day_min),
   max_enrollments INTEGER,
   is_active BOOLEAN DEFAULT true,
+  class_start_hour INTEGER NOT NULL DEFAULT 10,
+  class_end_hour INTEGER NOT NULL DEFAULT 14,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  CONSTRAINT university_courses_class_hours_check CHECK (
+    class_start_hour >= 0
+    AND class_start_hour < 24
+    AND class_end_hour > class_start_hour
+    AND class_end_hour <= 24
+  )
 );
 
--- Create enrollment status enum
-CREATE TYPE enrollment_status AS ENUM ('enrolled', 'in_progress', 'completed', 'dropped');
+DO $$
+BEGIN
+  CREATE TYPE public.enrollment_status AS ENUM (
+    'enrolled', 'in_progress', 'completed', 'dropped'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
--- Create player_university_enrollments table
 CREATE TABLE IF NOT EXISTS public.player_university_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -43,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.player_university_enrollments (
   enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   scheduled_end_date TIMESTAMP WITH TIME ZONE NOT NULL,
   actual_completion_date TIMESTAMP WITH TIME ZONE,
-  status enrollment_status DEFAULT 'enrolled',
+  status public.enrollment_status DEFAULT 'enrolled',
   total_xp_earned INTEGER DEFAULT 0,
   days_attended INTEGER DEFAULT 0,
   payment_amount INTEGER NOT NULL,
@@ -51,7 +65,6 @@ CREATE TABLE IF NOT EXISTS public.player_university_enrollments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Create player_university_attendance table
 CREATE TABLE IF NOT EXISTS public.player_university_attendance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID REFERENCES public.player_university_enrollments(id) ON DELETE CASCADE NOT NULL,
@@ -62,66 +75,81 @@ CREATE TABLE IF NOT EXISTS public.player_university_attendance (
   UNIQUE(enrollment_id, attendance_date)
 );
 
--- Enable RLS on all tables
 ALTER TABLE public.universities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.university_courses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_university_enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_university_attendance ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for universities
+DROP POLICY IF EXISTS "Universities are viewable by everyone" ON public.universities;
 CREATE POLICY "Universities are viewable by everyone"
-  ON public.universities FOR SELECT
-  USING (true);
+  ON public.universities FOR SELECT USING (true);
 
--- RLS Policies for university_courses
+DROP POLICY IF EXISTS "Courses are viewable by everyone" ON public.university_courses;
 CREATE POLICY "Courses are viewable by everyone"
-  ON public.university_courses FOR SELECT
-  USING (true);
+  ON public.university_courses FOR SELECT USING (true);
 
--- RLS Policies for player_university_enrollments
+DROP POLICY IF EXISTS "Users can view their own enrollments" ON public.player_university_enrollments;
 CREATE POLICY "Users can view their own enrollments"
   ON public.player_university_enrollments FOR SELECT
-  USING (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-
-CREATE POLICY "Users can create their own enrollments"
-  ON public.player_university_enrollments FOR INSERT
-  WITH CHECK (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-
-CREATE POLICY "Users can update their own enrollments"
-  ON public.player_university_enrollments FOR UPDATE
-  USING (profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
-
--- RLS Policies for player_university_attendance
-CREATE POLICY "Users can view their own attendance"
-  ON public.player_university_attendance FOR SELECT
-  USING (enrollment_id IN (
-    SELECT id FROM player_university_enrollments 
-    WHERE profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = player_university_enrollments.profile_id
+      AND profiles.user_id = auth.uid()
   ));
 
--- Create triggers for updated_at
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+DROP POLICY IF EXISTS "Users can create their own enrollments" ON public.player_university_enrollments;
+CREATE POLICY "Users can create their own enrollments"
+  ON public.player_university_enrollments FOR INSERT
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = player_university_enrollments.profile_id
+      AND profiles.user_id = auth.uid()
+  ));
 
+DROP POLICY IF EXISTS "Users can update their own enrollments" ON public.player_university_enrollments;
+CREATE POLICY "Users can update their own enrollments"
+  ON public.player_university_enrollments FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = player_university_enrollments.profile_id
+      AND profiles.user_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = player_university_enrollments.profile_id
+      AND profiles.user_id = auth.uid()
+  ));
+
+DROP POLICY IF EXISTS "Users can view their own attendance" ON public.player_university_attendance;
+CREATE POLICY "Users can view their own attendance"
+  ON public.player_university_attendance FOR SELECT
+  USING (EXISTS (
+    SELECT 1
+    FROM public.player_university_enrollments enrollment
+    JOIN public.profiles profile ON profile.id = enrollment.profile_id
+    WHERE enrollment.id = player_university_attendance.enrollment_id
+      AND profile.user_id = auth.uid()
+  ));
+
+DROP TRIGGER IF EXISTS update_universities_updated_at ON public.universities;
 CREATE TRIGGER update_universities_updated_at
   BEFORE UPDATE ON public.universities
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_university_courses_updated_at ON public.university_courses;
 CREATE TRIGGER update_university_courses_updated_at
   BEFORE UPDATE ON public.university_courses
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_player_university_enrollments_updated_at
+  ON public.player_university_enrollments;
 CREATE TRIGGER update_player_university_enrollments_updated_at
   BEFORE UPDATE ON public.player_university_enrollments
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Seed initial universities data
-INSERT INTO public.universities (name, city, prestige, quality_of_learning, course_cost_modifier, description)
+INSERT INTO public.universities (
+  name, city, prestige, quality_of_learning, course_cost_modifier, description
+)
 VALUES
   ('Rockmundo Conservatory', 'London', 92, 95, 1.5, 'Premier music institution with world-class faculty and state-of-the-art facilities.'),
   ('Skyline School of Sound', 'New York', 88, 90, 1.3, 'Cutting-edge music production and performance academy in the heart of NYC.'),
@@ -129,8 +157,7 @@ VALUES
   ('Sunset Boulevard Music Academy', 'Los Angeles', 84, 87, 1.2, 'Industry-connected school with direct pathways to the entertainment business.'),
   ('Pulsewave Technology College', 'Toronto', 79, 85, 0.9, 'Modern approach to music technology and digital production.')
 ON CONFLICT (name, city) DO UPDATE
-SET 
-  prestige = EXCLUDED.prestige,
-  quality_of_learning = EXCLUDED.quality_of_learning,
-  course_cost_modifier = EXCLUDED.course_cost_modifier,
-  description = EXCLUDED.description;
+SET prestige = EXCLUDED.prestige,
+    quality_of_learning = EXCLUDED.quality_of_learning,
+    course_cost_modifier = EXCLUDED.course_cost_modifier,
+    description = EXCLUDED.description;
