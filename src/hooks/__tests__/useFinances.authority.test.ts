@@ -40,6 +40,11 @@ describe("canonical Financial Command Center UI", () => {
     expect(hookSource).not.toContain("band_balance");
   });
 
+  it("does not hide active-profile loading failures behind an empty dashboard", () => {
+    expect(hookSource).toContain("isProfileLoading");
+    expect(hookSource).toContain("profileError ?? query.error");
+  });
+
   it("keeps transfers visible without classifying them as spending", () => {
     expect(hookSource).toContain('"transfer"');
     expect(hookSource).toContain("externalCashFlow");

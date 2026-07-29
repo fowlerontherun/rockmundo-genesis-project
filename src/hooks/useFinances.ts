@@ -230,7 +230,11 @@ const mapCommandCenter = (data: FinanceCommandCenter) => {
 };
 
 export const useFinances = () => {
-  const { profileId } = useActiveProfile();
+  const {
+    profileId,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useActiveProfile();
   const query = useQuery({
     queryKey: ["finance-command-center", profileId],
     queryFn: () => fetchFinanceCommandCenter(250),
@@ -253,8 +257,8 @@ export const useFinances = () => {
     investmentOptions: INVESTMENT_OPTIONS,
     banking: query.data?.banking ?? null,
     otherCurrencyBalances: query.data?.otherCurrencyBalances ?? [],
-    isLoading: !!profileId && query.isLoading,
-    error: query.error,
+    isLoading: isProfileLoading || (!!profileId && query.isLoading),
+    error: profileError ?? query.error,
     refetch: query.refetch,
   };
 };
