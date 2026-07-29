@@ -371,7 +371,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           };
           await supabase
             .from("artist_label_contracts")
-            .update(updateObj)
+            .update(updateObj as any)
             .eq("id", activeContract.id);
         }
       }

@@ -122,7 +122,7 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
 
       const { data, error } = await supabase
         .from("music_video_configs")
-        .insert(insertPayload)
+        .insert(insertPayload as any)
         .select(`
           *,
           releases:releases(id, title, release_type, artist_name),

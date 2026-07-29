@@ -216,7 +216,7 @@ export const OnboardingWizard = () => {
         }
         await supabase
           .from("profiles")
-          .update(profileUpdates)
+          .update(profileUpdates as any)
           .eq("id", profileId);
       }
 

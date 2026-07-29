@@ -207,7 +207,7 @@ export function useBandRiders(bandId: string | null) {
     mutationFn: async ({ id, ...updates }: Partial<BandRiderItem> & { id: string }) => {
       const { data, error } = await supabase
         .from('band_rider_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();

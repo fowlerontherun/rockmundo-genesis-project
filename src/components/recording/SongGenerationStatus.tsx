@@ -94,7 +94,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       }
       await supabase
         .from('songs')
-        .update(updatePayload)
+        .update(updatePayload as any)
         .eq('id', songId);
 
       const body: Record<string, any> = { songId, userId: profileId };

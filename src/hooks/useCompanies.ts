@@ -240,7 +240,7 @@ export const useUpdateCompany = () => {
     mutationFn: async ({ id, ...updates }: Partial<Company> & { id: string }): Promise<Company> => {
       const { data, error } = await supabase
         .from("companies")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();
