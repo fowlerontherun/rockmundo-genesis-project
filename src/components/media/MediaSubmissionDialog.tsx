@@ -126,7 +126,7 @@ export function MediaSubmissionDialog({
       };
 
       const { error } = mediaType === "podcast"
-        ? await supabase.rpc("submit_podcast_appearance", {
+        ? await (supabase as any).rpc("submit_podcast_appearance", {
             p_band_id: bandId,
             p_podcast_id: mediaItem.id,
             p_episode_topic: selectedType,

@@ -56,7 +56,7 @@ export const TourCreationWizard = ({ isOpen, onClose, bandId, bandName }: TourCr
     },
   });
 
-  const eligibleSetlists = useMemo(() => setlists.filter((setlist) => (setlist.song_count ?? 0) >= 6), [setlists]);
+  const eligibleSetlists = useMemo(() => setlists.filter((setlist) => (((setlist as any).song_count as number) ?? 0) >= 6), [setlists]);
 
   const { data: venues = [] } = useQuery({
     queryKey: ['venues-with-cities'],
