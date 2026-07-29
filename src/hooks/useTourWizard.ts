@@ -57,7 +57,7 @@ const WIZARD_STEPS = [
 
 export function useTourWizard(options: UseTourWizardOptions = {}) {
   const { toast } = useToast();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   
   const [state, setState] = useState<TourWizardState>({
@@ -520,7 +520,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   // Book tour mutation
   const bookTourMutation = useMutation({
     mutationFn: async () => {
-      if (!profileId || !state.bandId) throw new Error('Missing profile or band');
+      if (!profileId || !userId || !state.bandId) throw new Error('Missing user, profile or band');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
@@ -537,7 +537,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         .from('tours')
         .insert({
           name: state.name,
-          user_id: profileId,
+          // tours.user_id references auth.users, not the active character profile.
+          user_id: userId,
           band_id: state.bandId,
           start_date: state.startDate,
           end_date: endDate,
