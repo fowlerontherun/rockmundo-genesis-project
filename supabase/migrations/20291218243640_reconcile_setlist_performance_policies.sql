@@ -1,5 +1,5 @@
--- Allow members of a band to manage entries in that band's setlists while
--- keeping the reusable performance-item catalogue publicly readable.
+-- Reconcile setlist and performance-catalogue policies for databases where the
+-- historical migration targeted a nonexistent public.performance_items table.
 
 ALTER TABLE public.setlist_songs ENABLE ROW LEVEL SECURITY;
 
@@ -80,7 +80,6 @@ CREATE POLICY "Band members can delete setlist songs"
   );
 
 ALTER TABLE public.performance_items_catalog ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Performance items are viewable by everyone"
   ON public.performance_items_catalog;
 DROP POLICY IF EXISTS "Everyone can view performance items catalog"
