@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 export function useActiveProfile() {
   const { user } = useAuth();
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error } = useQuery({
     queryKey: ["active-profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -27,5 +27,6 @@ export function useActiveProfile() {
     /** The auth-level user ID — use for tables where user_id stores auth.users.id */
     userId: user?.id ?? null,
     isLoading,
+    error,
   };
 }
