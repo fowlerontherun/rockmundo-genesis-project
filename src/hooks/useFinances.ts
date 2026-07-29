@@ -1,24 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-// useAuth removed — profileId sourced from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import {
+  fetchFinanceCommandCenter,
+  type FinanceCommandBand,
+  type FinanceCommandCenter,
+} from "@/lib/api/financeCommandCenter";
+import { fromMinorUnits } from "@/lib/financeFormatting";
+
+export type FinancialTransactionType = "income" | "expense" | "transfer" | "other";
 
 export interface FinancialTransaction {
   id: string;
   date: string;
-  type: "income" | "expense";
+  type: FinancialTransactionType;
   source: string;
   amount: number;
   description: string | null;
   bandName?: string;
+  currencyCode: string;
+  externalCashFlow: boolean;
+}
+
+export interface BandTreasury {
+  accountId: string;
+  currencyCode: string;
+  balance: number;
+  availableBalance: number;
 }
 
 export interface BandFinance {
   id: string;
   name: string;
   balance: number;
+  currencyCode: string;
   memberCount: number;
   playerShare: number;
+  treasuries: BandTreasury[];
 }
 
 export interface PlayerLoan {
@@ -32,6 +49,8 @@ export interface PlayerLoan {
   started_at: string;
   due_date: string;
   status: string;
+  currencyCode: string;
+  purpose?: string;
 }
 
 export interface PlayerInvestment {
@@ -43,6 +62,7 @@ export interface PlayerInvestment {
   growth_rate: number;
   purchased_at: string;
   notes: string | null;
+  currencyCode: string;
 }
 
 export interface LoanOffer {
@@ -69,10 +89,13 @@ export interface MonthlyLedgerEntry {
   month: string;
   income: number;
   expenses: number;
+  currencyCode: string;
 }
 
 export interface FinancialSummary {
+  currencyCode: string;
   cash: number;
+  personalAccounts: number;
   totalInvested: number;
   investmentValue: number;
   totalLoans: number;
@@ -83,282 +106,155 @@ export interface FinancialSummary {
   monthlyExpenses: number;
 }
 
-// Static loan offers based on player fame/level
-const LOAN_OFFERS: LoanOffer[] = [
-  {
-    id: "starter-loan",
-    name: "Starter Equipment Loan",
-    maxAmount: 5000,
-    interestRate: 8.5,
-    termWeeks: 24,
-    description: "Perfect for upgrading your first instruments or recording gear.",
-    requirements: ["No active loans", "At least 1 week in-game"],
-  },
-  {
-    id: "tour-loan",
-    name: "Tour Advance",
-    maxAmount: 15000,
-    interestRate: 6.5,
-    termWeeks: 36,
-    description: "Fund your tour expenses upfront with flexible repayment.",
-    requirements: ["Band fame > 100", "Completed at least 5 gigs"],
-  },
-  {
-    id: "studio-loan",
-    name: "Studio Investment Loan",
-    maxAmount: 50000,
-    interestRate: 5.0,
-    termWeeks: 52,
-    description: "Major financing for studio time, album production, or equipment upgrades.",
-    requirements: ["Band fame > 500", "Net worth > $10,000"],
-  },
-];
+const LOAN_OFFERS: LoanOffer[] = [];
+const INVESTMENT_OPTIONS: InvestmentOption[] = [];
 
-// Static investment options
-const INVESTMENT_OPTIONS: InvestmentOption[] = [
-  {
-    id: "music-etf",
-    name: "Music Industry ETF",
-    category: "Equity",
-    minInvestment: 500,
-    expectedReturn: "4-8% annually",
-    risk: "Medium",
-    description: "Diversified fund tracking major music and entertainment companies.",
-  },
-  {
-    id: "studio-coop",
-    name: "Studio Co-op Share",
-    category: "Real Assets",
-    minInvestment: 2000,
-    expectedReturn: "6-12% annually",
-    risk: "Medium",
-    description: "Partial ownership in a community recording studio with profit sharing.",
-  },
-  {
-    id: "royalty-pool",
-    name: "Royalty Exchange Pool",
-    category: "Royalties",
-    minInvestment: 1000,
-    expectedReturn: "3-7% annually",
-    risk: "Low",
-    description: "Invest in a pool of music royalties from established artists.",
-  },
-  {
-    id: "creator-fund",
-    name: "Creator Startup Fund",
-    category: "Startups",
-    minInvestment: 500,
-    expectedReturn: "10-25% annually",
-    risk: "High",
-    description: "High-risk fund investing in emerging music tech startups.",
-  },
-  {
-    id: "savings",
-    name: "High-Yield Savings",
-    category: "Cash",
-    minInvestment: 100,
-    expectedReturn: "2-3% annually",
-    risk: "Low",
-    description: "Safe, liquid savings with modest but guaranteed returns.",
-  },
-];
+const emptySummary = (currencyCode = "GBP"): FinancialSummary => ({
+  currencyCode,
+  cash: 0,
+  personalAccounts: 0,
+  totalInvested: 0,
+  investmentValue: 0,
+  totalLoans: 0,
+  netWorth: 0,
+  totalEarnings: 0,
+  totalExpenses: 0,
+  monthlyIncome: 0,
+  monthlyExpenses: 0,
+});
 
-export const useFinances = () => {
-  const { profileId } = useActiveProfile();
-
-  // Fetch player's cash from profiles
-  const { data: profile } = useQuery({
-    queryKey: ["profile-cash", profileId],
-    queryFn: async () => {
-      if (!profileId) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("cash, fame")
-        .eq("id", profileId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profileId,
-  });
-
-  // Fetch player's bands and their balances (via profile_id on band_members)
-  const { data: bands } = useQuery({
-    queryKey: ["player-bands-finances", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      const { data: memberships, error: memberError } = await supabase
-        .from("band_members")
-        .select("band_id, bands!band_members_band_id_fkey(id, name, band_balance)")
-        .eq("profile_id", profileId);
-      
-      if (memberError) throw memberError;
-
-      const bandFinances: BandFinance[] = [];
-      for (const m of memberships || []) {
-        const band = m.bands as unknown as { id: string; name: string; band_balance: number };
-        if (!band) continue;
-        
-        const { count } = await supabase
-          .from("band_members")
-          .select("*", { count: "exact", head: true })
-          .eq("band_id", band.id);
-        
-        const memberCount = count || 1;
-        bandFinances.push({
-          id: band.id,
-          name: band.name,
-          balance: band.band_balance || 0,
-          memberCount,
-          playerShare: (band.band_balance || 0) / memberCount,
-        });
-      }
-      return bandFinances;
-    },
-    enabled: !!profileId,
-  });
-
-  // Fetch transaction history from band_earnings via profile_id
-  const { data: transactions } = useQuery({
-    queryKey: ["finance-transactions", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      
-      const { data: earnings, error: earningsError } = await (supabase as any)
-        .from("band_earnings")
-        .select("id, created_at, source, amount, description, band_id, bands(name)")
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      
-      if (earningsError) throw earningsError;
-
-      const txns: FinancialTransaction[] = (earnings || []).map((e: any) => ({
-        id: e.id,
-        date: e.created_at,
-        type: e.amount >= 0 ? "income" : "expense",
-        source: e.source,
-        amount: Math.abs(e.amount),
-        description: e.description,
-        bandName: (e.bands as unknown as { name: string })?.name,
-      }));
-
-      return txns;
-    },
-    enabled: !!profileId,
-  });
-
-  // Fetch player investments
-  const { data: investments } = useQuery({
-    queryKey: ["player-investments", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      const { data, error } = await (supabase as any)
-        .from("player_investments")
-        .select("*")
-        .eq("profile_id", profileId)
-        .order("purchased_at", { ascending: false });
-      if (error) throw error;
-      return data as PlayerInvestment[];
-    },
-    enabled: !!profileId,
-  });
-
-  // Fetch player loans
-  const { data: loans } = useQuery({
-    queryKey: ["player-loans", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      const { data, error } = await (supabase as any)
-        .from("player_loans")
-        .select("*")
-        .eq("profile_id", profileId)
-        .order("started_at", { ascending: false });
-      if (error) throw error;
-      return data as PlayerLoan[];
-    },
-    enabled: !!profileId,
-  });
-
-  // Calculate monthly ledger from transactions
-  const monthlyLedger: MonthlyLedgerEntry[] = (() => {
-    if (!transactions?.length) return [];
-    
-    const now = new Date();
-    const months: MonthlyLedgerEntry[] = [];
-    
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = monthDate.toLocaleDateString("en-US", { month: "short" });
-      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-      
-      const monthTxns = transactions.filter((t) => {
-        const d = new Date(t.date);
-        return d >= monthStart && d <= monthEnd;
-      });
-      
-      const income = monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-      const expenses = monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-      
-      months.push({ month: monthKey, income, expenses });
-    }
-    
-    return months;
-  })();
-
-  // Calculate summary
-  const summary: FinancialSummary = (() => {
-    const cash = profile?.cash || 0;
-    const totalInvested = investments?.reduce((s, i) => s + i.invested_amount, 0) || 0;
-    const investmentValue = investments?.reduce((s, i) => s + i.current_value, 0) || 0;
-    const activeLoans = loans?.filter((l) => l.status === "active") || [];
-    const totalLoans = activeLoans.reduce((s, l) => s + l.remaining_balance, 0);
-    const bandEquity = bands?.reduce((s, b) => s + b.playerShare, 0) || 0;
-    
-    const totalEarnings = transactions?.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0) || 0;
-    const totalExpenses = transactions?.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0) || 0;
-    
-    const monthlyIncome = monthlyLedger.length 
-      ? monthlyLedger.reduce((s, m) => s + m.income, 0) / monthlyLedger.length 
-      : 0;
-    const monthlyExpenses = monthlyLedger.length 
-      ? monthlyLedger.reduce((s, m) => s + m.expenses, 0) / monthlyLedger.length 
-      : 0;
-
-    return {
-      cash,
-      totalInvested,
-      investmentValue,
-      totalLoans,
-      netWorth: cash + investmentValue + bandEquity - totalLoans,
-      totalEarnings,
-      totalExpenses,
-      monthlyIncome,
-      monthlyExpenses,
-    };
-  })();
-
-  const earningsBySource: Record<string, number> = (() => {
-    if (!transactions?.length) return {};
-    const bySource: Record<string, number> = {};
-    transactions.filter((t) => t.type === "income").forEach((t) => {
-      bySource[t.source] = (bySource[t.source] || 0) + t.amount;
-    });
-    return bySource;
-  })();
+const mapBand = (band: FinanceCommandBand, primaryCurrency: string): BandFinance => {
+  const treasuries = band.treasuries.map((treasury) => ({
+    accountId: treasury.accountId,
+    currencyCode: treasury.currencyCode,
+    balance: fromMinorUnits(treasury.balanceMinor),
+    availableBalance: fromMinorUnits(treasury.availableBalanceMinor),
+  }));
+  const primaryTreasury =
+    treasuries.find((treasury) => treasury.currencyCode === primaryCurrency) ?? treasuries[0];
 
   return {
-    profile,
-    bands: bands || [],
-    transactions: transactions || [],
-    investments: investments || [],
-    loans: loans || [],
+    id: band.id,
+    name: band.name,
+    balance: primaryTreasury?.balance ?? 0,
+    currencyCode: primaryTreasury?.currencyCode ?? primaryCurrency,
+    memberCount: band.memberCount,
+    playerShare: 0,
+    treasuries,
+  };
+};
+
+const mapCommandCenter = (data: FinanceCommandCenter) => {
+  const bands = data.bands.map((band) => mapBand(band, data.currencyCode));
+  const bandNames = new Map(bands.map((band) => [band.id, band.name]));
+
+  const transactions: FinancialTransaction[] = data.transactions.map((transaction) => ({
+    id: transaction.id,
+    date: transaction.createdAt,
+    type: transaction.direction,
+    source: transaction.category || transaction.source,
+    amount: Math.abs(fromMinorUnits(transaction.amountMinor)),
+    description: transaction.description,
+    bandName:
+      transaction.relatedEntityType === "band" && transaction.relatedEntityId
+        ? bandNames.get(transaction.relatedEntityId)
+        : undefined,
+    currencyCode: transaction.currencyCode,
+    externalCashFlow: transaction.externalCashFlow,
+  }));
+
+  const summary: FinancialSummary = {
+    currencyCode: data.currencyCode,
+    cash: fromMinorUnits(data.summary.cashMinor),
+    personalAccounts: fromMinorUnits(data.summary.personalAccountsMinor),
+    totalInvested: fromMinorUnits(data.summary.totalInvestedMinor),
+    investmentValue: fromMinorUnits(data.summary.investmentValueMinor),
+    totalLoans: fromMinorUnits(data.summary.totalLoansMinor),
+    netWorth: fromMinorUnits(data.summary.netWorthMinor),
+    totalEarnings: fromMinorUnits(data.summary.totalEarningsMinor),
+    totalExpenses: fromMinorUnits(data.summary.totalExpensesMinor),
+    monthlyIncome: fromMinorUnits(data.summary.monthlyIncomeMinor),
+    monthlyExpenses: fromMinorUnits(data.summary.monthlyExpensesMinor),
+  };
+
+  const investments: PlayerInvestment[] = data.investments.map((investment) => ({
+    id: investment.id,
+    investment_name: investment.name,
+    category: investment.category,
+    invested_amount: fromMinorUnits(investment.investedMinor),
+    current_value: fromMinorUnits(investment.currentValueMinor),
+    growth_rate: investment.growthRate,
+    purchased_at: investment.purchasedAt,
+    notes: investment.notes,
+    currencyCode: investment.currencyCode,
+  }));
+
+  const loans: PlayerLoan[] = data.loans.map((loan) => ({
+    id: loan.id,
+    loan_name: `${loan.providerName} · ${loan.purpose.replaceAll("_", " ")}`,
+    principal: fromMinorUnits(loan.principalMinor),
+    interest_rate: loan.interestRateBps / 100,
+    remaining_balance: fromMinorUnits(loan.outstandingMinor),
+    weekly_payment: fromMinorUnits(loan.scheduledPaymentMinor),
+    total_paid: Math.max(0, fromMinorUnits(loan.principalMinor - loan.outstandingMinor)),
+    started_at: loan.nextPaymentDate ?? loan.maturityDate,
+    due_date: loan.maturityDate,
+    status: loan.status,
+    currencyCode: loan.currencyCode,
+    purpose: loan.purpose,
+  }));
+
+  const monthlyLedger: MonthlyLedgerEntry[] = data.monthlyLedger.map((entry) => ({
+    month: entry.month,
+    income: fromMinorUnits(entry.incomeMinor),
+    expenses: fromMinorUnits(entry.expensesMinor),
+    currencyCode: entry.currencyCode,
+  }));
+
+  const earningsBySource = Object.fromEntries(
+    Object.entries(data.earningsBySource).map(([source, amountMinor]) => [
+      source,
+      fromMinorUnits(amountMinor),
+    ]),
+  );
+
+  return {
+    bands,
+    transactions,
+    investments,
+    loans,
     monthlyLedger,
     summary,
     earningsBySource,
+  };
+};
+
+export const useFinances = () => {
+  const { profileId } = useActiveProfile();
+  const query = useQuery({
+    queryKey: ["finance-command-center", profileId],
+    queryFn: () => fetchFinanceCommandCenter(250),
+    enabled: !!profileId,
+  });
+
+  const mapped = query.data ? mapCommandCenter(query.data) : null;
+  const summary = mapped?.summary ?? emptySummary();
+
+  return {
+    profile: query.data ? { cash: summary.cash } : null,
+    bands: mapped?.bands ?? [],
+    transactions: mapped?.transactions ?? [],
+    investments: mapped?.investments ?? [],
+    loans: mapped?.loans ?? [],
+    monthlyLedger: mapped?.monthlyLedger ?? [],
+    summary,
+    earningsBySource: mapped?.earningsBySource ?? {},
     loanOffers: LOAN_OFFERS,
     investmentOptions: INVESTMENT_OPTIONS,
-    isLoading: !profile,
+    banking: query.data?.banking ?? null,
+    otherCurrencyBalances: query.data?.otherCurrencyBalances ?? [],
+    isLoading: !!profileId && query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
