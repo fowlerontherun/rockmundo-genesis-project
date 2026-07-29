@@ -28,10 +28,10 @@ export const useCompanies = () => {
         throw error;
       }
 
-      const companies = (data || []) as Company[];
+      const companies = (data || []) as unknown as Company[];
       if (companies.length === 0) return companies;
 
-      const { data: festivalCompanies, error: festivalError } = await supabase
+      const { data: festivalCompanies, error: festivalError } = await (supabase as any)
         .from("festival_companies")
         .select("id, company_id")
         .in("company_id", companies.map((company) => company.id));
@@ -41,7 +41,7 @@ export const useCompanies = () => {
       }
 
       const festivalIdByCompany = new Map(
-        (festivalCompanies || []).map((festival) => [festival.company_id, festival.id]),
+        ((festivalCompanies || []) as Array<{ id: string; company_id: string }>).map((festival) => [festival.company_id, festival.id]),
       );
 
       return companies.map((company) => ({
@@ -76,7 +76,7 @@ export const useCompany = (companyId: string | undefined) => {
 
       if (!data) return null;
 
-      const { data: festivalCompany, error: festivalError } = await supabase
+      const { data: festivalCompany, error: festivalError } = await (supabase as any)
         .from("festival_companies")
         .select("id")
         .eq("company_id", data.id)
@@ -87,8 +87,8 @@ export const useCompany = (companyId: string | undefined) => {
       }
 
       return {
-        ...(data as Company),
-        festival_company_id: festivalCompany?.id ?? null,
+        ...(data as unknown as Company),
+        festival_company_id: (festivalCompany as { id?: string } | null)?.id ?? null,
       };
     },
     enabled: !!companyId,
@@ -240,7 +240,7 @@ export const useUpdateCompany = () => {
     mutationFn: async ({ id, ...updates }: Partial<Company> & { id: string }): Promise<Company> => {
       const { data, error } = await supabase
         .from("companies")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();

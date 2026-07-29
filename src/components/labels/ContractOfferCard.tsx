@@ -225,7 +225,7 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
       const { error } = await supabase
         .from("artist_label_contracts")
-        .update(updatePayload)
+        .update(updatePayload as any)
         .eq("id", offer.id);
       if (error) throw error;
 

@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.608",
+    date: "2026-07-29",
+    changes: [
+      { type: 'fix', description: "Booking a gig failed with 'Reference: 42703'. The travel-conflict safety check was looking for a gig start column that does not exist, so every gig insert was rejected. It now reads the gig's scheduled date." },
+      { type: 'improvement', description: "Cleared all outstanding TypeScript build errors across companies, gig execution, playlists, hospitalisation, charter flights, city projects and the festival company data layer." },
+    ],
+  },
+  {
+
     version: "1.1.607",
     date: "2026-07-28",
     changes: [

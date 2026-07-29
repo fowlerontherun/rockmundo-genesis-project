@@ -222,7 +222,7 @@ export function useUpdateProductionStatus() {
       
       const { data, error } = await supabase
         .from('merch_production_queue')
-        .update(updates)
+        .update(updates as any)
         .eq('id', orderId)
         .select()
         .single();

@@ -41612,39 +41612,6 @@ export type Database = {
       }
     }
     Functions: {
-      festival_company_capabilities: { Args: never; Returns: unknown }
-      found_festival_company: {
-        Args: { p_company_name: string; p_public_name: string; p_description?: string | null; p_idempotency_key?: string | null }
-        Returns: unknown
-      }
-      get_festival_artist_programme: { Args: { p_festival_company_id: string }; Returns: unknown }
-      get_festival_company_founding_eligibility: { Args: never; Returns: unknown }
-      get_festival_company_setup: { Args: { p_festival_company_id: string }; Returns: unknown }
-      get_festival_configuration: { Args: { p_festival_company_id: string }; Returns: unknown }
-      get_festival_site_plan: { Args: { p_festival_company_id: string }; Returns: unknown }
-      get_festival_ticket_plan: { Args: { p_festival_company_id: string }; Returns: unknown }
-      get_my_festival_artist_opportunities: { Args: never; Returns: unknown }
-      get_owned_festival_companies: { Args: never; Returns: unknown }
-      save_festival_artist_programme: {
-        Args: { p_festival_company_id: string; p_expected_version: number; p_programme: Json; p_application_windows: Json; p_idempotency_key: string; p_complete?: boolean }
-        Returns: unknown
-      }
-      save_festival_configuration: {
-        Args: { p_festival_company_id: string; p_expected_version: number; p_configuration: Json; p_idempotency_key: string }
-        Returns: unknown
-      }
-      save_festival_site_plan: {
-        Args: { p_festival_company_id: string; p_expected_version: number; p_site_plan: Json; p_stages: Json; p_idempotency_key: string; p_complete?: boolean }
-        Returns: unknown
-      }
-      save_festival_ticket_plan: {
-        Args: { p_festival_company_id: string; p_expected_version: number; p_ticket_plan: Json; p_products: Json; p_release_phases: Json; p_capacity_allocations: Json; p_idempotency_key: string; p_complete?: boolean }
-        Returns: unknown
-      }
-      search_festival_artist_candidates: {
-        Args: { p_festival_company_id: string; p_query?: string | null; p_artist_type?: string | null; p_genres?: string[]; p_minimum_fame?: number | null; p_maximum_fame?: number | null; p_limit?: number; p_offset?: number }
-        Returns: unknown
-      }
       _caller_profile_id: { Args: never; Returns: string }
       accept_festival_offer: {
         Args: {
@@ -42272,10 +42239,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      active_band_performing_members: {
-        Args: { p_band_id: string }
-        Returns: { profile_id: string }[]
       }
       book_gig: {
         Args: {
@@ -44573,15 +44536,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      submit_podcast_appearance: {
-        Args: {
-          p_band_id: string
-          p_episode_topic: string
-          p_linked_release_id?: string
-          p_podcast_id: string
-        }
-        Returns: string
       }
       submit_festival_setlist:
         | {

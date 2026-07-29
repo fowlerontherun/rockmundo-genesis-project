@@ -19,7 +19,7 @@ const minor = (value: string) => {
 };
 
 export function AddMoneyToBand({ bandId: fixedBandId, onComplete }: { bandId?: string; onComplete?: () => void }) {
-  const { profileId, loading: profileLoading } = useActiveProfile();
+  const { profileId, isLoading: profileLoading } = useActiveProfile();
   const [bands, setBands] = useState<Array<{ id: string; name: string }>>([]);
   const [bandId, setBandId] = useState(fixedBandId ?? "");
   const [sources, setSources] = useState<Source[]>([]);

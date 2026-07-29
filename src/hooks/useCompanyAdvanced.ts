@@ -163,7 +163,7 @@ export function useUpdateGoalProgress() {
 
       const { data: result, error } = await supabase
         .from("company_goals")
-        .update(updateData)
+        .update(updateData as any)
         .eq("id", goalId)
         .select()
         .single();
