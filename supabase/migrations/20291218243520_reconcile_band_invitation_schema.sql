@@ -1,6 +1,5 @@
--- Bridge the original band invitation table to the canonical invitation model.
--- The table is created by 20250916160000_create_band_invitations_table.sql;
--- this migration adds the richer role/message fields used by the current RPCs.
+-- Reconcile the canonical band invitation columns for databases where the
+-- historical October compatibility migration was already recorded.
 
 ALTER TABLE public.band_invitations
   ADD COLUMN IF NOT EXISTS inviter_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -32,8 +31,6 @@ BEGIN
       ALTER COLUMN inviter_user_id SET NOT NULL;
   END IF;
 
-  -- Legacy open invitations could have no explicit invitee. Preserve those rows,
-  -- but make the canonical column required once no such rows remain.
   IF NOT EXISTS (
     SELECT 1 FROM public.band_invitations WHERE invited_user_id IS NULL
   ) THEN
@@ -45,31 +42,18 @@ $$;
 
 CREATE INDEX IF NOT EXISTS band_invitations_invited_user_idx
   ON public.band_invitations (invited_user_id);
-
 CREATE INDEX IF NOT EXISTS band_invitations_inviter_created_idx
   ON public.band_invitations (inviter_user_id, created_at DESC);
-
 CREATE INDEX IF NOT EXISTS band_invitations_band_status_idx
   ON public.band_invitations (band_id, status);
-
 CREATE UNIQUE INDEX IF NOT EXISTS band_invitations_one_pending_per_user_band_idx
   ON public.band_invitations (band_id, invited_user_id)
   WHERE status = 'pending' AND invited_user_id IS NOT NULL;
 
 ALTER TABLE public.band_invitations ENABLE ROW LEVEL SECURITY;
 
--- Retire the original public-read and legacy-column policies.
 DROP POLICY IF EXISTS "Band invitations are viewable by everyone"
   ON public.band_invitations;
-DROP POLICY IF EXISTS "Band leaders can create invitations"
-  ON public.band_invitations;
-DROP POLICY IF EXISTS "Band leaders can update invitations"
-  ON public.band_invitations;
-DROP POLICY IF EXISTS "Band leaders can delete invitations"
-  ON public.band_invitations;
-DROP POLICY IF EXISTS "Invitees can accept invitations"
-  ON public.band_invitations;
-
 DROP POLICY IF EXISTS "Band members can view their band invitations"
   ON public.band_invitations;
 CREATE POLICY "Band members can view their band invitations"
@@ -78,27 +62,26 @@ CREATE POLICY "Band members can view their band invitations"
   USING (
     invited_user_id = auth.uid()
     OR EXISTS (
-      SELECT 1
-      FROM public.band_members bm
+      SELECT 1 FROM public.band_members bm
       WHERE bm.band_id = band_invitations.band_id
         AND bm.user_id = auth.uid()
     )
     OR EXISTS (
-      SELECT 1
-      FROM public.bands b
+      SELECT 1 FROM public.bands b
       WHERE b.id = band_invitations.band_id
         AND b.leader_id = auth.uid()
     )
   );
 
+DROP POLICY IF EXISTS "Band leaders can create invitations"
+  ON public.band_invitations;
 CREATE POLICY "Band leaders can create invitations"
   ON public.band_invitations
   FOR INSERT
   WITH CHECK (
     inviter_user_id = auth.uid()
     AND EXISTS (
-      SELECT 1
-      FROM public.bands b
+      SELECT 1 FROM public.bands b
       WHERE b.id = band_invitations.band_id
         AND b.leader_id = auth.uid()
     )
@@ -119,16 +102,14 @@ CREATE POLICY "Band leaders can update invitations"
   FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1
-      FROM public.bands b
+      SELECT 1 FROM public.bands b
       WHERE b.id = band_invitations.band_id
         AND b.leader_id = auth.uid()
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1
-      FROM public.bands b
+      SELECT 1 FROM public.bands b
       WHERE b.id = band_invitations.band_id
         AND b.leader_id = auth.uid()
     )
@@ -142,8 +123,7 @@ CREATE POLICY "Band leaders can cancel invitations"
   USING (
     status = 'pending'
     AND EXISTS (
-      SELECT 1
-      FROM public.bands b
+      SELECT 1 FROM public.bands b
       WHERE b.id = band_invitations.band_id
         AND b.leader_id = auth.uid()
     )

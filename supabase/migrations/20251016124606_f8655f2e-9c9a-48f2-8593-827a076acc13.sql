@@ -1,48 +1,54 @@
--- Add missing columns to songs table
-ALTER TABLE songs 
-ADD COLUMN IF NOT EXISTS rating_revealed_at timestamp with time zone,
-ADD COLUMN IF NOT EXISTS profile_id uuid REFERENCES profiles(id);
+-- Add profile-oriented compatibility fields to songs without changing the
+-- authoritative auth-user ownership stored in songs.artist_id.
+ALTER TABLE public.songs
+  ADD COLUMN IF NOT EXISTS rating_revealed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS profile_id uuid REFERENCES public.profiles(id);
 
--- Add missing column to profiles table  
-ALTER TABLE profiles
-ADD COLUMN IF NOT EXISTS current_activity text;
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS current_activity text;
 
--- Create index on songs profile_id for better query performance
-CREATE INDEX IF NOT EXISTS idx_songs_profile_id ON songs(profile_id);
+CREATE INDEX IF NOT EXISTS idx_songs_profile_id
+  ON public.songs (profile_id);
 
--- Update existing songs to link to profiles via user_id
-UPDATE songs s
+-- artist_id is the established auth.users owner. Resolve the corresponding
+-- character profile through profiles.user_id; songs.user_id never existed in
+-- the authoritative schema.
+UPDATE public.songs s
 SET profile_id = p.id
-FROM profiles p
-WHERE s.user_id = p.user_id
-AND s.profile_id IS NULL;
+FROM public.profiles p
+WHERE s.artist_id = p.user_id
+  AND s.profile_id IS NULL;
 
--- Drop policy if exists and recreate
-DROP POLICY IF EXISTS "Band members can view band songs" ON songs;
-
+DROP POLICY IF EXISTS "Band members can view band songs"
+  ON public.songs;
 CREATE POLICY "Band members can view band songs"
-ON songs FOR SELECT
-USING (
-  band_id IN (
-    SELECT band_id FROM band_members WHERE user_id = auth.uid()
-  )
-);
+  ON public.songs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.band_members bm
+      WHERE bm.band_id = songs.band_id
+        AND bm.user_id = auth.uid()
+    )
+  );
 
--- Create a view for bands to see their gifted songs
-CREATE OR REPLACE VIEW band_gift_notifications AS
-SELECT 
+CREATE OR REPLACE VIEW public.band_gift_notifications AS
+SELECT
   asg.id,
   asg.created_at,
   asg.gift_message,
   asg.gifted_to_band_id,
-  b.name as band_name,
-  s.id as song_id,
-  s.title as song_title,
+  b.name AS band_name,
+  s.id AS song_id,
+  s.title AS song_title,
   s.genre,
   s.song_rating,
   s.quality_score,
-  FALSE as viewed
-FROM admin_song_gifts asg
-JOIN songs s ON s.id = asg.song_id
-JOIN bands b ON b.id = asg.gifted_to_band_id
+  FALSE AS viewed
+FROM public.admin_song_gifts asg
+JOIN public.songs s ON s.id = asg.song_id
+JOIN public.bands b ON b.id = asg.gifted_to_band_id
 WHERE asg.gifted_to_band_id IS NOT NULL;
+
+NOTIFY pgrst, 'reload schema';
