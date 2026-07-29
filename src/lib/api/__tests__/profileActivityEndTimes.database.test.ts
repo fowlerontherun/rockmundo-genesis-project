@@ -33,6 +33,16 @@ describe("profile activity end-time authority", () => {
     }
   });
 
+  it("uses PostgreSQL-compatible idempotent policy and constraint creation", () => {
+    for (const migration of activityTableMigrations) {
+      const lowerMigration = migration.toLowerCase();
+      expect(lowerMigration).not.toContain("create policy if not exists");
+      expect(lowerMigration).not.toContain("add constraint if not exists");
+      expect(migration).toContain("activity_feed_duration_check");
+      expect(migration).toContain("pg_constraint");
+    }
+  });
+
   it("converts and backfills existing generated columns safely", () => {
     expect(compatibilityMigration).toContain("is_generated = 'ALWAYS'");
     expect(compatibilityMigration).toContain("ALTER COLUMN ends_at DROP EXPRESSION");
