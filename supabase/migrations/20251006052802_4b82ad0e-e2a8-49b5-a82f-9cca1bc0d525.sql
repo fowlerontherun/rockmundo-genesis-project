@@ -98,6 +98,27 @@ CREATE POLICY "Profiles manage their own activity status"
     )
   );
 
+ALTER TABLE public.activity_feed
+  ADD COLUMN IF NOT EXISTS status text,
+  ADD COLUMN IF NOT EXISTS duration_minutes integer,
+  ADD COLUMN IF NOT EXISTS status_id uuid REFERENCES public.profile_activity_statuses(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS metadata jsonb;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'activity_feed_duration_check'
+      AND conrelid = 'public.activity_feed'::regclass
+  ) THEN
+    ALTER TABLE public.activity_feed
+      ADD CONSTRAINT activity_feed_duration_check
+      CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+  END IF;
+END
+$$;
+
 -- Keep the existing jam-session compatibility column idempotent. The table is
 -- created by 20250916153000_create_jam_sessions_table.sql.
 ALTER TABLE public.jam_sessions
