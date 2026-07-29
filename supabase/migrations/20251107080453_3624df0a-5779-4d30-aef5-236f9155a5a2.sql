@@ -69,12 +69,12 @@ ALTER TABLE public.label_releases
   ADD COLUMN IF NOT EXISTS revenue_generated numeric(12,2) NOT NULL DEFAULT 0;
 
 UPDATE public.label_releases
-SET marketing_budget = COALESCE(marketing_budget, promotion_budget, 0),
-    units_sold = COALESCE(units_sold, sales_units, 0),
-    revenue_generated = COALESCE(revenue_generated, gross_revenue, 0)
-WHERE marketing_budget IS NULL
-   OR units_sold IS NULL
-   OR revenue_generated IS NULL;
+SET marketing_budget = COALESCE(NULLIF(marketing_budget, 0), promotion_budget, 0),
+    units_sold = COALESCE(NULLIF(units_sold, 0), sales_units, 0),
+    revenue_generated = COALESCE(NULLIF(revenue_generated, 0), gross_revenue, 0)
+WHERE (marketing_budget = 0 AND COALESCE(promotion_budget, 0) <> 0)
+   OR (units_sold = 0 AND COALESCE(sales_units, 0) <> 0)
+   OR (revenue_generated = 0 AND COALESCE(gross_revenue, 0) <> 0);
 
 ALTER TABLE public.label_royalty_statements
   ADD COLUMN IF NOT EXISTS gross_revenue numeric(12,2) NOT NULL DEFAULT 0,
@@ -85,11 +85,15 @@ ALTER TABLE public.label_royalty_statements
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
 UPDATE public.label_royalty_statements
-SET gross_revenue = COALESCE(gross_revenue, artist_share + label_share, 0),
-    net_payout = COALESCE(net_payout, artist_share, 0),
+SET gross_revenue = COALESCE(
+      NULLIF(gross_revenue, 0),
+      COALESCE(artist_share, 0) + COALESCE(label_share, 0),
+      0
+    ),
+    net_payout = COALESCE(NULLIF(net_payout, 0), artist_share, 0),
     created_at = COALESCE(created_at, generated_at, now())
-WHERE gross_revenue IS NULL
-   OR net_payout IS NULL
+WHERE (gross_revenue = 0 AND COALESCE(artist_share, 0) + COALESCE(label_share, 0) <> 0)
+   OR (net_payout = 0 AND COALESCE(artist_share, 0) <> 0)
    OR created_at IS NULL;
 
 -- Seed additional templates through both the canonical fields and the legacy
