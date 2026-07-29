@@ -1,5 +1,5 @@
--- Convert completed songwriting projects into draft songs using the established
--- auth-user owner stored in songs.artist_id and the derived character profile.
+-- Reconcile completed songwriting projects that were not converted because the
+-- historical migration targeted a nonexistent songs.user_id column.
 
 ALTER TABLE public.songs
   ADD COLUMN IF NOT EXISTS completed_at timestamptz;
