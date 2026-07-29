@@ -87,9 +87,22 @@ create policy "Profiles manage their own activity status"
 alter table public.activity_feed
   add column if not exists status text,
   add column if not exists duration_minutes integer,
-  add column if not exists status_id uuid references public.profile_activity_statuses(id) on delete set null,
-  add constraint if not exists activity_feed_duration_check
-    check (duration_minutes is null or duration_minutes >= 0);
+  add column if not exists status_id uuid references public.profile_activity_statuses(id) on delete set null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'activity_feed_duration_check'
+      and conrelid = 'public.activity_feed'::regclass
+  ) then
+    alter table public.activity_feed
+      add constraint activity_feed_duration_check
+      check (duration_minutes is null or duration_minutes >= 0);
+  end if;
+end
+$$;
 
 alter table public.activity_feed
   add column if not exists metadata jsonb;
@@ -229,26 +242,32 @@ alter table public.busking_locations enable row level security;
 alter table public.busking_modifiers enable row level security;
 alter table public.busking_sessions enable row level security;
 
-create policy if not exists "Busking locations are publicly readable" on public.busking_locations
+drop policy if exists "Busking locations are publicly readable" on public.busking_locations;
+create policy "Busking locations are publicly readable" on public.busking_locations
   for select using (true);
 
-create policy if not exists "Busking modifiers are publicly readable" on public.busking_modifiers
+drop policy if exists "Busking modifiers are publicly readable" on public.busking_modifiers;
+create policy "Busking modifiers are publicly readable" on public.busking_modifiers
   for select using (true);
 
-create policy if not exists "Users can view their busking sessions" on public.busking_sessions
+drop policy if exists "Users can view their busking sessions" on public.busking_sessions;
+create policy "Users can view their busking sessions" on public.busking_sessions
   for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can insert their busking sessions" on public.busking_sessions
+drop policy if exists "Users can insert their busking sessions" on public.busking_sessions;
+create policy "Users can insert their busking sessions" on public.busking_sessions
   for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can update their busking sessions" on public.busking_sessions
+drop policy if exists "Users can update their busking sessions" on public.busking_sessions;
+create policy "Users can update their busking sessions" on public.busking_sessions
   for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can delete their busking sessions" on public.busking_sessions
+drop policy if exists "Users can delete their busking sessions" on public.busking_sessions;
+create policy "Users can delete their busking sessions" on public.busking_sessions
   for delete
   using (auth.uid() = user_id);
 
