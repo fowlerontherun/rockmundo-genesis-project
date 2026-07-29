@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownLeft,
@@ -12,6 +12,8 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import { AddMoneyToBand } from "@/components/bands/AddMoneyToBand";
 import { SavingsGoalsPanel } from "@/components/banking/SavingsGoalsPanel";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -39,11 +41,35 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  depositWalletToBank,
+  transferBetweenBankAccounts,
+  withdrawBankToWallet,
+  type WalletBankTransferResult,
+} from "@/lib/api/personalBanking";
+import {
   fetchBankingDashboard,
   formatCurrencyMinor,
 } from "@/services/banking/bankingService";
-import { format } from "date-fns";
-import { toast } from "sonner";
+
+type BankingAccount = {
+  id: string;
+  nickname?: string | null;
+  providerName: string;
+  accountType: string;
+  currencyCode: string;
+  annualRateBps?: number | null;
+  balanceMinor: number;
+  restrictionSummary?: string | null;
+};
+
+type BankingActivity = {
+  id: string;
+  description?: string | null;
+  txType: string;
+  createdAt: string;
+  amountMinor: number;
+  currencyCode: string;
+};
 
 function errMsg(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -53,6 +79,9 @@ function errMsg(error: unknown): string {
   }
   if (message.includes("currency_mismatch")) {
     return "These accounts use different currencies and cannot be transferred directly.";
+  }
+  if (message.includes("idempotency_key_conflict")) {
+    return "These transfer details changed after the operation started. Close this window and try again.";
   }
   return message || "Something went wrong.";
 }
@@ -65,6 +94,8 @@ const parseAmountMinor = (value: string): number | null => {
   return Number.isSafeInteger(amountMinor) ? amountMinor : null;
 };
 
+const operationKey = () => crypto.randomUUID();
+
 export default function Banking() {
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
@@ -72,8 +103,15 @@ export default function Banking() {
     queryFn: fetchBankingDashboard,
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["banking-dashboard"] });
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["banking-dashboard"] }),
+      queryClient.invalidateQueries({ queryKey: ["profile"] }),
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
+      queryClient.invalidateQueries({ queryKey: ["financial-account"] }),
+      queryClient.invalidateQueries({ queryKey: ["financial-transactions"] }),
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -111,9 +149,9 @@ export default function Banking() {
     );
   }
 
-  const accounts = data?.accounts ?? [];
+  const accounts = (data?.accounts ?? []) as BankingAccount[];
   const goals = data?.savingsGoals ?? [];
-  const recent = data?.recentActivity ?? [];
+  const recent = (data?.recentActivity ?? []) as BankingActivity[];
   const summary = data?.savingsSummary;
   const currency = summary?.currencyCode ?? "GBP";
 
@@ -129,37 +167,25 @@ export default function Banking() {
           <StatCard
             icon={<WalletCards className="h-5 w-5" />}
             label="Net worth"
-            value={formatCurrencyMinor({
-              amountMinor: summary?.netWorthMinor ?? 0,
-              currencyCode: currency,
-            })}
+            value={formatCurrencyMinor({ amountMinor: summary?.netWorthMinor ?? 0, currencyCode: currency })}
             hint="Wallet + bank + goals"
           />
           <StatCard
             icon={<PiggyBank className="h-5 w-5" />}
             label="Savings"
-            value={formatCurrencyMinor({
-              amountMinor: summary?.savingsMinor ?? 0,
-              currencyCode: currency,
-            })}
+            value={formatCurrencyMinor({ amountMinor: summary?.savingsMinor ?? 0, currencyCode: currency })}
             hint="Accounts and goals"
           />
           <StatCard
             icon={<CalendarClock className="h-5 w-5" />}
             label="Locked deposits"
-            value={formatCurrencyMinor({
-              amountMinor: summary?.lockedDepositsMinor ?? 0,
-              currencyCode: currency,
-            })}
+            value={formatCurrencyMinor({ amountMinor: summary?.lockedDepositsMinor ?? 0, currencyCode: currency })}
             hint="Fixed term"
           />
           <StatCard
             icon={<TrendingUp className="h-5 w-5" />}
             label="Wallet cash"
-            value={formatCurrencyMinor({
-              amountMinor: summary?.cashMinor ?? 0,
-              currencyCode: currency,
-            })}
+            value={formatCurrencyMinor({ amountMinor: summary?.cashMinor ?? 0, currencyCode: currency })}
             hint="Available now"
           />
         </div>
@@ -179,30 +205,20 @@ export default function Banking() {
             {accounts.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  No accounts yet. Open your first current or savings account to get
-                  started.
+                  No accounts yet. Open your first current or savings account to get started.
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {accounts.map((account) => (
-                  <AccountCard
-                    key={account.id}
-                    account={account}
-                    accounts={accounts}
-                    onDone={invalidate}
-                  />
+                  <AccountCard key={account.id} account={account} accounts={accounts} onDone={invalidate} />
                 ))}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="goals">
-            <SavingsGoalsPanel
-              goals={goals}
-              currencyCode={currency}
-              onChanged={invalidate}
-            />
+            <SavingsGoalsPanel goals={goals} currencyCode={currency} onChanged={invalidate} />
           </TabsContent>
 
           <TabsContent value="statements">
@@ -217,18 +233,15 @@ export default function Banking() {
                 {recent.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No transactions yet.</p>
                 ) : (
-                  recent.map((transaction: any) => (
+                  recent.map((transaction) => (
                     <div
                       key={transaction.id}
                       className="flex items-center justify-between border-b py-2 text-sm last:border-0"
                     >
                       <div>
-                        <div className="font-medium">
-                          {transaction.description ?? transaction.txType}
-                        </div>
+                        <div className="font-medium">{transaction.description ?? transaction.txType}</div>
                         <div className="text-xs text-muted-foreground">
-                          {format(new Date(transaction.createdAt), "PPp")} ·{" "}
-                          {transaction.txType}
+                          {format(new Date(transaction.createdAt), "PPp")} · {transaction.txType}
                         </div>
                       </div>
                       <div className="font-semibold">
@@ -284,9 +297,9 @@ function AccountCard({
   accounts,
   onDone,
 }: {
-  account: any;
-  accounts: any[];
-  onDone: () => void;
+  account: BankingAccount;
+  accounts: BankingAccount[];
+  onDone: () => void | Promise<void>;
 }) {
   const compatibleDestinations = accounts.filter(
     (candidate) =>
@@ -298,39 +311,28 @@ function AccountCard({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base">
-              {account.nickname || account.providerName}
-            </CardTitle>
+            <CardTitle className="text-base">{account.nickname || account.providerName}</CardTitle>
             <CardDescription className="capitalize">
               {account.accountType.replace("_", " ")} · {account.currencyCode} ·{" "}
               {((account.annualRateBps ?? 0) / 100).toFixed(2)}% APR
             </CardDescription>
           </div>
-          <Badge
-            variant={account.accountType === "fixed_deposit" ? "secondary" : "outline"}
-          >
+          <Badge variant={account.accountType === "fixed_deposit" ? "secondary" : "outline"}>
             {account.accountType.replace("_", " ")}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="text-3xl font-bold">
-          {formatCurrencyMinor({
-            amountMinor: account.balanceMinor,
-            currencyCode: account.currencyCode,
-          })}
+          {formatCurrencyMinor({ amountMinor: account.balanceMinor, currencyCode: account.currencyCode })}
         </div>
         {account.restrictionSummary && (
           <p className="text-xs text-muted-foreground">{account.restrictionSummary}</p>
         )}
         <div className="flex flex-wrap gap-2">
-          <DepositDialog account={account} onDone={onDone} />
-          <WithdrawDialog account={account} onDone={onDone} />
-          <TransferDialog
-            fromAccount={account}
-            accounts={compatibleDestinations}
-            onDone={onDone}
-          />
+          <WalletBankDialog operation="deposit" account={account} onDone={onDone} />
+          <WalletBankDialog operation="withdraw" account={account} onDone={onDone} />
+          <TransferDialog fromAccount={account} accounts={compatibleDestinations} onDone={onDone} />
         </div>
       </CardContent>
     </Card>
@@ -342,44 +344,56 @@ function OpenAccountDialog({
   onDone,
 }: {
   currencyCode: string;
-  onDone: () => void;
+  onDone: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<"current" | "savings" | "fixed_deposit">(
-    "current",
-  );
+  const [type, setType] = useState<"current" | "savings" | "fixed_deposit">("current");
   const [nickname, setNickname] = useState("");
   const [initial, setInitial] = useState("0");
   const [term, setTerm] = useState("6");
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const initialMinor = parseAmountMinor(initial);
-  const initialIsValid =
-    initialMinor !== null && initialMinor >= 0 && initialMinor % 100 === 0;
+  const initialIsValid = initialMinor !== null && initialMinor >= 0 && initialMinor % 100 === 0;
+
+  const resetOperation = () => setIdempotencyKey(null);
+  const resetDialog = () => {
+    setNickname("");
+    setInitial("0");
+    setTerm("6");
+    resetOperation();
+  };
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const key = idempotencyKey ?? operationKey();
+      if (!idempotencyKey) setIdempotencyKey(key);
       const { data, error } = await (supabase as any).rpc("open_my_bank_account", {
         p_account_type: type,
         p_nickname: nickname.trim() || null,
         p_initial_amount_minor: initialMinor ?? 0,
         p_term_months: type === "fixed_deposit" ? Number(term) : null,
         p_currency_code: currencyCode,
-        p_idempotency_key: crypto.randomUUID(),
+        p_idempotency_key: key,
       });
       if (error) throw new Error(error.message);
-      return data;
+      return data as { idempotent?: boolean } | null;
     },
-    onSuccess: () => {
-      toast.success("Account opened");
-      onDone();
+    onSuccess: (result) => {
+      toast.success(result?.idempotent ? "Account was already opened — details refreshed" : "Account opened");
+      void onDone();
       setOpen(false);
-      setNickname("");
-      setInitial("0");
+      resetDialog();
     },
     onError: (error) => toast.error(errMsg(error)),
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen && !mutation.isPending) resetDialog();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
@@ -390,17 +404,21 @@ function OpenAccountDialog({
         <DialogHeader>
           <DialogTitle>Open a bank account</DialogTitle>
           <DialogDescription>
-            Current (0%), savings (2.5% APR), or fixed deposit (3–8% APR,
-            locked). The account uses this character&apos;s {currencyCode} wallet.
+            Current (0%), savings (2.5% APR), or fixed deposit (3–8% APR, locked). The
+            account uses this character&apos;s {currencyCode} wallet.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
             <Label>Account type</Label>
-            <Select value={type} onValueChange={(value: any) => setType(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+            <Select
+              value={type}
+              onValueChange={(value) => {
+                setType(value as "current" | "savings" | "fixed_deposit");
+                resetOperation();
+              }}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Current</SelectItem>
                 <SelectItem value="savings">Savings</SelectItem>
@@ -412,7 +430,10 @@ function OpenAccountDialog({
             <Label>Nickname (optional)</Label>
             <Input
               value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
+              onChange={(event) => {
+                setNickname(event.target.value);
+                resetOperation();
+              }}
               placeholder="Tour fund"
             />
           </div>
@@ -423,21 +444,26 @@ function OpenAccountDialog({
               min="0"
               step="1"
               value={initial}
-              onChange={(event) => setInitial(event.target.value)}
+              onChange={(event) => {
+                setInitial(event.target.value);
+                resetOperation();
+              }}
             />
             {!initialIsValid && (
-              <p className="text-xs text-destructive">
-                Opening deposits must use whole currency units.
-              </p>
+              <p className="text-xs text-destructive">Opening deposits must use whole currency units.</p>
             )}
           </div>
           {type === "fixed_deposit" && (
             <div className="space-y-1">
               <Label>Term (months)</Label>
-              <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select
+                value={term}
+                onValueChange={(value) => {
+                  setTerm(value);
+                  resetOperation();
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[3, 6, 12, 24, 36].map((months) => (
                     <SelectItem key={months} value={String(months)}>
@@ -450,11 +476,8 @@ function OpenAccountDialog({
           )}
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !initialIsValid}
-          >
-            {mutation.isPending ? "Opening…" : "Open account"}
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !initialIsValid}>
+            {mutation.isPending ? "Opening…" : idempotencyKey ? "Retry opening" : "Open account"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -462,119 +485,100 @@ function OpenAccountDialog({
   );
 }
 
-function AmountRpcDialog({
-  trigger,
-  title,
-  description,
-  rpc,
+function WalletBankDialog({
+  operation,
+  account,
   onDone,
-  currency,
-  accountId,
 }: {
-  trigger: React.ReactNode;
-  title: string;
-  description: string;
-  rpc: string;
-  onDone: () => void;
-  currency: string;
-  accountId: string;
+  operation: "deposit" | "withdraw";
+  account: BankingAccount;
+  onDone: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const amountMinor = parseAmountMinor(amount);
-  const valid =
-    amountMinor !== null && amountMinor > 0 && amountMinor % 100 === 0;
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const amountMinor = useMemo(() => parseAmountMinor(amount), [amount]);
+  const valid = amountMinor !== null && amountMinor > 0 && amountMinor % 100 === 0;
+  const depositing = operation === "deposit";
+
+  const resetDialog = () => {
+    setAmount("");
+    setIdempotencyKey(null);
+  };
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await (supabase as any).rpc(rpc, {
-        p_amount_minor: amountMinor ?? 0,
-        p_idempotency_key: crypto.randomUUID(),
-        p_bank_account_id: accountId,
-      });
-      if (error) throw new Error(error.message);
-      return data;
+    mutationFn: async (): Promise<WalletBankTransferResult> => {
+      const key = idempotencyKey ?? operationKey();
+      if (!idempotencyKey) setIdempotencyKey(key);
+      const input = {
+        bankAccountId: account.id,
+        amountMinor: amountMinor ?? 0,
+        idempotencyKey: key,
+      };
+      return depositing ? depositWalletToBank(input) : withdrawBankToWallet(input);
     },
-    onSuccess: () => {
-      toast.success("Transfer complete");
-      onDone();
+    onSuccess: (result) => {
+      const action = depositing ? "Deposit" : "Withdrawal";
+      toast.success(
+        result.idempotent
+          ? `${action} was already completed — balances refreshed`
+          : `${action} complete`,
+      );
+      void onDone();
       setOpen(false);
-      setAmount("");
+      resetDialog();
     },
     onError: (error) => toast.error(errMsg(error)),
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen && !mutation.isPending) resetDialog();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          {depositing ? (
+            <ArrowDownLeft className="mr-1 h-4 w-4" />
+          ) : (
+            <ArrowUpRight className="mr-1 h-4 w-4" />
+          )}
+          {depositing ? "Deposit" : "Withdraw"}
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{depositing ? "Deposit from wallet" : "Withdraw to wallet"}</DialogTitle>
+          <DialogDescription>
+            Move whole currency units {depositing ? "from this character's wallet into the account" : "from this account into the character wallet"}.
+            A network-error retry will not move the money twice.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-1">
-          <Label>Amount ({currency})</Label>
+          <Label>Amount ({account.currencyCode})</Label>
           <Input
             inputMode="numeric"
             min="0"
             step="1"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => {
+              setAmount(event.target.value);
+              setIdempotencyKey(null);
+            }}
           />
           {amount && !valid && (
-            <p className="text-xs text-destructive">
-              Wallet transfers must use whole currency units.
-            </p>
+            <p className="text-xs text-destructive">Wallet transfers must use whole currency units.</p>
           )}
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !valid}
-          >
-            {mutation.isPending ? "Working…" : "Confirm"}
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !valid}>
+            {mutation.isPending ? "Working…" : idempotencyKey ? "Retry safely" : "Confirm"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DepositDialog({ account, onDone }: { account: any; onDone: () => void }) {
-  return (
-    <AmountRpcDialog
-      trigger={
-        <Button size="sm" variant="outline">
-          <ArrowDownLeft className="mr-1 h-4 w-4" />
-          Deposit
-        </Button>
-      }
-      title="Deposit from wallet"
-      description="Move whole currency units from this character's wallet into the account."
-      rpc="deposit_my_wallet_to_bank"
-      accountId={account.id}
-      currency={account.currencyCode}
-      onDone={onDone}
-    />
-  );
-}
-
-function WithdrawDialog({ account, onDone }: { account: any; onDone: () => void }) {
-  return (
-    <AmountRpcDialog
-      trigger={
-        <Button size="sm" variant="outline">
-          <ArrowUpRight className="mr-1 h-4 w-4" />
-          Withdraw
-        </Button>
-      }
-      title="Withdraw to wallet"
-      description="Move whole currency units from this account into the character wallet."
-      rpc="withdraw_my_bank_to_wallet"
-      accountId={account.id}
-      currency={account.currencyCode}
-      onDone={onDone}
-    />
   );
 }
 
@@ -583,42 +587,56 @@ function TransferDialog({
   accounts,
   onDone,
 }: {
-  fromAccount: any;
-  accounts: any[];
-  onDone: () => void;
+  fromAccount: BankingAccount;
+  accounts: BankingAccount[];
+  onDone: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [destinationId, setDestinationId] = useState(accounts[0]?.id ?? "");
   const [amount, setAmount] = useState("");
-  const amountMinor = parseAmountMinor(amount);
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const amountMinor = useMemo(() => parseAmountMinor(amount), [amount]);
   const valid = amountMinor !== null && amountMinor > 0 && Boolean(destinationId);
 
+  const resetDialog = () => {
+    setAmount("");
+    setDestinationId(accounts[0]?.id ?? "");
+    setIdempotencyKey(null);
+  };
+
   const mutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await (supabase as any).rpc(
-        "transfer_between_my_bank_accounts",
-        {
-          p_source_bank_account_id: fromAccount.id,
-          p_destination_bank_account_id: destinationId,
-          p_amount_minor: amountMinor ?? 0,
-          p_idempotency_key: crypto.randomUUID(),
-        },
-      );
-      if (error) throw new Error(error.message);
+    mutationFn: () => {
+      const key = idempotencyKey ?? operationKey();
+      if (!idempotencyKey) setIdempotencyKey(key);
+      return transferBetweenBankAccounts({
+        sourceBankAccountId: fromAccount.id,
+        destinationBankAccountId: destinationId,
+        amountMinor: amountMinor ?? 0,
+        idempotencyKey: key,
+      });
     },
-    onSuccess: () => {
-      toast.success("Transfer complete");
-      onDone();
+    onSuccess: (result) => {
+      toast.success(
+        result.idempotent
+          ? "Transfer was already completed — balances refreshed"
+          : "Transfer complete",
+      );
+      void onDone();
       setOpen(false);
-      setAmount("");
+      resetDialog();
     },
     onError: (error) => toast.error(errMsg(error)),
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen && !mutation.isPending) resetDialog();
+  };
+
   if (accounts.length === 0) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <ArrowLeftRight className="mr-1 h-4 w-4" />
@@ -629,22 +647,25 @@ function TransferDialog({
         <DialogHeader>
           <DialogTitle>Transfer between {fromAccount.currencyCode} accounts</DialogTitle>
           <DialogDescription>
-            Currency conversion is not performed. Only matching-currency destinations
-            are shown.
+            Currency conversion is not performed. Only matching-currency destinations are
+            shown. A network-error retry will reuse the original operation.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
             <Label>To account</Label>
-            <Select value={destinationId} onValueChange={setDestinationId}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+            <Select
+              value={destinationId}
+              onValueChange={(value) => {
+                setDestinationId(value);
+                setIdempotencyKey(null);
+              }}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
-                    {account.nickname || account.providerName} ·{" "}
-                    {account.accountType.replace("_", " ")}
+                    {account.nickname || account.providerName} · {account.accountType.replace("_", " ")}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -657,16 +678,16 @@ function TransferDialog({
               min="0"
               step="0.01"
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={(event) => {
+                setAmount(event.target.value);
+                setIdempotencyKey(null);
+              }}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !valid}
-          >
-            {mutation.isPending ? "Working…" : "Transfer"}
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !valid}>
+            {mutation.isPending ? "Working…" : idempotencyKey ? "Retry safely" : "Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>
