@@ -8,6 +8,8 @@ const read = (file: string) => fs.readFileSync(path.resolve(file), "utf8");
 const hookSource = read("src/hooks/useFinances.ts");
 const pageSource = read("src/pages/Finances.tsx");
 const holdingsSource = read("src/components/finance/CanonicalFinanceHoldings.tsx");
+const charitySource = read("src/components/finance/CharityDonationsTab.tsx");
+const charityApiSource = read("src/lib/api/charityDonations.ts");
 const transactionSource = read("src/components/finance/TransactionsList.tsx");
 const summarySource = read("src/components/finance/FinanceSummaryCards.tsx");
 const personalSource = read("src/components/finance/PersonalFinanceBreakdown.tsx");
@@ -17,6 +19,7 @@ const formattingSource = read("src/lib/financeFormatting.ts");
 const migratedUiSources = [
   pageSource,
   holdingsSource,
+  charitySource,
   transactionSource,
   summarySource,
   personalSource,
@@ -59,14 +62,17 @@ describe("canonical Financial Command Center UI", () => {
     expect(fromMinorUnits(12345)).toBe(123.45);
   });
 
-  it("removes unsafe legacy cash mutations from reachable finance tabs", () => {
+  it("keeps unsafe legacy mutations out of reachable finance tabs", () => {
     expect(pageSource).not.toContain("InvestmentsTab");
     expect(pageSource).not.toContain("LoansTab");
-    expect(pageSource).not.toContain("CharityDonationsTab");
+    expect(pageSource).toContain("CharityDonationsTab");
     expect(pageSource).toContain("CanonicalInvestmentsPanel");
     expect(pageSource).toContain("CanonicalLoansPanel");
     expect(holdingsSource).not.toContain("supabase");
     expect(holdingsSource).toContain("temporarily read-only");
+    expect(charitySource).not.toContain('.from("profiles")');
+    expect(charitySource).not.toContain('.from("charity_donations").insert');
+    expect(charityApiSource).toContain('"make_my_charity_donation"');
   });
 
   it("discloses other currencies without fake conversion", () => {

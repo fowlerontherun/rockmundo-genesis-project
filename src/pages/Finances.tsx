@@ -15,12 +15,12 @@ import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPane
 import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
 import { FinancialHistoryLedger } from "@/components/finance/FinancialHistoryLedger";
 import { PlayerFinanceHub } from "@/components/finance/PlayerFinanceHub";
+import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FinancialObligationsPanel } from "@/components/finance/FinancialObligationsPanel";
 import {
   CanonicalInvestmentsPanel,
   CanonicalLoansPanel,
-  LegacyMutationNotice,
   OtherCurrencyBalancesPanel,
 } from "@/components/finance/CanonicalFinanceHoldings";
 
@@ -125,10 +125,7 @@ const Finances = () => {
         </TabsContent>
 
         <TabsContent value="charity" className="space-y-6">
-          <LegacyMutationNotice
-            title="Charity donations are temporarily read-only"
-            body="The previous donation flow deducted compatibility cash before recording the donation. It is disabled until the donation and reward update can post through one atomic ledger transaction."
-          />
+          <CharityDonationsTab cash={summary.cash} currencyCode={summary.currencyCode} />
         </TabsContent>
 
         <TabsContent value="sponsorships" className="space-y-6">

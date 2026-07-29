@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Heart, Star, Shield, Leaf, Music, Palette } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Heart, Leaf, Music, Palette, Shield, Star } from "lucide-react";
 import { toast } from "sonner";
 
-const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { makeCharityDonation } from "@/lib/api/charityDonations";
+import { formatMinorMoney, formatMoney } from "@/lib/financeFormatting";
 
 const categoryIcons: Record<string, typeof Heart> = {
   music_education: Music,
@@ -21,7 +22,7 @@ const categoryIcons: Record<string, typeof Heart> = {
   arts: Palette,
 };
 
-const categoryColors: Record<string, string> = {
+const categoryColours: Record<string, string> = {
   music_education: "bg-blue-500/10 text-blue-500",
   health: "bg-red-500/10 text-red-500",
   environment: "bg-green-500/10 text-green-500",
@@ -29,7 +30,7 @@ const categoryColors: Record<string, string> = {
   arts: "bg-purple-500/10 text-purple-500",
 };
 
-interface CharityOrg {
+interface CharityOrganisation {
   id: string;
   name: string;
   category: string;
@@ -43,15 +44,22 @@ interface CharityDonation {
   id: string;
   charity_id: string;
   amount: number;
+  amount_minor: number;
+  currency_code: string;
   fame_gained: number;
   reputation_gained: number;
   created_at: string;
 }
 
-export const CharityDonationsTab = ({ cash }: { cash: number }) => {
+interface CharityDonationsTabProps {
+  cash: number;
+  currencyCode: string;
+}
+
+export const CharityDonationsTab = ({ cash, currencyCode }: CharityDonationsTabProps) => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
-  const [selectedCharity, setSelectedCharity] = useState<CharityOrg | null>(null);
+  const [selectedCharity, setSelectedCharity] = useState<CharityOrganisation | null>(null);
   const [donationAmount, setDonationAmount] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -61,11 +69,11 @@ export const CharityDonationsTab = ({ cash }: { cash: number }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("charity_organizations")
-        .select("*")
+        .select("id, name, category, description, fame_bonus_pct, reputation_boost, tax_deduction_pct")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
-      return data as CharityOrg[];
+      return data as CharityOrganisation[];
     },
   });
 
@@ -78,82 +86,97 @@ export const CharityDonationsTab = ({ cash }: { cash: number }) => {
         .select("*")
         .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
       if (error) throw error;
-      return data as CharityDonation[];
+      return (data ?? []) as unknown as CharityDonation[];
     },
     enabled: !!profileId,
   });
 
   const donateMutation = useMutation({
-    mutationFn: async ({ charityId, amount, fameGained, repGained }: { charityId: string; amount: number; fameGained: number; repGained: number }) => {
-      if (!profileId) throw new Error("No profile");
-
-      // Deduct cash
-      const { error: cashErr } = await supabase
-        .from("profiles")
-        .update({ cash: cash - amount })
-        .eq("id", profileId);
-      if (cashErr) throw cashErr;
-
-      // Record donation
-      const { error: donErr } = await supabase
-        .from("charity_donations")
-        .insert({ profile_id: profileId, charity_id: charityId, amount, fame_gained: fameGained, reputation_gained: repGained });
-      if (donErr) throw donErr;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
-      queryClient.invalidateQueries({ queryKey: ["charity-donations"] });
-      toast.success("Donation made! You gained fame and reputation.");
+    mutationFn: ({ charityId, amountMinor, idempotencyKey }: { charityId: string; amountMinor: number; idempotencyKey: string }) =>
+      makeCharityDonation(charityId, amountMinor, idempotencyKey),
+    onSuccess: (result) => {
+      for (const queryKey of [
+        ["charity-donations", profileId],
+        ["finance-command-center", profileId],
+        ["financial-ledger-history"],
+        ["profile"],
+      ]) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      toast.success(
+        `Donated ${formatMinorMoney(result.amountMinor, result.currencyCode)} · +${result.fameGained} fame · +${result.reputationGained} attitude`,
+      );
       setDialogOpen(false);
       setDonationAmount("");
     },
-    onError: () => toast.error("Failed to process donation"),
+    onError: (error: Error) => toast.error(error.message),
   });
 
+  const amountText = donationAmount.trim();
+  const validAmount = /^\d+$/.test(amountText) && Number(amountText) > 0;
+  const amountMajor = validAmount ? Number(amountText) : 0;
+
   const handleDonate = () => {
-    if (!selectedCharity) return;
-    const amount = parseInt(donationAmount);
-    if (isNaN(amount) || amount <= 0) return toast.error("Enter a valid amount");
-    if (amount > cash) return toast.error("Not enough cash");
-    const fameGained = Math.floor(amount * (selectedCharity.fame_bonus_pct / 100));
-    const repGained = Math.floor((amount / 100) * selectedCharity.reputation_boost);
-    donateMutation.mutate({ charityId: selectedCharity.id, amount, fameGained, repGained });
+    if (!selectedCharity || !validAmount) {
+      toast.error("Enter a whole-number donation amount");
+      return;
+    }
+    if (amountMajor > cash) {
+      toast.error("Not enough available wallet funds");
+      return;
+    }
+
+    donateMutation.mutate({
+      charityId: selectedCharity.id,
+      amountMinor: amountMajor * 100,
+      idempotencyKey: `charity:${profileId ?? "unknown"}:${crypto.randomUUID()}`,
+    });
   };
 
-  const categories = [...new Set(charities.map((c) => c.category))];
-  const filtered = categoryFilter ? charities.filter((c) => c.category === categoryFilter) : charities;
-  const totalDonated = donations.reduce((s, d) => s + d.amount, 0);
+  const categories = [...new Set(charities.map((charity) => charity.category))];
+  const filtered = categoryFilter
+    ? charities.filter((charity) => charity.category === categoryFilter)
+    : charities;
+  const currentCurrencyDonatedMinor = donations
+    .filter((donation) => donation.currency_code === currencyCode)
+    .reduce((sum, donation) => sum + donation.amount_minor, 0);
+  const previewFame = selectedCharity && validAmount
+    ? Math.floor((amountMajor * selectedCharity.fame_bonus_pct) / 100)
+    : 0;
+  const previewReputation = selectedCharity && validAmount
+    ? Math.floor((amountMajor * selectedCharity.reputation_boost) / 100)
+    : 0;
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">Total Donated</p>
-            <p className="text-2xl font-bold text-pink-500">{fmt.format(totalDonated)}</p>
+            <p className="text-sm text-muted-foreground">Donated in {currencyCode}</p>
+            <p className="text-2xl font-bold text-pink-500">
+              {formatMinorMoney(currentCurrencyDonatedMinor, currencyCode)}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">Donations Made</p>
+            <p className="text-sm text-muted-foreground">Donations made</p>
             <p className="text-2xl font-bold text-primary">{donations.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">Fame Earned</p>
+            <p className="text-sm text-muted-foreground">Fame earned</p>
             <p className="text-2xl font-bold text-amber-500">
-              <Star className="inline h-5 w-5 mr-1" />
-              {donations.reduce((s, d) => s + d.fame_gained, 0)}
+              <Star className="mr-1 inline h-5 w-5" />
+              {donations.reduce((sum, donation) => sum + donation.fame_gained, 0)}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Category filters */}
       <div className="flex flex-wrap gap-2">
         <Badge
           variant={categoryFilter === null ? "default" : "outline"}
@@ -162,74 +185,74 @@ export const CharityDonationsTab = ({ cash }: { cash: number }) => {
         >
           All
         </Badge>
-        {categories.map((cat) => (
+        {categories.map((category) => (
           <Badge
-            key={cat}
-            variant={categoryFilter === cat ? "default" : "outline"}
+            key={category}
+            variant={categoryFilter === category ? "default" : "outline"}
             className="cursor-pointer capitalize"
-            onClick={() => setCategoryFilter(cat === categoryFilter ? null : cat)}
+            onClick={() => setCategoryFilter(category === categoryFilter ? null : category)}
           >
-            {cat.replace("_", " ")}
+            {category.replaceAll("_", " ")}
           </Badge>
         ))}
       </div>
 
-      {/* Charity grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((charity) => {
           const Icon = categoryIcons[charity.category] || Heart;
-          const color = categoryColors[charity.category] || "bg-muted text-muted-foreground";
+          const colour = categoryColours[charity.category] || "bg-muted text-muted-foreground";
           return (
             <Card key={charity.id} className="flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <div className={`rounded-lg p-2 ${color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <Badge variant="outline" className="capitalize text-xs">
-                    {charity.category.replace("_", " ")}
-                  </Badge>
+                  <div className={`rounded-lg p-2 ${colour}`}><Icon className="h-5 w-5" /></div>
+                  <Badge variant="outline" className="text-xs capitalize">{charity.category.replaceAll("_", " ")}</Badge>
                 </div>
-                <CardTitle className="text-base mt-2">{charity.name}</CardTitle>
-                <CardDescription className="text-xs line-clamp-2">{charity.description}</CardDescription>
+                <CardTitle className="mt-2 text-base">{charity.name}</CardTitle>
+                <CardDescription className="line-clamp-2 text-xs">{charity.description}</CardDescription>
               </CardHeader>
               <CardContent className="mt-auto space-y-3">
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <Badge variant="secondary">Fame +{charity.fame_bonus_pct}%</Badge>
-                  <Badge variant="secondary">Rep +{charity.reputation_boost}</Badge>
-                  <Badge variant="secondary">Tax -{charity.tax_deduction_pct}%</Badge>
+                  <Badge variant="secondary">Fame rate {charity.fame_bonus_pct}%</Badge>
+                  <Badge variant="secondary">Attitude rate {charity.reputation_boost}%</Badge>
+                  <Badge variant="secondary">Tax record {charity.tax_deduction_pct}%</Badge>
                 </div>
-                <Dialog open={dialogOpen && selectedCharity?.id === charity.id} onOpenChange={(open) => {
-                  setDialogOpen(open);
-                  if (open) setSelectedCharity(charity);
-                }}>
+                <Dialog
+                  open={dialogOpen && selectedCharity?.id === charity.id}
+                  onOpenChange={(open) => {
+                    setDialogOpen(open);
+                    setSelectedCharity(open ? charity : null);
+                    if (!open) setDonationAmount("");
+                  }}
+                >
                   <DialogTrigger asChild>
-                    <Button size="sm" className="w-full" variant="outline">
-                      <Heart className="h-3 w-3 mr-1" /> Donate
+                    <Button size="sm" className="w-full" variant="outline" disabled={cash < 1}>
+                      <Heart className="mr-1 h-3 w-3" /> Donate
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Donate to {charity.name}</DialogTitle>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>Donate to {charity.name}</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-2">
-                      <p className="text-sm text-muted-foreground">Available: {fmt.format(cash)}</p>
+                      <p className="text-sm text-muted-foreground">Wallet available: {formatMoney(cash, currencyCode)}</p>
                       <Input
                         type="number"
-                        placeholder="Amount ($)"
+                        inputMode="numeric"
+                        placeholder={`Amount (${currencyCode})`}
                         value={donationAmount}
-                        onChange={(e) => setDonationAmount(e.target.value)}
+                        onChange={(event) => setDonationAmount(event.target.value)}
                         min={1}
-                        max={cash}
+                        max={Math.floor(cash)}
+                        step={1}
                       />
-                      {donationAmount && parseInt(donationAmount) > 0 && (
-                        <div className="rounded-md bg-muted p-3 text-sm space-y-1">
-                          <p>Fame gained: <span className="font-semibold text-amber-500">+{Math.floor(parseInt(donationAmount) * (charity.fame_bonus_pct / 100))}</span></p>
-                          <p>Reputation: <span className="font-semibold text-blue-500">+{Math.floor((parseInt(donationAmount) / 100) * charity.reputation_boost)}</span></p>
+                      {validAmount && (
+                        <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
+                          <p>Estimated fame: <span className="font-semibold text-amber-500">+{previewFame}</span></p>
+                          <p>Estimated attitude reputation: <span className="font-semibold text-blue-500">+{previewReputation}</span></p>
+                          <p className="text-xs text-muted-foreground">The server calculates the final rewards and caps attitude at 100.</p>
                         </div>
                       )}
-                      <Button onClick={handleDonate} disabled={donateMutation.isPending} className="w-full">
-                        {donateMutation.isPending ? "Processing..." : "Confirm Donation"}
+                      <Button onClick={handleDonate} disabled={donateMutation.isPending || !validAmount} className="w-full">
+                        {donateMutation.isPending ? "Processing…" : `Donate ${validAmount ? formatMoney(amountMajor, currencyCode) : ""}`}
                       </Button>
                     </div>
                   </DialogContent>
@@ -240,33 +263,25 @@ export const CharityDonationsTab = ({ cash }: { cash: number }) => {
         })}
       </div>
 
-      {/* Donation history */}
       {donations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Donation History</CardTitle>
+            <CardTitle className="text-lg">Donation history</CardTitle>
+            <CardDescription>Each completed donation is linked to an immutable ledger transaction.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Charity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Fame</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow><TableHead>Charity</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Fame</TableHead><TableHead className="text-right">Attitude</TableHead><TableHead className="text-right">Date</TableHead></TableRow></TableHeader>
               <TableBody>
-                {donations.map((d) => {
-                  const charity = charities.find((c) => c.id === d.charity_id);
+                {donations.map((donation) => {
+                  const charity = charities.find((item) => item.id === donation.charity_id);
                   return (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">{charity?.name || "Unknown"}</TableCell>
-                      <TableCell className="text-right text-pink-500">{fmt.format(d.amount)}</TableCell>
-                      <TableCell className="text-right text-amber-500">+{d.fame_gained}</TableCell>
-                      <TableCell className="text-right text-muted-foreground text-xs">
-                        {new Date(d.created_at).toLocaleDateString()}
-                      </TableCell>
+                    <TableRow key={donation.id}>
+                      <TableCell className="font-medium">{charity?.name || "Unknown charity"}</TableCell>
+                      <TableCell className="text-right text-pink-500">{formatMinorMoney(donation.amount_minor, donation.currency_code)}</TableCell>
+                      <TableCell className="text-right text-amber-500">+{donation.fame_gained}</TableCell>
+                      <TableCell className="text-right text-blue-500">+{donation.reputation_gained}</TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">{new Date(donation.created_at).toLocaleDateString("en-GB")}</TableCell>
                     </TableRow>
                   );
                 })}
