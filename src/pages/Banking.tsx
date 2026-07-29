@@ -413,8 +413,8 @@ function OpenAccountDialog({
             <Label>Account type</Label>
             <Select
               value={type}
-              onValueChange={(value: "current" | "savings" | "fixed_deposit") => {
-                setType(value);
+              onValueChange={(value) => {
+                setType(value as "current" | "savings" | "fixed_deposit");
                 resetOperation();
               }}
             >
