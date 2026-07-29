@@ -1,6 +1,6 @@
--- Compatibility layer for the authoritative record-label schema created by the
--- consolidated 20250917090000 migration. Do not recreate tables or add a second
--- set of permissive RLS policies here.
+-- Reconcile the November label aliases against the authoritative record-label
+-- schema. This migration is additive and does not replace canonical policies,
+-- triggers or tables.
 
 ALTER TABLE public.territories
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
@@ -11,7 +11,6 @@ ALTER TABLE public.label_territories
 ALTER TABLE public.label_roster_slots
   ADD COLUMN IF NOT EXISTS contract_id uuid REFERENCES public.artist_label_contracts(id) ON DELETE SET NULL;
 
--- These aliases remain in active use by the label directory and admin editor.
 ALTER TABLE public.label_deal_types
   ADD COLUMN IF NOT EXISTS royalty_artist_pct integer,
   ADD COLUMN IF NOT EXISTS advance_min integer NOT NULL DEFAULT 0,
@@ -32,8 +31,7 @@ ALTER TABLE public.label_deal_types
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'label_deal_types_royalty_artist_pct_check'
       AND conrelid = 'public.label_deal_types'::regclass
   ) THEN
@@ -44,8 +42,7 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'label_deal_types_advance_range_check'
       AND conrelid = 'public.label_deal_types'::regclass
   ) THEN
@@ -57,8 +54,6 @@ BEGIN
 END
 $$;
 
--- Preserve harmless aliases from the later label prototype without replacing
--- the canonical columns or automation.
 ALTER TABLE public.artist_label_contracts
   ADD COLUMN IF NOT EXISTS marketing_support integer NOT NULL DEFAULT 0;
 
@@ -96,9 +91,6 @@ WHERE (gross_revenue = 0 AND COALESCE(artist_share, 0) + COALESCE(label_share, 0
    OR (net_payout = 0 AND COALESCE(artist_share, 0) <> 0)
    OR created_at IS NULL;
 
--- Seed additional templates through both the canonical fields and the legacy
--- aliases. Use existence checks because historical data may not have a unique
--- constraint on name.
 INSERT INTO public.label_deal_types (
   name,
   description,
@@ -144,14 +136,12 @@ FROM (VALUES
   advance_max
 )
 WHERE NOT EXISTS (
-  SELECT 1
-  FROM public.label_deal_types existing
+  SELECT 1 FROM public.label_deal_types existing
   WHERE lower(existing.name) = lower(seed.name)
 );
 
 INSERT INTO public.territories (code, name, region)
-SELECT *
-FROM (VALUES
+SELECT * FROM (VALUES
   ('US'::text, 'United States'::text, 'North America'::text),
   ('UK'::text, 'United Kingdom'::text, 'Europe'::text),
   ('CA'::text, 'Canada'::text, 'North America'::text),
