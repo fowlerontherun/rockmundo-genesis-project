@@ -1,60 +1,93 @@
--- Fix setlist_songs and performance_items RLS policies to allow all band members
+-- Allow members of a band to manage entries in that band's setlists while
+-- keeping the reusable performance-item catalogue publicly readable.
 
--- Drop existing restrictive policies on setlist_songs if they exist
-DROP POLICY IF EXISTS "Band members can view setlist songs" ON setlist_songs;
-DROP POLICY IF EXISTS "Band leaders can manage setlist songs" ON setlist_songs;
-DROP POLICY IF EXISTS "Band members can add songs to setlists" ON setlist_songs;
-DROP POLICY IF EXISTS "Band members can update setlist songs" ON setlist_songs;
-DROP POLICY IF EXISTS "Band members can delete setlist songs" ON setlist_songs;
+ALTER TABLE public.setlist_songs ENABLE ROW LEVEL SECURITY;
 
--- Create permissive policies for all band members
+DROP POLICY IF EXISTS "Band members can view setlist songs"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band leaders can manage setlist songs"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band members can add songs to setlists"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band members can view their setlist songs"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band members can insert setlist songs"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band members can update setlist songs"
+  ON public.setlist_songs;
+DROP POLICY IF EXISTS "Band members can delete setlist songs"
+  ON public.setlist_songs;
+
 CREATE POLICY "Band members can view their setlist songs"
-  ON setlist_songs FOR SELECT
+  ON public.setlist_songs
+  FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM setlists s
-      JOIN band_members bm ON bm.band_id = s.band_id
+      SELECT 1
+      FROM public.setlists s
+      JOIN public.band_members bm ON bm.band_id = s.band_id
       WHERE s.id = setlist_songs.setlist_id
-      AND bm.user_id = auth.uid()
+        AND bm.user_id = auth.uid()
     )
   );
 
 CREATE POLICY "Band members can insert setlist songs"
-  ON setlist_songs FOR INSERT
+  ON public.setlist_songs
+  FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM setlists s
-      JOIN band_members bm ON bm.band_id = s.band_id
+      SELECT 1
+      FROM public.setlists s
+      JOIN public.band_members bm ON bm.band_id = s.band_id
       WHERE s.id = setlist_songs.setlist_id
-      AND bm.user_id = auth.uid()
+        AND bm.user_id = auth.uid()
     )
   );
 
 CREATE POLICY "Band members can update setlist songs"
-  ON setlist_songs FOR UPDATE
+  ON public.setlist_songs
+  FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM setlists s
-      JOIN band_members bm ON bm.band_id = s.band_id
+      SELECT 1
+      FROM public.setlists s
+      JOIN public.band_members bm ON bm.band_id = s.band_id
       WHERE s.id = setlist_songs.setlist_id
-      AND bm.user_id = auth.uid()
+        AND bm.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.setlists s
+      JOIN public.band_members bm ON bm.band_id = s.band_id
+      WHERE s.id = setlist_songs.setlist_id
+        AND bm.user_id = auth.uid()
     )
   );
 
 CREATE POLICY "Band members can delete setlist songs"
-  ON setlist_songs FOR DELETE
+  ON public.setlist_songs
+  FOR DELETE
   USING (
     EXISTS (
-      SELECT 1 FROM setlists s
-      JOIN band_members bm ON bm.band_id = s.band_id
+      SELECT 1
+      FROM public.setlists s
+      JOIN public.band_members bm ON bm.band_id = s.band_id
       WHERE s.id = setlist_songs.setlist_id
-      AND bm.user_id = auth.uid()
+        AND bm.user_id = auth.uid()
     )
   );
 
--- Also ensure performance_items table allows viewing by all users
-DROP POLICY IF EXISTS "Performance items are viewable by everyone" ON performance_items;
+ALTER TABLE public.performance_items_catalog ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Performance items are viewable by everyone"
-  ON performance_items FOR SELECT
+DROP POLICY IF EXISTS "Performance items are viewable by everyone"
+  ON public.performance_items_catalog;
+DROP POLICY IF EXISTS "Everyone can view performance items catalog"
+  ON public.performance_items_catalog;
+CREATE POLICY "Everyone can view performance items catalog"
+  ON public.performance_items_catalog
+  FOR SELECT
   USING (true);
+
+NOTIFY pgrst, 'reload schema';
