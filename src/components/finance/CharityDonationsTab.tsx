@@ -81,14 +81,14 @@ export const CharityDonationsTab = ({ cash, currencyCode }: CharityDonationsTabP
     queryKey: ["charity-donations", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("charity_donations")
-        .select("id, charity_id, amount, amount_minor, currency_code, fame_gained, reputation_gained, created_at")
+        .select("*")
         .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []) as CharityDonation[];
+      return (data ?? []) as unknown as CharityDonation[];
     },
     enabled: !!profileId,
   });
