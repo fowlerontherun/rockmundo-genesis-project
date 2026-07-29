@@ -10,9 +10,11 @@ const baseSchema = read(
 const compatibilityMigration = read(
   "supabase/migrations/20250916085440_446206dd-4681-4653-9198-bcc512ebdd45.sql",
 );
-const duplicateMigration = read(
+const duplicateMigrations = [
   "supabase/migrations/20250916085517_f5f55449-6b35-4479-93e8-09fa35807472.sql",
-);
+  "supabase/migrations/20250916085540_6d17ec9d-9a9c-44be-864d-5972c41adae1.sql",
+  "supabase/migrations/20250916085610_b5ae9f69-4eaa-4c54-b70f-6956d77b3f46.sql",
+].map(read);
 const finalReconciliation = read(
   "supabase/migrations/20291218243000_reconcile_auth_signup_trigger.sql",
 );
@@ -38,11 +40,14 @@ describe("auth signup trigger migration authority", () => {
     expect(compatibilityMigration.match(/WHERE NOT EXISTS/g)?.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("keeps the accidental duplicate timestamp as a no-op", () => {
-    expect(duplicateMigration).toContain("accidental byte-for-byte duplicate");
-    expect(duplicateMigration).not.toContain("CREATE TRIGGER on_auth_user_created");
-    expect(duplicateMigration).not.toContain("INSERT INTO public.achievements");
-    expect(duplicateMigration).not.toContain("INSERT INTO public.equipment_items");
+  it("keeps every accidental duplicate seed timestamp as a no-op", () => {
+    for (const duplicateMigration of duplicateMigrations) {
+      expect(duplicateMigration.toLowerCase()).toContain("duplicate");
+      expect(duplicateMigration).not.toContain("CREATE TRIGGER on_auth_user_created");
+      expect(duplicateMigration).not.toContain("INSERT INTO public.achievements");
+      expect(duplicateMigration).not.toContain("INSERT INTO public.equipment_items");
+      expect(duplicateMigration).not.toContain("ON CONFLICT (name)");
+    }
   });
 
   it("rebinds exactly one final trigger to the latest function", () => {
