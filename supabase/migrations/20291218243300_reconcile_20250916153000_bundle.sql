@@ -1,19 +1,6 @@
--- Consolidated owner for the historical 20250916153000 migration version.
--- Supabase records the 14-digit version, so the former eight-file collision
--- prevented fresh databases from applying the complete feature set.
+-- Forward reconciliation for databases where Supabase recorded only the first
+-- file from the historical 20250916153000 collision.
 
--- Contract advance recoupment.
-ALTER TABLE public.contracts
-  ADD COLUMN IF NOT EXISTS advance_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS recouped_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
-
-UPDATE public.contracts
-SET
-  advance_balance = advance_payment::NUMERIC(12,2),
-  recouped_amount = 0
-WHERE advance_balance = 0;
-
--- Social metrics retained on the legacy auth-user profile row.
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS followers BIGINT DEFAULT 0,
   ADD COLUMN IF NOT EXISTS engagement_rate NUMERIC(5,2) DEFAULT 0;
@@ -23,7 +10,6 @@ SET
   followers = COALESCE(followers, 0),
   engagement_rate = COALESCE(engagement_rate, 0);
 
--- Competitions and rankings.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS public.competitions (
@@ -104,7 +90,6 @@ CREATE INDEX IF NOT EXISTS competition_participants_profile_id_idx
 CREATE INDEX IF NOT EXISTS player_rankings_ranking_type_rank_idx
   ON public.player_rankings (ranking_type, rank);
 
--- Collaborative jam sessions. host_id and participant_ids contain auth user IDs.
 CREATE TABLE IF NOT EXISTS public.jam_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   host_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
@@ -129,27 +114,23 @@ ALTER TABLE public.jam_sessions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Jam sessions are viewable by authenticated users" ON public.jam_sessions;
 CREATE POLICY "Jam sessions are viewable by authenticated users"
-  ON public.jam_sessions
-  FOR SELECT
+  ON public.jam_sessions FOR SELECT
   USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Hosts can create jam sessions" ON public.jam_sessions;
 CREATE POLICY "Hosts can create jam sessions"
-  ON public.jam_sessions
-  FOR INSERT
+  ON public.jam_sessions FOR INSERT
   WITH CHECK (auth.uid() = host_id);
 
 DROP POLICY IF EXISTS "Hosts can manage jam sessions" ON public.jam_sessions;
 CREATE POLICY "Hosts can manage jam sessions"
-  ON public.jam_sessions
-  FOR UPDATE
+  ON public.jam_sessions FOR UPDATE
   USING (auth.uid() = host_id)
   WITH CHECK (auth.uid() = host_id);
 
 DROP POLICY IF EXISTS "Hosts can delete jam sessions" ON public.jam_sessions;
 CREATE POLICY "Hosts can delete jam sessions"
-  ON public.jam_sessions
-  FOR DELETE
+  ON public.jam_sessions FOR DELETE
   USING (auth.uid() = host_id);
 
 CREATE OR REPLACE FUNCTION public.update_jam_sessions_updated_at()
@@ -183,8 +164,7 @@ BEGIN
     RAISE EXCEPTION 'Authentication required to join jam sessions';
   END IF;
 
-  SELECT *
-  INTO v_session
+  SELECT * INTO v_session
   FROM public.jam_sessions
   WHERE id = p_session_id
   FOR UPDATE;
@@ -215,9 +195,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.join_jam_session(UUID) TO authenticated;
 
--- Player leaderboard. Canonical song ownership is artist_id, not user_id.
 DROP VIEW IF EXISTS public.leaderboards;
-
 CREATE VIEW public.leaderboards AS
 WITH song_stats AS (
   SELECT
@@ -260,7 +238,6 @@ LEFT JOIN achievement_totals ON achievement_totals.user_id = profiles.user_id;
 
 GRANT SELECT ON public.leaderboards TO anon, authenticated;
 
--- User schedule entries.
 CREATE TABLE IF NOT EXISTS public.schedule_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -285,27 +262,23 @@ ALTER TABLE public.schedule_events ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view their schedule events" ON public.schedule_events;
 CREATE POLICY "Users can view their schedule events"
-  ON public.schedule_events
-  FOR SELECT
+  ON public.schedule_events FOR SELECT
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can create their schedule events" ON public.schedule_events;
 CREATE POLICY "Users can create their schedule events"
-  ON public.schedule_events
-  FOR INSERT
+  ON public.schedule_events FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their schedule events" ON public.schedule_events;
 CREATE POLICY "Users can update their schedule events"
-  ON public.schedule_events
-  FOR UPDATE
+  ON public.schedule_events FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their schedule events" ON public.schedule_events;
 CREATE POLICY "Users can delete their schedule events"
-  ON public.schedule_events
-  FOR DELETE
+  ON public.schedule_events FOR DELETE
   USING (auth.uid() = user_id);
 
 CREATE OR REPLACE FUNCTION public.update_schedule_events_updated_at()
@@ -325,7 +298,6 @@ CREATE TRIGGER update_schedule_events_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_schedule_events_updated_at();
 
--- Per-song streaming totals.
 CREATE TABLE IF NOT EXISTS public.streaming_stats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
@@ -347,27 +319,23 @@ ALTER TABLE public.streaming_stats ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view their streaming stats" ON public.streaming_stats;
 CREATE POLICY "Users can view their streaming stats"
-  ON public.streaming_stats
-  FOR SELECT
+  ON public.streaming_stats FOR SELECT
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert their streaming stats" ON public.streaming_stats;
 CREATE POLICY "Users can insert their streaming stats"
-  ON public.streaming_stats
-  FOR INSERT
+  ON public.streaming_stats FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their streaming stats" ON public.streaming_stats;
 CREATE POLICY "Users can update their streaming stats"
-  ON public.streaming_stats
-  FOR UPDATE
+  ON public.streaming_stats FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their streaming stats" ON public.streaming_stats;
 CREATE POLICY "Users can delete their streaming stats"
-  ON public.streaming_stats
-  FOR DELETE
+  ON public.streaming_stats FOR DELETE
   USING (auth.uid() = user_id);
 
 CREATE OR REPLACE FUNCTION public.update_streaming_stats_updated_at()
@@ -387,7 +355,6 @@ CREATE TRIGGER update_streaming_stats_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_streaming_stats_updated_at();
 
--- Incremental organic stream growth. History ownership follows songs.artist_id.
 CREATE TABLE IF NOT EXISTS public.song_stream_growth_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
@@ -401,8 +368,7 @@ ALTER TABLE public.song_stream_growth_history ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view their own song growth" ON public.song_stream_growth_history;
 CREATE POLICY "Users can view their own song growth"
-  ON public.song_stream_growth_history
-  FOR SELECT
+  ON public.song_stream_growth_history FOR SELECT
   USING (auth.uid() = user_id);
 
 CREATE INDEX IF NOT EXISTS song_stream_growth_history_user_recorded_at_idx
@@ -440,10 +406,7 @@ BEGIN
     UPDATE public.songs songs
     SET
       streams = songs.streams + growth.stream_increase,
-      revenue = ROUND(
-        (songs.revenue + (growth.stream_increase * 0.01))::NUMERIC,
-        2
-      ),
+      revenue = ROUND((songs.revenue + growth.stream_increase * 0.01)::NUMERIC, 2),
       updated_at = now()
     FROM growth
     WHERE songs.id = growth.id
@@ -460,11 +423,7 @@ BEGIN
     streams_added,
     revenue_added
   )
-  SELECT
-    id,
-    user_id,
-    stream_increase,
-    revenue_added
+  SELECT id, user_id, stream_increase, revenue_added
   FROM updated
   WHERE stream_increase > 0;
 END;
@@ -478,8 +437,7 @@ CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
 DO $schedule$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-    FROM cron.job
+    SELECT 1 FROM cron.job
     WHERE jobname = 'song_stream_growth_quarter_hour'
   ) THEN
     PERFORM cron.schedule(

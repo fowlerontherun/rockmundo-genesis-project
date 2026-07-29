@@ -1,14 +1,4 @@
 {
-  "20250916153000": [
-    "20250916153000_add_contract_recoupment_fields.sql",
-    "20250916153000_add_social_metrics_to_profiles.sql",
-    "20250916153000_create_competitions_tables.sql",
-    "20250916153000_create_jam_sessions_table.sql",
-    "20250916153000_create_leaderboards_view.sql",
-    "20250916153000_create_schedule_events_table.sql",
-    "20250916153000_create_streaming_stats_table.sql",
-    "20250916153000_song_stream_growth_job.sql"
-  ],
   "20250917090000": [
     "20250917090000_add_promotion_campaigns_table.sql",
     "20250917090000_create_label_system.sql",
