@@ -1,43 +1,70 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FinancialSummary, FinancialTransaction } from "@/hooks/useFinances";
+import { formatMoney } from "@/lib/financeFormatting";
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+export function PlayerFinanceHub({
+  summary,
+  transactions,
+}: {
+  summary: FinancialSummary;
+  transactions: FinancialTransaction[];
+}) {
+  const money = (amount: number) => formatMoney(amount, summary.currencyCode);
+  const netMonthly = summary.monthlyIncome - summary.monthlyExpenses;
+  const recent = transactions.slice(0, 12);
 
-const incomeCategories = ["Wages", "Gig earnings", "Royalties", "Streaming", "Merchandise", "Songwriting", "Session work", "Teaching", "Company dividends", "Player transfers", "Administrative grants", "Other income"];
-const expenseCategories = ["Rent", "Travel", "Accommodation", "Food or lifestyle", "Rehearsals", "Recording", "Equipment", "Repairs", "Education", "Band contributions", "Taxes", "Fees", "Subscriptions", "Debt payments", "Other spending"];
-
-export function PlayerFinanceHub({ summary, transactions }: { summary: FinancialSummary; transactions: FinancialTransaction[] }) {
-  const weeklyIncome = transactions.filter((t) => t.type === "income").slice(0, 20).reduce((sum, t) => sum + t.amount, 0);
-  const weeklyExpenses = transactions.filter((t) => t.type === "expense").slice(0, 20).reduce((sum, t) => sum + t.amount, 0);
-  const upcoming = transactions.filter((t) => t.type === "expense").slice(0, 3);
   return (
     <div className="space-y-6" aria-label="Personal finance hub">
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <FinanceMetric label="Available cash" value={money.format(summary.cash)} />
-        <FinanceMetric label="Reserved" value={money.format(Math.max(0, summary.totalLoans / 12))} />
-        <FinanceMetric label="Weekly income" value={money.format(weeklyIncome)} tone="good" />
-        <FinanceMetric label="Weekly expenses" value={money.format(weeklyExpenses)} tone="bad" />
-        <FinanceMetric label="Net cash flow" value={money.format(weeklyIncome - weeklyExpenses)} />
-        <FinanceMetric label="Taxable this period" value={money.format(weeklyIncome)} />
+        <FinanceMetric label="Wallet cash" value={money(summary.cash)} />
+        <FinanceMetric label="Personal accounts" value={money(summary.personalAccounts)} />
+        <FinanceMetric label="Average monthly income" value={money(summary.monthlyIncome)} tone="good" />
+        <FinanceMetric label="Average monthly expenses" value={money(summary.monthlyExpenses)} tone="bad" />
+        <FinanceMetric label="Average monthly net" value={money(netMonthly)} tone={netMonthly >= 0 ? "good" : "bad"} />
+        <FinanceMetric label="Canonical liabilities" value={money(summary.totalLoans)} tone={summary.totalLoans > 0 ? "bad" : undefined} />
       </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Income breakdown</CardTitle><CardDescription>Extensible categories; only connected ledger sources show values.</CardDescription></CardHeader>
-          <CardContent className="flex flex-wrap gap-2">{incomeCategories.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}</CardContent>
+          <CardHeader><CardTitle>All-time external cash flow</CardTitle><CardDescription>Internal account transfers are excluded.</CardDescription></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border p-4"><p className="text-xs text-muted-foreground">External income</p><p className="text-xl font-semibold text-fm-good">{money(summary.totalEarnings)}</p></div>
+            <div className="rounded-lg border p-4"><p className="text-xs text-muted-foreground">External spending</p><p className="text-xl font-semibold text-fm-bad">{money(summary.totalExpenses)}</p></div>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Expense breakdown</CardTitle><CardDescription>Recurring obligations and ledger categories feed this view.</CardDescription></CardHeader>
-          <CardContent className="flex flex-wrap gap-2">{expenseCategories.map((c) => <Badge key={c} variant="outline">{c}</Badge>)}</CardContent>
+          <CardHeader><CardTitle>Personal wealth boundary</CardTitle><CardDescription>Only balances in {summary.currencyCode} enter the headline total.</CardDescription></CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Personal accounts</span><span>{money(summary.personalAccounts)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Investments</span><span>{money(summary.investmentValue)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Less liabilities</span><span className="text-fm-bad">-{money(summary.totalLoans)}</span></div>
+            <div className="flex justify-between border-t pt-2 font-semibold"><span>Personal net worth</span><span>{money(summary.netWorth)}</span></div>
+          </CardContent>
         </Card>
       </div>
+
       <Card>
-        <CardHeader><CardTitle>Upcoming confirmed expenses</CardTitle><CardDescription>Shows due payments, auto-pay status and current recoverability once obligations exist.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Recent canonical activity</CardTitle><CardDescription>Wallet, bank, savings and external transactions in one history.</CardDescription></CardHeader>
         <CardContent>
-          <Table><TableHeader><TableRow><TableHead>Due</TableHead><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
-            {upcoming.length ? upcoming.map((t) => <TableRow key={t.id}><TableCell>{new Date(t.date).toLocaleDateString()}</TableCell><TableCell>{t.description ?? t.source}</TableCell><TableCell>{t.source}</TableCell><TableCell className="text-right">{money.format(t.amount)}</TableCell><TableCell><Badge>Scheduled</Badge></TableCell></TableRow>) : <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">No upcoming obligations yet.</TableCell></TableRow>}
-          </TableBody></Table></CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {recent.length ? recent.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{new Date(transaction.date).toLocaleDateString("en-GB")}</TableCell>
+                  <TableCell>{transaction.description ?? transaction.source}</TableCell>
+                  <TableCell>
+                    {transaction.type === "income" ? <Badge variant="outline" className="text-fm-good"><ArrowUpRight className="mr-1 h-3 w-3" />Income</Badge> : transaction.type === "expense" ? <Badge variant="outline" className="text-fm-bad"><ArrowDownRight className="mr-1 h-3 w-3" />Expense</Badge> : <Badge variant="outline"><ArrowLeftRight className="mr-1 h-3 w-3" />Transfer</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right">{formatMoney(transaction.amount, transaction.currencyCode)}</TableCell>
+                </TableRow>
+              )) : <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">No canonical activity yet.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
       </Card>
     </div>
   );

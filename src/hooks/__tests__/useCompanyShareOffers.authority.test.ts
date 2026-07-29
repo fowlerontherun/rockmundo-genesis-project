@@ -45,6 +45,14 @@ describe("company share offer authority", () => {
     expect(offerSource).toContain('.from("company_share_offers" as any)');
   });
 
+  it("uses the public profile view for cross-player identity", () => {
+    expect(offerSource).toContain('.from("public_profiles")');
+    expect(legacySource).toContain('.from("public_profiles")');
+    expect(panelSource).toContain('.from("public_profiles")');
+    expect(`${offerSource}\n${legacySource}\n${panelSource}`).not.toContain("stage_name");
+    expect(panelSource).toContain("display_name");
+  });
+
   it("requires buyer action for paid offers", () => {
     expect(panelSource).toContain("Incoming Share Offers");
     expect(panelSource).toContain("offerId: offer.id, accept: false");

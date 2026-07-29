@@ -1,6 +1,8 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { AlertCircle, DollarSign, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useFinances } from "@/hooks/useFinances";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { IncomeBreakdownChart } from "@/components/finance/IncomeBreakdownChart";
@@ -8,41 +10,56 @@ import { IncomeExpenseChart } from "@/components/finance/IncomeExpenseChart";
 import { SpendingCategoriesChart } from "@/components/finance/SpendingCategoriesChart";
 import { BandFinanceDetail } from "@/components/finance/BandFinanceDetail";
 import { PersonalFinanceBreakdown } from "@/components/finance/PersonalFinanceBreakdown";
-import { InvestmentsTab } from "@/components/finance/InvestmentsTab";
-import { LoansTab } from "@/components/finance/LoansTab";
 import { TransactionsList } from "@/components/finance/TransactionsList";
-import { CharityDonationsTab } from "@/components/finance/CharityDonationsTab";
 import { SponsorshipTypesPanel } from "@/components/finance/SponsorshipTypesPanel";
 import { CityTreasuryCard } from "@/components/finance/CityTreasuryCard";
 import { FinancialHistoryLedger } from "@/components/finance/FinancialHistoryLedger";
 import { PlayerFinanceHub } from "@/components/finance/PlayerFinanceHub";
-import { Loader2, DollarSign } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FinancialObligationsPanel } from "@/components/finance/FinancialObligationsPanel";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
+import {
+  CanonicalInvestmentsPanel,
+  CanonicalLoansPanel,
+  LegacyMutationNotice,
+  OtherCurrencyBalancesPanel,
+} from "@/components/finance/CanonicalFinanceHoldings";
 
 const Finances = () => {
   const [searchParams] = useSearchParams();
-  const { 
-    bands, 
-    transactions, 
-    investments, 
-    loans, 
+  const {
+    bands,
+    transactions,
+    investments,
+    loans,
     summary,
     earningsBySource,
     monthlyLedger,
-    loanOffers,
-    investmentOptions,
+    otherCurrencyBalances,
     isLoading,
+    error,
+    refetch,
   } = useFinances();
-  const { profileId } = useActiveProfile();
 
   if (isLoading) {
     return (
       <FMPageScaffold title="Financial Command Center" icon={DollarSign} backTo="/career">
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (error) {
+    return (
+      <FMPageScaffold title="Financial Command Center" icon={DollarSign} backTo="/career">
+        <Card className="border-destructive/40">
+          <CardContent className="flex min-h-[260px] flex-col items-center justify-center gap-3 text-center">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+            <div><p className="font-semibold">Financial data could not be loaded</p><p className="text-sm text-muted-foreground">The canonical finance dashboard did not return successfully.</p></div>
+            <Button variant="outline" onClick={() => void refetch()}>Retry</Button>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
@@ -50,16 +67,13 @@ const Finances = () => {
   return (
     <FMPageScaffold
       title="Financial Command Center"
-      subtitle="Monitor personal and band finances, track investments, and explore funding pathways."
+      subtitle="Canonical personal balances, cash flow, liabilities and separate band treasuries."
       icon={DollarSign}
       backTo="/career"
     >
-
-
-      {/* Summary Cards */}
       <FinanceSummaryCards summary={summary} />
+      <OtherCurrencyBalancesPanel balances={otherCurrencyBalances} />
 
-      {/* Main Tabs */}
       <Tabs defaultValue={searchParams.get("tab") || "overview"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -74,25 +88,20 @@ const Finances = () => {
           <TabsTrigger value="sponsorships">Sponsorships</TabsTrigger>
           <TabsTrigger value="city">City Treasury</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="ledger">Ledger</TabsTrigger>
+          <TabsTrigger value="ledger">Wallet Ledger</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <PersonalFinanceBreakdown summary={summary} />
-            <BandFinanceDetail bands={bands} transactions={transactions} />
+            <BandFinanceDetail bands={bands} />
           </div>
-
-          {/* Income vs Expenses trend */}
-          <IncomeExpenseChart data={monthlyLedger} />
-
+          <IncomeExpenseChart data={monthlyLedger} currencyCode={summary.currencyCode} />
           <div className="grid gap-6 lg:grid-cols-2">
-            <IncomeBreakdownChart earningsBySource={earningsBySource} />
-            <SpendingCategoriesChart transactions={transactions} />
+            <IncomeBreakdownChart earningsBySource={earningsBySource} currencyCode={summary.currencyCode} />
+            <SpendingCategoriesChart transactions={transactions} currencyCode={summary.currencyCode} />
           </div>
-
-          {/* Recent Transactions */}
-          <TransactionsList transactions={transactions.slice(0, 10)} />
+          <TransactionsList transactions={transactions.slice(0, 10)} currencyCode={summary.currencyCode} />
         </TabsContent>
 
         <TabsContent value="personal" className="space-y-6">
@@ -100,23 +109,15 @@ const Finances = () => {
         </TabsContent>
 
         <TabsContent value="bands" className="space-y-6">
-          <BandFinanceDetail bands={bands} transactions={transactions} />
+          <BandFinanceDetail bands={bands} />
         </TabsContent>
 
         <TabsContent value="investments" className="space-y-6">
-          <InvestmentsTab 
-            investments={investments} 
-            investmentOptions={investmentOptions}
-            cash={summary.cash}
-          />
+          <CanonicalInvestmentsPanel investments={investments} currencyCode={summary.currencyCode} />
         </TabsContent>
 
         <TabsContent value="loans" className="space-y-6">
-          <LoansTab 
-            loans={loans} 
-            loanOffers={loanOffers}
-            cash={summary.cash}
-          />
+          <CanonicalLoansPanel loans={loans} />
         </TabsContent>
 
         <TabsContent value="obligations" className="space-y-6">
@@ -124,7 +125,10 @@ const Finances = () => {
         </TabsContent>
 
         <TabsContent value="charity" className="space-y-6">
-          <CharityDonationsTab cash={summary.cash} />
+          <LegacyMutationNotice
+            title="Charity donations are temporarily read-only"
+            body="The previous donation flow deducted compatibility cash before recording the donation. It is disabled until the donation and reward update can post through one atomic ledger transaction."
+          />
         </TabsContent>
 
         <TabsContent value="sponsorships" className="space-y-6">
@@ -136,7 +140,7 @@ const Finances = () => {
         </TabsContent>
 
         <TabsContent value="transactions" className="space-y-6">
-          <TransactionsList transactions={transactions} />
+          <TransactionsList transactions={transactions} currencyCode={summary.currencyCode} />
         </TabsContent>
 
         <TabsContent value="ledger" className="space-y-6">
