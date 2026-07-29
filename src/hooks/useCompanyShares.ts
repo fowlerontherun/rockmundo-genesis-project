@@ -5,12 +5,19 @@ import { distributeCompanyAnnualProfit } from "@/lib/api/companyProfitDistributi
 
 export { useIssueCompanyShares } from "@/hooks/useCompanyShareOffers";
 
+type ShareholderPublicProfile = {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  username: string | null;
+};
+
 export interface CompanyShareholder {
   id: string;
   company_id: string;
   user_id: string;
   shares: number;
-  profile?: { id: string; stage_name: string | null; username: string | null } | null;
+  profile?: ShareholderPublicProfile | null;
 }
 
 export const useCompanyShareholders = (companyId: string | undefined) => {
@@ -27,16 +34,20 @@ export const useCompanyShareholders = (companyId: string | undefined) => {
 
       if (error) throw error;
       const shareholders = (data || []) as unknown as CompanyShareholder[];
-
       if (shareholders.length === 0) return shareholders;
 
       const userIds = shareholders.map((shareholder) => shareholder.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, user_id, stage_name, username")
-        .in("user_id", userIds as string[]);
+      const { data: profiles, error: profileError } = await supabase
+        .from("public_profiles")
+        .select("id, user_id, display_name, username")
+        .in("user_id", userIds);
 
-      const profileByUserId = new Map((profiles || []).map((profile: any) => [profile.user_id, profile]));
+      if (profileError) throw profileError;
+      const publicProfiles = (profiles || []) as ShareholderPublicProfile[];
+      const profileByUserId = new Map(
+        publicProfiles.map((profile) => [profile.user_id, profile]),
+      );
+
       return shareholders.map((shareholder) => ({
         ...shareholder,
         profile: profileByUserId.get(shareholder.user_id) ?? null,
