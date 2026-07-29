@@ -40,14 +40,14 @@ export const useCompanies = () => {
         console.error("Error fetching festival company extensions:", festivalError);
       }
 
-      const festivalIdByCompany = new Map(
-        (festivalCompanies || []).map((festival: { company_id: string; id: string }) => [festival.company_id, festival.id]),
+      const festivalIdByCompany = new Map<string, string>(
+        (festivalCompanies || []).map((festival: { company_id: string; id: string }) => [festival.company_id, festival.id] as [string, string]),
       );
 
       return companies.map((company) => ({
         ...company,
         festival_company_id: festivalIdByCompany.get(company.id) ?? null,
-      }));
+      })) as Company[];
     },
     enabled: !!userId,
   });
