@@ -15,6 +15,13 @@ const reconciliationMigration = fs.readFileSync(
   ),
   "utf8",
 );
+const releaseTriggerCorrection = fs.readFileSync(
+  path.join(
+    migrationsDirectory,
+    "20291218243410_fix_label_release_status_trigger.sql",
+  ),
+  "utf8",
+);
 const collisionRegistry = JSON.parse(
   fs.readFileSync(
     path.resolve("scripts/supabase/migration-timestamp-collisions.json"),
@@ -53,7 +60,9 @@ describe("20250917090000 migration authority", () => {
     expect(ownerMigration).not.toContain("admin123");
     expect(ownerMigration).not.toContain("on conflict (name)");
     expect(ownerMigration).not.toContain("profiles.cash");
-    expect(ownerMigration).toContain("where not exists(select 1 from public.label_deal_types");
+    expect(ownerMigration).toContain(
+      "where not exists(select 1 from public.label_deal_types",
+    );
   });
 
   it("uses canonical song ownership for player promotions", () => {
@@ -69,7 +78,9 @@ describe("20250917090000 migration authority", () => {
     );
     expect(ownerMigration).toContain("security definer");
     expect(ownerMigration).toContain("set search_path = public, pg_temp");
-    expect(ownerMigration).toContain("drop policy if exists label_members_manage_team");
+    expect(ownerMigration).toContain(
+      "drop policy if exists label_members_manage_team",
+    );
   });
 
   it("replays the complete bundle for previously collided deployments", () => {
@@ -84,5 +95,18 @@ describe("20250917090000 migration authority", () => {
     }
     expect(reconciliationMigration).not.toContain("admin@rockmundo.com");
     expect(reconciliationMigration).not.toContain("on conflict (name)");
+  });
+
+  it("handles release inserts without reading an unassigned OLD record", () => {
+    const insertBranch = releaseTriggerCorrection.slice(
+      releaseTriggerCorrection.indexOf("if tg_op = 'INSERT' then"),
+      releaseTriggerCorrection.indexOf("if old.status is distinct from new.status"),
+    );
+
+    expect(insertBranch).toContain("return new;");
+    expect(insertBranch).not.toContain("old.status");
+    expect(releaseTriggerCorrection).toContain(
+      "if old.status is distinct from new.status and new.status = 'released' then",
+    );
   });
 });
